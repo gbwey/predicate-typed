@@ -1,0 +1,9 @@
+[ 
+   { "firstName1"  : "Daniel"
+   , "lastName1"   : "diaz"
+   , "age1"        :  24
+   , "likesPizza1" :  true
+   , "date1" : "2001-01-12T04:05:33"
+   , "ipaddress1" : "124.1.12.245"
+   }
+]

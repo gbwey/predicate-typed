@@ -1,0 +1,59 @@
+name:                predicate-typed
+version:             0.1.0.0
+github:              "githubuser/predicate-typed"
+license:             BSD3
+author:              "Author name here"
+maintainer:          "example@example.com"
+copyright:           "2019 Author name here"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+description:         Please see the README on GitHub at <https://github.com/gbwey/predicate-typed#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- containers
+- mtl
+- pcre-heavy
+- pcre-light
+- lens
+- pretty
+- pretty-terminal
+- pretty-tree
+- tree-view
+- discrimination
+- safe
+- bytestring
+- text
+- ghc-prim
+- these
+- time
+- aeson
+- deepseq
+- directory
+- comonad
+- template-haskell
+- th-orphans
+- th-lift
+- QuickCheck
+
+library:
+  source-dirs: src
+  ghc-options:
+  - -fomit-interface-pragmas
+
+tests:
+  predicate-typed-test:
+    main:                TestSpec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -fomit-interface-pragmas
+    dependencies:
+    - predicate-typed
+    - stm
+    - easytest

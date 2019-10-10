@@ -1,0 +1,38 @@
+[ 
+   { "firstName1"  : "Daniel"
+   , "lastName1"   : "Diaz"
+   , "age1"        :  24
+   , "likesPizza1" :  true
+   , "date1" : "2001-01-12T04:05:33"
+   , "ipaddress1" : "124.1.12.223"
+     }
+,
+   { "firstName1"  : "Rose"
+   , "lastName1"   : "Red"
+   , "age1"        :  39
+   , "likesPizza1" :  false
+   , "date1" : "2002-01-12T04:05:33"
+   , "ipaddress1" : "124.1.12.223"
+     }
+,  { "firstName1"  : "John"
+   , "lastName1"   : "Doe"
+   , "age1"        :  45
+   , "likesPizza1" :  false
+   , "date1" : "2003-01-12T04:05:33"
+   , "ipaddress1" : "124.1.12.223"
+     }
+,  { "firstName1"  : "Vladimir"
+   , "lastName1"   : "Vygodsky"
+   , "age1"        :  27
+   , "likesPizza1" :  false
+   , "date1" : "2004-01-12T04:05:33"
+   , "ipaddress1" : "124.1.12.223"
+     }
+,  { "firstName1"  : "Vladimir"
+   , "lastName1"   : "Vygodsky"
+   , "age1"        :  60
+   , "likesPizza1" :  false
+   , "date1" : "2005-01-12T04:05:33"
+   , "ipaddress1" : "124.1.12.100"
+     }
+]

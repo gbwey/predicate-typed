@@ -1,0 +1,23 @@
+[ 
+   { "firstName"  : "Daniel"
+   , "lastName"   : "Diaz"
+   , "age"        :  24
+   , "likesPizza" :  true
+     }
+,
+   { "firstName"  : "Rose"
+   , "lastName"   : "Red"
+   , "age"        :  39
+   , "likesPizza" :  false
+     }
+,  { "firstName"  : "John"
+   , "lastName"   : "Doe"
+   , "age"        :  45
+   , "likesPizza" :  false
+     }
+,  { "firstName"  : "Vladimir"
+   , "lastName"   : "Vygodsky"
+   , "age"        :  27
+   , "likesPizza" :  false
+     }
+]

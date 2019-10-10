@@ -1,0 +1,5 @@
+.stack-work/
+predicate-typed.cabal
+*~
+*dump-hi
+.vscode/
