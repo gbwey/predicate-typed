@@ -2,9 +2,9 @@ name:                predicate-typed
 version:             0.1.0.0
 github:              "githubuser/predicate-typed"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2019 Author name here"
+author:              "Grant Weyburne"
+maintainer:          "gbwey9@gmail.com"
+copyright:           "2019 gbwey"
 
 extra-source-files:
 - README.md
