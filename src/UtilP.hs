@@ -551,21 +551,6 @@ evalBinStrict opts s fn ll rr =
           let z = fn a b
           in mkNodeB opts z [show a <> " " <> s <> " " <> show b] [hh ll, hh rr]
 
--- | typelevel representation of signed rational numbers/integers
-data Rat (pos :: Bool) (num :: Nat) (den :: Nat)
-type Pos (n :: Nat) = Rat 'True n 1
-type Neg (n :: Nat) = Rat 'False n 1
-
--- | constructs a valid positive rational number
-type family PosR (n :: Nat) (d :: Nat) where
-  PosR n 0 = GL.TypeError ('GL.Text "PosR has a 0 denominator where numerator=" ':<>: 'GL.ShowType n)
-  PosR n d = Rat 'True n d
-
--- | constructs a valid negative rational number
-type family NegR (n :: Nat) (d :: Nat) where
-  NegR n 0 = GL.TypeError ('GL.Text "NegR has a 0 denominator where numerator=" ':<>: 'GL.ShowType n)
-  NegR n d = Rat 'False n d
-
 -- | type level Between
 type family BetweenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
   BetweenT m n v =
@@ -605,31 +590,6 @@ type family NotT (b :: Bool) :: Bool where
   NotT 'True = 'False
   NotT 'False = 'True
 
--- | compares 2 numbers where the numbers are type level signed rationals or Nats
-type family CmpRat (m :: k) (n :: k1) :: Ordering where
-  CmpRat (Rat x n 0) z = GL.TypeError ('GL.Text "CmpRat: lhs has 0 denominator" ':$$: 'GL.ShowType (Rat x n 0) ':<>: 'GL.Text " `CmpRat` " ':<>: 'GL.ShowType z)
-  CmpRat z (Rat x n 0) = GL.TypeError ('GL.Text "CmpRat: rhs has 0 denominator" ':$$: 'GL.ShowType z ':<>: 'GL.Text " `CmpRat` " ':<>: 'GL.ShowType (Rat x n 0))
-  CmpRat (m :: Nat) (n :: Nat) = GN.CmpNat m n
-  CmpRat (Rat x n d) (w :: Nat) = CmpRat (Rat x n d) (Pos w)
-  CmpRat (w :: Nat) (Rat x n d) = CmpRat (Pos w) (Rat x n d)
-  CmpRat (Rat x 0 d) (Rat x1 0 d1) = 'EQ
-  CmpRat (Rat 'True n d) (Rat 'False n1 d1) = 'GT
-  CmpRat (Rat 'False n d) (Rat 'True n1 d1) = 'LT
-  CmpRat (Rat 'False n d) (Rat 'False n1 d1) =
-    CmpRat (Rat 'True n1 d1) (Rat 'True n d)
-  CmpRat (Rat 'True n d) (Rat 'True n1 d1) =
-    IfT (GN.CmpNat (GN.Div n d) (GN.Div n1 d1) DE.== 'EQ)
-       (GN.CmpNat (n GN.* d1) (n1 GN.* d))
-       (GN.CmpNat (GN.Div n d) (GN.Div n1 d1))
-
--- | get a list of rationals from the type level
-class GetRats as where
-  getRats :: [Rational]
-instance GetRats '[] where
-  getRats = []
-instance (GetRat n, GetRats ns) => GetRats (n ': ns) where
-  getRats = getRat @n : getRats @ns
-
 -- | get a Nat from the typelevel
 nat :: forall n a . (KnownNat n, Num a) => a
 nat = fromIntegral (GL.natVal (Proxy @n))
@@ -637,17 +597,6 @@ nat = fromIntegral (GL.natVal (Proxy @n))
 -- | gets the Symbol from the typelevel
 symb :: forall s . KnownSymbol s => String
 symb = GL.symbolVal (Proxy @s)
-
--- | get a Rational from the typelevel
-class GetRat a where
-  getRat :: Rational
-instance KnownNat n => GetRat (n :: Nat) where
-  getRat = nat @n
-instance (GetBool pos, KnownNat num, KnownNat den, NotZeroT den) => GetRat (Rat (pos :: Bool) (num :: Nat) (den :: Nat)) where
-  getRat = let s = getBool @pos
-               n = nat @num
-               d = nat @den
-           in (if s then 1 else (-1)) * n % d
 
 -- | get a list of Nats from the typelevel
 class GetNats as where
