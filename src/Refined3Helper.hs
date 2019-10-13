@@ -24,6 +24,15 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveLift #-}
+-- |
+-- Module      : Refined3Helper
+-- Description : Contains convenient prepackaged 4-tuples to use with Refined3
+-- Copyright   : (c) Grant Weyburne, 2019
+-- License     : BSD-3
+-- Maintainer  : gbwey9@gmail.com
+--
+-- Refined3 ip op fmt i. The 4-tuple is (ip,op,fmt,i)
+--
 module Refined3Helper where
 import Refined3
 import Predicate
@@ -37,7 +46,7 @@ import qualified Data.Semigroup as SG
 -- credit card with luhn algorithm
 type Ccip = Remove "-" Id >> Ones >> Map (ReadP Int)
 type Ccop (n :: Nat) = Guard ('(n,Len) >> Printf2 "expected %d digits but found %d") (Len >> Same n) >> Luhn
-type Ccfmt (ns :: [Nat]) = Map ShowP >> Concat >> Splitats ns >> Intercalate '["-"] Id >> Concat
+type Ccfmt (ns :: [Nat]) = Map ShowP >> Concat >> SplitAts ns >> Intercalate '["-"] Id >> Concat
 
 type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
 
@@ -51,16 +60,16 @@ cc11 :: Proxy (Ccn '[4,4,3])   -- or Proxy CC11
 cc11 = mkProxy3P
 
 type Datetime1 (t :: Type) = '(Dtip1 t, Dtop1, Dtfmt1, String)
-type Dtip1 t = Parsetime t "%F %T" Id
+type Dtip1 t = ParseTimeP t "%F %T" Id
 
 -- extra check to validate the time as parseTime doesnt validate the time component
 type Dtop1 =
-   Formattime "%H %M %S" >> Resplit "\\s+" >> Map (ReadP Int)
+   FormatTimeP "%H %M %S" >> Resplit "\\s+" >> Map (ReadP Int)
      >> Guards '[ '(Printf2 "guard %d invalid hours %d", Between 0 23)
                 , '(Printf2 "guard %d invalid minutes %d", Between 0 59)
                 , '(Printf2 "guard %d invalid seconds %d", Between 0 59)
                 ] >> 'True
-type Dtfmt1 = Formattime "%F %T"
+type Dtfmt1 = FormatTimeP "%F %T"
 
 ssn :: Proxy Ssn
 ssn = mkProxy3
@@ -68,7 +77,7 @@ ssn = mkProxy3
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
 type Ssnip = Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd >> Map (ReadP Int)
-type Ssnop = Guardsquick (Printf2 "number for group %d invalid: found %d")
+type Ssnop = GuardsQuick (Printf2 "number for group %d invalid: found %d")
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
                       >> 'True
 type Ssnop' = Guards '[ '(Printf2 "guard %d invalid: found %d", Between 1 899 && Id /= 666)
@@ -99,7 +108,7 @@ ip1 :: Proxy Ip1
 ip1 = mkProxy3
 
 type Ipip = Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" >> OneP >> Snd >> Map (ReadP Int)
-type Ipop = Guardsquick (Printf2 "guard(%d) octet out of range 0-255 found %d") (RepeatT 4 (Between 0 255)) >> 'True
+type Ipop = GuardsQuick (Printf2 "guard(%d) octet out of range 0-255 found %d") (RepeatT 4 (Between 0 255)) >> 'True
 type Ipop' = Guards '[
           '(Printf2 "octet %d out of range 0-255 found %d", Between 0 255)
         , '(Printf2 "octet %d out of range 0-255 found %d", Between 0 255)
@@ -110,7 +119,7 @@ type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d"
 
 type HmsR = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- padded only -- dumb because strict validation should not be done twice: ie in ip and op!
 type Hmsconv = Do '[Rescan HmsR, Head, Snd, Map (ReadBaseInt 10)]
-type Hmsval = Guardsquick (Printf2 "guard(%d) %d is out of range") '[Between 0 23, Between 0 59, Between 0 59]
+type Hmsval = GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 0 23, Between 0 59, Between 0 59]
 
 type Hms4 = '(Hmsconv, Hmsval >> 'True, Hmsfmt, String)
 
@@ -123,10 +132,10 @@ type Ip4strictR = "^" `AppendSymbol` IntersperseT "\\." (RepeatT 4 OctetR) `Appe
 
 -- eg ["2001-01-01", "Jan 24 2009", "03/29/0x7"]
 type Datefmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
-type DateN = '(Parsetimes Day Datefmts Id, 'True, Formattime "%Y-%m-%d", String)
+type DateN = '(ParseTimes Day Datefmts Id, 'True, FormatTimeP "%Y-%m-%d", String)
 
 type DatetimeFmts = '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]
-type DatetimeN = '(Parsetimes UTCTime DatetimeFmts Id, 'True, Formattime "%Y-%m-%d %H:%M:%S", String)
+type DatetimeN = '(ParseTimes UTCTime DatetimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S", String)
 
 type BaseN (n :: Nat) = '(ReadBase Integer n, 'True, ShowBase n, String)
 

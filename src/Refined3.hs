@@ -24,8 +24,18 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveLift #-}
+-- |
+-- Module      : Refined3
+-- Description : Refinement type allowing the external type to differ from the internal type
+-- Copyright   : (c) Grant Weyburne, 2019
+-- License     : BSD-3
+-- Maintainer  : gbwey9@gmail.com
+--
+-- see 'Refined3'
+-- contains Json / Arbitrary and Read instances
 module Refined3 (
-    Refined3 (..)
+    Refined3
+  , unsafeRefined3
   , Refined3C
   , r3in
   , r3out
@@ -40,7 +50,6 @@ module Refined3 (
   , newRefined3T
   , newRefined3TP
   , newRefined3TPIO
-  , newRefined3TPImpl
   , newRefined3TPSkipIPImpl
   , convertRefined3T
   , convertRefined3TP
@@ -84,6 +93,9 @@ import Test.QuickCheck
 -- PP fmt (PP ip i) should be valid input to Refined3
 data Refined3 ip op fmt i = Refined3 { in3 :: PP ip i, out3 :: PP fmt (PP ip i) }
 
+unsafeRefined3 :: forall ip op fmt i . PP ip i -> PP fmt (PP ip i) -> Refined3 ip op fmt i
+unsafeRefined3 = Refined3
+
 -- | Provides the constraints on Refined3
 type Refined3C ip op fmt i = (P ip i, P op (PP ip i), PP op (PP ip i) ~ Bool, P fmt (PP ip i), PP fmt (PP ip i) ~ i)
 
@@ -120,20 +132,21 @@ instance (Show (PP fmt (PP ip i)), Show (PP ip i), Refined3C ip op fmt i, FromJS
                     Just r -> return r
 
 -- need something simpler
+{-
 instance (Arbitrary (PP ip i)
         , Show (PP ip i)
         , Show i
         , Refined3C ip op fmt i
         ) => Arbitrary (Refined3 ip op fmt i) where
   arbitrary = suchThatMap (arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt o2
-
-arbitraryR3P ::
+-}
+arbitraryR3P :: forall ip op fmt i .
    ( Arbitrary (PP ip i)
    , Show (PP ip i)
    , Show i
    , Refined3C ip op fmt i
    ) => Proxy '(ip,op,fmt,i) -> Gen (Refined3 ip op fmt i)
-arbitraryR3P _ = arbitrary
+arbitraryR3P _ = suchThatMap (arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt o2
 
 -- help things along a little
 arbitraryR3PFun ::
@@ -343,7 +356,7 @@ prtEval3P _ opts i = do
   x <- eval3M opts i
   prt3IO opts x
 
--- pass in a proxy (use mkProxy to package stuff up)
+-- pass in a proxy (use mkProxy to package all the types together as a 4-tuple)
 -- ip converts input 'i' to format used for op and fmt
 -- op is a boolean predicate [has to be True to continue] (uses P ip i as input)
 -- fmt formats the output (can be anything ie not just String) (uses P ip i as input)
@@ -447,7 +460,7 @@ eval3X opts i = runIdentity $ do
               Right True -> do
                 ss@(fromTT -> t3) <- eval (Proxy @fmt) opts a
                 pure $ case getValLR (_tBool ss) of
-                     Right b -> (RTTrueT a t1 t2 b t3, Just (Refined a, b))
+                     Right b -> (RTTrueT a t1 t2 b t3, Just (unsafeRefined a, b))
                      Left e -> (RTTrueF a t1 t2 e t3, Nothing)
               Right False -> pure (RTFalse a t1 t2, Nothing)
               Left e -> pure (RTF a t1 e t2, Nothing)

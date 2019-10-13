@@ -15,7 +15,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE NoOverloadedLists #-} -- overloaded lists messes stuff up
+{-# LANGUAGE NoOverloadedLists #-} -- overloaded lists breaks the tests
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 module TestJson where
@@ -79,8 +79,8 @@ type NameR1 = Refined (Name1 >> 'True) String
 type Name1 =
           Uncons
        >> 'Just Id
-       >> Guard (Fst >> Printf "not upper first(%c)") (Fst >> '[Id] >> IsCharset 'CUpper)
-       >> Guard (Snd >> Printf "not lower rest(%s)") (Snd >> IsCharset 'CLower)
+       >> Guard (Fst >> Printf "not upper first(%c)") (Fst >> '[Id] >> IsCharSet 'CUpper)
+       >> Guard (Snd >> Printf "not lower rest(%s)") (Snd >> IsCharSet 'CLower)
 
 type AgeR = Refined (Between 10 60) Int
 
@@ -88,7 +88,7 @@ type Ip4R = MakeR3 '(Ip4ip, Ip4op >> 'True, Ip4fmt, String)
 
 type Ip4ip = Resplit "\\." >> Map (ReadP Int)
 type Ip4op = Guard (Len >> Printf "expected length 4 found %d") (Len >> Same 4)
-          >> Guardsquick (Printf2 "guard(%d): expected between 0 and 255 found %d") (RepeatT 4 (Between 0 255))
+          >> GuardsQuick (Printf2 "guard(%d): expected between 0 and 255 found %d") (RepeatT 4 (Between 0 255))
 type Ip4fmt = Printfnt 4 "%03d.%03d.%03d.%03d"
 
 type DateTimeNR = MakeR3 DatetimeN

@@ -27,6 +27,13 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
+-- |
+-- Module      : UtilP
+-- Description : Utility methods for Predicate / methods for displaying the evaluation tree ...
+-- Copyright   : (c) Grant Weyburne, 2019
+-- License     : BSD-3
+-- Maintainer  : gbwey9@gmail.com
+--
 module UtilP where
 import qualified GHC.TypeNats as GN
 import Data.Ratio
@@ -71,79 +78,15 @@ data TT a = TT { _tBool :: BoolT a  -- ^ the value at this root node
                , _tForest :: Forest PE } -- ^ the child nodes
                 deriving Show
 
--- | creates a Node for the evaluation tree
-mkNode :: POpts -> BoolT a -> [String] -> [Holder] -> TT a
-mkNode opts bt ss hs
-  | oLite opts = TT bt [] []
-  | otherwise = TT bt ss (map fromTTH hs)
+-- | contains the typed result from evaluating the expression tree to this point
+data BoolT a where
+  FailT :: String -> BoolT a  -- ^ failure with string
+  FalseT :: BoolT Bool        -- ^ false predicate
+  TrueT :: BoolT Bool         -- ^ true predicate
+  PresentT :: a -> BoolT a    -- ^ non predicate value
 
--- | creates a Boolean node
-mkNodeB :: POpts -> Bool -> [String] -> [Holder] -> TT Bool
-mkNodeB opts b = mkNode opts (bool FalseT TrueT b)
-
-partitionTTs :: [TT a] -> ([TT x], [TT a])
-partitionTTs = partitionEithers . map getTTLR
-
-getTTLR :: TT a -> Either (TT x) (TT a)
-getTTLR t =
-  case _tBool t of
-    FailT e -> Left $ t & tBool .~ FailT e
-    _ -> Right t
-
-partitionTTExtended :: (w, TT a) -> ([((w, TT x), String)], [(w, TT a)])
-partitionTTExtended z@(_, t) =
-  case _tBool t of
-    FailT e -> ([(z & _2 . tBool .~ FailT e, e)], [])
-    _ -> ([], [z])
-
-boolT2P :: Lens' (BoolT a) BoolP
-boolT2P afb = \case
-  FailT e -> FailT e <$ afb (FailP e)
-  TrueT -> TrueT <$ afb TrueP
-  FalseT -> FalseT <$ afb FalseP
-  PresentT a -> PresentT a <$ afb PresentP
-
-getValLRFromTT :: TT a -> Either String a
-getValLRFromTT = getValLR  . _tBool
-
-getValLR :: BoolT a -> Either String a
-getValLR = \case
-    FailT e -> Left e
-    TrueT -> Right True
-    FalseT -> Right False
-    PresentT a -> Right a
-
-shortTT :: BoolT Bool -> Either String String
-shortTT z = case z of
-    FailT e -> Left $ "FailT " <> e
-    TrueT -> Right $ show z
-    FalseT -> Left $ show z
-    PresentT True -> Right $ show z
-    PresentT False -> Left $ show z
-
-fromTT :: TT a -> Tree PE
-fromTT (TT bt ss tt) = Node (PE (bt ^. boolT2P) ss) tt
-
-fromTTH :: Holder -> Tree PE
-fromTTH (Holder x) = fromTT x
-
-data Holder = forall w . Holder { unHolder :: TT w }
-
-hh :: TT w -> Holder
-hh = Holder
-
-getValueLR :: POpts -> String -> TT a -> [Holder] -> Either (TT x) a
-getValueLR = getValueLRImpl True
-
-getValueLRHide :: POpts -> String -> TT a -> [Holder] -> Either (TT x) a
-getValueLRHide = getValueLRImpl False
-
--- elide FailT msg in tStrings[0] if showError is False
-getValueLRImpl :: Bool -> POpts -> String -> TT a -> [Holder] -> Either (TT x) a
-getValueLRImpl showError opts msg0 tt hs =
-  let tt' = hs ++ [hh tt]
-  in left (\e -> mkNode opts (FailT e) [msg0 <> if showError then (if null msg0 then "" else " ") <> "[" <> e <> "]" else ""] tt')
-            (getValLRFromTT tt)
+deriving instance Show a => Show (BoolT a)
+deriving instance Eq a => Eq (BoolT a)
 
 tBool :: Lens (TT a) (TT b) (BoolT a) (BoolT b)
 tBool afb s = (\b -> s { _tBool = b }) <$> afb (_tBool s)
@@ -157,15 +100,13 @@ tForest afb s = (\b -> s { _tForest = b }) <$> afb (_tForest s)
 pStrings :: Lens' PE [String]
 pStrings afb s = (\b -> s { _pStrings = b }) <$> afb (_pStrings s)
 
--- | contains the typed result from evaluating the expression tree to this point
-data BoolT a where
-  FailT :: String -> BoolT a  -- ^ failure with string
-  FalseT :: BoolT Bool        -- ^ false predicate
-  TrueT :: BoolT Bool         -- ^ true predicate
-  PresentT :: a -> BoolT a    -- ^ non predicate value
-
-deriving instance Show a => Show (BoolT a)
-deriving instance Eq a => Eq (BoolT a)
+-- | a lens from typed BoolT to the untyped BoolP
+boolT2P :: Lens' (BoolT a) BoolP
+boolT2P afb = \case
+  FailT e -> FailT e <$ afb (FailP e)
+  TrueT -> TrueT <$ afb TrueP
+  FalseT -> FalseT <$ afb FalseP
+  PresentT a -> PresentT a <$ afb PresentP
 
 -- | contains the untyped result from evaluating the expression tree to this point
 data BoolP =
@@ -198,19 +139,106 @@ data PE = PE { _pBool :: BoolP -- ^ holds the result of running the predicate
 pBool :: Lens' PE BoolP
 pBool afb (PE x y) = flip PE y <$> afb x
 
+-- | creates a Node for the evaluation tree
+mkNode :: POpts -> BoolT a -> [String] -> [Holder] -> TT a
+mkNode opts bt ss hs
+  | oLite opts = TT bt [] []
+  | otherwise = TT bt ss (map fromTTH hs)
+
+-- | creates a Boolean node for a predicate type
+mkNodeB :: POpts -> Bool -> [String] -> [Holder] -> TT Bool
+mkNodeB opts b = mkNode opts (bool FalseT TrueT b)
+
+-- | partition a tree into failures and non failures
+partitionTTs :: [TT a] -> ([TT x], [TT a])
+partitionTTs = partitionEithers . map getTTLR
+
+getTTLR :: TT a -> Either (TT x) (TT a)
+getTTLR t =
+  case _tBool t of
+    FailT e -> Left $ t & tBool .~ FailT e
+    _ -> Right t
+
+partitionTTExtended :: (w, TT a) -> ([((w, TT x), String)], [(w, TT a)])
+partitionTTExtended z@(_, t) =
+  case _tBool t of
+    FailT e -> ([(z & _2 . tBool .~ FailT e, e)], [])
+    _ -> ([], [z])
+
+getValLRFromTT :: TT a -> Either String a
+getValLRFromTT = getValLR  . _tBool
+
+-- | get the value from BoolT or fail
+getValLR :: BoolT a -> Either String a
+getValLR = \case
+    FailT e -> Left e
+    TrueT -> Right True
+    FalseT -> Right False
+    PresentT a -> Right a
+
+shortTT :: BoolT Bool -> Either String String
+shortTT z = case z of
+    FailT e -> Left $ "FailT " <> e
+    TrueT -> Right $ show z
+    FalseT -> Left $ show z
+    PresentT True -> Right $ show z
+    PresentT False -> Left $ show z
+
+-- | converts a typed tree to an untyped on for display
+fromTT :: TT a -> Tree PE
+fromTT (TT bt ss tt) = Node (PE (bt ^. boolT2P) ss) tt
+
+-- | a monomorphic container of trees
+data Holder = forall w . Holder { unHolder :: TT w }
+
+-- | converts a typed tree into an untyped one
+fromTTH :: Holder -> Tree PE
+fromTTH (Holder x) = fromTT x
+
+-- | convenience method to wrap a typed tree
+hh :: TT w -> Holder
+hh = Holder
+
+-- | see 'getValueLRImpl' : add more detail to the tree if there are errors
+getValueLR :: POpts -> String -> TT a -> [Holder] -> Either (TT x) a
+getValueLR = getValueLRImpl True
+
+-- | see 'getValueLRImpl' : add less detail to the tree if there are errors
+getValueLRHide :: POpts -> String -> TT a -> [Holder] -> Either (TT x) a
+getValueLRHide = getValueLRImpl False
+
+-- elide FailT msg in tStrings[0] if showError is False
+-- | a helper method to add extra context on failure to the tree or extract the value at the root of the tree
+getValueLRImpl :: Bool -> POpts -> String -> TT a -> [Holder] -> Either (TT x) a
+getValueLRImpl showError opts msg0 tt hs =
+  let tt' = hs ++ [hh tt]
+  in left (\e -> mkNode
+                   opts
+                  (FailT e)
+                   [msg0 <> if showError then (if null msg0 then "" else " ") <> "[" <> e <> "]"
+                            else ""]
+                  tt'
+          )
+          (getValLRFromTT tt)
+
 -- | the color palette for displaying the expression tree
 newtype PColor = PColor { unPColor :: BoolP -> String -> String }
 
 -- | customizable options
 data POpts = POpts { oShowA :: Maybe Int -- ^ length of data to display for 'showA'
                    , oDebug :: !Int  -- ^ debug level
-                   , oDisp :: DisP -- ^ how to display the tree orientation and unicode etc
+                   , oDisp :: Disp -- ^ how to display the tree orientation and unicode etc
                    , oHide :: !Int -- ^ hides one layer of a tree
                    , oColor :: !(String, PColor) -- ^ color palette used
                    , oLite :: !Bool
                    }
 
-data DisP = NormalDisp | Vertical !Int | Unicode | PPTree deriving (Show, Eq)
+-- | display format for the tree
+data Disp = NormalDisp -- ^ draw horizontal tree
+          | Vertical !Int -- ^ draw vertical tree
+          | Unicode  -- ^ use unicode
+          | PPTree  -- ^ pretty printer tree
+          deriving (Show, Eq)
 
 instance Show POpts where
   show POpts {..} =
@@ -235,14 +263,14 @@ defOpts = POpts
 ol :: POpts
 ol = o0 { oColor = color0, oLite = True }
 
--- | return the summary
+-- | skip the detail and just return the summary but keep the colors
 olc :: POpts
 olc = ol { oColor = color1 }
 
 o0 :: POpts
 o0 = defOpts { oColor = color0 }
 
--- | skip colors and return the details
+-- | skip colors
 o02 :: POpts
 o02 = o2 { oColor = color0 }
 
@@ -261,12 +289,15 @@ o3 :: POpts
 o3 = defOpts { oDebug = 3, oShowA = Just 400 }
 
 
+-- | helper method to set the width of data to be shown in the tree
 seta :: Int -> POpts -> POpts
 seta w o = o { oShowA = Just w }
 
+-- | helper method to display the tree vertically
 setv :: Int -> POpts -> POpts
 setv w o = o { oDisp = Vertical w }
 
+-- | helper method to set the debug level
 setd :: Int -> POpts -> POpts
 setd v o = o { oDebug = v }
 
@@ -324,7 +355,7 @@ defu = setu o1
 defv' :: Width -> POpts
 defv' w = setv w o1
 
--- | fix a PresentT Bool to TrueT or FalseT
+-- | fix PresentT Bool to TrueT or FalseT
 fixBoolT :: TT Bool -> TT Bool
 fixBoolT t =
   case t ^? tBool . _PresentT of
@@ -362,29 +393,30 @@ showA' o i s a = showLit' o i s (show a)
 
 -- | Regex options for Rescan Resplit Re etc
 data ROpt =
-    Anchored -- Force pattern anchoring
-  | Auto_callout -- Compile automatic callouts
---  | Bsr_anycrlf -- \R matches only CR, LF, or CrlF
---  | Bsr_unicode -- \R matches all Unicode line endings
-  | Caseless -- Do caseless matching
-  | Dollar_endonly -- $ not to match newline at end
-  | Dotall -- matches anything including NL
-  | Dupnames -- Allow duplicate names for subpatterns
-  | Extended -- Ignore whitespace and # comments
-  | Extra -- PCRE extra features (not much use currently)
-  | Firstline -- Force matching to be before newline
-  | Multiline -- ^ and $ match newlines within data
---  | Newline_any -- Recognize any Unicode newline sequence
---  | Newline_anycrlf -- Recognize CR, LF, and CrlF as newline sequences
-  | Newline_cr -- Set CR as the newline sequence
-  | Newline_crlf -- Set CrlF as the newline sequence
-  | Newline_lf -- Set LF as the newline sequence
-  | No_auto_capture -- Disable numbered capturing parentheses (named ones available)
-  | Ungreedy -- Invert greediness of quantifiers
-  | Utf8 -- Run in UTF--8 mode
-  | No_utf8_check -- Do not check the pattern for UTF-8 validity
+    Anchored -- ^ Force pattern anchoring
+  | Auto_callout -- ^ Compile automatic callouts
+--  | Bsr_anycrlf --  \R matches only CR, LF, or CrlF
+--  | Bsr_unicode -- ^ \R matches all Unicode line endings
+  | Caseless -- ^ Do caseless matching
+  | Dollar_endonly -- ^ dollar not to match newline at end
+  | Dotall -- ^ matches anything including NL
+  | Dupnames -- ^ Allow duplicate names for subpatterns
+  | Extended -- ^ Ignore whitespace and # comments
+  | Extra -- ^ PCRE extra features (not much use currently)
+  | Firstline -- ^ Force matching to be before newline
+  | Multiline -- ^ caret and dollar match newlines within data
+--  | Newline_any -- ^ Recognize any Unicode newline sequence
+--  | Newline_anycrlf -- ^ Recognize CR, LF, and CrlF as newline sequences
+  | Newline_cr -- ^ Set CR as the newline sequence
+  | Newline_crlf -- ^ Set CrlF as the newline sequence
+  | Newline_lf -- ^ Set LF as the newline sequence
+  | No_auto_capture -- ^ Disable numbered capturing parentheses (named ones available)
+  | Ungreedy -- ^ Invert greediness of quantifiers
+  | Utf8 -- ^ Run in UTF--8 mode
+  | No_utf8_check -- ^ Do not check the pattern for UTF-8 validity
   deriving (Show,Eq,Ord,Enum,Bounded)
 
+-- | compile a regex using the type level symbol
 compileRegex :: forall s rs a . (KnownSymbol s, GetROpts rs)
   => POpts -> String -> Either (TT a) RH.Regex
 compileRegex opts nm =
@@ -394,6 +426,7 @@ compileRegex opts nm =
     in flip left (RH.compileM (B8.pack s) rs)
           $ \e -> mkNode opts (FailT "Regex failed to compile") [mm <> " compile failed with regex msg[" <> e <> "]"] []
 
+-- | extract the regex options from the type level list
 class GetROpts (os :: [ROpt]) where
   getROpts :: [RL.PCREOption]
 instance GetROpts '[] where
@@ -401,6 +434,7 @@ instance GetROpts '[] where
 instance (GetROpt r, GetROpts rs) => GetROpts (r ': rs) where
   getROpts = getROpt @r : getROpts @rs
 
+-- | convert type level regex option to the value level
 class GetROpt (o :: ROpt) where
   getROpt :: RL.PCREOption
 instance GetROpt 'Anchored where getROpt = RL.anchored
@@ -425,12 +459,8 @@ instance GetROpt 'Ungreedy where getROpt = RL.ungreedy
 instance GetROpt 'Utf8 where getROpt = RL.utf8
 instance GetROpt 'No_utf8_check where getROpt = RL.no_utf8_check
 
-type CVal = Either String RH.Regex
-
-formatList :: forall x z . Show x => POpts -> [((Int, x), z)] -> String
-formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showA' opts 0 ", a=" a <> ")")
-
-splitAndP :: Show x =>
+-- | extract values from the trees or if there are errors returned a tree with added context
+splitAndAlign :: Show x =>
                     POpts
                     -> [String]
                     -> [((Int, x), TT a)]
@@ -438,14 +468,19 @@ splitAndP :: Show x =>
                               ([a]
                               ,[((Int, x), TT a)]
                               )
-splitAndP opts msgs ts =
+splitAndAlign opts msgs ts =
   case mconcat $ map partitionTTExtended ts of
-     (excs@(e:_), _) -> -- displays the first error only! getBoolP (snd e)
-          --let err = intercalate " | " (map snd excs)
-              --bads = groupErrors $ toList err -- lefts (map (fst.snd) ts)
-          Left $ mkNode opts (FailT (groupErrors (map snd excs))) (msgs <> ["excs=" <> show (length excs) <> " " <> formatList opts [fst e]]) (map (hh . snd) ts)
+     (excs@(e:_), _) ->
+          Left $ mkNode opts
+                       (FailT (groupErrors (map snd excs)))
+                       (msgs <> ["excs=" <> show (length excs) <> " " <> formatList opts [fst e]])
+                       (map (hh . snd) ts)
      ([], tfs) -> Right (valsFromTTs (map snd ts), tfs)
 
+formatList :: forall x z . Show x => POpts -> [((Int, x), z)] -> String
+formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showA' opts 0 ", a=" a <> ")")
+
+-- | extract all root values from a list of trees
 valsFromTTs :: [TT a] -> [a]
 valsFromTTs = concatMap toList
 
@@ -461,6 +496,7 @@ isTrue = and
 
 -- cant use: is / isn't / has cos only FailT will be False: use Fold
 -- this is more specific to TrueP FalseP
+-- | prism from BoolT to Bool
 _boolT :: Prism' (BoolT Bool) Bool
 _boolT = prism' (bool FalseT TrueT)
          $ \case
@@ -498,10 +534,12 @@ imply :: Bool -> Bool -> Bool
 imply p q = not p || q
 
 -- msg is only used for an exception: up to the calling programs to deal with ading msg to good and bad
+-- | applies a boolean binary operation against the values from two boolean trees
 evalBinStrict :: POpts
                  -> String
                  -> (Bool -> Bool -> Bool)
-                 -> TT Bool -> TT Bool
+                 -> TT Bool
+                 -> TT Bool
                  -> TT Bool
 evalBinStrict opts s fn ll rr =
   case getValueLR opts (s <> " p") ll [Holder rr] of
@@ -518,10 +556,12 @@ data Rat (pos :: Bool) (num :: Nat) (den :: Nat)
 type Pos (n :: Nat) = Rat 'True n 1
 type Neg (n :: Nat) = Rat 'False n 1
 
+-- | constructs a valid positive rational number
 type family PosR (n :: Nat) (d :: Nat) where
   PosR n 0 = GL.TypeError ('GL.Text "PosR has a 0 denominator where numerator=" ':<>: 'GL.ShowType n)
   PosR n d = Rat 'True n d
 
+-- | constructs a valid negative rational number
 type family NegR (n :: Nat) (d :: Nat) where
   NegR n 0 = GL.TypeError ('GL.Text "NegR has a 0 denominator where numerator=" ':<>: 'GL.ShowType n)
   NegR n d = Rat 'False n d
@@ -537,6 +577,7 @@ type family BetweenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
              ':<>: 'GL.Text " and "
              ':<>: 'GL.ShowType n)
 
+-- | makes zero invalid at the type level
 type NotZeroT v = FailIfT (v DE.== 0) ('GL.Text "found zero value")
 
 -- | typelevel Null on Symbol
@@ -544,6 +585,7 @@ type family NullT (x :: Symbol) :: Bool where
   NullT ("" :: Symbol) = 'True
   NullT _ = 'False
 
+-- | helper method to fail with an error if the True
 type family FailIfT (b :: Bool) (msg :: GL.ErrorMessage) :: Constraint where
   FailIfT 'False _ = ()
   FailIfT 'True e = GL.TypeError e
@@ -580,6 +622,7 @@ type family CmpRat (m :: k) (n :: k1) :: Ordering where
        (GN.CmpNat (n GN.* d1) (n1 GN.* d))
        (GN.CmpNat (GN.Div n d) (GN.Div n1 d1))
 
+-- | get a list of rationals from the type level
 class GetRats as where
   getRats :: [Rational]
 instance GetRats '[] where
@@ -668,14 +711,17 @@ instance GetBool 'False where
 data N = S N | Z
 
 -- a shim for TupleListImpl used mainly by Printfn
+-- | inductive numbers
 type family ToN (n :: Nat) :: N where
   ToN 0 = 'Z
   ToN n = 'S (ToN (n GL.- 1))
 
+-- | converts an inductive number to Nat
 type family FromN (n :: N) :: Nat where
   FromN 'Z = 0
   FromN ('S n) = 1 GL.+ FromN n
 
+-- | extract N from the type level to Int
 class GetNatN (n :: N) where
   getNatN :: Int
 instance GetNatN 'Z where
@@ -686,7 +732,7 @@ instance GetNatN n => GetNatN ('S n) where
 getN :: Typeable t => Proxy (t :: N) -> Int
 getN p = length (show (typeRep p)) `div` 5
 
-data OrderingP = Cgt | Cge | Ceq | Cle | Clt | Cne deriving (Show,Eq,Enum,Bounded)
+data OrderingP = Cgt | Cge | Ceq | Cle | Clt | Cne deriving (Show, Eq, Enum, Bounded)
 
 class GetOrd (k :: OrderingP) where
   getOrd :: Ord a => (String, a -> a -> Bool)

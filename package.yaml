@@ -57,3 +57,15 @@ tests:
     - predicate-typed
     - stm
     - easytest
+  doctests:
+    main: doctests.hs
+    other-modules: []
+    ghc-options:
+    - -threaded
+    - -fomit-interface-pragmas
+    source-dirs:
+    - .
+    - src
+    dependencies:
+    - predicate-typed
+    - doctest

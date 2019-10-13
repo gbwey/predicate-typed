@@ -25,7 +25,29 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
-module RefinedE where
+-- |
+-- Module      : RefinedE
+-- Description : Refinement type that fakes Refined3 using only Refined
+-- Copyright   : (c) Grant Weyburne, 2019
+-- License     : BSD-3
+-- Maintainer  : gbwey9@gmail.com
+--
+module RefinedE (
+    mkProxyE
+  , withRefinedETP
+  , newRefinedE
+  , newRefinedEP
+  , evalEP
+  , evalE
+  , prtE
+  , prtELPure
+  , msgRResults
+  , proxyEToV
+  , mkProxy3E
+  , Results (..)
+  , RResults (..)
+  , RefinedEC
+  ) where
 import Refined
 import Predicate
 import UtilP
@@ -109,7 +131,7 @@ evalE opts i = runIdentity $ do
        Right a -> do
          rr@(fromTT -> t2) <- evalBool (Proxy @op) opts a
          pure $ case getValLR (_tBool rr) of
-              Right True -> Right (Refined a)
+              Right True -> Right $ unsafeRefined a
               Right False -> Left (RTFalse a t1 t2)
               Left e -> Left (RTF a t1 e t2)
        Left e -> pure $ Left (RF e t1)

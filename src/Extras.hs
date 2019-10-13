@@ -27,6 +27,13 @@
 {-# LANGUAGE TypeInType #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE OverloadedLists #-}
+-- |
+-- Module      : Extras
+-- Description : Very experimental P instances that didn't quite make it
+-- Copyright   : (c) Grant Weyburne, 2019
+-- License     : BSD-3
+-- Maintainer  : gbwey9@gmail.com
+--
 module Extras where
 import UtilP
 import Predicate
@@ -39,6 +46,7 @@ import Control.Lens hiding (strict,iall)
 import Control.Applicative
 import Control.Monad
 import Control.Arrow
+import Control.Comonad
 
 data Test1
 
@@ -282,7 +290,7 @@ instance P F2X (a -> (b,c)) where
   type PP F2X (a -> (b,c)) = a -> c
   eval _ opts ab = pure $ mkNode opts (PresentT (snd . ab)) ["F2X"] []
 
--- has the advantage over FidP that we can calculate the type without running: once you use >> you are running stuff!
+-- has the advantage over Fidp that we can calculate the type without running: once you use >> you are running it
 data Fid' t
 type Fid (t :: Type) = Fid' (Hole t)
 
@@ -290,23 +298,23 @@ instance P (Fid' t) a where
   type PP (Fid' t) a = PP t a -> PP t a
   eval _ opts _ = pure $ mkNode opts (PresentT id) ["Fid"] []
 
-data FidP
-type FidpP = 'Proxy >> FidP
-type Fidpt (t :: Type) = Proxy t >> FidP
+data Fidp
+type FidpP = 'Proxy >> Fidp
+type Fidpt (t :: Type) = Proxy t >> Fidp
 
-instance P FidP (Proxy (a :: Type)) where
-  type PP FidP (Proxy a) = a -> a
-  eval _ opts _ = pure $ mkNode opts (PresentT id) ["FidP"] []
+instance P Fidp (Proxy (a :: Type)) where
+  type PP Fidp (Proxy a) = a -> a
+  eval _ opts _ = pure $ mkNode opts (PresentT id) ["Fidp"] []
 
 dup :: a -> (a,a)
 dup = join (,)
 
-data FduP' t
-type FduP (t :: Type) = FduP' (Hole t)
+data Fdup' t
+type Fdup (t :: Type) = Fdup' (Hole t)
 
-instance P (FduP' t) a where
-  type PP (FduP' t) a = PP t a -> (PP t a, PP t a)
-  eval _ opts _a = pure $ mkNode opts (PresentT dup) ["FduP"] []
+instance P (Fdup' t) a where
+  type PP (Fdup' t) a = PP t a -> (PP t a, PP t a)
+  eval _ opts _a = pure $ mkNode opts (PresentT dup) ["Fdup"] []
 
 data Fshow
 
@@ -374,7 +382,7 @@ swapt (a,b) = (b,a)
 
 -- normal functions on 2 args
 
-type Bothx p q r = p *** q >> r Fst Snd -- it gets confused with the types for complex stuff
+type Bothx p q r = p *** q >> r Fst Snd -- it gets confused with the types for more complex situations
 -- also doesnt partially apply a predicate but an Adt!
 
 data Both p q
@@ -519,4 +527,151 @@ type family ApplyMonadT (ma :: Type) (amb :: Type) :: Type where
        ':<>: 'GL.ShowType ma
        ':$$: 'GL.Text "a -> m b = "
        ':<>: 'GL.ShowType amb)
+
+data Extend p q
+type p <<= q = Extend p q
+infixl 4 <<=
+
+type p =>> q = q <<= p
+infixr 1 =>>
+
+instance (P p x
+        , P q x
+        , Show (w b)
+        , ApplyComonadT (PP p x) (PP q x) ~ w b
+        , Comonad w
+        , PP p x ~ (w a -> b)
+        , PP q x ~ w a
+        ) => P (Extend p q) x where
+  type PP (Extend p q) x = ApplyComonadT (PP p x) (PP q x)
+  eval _ opts x = do
+    let msg0 = "(<<=)"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let d = extend p q
+        in mkNode opts (PresentT d) [msg0 <> show0 opts " " d] [hh pp, hh qq]
+
+type family ApplyComonadT (wab :: Type) (wa :: Type) :: Type where
+  ApplyComonadT (w a -> b) (w a) = w b
+  ApplyComonadT wab wa = GL.TypeError (
+       'GL.Text "ApplyComonadT: (w a -> b) (w a) but found something else"
+       ':$$: 'GL.Text "w a -> b = "
+       ':<>: 'GL.ShowType wab
+       ':$$: 'GL.Text "w a = "
+       ':<>: 'GL.ShowType wa)
+
+data Mark (t :: Type) p
+
+instance P p a => P (Mark t p) a where
+  type PP (Mark t p) a = PP p a
+  eval _ opts a = do
+    let msg0 = "Mark"
+    pp <- eval (Proxy @p) opts a
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right _p -> mkNode opts (_tBool pp) [msg0] [hh pp]
+
+
+type ToProxylist = 'Proxy >> Proxylist
+
+data Proxylist
+
+instance P Proxylist (proxy (a :: Type)) where
+  type PP Proxylist (proxy a) = Proxy [a]
+  eval _ opts _pa = pure $ mkNode opts (PresentT (Proxy @[a])) ["Proxylist"] []
+
+data Proxyfaa
+type Proxyfaa' = 'Proxy >> Proxyfaa
+
+instance P Proxyfaa (proxy (f a)) where
+  type PP Proxyfaa (proxy (f a)) = Proxy a
+  eval _ opts _ = pure $ mkNode opts (PresentT (Proxy @a)) ["Proxyfaa"] []
+
+data Proxyfaba
+type Proxyfaba' = 'Proxy >> Proxyfaba
+
+instance P Proxyfaba (proxy (f a b)) where
+  type PP Proxyfaba (proxy (f a b)) = Proxy a
+  eval _ opts _ = pure $ mkNode opts (PresentT (Proxy @a)) ["Proxyfaba"] []
+
+data Proxyfabb
+type Proxyfabb' = 'Proxy >> Proxyfabb
+
+instance P Proxyfabb (proxy (f a b)) where
+  type PP Proxyfabb (proxy (f a b)) = Proxy b
+  eval _ opts _ = pure $ mkNode opts (PresentT (Proxy @b)) ["Proxyfabb"] []
+
+
+type Lefts' = ListOf LeftToMaybe
+type Rights' = ListOf RightToMaybe
+type PartitionEithers' = '(Lefts', Rights')
+
+type Thiss' = ListOf ThisToMaybe
+type Thats' = ListOf ThatToMaybe
+type Theses' = ListOf TheseToMaybe
+type PartitionThese' = '(Thiss', '(Thats', Theses'))
+
+type ListOf p = Concat << MapF (GDef_PA p (Proxylist >> MemptyProxy) (Pure [] Snd) Id)
+
+
+data Fmap_SWAP
+instance (Swapped p, Functor f) => P Fmap_SWAP (f (p a b)) where
+  type PP Fmap_SWAP (f (p a b)) = f (p b a)
+  eval _ opts mb = pure $ mkNode opts (PresentT (view swapped <$> mb)) ["Fmap_SWAP"] []
+
+data Fmap_SEMI
+instance (Semigroup s, Functor f) => P Fmap_SEMI (f (s,s)) where
+  type PP Fmap_SEMI (f (s,s)) = f s
+  eval _ opts mb = pure $ mkNode opts (PresentT (uncurry (<>) <$> mb)) ["Fmap_SEMI"] []
+
+data Fmap_ALT
+instance (Alternative t, Functor f) => P Fmap_ALT (f (t a,t a)) where
+  type PP Fmap_ALT (f (t a,t a)) = f (t a)
+  eval _ opts mb = pure $ mkNode opts (PresentT (uncurry (<|>) <$> mb)) ["Fmap_ALT"] []
+
+data Fmap_APP
+instance (Applicative t, Functor f) => P Fmap_APP (f (t a,t b)) where
+  type PP Fmap_APP (f (t a,t b)) = f (t (a,b))
+  eval _ opts mb = pure $ mkNode opts (PresentT (uncurry (liftA2 (,)) <$> mb)) ["Fmap_APP"] []
+
+data Fmap_APPK
+instance (Applicative t, Functor f) => P Fmap_APPK (f (t a,t x)) where
+  type PP Fmap_APPK (f (t a,t x)) = f (t a)
+  eval _ opts mb = pure $ mkNode opts (PresentT (uncurry (<*) <$> mb)) ["Fmap_APPK"] []
+
+data Fmap_CONS
+instance (Functor f
+        , Cons s s (ConsT s) (ConsT s)
+        , ConsT s ~ a
+        ) => P Fmap_CONS (f (a, s)) where
+  type PP Fmap_CONS (f (a,s)) = f s
+  eval _ opts mb = pure $ mkNode opts (PresentT (uncurry cons <$> mb)) ["Fmap_CONS"] []
+
+data Fmap_SNOC
+instance (Functor f
+        , Snoc s s (ConsT s) (ConsT s)
+        , ConsT s ~ a
+        ) => P Fmap_SNOC (f (s, a)) where
+  type PP Fmap_SNOC (f (s,a)) = f s
+  eval _ opts mb = pure $ mkNode opts (PresentT (uncurry snoc <$> mb)) ["Fmap_SNOC"] []
+
+data Fmap_INS p q
+instance (Functor f
+        , P p x
+        , P q x
+        , PP p x ~ b
+        , PP q x ~ f a
+        ) => P (Fmap_INS p q) x where
+  type PP (Fmap_INS p q) x = Fmap_InsT (PP q x) (PP p x)
+  eval _ opts x = do
+    let msg0 = "Fmap_INS"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) -> mkNode opts (PresentT ((p,) <$> q)) ["Fmap_INS"] [hh pp, hh qq]
+
+type family Fmap_InsT fa b where
+  Fmap_InsT (f a) b = f (b,a)
 

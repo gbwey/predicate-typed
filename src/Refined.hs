@@ -27,10 +27,19 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE StandaloneDeriving #-}
+-- |
+-- Module      : Refined
+-- Description : Traditional refinement type with only one type
+-- Copyright   : (c) Grant Weyburne, 2019
+-- License     : BSD-3
+-- Maintainer  : gbwey9@gmail.com
+--
 module Refined (
-    Refined (..)
+    Refined
+  , unsafeRefined
   , rval
   , RefinedC
+  , arbitraryR
   , rapply
   , rapply0
   , rapply1
@@ -60,8 +69,10 @@ import qualified Language.Haskell.TH.Syntax as TH
 import System.Console.Pretty
 import Test.QuickCheck
 
--- hide constructor
 newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
+
+unsafeRefined :: forall p a . a -> Refined p a
+unsafeRefined = Refined
 
 instance (RefinedC p a, Read a) => Read (Refined p a) where
   readsPrec n s = do
@@ -86,11 +97,18 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
                   case mr of
                     Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
                     Just r -> return r
-
+{-
 -- need something simpler
 instance (Arbitrary a, RefinedC p a) => Arbitrary (Refined p a) where
 --  arbitrary = Refined <$> suchThat (arbitrary @a) (isJust . snd . runIdentity . newRefined @p)
   arbitrary = suchThatMap (arbitrary @a) (snd . runIdentity . newRefined @p o2)
+-}
+arbitraryR :: forall p a.
+   ( Arbitrary a
+   , RefinedC p a
+   ) => Gen (Refined p a)
+arbitraryR = suchThatMap (arbitrary @a) (snd . runIdentity . newRefined @p o2)
+
 
 rapply :: forall m p a . (RefinedC p a, Monad m)
   => POpts
