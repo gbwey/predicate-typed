@@ -38,8 +38,8 @@ module Refined3 (
     unsafeRefined3
   , Refined3C
   , Refined3(in3,out3)
-  , arbitraryR3P
-  , arbitraryR3PFun
+  , arbRefined3
+  , arbRefined3With
   , mkProxy3
   , mkProxy3P
   , MkProxyT
@@ -54,6 +54,8 @@ module Refined3 (
   , rapply3
   , rapply3P
   , prtEval3P
+  , prtEval3PIO
+  , prtEval3
   , eval3P
   , eval3
   , eval3M
@@ -74,16 +76,13 @@ import Control.Lens hiding (strict,iall)
 import Data.Tree
 import Data.Proxy
 import Control.Monad.Except
-import Control.Monad.Writer hiding (First)
+import Control.Monad.Writer (tell)
 import Data.Aeson
 import qualified Language.Haskell.TH.Syntax as TH
 import System.Console.Pretty
 import Test.QuickCheck
 
--- | Refinement type that differentiates input type from output type
---
--- If we fix the input type to String then it looks like read into internal type / validate internal type / show internal type.
--- Although the most common scenario is String as input, you are free to choose any input type.
+-- | Refinement type that differentiates the input type from output type
 --
 -- @
 -- \'i\' is the input type
@@ -93,30 +92,44 @@ import Test.QuickCheck
 -- PP fmt (PP ip i) should be valid input to Refined3
 -- @
 --
+-- If we fix the input type to String then it looks similar to:
+-- 1. read into an internal type
+-- 2. validate internal type with a predicate function
+-- 3. show/format the  internal type
+--
+-- Although the most common scenario is String as input, you are free to choose any input type you like
+--
 -- >>> :set -XTypeApplications
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeOperators
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prt3 ol $ eval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x") ol "00fe"
+-- >>> prtEval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x") ol "00fe"
 -- Right (Refined3 {in3 = 254, out3 = "fe"})
 --
--- >>> prt3 ol $ eval3 @(ReadBase Int 16) @(Lt 253) @(Printf "%x") ol "00fe"
+-- >>> prtEval3 @(ReadBase Int 16) @(Lt 253) @(Printf "%x") ol "00fe"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prt3 ol $ eval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x") ol "00fg"
+-- >>> prtEval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x") ol "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prt3 ol $ eval3 @(Resplit "\\." >> Map (ReadP Int)) @(Guard (Len >> Printf "found length=%d") (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1.5"
+-- >>> prtEval3 @(Resplit "\\." >> Map (ReadP Int)) @(Guard (Len >> Printf "found length=%d") (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> prt3 ol $ eval3 @(Resplit "\\." >> Map (ReadP Int)) @(Guard (Len >> Printf "found length=%d") (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1"
+-- >>> prtEval3 @(Resplit "\\." >> Map (ReadP Int)) @(Guard (Len >> Printf "found length=%d") (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1"
 -- Right (Refined3 {in3 = [198,162,3,1], out3 = "198.162.003.001"})
 --
--- >>> prt3 ol $ eval3 @(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id) @(Guard "expected a Sunday" (Snd >> Snd >> Same 7) >> 'True) @(Fst >> UnMkDay) ol (2019,(10,13))
+-- >>> prtEval3 @(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id) @(Guard "expected a Sunday" (Snd >> Snd == 7) >> 'True) @(Fst >> UnMkDay) ol (2019,(10,13))
 -- Right (Refined3 {in3 = (2019-10-13,(41,7)), out3 = (2019,(10,13))})
 --
--- >>> prt3 ol $ eval3 @(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id) @(Guard "expected a Sunday" (Snd >> Snd >> Same 7) >> 'True) @(Fst >> UnMkDay) ol (2019,(10,12))
+-- >>> prtEval3 @(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id) @(Guard "expected a Sunday" (Snd >> Snd == 7) >> 'True) @(Fst >> UnMkDay) ol (2019,(10,12))
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
+--
+-- >>> type T4 k = '(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id, Guard "expected a Sunday" (Snd >> Snd == 7) >> 'True, Fst >> UnMkDay, k)
+-- >>> prtEval3P (Proxy @(T4 _)) ol (2019,(10,12))
+-- Left Step 2. Failed Boolean Check(op) | expected a Sunday
+--
+-- >>> prtEval3P (Proxy @(T4 _)) ol (2019,(10,13))
+-- Right (Refined3 {in3 = (2019-10-13,(41,7)), out3 = (2019,(10,13))})
 --
 
 data Refined3 ip op fmt i = Refined3 { in3 :: PP ip i, out3 :: PP fmt (PP ip i) }
@@ -165,14 +178,14 @@ instance (Arbitrary (PP ip i)
         ) => Arbitrary (Refined3 ip op fmt i) where
   arbitrary = suchThatMap (arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt o2
 -}
-arbitraryR3P :: forall ip op fmt i .
+arbRefined3 :: forall ip op fmt i .
    ( Arbitrary (PP ip i)
    , Refined3C ip op fmt i
    ) => Proxy '(ip,op,fmt,i) -> POpts -> Gen (Refined3 ip op fmt i)
-arbitraryR3P _ = suchThatMap (arbitrary @(PP ip i)) . eval3MQuickIdentity @ip @op @fmt
+arbRefined3 _ = suchThatMap (arbitrary @(PP ip i)) . eval3MQuickIdentity @ip @op @fmt
 
 -- help things along a little
-arbitraryR3PFun ::
+arbRefined3With ::
     forall ip op fmt i
   . (Arbitrary (PP ip i)
    , Refined3C ip op fmt i)
@@ -180,7 +193,7 @@ arbitraryR3PFun ::
   -> POpts
   -> (PP ip i -> PP ip i)
   -> Gen (Refined3 ip op fmt i)
-arbitraryR3PFun _ opts f =
+arbRefined3With _ opts f =
   suchThatMap (f <$> arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt opts
 
 mkProxy3 :: forall ip op fmt i . Refined3C ip op fmt i => Proxy '(ip,op,fmt,i)
@@ -367,7 +380,7 @@ data RResults a b =
      | RTTrueT a (Tree PE) (Tree PE) b (Tree PE)      -- Right a + Right True + Right b
      deriving Show
 
-prtEval3P :: forall ip op fmt i proxy
+prtEval3PIO :: forall ip op fmt i proxy
   . ( Refined3C ip op fmt i
     , Show (PP ip i)
     , Show i)
@@ -375,9 +388,33 @@ prtEval3P :: forall ip op fmt i proxy
   -> POpts
   -> i
   -> IO (Either String (Refined3 ip op fmt i))
-prtEval3P _ opts i = do
+prtEval3PIO _ opts i = do
   x <- eval3M opts i
   prt3IO opts x
+
+prtEval3 :: forall ip op fmt i
+  . ( Refined3C ip op fmt i
+    , Show (PP ip i)
+    , Show i)
+  => POpts
+  -> i
+  -> Either Msg3 (Refined3 ip op fmt i)
+prtEval3 opts i =
+  let x = eval3 opts i
+  in prt3 opts x
+
+prtEval3P :: forall ip op fmt i proxy
+  . ( Refined3C ip op fmt i
+    , Show (PP ip i)
+    , Show i)
+  => proxy '(ip,op,fmt,i)
+  -> POpts
+  -> i
+  -> Either Msg3 (Refined3 ip op fmt i)
+prtEval3P _ opts i =
+  let x = eval3 opts i
+  in prt3 opts x
+
 
 -- pass in a proxy (use mkProxy to package all the types together as a 4-tuple)
 -- ip converts input 'i' to format used for op and fmt
@@ -492,7 +529,7 @@ eval3X opts i = runIdentity $ do
 prt3IO :: (Show a, Show b) => POpts -> (RResults a b, Maybe r) -> IO (Either String r)
 prt3IO opts (ret,mr) = do
   let m3 = prt3Impl opts ret
-  putStrLn $ m3Long m3
+  unless (oLite opts) $ putStrLn $ m3Long m3
   return $ maybe (Left (m3Desc m3 <> " | " <> m3Short m3)) Right mr
 
 prt3 :: (Show a, Show b) => POpts -> (RResults a b, Maybe r) -> Either Msg3 r

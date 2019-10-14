@@ -954,6 +954,8 @@ instance P I a where
 
 -- | identity function that displays the input
 --
+--   even more constraints than 'I' so we might need to explicitly add types
+
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
 --   >>> pl @Id 23
@@ -967,13 +969,14 @@ instance Show a => P Id a where
 
 -- | identity function that also displays the type information for debugging
 --
+--   even more constraints than 'Id' so we might need to explicitly add types (Typeable)
+--
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
 --   >>> pl @IdT 23
 --   Present 23
 --   PresentT 23
-data IdT -- typeable and showable version of Id
--- more constraints so have to explicitly add types in code more so than just Show!
+data IdT
 instance (Typeable a, Show a) => P IdT a where
   type PP IdT a = a
   eval _ opts a =
@@ -1602,75 +1605,6 @@ instance (Show a
                         Left e -> e
                         Right q -> mkNode opts (PresentT (p,q)) [msg <> show0 opts " " (p,q) <> showA opts " | " (These a b)] [hh pp, hh qq]
          _ -> pure $ mkNode opts (FailT (msg <> " found " <> showThese th)) [msg <> " found " <> showThese th] []
-
--- | sets the 'BoolT' value to 'TrueT'
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @'TrueT True
---   True
---   TrueT
---   >>> pl @'TrueT False
---   True
---   TrueT
-instance a ~ Bool => P 'TrueT a where
-  type PP 'TrueT a = a
-  eval _ opts _ =
-    let msg = "'TrueT"
-    in pure $ mkNodeB opts True [msg] []
-
--- | sets the 'BoolT' value to 'FalseT'
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @'FalseT True
---   False
---   FalseT
---
---   >>> pl @'FalseT False
---   False
---   FalseT
-instance a ~ Bool => P 'FalseT a where
-  type PP 'FalseT a = a
-  eval _ opts _ =
-    let msg = "'FalseT"
-    in pure $ mkNodeB opts False [msg] []
-
--- | sets the 'BoolT' wrapper to 'PresentT'
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @('PresentT Id) 13
---   Present 13
---   PresentT 13
---
---   >>> pl @('PresentT 'True) 13
---   Present True
---   PresentT True
-instance (P p x
-        , Show (PP p x)
-        ) => P ('PresentT p) x where
-  type PP ('PresentT p) x = PP p x
-  eval _ opts x = do
-    let msg = "'PresentT"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg pp [] of
-      Left e -> e
-      Right p -> mkNode opts (PresentT p) [msg <> show0 opts " " p] []
-
--- | sets the 'BoolT' wrapper to 'FailT'
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @('FailT '[]) ()
---   Error 'FailT
---   FailT "'FailT"
---
-instance Show a => P ('FailT e) a where
-  type PP ('FailT e) a = a
-  eval _ opts a =
-    let msg = "'FailT"
-    in pure $ mkNode opts (FailT msg) [msg <> showA opts " | " a] []
 
 -- | converts the value to the corresponding 'Proxy'
 --
@@ -2426,7 +2360,7 @@ instance (Show (PP p x)
         let d = p ^. _Unwrapped'
         in mkNode opts (PresentT d) ["Wrap" <> show0 opts " " d <> showA opts " | " p] [hh pp]
 
--- | similar to 'coerce' function
+-- | similar to 'coerce'
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
@@ -3203,6 +3137,26 @@ instance (P r x
 type family EitherXT lr x p where
   EitherXT (Either a b) x p = PP p (x,a)
 
+-- | similar to 'Data.These.mergeTheseWith' but additionally provides \'p\', '\q'\ and \'r\' the original input as the first element in the tuple
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(TheseX (((Fst >> Fst) + Snd) >> ShowP) ShowP (Snd >> Snd) Snd) (9,This 123)
+--   Present "132"
+--   PresentT "132"
+--
+--   >>> pl @(TheseX '(Snd,"fromthis") '(99 >> Negate,Snd) Snd Id) (This 123)
+--   Present (123,"fromthis")
+--   PresentT (123,"fromthis")
+--
+--   >>> pl @(TheseX '(Snd,"fromthis") '(99 >> Negate,Snd) Snd Id) (That "fromthat")
+--   Present (-99,"fromthat")
+--   PresentT (-99,"fromthat")
+--
+--   >>> pl @(TheseX '(Snd,"fromthis") '(99 >> Negate,Snd) Snd Id) (These 123 "fromthese")
+--   Present (123,"fromthese")
+--   PresentT (123,"fromthese")
+--
 data TheseX p q r s
 
 instance (P s x
@@ -3242,6 +3196,20 @@ instance (P s x
 type family TheseXT lr x p where
   TheseXT (These a b) x p = PP p (x,a)
 
+-- | similar to 'maybe'
+--
+--   similar to 'MaybeX' but provides a Proxy to the result of \'q\' and does not provide the surrounding context
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(MaybeIn "foundnothing" (Pred >> ShowP)) (Just 20)
+--   Present "19"
+--   PresentT "19"
+--
+--   >>> pl @(MaybeIn "found nothing" (Pred >> ShowP)) Nothing
+--   Present "found nothing"
+--   PresentT "found nothing"
+--
 data MaybeIn p q
 type IsNothing = MaybeIn 'True 'False
 type IsJust = MaybeIn 'False 'True
@@ -3759,7 +3727,7 @@ instance (as ~ t a
     let b = or as
     in pure $ mkNodeB opts b ["Ors" <> showA opts " | " as] []
 
--- | similar to a cons function
+-- | similar to cons
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
@@ -3785,7 +3753,7 @@ instance (P p x
         let b = p `cons` q
         in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
 
--- | similar to the snoc function
+-- | similar to snoc
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
@@ -3886,7 +3854,7 @@ instance (Show as, AsEmpty as) => P IsEmpty as where
     let b = has _Empty as
     in pure $ mkNodeB opts b ["IsEmpty" <> showA opts " | " as] []
 
--- | similar to 'null' using Foldable
+-- | similar to 'null' using 'Foldable'
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
@@ -4316,12 +4284,16 @@ instance (P prt a
 data Hole (t :: Type)
 type T (t :: Type) = Hole t -- easier to type
 
--- Typeable doesnt seem to make appear to have any impact
+-- | Acts as a proxy in this dsl where you can explicitly set the Type.
+--
+--  It is passed around as an argument to help the type checker when needed.
+--  see 'ReadP', 'ParseTimeP', 'ShowP'
+--
 instance Typeable t => P (Hole t) a where
   type PP (Hole t) a = t -- can only be Type not Type -> Type (can use Proxy but then we go down the rabbithole)
   eval _ opts _a =
     let msg = "Hole(" <> showT @t <> ")"
-    in pure $ mkNode opts (FailT msg) [msg <> " you probably meant to get access to PP only"] []
+    in pure $ mkNode opts (FailT msg) [msg <> " you probably meant to get access to the type of PP only and not evaluate"] []
 
 data Unproxy
 
@@ -4329,9 +4301,22 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
   type PP Unproxy (Proxy a) = a
   eval _ opts _a =
     let msg = "Unproxy(" <> showT @a <> ")"
-    in pure $ mkNode opts (FailT msg) [msg <> " you probably meant to get access to PP only"] []
+    in pure $ mkNode opts (FailT msg) [msg <> " you probably meant to get access to the type of PP only and not evaluate"] []
 
-data W (p :: k) -- transparent predicate wrapper to make k a Type so it can be in a promoted list (cant mix kinds)
+-- | transparent predicate wrapper to make k of kind Type so it can be in a promoted list (cant mix kinds) see 'Do'
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(Do '[W 123, W "xyz", Len &&& Id, Pred *** Id<>Id]) ()
+--   Present (2,"xyzxyz")
+--   PresentT (2,"xyzxyz")
+--
+--
+--   >>> pl @(TupleI '[W 999,W "somestring",W 'True, Id, Pred >> ShowP]) 23
+--   Present (999,("somestring",(True,(23,("22",())))))
+--   PresentT (999,("somestring",(True,(23,("22",())))))
+--
+data W (p :: k)
 instance P p a => P (W p) a where
   type PP (W p) a = PP p a
   eval _ = eval (Proxy @(Msg "W" p))
@@ -4343,7 +4328,7 @@ instance P p a => P (W p) a where
 --   >>> pl @(Catch Succ (Fst >> Second ShowP >> Printf2 "%s %s" >> 'LT)) GT
 --   Present LT
 --   PresentT LT
-
+--
 --   >>> pl @(Catch' Succ (Second ShowP >> Printf2 "%s %s")) GT
 --   Error Succ IO e=Prelude.Enum.Ordering.succ: bad argument GT
 --   FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument GT"
@@ -5116,7 +5101,9 @@ instance (KnownSymbol s, NullT s ~ 'False) => P (Char1 s) a where
      let c = head $ symb @s
      in pure $ mkNode opts (PresentT c) ["Char1" <> show0 opts " " c] []
 
--- | a version zip that pads with 'Data.These.This' or 'Data.These.That' if the lengths of the two lists don't match
+-- | similar to 'Data.Align.align' thats pads with 'Data.These.This' or 'Data.These.That' if one list is shorter than the other
+--
+--   the key is that all information about both lists are preserved
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds

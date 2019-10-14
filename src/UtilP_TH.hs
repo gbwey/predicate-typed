@@ -1,5 +1,3 @@
--- double dollar works great if you have the TH.Lift instances
--- Data.Time does not: import TH_Orphans.hs ()
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -33,14 +31,14 @@ import Data.Functor.Identity
 import UtilP
 import Control.Monad (unless)
 
--- | creates a Refined3 refinement type
+-- | creates a 'Refined3.Refined3' refinement type with terse output
 refined3TH :: forall ip op fmt i
   . (Show i, Show (PP ip i), TH.Lift i, TH.Lift (PP ip i), Refined3C ip op fmt i)
   => i
   -> TH.Q (TH.TExp (Refined3 ip op fmt i))
-refined3TH = refined3TH' o2
+refined3TH = refined3TH' ol
 
--- | creates a Refined3 refinement type and allows you to specify options (ol to just get a summary / o2 for full detail and colors)
+-- | creates a 'Refined3.Refined3' refinement type and allows you to specify options (ol to just get a summary / o2 for full detail and colors)
 refined3TH' :: forall ip op fmt i
   . (Show i, Show (PP ip i), TH.Lift i, TH.Lift (PP ip i), Refined3C ip op fmt i)
   => POpts
@@ -59,14 +57,14 @@ refined3TH' opts i = do
     Nothing -> fail $ msg0 ++ ": predicate failed with " ++ (m3Desc m3 <> " | " <> m3Short m3)
     Just r -> TH.TExp <$> TH.lift r
 
--- | creates a Refined refinement type
+-- | creates a 'Refined.Refined' refinement type with terse output
 refinedTH :: forall p i
   . (Show i, TH.Lift i, RefinedC p i)
   => i
   -> TH.Q (TH.TExp (Refined p i))
-refinedTH = refinedTH' o2
+refinedTH = refinedTH' ol
 
--- | creates a Refined refinement type and allows you to specify options
+-- | creates a 'Refined.Refined' refinement type and allows you to specify options
 refinedTH' :: forall p i
   . (Show i, TH.Lift i, RefinedC p i)
   => POpts

@@ -1,7 +1,3 @@
--- experimental: use Refined/Refined3 instead
--- dispenses with 'fmt' and just emulates Refined3 using Refined
--- the whole thing is driven by proxy '(ip,op,i)
--- since we dont store the input then the input conversion has nothing to do with Refined and is instead part of a separate conversion process
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -25,13 +21,18 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
--- |
--- Module      : RefinedE
--- Description : Refinement type that fakes Refined3 using only Refined
--- Copyright   : (c) Grant Weyburne, 2019
--- License     : BSD-3
--- Maintainer  : gbwey9@gmail.com
---
+{- |
+Module      : RefinedE
+Description : Refinement type that fakes Refined3 using only Refined
+Copyright   : (c) Grant Weyburne, 2019
+License     : BSD-3
+Maintainer  : gbwey9@gmail.com
+
+This is a hybrid between "Refined" and "Refined3"
+It dispenses with \'fmt\' from 'Refined3.Refined3' and emulates 'Refined3.Refined3' by packing parts values 'Refined'
+The whole thing is driven by 3-tuple proxy '(ip,op,i)
+Since we dont store the input then the input conversion has nothing to do with Refined and is instead part of a separate conversion process
+-}
 module RefinedE (
     mkProxyE
   , withRefinedETP
@@ -56,13 +57,14 @@ import Control.Lens hiding (strict,iall)
 import Data.Tree
 import Data.Proxy
 import Control.Monad.Except
-import Control.Monad.Writer hiding (First)
+import Control.Monad.Writer (tell)
 import Data.Bitraversable
 import qualified Data.Bifunctor as Bi
 
 mkProxyE :: forall ip op i . Proxy '(ip,op,i)
 mkProxyE = Proxy
 
+-- | the class constraints required for this refinement type
 type RefinedEC ip op i = (P ip i, P op (PP ip i), PP op (PP ip i) ~ Bool)
 
 type MakeRT m p = RefinedT m (MakeRE p)
@@ -174,10 +176,10 @@ msgRResults = \case
    RTF _ _ e _ -> "step2:" <> e
    RTFalse {} -> "boolean check false"
 
--- convert from RefinedV style Proxy: now you can use evalEP with this
+-- | convert from 'Refined3.Refined3' Proxy: now you can use 'evalEP' with this
 proxyEToV ::  forall ip op fmt i proxy . proxy '(ip, op, fmt, i) -> Proxy '(ip &&& (ip >> fmt),Fst >> op,i)
 proxyEToV _ = Proxy
 
--- same as mkProxy3 but doesnt have the requirement that i ~ PP fmt (PP ip i)
+-- | same as 'Refined3.mkProxy3' but doesnt have the requirement that \'i ~ PP fmt (PP ip i)\'
 mkProxy3E :: forall ip op fmt i . (PP op (PP ip i) ~ Bool, P ip i, P op (PP ip i), P fmt (PP ip i)) => Proxy '(ip,op,fmt,i)
 mkProxy3E = Proxy

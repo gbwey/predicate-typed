@@ -479,9 +479,9 @@ allTests =
   , expectPE (PresentT (3, SG.Any True)) $ pl @(Id !! (FromStringP' (T _) "d") &&& (IToList _ >> Map (Snd >> Gt 3 >> Coerce SG.Any) >> Mconcat ) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
   , expectPE (PresentT (3, True)) $ pl @(Id !! ("d" >> FromStringP _) &&& (IToList _ >> Map (Snd >> Gt 3 >> Wrap SG.Any Id) >> Mconcat >> Unwrap) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
     --- have to wrap with W cos different kinds
-  , expectPE TrueT $ pl @(Do '[ W ('PresentT I), W 'FalseT, Not]) False
-  , expectPE FalseT $ pl @(Do '[ W ('PresentT Id), W 'FalseT ]) True -- have to wrap them cos BoolT a vs BoolT Bool ie different types
-  , expectPE TrueT $ pl @('PresentT I >> 'FalseT >> Not) False
+--  , expectPE TrueT $ pl @(Do '[ W ('PresentT I), W 'FalseT, Not]) False
+--  , expectPE FalseT $ pl @(Do '[ W ('PresentT Id), W 'FalseT ]) True -- have to wrap them cos BoolT a vs BoolT Bool ie different types
+--  , expectPE TrueT $ pl @('PresentT I >> 'FalseT >> Not) False
   -- IxL "d" doesnt work cos is Text not String
   , expectPE (PresentT 3) $ pl @(Id !! KST _ "d") (M.fromList $ zip (map T.singleton "abcd") [0 ..])
   -- use Fromstring
@@ -1068,10 +1068,10 @@ allTests =
   , expectPE (FailT "msg=someval caught(044)") $ pl @(Catch' (Failt Int "someval") (Printf2 "msg=%s caught(%03d)")) (44 :: Int)
   , expectPE (FailT "msg=expected list of length 1 but found length=3 caught([10,12,13])") $ pl @(Catch' OneP (Second ShowP >> Printf2 "msg=%s caught(%s)")) [10,12,13]
   , expectPE (PresentT 10) $ pl @(Catch' OneP (Second ShowP >> Printf2 "msg=%s caught(%s)")) [10]
-  , expectEq (unsafeRefined3 [1,2,3,4] "001.002.003.004") ($$(refined3TH' ol "1.2.3.4") :: MakeR3 Ip)
-  , expectEq (unsafeRefined @'True ("1.2.3.4" :: String)) $$(refinedTH' ol "1.2.3.4")
-  , expectEq (unsafeRefined @((Len >> Same 4) && Luhn) [1,2,3,0]) $$(refinedTH' ol [1,2,3,0])
-  , expectEq (unsafeRefined @((Len >> Same 4) && Luhn >> Not) [1,2,3,1]) $$(refinedTH' ol [1,2,3,1])
+  , expectEq (unsafeRefined3 [1,2,3,4] "001.002.003.004") ($$(refined3TH "1.2.3.4") :: MakeR3 Ip)
+  , expectEq (unsafeRefined @'True ("1.2.3.4" :: String)) $$(refinedTH "1.2.3.4")
+  , expectEq (unsafeRefined @((Len >> Same 4) && Luhn) [1,2,3,0]) $$(refinedTH [1,2,3,0])
+  , expectEq (unsafeRefined @((Len >> Same 4) && Luhn >> Not) [1,2,3,1]) $$(refinedTH [1,2,3,1])
   , expectPE (FailT "msg=expected list of length 1 but found length=2 err s=[10,11]") $ pl @(Catch' OneP (Second ShowP >> Printf2 "msg=%s err s=%s")) [10,11]
   , expectPE (PresentT 99) $ pl @(Catch OneP 99) [10,11]
   , expectPE (PresentT 10) $ pl @(Catch OneP 99) [10]
@@ -1082,5 +1082,5 @@ allTests =
   , expectPE (PresentT 255) $ pl @(ReadBase Int 16) "ff"
   , expectPE (PresentT "-7b") $ pl @(ShowBase 16) (-123)
   , expectPE (PresentT "7b") $ pl @(ShowBase 16) 123
-  , prop $ forAll (arbitraryR3P (mkProxy3P @'(ReadBase Int 16, 'True, ShowBase 16, String)) ol) (\r -> evalQuick @(ReadBase Int 16) (out3 r) == Right (in3 r))
+  , prop $ forAll (arbRefined3 (mkProxy3P @'(ReadBase Int 16, 'True, ShowBase 16, String)) ol) (\r -> evalQuick @(ReadBase Int 16) (out3 r) == Right (in3 r))
   ]

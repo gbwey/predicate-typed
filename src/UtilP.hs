@@ -751,7 +751,7 @@ fixPresentP opts bp a =
 
 prtTreePure :: POpts -> Tree PE -> String
 prtTreePure opts t
-  | oLite opts = showBoolP opts (t ^. root . pBool) <> "\n"
+  | oLite opts = showBoolP opts (t ^. root . pBool)
   | otherwise = showImpl opts $ fmap (toNodeString opts) t
 
 showImpl :: POpts -> Tree String -> String

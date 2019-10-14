@@ -38,7 +38,7 @@ module Refined (
     Refined(unRefined)
   , unsafeRefined
   , RefinedC
-  , arbitraryR
+  , arbRefined
   , rapply
   , rapply0
   , rapply1
@@ -46,12 +46,10 @@ module Refined (
   , withRefinedT
   , withRefinedTIO
   , newRefined
---  , newRefinedTImpl
+  , prtRefinedIO
   , newRefinedT
   , newRefinedTIO
   , RefinedT(..)
---  , unRavelT
---  , prtRefinedTImpl
   , prtRefinedTIO
   , prtRefinedT
  ) where
@@ -60,7 +58,7 @@ import UtilP
 import Control.Lens hiding (strict,iall)
 import Data.Proxy
 import Control.Monad.Except
-import Control.Monad.Writer hiding (First)
+import Control.Monad.Writer (WriterT(..), runWriterT, MonadWriter, tell)
 import Control.Monad.Cont
 import Data.Aeson
 import GHC.Generics (Generic)
@@ -69,6 +67,55 @@ import System.Console.Pretty
 import Test.QuickCheck
 
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeOperators
+-- >>> :m + Data.Time.Calendar.WeekDate
+-- >>> prtRefinedIO @(Between 10 14) ol 13
+-- Right (Refined {unRefined = 13})
+--
+-- >>> prtRefinedIO @(Between 10 14) ol 99
+-- Left FalseP
+--
+-- >>> prtRefinedIO @(Last >> Len == 4) ol ["one","two","three","four"]
+-- Right (Refined {unRefined = ["one","two","three","four"]})
+--
+-- >>> prtRefinedIO @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") ol "141.213.1.99"
+-- Right (Refined {unRefined = "141.213.1.99"})
+--
+-- >>> prtRefinedIO @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") ol "141.213.1"
+-- Left FalseP
+--
+-- >>> prtRefinedIO @(Resplit "\\." >> Map (ReadP Int) >> Guard (Len >> Printf "bad length: found %d") (Len == 4) >> 'True) ol "141.213.1"
+-- Left (FailP "bad length: found 3")
+--
+-- >>> prtRefinedIO @(Resplit "\\." >> Map (ReadP Int) >> Guard (Len >> Printf "bad length: found %d") (Len == 4) >> GuardsQuick (Printf2 "octet %d out of range %d") (RepeatT 4 (Between 0 255)) >> 'True) ol "141.213.1.444"
+-- Left (FailP "octet 3 out of range 444")
+--
+-- >>> prtRefinedIO @(Resplit "\\." >> Map (ReadP Int) >> Guard (Len >> Printf "bad length: found %d") (Len == 4) >> GuardsQuick (Printf2 "octet %d out of range %d") (RepeatT 4 (Between 0 255)) >> 'True) ol "141.213.1x34.444"
+-- Left (FailP "ReadP Int (1x34) failed")
+--
+-- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) >> Luhn) ol "12344"
+-- Right (Refined {unRefined = "12344"})
+--
+-- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) >> Luhn) ol "12340"
+-- Left FalseP
+--
+-- >>> prtRefinedIO @(Any Prime) ol [11,13,17,18]
+-- Right (Refined {unRefined = [11,13,17,18]})
+--
+-- >>> prtRefinedIO @(All Prime) ol [11,13,17,18]
+-- Left FalseP
+--
+-- >>> prtRefinedIO @(Snd !! Fst >> Len > 5) ol (2,["abc","defghij","xyzxyazsfd"])
+-- Right (Refined {unRefined = (2,["abc","defghij","xyzxyazsfd"])})
+--
+-- >>> prtRefinedIO @(Snd !! Fst >> Len > 5) ol (27,["abc","defghij","xyzxyazsfd"])
+-- Left (FailP "(!!) index not found")
+--
+-- >>> prtRefinedIO @(Snd !! Fst >> Len <= 5) ol (2,["abc","defghij","xyzxyazsfd"])
+-- Left FalseP
 newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
 
 -- | 'Read' instance for 'Refined'
@@ -95,18 +142,13 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
                   case mr of
                     Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
                     Just r -> return r
-{-
--- need something simpler
-instance (Arbitrary a, RefinedC p a) => Arbitrary (Refined p a) where
---  arbitrary = Refined <$> suchThat (arbitrary @a) (isJust . snd . runIdentity . newRefined @p)
-  arbitrary = suchThatMap (arbitrary @a) (snd . runIdentity . newRefined @p o2)
--}
+
 -- | 'arbitrary' value for 'Refined'
-arbitraryR :: forall p a.
+arbRefined :: forall p a.
    ( Arbitrary a
    , RefinedC p a
    ) => POpts -> Gen (Refined p a)
-arbitraryR opts = suchThatMap (arbitrary @a) (snd . runIdentity . newRefined @p opts)
+arbRefined opts = suchThatMap (arbitrary @a) (snd . runIdentity . newRefined @p opts)
 
 
 -- | binary operation applied to two 'RefinedT' values
@@ -171,6 +213,20 @@ withRefinedTIO :: forall p m a b
   -> (Refined p a -> RefinedT m b)
   -> RefinedT m b
 withRefinedTIO opts a k = newRefinedTIO @p opts a >>= k
+
+-- | same as 'newRefined' but prints the results
+prtRefinedIO :: forall p a
+   . RefinedC p a
+   => POpts
+   -> a
+   -> IO (Either BoolP (Refined p a))
+prtRefinedIO opts a = do
+  tt <- evalBool (Proxy @p) opts a
+  let msg = (_tBool tt ^. boolT2P, prtTreePure opts (fromTT tt))
+  unless (oLite opts) $ putStrLn $ snd msg
+  pure $ case getValueLR opts "" tt [] of
+    Right True -> Right (Refined a)
+    _ -> Left (fst msg)
 
 -- | returns a 'Refined' value if \'a\' is valid for the predicate \'p\'
 newRefined :: forall p a m . (MonadEval m, RefinedC p a)
