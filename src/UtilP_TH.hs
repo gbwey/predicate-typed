@@ -31,6 +31,7 @@ import Predicate
 import qualified Language.Haskell.TH.Syntax as TH
 import Data.Functor.Identity
 import UtilP
+import Control.Monad (unless)
 
 -- | creates a Refined3 refinement type
 refined3TH :: forall ip op fmt i
@@ -49,10 +50,11 @@ refined3TH' opts i = do
   let msg0 = "refined3TH"
       (ret,mr) = eval3 @ip @op @fmt opts i
       m3 = prt3Impl opts ret
-  TH.runIO $ do
-    putStrLn $ "\n>>>>>>> Start " ++ msg0 ++ " " ++ show i
-    putStrLn $ m3Long m3
-    putStrLn $ "<<<<<<< End "++ msg0 ++ " " ++ show i -- ++ "\n"
+  unless (oLite opts) $
+    TH.runIO $ do
+      putStrLn $ "\n>>>>>>> Start " ++ msg0 ++ " " ++ show i
+      putStrLn $ m3Long m3
+      putStrLn $ "<<<<<<< End "++ msg0 ++ " " ++ show i -- ++ "\n"
   case mr of
     Nothing -> fail $ msg0 ++ ": predicate failed with " ++ (m3Desc m3 <> " | " <> m3Short m3)
     Just r -> TH.TExp <$> TH.lift r
@@ -73,10 +75,11 @@ refinedTH' :: forall p i
 refinedTH' opts i = do
   let msg0 = "refinedTH"
   let ((bp,e),mr) = runIdentity $ newRefined @p opts i
-  TH.runIO $ do
-    putStrLn $ "\n>>>>>>> Start " ++ msg0 ++ " " ++ show i
-    putStrLn $ "\n" ++ e
-    putStrLn $ "<<<<<<< End " ++ msg0 ++ " " ++ show i -- ++ "\n"
+  unless (oLite opts) $
+    TH.runIO $ do
+      putStrLn $ "\n>>>>>>> Start " ++ msg0 ++ " " ++ show i
+      putStrLn $ "\n" ++ e
+      putStrLn $ "<<<<<<< End " ++ msg0 ++ " " ++ show i
   case mr of
     Nothing -> fail $ msg0 ++ ": predicate failed with " ++ show bp -- ++ "\n" ++ e
     Just r -> TH.TExp <$> TH.lift r

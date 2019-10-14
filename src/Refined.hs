@@ -35,9 +35,8 @@
 -- Maintainer  : gbwey9@gmail.com
 --
 module Refined (
-    Refined
+    Refined(unRefined)
   , unsafeRefined
-  , rval
   , RefinedC
   , arbitraryR
   , rapply
@@ -47,12 +46,12 @@ module Refined (
   , withRefinedT
   , withRefinedTIO
   , newRefined
-  , newRefinedTImpl
+--  , newRefinedTImpl
   , newRefinedT
   , newRefinedTIO
   , RefinedT(..)
-  , unRavelT
-  , prtRefinedTImpl
+--  , unRavelT
+--  , prtRefinedTImpl
   , prtRefinedTIO
   , prtRefinedT
  ) where
@@ -61,7 +60,7 @@ import UtilP
 import Control.Lens hiding (strict,iall)
 import Data.Proxy
 import Control.Monad.Except
-import Control.Monad.Writer
+import Control.Monad.Writer hiding (First)
 import Control.Monad.Cont
 import Data.Aeson
 import GHC.Generics (Generic)
@@ -69,11 +68,10 @@ import qualified Language.Haskell.TH.Syntax as TH
 import System.Console.Pretty
 import Test.QuickCheck
 
+-- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
 
-unsafeRefined :: forall p a . a -> Refined p a
-unsafeRefined = Refined
-
+-- | 'Read' instance for 'Refined'
 instance (RefinedC p a, Read a) => Read (Refined p a) where
   readsPrec n s = do
     (a,x) <- readsPrec @a n s
@@ -82,14 +80,14 @@ instance (RefinedC p a, Read a) => Read (Refined p a) where
        Nothing -> []
        Just r -> [(r,x)]
 
-rval :: Getter (Refined p a) a
-rval afb (Refined a) = Refined <$> afb a
+-- | the constraints that 'Refined' must adhere to
+type RefinedC p a = (PP p a ~ Bool, P p a)
 
-type RefinedC p a = (PP p a ~ Bool, P p a) -- we only care about real predicates!
-
+-- | 'ToJSON' instance for 'Refined'
 instance ToJSON a => ToJSON (Refined p a) where
   toJSON = toJSON . unRefined
 
+-- | 'FromJSON' instance for 'Refined'
 instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
   parseJSON z = do
                   a <- parseJSON z
@@ -103,13 +101,15 @@ instance (Arbitrary a, RefinedC p a) => Arbitrary (Refined p a) where
 --  arbitrary = Refined <$> suchThat (arbitrary @a) (isJust . snd . runIdentity . newRefined @p)
   arbitrary = suchThatMap (arbitrary @a) (snd . runIdentity . newRefined @p o2)
 -}
+-- | 'arbitrary' value for 'Refined'
 arbitraryR :: forall p a.
    ( Arbitrary a
    , RefinedC p a
-   ) => Gen (Refined p a)
-arbitraryR = suchThatMap (arbitrary @a) (snd . runIdentity . newRefined @p o2)
+   ) => POpts -> Gen (Refined p a)
+arbitraryR opts = suchThatMap (arbitrary @a) (snd . runIdentity . newRefined @p opts)
 
 
+-- | binary operation applied to two 'RefinedT' values
 rapply :: forall m p a . (RefinedC p a, Monad m)
   => POpts
   -> (a -> a -> a)
@@ -124,7 +124,7 @@ rapply opts f ma mb = do
   tell [bgColor Blue "=== a `op` b ==="]
   newRefinedT opts (f x y)
 
--- raw values
+-- | takes two values and lifts them into 'RefinedT' and then applies the binary operation
 rapply0 :: forall p a m . (RefinedC p a, Monad m)
   => POpts
   -> (a -> a -> a)
@@ -133,7 +133,7 @@ rapply0 :: forall p a m . (RefinedC p a, Monad m)
   -> RefinedT m (Refined p a)
 rapply0 opts f a b = rapply opts f (newRefinedT opts a) (newRefinedT opts b)
 
--- Refined
+-- | same as 'rapply' except we already have valid 'Refined' values as input
 rapply1 :: forall m p a . (RefinedC p a, Monad m)
   => POpts
   -> (a -> a -> a)
@@ -142,16 +142,20 @@ rapply1 :: forall m p a . (RefinedC p a, Monad m)
   -> RefinedT m (Refined p a)
 rapply1 opts f (Refined a) (Refined b) = newRefinedT opts (f a b)
 
-convertRefinedT :: forall m p p1 i
-  . ( RefinedC p1 i
+-- | attempts to lift a refinement type to another refinement type by way of transformation function
+--   you can control both the predicate and the type
+convertRefinedT :: forall m p p1 a a1
+  . ( RefinedC p1 a1
     , Monad m)
   => POpts
-  -> RefinedT m (Refined p i)
-  -> RefinedT m (Refined p1 i)
-convertRefinedT opts ma = do
+  -> (a -> a1)
+  -> RefinedT m (Refined p a)
+  -> RefinedT m (Refined p1 a1)
+convertRefinedT opts f ma = do
   Refined a <- ma -- you already got a refined in there so no need to check RefinedC
-  newRefinedT @p1 opts a
+  newRefinedT @p1 opts (f a)
 
+-- | invokes the callback with the 'Refined' value if \'a\' is valid for the predicate \'p\'
 withRefinedT :: forall p m a b
      . (Monad m, RefinedC p a)
   => POpts
@@ -168,6 +172,7 @@ withRefinedTIO :: forall p m a b
   -> RefinedT m b
 withRefinedTIO opts a k = newRefinedTIO @p opts a >>= k
 
+-- | returns a 'Refined' value if \'a\' is valid for the predicate \'p\'
 newRefined :: forall p a m . (MonadEval m, RefinedC p a)
    => POpts
    -> a
@@ -193,6 +198,7 @@ newRefinedTImpl f opts a = do
     _ -> let rc = show (_tBool tt ^. boolT2P)
          in throwError rc -- RefinedT $ ExceptT $ WriterT $ return (Left rc, [])
 
+-- | returns a wrapper 'RefinedT' around a possible 'Refined' value if \'a\' is valid for the predicate \'p\'
 newRefinedT :: forall p a m
   . ( RefinedC p a
     , Monad m)
@@ -240,3 +246,6 @@ prtRefinedTIO = prtRefinedTImpl id
 prtRefinedT :: (MonadIO m, Show a) => RefinedT Identity a -> m ()
 prtRefinedT = prtRefinedTImpl (return . runIdentity)
 
+-- | a way to unsafely create a 'Refined' value
+unsafeRefined :: forall p a . a -> Refined p a
+unsafeRefined = Refined

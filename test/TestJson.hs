@@ -24,7 +24,6 @@ import Refined
 import Refined3
 import Refined3Helper
 import UtilP
-import Text.Show.Functions () -- need this if we use functions
 import GHC.Generics (Generic)
 import Data.Text (Text)
 import Data.Aeson
@@ -91,4 +90,4 @@ type Ip4op = Guard (Len >> Printf "expected length 4 found %d") (Len >> Same 4)
           >> GuardsQuick (Printf2 "guard(%d): expected between 0 and 255 found %d") (RepeatT 4 (Between 0 255))
 type Ip4fmt = Printfnt 4 "%03d.%03d.%03d.%03d"
 
-type DateTimeNR = MakeR3 DatetimeN
+type DateTimeNR = MakeR3 DateTimeN

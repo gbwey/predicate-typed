@@ -24,33 +24,31 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveLift #-}
--- |
--- Module      : Refined3
--- Description : Refinement type allowing the external type to differ from the internal type
--- Copyright   : (c) Grant Weyburne, 2019
--- License     : BSD-3
--- Maintainer  : gbwey9@gmail.com
---
--- see 'Refined3'
--- contains Json / Arbitrary and Read instances
+{- |
+Module      : Refined3
+Description : Refinement type allowing the external type to differ from the internal type
+Copyright   : (c) Grant Weyburne, 2019
+License     : BSD-3
+Maintainer  : gbwey9@gmail.com
+
+see 'Refined3'
+contains Json and Read instances and arbitrary functions
+-}
 module Refined3 (
-    Refined3
-  , unsafeRefined3
+    unsafeRefined3
   , Refined3C
-  , r3in
-  , r3out
+  , Refined3(in3,out3)
   , arbitraryR3P
   , arbitraryR3PFun
   , mkProxy3
   , mkProxy3P
-  , type MkProxyT
+  , MkProxyT
   , withRefined3TIO
   , withRefined3T
   , withRefined3TP
   , newRefined3T
   , newRefined3TP
   , newRefined3TPIO
-  , newRefined3TPSkipIPImpl
   , convertRefined3T
   , convertRefined3TP
   , rapply3
@@ -59,16 +57,13 @@ module Refined3 (
   , eval3P
   , eval3
   , eval3M
-  , eval3MSkip
-  , eval3MQuickIdentity
-  , eval3MQuick
   , eval3PX
   , eval3X
   , prt3IO
   , prt3
   , Msg3 (..)
   , prt3Impl
-  , type MakeR3
+  , MakeR3
   , Results (..)
   , RResults (..)
  ) where
@@ -79,38 +74,69 @@ import Control.Lens hiding (strict,iall)
 import Data.Tree
 import Data.Proxy
 import Control.Monad.Except
-import Control.Monad.Writer
+import Control.Monad.Writer hiding (First)
 import Data.Aeson
 import qualified Language.Haskell.TH.Syntax as TH
 import System.Console.Pretty
 import Test.QuickCheck
 
 -- | Refinement type that differentiates input type from output type
--- 'i' is the input type
--- 'ip' converts i to PP ip i which is the internal type
--- 'op' validates that internal type using PP op (PP ip i) ~ Bool
--- 'fmt' outputs the internal type PP fmt (PP ip i) ~ i
+--
+-- If we fix the input type to String then it looks like read into internal type / validate internal type / show internal type.
+-- Although the most common scenario is String as input, you are free to choose any input type.
+--
+-- @
+-- \'i\' is the input type
+-- \'ip\' converts i to PP ip i which is the internal type
+-- \'op\' validates that internal type using PP op (PP ip i) ~ Bool
+-- \'fmt\' outputs the internal type PP fmt (PP ip i) ~ i
 -- PP fmt (PP ip i) should be valid input to Refined3
+-- @
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeOperators
+-- >>> :m + Data.Time.Calendar.WeekDate
+-- >>> prt3 ol $ eval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x") ol "00fe"
+-- Right (Refined3 {in3 = 254, out3 = "fe"})
+--
+-- >>> prt3 ol $ eval3 @(ReadBase Int 16) @(Lt 253) @(Printf "%x") ol "00fe"
+-- Left Step 2. False Boolean Check(op) | FalseP
+--
+-- >>> prt3 ol $ eval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x") ol "00fg"
+-- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
+--
+-- >>> prt3 ol $ eval3 @(Resplit "\\." >> Map (ReadP Int)) @(Guard (Len >> Printf "found length=%d") (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1.5"
+-- Left Step 2. Failed Boolean Check(op) | found length=5
+--
+-- >>> prt3 ol $ eval3 @(Resplit "\\." >> Map (ReadP Int)) @(Guard (Len >> Printf "found length=%d") (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1"
+-- Right (Refined3 {in3 = [198,162,3,1], out3 = "198.162.003.001"})
+--
+-- >>> prt3 ol $ eval3 @(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id) @(Guard "expected a Sunday" (Snd >> Snd >> Same 7) >> 'True) @(Fst >> UnMkDay) ol (2019,(10,13))
+-- Right (Refined3 {in3 = (2019-10-13,(41,7)), out3 = (2019,(10,13))})
+--
+-- >>> prt3 ol $ eval3 @(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id) @(Guard "expected a Sunday" (Snd >> Snd >> Same 7) >> 'True) @(Fst >> UnMkDay) ol (2019,(10,12))
+-- Left Step 2. Failed Boolean Check(op) | expected a Sunday
+--
+
 data Refined3 ip op fmt i = Refined3 { in3 :: PP ip i, out3 :: PP fmt (PP ip i) }
 
 unsafeRefined3 :: forall ip op fmt i . PP ip i -> PP fmt (PP ip i) -> Refined3 ip op fmt i
 unsafeRefined3 = Refined3
 
 -- | Provides the constraints on Refined3
-type Refined3C ip op fmt i = (P ip i, P op (PP ip i), PP op (PP ip i) ~ Bool, P fmt (PP ip i), PP fmt (PP ip i) ~ i)
-
--- | Getters on Refined3
-r3in :: Getter (Refined3 ip op fmt i) (PP ip i)
-r3in afb (Refined3 a x) = flip Refined3 x <$> afb a
-
-r3out :: Getter (Refined3 ip op fmt i) (PP fmt (PP ip i))
-r3out afb (Refined3 x a) = Refined3 x <$> afb a
+type Refined3C ip op fmt i =
+       ( P ip i
+       , P op (PP ip i)
+       , PP op (PP ip i) ~ Bool   -- the internal value needs to pass the predicate check
+       , P fmt (PP ip i)
+       , PP fmt (PP ip i) ~ i  -- the output type must match the original input type
+       )
 
 deriving instance (Show i, Show (PP ip i), Show (PP fmt (PP ip i))) => Show (Refined3 ip op fmt i)
 deriving instance (Eq i, Eq (PP ip i), Eq (PP fmt (PP ip i))) => Eq (Refined3 ip op fmt i)
 deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Refined3 ip op fmt i)
 
--- | Read instance for Refined3
 instance (Show i, Show (PP ip i), Refined3C ip op fmt i, Read i) => Read (Refined3 ip op fmt i) where
   readsPrec n s = do
     (a,x) <- readsPrec @i n s
@@ -131,7 +157,6 @@ instance (Show (PP fmt (PP ip i)), Show (PP ip i), Refined3C ip op fmt i, FromJS
                     Nothing -> fail $ "Refined3:" ++ show (prt3Impl o2 ret)
                     Just r -> return r
 
--- need something simpler
 {-
 instance (Arbitrary (PP ip i)
         , Show (PP ip i)
@@ -142,18 +167,14 @@ instance (Arbitrary (PP ip i)
 -}
 arbitraryR3P :: forall ip op fmt i .
    ( Arbitrary (PP ip i)
-   , Show (PP ip i)
-   , Show i
    , Refined3C ip op fmt i
-   ) => Proxy '(ip,op,fmt,i) -> Gen (Refined3 ip op fmt i)
-arbitraryR3P _ = suchThatMap (arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt o2
+   ) => Proxy '(ip,op,fmt,i) -> POpts -> Gen (Refined3 ip op fmt i)
+arbitraryR3P _ = suchThatMap (arbitrary @(PP ip i)) . eval3MQuickIdentity @ip @op @fmt
 
 -- help things along a little
 arbitraryR3PFun ::
     forall ip op fmt i
   . (Arbitrary (PP ip i)
-   , Show (PP ip i)
-   , Show i
    , Refined3C ip op fmt i)
   => Proxy '(ip,op,fmt,i)
   -> POpts
@@ -165,7 +186,9 @@ arbitraryR3PFun _ opts f =
 mkProxy3 :: forall ip op fmt i . Refined3C ip op fmt i => Proxy '(ip,op,fmt,i)
 mkProxy3 = Proxy
 
--- checks to make sure the proxy is consistent with Refined3C: you can pass in a promoted 4 tuple
+-- | use type application to set the parameters then it will be wrapped into a 4-tuple
+--   checks to make sure the proxy is consistent with Refined3C
+-- use for passing into eval3P you can pass in a promoted 4 tuple to other methods
 mkProxy3P :: forall z ip op fmt i . (z ~ '(ip,op,fmt,i), Refined3C ip op fmt i) => Proxy '(ip,op,fmt,i)
 mkProxy3P = Proxy
 
@@ -477,7 +500,7 @@ prt3 opts (ret,mr) = maybe (Left $ prt3Impl opts ret) Right mr
 
 data Msg3 = Msg3 { m3Desc :: String, m3Short :: String, m3Long :: String } deriving Eq
 instance Show Msg3 where
-  show (Msg3 a b c) = a <> " | " <> b <> "\n" <> c
+  show (Msg3 a b c) = a <> " | " <> b <> (if null c then "" else "\n" <> c)
 
 prt3Impl :: (Show a, Show b)
   => POpts
@@ -486,26 +509,28 @@ prt3Impl :: (Show a, Show b)
 prt3Impl opts v =
   let outmsg msg = "\n***" <> msg <> " ***\n\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) = " ++ show a)
+      mkMsg3 m n r | oLite opts = Msg3 m n ""
+                   | otherwise = Msg3 m n r
   in case v of
        RF e t1 ->
          let (m,n) = ("Step 1. Initial Conversion(ip) Failed", e)
              r = outmsg m <> " = " <> n
               <> prtTreePure opts t1
-         in Msg3 m n r
+         in mkMsg3 m n r
        RTF a t1 e t2 ->
          let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg (m <> " = " <> n)
               <> prtTreePure opts t2
-         in Msg3 m n r
+         in mkMsg3 m n r
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", "FalseP")
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg (m <> " = " <> n)
               <> prtTreePure opts t2
-         in Msg3 m n r
+         in mkMsg3 m n r
        RTTrueF a t1 t2 e t3 ->
          let (m,n) = ("Step 3. Failed Output Conversion(fmt)", e)
              r = msg1 a
@@ -514,7 +539,7 @@ prt3Impl opts v =
               <> prtTreePure opts t2
               <> outmsg (m <> " = " <> n)
               <> prtTreePure opts t3
-         in Msg3 m n r
+         in mkMsg3 m n r
        RTTrueT a t1 t2 b t3 ->
          let (m,n) = ("Step 3. Success Output Conversion(fmt)", show b)
              r = msg1 a
@@ -523,5 +548,5 @@ prt3Impl opts v =
               <> prtTreePure opts t2
               <> outmsg (m <> " = " <> n)
               <> fixLite opts b t3
-         in Msg3 m n r
+         in mkMsg3 m n r
 

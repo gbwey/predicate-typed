@@ -47,6 +47,7 @@ module RefinedE (
   , Results (..)
   , RResults (..)
   , RefinedEC
+  , MakeRT
   ) where
 import Refined
 import Predicate
@@ -55,7 +56,7 @@ import Control.Lens hiding (strict,iall)
 import Data.Tree
 import Data.Proxy
 import Control.Monad.Except
-import Control.Monad.Writer
+import Control.Monad.Writer hiding (First)
 import Data.Bitraversable
 import qualified Data.Bifunctor as Bi
 
@@ -66,7 +67,7 @@ type RefinedEC ip op i = (P ip i, P op (PP ip i), PP op (PP ip i) ~ Bool)
 
 type MakeRT m p = RefinedT m (MakeRE p)
 
--- convert from '(ip,op,fmt,i) to RefinedE signature
+-- | convert from \'(ip,op,fmt,i) to RefinedE signature
 type family MakeRE p where
   MakeRE '(ip,op,i) = Refined op (PP ip i)
 

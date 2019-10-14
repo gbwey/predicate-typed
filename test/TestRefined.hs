@@ -32,10 +32,9 @@ import UtilP_TH
 import GHC.TypeLits (Symbol,Nat)
 import Data.Typeable
 import Data.Time
-import Text.Show.Functions () -- need this if we use functions
 import GHC.Generics (Generic)
 import Data.Aeson
-import TH_Orphans () -- need this else refined3TH fails for dates
+import TH_Orphans () -- need this else refined*TH' fails for dates
 import Control.Monad.Cont
 import EasyTest
 import GHC.Stack
@@ -45,20 +44,20 @@ import Data.List
 
 suite :: Test ()
 suite = tests
-  [ scope "ok3 ip9" $ expectEq ($$(refined3TH "121.0.12.13") :: MakeR3 Ip9) (unsafeRefined3 [121,0,12,13] "121.000.012.013")
-  , scope "ok3 luhn check" $ expectEq ($$(refined3TH "12345678903") :: MakeR3 CC11) (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
-  , scope "ok3 datetime utctime" $ expectEq ($$(refined3TH "2019-01-04 23:00:59") :: MakeR3 (Datetime1 UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
-  , scope "ok3 datetime localtime" $ expectEq ($$(refined3TH "2019-01-04 09:12:30") :: MakeR3 (Datetime1 LocalTime)) (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
-  , scope "ok3 hms" $ expectEq ($$(refined3TH "12:0:59") :: MakeR3 Hms) (unsafeRefined3 [12,0,59] "12:00:59")
-  , scope "always true" $ expectEq ($$(refinedTH 7) :: Refined 'True Int) (unsafeRefined 7)
-  , scope "between5and9" $ expectEq ($$(refinedTH 7) :: Refined (Between 5 9) Int) (unsafeRefined 7)
-  , scope "ok3 between5and9" $ expectEq ($$(refined3TH "7") :: Refined3 (ReadP Int) (Between 5 9) (Printf "%03d") String) (unsafeRefined3 7 "007")
-  , scope "ok3 ssn" $ expectEq ($$(refined3TH "123-45-6789") :: MakeR3 Ssn) (unsafeRefined3 [123,45,6789] "123-45-6789")
-  , scope "ok3 base16" $ expectEq ($$(refined3TH "12f") :: MakeR3 (BaseN 16)) (unsafeRefined3 303 "12f")
-  , scope "ok3 daten1" $ expectEq ($$(refined3TH "June 25 1900") :: MakeR3 DateN) (unsafeRefined3 (read "1900-06-25") "1900-06-25")
-  , scope "ok3 daten2" $ expectEq ($$(refined3TH "12/02/99") :: MakeR3 DateN) (unsafeRefined3 (read "1999-12-02") "1999-12-02")
-  , scope "ok3 daten3" $ expectEq ($$(refined3TH "2011-12-02") :: MakeR3 DateN) (unsafeRefined3 (read "2011-12-02") "2011-12-02")
-  , scope "ok3 ccn123" $ expectEq ($$(refined3TH "123455") :: MakeR3 (Ccn '[1,2,3])) (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
+  [ scope "ok3 ip9" $ expectEq ($$(refined3TH' ol "121.0.12.13") :: MakeR3 Ip9) (unsafeRefined3 [121,0,12,13] "121.000.012.013")
+  , scope "ok3 luhn check" $ expectEq ($$(refined3TH' ol "12345678903") :: MakeR3 CC11) (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
+  , scope "ok3 datetime utctime" $ expectEq ($$(refined3TH' ol "2019-01-04 23:00:59") :: MakeR3 (DateTime1 UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
+  , scope "ok3 datetime localtime" $ expectEq ($$(refined3TH' ol "2019-01-04 09:12:30") :: MakeR3 (DateTime1 LocalTime)) (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
+  , scope "ok3 hms" $ expectEq ($$(refined3TH' ol "12:0:59") :: MakeR3 Hms) (unsafeRefined3 [12,0,59] "12:00:59")
+  , scope "always true" $ expectEq ($$(refinedTH' ol 7) :: Refined 'True Int) (unsafeRefined 7)
+  , scope "between5and9" $ expectEq ($$(refinedTH' ol 7) :: Refined (Between 5 9) Int) (unsafeRefined 7)
+  , scope "ok3 between5and9" $ expectEq ($$(refined3TH' ol "7") :: Refined3 (ReadP Int) (Between 5 9) (Printf "%03d") String) (unsafeRefined3 7 "007")
+  , scope "ok3 ssn" $ expectEq ($$(refined3TH' ol "123-45-6789") :: MakeR3 Ssn) (unsafeRefined3 [123,45,6789] "123-45-6789")
+  , scope "ok3 base16" $ expectEq ($$(refined3TH' ol "12f") :: MakeR3 (BaseN 16)) (unsafeRefined3 303 "12f")
+  , scope "ok3 daten1" $ expectEq ($$(refined3TH' ol "June 25 1900") :: MakeR3 DateN) (unsafeRefined3 (read "1900-06-25") "1900-06-25")
+  , scope "ok3 daten2" $ expectEq ($$(refined3TH' ol "12/02/99") :: MakeR3 DateN) (unsafeRefined3 (read "1999-12-02") "1999-12-02")
+  , scope "ok3 daten3" $ expectEq ($$(refined3TH' ol "2011-12-02") :: MakeR3 DateN) (unsafeRefined3 (read "2011-12-02") "2011-12-02")
+  , scope "ok3 ccn123" $ expectEq ($$(refined3TH' ol "123455") :: MakeR3 (Ccn '[1,2,3])) (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
   ]
 
 type Ip4 = ("^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$" :: Symbol)
@@ -107,8 +106,6 @@ yy2 = newRefined3TP @Identity (Proxy @Tst1) o2 "3"
 
 yy3 = rapply3 o2 (*) yy1 yy2 -- fails
 yy4 = rapply3 o2 (+) yy1 yy2 -- ok
-
-type Tstt = '(Ip4A, 'True, '(), String)
 
 type Ip4T = '(Ip4A, Ip4B, Ip4C, String)
 
@@ -232,82 +229,29 @@ prtEval3P (Proxy @(Ccn '[1,1,1,1])) ol "1230"
 prtEval3P (Proxy @(Ccn '[1,2,3])) ol "123455" -- succeeds
 -}
 
-tst9 :: Monad m => Int -> Int -> ContT (RefinedT m b) Identity (Refined (Ge 4) Int, Refined (Ge 4) Int)
-tst9 a b = do
-  x <- cont (\k -> withRefinedT @(Ge 4) o2 a k)
-  y <- cont (\k -> withRefinedT @(Ge 4) o2 b k)
-  return (x,y)
-
-tst10 :: Monad m => Int -> Cont (RefinedT m b) (Refined (Ge 4) Int)
-tst10 a = cont (withRefinedT @(Ge 4) o2 a)
-
-tst11 :: forall p m a r . (Monad m, RefinedC p a) => a -> ContT r (RefinedT m) (Refined p a)
-tst11 a = ContT (withRefinedT @p o2 a)
-
-tst11a :: forall p m a . (Monad m, RefinedC p a) => a -> ContT (Refined p a) (RefinedT m) (Refined p a)
-tst11a a = ContT (withRefinedT @p o2 a)
-
-krefined :: forall p m a . (Monad m, RefinedC p a) => a -> ContT (Refined p a) (RefinedT m) a
-krefined a = ContT (\k -> newRefinedT @p o2 a >>= k . view rval)
-
-tst11c :: forall p m a . (Monad m, RefinedC p a) => (a -> a -> a) -> a -> a -> ContT (Refined p a) (RefinedT m) a
-tst11c f a b = do
-  x <- ContT (\k -> newRefinedT @p o2 a >>= k . view rval)
-  y <- ContT (\k -> newRefinedT @p o2 b >>= k . view rval)
-  return $ f x y
-
-tst11d :: forall p m a . (Monad m, RefinedC p a) => (a -> a -> a) -> a -> a -> ContT (Refined p a) (RefinedT m) a
-tst11d f a b = do
-  x <- krefined a
-  y <- krefined b
-  return $ f x y
-
--- apply a function to raw values! how useful is this
--- you already have data loaded into Refined so that is what is useful
-tst11e :: forall p m a . (Monad m, RefinedC p a) => (a -> a -> a) -> a -> a -> ContT (Refined p a) (RefinedT m) a
-tst11e f a b = f <$> krefined a <*> krefined b
-
-tst12 :: forall p m a . (Monad m, RefinedC p a) => (a -> a -> a) -> a -> a -> ContT (Refined p a) (RefinedT m) (Refined p a)
-tst12 f a b = do
-  x <- ContT (withRefinedT @p o2 a)
-  y <- ContT (withRefinedT @p o2 b)
-  ContT $ \k -> do
-    c <- newRefinedT @p o2 (f (x ^. rval) (y ^. rval))
-    k (unsafeRefined (c ^. rval))
-
-tst12a :: forall p m a . (Monad m, RefinedC p a) => (a -> a -> a) -> a -> a -> RefinedT m (Refined p a)
-tst12a f a b = flip runContT return $ tst12 f a b
-
-tst12b :: forall p m a b c . (Monad m, RefinedC p a, a ~ b, a ~ c) => (a -> b -> c) -> a -> b -> RefinedT m (Refined p c)
-tst12b f a b = flip runContT return $ do
-  x <- ContT (withRefinedT @p o2 a)
-  y <- ContT (withRefinedT @p o2 b)
-  ContT $ \k -> do
-    c <- newRefinedT @p o2 (f (x ^. rval) (y ^. rval))
-    k (unsafeRefined (c ^. rval))
-
 -- prtRefinedT tst1
 tst1 :: Monad m => RefinedT m (Int,Int)
 tst1 = withRefinedT @(Between 2 11) o2 10
   $ \x -> withRefinedT @(Between 200 211) o2 10
-     $ \y -> return (x ^. rval, y ^. rval)
+     $ \y -> return (unRefined x, unRefined y)
 
--- IOprtRefinedT tst2
+-- prtRefinedTIO tst2
 tst2 :: MonadIO m => RefinedT m (Int,Int)
 tst2 = withRefinedTIO @(Between 2 11) o2 10
   $ \x -> withRefinedTIO @(Stderr "start" |> Between 200 211 >| Stderr "end") o2 10
-     $ \y -> return (x ^. rval, y ^. rval)
+     $ \y -> return (unRefined x, unRefined y)
 
--- prtRefinedT tst1
+-- prtRefinedT tst1a
 tst1a :: Monad m => RefinedT m ((Int,String),(Int,String))
 tst1a = withRefined3T @(ReadBase Int 16) @(Between 100 200) @(ShowBase 16) @String o2 "a3"
   $ \r1 -> withRefined3T @(ReadP Int) @'True @ShowP @String o2 "12"
-     $ \r2 -> return ((r1 ^. r3in, r1 ^. r3out), (r2 ^. r3in, r2 ^. r3out))
+     $ \r2 -> return ((in3 r1, out3 r1), (in3 r2, out3 r2))
 
+-- prtRefinedTIO tst2a
 tst2a :: MonadIO m => RefinedT m ((Int,String),(Int,String))
 tst2a = withRefined3TIO @(ReadBase Int 16) @(Stderr "start" |> Between 100 200 >| Stdout "end") @(ShowBase 16) @String o2 "a3"
   $ \r1 -> withRefined3TIO @(ReadP Int) @'True @ShowP @String o2 "12"
-     $ \r2 -> return ((r1 ^. r3in, r1 ^. r3out), (r2 ^. r3in, r2 ^. r3out))
+     $ \r2 -> return ((in3 r1, out3 r1), (in3 r2, out3 r2))
 
 -- have to use 'i' as we dont hold onto the input
 testRefined3PJ :: forall ip op fmt i proxy
@@ -335,12 +279,12 @@ testRefined3P _ opts i =
       m3 = prt3Impl opts ret
   in case mr of
     Just r ->
-      let (ret1,mr1) = eval3 @ip @op @fmt opts (r ^. r3out)
+      let (ret1,mr1) = eval3 @ip @op @fmt opts (out3 r)
           m3a = prt3Impl opts ret1
       in case mr1 of
-           Nothing -> Left ("testRefined3P(2): round trip failed: old(" ++ show i ++ ") new(" ++ show (r ^. r3out) ++ ")", show m3a)
+           Nothing -> Left ("testRefined3P(2): round trip failed: old(" ++ show i ++ ") new(" ++ show (out3 r) ++ ")", show m3a)
            Just r1 ->
-             if r /= r1 then Left ("testRefined3P(3): round trip ok but values dont match: old(" ++ show i ++ ") new(" ++ show (r ^. r3out) ++ ")", show (r,r1))
+             if r /= r1 then Left ("testRefined3P(3): round trip ok but values dont match: old(" ++ show i ++ ") new(" ++ show (out3 r) ++ ")", show (r,r1))
              else Right (r,r1)
     Nothing -> Left ("testRefined3P(1): bad initial predicate i=" ++ show i, show m3)
 
@@ -406,7 +350,6 @@ testRefined opts a =
    in case mr of
         Nothing -> error $ show bp ++ "\n" ++ e
         Just r -> eitherDecode @(Refined p a) $ encode r
-
 
 expectPE :: (Show a, Eq a, HasCallStack) => BoolT a -> IO (BoolT a) -> Test ()
 expectPE bp m = do

@@ -59,7 +59,7 @@ ccn = mkProxy3
 cc11 :: Proxy (Ccn '[4,4,3])   -- or Proxy CC11
 cc11 = mkProxy3P
 
-type Datetime1 (t :: Type) = '(Dtip1 t, Dtop1, Dtfmt1, String)
+type DateTime1 (t :: Type) = '(Dtip1 t, Dtop1, Dtfmt1, String)
 type Dtip1 t = ParseTimeP t "%F %T" Id
 
 -- extra check to validate the time as parseTime doesnt validate the time component
@@ -131,11 +131,11 @@ type OctetR = "(25[0-5]|2[0..4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])" -- no padded
 type Ip4strictR = "^" `AppendSymbol` IntersperseT "\\." (RepeatT 4 OctetR) `AppendSymbol` "$"
 
 -- eg ["2001-01-01", "Jan 24 2009", "03/29/0x7"]
-type Datefmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
-type DateN = '(ParseTimes Day Datefmts Id, 'True, FormatTimeP "%Y-%m-%d", String)
+type DateFmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
+type DateN = '(ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d", String)
 
-type DatetimeFmts = '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]
-type DatetimeN = '(ParseTimes UTCTime DatetimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S", String)
+type DateTimeFmts = '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]
+type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S", String)
 
 type BaseN (n :: Nat) = '(ReadBase Integer n, 'True, ShowBase n, String)
 
@@ -145,7 +145,7 @@ base16 = mkProxy3
 daten :: Proxy DateN
 daten = mkProxy3
 
-datetimen :: Proxy DatetimeN
+datetimen :: Proxy DateTimeN
 datetimen = mkProxy3
 
 type Rbetween m n = Refined3 Id (Between m n) Id Int
