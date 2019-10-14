@@ -955,7 +955,7 @@ instance P I a where
 -- | identity function that displays the input
 --
 --   even more constraints than 'I' so we might need to explicitly add types
-
+--
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
 --   >>> pl @Id 23

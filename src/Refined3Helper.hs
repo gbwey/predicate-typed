@@ -31,7 +31,7 @@
 -- License     : BSD-3
 -- Maintainer  : gbwey9@gmail.com
 --
--- Refined3 ip op fmt i. The 4-tuple is (ip,op,fmt,i)
+-- Prepackaged proxies for use with 'Refined3.Refined3'
 --
 module Refined3Helper where
 import Refined3
@@ -130,7 +130,7 @@ type OctetR = "(25[0-5]|2[0..4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])" -- no padded
 --type Ip4strictR = "^" `AppendSymbol` OctetR `AppendSymbol` "\\." `AppendSymbol` OctetR `AppendSymbol` "\\." `AppendSymbol` OctetR `AppendSymbol` "\\." `AppendSymbol` OctetR `AppendSymbol` "$"
 type Ip4strictR = "^" `AppendSymbol` IntersperseT "\\." (RepeatT 4 OctetR) `AppendSymbol` "$"
 
--- eg ["2001-01-01", "Jan 24 2009", "03/29/0x7"]
+-- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
 type DateFmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
 type DateN = '(ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d", String)
 
