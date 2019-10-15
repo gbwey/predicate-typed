@@ -15,11 +15,12 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE NoOverloadedLists #-} -- overloaded lists breaks some of the tests
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
 module TestRefined where
+import Test.Tasty
+import Test.Tasty.HUnit
 import Predicate
 import Data.Tree
 import Refined
@@ -36,28 +37,25 @@ import GHC.Generics (Generic)
 import Data.Aeson
 import TH_Orphans () -- need this else refined*TH' fails for dates
 import Control.Monad.Cont
-import EasyTest
-import GHC.Stack
-import qualified Data.Text as T
 import Control.Arrow
 import Data.List
 
-suite :: Test ()
-suite = tests
-  [ scope "ok3 ip9" $ expectEq ($$(refined3TH "121.0.12.13") :: MakeR3 Ip9) (unsafeRefined3 [121,0,12,13] "121.000.012.013")
-  , scope "ok3 luhn check" $ expectEq ($$(refined3TH "12345678903") :: MakeR3 CC11) (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
-  , scope "ok3 datetime utctime" $ expectEq ($$(refined3TH "2019-01-04 23:00:59") :: MakeR3 (DateTime1 UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
-  , scope "ok3 datetime localtime" $ expectEq ($$(refined3TH "2019-01-04 09:12:30") :: MakeR3 (DateTime1 LocalTime)) (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
-  , scope "ok3 hms" $ expectEq ($$(refined3TH "12:0:59") :: MakeR3 Hms) (unsafeRefined3 [12,0,59] "12:00:59")
-  , scope "always true" $ expectEq ($$(refinedTH 7) :: Refined 'True Int) (unsafeRefined 7)
-  , scope "between5and9" $ expectEq ($$(refinedTH 7) :: Refined (Between 5 9) Int) (unsafeRefined 7)
-  , scope "ok3 between5and9" $ expectEq ($$(refined3TH "7") :: Refined3 (ReadP Int) (Between 5 9) (Printf "%03d") String) (unsafeRefined3 7 "007")
-  , scope "ok3 ssn" $ expectEq ($$(refined3TH "123-45-6789") :: MakeR3 Ssn) (unsafeRefined3 [123,45,6789] "123-45-6789")
-  , scope "ok3 base16" $ expectEq ($$(refined3TH "12f") :: MakeR3 (BaseN 16)) (unsafeRefined3 303 "12f")
-  , scope "ok3 daten1" $ expectEq ($$(refined3TH "June 25 1900") :: MakeR3 DateN) (unsafeRefined3 (read "1900-06-25") "1900-06-25")
-  , scope "ok3 daten2" $ expectEq ($$(refined3TH "12/02/99") :: MakeR3 DateN) (unsafeRefined3 (read "1999-12-02") "1999-12-02")
-  , scope "ok3 daten3" $ expectEq ($$(refined3TH "2011-12-02") :: MakeR3 DateN) (unsafeRefined3 (read "2011-12-02") "2011-12-02")
-  , scope "ok3 ccn123" $ expectEq ($$(refined3TH "123455") :: MakeR3 (Ccn '[1,2,3])) (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
+suite :: IO ()
+suite = defaultMain $ testGroup "testrefined"
+  [ testCase "ok3 ip9" $ (@?=) ($$(refined3TH "121.0.12.13") :: MakeR3 Ip9) (unsafeRefined3 [121,0,12,13] "121.000.012.013")
+  , testCase "ok3 luhn check" $ (@?=) ($$(refined3TH "12345678903") :: MakeR3 CC11) (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
+  , testCase "ok3 datetime utctime" $ (@?=) ($$(refined3TH "2019-01-04 23:00:59") :: MakeR3 (DateTime1 UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
+  , testCase "ok3 datetime localtime" $ (@?=) ($$(refined3TH "2019-01-04 09:12:30") :: MakeR3 (DateTime1 LocalTime)) (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
+  , testCase "ok3 hms" $ (@?=) ($$(refined3TH "12:0:59") :: MakeR3 Hms) (unsafeRefined3 [12,0,59] "12:00:59")
+  , testCase "always true" $ (@?=) ($$(refinedTH 7) :: Refined 'True Int) (unsafeRefined 7)
+  , testCase "between5and9" $ (@?=) ($$(refinedTH 7) :: Refined (Between 5 9) Int) (unsafeRefined 7)
+  , testCase "ok3 between5and9" $ (@?=) ($$(refined3TH "7") :: Refined3 (ReadP Int) (Between 5 9) (Printf "%03d") String) (unsafeRefined3 7 "007")
+  , testCase "ok3 ssn" $ (@?=) ($$(refined3TH "123-45-6789") :: MakeR3 Ssn) (unsafeRefined3 [123,45,6789] "123-45-6789")
+  , testCase "ok3 base16" $ (@?=) ($$(refined3TH "12f") :: MakeR3 (BaseN 16)) (unsafeRefined3 303 "12f")
+  , testCase "ok3 daten1" $ (@?=) ($$(refined3TH "June 25 1900") :: MakeR3 DateN) (unsafeRefined3 (read "1900-06-25") "1900-06-25")
+  , testCase "ok3 daten2" $ (@?=) ($$(refined3TH "12/02/99") :: MakeR3 DateN) (unsafeRefined3 (read "1999-12-02") "1999-12-02")
+  , testCase "ok3 daten3" $ (@?=) ($$(refined3TH "2011-12-02") :: MakeR3 DateN) (unsafeRefined3 (read "2011-12-02") "2011-12-02")
+  , testCase "ok3 ccn123" $ (@?=) ($$(refined3TH "123455") :: MakeR3 (Ccn '[1,2,3])) (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
   ]
 
 type Ip4 = ("^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$" :: Symbol)
@@ -105,7 +103,7 @@ yy1 = newRefined3TP @Identity (Proxy @Tst1) o2 "4"
 yy2 = newRefined3TP @Identity (Proxy @Tst1) o2 "3"
 
 yy3 = rapply3 o2 (*) yy1 yy2 -- fails
-yy4 = rapply3 o2 (+) yy1 yy2 -- ok
+yy4 = rapply3 o2 (+) yy1 yy2 -- pure ()
 
 type Ip4T = '(Ip4A, Ip4B, Ip4C, String)
 
@@ -284,7 +282,7 @@ testRefined3P _ opts i =
       in case mr1 of
            Nothing -> Left ("testRefined3P(2): round trip failed: old(" ++ show i ++ ") new(" ++ show (out3 r) ++ ")", show m3a)
            Just r1 ->
-             if r /= r1 then Left ("testRefined3P(3): round trip ok but values dont match: old(" ++ show i ++ ") new(" ++ show (out3 r) ++ ")", show (r,r1))
+             if r /= r1 then Left ("testRefined3P(3): round trip pure () but values dont match: old(" ++ show i ++ ") new(" ++ show (out3 r) ++ ")", show (r,r1))
              else Right (r,r1)
     Nothing -> Left ("testRefined3P(1): bad initial predicate i=" ++ show i, show m3)
 
@@ -351,38 +349,62 @@ testRefined opts a =
         Nothing -> error $ show bp ++ "\n" ++ e
         Just r -> eitherDecode @(Refined p a) $ encode r
 
-expectPE :: (Show a, Eq a, HasCallStack) => BoolT a -> IO (BoolT a) -> Test ()
+expectIO :: (HasCallStack, Show a) => IO (Either String a) -> (Either String a -> Either String ()) -> IO ()
+expectIO iolr p = do
+  lr <- iolr
+  case p lr of
+    Left e -> assertFailure $ "expectIO: " <> e <> " lr=" <> show lr
+    Right () -> pure ()
+
+expectLeftWith :: Show a => String -> Either String a -> Either String ()
+expectLeftWith _ (Right a) = Left $ "expected fail but was actually successful " ++ show a
+expectLeftWith n (Left s)
+  | n `isInfixOf` s = Right ()
+  | otherwise = Left $ "found fail but infix string did not match: actual[" ++ s ++ "] infix[" ++ n ++ "]"
+
+expectLeft :: Show b => Either a b -> IO ()
+expectLeft = \case
+  Left _ -> pure ()
+  Right e -> assertFailure $ "expected Left but found Right " ++ show e
+
+expectRight :: Show a => Either a b -> IO ()
+expectRight = \case
+  Right _ -> pure ()
+  Left e -> assertFailure $ "expected Right but found Left " ++ show e
+
+
+expectPE :: (Show a, Eq a, HasCallStack) => BoolT a -> IO (BoolT a) -> IO ()
 expectPE bp m = do
-  x <- io m
-  io $ print (x,bp)
-  expectEq bp x
+  x <- m
+  print (x,bp)
+  bp @?= x
 
 expect3 :: (HasCallStack, Show i, Show r, Eq i, Eq r, Eq j, Show j)
   => Either (Results i j) r
   -> (RResults i j, Maybe r)
-  -> Test ()
+  -> IO ()
 expect3 lhs (rhs,mr) = do
-  expectEq lhs $ maybe (Left $ toRResults3 rhs) Right mr
+  (@?=) lhs $ maybe (Left $ toRResults3 rhs) Right mr
 
 expectE :: (HasCallStack, Show a, Eq a)
   => Either (RE.Results a) (Refined op a)
   -> Either (RE.RResults a) (Refined op a)
-  -> Test ()
+  -> IO ()
 expectE lhs rhs = do
-  expectEq lhs $ left toRResultsE rhs
+  (@?=) lhs $ left toRResultsE rhs
 
 expectJ :: (HasCallStack, Show a, Eq a)
   => Either [String] a
   -> Either String a
-  -> Test ()
+  -> IO ()
 expectJ lhs rhs =
   case (lhs,rhs) of
-    (Left _e,Right r) -> crash $ "expected left but found right " <> T.pack (show r)
-    (Right r,Right r1) -> expectEq r r1
-    (Right _r,Left e) -> crash $ "expected right but found left " <> T.pack e
+    (Left _e,Right r) -> assertFailure $ "expected left but found right " <> show r
+    (Right r,Right r1) -> r @?= r1
+    (Right _r,Left e) -> assertFailure $ "expected right but found left " <> e
     (Left ss, Left e)
-       | all (`isInfixOf` e) ss -> ok
-       | otherwise -> crash $ "both left but expected " <> T.pack (show ss) <> " in " <> T.pack e
+       | all (`isInfixOf` e) ss -> pure ()
+       | otherwise -> assertFailure $ "both left but expected " <> (show ss) <> " in " <> e
 
 toFrom :: (FromJSON a1, ToJSON a2, a1 ~ a2) => a2 -> Either String a1
 toFrom = eitherDecode . encode

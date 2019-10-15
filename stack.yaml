@@ -2,8 +2,6 @@ resolver: lts-13.25
 
 packages:
 - .
-- location: ../easytest
-  extra-dep: true
 
 extra-deps:
 - pretty-terminal-0.1.0.0

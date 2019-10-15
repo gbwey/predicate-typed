@@ -15,10 +15,12 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE NoOverloadedLists #-} -- overloaded lists breaks the tests
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 module TestJson where
+import Test.Tasty
+import TestRefined
+import Test.Tasty.HUnit
 import Predicate
 import Refined
 import Refined3
@@ -27,15 +29,14 @@ import UtilP
 import GHC.Generics (Generic)
 import Data.Text (Text)
 import Data.Aeson
-import EasyTest
 
-suite :: Test ()
-suite = tests
-  [ scope "testperson ok" $ expectIO testPerson (() <$)
-  , scope "testperson1 ok" $ expectIO (testPerson1 2) (() <$)
-  , scope "testperson1 bad ipaddress" $ expectIO (testPerson1 3) (expectLeftWith "expected between 0 and 255 found 260")
-  , scope "testperson1 bad lastname lowercase first letter" $ expectIO (testPerson1 4) (expectLeftWith "invalid name(diaz)")
-  , scope "testperson1 age 99 out of range" $ expectIO (testPerson1 5) (expectLeftWith "Error in $[0].age1")
+suite :: IO ()
+suite = defaultMain $ testGroup "testrefined"
+  [ testCase "testperson ok" $ expectIO testPerson (() <$)
+  , testCase "testperson1 ok" $ expectIO (testPerson1 2) (() <$)
+  , testCase "testperson1 bad ipaddress" $ expectIO (testPerson1 3) (expectLeftWith "expected between 0 and 255 found 260")
+  , testCase "testperson1 bad lastname lowercase first letter" $ expectIO (testPerson1 4) (expectLeftWith "invalid name(diaz)")
+  , testCase "testperson1 age 99 out of range" $ expectIO (testPerson1 5) (expectLeftWith "Error in $[0].age1")
   ]
 
 testPerson :: IO (Either String [Person])

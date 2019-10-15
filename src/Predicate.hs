@@ -1793,15 +1793,17 @@ instance (P p a
 --   PresentT LT
 
 data Rat (pos :: Bool) (num :: Nat) (den :: Nat)
+-- | constructs a positive integer as a rational number 'Rat'
 type Pos (n :: Nat) = Rat 'True n 1
+-- | constructs a negative integer as a rational number 'Rat'
 type Neg (n :: Nat) = Rat 'False n 1
 
--- | constructs a valid positive rational number
+-- | constructs a valid positive rational number 'Rat'
 type family PosR (n :: Nat) (d :: Nat) where
   PosR n 0 = GL.TypeError ('GL.Text "PosR has a 0 denominator where numerator=" ':<>: 'GL.ShowType n)
   PosR n d = Rat 'True n d
 
--- | constructs a valid negative rational number
+-- | constructs a valid negative rational number 'Rat'
 type family NegR (n :: Nat) (d :: Nat) where
   NegR n 0 = GL.TypeError ('GL.Text "NegR has a 0 denominator where numerator=" ':<>: 'GL.ShowType n)
   NegR n d = Rat 'False n d

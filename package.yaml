@@ -56,7 +56,9 @@ tests:
     dependencies:
     - predicate-typed
     - stm
-    - easytest
+    - tasty
+    - tasty-hunit
+    - tasty-quickcheck
   doctests:
     main: doctests.hs
     other-modules: []
