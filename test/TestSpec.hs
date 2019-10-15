@@ -6,6 +6,6 @@ import Data.Functor
 
 main :: IO ()
 main = do
-  TestPredicate.doit
+  TestPredicate.suite
   TestJson.suite
   TestRefined.suite

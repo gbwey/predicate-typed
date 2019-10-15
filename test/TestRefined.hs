@@ -41,7 +41,7 @@ import Control.Arrow
 import Data.List
 
 suite :: IO ()
-suite = defaultMain $ testGroup "testrefined"
+suite = defaultMain $ testGroup "TestRefined"
   [ testCase "ok3 ip9" $ (@?=) ($$(refined3TH "121.0.12.13") :: MakeR3 Ip9) (unsafeRefined3 [121,0,12,13] "121.000.012.013")
   , testCase "ok3 luhn check" $ (@?=) ($$(refined3TH "12345678903") :: MakeR3 CC11) (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
   , testCase "ok3 datetime utctime" $ (@?=) ($$(refined3TH "2019-01-04 23:00:59") :: MakeR3 (DateTime1 UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")

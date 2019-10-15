@@ -45,8 +45,8 @@ import Text.Show.Functions ()
 import Data.Functor.Compose
 import TestRefined hiding (suite)
 
-doit :: IO ()
-doit = defaultMain $ testGroup "testpredicate" (orderTests allTests <> allProps)
+suite :: IO ()
+suite = defaultMain $ testGroup "TestPredicate" (orderTests allTests <> allProps)
 
 allProps :: [TestTree]
 allProps =
