@@ -161,7 +161,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 `- P Id "00feg"
 ```
 
-#### This example fails as the hexadecimal value not between 10 and 256
+#### This example fails as the hexadecimal value is valid but is not between 10 and 256
 
 ```haskell
 >either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe443a\""
