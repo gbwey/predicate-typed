@@ -147,26 +147,26 @@ prtELPure :: Show a
    -> RResults a
    -> String
 prtELPure opts v =
-  let outmsg msg = "\n***" <> msg <> "***\n"
-      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) " ++ show a)
+  let outmsg msg = "\n*** " <> msg <> " ***\n"
+      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
   in case v of
        RF e t1 ->
-         let (m,n) = ("Step 1. Initial Conversion(ip) Failed", e)
-             r = outmsg m <> " = " <> n
+         let (m,_n) = ("Step 1. Initial Conversion(ip) Failed", e)
+             r = outmsg m
               <> prtTreePure opts t1
          in r
        RTF a t1 e t2 ->
-         let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
+         let (m,_n) = ("Step 2. Failed Boolean Check(op)", e)
              r = msg1 a
               <> fixLite opts a t1
-              <> outmsg (m <> " = " <> n)
+              <> outmsg m
               <> prtTreePure opts t2
          in r
        RTFalse a t1 t2 ->
-         let (m,n) = ("Step 2. False Boolean Check(op)", "FalseP")
+         let m = "Step 2. False Boolean Check(op)"
              r = msg1 a
               <> fixLite opts a t1
-              <> outmsg (m <> " = " <> n)
+              <> outmsg m
               <> prtTreePure opts t2
          in r
 

@@ -91,7 +91,7 @@ run this to get details in color of each evaluation step:
 ```haskell
 >prtEval3PIO (Proxy @Hex) o2 "0000fe"
 
-***Step 1. Success Initial Conversion(ip) = 254 ***
+***Step 1. Success Initial Conversion(ip) [254] ***
 
 P ReadBase(Int) 16 254 | "0000fe"
 |
@@ -156,7 +156,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ***Step 1. Initial Conversion(ip) Failed ***
 
- = invalid base 16[Error invalid base 16] ReadBase(Int) 16 as=00feg err=[(254,"g")]
+[Error invalid base 16] ReadBase(Int) 16 as=00feg err=[(254,"g")]
 |
 `- P Id "00feg"
 ```
@@ -168,9 +168,9 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 >putStrLn e
 Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
 
-***Step 1. Success Initial Conversion(ip) = 16663610 ***
+***Step 1. Success Initial Conversion(ip) [16663610] ***
 
-P ReadBase(Int) 16 16663610 | "00fe443a"
+P ReadBase(Int,16) 16663610 | "00fe443a"
 |
 `- P Id "00fe443a"
 

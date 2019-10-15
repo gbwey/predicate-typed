@@ -5302,7 +5302,7 @@ instance (Typeable (PP t x)
   eval _ opts x = do
     let n = nat @n
         xs = getValidBase n
-        msg0 = "ReadBase(" <> t <> ") " <> show n
+        msg0 = "ReadBase(" <> t <> "," <> show n <> ")"
         t = showT @(PP t x)
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts (msg0 <> " p failed") pp [] of

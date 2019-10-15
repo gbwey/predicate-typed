@@ -173,13 +173,13 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 -- >>> removeAnsiForDocTest $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe443a\""
 -- Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
 -- <BLANKLINE>
--- ***Step 1. Success Initial Conversion(ip) = 16663610 ***
+-- *** Step 1. Success Initial Conversion(ip) [16663610] ***
 -- <BLANKLINE>
--- P ReadBase(Int) 16 16663610 | "00fe443a"
+-- P ReadBase(Int,16) 16663610 | "00fe443a"
 -- |
 -- `- P Id "00fe443a"
 -- <BLANKLINE>
--- ***Step 2. False Boolean Check(op) = FalseP ***
+-- *** Step 2. False Boolean Check(op) ***
 -- <BLANKLINE>
 -- False True && False
 -- |
@@ -578,28 +578,28 @@ prt3Impl :: (Show a, Show b)
   -> RResults a b
   -> Msg3
 prt3Impl opts v =
-  let outmsg msg = "\n***" <> msg <> " ***\n\n"
-      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) = " ++ show a)
+  let outmsg msg = "\n*** " <> msg <> " ***\n\n"
+      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg3 m n r | oLite opts = Msg3 m n ""
                    | otherwise = Msg3 m n r
   in case v of
        RF e t1 ->
          let (m,n) = ("Step 1. Initial Conversion(ip) Failed", e)
-             r = outmsg m <> " = " <> n
+             r = outmsg m
               <> prtTreePure opts t1
          in mkMsg3 m n r
        RTF a t1 e t2 ->
          let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
              r = msg1 a
               <> fixLite opts a t1
-              <> outmsg (m <> " = " <> n)
+              <> outmsg m
               <> prtTreePure opts t2
          in mkMsg3 m n r
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", "FalseP")
              r = msg1 a
               <> fixLite opts a t1
-              <> outmsg (m <> " = " <> n)
+              <> outmsg m
               <> prtTreePure opts t2
          in mkMsg3 m n r
        RTTrueF a t1 t2 e t3 ->
@@ -608,7 +608,7 @@ prt3Impl opts v =
               <> fixLite opts a t1
               <> outmsg "Step 2. Success Boolean Check(op)"
               <> prtTreePure opts t2
-              <> outmsg (m <> " = " <> n)
+              <> outmsg m
               <> prtTreePure opts t3
          in mkMsg3 m n r
        RTTrueT a t1 t2 b t3 ->
@@ -617,7 +617,7 @@ prt3Impl opts v =
               <> fixLite opts a t1
               <> outmsg "Step 2. Success Boolean Check(op)"
               <> prtTreePure opts t2
-              <> outmsg (m <> " = " <> n)
+              <> outmsg m
               <> fixLite opts b t3
          in mkMsg3 m n r
 
