@@ -21,32 +21,36 @@ data Refined p a = Refined a
 ### Examples of Refined (for more information see [doctests](src/Refined.hs))
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
-$$(refinedTH "123") :: Refined (ReadP Int >> Id > 99) String
+>prtRefinedIO @(ReadP Int >> Id > 99) ol "123"
+Right (Refined {unRefined = "123"})
 ```
 
 2. reads in a number but fails at compile-time
 ```haskell
-$$(refinedTH "1x2x3") :: Refined (ReadP Int >> Id > 99) String
+>prtRefinedIO @(ReadP Int >> Id > 99) ol "1x2y3"
+Left (FailP "ReadP Int (1x2y3) failed")
 ```
 
 3. reads in a hexadecimal string and checks to see that it is between 99 and 256
 ```haskell
-$$(refinedTH "000fe") :: Refined (ReadBase Int 16 >> Between 99 256) String
+>prtRefinedIO @(ReadBase Int 16 >> Between 99 256) ol "000fe"
+Right (Refined {unRefined = "000fe"})
 ```
 
 4. reads in a hexadecimal string but fails the predicate check so doesnt compile
 ```haskell
-$$(refinedTH "000fe") :: Refined (ReadBase Int 16 >> Between 99 253) String
+>prtRefinedIO @(ReadBase Int 16 >> Between 99 253) ol "000fe"
+Left FalseP
 ```
 
 5. same as 4. above but now we get details of where it went wrong
 ```haskell
-$$(refinedTH' o2 "000fe") :: Refined (ReadBase Int 16 >> Between 99 253) String
+>prtRefinedIO @o2 "000fe") :: Refined (ReadBase Int 16 >> Between 99 253) String
 ```
 
 6. reads in a string as time and does simple validation
 ```haskell
-$$(refinedTH "12:01:05") :: Refined (Resplit ":" >> Map (ReadP Int) >> Len == 3) String
+>prtRefinedIO @"12:01:05") :: Refined (Resplit ":" >> Map (ReadP Int) >> Len == 3) String
 ```
   * `Resplit ":"`
      split using regex using a colon as a delimiter  ["12","01","05"]
@@ -73,7 +77,7 @@ pe2 @(Map (Len == 3) [12,1,5]
 ```haskell
 type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
 
-$$(refined3TH "0000fe") :: MakeR3 Hex
+>prtEval3PIO @(Proxy Hex) ol "0000fe"
 Refined3 {in3 = 255, out3 = "fe"}
 ```
 1. `ReadBase Int 16`
@@ -84,9 +88,37 @@ Refined3 {in3 = 255, out3 = "fe"}
     formats the output as "fe" which is compatible with the input
 
 run this to get details in color of each evaluation step:
-`$$(refined3TH' o2 "0000fe") :: MakeR3 Hex`
+```haskell
+>prtEval3PIO (Proxy @Hex) o2 "0000fe"
 
-Here we read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as output
+***Step 1. Success Initial Conversion(ip) = 254 ***
+
+P ReadBase(Int) 16 254 | "0000fe"
+|
+`- P Id "0000fe"
+
+***Step 2. Success Boolean Check(op) ***
+
+True  True && True
+|
++- True  254 >= 0
+|  |
+|  +- P I
+|  |
+|  `- P '0
+|
+`- True  254 <= 255
+   |
+   +- P I
+   |
+   `- P '255
+
+***Step 3. Success Output Conversion(fmt) = "fe" ***
+
+P ShowBase 16 fe | 254
+```
+
+Read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as output
 ```haskell
 pe2 @(ReadBase Int 16) "0000fe" == 254
 
@@ -95,3 +127,66 @@ pe2 @(Between 0 255) 254 = True
 pe2 @(ShowBase 16) 254 = "fe"
 ```
 
+### Template Haskell versions
+
+```haskell
+ex1 :: Refined (ReadP Int >> Id > 99) String
+ex1 = $$(refinedTH "123")
+```
+
+```haskell
+type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
+
+ex2 :: MakeR3 Hex
+ex2 = $$(refined3TH "0000fe")
+```
+
+### Json decoding
+
+#### This example is successful as it is a valid hexadecimal and is in the range 10 though 256
+```haskell
+>eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe\""
+Right (Refined3 {in3 = 254, out3 = "254"})
+```
+
+#### This example fails as the value is not a valid hexadecimal string
+```haskell
+>either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16) 'True ShowP String) "\"00feg\""
+Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
+
+***Step 1. Initial Conversion(ip) Failed ***
+
+ = invalid base 16[Error invalid base 16] ReadBase(Int) 16 as=00feg err=[(254,"g")]
+|
+`- P Id "00feg"
+```
+
+#### This example fails as the hexadecimal value not between 10 and 256
+
+```haskell
+>either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe443a\""
+>putStrLn e
+Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
+
+***Step 1. Success Initial Conversion(ip) = 16663610 ***
+
+P ReadBase(Int) 16 16663610 | "00fe443a"
+|
+`- P Id "00fe443a"
+
+***Step 2. False Boolean Check(op) = FalseP ***
+
+False True && False
+|
++- True  16663610 > 10
+|  |
+|  +- P Id 16663610
+|  |
+|  `- P '10
+|
+`- False 16663610 < 256
+   |
+   +- P Id 16663610
+   |
+   `- P '256
+```

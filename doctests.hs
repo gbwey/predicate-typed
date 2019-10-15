@@ -1,7 +1,7 @@
 import Test.DocTest
 -- main = doctest ["src", "--verbose"]
 main :: IO ()
-main = doctest ["src"]
+main = doctest ["-isrc", "src"]
 
 {-
 C:\haskell\predicate-typed>stack exec doctest -- "src/Predicate.hs"

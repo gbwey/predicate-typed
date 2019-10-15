@@ -161,7 +161,41 @@ instance (Show i, Show (PP ip i), Refined3C ip op fmt i, Read i) => Read (Refine
 instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
   toJSON = toJSON . out3
 
--- reads external value
+
+-- | 'FromJSON' instance for 'Refined3'
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> :set -XOverloadedStrings
+-- >>> eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe\""
+-- Right (Refined3 {in3 = 254, out3 = "254"})
+--
+-- >>> removeAnsiForDocTest $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe443a\""
+-- Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
+-- <BLANKLINE>
+-- ***Step 1. Success Initial Conversion(ip) = 16663610 ***
+-- <BLANKLINE>
+-- P ReadBase(Int) 16 16663610 | "00fe443a"
+-- |
+-- `- P Id "00fe443a"
+-- <BLANKLINE>
+-- ***Step 2. False Boolean Check(op) = FalseP ***
+-- <BLANKLINE>
+-- False True && False
+-- |
+-- +- True  16663610 > 10
+-- |  |
+-- |  +- P Id 16663610
+-- |  |
+-- |  `- P '10
+-- |
+-- `- False 16663610 < 256
+--    |
+--    +- P Id 16663610
+--    |
+--    `- P '256
+-- <BLANKLINE>
+--
 instance (Show (PP fmt (PP ip i)), Show (PP ip i), Refined3C ip op fmt i, FromJSON i) => FromJSON (Refined3 ip op fmt i) where
   parseJSON z = do
                   i <- parseJSON @i z

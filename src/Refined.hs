@@ -27,6 +27,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 -- |
 -- Module      : Refined
 -- Description : Traditional refinement type with only one type
@@ -65,7 +66,6 @@ import GHC.Generics (Generic)
 import qualified Language.Haskell.TH.Syntax as TH
 import System.Console.Pretty
 import Test.QuickCheck
-
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
 -- >>> :set -XTypeApplications
@@ -135,6 +135,30 @@ instance ToJSON a => ToJSON (Refined p a) where
   toJSON = toJSON . unRefined
 
 -- | 'FromJSON' instance for 'Refined'
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> :set -XOverloadedStrings
+-- >>> eitherDecode' @(Refined (Between 10 14) Int) "13"
+-- Right (Refined {unRefined = 13})
+--
+-- >>> removeAnsiForDocTest $ eitherDecode' @(Refined (Between 10 14) Int) "16"
+-- Error in $: Refined:FalseP
+-- False True && False
+-- |
+-- +- True  16 >= 10
+-- |  |
+-- |  +- P I
+-- |  |
+-- |  `- P '10
+-- |
+-- `- False 16 <= 14
+--    |
+--    +- P I
+--    |
+--    `- P '14
+-- <BLANKLINE>
+--
 instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
   parseJSON z = do
                   a <- parseJSON z
@@ -149,7 +173,6 @@ arbRefined :: forall p a.
    , RefinedC p a
    ) => POpts -> Gen (Refined p a)
 arbRefined opts = suchThatMap (arbitrary @a) (snd . runIdentity . newRefined @p opts)
-
 
 -- | binary operation applied to two 'RefinedT' values
 rapply :: forall m p a . (RefinedC p a, Monad m)

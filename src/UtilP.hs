@@ -971,3 +971,17 @@ instance MonadEval IO where
   catchitNF v = E.evaluate (Right $!! v) `E.catch` (\(E.SomeException e) -> pure $ Left ("IO e=" <> show e))
   liftEval = id
 
+removeAnsiForDocTest :: Show a => Either String a -> IO ()
+removeAnsiForDocTest =
+  \case
+     Left e -> let esc = '\x1b'
+                   f :: String -> Maybe (String, String)
+                   f = \case
+                          [] -> Nothing
+                          c:cs | c == esc -> case break (=='m') cs of
+                                                  (_,'m':s) -> Just ("",s)
+                                                  _ -> Nothing
+                               | otherwise -> Just $ break (==esc) (c:cs)
+               in putStrLn $ concat $ unfoldr f e
+     Right a -> print a
+
