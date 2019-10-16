@@ -40,6 +40,7 @@ import Control.Lens
 import qualified Data.Monoid as MM
 import qualified Data.Semigroup as SG
 import Data.These
+import Data.These.Lens ()
 import Data.Time
 import Text.Show.Functions ()
 import Data.Functor.Compose
@@ -797,7 +798,7 @@ allTests =
   , expectPE (PresentT (Just 'x')) $ pl @(Snd <$ Fst) (Just 10,'x')
   , expectPE (PresentT (Nothing @(SG.Sum _))) $ pl @(MemptyT' Id) (Just (SG.Sum 12))
   , expectPE (PresentT ([4,99],"xy")) $ pl @PartitionEithers [Left 4, Right 'x', Right 'y',Left 99]
-  , expectPE (PresentT ([(3,'b'),(5,'x')], ([4,99],"xy"))) $ pl @PartitionThese [This 4, That 'x', That 'y',These 3 'b', This 99, These 5 'x']
+  , expectPE (PresentT (([4,99],"xy"),[(3,'b'),(5,'x')])) $ pl @PartitionThese [This 4, That 'x', That 'y',These 3 'b', This 99, These 5 'x']
   , expectPE (PresentT [1,2,3]) $ pl @(MapMaybe (MaybeB (Le 3) Id)) [1..5]
   , expectPE (PresentT [4,5]) $ pl @(MapMaybe (MaybeB (Gt 3) Id)) [1..5]
   , expectPE (PresentT [94,93,92,91]) $ pl @(IterateWhile (Id > 90) Pred) 94
@@ -897,7 +898,7 @@ allTests =
   , expectPE (FailT "found rhs=Right 10") $ pl @(LeftFail (ShowP >> Printf "found rhs=%s") Id) (Right @String 10)
   , expectPE (FailT "found rhs=23") $ pl @(LeftFail (Snd >> Snd >> Printf "found rhs=%d") (Snd >> Fst)) ('x',(Right @() 10,23::Int))
   , expectPE (PresentT "abc") $ pl @(LeftFail (Snd >> Snd >> Printf "found rhs=%d") (Snd >> Fst)) ('x',(Left @_ @() "abc",23::Int))
-  , expectPE (PresentT ([(9,'z'),(8,'y')], ([1,4,10],"xy"))) $ pl @PartitionThese [This 1,That 'x',This 4,That 'y',These 9 'z',This 10,These 8 'y']
+  , expectPE (PresentT (([1,4,10],"xy"),[(9,'z'),(8,'y')])) $ pl @PartitionThese [This 1,That 'x',This 4,That 'y',These 9 'z',This 10,These 8 'y']
   , expectPE (PresentT [('a',1),('a',10),('z',14),('m',22)]) $ pl @(SortOn Snd Snd) ((),[('z',14),('a',10),('m',22),('a',1)])
   , expectPE (PresentT [('z',1),('m',22),('a',10)]) $ pl @(SortOnDesc Fst Snd) ((),[('z',1),('a',10),('m',22)])
   , expectPE (PresentT [('a',10),('m',22),('z',1)]) $ pl @(SortOn Fst Snd) ((),[('z',1),('a',10),('m',22)])

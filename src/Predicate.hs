@@ -23,7 +23,6 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE TypeInType #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE OverloadedLists #-}
 {- |
@@ -61,7 +60,8 @@ import Numeric
 import Data.Char
 import Data.Function
 import Data.These
-import Data.Align
+import Data.These.Lens ()
+import qualified Data.Align as TA
 import Data.Ratio
 import Data.Time
 import Data.Coerce
@@ -3932,19 +3932,20 @@ instance (Show a, Show b) => P PartitionEithers [Either a b] where
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
 --   >>> pl @PartitionThese [This 'a', That 2, This 'c', These 'z' 1, That 4, These 'a' 2, That 99]
---   Present ([('z',1),('a',2)],("ac",[2,4,99]))
---   PresentT ([('z',1),('a',2)],("ac",[2,4,99]))
+--   Present (("ac",[2,4,99]),[('z',1),('a',2)])
+--   PresentT (("ac",[2,4,99]),[('z',1),('a',2)])
 --
 data PartitionThese
 instance (Show a, Show b) => P PartitionThese [These a b] where
-  type PP PartitionThese [These a b] = ([(a, b)], ([a], [b]))
+  type PP PartitionThese [These a b] = (([a], [b]), [(a, b)])
   eval _ opts as =
-    let b = partitionThese as
+    let (x,y,z) = partitionThese as
+        b = ((x,y),z)
     in pure $ mkNode opts (PresentT b) ["PartitionThese" <> show0 opts " " b <> showA opts " | " as] []
 
-type Thiss = PartitionThese >> Snd >> Fst
-type Thats = PartitionThese >> Snd >> Snd
-type Theses = PartitionThese >> Fst
+type Thiss = PartitionThese >> Fst >> Fst
+type Thats = PartitionThese >> Fst >> Snd
+type Theses = PartitionThese >> Snd
 
 type CatMaybesa t = Foldl (Fst <> (Snd >> MaybeIn MemptyP '[Id])) (MemptyT t) Id
 type CatMaybesx t = Foldl (JustDef' Fst ((Fst >> Fst >> Fst) +: Snd) Snd) (MemptyT [t]) Id
@@ -5133,7 +5134,7 @@ instance (PP p a ~ [x]
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
-        let d = align p q
+        let d = TA.align p q
         in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
 
 data ZipTheseF p q
@@ -5144,7 +5145,7 @@ instance (Show (f y)
         , ExtractT (f x) ~ x
         , ExtractT (f y) ~ y
         , Show (f x)
-        , Align f
+        , TA.Align f
         , Show (f (These x y))
         , P p a
         , P q a)
@@ -5156,7 +5157,7 @@ instance (Show (f y)
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
-        let d = align p q
+        let d = TA.align p q
         in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
 
 type family ExtractT (ta :: Type) :: Type where

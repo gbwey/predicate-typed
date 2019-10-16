@@ -19,7 +19,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -66,6 +65,7 @@ import Control.Applicative (ZipList)
 import Data.Kind (Type)
 import Data.Either
 import Data.These
+import Data.These.Combinators
 import qualified Control.Exception as E
 import Control.DeepSeq
 import System.IO.Unsafe (unsafePerformIO)
@@ -241,13 +241,13 @@ data Disp = NormalDisp -- ^ draw horizontal tree
           deriving (Show, Eq)
 
 instance Show POpts where
-  show POpts {..} =
-    "POpts: showA=" <> show oShowA
-    <> " debug=" <> show oDebug
-    <> " disp=" <> show oDisp
-    <> " hide=" <> show oHide
-    <> " color=" <> show (fst oColor)
-    <> " lite=" <> show oLite
+  show opts =
+    "POpts: showA=" <> show (oShowA opts)
+    <> " debug=" <> show (oDebug opts)
+    <> " disp=" <> show (oDisp opts)
+    <> " hide=" <> show (oHide opts)
+    <> " color=" <> show (fst (oColor opts))
+    <> " lite=" <> show (oLite opts)
 
 defOpts :: POpts
 defOpts = POpts
