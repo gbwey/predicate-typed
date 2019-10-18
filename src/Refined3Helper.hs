@@ -117,8 +117,8 @@ type Ipop' = Guards '[
         ] >> 'True
 type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d"
 
-type HmsR = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- padded only -- dumb because strict validation should not be done twice: ie in ip and op!
-type Hmsconv = Do '[Rescan HmsR, Head, Snd, Map (ReadBaseInt 10)]
+type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- padded only -- dumb because strict validation should not be done twice: ie in ip and op!
+type Hmsconv = Do '[Rescan HmsRE, Head, Snd, Map (ReadBaseInt 10)]
 type Hmsval = GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 0 23, Between 0 59, Between 0 59]
 
 type Hms4 = '(Hmsconv, Hmsval >> 'True, Hmsfmt, String)
@@ -126,9 +126,9 @@ type Hms4 = '(Hmsconv, Hmsval >> 'True, Hmsfmt, String)
 hms4 :: Proxy Hms4
 hms4 = mkProxy3
 
-type OctetR = "(25[0-5]|2[0..4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])" -- no padded numbers allowed
---type Ip4strictR = "^" `AppendSymbol` OctetR `AppendSymbol` "\\." `AppendSymbol` OctetR `AppendSymbol` "\\." `AppendSymbol` OctetR `AppendSymbol` "\\." `AppendSymbol` OctetR `AppendSymbol` "$"
-type Ip4strictR = "^" `AppendSymbol` IntersperseT "\\." (RepeatT 4 OctetR) `AppendSymbol` "$"
+type OctetRE = "(25[0-5]|2[0..4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])" -- no padded numbers allowed
+--type Ip4strictRE = "^" `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "$"
+type Ip4strictRE = "^" `AppendSymbol` IntersperseT "\\." (RepeatT 4 OctetRE) `AppendSymbol` "$"
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
 type DateFmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
@@ -197,7 +197,7 @@ type Ok (t :: Type) = '(Id, 'True, Id, t)
 type OkR (t :: Type) = MakeR3 (Ok t)
 
 -- noop false
-type Oknot (t :: Type) = '(Id, 'False, Id, t)
-type OkNotR (t :: Type) = MakeR3 (Oknot t)
+type OkNot (t :: Type) = '(Id, 'False, Id, t)
+type OkNotR (t :: Type) = MakeR3 (OkNot t)
 
 type BaseIJ (i :: Nat) (j :: Nat) = '(ReadBase Int i >> ShowBase j, 'True, ReadBase Int j >> ShowBase i, String)

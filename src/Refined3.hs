@@ -35,14 +35,11 @@ see 'Refined3'
 contains Json and Read instances and arbitrary functions
 -}
 module Refined3 (
-    unsafeRefined3
+    Refined3(r3In,r3Out)
   , Refined3C
-  , Refined3(in3,out3)
-  , arbRefined3
-  , arbRefined3With
   , mkProxy3
   , mkProxy3P
-  , MkProxyT
+  , MkProxy3T
   , withRefined3TIO
   , withRefined3T
   , withRefined3TP
@@ -63,11 +60,15 @@ module Refined3 (
   , eval3X
   , prt3IO
   , prt3
+  , arbRefined3
+  , arbRefined3With
   , Msg3 (..)
   , prt3Impl
   , MakeR3
   , Results (..)
   , RResults (..)
+  , unsafeRefined3
+  , unsafeRefined3'
  ) where
 import Refined
 import Predicate
@@ -81,7 +82,9 @@ import Data.Aeson
 import qualified Language.Haskell.TH.Syntax as TH
 import System.Console.Pretty
 import Test.QuickCheck
-
+import qualified GHC.Read as GR
+import qualified Text.ParserCombinators.ReadPrec as PCR
+import qualified Text.Read.Lex as RL
 -- | Refinement type that differentiates the input type from output type
 --
 -- @
@@ -104,7 +107,7 @@ import Test.QuickCheck
 -- >>> :set -XTypeOperators
 -- >>> :m + Data.Time.Calendar.WeekDate
 -- >>> prtEval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x") ol "00fe"
--- Right (Refined3 {in3 = 254, out3 = "fe"})
+-- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
 -- >>> prtEval3 @(ReadBase Int 16) @(Lt 253) @(Printf "%x") ol "00fe"
 -- Left Step 2. False Boolean Check(op) | FalseP
@@ -116,10 +119,10 @@ import Test.QuickCheck
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
 -- >>> prtEval3 @(Resplit "\\." >> Map (ReadP Int)) @(Guard (Len >> Printf "found length=%d") (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1"
--- Right (Refined3 {in3 = [198,162,3,1], out3 = "198.162.003.001"})
+-- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
 -- >>> prtEval3 @(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id) @(Guard "expected a Sunday" (Snd >> Snd == 7) >> 'True) @(Fst >> UnMkDay) ol (2019,(10,13))
--- Right (Refined3 {in3 = (2019-10-13,(41,7)), out3 = (2019,(10,13))})
+-- Right (Refined3 {r3In = (2019-10-13,(41,7)), r3Out = (2019,(10,13))})
 --
 -- >>> prtEval3 @(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id) @(Guard "expected a Sunday" (Snd >> Snd == 7) >> 'True) @(Fst >> UnMkDay) ol (2019,(10,12))
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
@@ -129,13 +132,26 @@ import Test.QuickCheck
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
 -- >>> prtEval3P (Proxy @(T4 _)) ol (2019,(10,13))
--- Right (Refined3 {in3 = (2019-10-13,(41,7)), out3 = (2019,(10,13))})
+-- Right (Refined3 {r3In = (2019-10-13,(41,7)), r3Out = (2019,(10,13))})
 --
 
-data Refined3 ip op fmt i = Refined3 { in3 :: PP ip i, out3 :: PP fmt (PP ip i) }
+data Refined3 ip op fmt i = Refined3 { r3In :: PP ip i, r3Out :: PP fmt (PP ip i) }
 
+-- | directly load values into 'Refined3'. It still checks to see that those values are valid
+unsafeRefined3' :: forall ip op fmt i
+                . (Show i, Show (PP ip i), Refined3C ip op fmt i)
+                => POpts
+                -> i
+                -> Refined3 ip op fmt i
+unsafeRefined3' opts i =
+  let (ret,mr) = eval3 @ip @op @fmt opts i
+  in case mr of
+  Nothing -> error $ show (prt3Impl opts ret)
+  Just r -> r
+-- | directly load values into 'Refined3' without any checking
 unsafeRefined3 :: forall ip op fmt i . PP ip i -> PP fmt (PP ip i) -> Refined3 ip op fmt i
 unsafeRefined3 = Refined3
+
 
 -- | Provides the constraints on Refined3
 type Refined3C ip op fmt i =
@@ -150,16 +166,60 @@ deriving instance (Show i, Show (PP ip i), Show (PP fmt (PP ip i))) => Show (Ref
 deriving instance (Eq i, Eq (PP ip i), Eq (PP fmt (PP ip i))) => Eq (Refined3 ip op fmt i)
 deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Refined3 ip op fmt i)
 
-instance (Show i, Show (PP ip i), Refined3C ip op fmt i, Read i) => Read (Refined3 ip op fmt i) where
-  readsPrec n s = do
-    (a,x) <- readsPrec @i n s
-    let (_ret,mr) = eval3 @ip @op @fmt o2 a
-    case mr of
-      Nothing -> [] -- error $ show (prt3Impl _ret)
-      Just r -> [(r,x)]
+-- read instance from -ddump-deriv
+-- | 'Read' instance for 'Refined3'
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> :set -XOverloadedStrings
+-- >>> reads @(Refined3 (ReadBase Int 16) (Between 0 255) (ShowBase 16) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
+-- [(Refined3 {r3In = 254, r3Out = "fe"},"")]
+--
+-- >>> reads @(Refined3 (ReadBase Int 16) (Between 0 255) (ShowBase 16) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
+-- []
+--
+-- >>> reads @(Refined3 (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
+-- [(Refined3 {r3In = -1234, r3Out = "-4d2"},"")]
+--
+-- >>> reads @(Refined3 (Resplit "\\." >> Map (ReadP Int)) (Guard "len/=4" (Len == 4) >> 'True) (Printfnt 4 "%d.%d.%d.%d") String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
+-- [(Refined3 {r3In = [192,168,0,1], r3Out = "192.168.0.1"},"")]
+--
+instance (Eq i, Show i, Show (PP ip i), Refined3C ip op fmt i, Read (PP ip i), Read (PP fmt (PP ip i))) => Read (Refined3 ip op fmt i) where
+    readPrec
+      = GR.parens
+          (PCR.prec
+             11
+             (do GR.expectP (RL.Ident "Refined3")
+                 GR.expectP (RL.Punc "{")
+                 fld1 <- GR.readField
+                               "r3In" (PCR.reset GR.readPrec)
+                 GR.expectP (RL.Punc ",")
+                 fld2 <- GR.readField
+                               "r3Out" (PCR.reset GR.readPrec)
+                 GR.expectP (RL.Punc "}")
 
+                 let (_ret,mr) = runIdentity $ eval3MSkip @_ @ip @op @fmt o2 fld1
+                 case mr of
+                   Nothing -> fail "" --   show (prt3Impl o2 _ret)
+                   Just (Refined3 _r1 r2) | r2 == fld2 -> pure (Refined3 fld1 fld2)
+                                         | otherwise -> fail "" -- "mismatch on r3Out fmt: found (" ++ show fld2 ++ ") but expected(" ++ show r2 ++ ")"
+             ))
+    readList = GR.readListDefault
+    readListPrec = GR.readListPrecDefault
+
+-- | 'ToJSON' instance for 'Refined3'
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> :set -XOverloadedStrings
+-- >>> encode (unsafeRefined3 @(ReadBase Int 16) @(Between 0 255) @(ShowBase 16) 254 "fe")
+-- "\"fe\""
+--
+-- >>> encode (unsafeRefined3 @Id @'True @Id 123 123)
+-- "123"
+--
 instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
-  toJSON = toJSON . out3
+  toJSON = toJSON . r3Out
 
 
 -- | 'FromJSON' instance for 'Refined3'
@@ -167,10 +227,10 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 -- >>> :set -XTypeApplications
 -- >>> :set -XDataKinds
 -- >>> :set -XOverloadedStrings
--- >>> eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe\""
--- Right (Refined3 {in3 = 254, out3 = "254"})
+-- >>> eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe\""
+-- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> removeAnsiForDocTest $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe443a\""
+-- >>> removeAnsiForDocTest $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe443a\""
 -- Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [16663610] ***
@@ -230,6 +290,7 @@ arbRefined3With ::
 arbRefined3With _ opts f =
   suchThatMap (f <$> arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt opts
 
+-- | wraps the parameters for 'Refined3' in a 4-tuple for use with methods such as 'withRefined3TP' and 'newRefined3TP'
 mkProxy3 :: forall ip op fmt i . Refined3C ip op fmt i => Proxy '(ip,op,fmt,i)
 mkProxy3 = Proxy
 
@@ -239,12 +300,13 @@ mkProxy3 = Proxy
 mkProxy3P :: forall z ip op fmt i . (z ~ '(ip,op,fmt,i), Refined3C ip op fmt i) => Proxy '(ip,op,fmt,i)
 mkProxy3P = Proxy
 
--- convert from '(ip,op,fmt,i) to Refined3 signature
+-- | convenience type family for converting from a 4-tuple '(ip,op,fmt,i) to a 'Refined3' signature
 type family MakeR3 p where
   MakeR3 '(ip,op,fmt,i) = Refined3 ip op fmt i
 
-type family MkProxyT p where
-  MkProxyT '(ip,op,fmt,i) = Proxy '(ip,op,fmt,i)
+-- | convenience type family for converting from a 4-tuple '(ip,op,fmt,i) to a Proxy
+type family MkProxy3T p where
+  MkProxy3T '(ip,op,fmt,i) = Proxy '(ip,op,fmt,i)
 
 withRefined3TIO :: forall ip op fmt i m b
   . (MonadIO m, Refined3C ip op fmt i, Show (PP ip i), Show i)
@@ -620,4 +682,3 @@ prt3Impl opts v =
               <> outmsg m
               <> fixLite opts b t3
          in mkMsg3 m n r
-

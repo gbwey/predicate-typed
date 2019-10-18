@@ -18,8 +18,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 module TestJson where
+import TastyExtras
 import Test.Tasty
-import TestRefined
 import Test.Tasty.HUnit
 import Predicate
 import Refined

@@ -53,6 +53,9 @@ module Refined (
   , RefinedT(..)
   , prtRefinedTIO
   , prtRefinedT
+  , unRavelT
+  , unRavelTIO
+  , unRavelTI
  ) where
 import Predicate
 import UtilP
@@ -66,6 +69,10 @@ import GHC.Generics (Generic)
 import qualified Language.Haskell.TH.Syntax as TH
 import System.Console.Pretty
 import Test.QuickCheck
+import qualified GHC.Read as GR
+import qualified Text.ParserCombinators.ReadPrec as PCR
+import qualified Text.Read.Lex as RL
+
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
 -- >>> :set -XTypeApplications
@@ -119,13 +126,35 @@ import Test.QuickCheck
 newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
 
 -- | 'Read' instance for 'Refined'
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> :set -XOverloadedStrings
+-- >>> reads @(Refined (Between 0 255) Int) "Refined {unRefined = 254}"
+-- [(Refined {unRefined = 254},"")]
+--
+-- >>> reads @(Refined (Between 0 255) Int) "Refined {unRefined = 300}"
+-- []
+--
+
 instance (RefinedC p a, Read a) => Read (Refined p a) where
-  readsPrec n s = do
-    (a,x) <- readsPrec @a n s
-    let ((_bp,_e),mr) = runIdentity $ newRefined @p o2 a
-    case mr of
-       Nothing -> []
-       Just r -> [(r,x)]
+  readPrec
+    = GR.parens
+        (PCR.prec
+           11
+           (do GR.expectP (RL.Ident "Refined")
+               GR.expectP (RL.Punc "{")
+               fld0 <- GR.readField
+                             "unRefined"
+                             (PCR.reset GR.readPrec)
+               GR.expectP (RL.Punc "}")
+               let (_,mr) = runIdentity $ newRefined @p ol fld0
+               case mr of
+                 Nothing -> fail ""
+                 Just _r -> pure (Refined fld0)
+           ))
+  readList = GR.readListDefault
+  readListPrec = GR.readListPrecDefault
 
 -- | the constraints that 'Refined' must adhere to
 type RefinedC p a = (PP p a ~ Bool, P p a)
@@ -309,6 +338,12 @@ instance Monad m => MonadError String (RefinedT m) where
 
 unRavelT :: RefinedT m a -> m (Either String a, [String])
 unRavelT = runWriterT . runExceptT . unRefinedT
+
+unRavelTIO :: RefinedT IO a -> IO (Either String a, [String])
+unRavelTIO = runWriterT . runExceptT . unRefinedT
+
+unRavelTI :: RefinedT Identity a -> (Either String a, [String])
+unRavelTI = runIdentity . runWriterT . runExceptT . unRefinedT
 
 prtRefinedTImpl :: forall n m a . (MonadIO n, Show a) => (forall x . m x -> n x) -> RefinedT m a -> n ()
 prtRefinedTImpl f rt = do

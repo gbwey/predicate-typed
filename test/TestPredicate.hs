@@ -12,50 +12,42 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoOverloadedLists #-} -- overloaded lists breaks some predicates
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE NoOverloadedLists #-} -- overloaded lists messes stuff up
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
 module TestPredicate where
+import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
+--import Test.Tasty.QuickCheck
+import TestRefined
+import TestRefined3
 import Predicate
 import Refined
 import Refined3
 import Refined3Helper
-import qualified RefinedE as RE
-import RefinedE (evalE,evalEP,proxyEToV,mkProxy3E)
 import UtilP
-import UtilP_TH
 import Data.Ratio
+
+import Data.Typeable
+import Control.Lens
+import Data.Time
+import Text.Show.Functions ()
+import Data.Functor.Compose
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
-import Data.Typeable
-import Control.Lens
 import qualified Data.Monoid as MM
 import qualified Data.Semigroup as SG
 import Data.These
 import Data.These.Lens ()
-import Data.Time
-import Text.Show.Functions ()
-import Data.Functor.Compose
-import TestRefined hiding (suite)
 
 suite :: IO ()
-suite = defaultMain $ testGroup "TestPredicate" (orderTests allTests <> allProps)
-
-allProps :: [TestTree]
-allProps =
-  [testProperty "base16" $ forAll (arbRefined3 (mkProxy3P @'(ReadBase Int 16, 'True, ShowBase 16, String)) ol) (\r -> evalQuick @(ReadBase Int 16) (out3 r) == Right (in3 r))
-  ]
-
-orderTests :: [Assertion] -> [TestTree]
-orderTests = zipWith (\i t -> testCase (show i) t) [1::Int ..]
+suite = defaultMain $ testGroup "TestPredicate" (orderTests allTests)
 
 allTests :: [IO ()]
 allTests =
@@ -378,9 +370,9 @@ allTests =
   , expectPE (PresentT [4,4,4,4,4,4]) $ pl @(ScanN 5 Id Id) 4
   , expectPE (PresentT "") $ pl @('Proxy >> MemptyP) "abc"
   , expectPE (PresentT [1,2,3,244])
-      $ pl @(Rescan Ip4 >> OneP >> Snd >> Map (ReadBaseInt 10) >> Ip4guard) "1.2.3.244"
+      $ pl @(Rescan Ip4RE >> OneP >> Snd >> Map (ReadBaseInt 10) >> Ip4guard) "1.2.3.244"
   , expectPE (FailT "0-255")
-      $ pl @(Rescan Ip4 >> OneP >> Snd >> Map (ReadBaseInt 10) >> Ip4guard) "1.256.3.244"
+      $ pl @(Rescan Ip4RE >> OneP >> Snd >> Map (ReadBaseInt 10) >> Ip4guard) "1.256.3.244"
   , expectPE (FailT "0-255")
       $ pl @(Rescan "(\\d+)\\.?" >> Map Snd >> Concat >> Map (ReadBaseInt 10) >> Ip4guard) "1.22.312.66"
   , expectPE (FailT "4octets")
@@ -440,7 +432,7 @@ allTests =
   , expectPE (PresentT GT) $ pl @(Do '[ 'LT, 'EQ, 'GT ]) ()
   , expectPE (PresentT (-3 % 1)) $ pl @(Do '[Rat 'True 4 4,Pos 22,NegR 12 4]) ()
   , expectPE (PresentT [10,2,5,8]) $ pl @(GuardsLax (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 0 11, Between 1 4,Between 3 5])) [10::Int,2,5,8]
-  , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyR >> OneP >> Snd >> Map (ReadBaseInt 10) >> Ddmmyyyyval) "31-11-1999"
+  , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> Snd >> Map (ReadBaseInt 10) >> Ddmmyyyyval) "31-11-1999"
   , expectPE (PresentT [31,11,1999]) $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11,1999::Int]
   , expectPE (PresentT [31,11,1999,123,44]) $ pl @(GuardsLax (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11,1999,123,44::Int]
   , expectPE (FailT "Guards: data elements(2) /= predicates(3)") $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11::Int]
@@ -451,8 +443,8 @@ allTests =
   , expectPE (PresentT (TimeOfDay 14 59 20)) $ pl @(ReadP TimeOfDay) "14:59:20"
   , expectPE (PresentT (TimeOfDay 26 61 61)) $ pl @(ReadP TimeOfDay) "26:61:61" -- yep: this is valid! need to do your own validation
   , expectPE (FailT "ParseTimeP TimeOfDay (%H:%M%S) failed to parse") $ pl @(ParseTimeP TimeOfDay "%H:%M%S" Id) "14:04:61"
-  , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsR) >> ReadP TimeOfDay) "23:13:59"
-  , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsR) >> ReadP TimeOfDay) "23:13:60"
+  , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE) >> ReadP TimeOfDay) "23:13:59"
+  , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE) >> ReadP TimeOfDay) "23:13:60"
   , expectPE (FailT "Guards: data elements(5) /= predicates(3)") $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11,2000,1,2::Int]
   , expectPE (PresentT [31,11,2000,1,2]) $ pl @(GuardsLax (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11,2000,1,2::Int]
   , expectPE (PresentT [0,0,0,0,0,0,0,1,2,3]) $ pl @(PadL 10 0 Id) [1..3]
@@ -554,7 +546,7 @@ allTests =
   , expect3 (Right $ unsafeRefined3 [1,2,3,4] "001.002.003.004") $ eval3 @Ip4A @Ip4B @(Para (RepeatT 4 (Printf "%03d")) >> Intercalate '["."] Id >> Concat) ol "1.2.3.4"
   , expect3 (Right $ unsafeRefined3 [1,2,3,4] "abc__002__3__zzz") $ eval3 @Ip4A @Ip4B @(Para '[W "abc",Printf "%03d",Printf "%d",W "zzz"] >> Intercalate '["__"] Id >> Concat) ol "1.2.3.4"
   , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (Proxy @'(Ip4A, Ip4B, Para (RepeatT 4 (Printf "%03d")) >> Intercalate '["."] Id >> Concat, _)) ol "1.2.3.4"
-  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (mkProxy3E @Ip4A @Ip4B @(Para (RepeatT 4 (Printf "%03d")) >> Intercalate '["."] Id >> Concat)) ol "1.2.3.4"
+  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (mkProxy3 @Ip4A @Ip4B @(Para (RepeatT 4 (Printf "%03d")) >> Intercalate '["."] Id >> Concat)) ol "1.2.3.4"
 
   -- keep the original value
   , expect3
@@ -579,9 +571,9 @@ allTests =
      $ pl @(Printf "%-6s") (1234 :: Int)
   , expectPE (PresentT "0004d2") $ pl @(Printf "%06x") (1234 :: Int)
   , expectPE (PresentT (Left 123)) $ pl @(Pure (Either String) Id >> Swap) 123
-  , expectPE (PresentT [13,2,1999]) $ pl @(Rescan DdmmyyyyR >> OneP >> Snd >> Map (ReadP Int)) "13-02-1999"
-  , expectPE (PresentT [3,2,1999]) $ pl @(Rescan DdmmyyyyR >> OneP >> Snd >> Map (ReadP Int) >> Ddmmyyyyval) "03-02-1999"
-  , expectPE (FailT "guard(1) month 13 is out of range") $ pl @(Rescan DdmmyyyyR >> OneP >> Snd >> Map (ReadP Int) >> Ddmmyyyyval) "12-13-1999"
+  , expectPE (PresentT [13,2,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> Snd >> Map (ReadP Int)) "13-02-1999"
+  , expectPE (PresentT [3,2,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> Snd >> Map (ReadP Int) >> Ddmmyyyyval) "03-02-1999"
+  , expectPE (FailT "guard(1) month 13 is out of range") $ pl @(Rescan DdmmyyyyRE >> OneP >> Snd >> Map (ReadP Int) >> Ddmmyyyyval) "12-13-1999"
   , expectPE (PresentT [[1],[2,3,4],[5,6,7,8],[9,10,11,12]]) $ pl @(SplitAts '[1,3,4]) [1..12]
   , expectPE (PresentT [[1,2,3],[4]]) $ pl @(SplitAts '[3,1,1,1] >> FilterBy (Null >> Not) Id) [1..4]
   , expectPE (PresentT 1) $ pl @(Msg (Len >> Printf "digits=%d") Head') [1..4]
@@ -722,6 +714,7 @@ allTests =
   , expectPE (FailT "index('z') not found") $ pl @(FromList (M.Map _ _) >> (Char1 "z" &&& Lookup Id (Char1 "z")) >> If (Snd >> IsNothing) (Fst >> ShowP >> Fail I (Printf "index(%s) not found") >> 'False) (Snd >> 'Just Id)) [('x',True),('y',False)]
   , expectPE (PresentT True) $ pl @(FromList (M.Map _ _) >> (Char1 "z" &&& Lookup Id (Char1 "x")) >> If (Snd >> IsNothing) (Fst >> ShowP >> Fail I (Printf "index(%s) not found") >> 'False) (Snd >> 'Just Id)) [('x',True),('y',False)]
   , expectPE (FailT "index('z') not found") $ pl @(FromList (M.Map _ _) >> Lookup' _ Id (Char1 "z")) [('x',True),('y',False)]
+  , expectPE (PresentT ["abc","bcd","cde","def","efg","fgh","ghi","hi","i"]) $ pl @(Unfoldr (If Null (MkNothing _) ('(Take 3 , Drop 1) >> MkJust)) Id) "abcdefghi"
   , expectPE (PresentT [[1,2],[3,4],[5]]) $ pl @(Unfoldr (If Null (MkNothing _) (Pure _ (SplitAt 2 Id))) Id) [1..5]
   , expectPE (PresentT [[1,2],[3,4],[5]]) $ pl @(Unfoldr (MaybeB (Null >> Not) (SplitAt 2 Id)) Id) [1..5]
   , expectPE (PresentT [99,1,2,3,4,5]) $ pl @(FlipT (:+) Fst Snd) ([1..5],99)
@@ -914,139 +907,6 @@ allTests =
   , expectPE FalseT $ pl @(Between' (Fst >> Fst) (Fst >> Snd) Snd) ((1,4),10)
   , expectPE (FailT "no match on [03/29/0x7]") $ pl @(Map (ParseTimes Day '["%Y-%m-%d", "%m/%d/%y", "%b %d %Y"] Id)) ["2001-01-01", "Jan 24 2009", "03/29/0x7"]
   , expectPE (PresentT [read @Day "2001-01-01", read @Day "2009-01-24", read @Day "2007-03-29"]) $ pl @(Map (ParseTimes Day '["%Y-%m-%d", "%m/%d/%y", "%b %d %Y"] Id)) ["2001-01-01", "Jan 24 2009", "03/29/07"]
-  , (@?=) [(unsafeRefined3 255 "ff", "")] (reads @(Refined3 (ReadBase Int 16) 'True (ShowBase 16) String) "\"0ff\"") -- escape quotes cos read instance for String
-  , (@?=) [] (reads @(Refined3 (ReadBase Int 16) 'True (ShowBase 16) String) "\"0fz\"") -- escape quotes cos read instance for String
-  , (@?=) [(unsafeRefined 7, "")] (reads @(Refined (Between 2 10) Int) "7")
-  , (@?=) [] (reads @(Refined (Between 2 10) Int) "0")
-  , (@?=) [(unsafeRefined "abcaaaabb", "")] (reads @(Refined (Re "^[abc]+$") String) "\"abcaaaabb\"")
-  , (@?=) [] (reads @(Refined (Re "^[abc]+$") String) "\"abcaaaabbx\"")
-
-  , expectJ (Right (G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "001.002.003.004"))) (toFrom $ G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "1.2.3.4"))
-  , expectJ (Left ["Error in $.g4Ip", "False Boolean Check"]) (toFrom $ G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "1.2.3.400"))
-  , expectJ (Left ["Error in $.g4Ip", "ReadP Int (3x)"]) (toFrom $ G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "1.2.3x.4"))
-  , expectJ (Left ["Error in $.g4Age", "False Boolean Check"]) (toFrom $ G4 (unsafeRefined3 (-2) "-2") (unsafeRefined3 [1,2,3,4] "1.2.3.4"))
-  , expectJ (Left ["Error in $: Refined:FalseP"]) (toFrom (unsafeRefined @(Between 4 7 || Gt 14) 12))
-  , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @(Between 4 7 || Gt 14) 22))
-  , expectJ (Left ["Error in $: Refined:FailP \"someval\""]) (toFrom (unsafeRefined @(Between 4 7 || Gt 14 || Failt _ "someval") 12))
-  , expectPE (PresentT ["abc","bcd","cde","def","efg","fgh","ghi","hi","i"]) $ pl @(Unfoldr (If Null (MkNothing _) ('(Take 3 , Drop 1) >> MkJust)) Id) "abcdefghi"
-  , expectRight (testRefined3P (Proxy @(Ccn '[4,4,3])) ol "123-45-6---789-03-")
-  , expectLeft (testRefined3P (Proxy @(Ccn '[4,4,3])) ol "123-45-6---789-04-")
-  , expectRight (testRefined3P (Proxy @Hms) ol "1:2:33")
-  , expectLeft (testRefined3P (Proxy @Hms) ol "1:2:61")
-  , expectRight (testRefined3P (Proxy @(Ccn '[4,4,3])) ol "6433-1000-006")
-  , expectRight (testRefined3P (Proxy @(Ccn '[4,4,3])) ol "6433-10000-06")
-  , expectLeft (testRefined3P (Proxy @(Ccn '[4,4,3])) ol "6433-1000-000")
-  , expectRight (testRefined3P (Proxy @(Ccn '[1,2,1])) ol "1-23-0")
-
-  , expect3 (Left $ XF "Regex no results")
-                  $ eval3 @(Rescan Ip4 >> Head'' "failedn" >> Snd >> Map (ReadP Int))
-                          @((Len >> Same 4) && All (Between 0 255))
-                          @(Printfnt 4 "%03d.%03d.%03d.%03d")
-                          ol "1.21.x31.4"
-
-  , expect3 (Right $ unsafeRefined3 [1,21,31,4] "001.021.031.004")
-                  $ eval3 @(Rescan Ip4 >> Head'' "failedn" >> Snd >> Map (ReadP Int))
-                          @((Len >> Same 4) && All (Between 0 255))
-                          @(Printfnt 4 "%03d.%03d.%03d.%03d")
-                          ol "1.21.31.4"
-
-  , expectE (Right $ unsafeRefined [1,21,31,4])
-                  $ evalE @(Rescan Ip4 >> Head'' "failedn" >> Snd >> Map (ReadP Int))
-                          @((Len >> Same 4) && All (Between 0 255))
-                          ol "1.21.31.4"
-
-  , expect3 (Left $ XTFalse (-6.3))
-                  $ eval3 @(ReadP Double)
-                          @(Cmp 'Cgt ToRational (NegR 7 3))
-                          @(Printf "%5.3f")
-                          ol "-6.3"
-
-  , expectE (Left $ RE.XTFalse (-6.3))
-                  $ evalE @(ReadP Double) @(Cmp 'Cgt ToRational (NegR 7 3))
-                  ol "-6.3"
-
-  , expect3 (Right $ unsafeRefined3 4.123 "")
-                  $ eval3 @(ReadP Double) @(Cmp 'Cgt ToRational (NegR 7 3)) @""
-                  ol "4.123"
-
-  , expect3 (Right $ unsafeRefined3 4.123 (4123 % 1000))
-                  $ eval3 @Id @(Gt (NegR 7 3)) @(PosR 4123 1000)
-                  ol 4.123
-
-  , expect3 (Right $ unsafeRefined3 [1,2,3,4] "")
-                  $ eval3 @(Resplit "\\." >> Map (ReadP Int)) @(All (Between 0 255) && (Len >> Same 4)) @""
-                  ol "1.2.3.4"
-
-  , expectE (Right $ unsafeRefined [1,2,3,4])
-                  $ evalE @(Resplit "\\." >> Map (ReadP Int)) @(All (Between 0 255) && (Len >> Same 4))
-                  ol "1.2.3.4"
-
-  , expect3 (Left $ XTF [291,1048319,4387,17,1] "out of bounds")
-                  $ eval3 @Ip6A @Ip6B @""
-                  ol "123:Ffeff:1123:11:1"
-
-  , expectE (Left $ RE.XTF [291,1048319,4387,17,1] "out of bounds")
-                  $ evalE @Ip6A @Ip6B
-                  ol "123:Ffeff:1123:11:1"
-
-  , expect3 (Right $ unsafeRefined3 [12,2,0,255] "abc")
-                  $ eval3 @Ip4A @Ip4B @"abc"
-                  ol "12.2.0.255"
-
-  , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
-                  $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd >> Map (ReadBaseInt 10))
-                  @(Guard "expected 3" (Len >> Same 3)
-                 >> Guard "3 digits" (Ix' 0 >> Between 0 999)
-                 >> Guard "2 digits" (Ix' 1 >> Between 0 99)
-                 >> Guard "4 digits" (Ix' 2 >> Between 0 9999)
-                 >> 'True
-                   ) @"def"
-                   ol "123-45-6789"
-
-  , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz")
-                  $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd >> Map (ReadBaseInt 10))
-                  @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 0 999, Between 0 99, Between 0 9999]) >> 'True)
-                  @"xyz"
-                  ol "123-45-6789"
-
-  , expect3 (Left $ XTF [0,0,0,291,1048319,4387,17,1] "out of bounds")
-                  $ eval3 @Ip6A'' @Ip6B' @"xyz"
-                  ol "123:Ffeff:1123:11:1"
-
-  , expect3 (Right $ unsafeRefined3 [0,0,0,291,65535,4387,17,1] "xyz")
-                  $ eval3 @Ip6A'' @Ip6B' @"xyz"
-                  ol "123:Ffff:1123:11:1"
-
-  , expect3 (Right $ unsafeRefined3 [0,0,291,0,65535,0,0,17] "xyz")
-                  $ eval3 @Ip6A'' @Ip6B' @"xyz"
-                  ol "123::Ffff:::11"
-
-  , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
-                  $ eval3 @(Rescan DdmmyyyyR >> OneP >> Snd >> Map (ReadBaseInt 10))
-                           @(Ddmmyyyyval >> 'True)
-                           @"xyz"
-                           ol "31-11-1999"
-  , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd >> Map (ReadBaseInt 10))
-                  @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 0 999, Between 0 99, Between 0 9999]) >> 'True)
-                  @"xyz"
-                  ol "123-45-6789"
-
-  , expect3 (Right $ unsafeRefined3 [1,2,3,4] "001.002.003.004") $ eval3P ip4 ol "1.2.3.4"
-  , expect3 (Left $ XF "invalid base 10") $ eval3P ip4 ol "1.2.3x.4"
-  , expect3 (Left $ XTF [1,2,3,4,5] "expected 4 numbers") $ eval3P ip4 ol "1.2.3.4.5"
-  , expect3 (Left $ XTF [1,2,300,4] "each number must be between 0 and 255") $ eval3P ip4 ol "1.2.300.4"
-  , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval3P cc ol "12345678903"
-  , expectE (Right $ unsafeRefined ([1,2,3,4,5,6,7,8,9,0,3], "1234-5678-903")) $ evalEP (proxyEToV cc) ol "12345678903"
-  , expect3 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1]) $ eval3P cc ol "12345678901"
-  , expectE (Left $ RE.XTFalse ([1,2,3,4,5,6,7,8,9,0,1],"1234-5678-901")) $ evalEP (proxyEToV cc) ol "12345678901"
---  , expect3 (Right $ unsafeRefined3 True ["T","r","ue","Tr","ue"]) $ eval3P (Proxy @'(Id, Id, Do '[ShowP, Dup, Sapa, SplitAts '[1,1,2,2]], Bool)) True
-  , expectE (Right $ unsafeRefined (True,["T","r","ue","Tr","ue"])) $ evalEP (proxyEToV $ Proxy @'(Id, Id, Do '[ShowP, W Dup, Sapa, SplitAts '[1,1,2,2]], Bool)) ol True
-  , expectE (Right $ unsafeRefined (True,["T","r","ue","Tr","ue"])) $ evalEP (proxyEToV $ mkProxy3E @Id @Id @(Do '[ShowP, W Dup, Sapa, SplitAts '[1,1,2,2]]) @Bool) ol True
-  , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ eval3P hms2E ol "12:13:14"
-  , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "guard(2) 99 secs is out of range")) $ eval3P hms2E ol "12:13:99"
 
   , expectPE (PresentT "gt3") $ pl @(Case (Snd >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 15
   , expectPE (PresentT "lt2") $ pl @(Case (Snd >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 1
@@ -1069,10 +929,6 @@ allTests =
   , expectPE (FailT "msg=someval caught(044)") $ pl @(Catch' (Failt Int "someval") (Printf2 "msg=%s caught(%03d)")) (44 :: Int)
   , expectPE (FailT "msg=expected list of length 1 but found length=3 caught([10,12,13])") $ pl @(Catch' OneP (Second ShowP >> Printf2 "msg=%s caught(%s)")) [10,12,13]
   , expectPE (PresentT 10) $ pl @(Catch' OneP (Second ShowP >> Printf2 "msg=%s caught(%s)")) [10]
-  , (@?=) (unsafeRefined3 [1,2,3,4] "001.002.003.004") ($$(refined3TH "1.2.3.4") :: MakeR3 Ip)
-  , (@?=) (unsafeRefined @'True ("1.2.3.4" :: String)) $$(refinedTH "1.2.3.4")
-  , (@?=) (unsafeRefined @((Len >> Same 4) && Luhn) [1,2,3,0]) $$(refinedTH [1,2,3,0])
-  , (@?=) (unsafeRefined @((Len >> Same 4) && Luhn >> Not) [1,2,3,1]) $$(refinedTH [1,2,3,1])
   , expectPE (FailT "msg=expected list of length 1 but found length=2 err s=[10,11]") $ pl @(Catch' OneP (Second ShowP >> Printf2 "msg=%s err s=%s")) [10,11]
   , expectPE (PresentT 99) $ pl @(Catch OneP 99) [10,11]
   , expectPE (PresentT 10) $ pl @(Catch OneP 99) [10]
@@ -1084,4 +940,20 @@ allTests =
   , expectPE (PresentT "-7b") $ pl @(ShowBase 16) (-123)
   , expectPE (PresentT "7b") $ pl @(ShowBase 16) 123
   ]
+
+type Fizzbuzz = Id &&& If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" ""
+type Fizzbuzz' = Id &&& Case "" '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '["fizzbuzz", "fizz", "buzz"] Id
+type Fizzbuzz'' t t1 = Case (MkLeft t Fst) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '[ MkRight t1 "fizzbuzz", MkRight t1 "fizz", MkRight t1 "buzz"] Id
+--type Fizzbuzz''' = Case (MkLeft' (Snd >> Proxyfabb >> Unproxy) Fst) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '[ MkRight Int "fizzbuzz", MkRight Int "fizz", MkRight Int "buzz"] Id
+type Fizzbuzz'''' = Case (MkLeft String Fst) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '[ MkRight Int "fizzbuzz", MkRight Int "fizz", MkRight Int "buzz"] Id
+-- this is also good: makes use of type family MapT which does the apply on ADTs: so type synonyms dont work
+type Fizzbuzznew = Case (MkLeft String Fst) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] (MapT (MkRight' (Hole Int)) '[ "fizzbuzz", "fizz", "buzz"]) Id
+
+type Fizzbuzzalt = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")
+type Fizzbuzzs = Map Fizzbuzz
+type Fizzbuzzs1 t t1 = Map (Fizzbuzz >> If (Snd >> Null) (MkLeft t Fst) (MkRight t1 Snd))
+type Fizzbuzzs2 = Map (Fizzbuzz >> If (Snd >> Null) (MkLeft String Fst) (MkRight Int Snd))
+-- best one cos leverages type info to determine Either a b
+type Fizzbuzzs3 = Map (Fizzbuzz >> If (Snd == "") (MkLeft' Snd Fst) (MkRight' Fst Snd))
+
 
