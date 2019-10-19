@@ -28,7 +28,7 @@ dependencies:
 - bytestring
 - text
 - ghc-prim
-- these >= 1.0
+- these
 - these-lens
 - semialign
 - time

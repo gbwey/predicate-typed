@@ -1,4 +1,4 @@
-resolver: lts-13.25
+resolver: lts-14.10
 
 packages:
 - .
@@ -8,7 +8,4 @@ extra-deps:
 - pretty-tree-0.1.0.0
 - tree-view-0.5
 - discrimination-0.4
-- these-1.0.1
-- semialign-1
-- assoc-1
 - these-lens-1
