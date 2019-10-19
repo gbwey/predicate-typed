@@ -134,7 +134,6 @@ import qualified Text.Read.Lex as RL
 -- >>> prtEval3P (Proxy @(T4 _)) ol (2019,(10,13))
 -- Right (Refined3 {r3In = (2019-10-13,(41,7)), r3Out = (2019,(10,13))})
 --
-
 data Refined3 ip op fmt i = Refined3 { r3In :: PP ip i, r3Out :: PP fmt (PP ip i) }
 
 -- | directly load values into 'Refined3'. It still checks to see that those values are valid
@@ -589,39 +588,6 @@ eval3MQuick opts a = do
         _ -> Nothing
     _ -> pure Nothing
 
--- reuses the mkProxy3 but returns Refined vs Refined3
--- using plain Refined to emulate Refined3 sort of
--- we just output fmt instead of embedding it in Refined3
--- so 'ip' predicate gets us started: we store that (PP ip i) in Refined
--- then we run the boolean predicate 'op' which is successful if true
--- then we run 'fmt' against (PP ip i) and output both the Refined (PP p i) and the PP fmt (PP (ip i)) ie fmt run against PP ip i
---       if any of the three steps fails the process stops immediately and dumps out RResults
-eval3PX :: forall ip op fmt i proxy . Refined3C ip op fmt i
-  => proxy '(ip,op,fmt,i)
-  -> POpts
-  -> i
-  -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
-eval3PX _ = eval3X @ip @op @fmt
-
-eval3X :: forall ip op fmt i . Refined3C ip op fmt i
-  => POpts
-  -> i
-  -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
-eval3X opts i = runIdentity $ do
-  ll@(fromTT -> t1) <- eval (Proxy @ip) opts i
-  case getValLR (_tBool ll) of
-       Right a -> do
-         rr@(fromTT -> t2) <- evalBool (Proxy @op) opts a
-         case getValLR (_tBool rr) of
-              Right True -> do
-                ss@(fromTT -> t3) <- eval (Proxy @fmt) opts a
-                pure $ case getValLR (_tBool ss) of
-                     Right b -> (RTTrueT a t1 t2 b t3, Just (unsafeRefined a, b))
-                     Left e -> (RTTrueF a t1 t2 e t3, Nothing)
-              Right False -> pure (RTFalse a t1 t2, Nothing)
-              Left e -> pure (RTF a t1 e t2, Nothing)
-       Left e -> pure (RF e t1, Nothing)
-
 prt3IO :: (Show a, Show b) => POpts -> (RResults a b, Maybe r) -> IO (Either String r)
 prt3IO opts (ret,mr) = do
   let m3 = prt3Impl opts ret
@@ -682,3 +648,38 @@ prt3Impl opts v =
               <> outmsg m
               <> fixLite opts b t3
          in mkMsg3 m n r
+
+
+-- | emulates 'Refined3' but uses 'Refined'
+-- reuses the mkProxy3 but returns Refined vs Refined3
+-- using plain Refined to emulate Refined3 sort of
+-- we just output fmt instead of embedding it in Refined3
+-- so 'ip' predicate gets us started: we store that (PP ip i) in Refined
+-- then we run the boolean predicate 'op' which is successful if true
+-- then we run 'fmt' against (PP ip i) and output both the Refined (PP p i) and the PP fmt (PP (ip i)) ie fmt run against PP ip i
+--       if any of the three steps fails the process stops immediately and dumps out RResults
+eval3PX :: forall ip op fmt i proxy . Refined3C ip op fmt i
+  => proxy '(ip,op,fmt,i)
+  -> POpts
+  -> i
+  -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
+eval3PX _ = eval3X @ip @op @fmt
+
+eval3X :: forall ip op fmt i . Refined3C ip op fmt i
+  => POpts
+  -> i
+  -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
+eval3X opts i = runIdentity $ do
+  ll@(fromTT -> t1) <- eval (Proxy @ip) opts i
+  case getValLR (_tBool ll) of
+       Right a -> do
+         rr@(fromTT -> t2) <- evalBool (Proxy @op) opts a
+         case getValLR (_tBool rr) of
+              Right True -> do
+                ss@(fromTT -> t3) <- eval (Proxy @fmt) opts a
+                pure $ case getValLR (_tBool ss) of
+                     Right b -> (RTTrueT a t1 t2 b t3, Just (unsafeRefined a, b))
+                     Left e -> (RTTrueF a t1 t2 e t3, Nothing)
+              Right False -> pure (RTFalse a t1 t2, Nothing)
+              Left e -> pure (RTF a t1 e t2, Nothing)
+       Left e -> pure (RF e t1, Nothing)

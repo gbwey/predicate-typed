@@ -37,7 +37,6 @@
 --
 module Refined (
     Refined(unRefined)
-  , unsafeRefined
   , RefinedC
   , arbRefined
   , rapply
@@ -56,6 +55,8 @@ module Refined (
   , unRavelT
   , unRavelTIO
   , unRavelTI
+  , unsafeRefined
+  , unsafeRefined'
  ) where
 import Predicate
 import UtilP
@@ -363,3 +364,11 @@ prtRefinedT = prtRefinedTImpl (return . runIdentity)
 -- | a way to unsafely create a 'Refined' value
 unsafeRefined :: forall p a . a -> Refined p a
 unsafeRefined = Refined
+
+-- | a way to unsafely create a 'Refined' value but run the predicate
+unsafeRefined' :: forall p a . RefinedC p a => POpts -> a -> Refined p a
+unsafeRefined' opts a =
+  let tt = runIdentity $ evalBool (Proxy @p) opts a
+  in case getValueLR opts "" tt [] of
+       Right True -> Refined a
+       _ -> error $ prtTreePure opts (fromTT tt)

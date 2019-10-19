@@ -630,16 +630,25 @@ instance a ~ Day => P UnMkDay a where
 --   Present 4 % 5
 --   PresentT (4 % 5)
 --
-data ReadP' t p
-type ReadP (t :: Type) = ReadP' (Hole t) Id
+--   >>> pl @(ReadP' Day Id >> Between (ReadP' Day "2017-04-11") (ReadP' Day "2018-12-30")) "2018-10-12"
+--   True
+--   TrueT
+--
+--   >>> pl @(ReadP' Day Id >> Between (ReadP' Day "2017-04-11") (ReadP' Day "2018-12-30")) "2016-10-12"
+--   False
+--   FalseT
+--
+data ReadP'' t p
+type ReadP (t :: Type) = ReadP'' (Hole t) Id
+type ReadP' (t :: Type) p = ReadP'' (Hole t) p
 
 instance (P p x
         , PP p x ~ String
         , Typeable (PP t x)
         , Show (PP t x)
         , Read (PP t x)
-        ) => P (ReadP' t p) x where
-  type PP (ReadP' t p) x = PP t x
+        ) => P (ReadP'' t p) x where
+  type PP (ReadP'' t p) x = PP t x
   eval _ opts x = do
     let msg0 = "ReadP " <> t
         t = showT @(PP t x)

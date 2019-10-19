@@ -148,7 +148,7 @@ daten = mkProxy3
 datetimen :: Proxy DateTimeN
 datetimen = mkProxy3
 
-type Rbetween m n = Refined3 Id (Between m n) Id Int
+type BetweenR m n = Refined3 Id (Between m n) Id Int
 
 type LuhnR (n :: Nat) = MakeR3 (LuhnY n)
 type LuhnR' (n :: Nat) = MakeR3 (LuhnX n)
@@ -200,4 +200,54 @@ type OkR (t :: Type) = MakeR3 (Ok t)
 type OkNot (t :: Type) = '(Id, 'False, Id, t)
 type OkNotR (t :: Type) = MakeR3 (OkNot t)
 
+-- | convert a string from the given base \'i\' but stores it internally as a string of base \'j\'
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeOperators
+-- >>> prtEval3P (Proxy @(BaseIJ 16 2)) ol "fe"
+-- Right (Refined3 {r3In = "11111110", r3Out = "fe"})
+--
+-- >>> prtEval3P (Proxy @(BaseIJ 16 2)) ol "fge"
+-- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
+--
 type BaseIJ (i :: Nat) (j :: Nat) = '(ReadBase Int i >> ShowBase j, 'True, ReadBase Int j >> ShowBase i, String)
+
+-- | take any valid Read/Show instance and turn it into a valid Refined3
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeOperators
+-- >>> :m + Data.Ratio
+-- >>> prtEval3P (Proxy @(ReadShow Rational)) ol "13 % 3"
+-- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
+--
+-- >>> prtEval3P (Proxy @(ReadShow Rational)) ol "13x % 3"
+-- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3) failed
+--
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (Pos 3) (Pos 5)))) ol "13 % 3"
+-- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
+--
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (NegR 11 2) (Neg 3)))) ol "-13 % 3"
+-- Right (Refined3 {r3In = (-13) % 3, r3Out = "(-13) % 3"})
+--
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > Pos 11))) ol "13 % 3"
+-- Left Step 2. False Boolean Check(op) | FalseP
+--
+-- >>> let tmString = "2018-10-19 14:53:11.5121359 UTC"
+-- >>> let tm = read tmString :: UTCTime
+-- >>> prtEval3P (Proxy @(ReadShow UTCTime)) ol tmString
+-- Right (Refined3 {r3In = 2018-10-19 14:53:11.5121359 UTC, r3Out = "2018-10-19 14:53:11.5121359 UTC"})
+--
+-- >>> :m + Data.Aeson
+-- >>> prtEval3P (Proxy @(ReadShow Value)) ol "String \"jsonstring\""
+-- Right (Refined3 {r3In = String "jsonstring", r3Out = "String \"jsonstring\""})
+--
+-- >>> prtEval3P (Proxy @(ReadShow Value)) ol "Number 123.4"
+-- Right (Refined3 {r3In = Number 123.4, r3Out = "Number 123.4"})
+--
+type ReadShow (t :: Type) = '(ReadP t, 'True, ShowP, String)
+type ReadShowR (t :: Type) = MakeR3 (ReadShow t)
+
+type ReadShow' (t :: Type) p = '(ReadP t, p, ShowP, String)
+type ReadShowR' (t :: Type) p = MakeR3 (ReadShow' t p)

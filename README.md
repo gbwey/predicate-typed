@@ -76,7 +76,7 @@ _pe2_ does not have that restriction so you can run the whole thing or the indiv
 >pe2 @(Len == 3) [12,1,5]
 ```
 
-### An example using Refined3 (for more information see [doctests](src/Refined3.hs))
+### An example using Refined3 (for more information see [doctests](src/Refined3.hs) and [doctests](src/Refined3Helper.hs))
 
 ```haskell
 >type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
@@ -146,6 +146,12 @@ type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
 
 ex2 :: MakeR3 Hex
 ex2 = $$(refined3TH "0000fe")
+```
+
+### Any valid Read/Show instance can be used with Refined3
+```haskell
+>$$(refined3TH "13 % 3") :: ReadShowR Rational
+Refined3 {r3In = 13 % 3, r3Out = "13 % 3"}
 ```
 
 ### Json decoding

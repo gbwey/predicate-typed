@@ -48,18 +48,19 @@ suite = defaultMain $ testGroup "TestRefined3" (namedTests <> orderTests unnamed
 
 namedTests :: [TestTree]
 namedTests =
-  [ testCase "ok3 ip9" $ (@?=) ($$(refined3TH "121.0.12.13") :: MakeR3 Ip9) (unsafeRefined3 [121,0,12,13] "121.000.012.013")
-  , testCase "ok3 luhn check" $ (@?=) ($$(refined3TH "12345678903") :: MakeR3 CC11) (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
-  , testCase "ok3 datetime utctime" $ (@?=) ($$(refined3TH "2019-01-04 23:00:59") :: MakeR3 (DateTime1 UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
-  , testCase "ok3 datetime localtime" $ (@?=) ($$(refined3TH "2019-01-04 09:12:30") :: MakeR3 (DateTime1 LocalTime)) (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
-  , testCase "ok3 hms" $ (@?=) ($$(refined3TH "12:0:59") :: MakeR3 Hms) (unsafeRefined3 [12,0,59] "12:00:59")
-  , testCase "ok3 between5and9" $ (@?=) ($$(refined3TH "7") :: Refined3 (ReadP Int) (Between 5 9) (Printf "%03d") String) (unsafeRefined3 7 "007")
-  , testCase "ok3 ssn" $ (@?=) ($$(refined3TH "123-45-6789") :: MakeR3 Ssn) (unsafeRefined3 [123,45,6789] "123-45-6789")
-  , testCase "ok3 base16" $ (@?=) ($$(refined3TH "12f") :: MakeR3 (BaseN 16)) (unsafeRefined3 303 "12f")
-  , testCase "ok3 daten1" $ (@?=) ($$(refined3TH "June 25 1900") :: MakeR3 DateN) (unsafeRefined3 (read "1900-06-25") "1900-06-25")
-  , testCase "ok3 daten2" $ (@?=) ($$(refined3TH "12/02/99") :: MakeR3 DateN) (unsafeRefined3 (read "1999-12-02") "1999-12-02")
-  , testCase "ok3 daten3" $ (@?=) ($$(refined3TH "2011-12-02") :: MakeR3 DateN) (unsafeRefined3 (read "2011-12-02") "2011-12-02")
-  , testCase "ok3 ccn123" $ (@?=) ($$(refined3TH "123455") :: MakeR3 (Ccn '[1,2,3])) (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
+  [ testCase "ip9" $ (@?=) ($$(refined3TH "121.0.12.13") :: MakeR3 Ip9) (unsafeRefined3 [121,0,12,13] "121.000.012.013")
+  , testCase "luhn check" $ (@?=) ($$(refined3TH "12345678903") :: MakeR3 CC11) (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
+  , testCase "datetime utctime" $ (@?=) ($$(refined3TH "2019-01-04 23:00:59") :: MakeR3 (DateTime1 UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
+  , testCase "datetime localtime" $ (@?=) ($$(refined3TH "2019-01-04 09:12:30") :: MakeR3 (DateTime1 LocalTime)) (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
+  , testCase "hms" $ (@?=) ($$(refined3TH "12:0:59") :: MakeR3 Hms) (unsafeRefined3 [12,0,59] "12:00:59")
+  , testCase "between5and9" $ (@?=) ($$(refined3TH "7") :: Refined3 (ReadP Int) (Between 5 9) (Printf "%03d") String) (unsafeRefined3 7 "007")
+  , testCase "ssn" $ (@?=) ($$(refined3TH "123-45-6789") :: MakeR3 Ssn) (unsafeRefined3 [123,45,6789] "123-45-6789")
+  , testCase "base16" $ (@?=) ($$(refined3TH "12f") :: MakeR3 (BaseN 16)) (unsafeRefined3 303 "12f")
+  , testCase "daten1" $ (@?=) ($$(refined3TH "June 25 1900") :: MakeR3 DateN) (unsafeRefined3 (read "1900-06-25") "1900-06-25")
+  , testCase "daten2" $ (@?=) ($$(refined3TH "12/02/99") :: MakeR3 DateN) (unsafeRefined3 (read "1999-12-02") "1999-12-02")
+  , testCase "daten3" $ (@?=) ($$(refined3TH "2011-12-02") :: MakeR3 DateN) (unsafeRefined3 (read "2011-12-02") "2011-12-02")
+  , testCase "ccn123" $ (@?=) ($$(refined3TH "123455") :: MakeR3 (Ccn '[1,2,3])) (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
+  , testCase "readshow" $ (@?=) ($$(refined3TH "12 % 5") :: ReadShowR Rational) (unsafeRefined3 (12 % 5) "12 % 5")
   ]
 
 unnamedTests :: [IO ()]
@@ -251,7 +252,7 @@ www1 = prt3 o2 . eval3P (Proxy :: MkProxy3T Tst3) o2
 www2 = prt3 o2 . eval3P tst3 o2
 
 -- just pass in an ipaddress as a string: eg 1.2.3.4 or 1.2.3.4.5 (invalid) 1.2.3.400 (invalid)
-ww1 = prt3 o2 . eval3PX (Proxy :: MkProxy3T Tst3) o2
+ww1 = prtEval3P (Proxy :: MkProxy3T Tst3) o2
 
 -- 2. packaged as a proxy
 tst3 :: Proxy
@@ -261,15 +262,14 @@ tst3 :: Proxy
         ,String)
 tst3 = mkProxy3
 
-ww2 = prt3 o2 . eval3PX tst3 o2
+ww2 = prtEval3P tst3 o2
 
 -- 3. direct (has the advantage that we dont need to specify String
 
-ww3 = prt3 o2 . eval3PX
+ww3 = prtEval3
         @(Resplit "\\." >> Map (ReadP Int))
         @((Len >> Same 4) && All (Between 0 255))
         @(Map (Printf "%03d") >> Concat)
-        Proxy
         o2
 
 data G4 = G4 { g4Age :: MakeR3 Age
