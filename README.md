@@ -45,12 +45,13 @@ Left FalseP
 
 5. same as 4. above but now we get details of where it went wrong
 ```haskell
->prtRefinedIO @o2 "000fe") :: Refined (ReadBase Int 16 >> Between 99 253) String
+>prtRefinedIO @(ReadBase Int 16 >> Between 99 253) o2 "000fe"
 ```
 
 6. reads in a string as time and does simple validation
 ```haskell
->prtRefinedIO @"12:01:05") :: Refined (Resplit ":" >> Map (ReadP Int) >> Len == 3) String
+>prtRefinedIO @(Resplit ":" >> Map (ReadP Int) >> Len == 3) ol "12:01:05"
+Right (Refined {unRefined = "12:01:05"})
 ```
   * `Resplit ":"`
      split using regex using a colon as a delimiter  ["12","01","05"]
@@ -66,19 +67,22 @@ _pe2_ does not have that restriction so you can run the whole thing or the indiv
 (for less detail use _pl_)
 
 ```haskell
-pe2 (Resplit ":" >> Map (ReadP Int) >> Len == 3) "12:01:05"
-pe2 @(Resplit ":") "12:01:05"
-pe2 @(Map (ReadP Int)) ["12","01","05"]
-pe2 @(Map (Len == 3) [12,1,5]
+>pe2 @(Resplit ":" >> Map (ReadP Int) >> Len == 3) "12:01:05"
+
+>pe2 @(Resplit ":") "12:01:05"
+
+>pe2 @(Map (ReadP Int)) ["12","01","05"]
+
+>pe2 @(Len == 3) [12,1,5]
 ```
 
 ### An example using Refined3 (for more information see [doctests](src/Refined3.hs))
 
 ```haskell
-type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
+>type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
 
->prtEval3PIO @(Proxy Hex) ol "0000fe"
-Refined3 {in3 = 255, out3 = "fe"}
+>prtEval3PIO (Proxy @Hex) ol "0000fe"
+Refined3 {in3 = 254, out3 = "fe"}
 ```
 1. `ReadBase Int 16`
     reads a hexadecimal string and returns 254
@@ -120,11 +124,14 @@ P ShowBase 16 fe | 254
 
 Read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as output
 ```haskell
-pe2 @(ReadBase Int 16) "0000fe" == 254
+>pe2 @(ReadBase Int 16) "0000fe"
+PresentT 254
 
-pe2 @(Between 0 255) 254 = True
+>pe2 @(Between 0 255) 254
+TrueT
 
-pe2 @(ShowBase 16) 254 = "fe"
+>pe2 @(ShowBase 16) 254 = "fe"
+PresentT "fe"
 ```
 
 ### Template Haskell versions
@@ -165,7 +172,6 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ```haskell
 >either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe443a\""
->putStrLn e
 Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
 
 ***Step 1. Success Initial Conversion(ip) [16663610] ***
