@@ -50,12 +50,12 @@ Left FalseP
 
 6. reads in a string as time and does simple validation
 ```haskell
->prtRefinedIO @(Resplit ":" >> Map (ReadP Int) >> Len == 3) ol "12:01:05"
+>prtRefinedIO @(Resplit ":" >> Map (ReadP Int) Id >> Len == 3) ol "12:01:05"
 Right (Refined {unRefined = "12:01:05"})
 ```
   * `Resplit ":"`
      split using regex using a colon as a delimiter  ["12","01","05"]
-  * `Map (ReadP Int)`
+  * `Map (ReadP Int) Id`
      Read in the values as Ints                      [12,1,5]
   * `Len == 3`
      Check to see that the length of the list of Ints is 3
@@ -67,11 +67,11 @@ _pe2_ does not have that restriction so you can run the whole thing or the indiv
 (for less detail use _pl_)
 
 ```haskell
->pe2 @(Resplit ":" >> Map (ReadP Int) >> Len == 3) "12:01:05"
+>pe2 @(Resplit ":" >> Map (ReadP Int) Id >> Len == 3) "12:01:05"
 
 >pe2 @(Resplit ":") "12:01:05"
 
->pe2 @(Map (ReadP Int)) ["12","01","05"]
+>pe2 @(Map (ReadP Int) Id) ["12","01","05"]
 
 >pe2 @(Len == 3) [12,1,5]
 ```
@@ -152,6 +152,21 @@ ex2 = $$(refined3TH "0000fe")
 ```haskell
 >$$(refined3TH "13 % 3") :: ReadShowR Rational
 Refined3 {r3In = 13 % 3, r3Out = "13 % 3"}
+
+>$$(refined3TH "2016-11-09") :: ReadShowR Day
+Refined3 {r3In = 2016-11-09, r3Out = "2016-11-09"}
+```
+
+An example of an invalid refined3TH call
+```haskell
+>$$(refined3TH "2016-xy-09") :: ReadShowR Day
+
+<interactive>:171:4: error:
+    * refined3TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09) failed
+    * In the Template Haskell splice $$(refined3TH "2016-xy-09")
+      In the expression: $$(refined3TH "2016-xy-09") :: ReadShowR Day
+      In an equation for `it':
+          it = $$(refined3TH "2016-xy-09") :: ReadShowR Day
 ```
 
 ### Json decoding

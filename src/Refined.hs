@@ -95,19 +95,19 @@ import qualified Text.Read.Lex as RL
 -- >>> prtRefinedIO @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") ol "141.213.1"
 -- Left FalseP
 --
--- >>> prtRefinedIO @(Resplit "\\." >> Map (ReadP Int) >> Guard (Len >> Printf "bad length: found %d") (Len == 4) >> 'True) ol "141.213.1"
+-- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\.") >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> 'True) ol "141.213.1"
 -- Left (FailP "bad length: found 3")
 --
--- >>> prtRefinedIO @(Resplit "\\." >> Map (ReadP Int) >> Guard (Len >> Printf "bad length: found %d") (Len == 4) >> GuardsQuick (Printf2 "octet %d out of range %d") (RepeatT 4 (Between 0 255)) >> 'True) ol "141.213.1.444"
+-- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\.") >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsQuick (Printf2 "octet %d out of range %d") (RepeatT 4 (Between 0 255)) >> 'True) ol "141.213.1.444"
 -- Left (FailP "octet 3 out of range 444")
 --
--- >>> prtRefinedIO @(Resplit "\\." >> Map (ReadP Int) >> Guard (Len >> Printf "bad length: found %d") (Len == 4) >> GuardsQuick (Printf2 "octet %d out of range %d") (RepeatT 4 (Between 0 255)) >> 'True) ol "141.213.1x34.444"
+-- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\.") >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsQuick (Printf2 "octet %d out of range %d") (RepeatT 4 (Between 0 255)) >> 'True) ol "141.213.1x34.444"
 -- Left (FailP "ReadP Int (1x34) failed")
 --
--- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) >> Luhn) ol "12344"
+-- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) Id >> Luhn) ol "12344"
 -- Right (Refined {unRefined = "12344"})
 --
--- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) >> Luhn) ol "12340"
+-- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) Id >> Luhn) ol "12340"
 -- Left FalseP
 --
 -- >>> prtRefinedIO @(Any Prime) ol [11,13,17,18]

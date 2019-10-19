@@ -70,7 +70,7 @@ instance ToJSON Person1
 instance FromJSON Person1
 
 type ValidName =
-         Guard (Printf "invalid name(%s)")
+         Guard (Printf "invalid name(%s)" Id)
         (Re "^[A-Z][a-z']+$") >> 'True
 
 type NameR = Refined ValidName String
@@ -79,15 +79,15 @@ type NameR1 = Refined (Name1 >> 'True) String
 type Name1 =
           Uncons
        >> 'Just Id
-       >> Guard (Fst >> Printf "not upper first(%c)") (Fst >> '[Id] >> IsCharSet 'CUpper)
-       >> Guard (Snd >> Printf "not lower rest(%s)") (Snd >> IsCharSet 'CLower)
+       >> Guard (Printf "not upper first(%c)" Fst) (Fst >> '[Id] >> IsCharSet 'CUpper)
+       >> Guard (Printf "not lower rest(%s)" Snd) (Snd >> IsCharSet 'CLower)
 
 type AgeR = Refined (Between 10 60) Int
 
 type Ip4R = MakeR3 '(Ip4ip, Ip4op >> 'True, Ip4fmt, String)
 
-type Ip4ip = Resplit "\\." >> Map (ReadP Int)
-type Ip4op = Guard (Len >> Printf "expected length 4 found %d") (Len >> Same 4)
+type Ip4ip = Map (ReadP Int) (Resplit "\\.")
+type Ip4op = Guard (Printf "expected length 4 found %d" Len) (Len >> Same 4)
           >> GuardsQuick (Printf2 "guard(%d): expected between 0 and 255 found %d") (RepeatT 4 (Between 0 255))
 type Ip4fmt = Printfnt 4 "%03d.%03d.%03d.%03d"
 

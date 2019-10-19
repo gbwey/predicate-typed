@@ -53,7 +53,7 @@ namedTests =
   , testCase "datetime utctime" $ (@?=) ($$(refined3TH "2019-01-04 23:00:59") :: MakeR3 (DateTime1 UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
   , testCase "datetime localtime" $ (@?=) ($$(refined3TH "2019-01-04 09:12:30") :: MakeR3 (DateTime1 LocalTime)) (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
   , testCase "hms" $ (@?=) ($$(refined3TH "12:0:59") :: MakeR3 Hms) (unsafeRefined3 [12,0,59] "12:00:59")
-  , testCase "between5and9" $ (@?=) ($$(refined3TH "7") :: Refined3 (ReadP Int) (Between 5 9) (Printf "%03d") String) (unsafeRefined3 7 "007")
+  , testCase "between5and9" $ (@?=) ($$(refined3TH "7") :: Refined3 (ReadP Int) (Between 5 9) (Printf "%03d" Id) String) (unsafeRefined3 7 "007")
   , testCase "ssn" $ (@?=) ($$(refined3TH "123-45-6789") :: MakeR3 Ssn) (unsafeRefined3 [123,45,6789] "123-45-6789")
   , testCase "base16" $ (@?=) ($$(refined3TH "12f") :: MakeR3 (BaseN 16)) (unsafeRefined3 303 "12f")
   , testCase "daten1" $ (@?=) ($$(refined3TH "June 25 1900") :: MakeR3 DateN) (unsafeRefined3 (read "1900-06-25") "1900-06-25")
@@ -85,25 +85,25 @@ unnamedTests = [
   , expectRight (testRefined3P (Proxy @(Ccn '[1,2,1])) ol "1-23-0")
 
   , expect3 (Left $ XF "Regex no results")
-                  $ eval3 @(Rescan Ip4RE >> Head'' "failedn" >> Snd >> Map (ReadP Int))
+                  $ eval3 @(Rescan Ip4RE >> HeadFail "failedn" Id >> Map (ReadP Int) Snd)
                           @((Len >> Same 4) && All (Between 0 255))
                           @(Printfnt 4 "%03d.%03d.%03d.%03d")
                           ol "1.21.x31.4"
 
   , expect3 (Right $ unsafeRefined3 [1,21,31,4] "001.021.031.004")
-                  $ eval3 @(Rescan Ip4RE >> Head'' "failedn" >> Snd >> Map (ReadP Int))
+                  $ eval3 @(Rescan Ip4RE >> HeadFail "failedn" Id >> Map (ReadP Int) Snd)
                           @((Len >> Same 4) && All (Between 0 255))
                           @(Printfnt 4 "%03d.%03d.%03d.%03d")
                           ol "1.21.31.4"
 
   , expect3 (Left $ XTFalse (-6.3))
                   $ eval3 @(ReadP Double)
-                          @(Cmp 'Cgt ToRational (NegR 7 3))
-                          @(Printf "%5.3f")
+                          @(Cmp 'Cgt (ToRational Id) (NegR 7 3))
+                          @(Printf "%5.3f" Id)
                           ol "-6.3"
 
   , expect3 (Right $ unsafeRefined3 4.123 "")
-                  $ eval3 @(ReadP Double) @(Cmp 'Cgt ToRational (NegR 7 3)) @""
+                  $ eval3 @(ReadP Double) @(Cmp 'Cgt (ToRational Id) (NegR 7 3)) @""
                   ol "4.123"
 
   , expect3 (Right $ unsafeRefined3 4.123 (4123 % 1000))
@@ -111,7 +111,7 @@ unnamedTests = [
                   ol 4.123
 
   , expect3 (Right $ unsafeRefined3 [1,2,3,4] "")
-                  $ eval3 @(Resplit "\\." >> Map (ReadP Int)) @(All (Between 0 255) && (Len >> Same 4)) @""
+                  $ eval3 @(Map (ReadP Int) (Resplit "\\.")) @(All (Between 0 255) && (Len >> Same 4)) @""
                   ol "1.2.3.4"
 
   , expect3 (Left $ XTF [291,1048319,4387,17,1] "out of bounds")
@@ -124,7 +124,7 @@ unnamedTests = [
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
                   $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd >> Map (ReadBaseInt 10))
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBaseInt 10) Snd)
                   @(Guard "expected 3" (Len >> Same 3)
                  >> Guard "3 digits" (Ix' 0 >> Between 0 999)
                  >> Guard "2 digits" (Ix' 1 >> Between 0 99)
@@ -135,7 +135,7 @@ unnamedTests = [
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz")
                   $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd >> Map (ReadBaseInt 10))
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBaseInt 10) Snd)
                   @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 0 999, Between 0 99, Between 0 9999]) >> 'True)
                   @"xyz"
                   ol "123-45-6789"
@@ -153,12 +153,12 @@ unnamedTests = [
                   ol "123::Ffff:::11"
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
-                  $ eval3 @(Rescan DdmmyyyyRE >> OneP >> Snd >> Map (ReadBaseInt 10))
+                  $ eval3 @(Rescan DdmmyyyyRE >> OneP >> Map (ReadBaseInt 10) Snd)
                            @(Ddmmyyyyval >> 'True)
                            @"xyz"
                            ol "31-11-1999"
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd >> Map (ReadBaseInt 10))
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBaseInt 10) Snd)
                   @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 0 999, Between 0 99, Between 0 9999]) >> 'True)
                   @"xyz"
                   ol "123-45-6789"
@@ -186,7 +186,7 @@ type HexLtR3 = Refined3 (ReadBase Int 16) (Id < 500) (ShowBase 16) String
 type IntLtR3 = Refined3 (ReadP Int) (Id < 10) ShowP String
 
 -- printf breaks with negative numbers!
-type Tst1 = '(ReadP Int, Between 1 7, Printf "someval val=%03d", String)
+type Tst1 = '(ReadP Int, Between 1 7, Printf "someval val=%03d" Id, String)
 
 yy1, yy2, yy3, yy4 :: RefinedT Identity (MakeR3 Tst1)
 
@@ -217,7 +217,7 @@ cc = mkProxy3
 
 type Ipz1 = '(Id &&& Ip4A
            , Snd >> Ip4B
-           , Snd >> Para (RepeatT 4 (Printf "%03d")) >> Intercalate '["."] Id >> Concat
+           , Snd >> Para (RepeatT 4 (Printf "%03d" Id)) >> Intercalate '["."] Id >> Concat
            , String)
 type Ipz2 = '(Id, Ip4A, Ip4B, String) -- skips fmt and just uses the original input
 type Ipz3 = '(Ip4A, Ip4B, Id, String)
@@ -245,7 +245,7 @@ hms2E = mkProxy3P
 
 -- better to use Guard for op boolean check cos we get better errormessages
 -- 1. packaged up as a promoted tuple
-type Tst3 = '(Resplit "\\." >> Map (ReadP Int), (Len >> Same 4) && All (Between 0 255), Map (Printf "%03d") >> Concat, String)
+type Tst3 = '(Map (ReadP Int) (Resplit "\\."), (Len >> Same 4) && All (Between 0 255), ConcatMap (Printf "%03d" Id) Id, String)
 
 www1, www2 :: String -> Either Msg3 (MakeR3 Tst3)
 www1 = prt3 o2 . eval3P (Proxy :: MkProxy3T Tst3) o2
@@ -256,9 +256,9 @@ ww1 = prtEval3P (Proxy :: MkProxy3T Tst3) o2
 
 -- 2. packaged as a proxy
 tst3 :: Proxy
-        '(Resplit "\\." >> Map (ReadP Int)
+        '(Map (ReadP Int) (Resplit "\\.")
         ,(Len >> Same 4) && All (Between 0 255)
-        ,Map (Printf "%03d") >> Concat
+        ,ConcatMap (Printf "%03d" Id) Id
         ,String)
 tst3 = mkProxy3
 
@@ -267,9 +267,9 @@ ww2 = prtEval3P tst3 o2
 -- 3. direct (has the advantage that we dont need to specify String
 
 ww3 = prtEval3
-        @(Resplit "\\." >> Map (ReadP Int))
+        @(Map (ReadP Int) (Resplit "\\."))
         @((Len >> Same 4) && All (Between 0 255))
-        @(Map (Printf "%03d") >> Concat)
+        @(ConcatMap (Printf "%03d" Id) Id)
         o2
 
 data G4 = G4 { g4Age :: MakeR3 Age
@@ -281,7 +281,7 @@ type MyAge = Refined3 (ReadP Int) (Gt 4) ShowP String
 type Age = '(ReadP Int, Gt 4, ShowP, String)
 
 type Ip9 = '(
-            Resplit "\\." >> Map (ReadP Int) -- split String on "." then convert to [Int]
+            Map (ReadP Int) (Resplit "\\.") -- split String on "." then convert to [Int]
            ,(Len >> Same 4) && All (Between 0 255) -- process [Int] and make sure length==4 and each octet is between 0 and 255
            ,Printfnt 4 "%03d.%03d.%03d.%03d" -- printf [Int]
            ,String -- input type is string which is also the output type
