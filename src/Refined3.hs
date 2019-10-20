@@ -711,9 +711,9 @@ prt3Impl opts v =
 -- reuses the mkProxy3 but returns Refined vs Refined3
 -- using plain Refined to emulate Refined3 sort of
 -- we just output fmt instead of embedding it in Refined3
--- so 'ip' predicate gets us started: we store that (PP ip i) in Refined
--- then we run the boolean predicate 'op' which is successful if true
--- then we run 'fmt' against (PP ip i) and output both the Refined (PP p i) and the PP fmt (PP (ip i)) ie fmt run against PP ip i
+-- so \'ip\' predicate gets us started: we store that \'PP ip i\' in Refined
+-- then we run the boolean predicate \'op\' which is successful if true
+-- then we run \'fmt\' against '\PP ip i\' and output both the Refined (PP p i) and the PP fmt (PP (ip i)) ie \'fmt\' run against PP ip i
 --       if any of the three steps fails the process stops immediately and dumps out RResults
 eval3PX :: forall ip op fmt i proxy . Refined3C ip op fmt i
   => proxy '(ip,op,fmt,i)

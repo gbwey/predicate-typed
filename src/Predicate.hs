@@ -791,21 +791,33 @@ instance (Show a, as ~ [a]) => P Len as where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @LenF (Left "aa")
+--   >>> pl @(Length Id) (Left "aa")
 --   Present 0
 --   PresentT 0
 --
---   >>> pl @LenF (Right "aa")
+--   >>> pl @(Length Id) (Right "aa")
 --   Present 1
 --   PresentT 1
 --
-data LenF
+--   >>> pl @(Length (Right' Id)) (Right "abcd")
+--   Present 4
+--   PresentT 4
+--
+data Length p
 
-instance (Show (t a), Foldable t, as ~ t a) => P LenF as where
-  type PP LenF as = Int
-  eval _ opts as =
-    let n = length as
-    in pure $ mkNode opts (PresentT n) ["LenF" <> show0 opts " " n <> showA opts " | " as] []
+instance (PP p x ~ t a
+        , P p x
+        , Show (t a)
+        , Foldable t) => P (Length p) x where
+  type PP (Length p) x = Int
+  eval _ opts x = do
+    let msg0 = "Length"
+    pp <- eval (Proxy @p) opts x
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right as -> do
+        let n = length as
+        pure $ mkNode opts (PresentT n) ["Length" <> show0 opts " " n <> showA opts " | " as] []
 
 -- | similar to 'Control.Lens._1'
 --
@@ -978,7 +990,7 @@ instance (Show x, Show y, Show b) => P Snd3 (x,b,y) where
   eval _ opts (x,b,y) =
     pure $ mkNode opts (PresentT b) ["Snd3" <> show0 opts " " b <> showA opts " | " (x,b,y)] []
 
--- | 'thd' for a 3-tuple
+-- | access to third element in a 3-tuple
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
