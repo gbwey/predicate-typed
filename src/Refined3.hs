@@ -85,6 +85,8 @@ import Test.QuickCheck
 import qualified GHC.Read as GR
 import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified Text.Read.Lex as RL
+import qualified Data.Binary as B
+import Data.Binary (Binary)
 -- | Refinement type that differentiates the input type from output type
 --
 -- @
@@ -288,6 +290,61 @@ arbRefined3With ::
   -> Gen (Refined3 ip op fmt i)
 arbRefined3With _ opts f =
   suchThatMap (f <$> arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt opts
+
+-- | 'Binary' instance for 'Refined3'
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> import Control.Arrow ((+++))
+-- >>> import Data.Time
+-- >>> type K1 = MakeR3 '(ReadP Day, 'True, ShowP, String)
+-- >>> type K2 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-03-30") (ReadP' Day "2019-06-01"), ShowP, String)
+-- >>> type K3 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-05-30") (ReadP' Day "2019-06-01"), ShowP, String)
+-- >>> r = unsafeRefined3' ol "2019-04-23" :: K1
+-- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
+-- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
+--
+-- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
+-- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
+--
+-- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
+-- Refined3:Step 2. False Boolean Check(op) | FalseP
+-- <BLANKLINE>
+-- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
+-- <BLANKLINE>
+-- P ReadP Day (2019-04-23) 2019-04-23 | 2019-04-23
+-- |
+-- `- P Id "2019-04-23"
+-- <BLANKLINE>
+-- *** Step 2. False Boolean Check(op) ***
+-- <BLANKLINE>
+-- False False && True
+-- |
+-- +- False 2019-04-23 >= 2019-05-30
+-- |  |
+-- |  +- P I
+-- |  |
+-- |  `- P ReadP Day (2019-05-30) 2019-05-30 | 2019-05-30
+-- |     |
+-- |     `- P '2019-05-30
+-- |
+-- `- True  2019-04-23 <= 2019-06-01
+--    |
+--    +- P I
+--    |
+--    `- P ReadP Day (2019-06-01) 2019-06-01 | 2019-06-01
+--       |
+--       `- P '2019-06-01
+-- <BLANKLINE>
+--
+instance (Show (PP fmt (PP ip i)), Show (PP ip i), Refined3C ip op fmt i, Binary i) => Binary (Refined3 ip op fmt i) where
+  get = do
+          i <- B.get @i
+          let (ret,mr) = eval3 @ip @op @fmt o2 i
+          case mr of
+            Nothing -> fail $ "Refined3:" ++ show (prt3Impl o2 ret)
+            Just r -> return r
+  put (Refined3 _ r) = B.put @i r
 
 -- | wraps the parameters for 'Refined3' in a 4-tuple for use with methods such as 'withRefined3TP' and 'newRefined3TP'
 mkProxy3 :: forall ip op fmt i . Refined3C ip op fmt i => Proxy '(ip,op,fmt,i)

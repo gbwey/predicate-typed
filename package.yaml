@@ -40,6 +40,7 @@ dependencies:
 - th-orphans
 - th-lift
 - QuickCheck
+- binary
 
 library:
   source-dirs: src

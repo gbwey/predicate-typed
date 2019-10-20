@@ -73,7 +73,8 @@ import Test.QuickCheck
 import qualified GHC.Read as GR
 import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified Text.Read.Lex as RL
-
+import qualified Data.Binary as B
+import Data.Binary (Binary)
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
 -- >>> :set -XTypeApplications
@@ -196,6 +197,58 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
                   case mr of
                     Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
                     Just r -> return r
+
+-- | 'Binary' instance for 'Refined'
+--
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> import Data.Time
+-- >>> import Control.Arrow ((+++))
+-- >>> type K1 = Refined (ReadP Day >> 'True) String
+-- >>> type K2 = Refined (ReadP Day >> Between (ReadP' Day "2019-03-30") (ReadP' Day "2019-06-01")) String
+-- >>> type K3 = Refined (ReadP Day >> Between (ReadP' Day "2019-05-30") (ReadP' Day "2019-06-01")) String
+-- >>> r = unsafeRefined' ol "2019-04-23" :: K1
+-- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
+-- Refined {unRefined = "2019-04-23"}
+--
+-- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
+-- Refined {unRefined = "2019-04-23"}
+--
+-- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
+-- Refined:FalseP
+-- False >> False | 2019-04-23
+-- |
+-- +- P ReadP Day (2019-04-23) 2019-04-23 | 2019-04-23
+-- |  |
+-- |  `- P Id "2019-04-23"
+-- |
+-- `- False False && True
+--    |
+--    +- False 2019-04-23 >= 2019-05-30
+--    |  |
+--    |  +- P I
+--    |  |
+--    |  `- P ReadP Day (2019-05-30) 2019-05-30 | 2019-05-30
+--    |     |
+--    |     `- P '2019-05-30
+--    |
+--    `- True  2019-04-23 <= 2019-06-01
+--       |
+--       +- P I
+--       |
+--       `- P ReadP Day (2019-06-01) 2019-06-01 | 2019-06-01
+--          |
+--          `- P '2019-06-01
+-- <BLANKLINE>
+--
+instance (RefinedC p a, Binary a) => Binary (Refined p a) where
+  get = do
+          fld0 <- B.get @a
+          let ((bp,e),mr) = runIdentity $ newRefined @p o2 fld0
+          case mr of
+            Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
+            Just r -> return r
+  put (Refined r) = B.put @a r
 
 -- | 'arbitrary' value for 'Refined'
 arbRefined :: forall p a.
