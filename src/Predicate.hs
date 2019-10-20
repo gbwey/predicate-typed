@@ -568,6 +568,7 @@ instance (ParseTime (PP t a)
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
+--   >>> :set -XTypeOperators
 --   >>> pl @(MkDay Fst (Snd >> Fst) (Snd >> Snd)) (2019,(12,30))
 --   Present Just (2019-12-30,(1,1))
 --   PresentT (Just (2019-12-30,(1,1)))
@@ -625,6 +626,7 @@ instance a ~ Day => P UnMkDay a where
 -- | uses the 'Read' of the given type \'t\' and \'p\' which points to the content to read
 --
 --   >>> :set -XTypeApplications
+--   >>> :set -XTypeOperators
 --   >>> :set -XDataKinds
 --   >>> pl @(ReadP Rational) "4 % 5"
 --   Present 4 % 5
@@ -4140,31 +4142,6 @@ instance (Show (PP p a)
 type family MapTX ta where
   MapTX (t a) = a
 
-{-
--- | similar to 'map' for 'Foldable' instances
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @(Map Pred) [1..5]
---   Present [0,1,2,3,4]
---   PresentT [0,1,2,3,4]
---
-data Map p
-
-instance (Show (t a)
-        , Show (PP p a)
-        , P p a
-        , Show a
-        , Foldable t
-        ) => P (Map p) (t a) where
-  type PP (Map p) (t a) = [PP p a]
-  eval _ opts as = do
-    let msg0 = "Map"
-    ts <- zipWithM (\i a -> ((i, a),) <$> eval (Proxy @p) opts a) [0::Int ..] (toList as)
-    pure $ case splitAndAlign opts [msg0] ts of
-         Left e -> e
-         Right (vals, _) -> mkNode opts (PresentT vals) [msg0 <> show0 opts " " vals <> showA opts " | " as] (map (hh . fixit) ts)
--}
 -- | if p then run q else run r
 --
 --   >>> :set -XTypeApplications

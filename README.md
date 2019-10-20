@@ -9,8 +9,9 @@ what this library provides:
 6  template haskell methods for creating the refinement types at compile time
 7. ToJSON and FromJSON instances for Refined and Refined3
 8. Read and Show instance for Refined and Refined3
-9. database encoders and decoders using odbc(sqlhandler-odbcalt) or hdbc((sqlhandler-odbc)
-10. quickcheck arbitrary methods
+9. Binary instances for Refined and Refined3
+10. database encoders and decoders using odbc(sqlhandler-odbcalt) or hdbc((sqlhandler-odbc)
+11. quickcheck arbitrary methods
 
 ```haskell
 data Refined p a = Refined a
