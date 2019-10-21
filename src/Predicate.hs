@@ -399,7 +399,7 @@ instance (GetBool b
                            RR3 s -> (if alle then RH.gsub else RH.sub) regex s r
                in mkNode opts (PresentT ret) [msg1 <> showLit opts " " r <> showLit opts " | " ret] (hhs <> [hh rr])
 
--- | a predicate for determining if a string ('Control.Lens.IsText') belongs to the given character set
+-- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
@@ -482,7 +482,7 @@ instance (GetCharSet cs
     in pure $ mkNodeB opts b [msg0 <> showA opts " | " as] []
 
 
--- | converts a string ('Control.Lens.IsText') value to lower case
+-- | converts a string 'Data.Text.Lens.IsText' value to lower case
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
@@ -498,7 +498,7 @@ instance (Show a, IsText a) => P ToLower a where
     let xs = as & text %~ toLower
     in pure $ mkNode opts (PresentT xs) ["ToLower" <> show0 opts " " xs <> showA opts " | " as] []
 
--- | converts a string ('Control.Lens.IsText') value to upper case
+-- | converts a string 'Data.Text.Lens.IsText' value to upper case
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
@@ -6493,5 +6493,95 @@ type family FnT ab :: Type where
 
 evalQuick :: forall p i . P p i => i -> Either String (PP p i)
 evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) o0 i))
+
+-- | similar to 'T.strip' 'T.stripStart' 'T.stripEnd'
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(Trim Snd) (20," abc   ")
+--   Present "abc"
+--   PresentT "abc"
+--
+--   >>> pl @(TrimStart Snd) (20," abc   ")
+--   Present "abc   "
+--   PresentT "abc   "
+--
+--   >>> pl @(TrimEnd Snd) (20," abc   ")
+--   Present " abc"
+--   PresentT " abc"
+--
+-- todo: make it work for 'Data.Text.Lens.IsText'
+data Trim' (left :: Bool) (right :: Bool) p
+type Trim p = Trim' 'True 'True p
+type TrimStart p = Trim' 'True 'False p
+type TrimEnd p = Trim' 'False 'True p
+
+instance (FailIfT (NotT (OrT l r))
+           ('GL.Text "Trim': left and right cannot both be False")
+        , GetBool l
+        , GetBool r
+        , PP p x ~ String
+        , P p x) => P (Trim' l r p) x where
+  type PP (Trim' l r p) x = String
+  eval _ opts x = do
+    let msg0 = "Trim" ++ (if l && r then "" else if l then "Start" else "End")
+        l = getBool @l
+        r = getBool @r
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let fl = if l then dropWhile isSpace else id
+            fr = if r then dropWhileEnd isSpace else id
+            b =  (fl . fr) p
+        in mkNode opts (PresentT b) [msg0 <> showLit0 opts "" b <> showLit opts " | " p] [hh pp]
+
+-- | similar to 'T.stripLeft' 'T.stripRight'
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(StripLeft "xyz" Id) "xyzHello"
+--   Present Just "Hello"
+--   PresentT (Just "Hello")
+--
+--   >>> pl @(StripLeft "xyz" Id) "xywHello"
+--   Present Nothing
+--   PresentT Nothing
+--
+--   >>> pl @(StripRight "xyz" Id) "Hello xyz"
+--   Present Just "Hello "
+--   PresentT (Just "Hello ")
+--
+--   >>> pl @(StripRight "xyz" Id) "xyzHelloxyw"
+--   Present Nothing
+--   PresentT Nothing
+--
+data StripLR (right :: Bool) p q
+type StripRight p q = StripLR 'True p q
+type StripLeft p q = StripLR 'False p q
+
+instance (GetBool r
+        , PP p x ~ String
+        , P p x
+        , PP q x ~ String
+        , P q x
+        ) => P (StripLR r p q) x where
+  type PP (StripLR r p q) x = Maybe String
+  eval _ opts x = do
+    let msg0 = "Strip" ++ (if r then "Right" else "Left")
+        r = getBool @r
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq)  ->
+        let b = if r then
+                  let (before,after) = splitAt (length q - length p) q
+                  in if after == p then Just before else Nothing
+                else
+                  let (before,after) = splitAt (length p) q
+                  in if before == p then Just after else Nothing
+        in mkNode opts (PresentT b) [msg0 <> show0 opts "" b <> showLit opts " | p=" p <> showLit opts " | q=" q] [hh pp, hh qq]
+
+
 
 
