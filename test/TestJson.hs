@@ -71,7 +71,7 @@ instance FromJSON Person1
 
 type ValidName =
          Guard (Printf "invalid name(%s)" Id)
-        (Re "^[A-Z][a-z']+$") >> 'True
+        (Re "^[A-Z][a-z']+$" Id) >> 'True
 
 type NameR = Refined ValidName String
 
@@ -86,7 +86,7 @@ type AgeR = Refined (Between 10 60) Int
 
 type Ip4R = MakeR3 '(Ip4ip, Ip4op >> 'True, Ip4fmt, String)
 
-type Ip4ip = Map (ReadP Int) (Resplit "\\.")
+type Ip4ip = Map (ReadP Int) (Resplit "\\." Id)
 type Ip4op = Guard (Printf "expected length 4 found %d" Len) (Len >> Same 4)
           >> GuardsQuick (Printf2 "guard(%d): expected between 0 and 255 found %d") (RepeatT 4 (Between 0 255))
 type Ip4fmt = Printfnt 4 "%03d.%03d.%03d.%03d"

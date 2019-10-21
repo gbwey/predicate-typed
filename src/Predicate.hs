@@ -123,26 +123,34 @@ type Unzip = (Map Fst Id, Map Snd Id)
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Re "^\\d{2}:\\d{2}:\\d{2}$") "13:05:25"
+--   >>> pl @(Re "^\\d{2}:\\d{2}:\\d{2}$" Id) "13:05:25"
 --   True
 --   TrueT
 --
-data Re' (s :: Symbol) (rs :: [ROpt])
-type Re (s :: Symbol) = Re' s '[]
+data Re' (rs :: [ROpt]) p q
+type Re p q = Re' '[] p q
 
 instance (GetROpts rs
-        , KnownSymbol s
-        , as ~ String
-        ) => P (Re' s rs) as where
-  type PP (Re' s rs) as = Bool
-  eval _ opts as =
-    let mm = "Re" <> (if null rs then "' " <> show rs else "")
+        , PP p x ~ String
+        , PP q x ~ String
+        , P p x
+        , P q x
+        ) => P (Re' rs p q) x where
+  type PP (Re' rs p q) x = Bool
+  eval _ opts x = do
+    let msg0 = "Re" <> (if null rs then "' " <> show rs else "")
         rs = getROpts @rs
-    in pure $ case compileRegex @s @rs opts mm of
-      Left tta -> tta
-      Right r ->
-         let b = as RH.=~ r
-         in mkNodeB opts b [mm <> showLit opts " | " as] []
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let msg1 = msg0 <> " (" <> p <> ")"
+            hhs = [hh pp, hh qq]
+        in case compileRegex @rs opts msg1 p hhs of
+            Left tta -> tta
+            Right regex ->
+               let b = q RH.=~ regex
+               in mkNodeB opts b [msg1 <> showLit opts " | " q] hhs
 
 -- only way with rescan is to be explicit: no repeats! and useanchors but not (?m)
 -- or just use Re' but then we only get a bool ie doesnt capture groups
@@ -154,87 +162,111 @@ instance (GetROpts rs
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$") "13:05:25"
+--   >>> pl @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
 --   Present [("13:05:25",["13","05","25"])]
 --   PresentT [("13:05:25",["13","05","25"])]
 --
-data Rescan' (s :: Symbol) (rs :: [ROpt])
-type Rescan (s :: Symbol) = Rescan' s '[]
+data Rescan' (rs :: [ROpt]) p q
+type Rescan p q = Rescan' '[] p q
 
 instance (GetROpts rs
-        , KnownSymbol s
-        , as ~ String
-        ) => P (Rescan' s rs) as where
-  type PP (Rescan' s rs) as = [(as, [as])]
-  eval _ opts as =
+        , PP p x ~ String
+        , PP q x ~ String
+        , P p x
+        , P q x
+        ) => P (Rescan' rs p q) x where
+  type PP (Rescan' rs p q) x = [(String, [String])]
+  eval _ opts x = do
     let msg0 = "Rescan" <> (if null rs then "' " <> show rs else "")
         rs = getROpts @rs
-    in pure $ case compileRegex @s @rs opts msg0 of
-      Left tta -> tta
-      Right r ->
-         let b = take (_MX+1) $ RH.scan r as
-         in if length b>=_MX then
-              mkNode opts (FailT "Regex looping") [msg0 <> " Looping? " <> show (take 10 b) <> "..." <> showA opts " | " as] []
-            -- this is a failure cos empty string returned: so reuse p?
-            else if null b then mkNode opts (FailT "Regex no results") [msg0 <> " no match" <> showA opts " | " as] []
-            else mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showLit opts " | " as] []
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let msg1 = msg0 <> " (" <> p <> ")"
+            hhs = [hh pp, hh qq]
+        in case compileRegex @rs opts msg1 p hhs of
+          Left tta -> tta
+          Right regex ->
+            case splitAt _MX $ RH.scan regex q of
+              (b, _:_) -> mkNode opts (FailT "Regex looping") [msg1 <> " Looping? " <> show (take 10 b) <> "..." <> showA opts " | " q] hhs
+              ([], _) -> -- this is a failure cos empty string returned: so reuse p?
+                         mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> showA opts " | " q] [hh pp, hh qq]
+              (b, _) -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit opts " | " q] [hh pp, hh qq]
 
 
 -- | similar to 'Rescan' but gives the column start and ending positions instead of values
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(RescanRanges "^(\\d{2}):(\\d{2}):(\\d{2})$") "13:05:25"
+--   >>> pl @(RescanRanges "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
 --   Present [((0,8),[(0,2),(3,5),(6,8)])]
 --   PresentT [((0,8),[(0,2),(3,5),(6,8)])]
 --
-data RescanRanges' (s :: Symbol) (rs :: [ROpt])
-type RescanRanges (s :: Symbol) = RescanRanges' s '[]
+data RescanRanges' (rs :: [ROpt]) p q
+type RescanRanges p q = RescanRanges' '[] p q
 
 instance (GetROpts rs
-        , KnownSymbol s
-        , as ~ String
-        ) => P (RescanRanges' s rs) as where
-  type PP (RescanRanges' s rs) as = [((Int,Int), [(Int,Int)])]
-  eval _ opts as =
+        , PP p x ~ String
+        , PP q x ~ String
+        , P p x
+        , P q x
+        ) => P (RescanRanges' rs p q) x where
+  type PP (RescanRanges' rs p q) x = [((Int,Int), [(Int,Int)])]
+  eval _ opts x = do
     let msg0 = "RescanRanges" <> (if null rs then "' " <> show rs else "")
         rs = getROpts @rs
-    in pure $ case compileRegex @s @rs opts msg0 of
-      Left tta -> tta
-      Right r ->
-         let b = take (_MX+1) $ RH.scanRanges r as
-         in if length b>=_MX then
-              mkNode opts (FailT "Regex looping") [msg0 <> " Looping? " <> show (take 10 b) <> "..." <> showA opts " | " as] []
-            else if null b then mkNode opts (FailT "no match") [msg0 <> " no match" <> showA opts " | " as] []
-            else mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showLit opts " | " as] []
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let msg1 = msg0 <> " (" <> p <> ")"
+            hhs = [hh pp, hh qq]
+        in case compileRegex @rs opts msg1 p hhs of
+          Left tta -> tta
+          Right regex ->
+            case splitAt _MX $ RH.scanRanges regex q of
+              (b, _:_) -> mkNode opts (FailT "Regex looping") [msg1 <> " Looping? " <> show (take 10 b) <> "..." <> showA opts " | " q] hhs
+              ([], _) -> -- this is a failure cos empty string returned: so reuse p?
+                         mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> showA opts " | " q] hhs
+              (b, _) -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit opts " | " q] hhs
 
 -- | splits a string on a regex delimiter
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Resplit "\\.") "141.201.1.22"
+--   >>> pl @(Resplit "\\." Id) "141.201.1.22"
 --   Present ["141","201","1","22"]
 --   PresentT ["141","201","1","22"]
 --
-data Resplit' (s :: Symbol) (rs :: [ROpt])
-type Resplit (s :: Symbol) = Resplit' s '[]
+data Resplit' (rs :: [ROpt]) p q
+type Resplit p q = Resplit' '[] p q
 
 instance (GetROpts rs
-        , KnownSymbol s
-        , as ~ String
-        ) => P (Resplit' s rs) as where
-  type PP (Resplit' s rs) as = [as]
-  eval _ opts as =
+        , PP p x ~ String
+        , PP q x ~ String
+        , P p x
+        , P q x
+        ) => P (Resplit' rs p q) x where
+  type PP (Resplit' rs p q) x  = [String]
+  eval _ opts x = do
     let msg0 = "Resplit" <> (if null rs then "' " <> show rs else "")
         rs = getROpts @rs
-    in pure $ case compileRegex @s @rs opts msg0 of
-      Left tta -> tta
-      Right r ->
-         let b = take (_MX+1) $ RH.split r as
-         in if length b>=_MX then
-              mkNode opts (FailT "Regex looping") [msg0 <> " Looping? " <> show (take 10 b) <> "..." <> showA opts " | " as] []
-            else if null b then mkNode opts (FailT "no match") [msg0 <> " no match" <> showA opts " | " as] []
-            else mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showLit opts " | " as] []
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let msg1 = msg0 <> " (" <> p <> ")"
+            hhs = [hh pp, hh qq]
+        in case compileRegex @rs opts msg1 p hhs of
+          Left tta -> tta
+          Right regex ->
+            case splitAt _MX $ RH.split regex q of
+              (b, _:_) -> mkNode opts (FailT "Regex looping") [msg1 <> " Looping? " <> show (take 10 b) <> "..." <> showA opts " | " q] hhs
+              ([], _) -> -- this is a failure cos empty string returned: so reuse p?
+                         mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> showA opts " | " q] hhs
+              (b, _) -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit opts " | " q] hhs
+
 _MX :: Int
 _MX = 100
 
@@ -242,33 +274,130 @@ _MX = 100
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(ReplaceAll "\\." ":") "141.201.1.22"
+--   >>> pl @(ReplaceAllString "\\." ":" Id) "141.201.1.22"
 --   Present "141:201:1:22"
 --   PresentT "141:201:1:22"
 --
-data ReplaceImpl (alle :: Bool) (s :: Symbol) (s1 :: Symbol) (rs :: [ROpt])
-type ReplaceAll' (s :: Symbol) (s1 :: Symbol) (rs :: [ROpt]) = ReplaceImpl 'True s s1 rs
-type ReplaceAll (s :: Symbol) (s1 :: Symbol) = ReplaceAll' s s1 '[]
-type ReplaceOne' (s :: Symbol) (s1 :: Symbol) (rs :: [ROpt]) = ReplaceImpl 'False s s1 rs
-type ReplaceOne (s :: Symbol) (s1 :: Symbol) = ReplaceOne' s s1 '[]
+data ReplaceImpl (alle :: Bool) (rs :: [ROpt]) p q r
+type ReplaceAll' (rs :: [ROpt]) p q r = ReplaceImpl 'True rs p q r
+type ReplaceAll p q r = ReplaceAll' '[] p q r
+type ReplaceOne' (rs :: [ROpt]) p q r = ReplaceImpl 'False rs p q r
+type ReplaceOne p q r = ReplaceOne' '[] p q r
+
+type ReplaceAllString' (rs :: [ROpt]) p q r = ReplaceAll' rs p (MakeRR q) r
+type ReplaceAllString p q r = ReplaceAllString' '[] p q r
+
+type ReplaceOneString' (rs :: [ROpt]) p q r = ReplaceOne' rs p (MakeRR q) r
+type ReplaceOneString p q r = ReplaceOneString' '[] p q r
+
+-- | Simple replacement string: see 'ReplaceAllString' and 'ReplaceOneString'
+--
+data MakeRR p
+
+instance (PP p x ~ String
+        , P p x) => P (MakeRR p) x where
+  type PP (MakeRR p) x = RR
+  eval _ opts x = do
+    let msg0 = "MakeRR"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right as ->
+        let b = RR as
+        in mkNode opts (PresentT b) [msg0 <> showA opts " | " as] [hh pp]
+
+-- | A replacement function (String -> [String] -> String) which returns the whole match and the groups
+--   Used by 'RH.sub' and 'RH.sub'
+--   Requires "Text.Show.Functions"
+--
+data MakeRR1 p
+
+instance (PP p x ~ (String -> [String] -> String)
+        , P p x) => P (MakeRR1 p) x where
+  type PP (MakeRR1 p) x = RR
+  eval _ opts x = do
+    let msg0 = "MakeRR1 (String -> [String] -> String)"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right f -> mkNode opts (PresentT (RR1 f)) [msg0] [hh pp]
+
+-- | A replacement function (String -> String) that yields the whole match
+--   Used by 'RH.sub' and 'RH.sub'
+--   Requires "Text.Show.Functions"
+--
+--   >>> :m + Text.Show.Functions
+--   >>> pl @(ReplaceAll "\\." (MakeRR2 Fst) Snd) (\x -> x <> ":" <> x, "141.201.1.22")
+--   Present "141.:.201.:.1.:.22"
+--   PresentT "141.:.201.:.1.:.22"
+--
+data MakeRR2 p
+
+instance (PP p x ~ (String -> String)
+        , P p x) => P (MakeRR2 p) x where
+  type PP (MakeRR2 p) x = RR
+  eval _ opts x = do
+    let msg0 = "MakeRR2 (String -> String)"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right f -> mkNode opts (PresentT (RR2 f)) [msg0] [hh pp]
+
+-- | A replacement function ([String] -> String) which yields the groups
+--   Used by 'RH.sub' and 'RH.sub'
+--   Requires "Text.Show.Functions"
+--
+--   >>> :m + Text.Show.Functions
+--   >>> pl @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (MakeRR3 Fst) Snd) (\ys -> intercalate  " | " $ map (show . succ . read @Int) ys, "141.201.1.22")
+--   Present "142 | 202 | 2 | 23"
+--   PresentT "142 | 202 | 2 | 23"
+--
+data MakeRR3 p
+
+instance (PP p x ~ ([String] -> String)
+        , P p x) => P (MakeRR3 p) x where
+  type PP (MakeRR3 p) x = RR
+  eval _ opts x = do
+    let msg0 = "MakeRR3 ([String] -> String)"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right f -> mkNode opts (PresentT (RR3 f)) [msg0] [hh pp]
 
 instance (GetBool b
         , GetROpts rs
-        , KnownSymbol s
-        , KnownSymbol s1
-        , as ~ String
-        ) => P (ReplaceImpl b s s1 rs) as where
-  type PP (ReplaceImpl b s s1 rs) as = String
-  eval _ opts as =
+        , PP p x ~ String
+        , PP q x ~ RR
+        , PP r x ~ String
+        , P p x
+        , P q x
+        , P r x
+        ) => P (ReplaceImpl b rs p q r) x where
+  type PP (ReplaceImpl b rs p q r) x = String
+  eval _ opts x = do
     let msg0 = "Replace" <> (if alle then "All" else "One") <> (if null rs then "' " <> show rs else "")
         rs = getROpts @rs
-        s1 = symb @s1
         alle = getBool @b
-    in pure $ case compileRegex @s @rs opts msg0 of
-      Left tta -> tta
-      Right r ->
-         let ret = (if alle then RH.gsub else RH.sub) r s1 as
-         in mkNode opts (PresentT ret) [msg0 <> showLit opts " " as <> showLit opts " | " ret] []
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    case lr of
+      Left e -> pure e
+      Right (p,q,pp,qq) ->
+        let msg1 = msg0 <> " (" <> p <> ")"
+            hhs = [hh pp, hh qq]
+        in case compileRegex @rs opts msg1 p hhs of
+          Left tta -> pure tta
+          Right regex -> do
+            rr <- eval (Proxy @r) opts x
+            pure $ case getValueLR opts msg0 rr hhs of
+              Left e -> e
+              Right r ->
+               let ret :: String
+                   ret = case q of
+                           RR s -> (if alle then RH.gsub else RH.sub) regex s r
+                           RR1 s -> (if alle then RH.gsub else RH.sub) regex s r
+                           RR2 s -> (if alle then RH.gsub else RH.sub) regex s r
+                           RR3 s -> (if alle then RH.gsub else RH.sub) regex s r
+               in mkNode opts (PresentT ret) [msg1 <> showLit opts " " r <> showLit opts " | " ret] (hhs <> [hh rr])
 
 -- | a predicate for determining if a string ('Control.Lens.IsText') belongs to the given character set
 --
@@ -471,24 +600,32 @@ instance Show as => P ShowP as where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(FormatTimeP "%F %T") (read "2019-05-24 05:19:59" :: LocalTime)
+--   >>> pl @(FormatTimeP "%F %T" Id) (read "2019-05-24 05:19:59" :: LocalTime)
 --   Present "2019-05-24 05:19:59"
 --   PresentT "2019-05-24 05:19:59"
 --
-data FormatTimeP s
-type FormatTimeP' (s :: Symbol) = FormatTimeP s
+--   >>> pl @(FormatTimeP Fst Snd) ("the date is %d/%m/%Y", read "2019-05-24" :: Day)
+--   Present "the date is 24/05/2019"
+--   PresentT "the date is 24/05/2019"
+--
+data FormatTimeP p q
 
-instance (FormatTime a, P s a , PP s a ~ String) => P (FormatTimeP s) a where
-  type PP (FormatTimeP s) a = String
-  eval _ opts a = do
+instance (PP p x ~ String
+        , FormatTime (PP q x)
+        , P p x
+        , Show (PP q x)
+        , P q x
+        ) => P (FormatTimeP p q) x where
+  type PP (FormatTimeP p q) x = String
+  eval _ opts x = do
     let msg0 = "FormatTimeP"
-    ss <- eval (Proxy @s) opts a
-    pure $ case getValueLR opts msg0 ss [] of
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    pure $ case lr of
       Left e -> e
-      Right s ->
-        let msg1 = msg0 <> " (" <> s <> ")"
-            b = formatTime defaultTimeLocale s a
-        in mkNode opts (PresentT b) [msg1 <> showLit0 opts " " b <> showLit opts " | " s] [hh ss]
+      Right (p,q,pp,qq) ->
+        let msg1 = msg0 <> " (" <> p <> ")"
+            b = formatTime defaultTimeLocale p q
+        in mkNode opts (PresentT b) [msg1 <> showLit0 opts " " b <> showA opts " | " q] [hh pp, hh qq]
 
 -- | similar to 'Data.Time.parseTimeM' where \'t\' is the 'Data.Time.ParseTime' type, \'p\' is the datetime format and \'q\' points to the content to parse
 --
@@ -523,9 +660,10 @@ instance (ParseTime (PP t a)
       Left e -> e
       Right (p,q,pp,qq) ->
         let msg1 = msg0 <> " (" <> p <> ")"
+            hhs = [hh pp, hh qq]
         in case parseTimeM @Maybe @(PP t a) True defaultTimeLocale p q of
-             Just b -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit0 opts " | fmt=" p <> showA opts " | " q] [hh pp, hh qq]
-             Nothing -> mkNode opts (FailT (msg1 <> " failed to parse")) [msg1 <> " failed"] [hh pp, hh qq]
+             Just b -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit0 opts " | fmt=" p <> showA opts " | " q] hhs
+             Nothing -> mkNode opts (FailT (msg1 <> " failed to parse")) [msg1 <> " failed"] hhs
 
 -- | A convenience method to match against many different datetime formats to find a match
 --
@@ -559,10 +697,11 @@ instance (ParseTime (PP t a)
       Left e -> e
       Right (p,q,pp,qq) ->
         let msg1 = msg0
+            hhs = [hh pp, hh qq]
             zs = map (\d -> (d,) <$> parseTimeM @Maybe @(PP t a) True defaultTimeLocale d q) p
         in case catMaybes zs of
-             [] -> mkNode opts (FailT ("no match on [" ++ q ++ "]")) [msg1 <> " no match"] [hh pp, hh qq]
-             (d,b):_ -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit0 opts " | fmt=" d <> showA opts " | " q] [hh pp, hh qq]
+             [] -> mkNode opts (FailT ("no match on [" ++ q ++ "]")) [msg1 <> " no match"] hhs
+             (d,b):_ -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit0 opts " | fmt=" d <> showA opts " | " q] hhs
 
 -- | create a 'Day' from three int values passed in as year month and day
 --
@@ -596,15 +735,16 @@ instance (P p x
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
+        let hhs = [hh pp, hh qq]
         rr <- eval (Proxy @r) opts x
-        pure $ case getValueLR opts msg0 rr [hh pp, hh qq] of
+        pure $ case getValueLR opts msg0 rr hhs of
           Left e -> e
           Right r ->
             let mday = fromGregorianValid (fromIntegral p) q r
                 b = mday <&> \day ->
                       let (_, week, dow) = toWeekDate day
                       in (day, (week, dow))
-            in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | (y,m,d)=" (p,q,r)] [hh pp, hh qq, hh rr]
+            in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | (y,m,d)=" (p,q,r)] (hhs <> [hh rr])
 
 -- | uncreate a 'Day' returning year month and day
 --
@@ -813,11 +953,11 @@ instance (PP p x ~ t a
   eval _ opts x = do
     let msg0 = "Length"
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
-      Left e -> pure e
-      Right as -> do
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right as ->
         let n = length as
-        pure $ mkNode opts (PresentT n) ["Length" <> show0 opts " " n <> showA opts " | " as] []
+        in mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " as] []
 
 -- | similar to 'Control.Lens._1'
 --
@@ -1336,10 +1476,11 @@ instance (P p a
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
+         let hhs = [hh pp, hh qq]
          rr <- eval (Proxy @r) opts a
-         pure $ case getValueLR opts msg rr [hh pp, hh qq] of
+         pure $ case getValueLR opts msg rr hhs of
            Left e -> e
-           Right r -> mkNode opts (PresentT (p,q,r)) [msg] [hh pp, hh qq, hh rr]
+           Right r -> mkNode opts (PresentT (p,q,r)) [msg] (hhs <> [hh rr])
 
 -- | run the predicates in a promoted 4-tuple
 --
@@ -1674,12 +1815,12 @@ instance (Show a
          These a b -> do
             pp <- eval (Proxy @p) opts a
             case getValueLR opts msg pp [] of
-                 Left e -> pure e
-                 Right p -> do
-                   qq <- eval (Proxy @q) opts b
-                   pure $ case getValueLR opts (msg <> " q failed p=" <> show p) qq [hh pp] of
-                        Left e -> e
-                        Right q -> mkNode opts (PresentT (p,q)) [msg <> show0 opts " " (p,q) <> showA opts " | " (These a b)] [hh pp, hh qq]
+               Left e -> pure e
+               Right p -> do
+                 qq <- eval (Proxy @q) opts b
+                 pure $ case getValueLR opts (msg <> " q failed p=" <> show p) qq [hh pp] of
+                    Left e -> e
+                    Right q -> mkNode opts (PresentT (p,q)) [msg <> show0 opts " " (p,q) <> showA opts " | " (These a b)] [hh pp, hh qq]
          _ -> pure $ mkNode opts (FailT (msg <> " found " <> showThese th)) [msg <> " found " <> showThese th] []
 
 -- | converts the value to the corresponding 'Proxy'
@@ -1993,8 +2134,9 @@ instance (P n a
       Left e -> pure e
       Right (fromIntegral -> n,p,nn,pp) -> do
         let msg1 = msg0 <> show0 opts " " n <> " pad=" <> show p
+            hhs = [hh nn, hh pp]
         qq <- eval (Proxy @q) opts a
-        pure $ case getValueLR opts (msg1 <> " q failed") qq [hh nn, hh pp] of
+        pure $ case getValueLR opts (msg1 <> " q failed") qq hhs of
           Left e -> e
           Right q ->
             let l = length q
@@ -2002,26 +2144,25 @@ instance (P n a
                 bs = if lft
                      then (replicate diff p) <> q
                      else q <> (replicate diff p)
-            in mkNode opts (PresentT bs) [msg1 <> show0 opts " " bs <> showA opts " | " q] [hh nn, hh pp]
+            in mkNode opts (PresentT bs) [msg1 <> show0 opts " " bs <> showA opts " | " q] (hhs <> [hh qq])
 
 -- | split a list \'p\' into parts using the lengths in the type level list \'ns\'
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(SplitAts '[2,3,1,1]) "hello world"
+--   >>> pl @(SplitAts '[2,3,1,1] Id) "hello world"
 --   Present ["he","llo"," ","w","orld"]
 --   PresentT ["he","llo"," ","w","orld"]
 --
---   >>> pl @(SplitAts '[2]) "hello world"
+--   >>> pl @(SplitAts '[2] Id) "hello world"
 --   Present ["he","llo world"]
 --   PresentT ["he","llo world"]
 --
---   >>> pl @(SplitAts '[10,1,1,5]) "hello world"
+--   >>> pl @(SplitAts '[10,1,1,5] Id) "hello world"
 --   Present ["hello worl","d","",""]
 --   PresentT ["hello worl","d","",""]
 --
-data SplitAts' ns p
-type SplitAts ns = SplitAts' ns Id
+data SplitAts ns p
 instance (P ns x
         , P p x
         , PP p x ~ [a]
@@ -2029,8 +2170,8 @@ instance (P ns x
         , Show a
         , PP ns x ~ [n]
         , Integral n
-        ) => P (SplitAts' ns p) x where
-  type PP (SplitAts' ns p) x = [PP p x]
+        ) => P (SplitAts ns p) x where
+  type PP (SplitAts ns p) x = [PP p x]
   eval _ opts x = do
     let msg = "SplitAts"
     lr <- runPQ msg (Proxy @ns) (Proxy @p) opts x
@@ -3362,7 +3503,7 @@ instance (P p x
         let b = pure a
         in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " a] [hh pp]
 
-type Pmempty = MemptyT' 'Proxy  -- lifts 'a' to 'Proxy a' then we can use it with MemptyP
+type PMempty = MemptyT' 'Proxy  -- lifts 'a' to 'Proxy a' then we can use it with MemptyP
 
 -- | similar to 'mempty'
 --
@@ -3572,20 +3713,31 @@ instance (Show a, Monoid a) => P MConcat [a] where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @Concat ["abc","D","eF","","G"]
+--   >>> pl @(Concat Id) ["abc","D","eF","","G"]
 --   Present "abcDeFG"
 --   PresentT "abcDeFG"
 --
-data Concat
+--   >>> pl @(Concat Snd) ('x',["abc","D","eF","","G"])
+--   Present "abcDeFG"
+--   PresentT "abcDeFG"
+--
+data Concat p
 
 instance (Show a
         , Show (t [a])
+        , PP p x ~ (t [a])
+        , P p x
         , Foldable t
-        ) => P Concat (t [a]) where
-  type PP Concat (t [a]) = [a]
-  eval _ opts a =
-    let b = concat a
-    in pure $ mkNode opts (PresentT b) ["Concat" <> show0 opts " " b <> showA opts " | " a] []
+        ) => P (Concat p) x where
+  type PP (Concat p) x = MapTX (PP p x)
+  eval _ opts x = do
+    let msg0 = "Concat"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right as ->
+        let b = concat as
+        in mkNode opts (PresentT b) ["Concat" <> show0 opts " " b <> showA opts " | " as] [hh pp]
 
 instance P (Proxy t) a where
   type PP (Proxy t) a = Proxy t
@@ -3728,9 +3880,10 @@ instance (P q a
       Left e -> e
       Right (p,q,pp,qq) ->
         let msg1 = msg0 <> "(" <> show q <> ")"
+            hhs = [hh pp, hh qq]
         in case p ^? ix q of
-             Nothing -> mkNode opts (PresentT Nothing) [msg1 <> " not found"] [hh pp, hh qq]
-             Just ret -> mkNode opts (PresentT (Just ret)) [msg1 <> show0 opts " " ret <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
+             Nothing -> mkNode opts (PresentT Nothing) [msg1 <> " not found"] hhs
+             Just ret -> mkNode opts (PresentT (Just ret)) [msg1 <> show0 opts " " ret <> showA opts " | p=" p <> showA opts " | q=" q] hhs
 
 -- | 'Data.List.ands'
 --
@@ -4129,7 +4282,7 @@ instance (PP q a ~ s
 --   PresentT [0,1,2,3,4]
 --
 data Map p q
-type ConcatMap p q = Map p q >> Concat
+type ConcatMap p q = Concat (Map p q)
 
 instance (Show (PP p a)
         , P p a
@@ -4444,11 +4597,12 @@ instance (PP p a ~ PP q a
     lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq)
-         | q == 0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] [hh pp, hh qq]
-         | otherwise ->
-            let d = p `div` q
-            in mkNode opts (PresentT d) [show p <> " `div` " <> show q <> " = " <> show d] [hh pp, hh qq]
+      Right (p,q,pp,qq) ->
+         let hhs = [hh pp, hh qq]
+         in case q of
+              0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] hhs
+              _ -> let d = p `div` q
+                   in mkNode opts (PresentT d) [show p <> " `div` " <> show q <> " = " <> show d] hhs
 
 
 -- | similar to 'mod'
@@ -4476,11 +4630,12 @@ instance (PP p a ~ PP q a
     lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq)
-         | q == 0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] [hh pp, hh qq]
-         | otherwise ->
-            let d = p `mod` q
-            in mkNode opts (PresentT d) [show p <> " `mod` " <> show q <> " = " <> show d] [hh pp, hh qq]
+      Right (p,q,pp,qq) ->
+         let hhs = [hh pp, hh qq]
+         in case q of
+              0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] hhs
+              _ -> let d = p `mod` q
+                   in mkNode opts (PresentT d) [show p <> " `mod` " <> show q <> " = " <> show d] hhs
 
 -- | similar to 'divMod'
 --
@@ -4520,11 +4675,12 @@ instance (PP p a ~ PP q a
     lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq)
-         | q == 0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] [hh pp, hh qq]
-         | otherwise ->
-            let d = p `divMod` q
-            in mkNode opts (PresentT d) [show p <> " `divMod` " <> show q <> " = " <> show d] [hh pp, hh qq]
+      Right (p,q,pp,qq) ->
+        let hhs = [hh pp, hh qq]
+        in case q of
+             0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] hhs
+             _ -> let d = p `divMod` q
+                  in mkNode opts (PresentT d) [show p <> " `divMod` " <> show q <> " = " <> show d] hhs
 
 -- | similar to 'quotRem'
 --
@@ -4564,11 +4720,12 @@ instance (PP p a ~ PP q a
     lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq)
-         | q == 0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] [hh pp, hh qq]
-         | otherwise ->
-            let d = p `quotRem` q
-            in mkNode opts (PresentT d) [show p <> " `quotRem` " <> show q <> " = " <> show d] [hh pp, hh qq]
+      Right (p,q,pp,qq) ->
+        let hhs = [hh pp, hh qq]
+        in case q of
+             0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] hhs
+             _ -> let d = p `quotRem` q
+                  in mkNode opts (PresentT d) [show p <> " `quotRem` " <> show q <> " = " <> show d] hhs
 
 type Quot p q = QuotRem p q >> Fst
 type Rem p q = QuotRem p q >> Snd
@@ -5756,45 +5913,26 @@ instance P p a => P (Hide p) a where
 --   False
 --   FalseT
 --
-data ReadFile (s :: Symbol)
-type FileExists (s :: Symbol) = ReadFile s >> IsJust
+data ReadFile p
+type FileExists p = ReadFile p >> IsJust
 
-instance KnownSymbol s => P (ReadFile s) a where
-  type PP (ReadFile s) a = Maybe String
-  eval _ opts _ = do
-    let s = symb @s
-        msg = "ReadFile[" <> s <> "]"
-    mb <- runIO $ do
-                    b <- doesFileExist s
-                    if b then Just <$> readFile s else pure Nothing
-    pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg <> " must run in IO")) [msg <> " must run in IO"] []
-      Just Nothing -> mkNode opts (PresentT Nothing) [msg <> " does not exist"] []
-      Just (Just b) -> mkNode opts (PresentT (Just b)) [msg <> " len=" <> show (length b) <> showLit0 opts " Just " b] []
-
--- | does the directory exists
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @(DirExists ".") ()
---   True
---   TrueT
---
-data ReadDir (s :: Symbol)
-type DirExists (s :: Symbol) = ReadDir s >> IsJust
-
-instance KnownSymbol s => P (ReadDir s) a where
-  type PP (ReadDir s) a = Maybe [String]
-  eval _ opts _ = do
-    let s = symb @s
-        msg = "ReadDir[" <> s <> "]"
-    mb <- runIO $ do
-                    b <- doesDirectoryExist s
-                    if b then Just <$> listDirectory s else pure Nothing
-    pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg <> " must run in IO")) [msg <> " must run in IO"] []
-      Just Nothing -> mkNode opts (PresentT Nothing) [msg <> " does not exist"] []
-      Just (Just b) -> mkNode opts (PresentT (Just b)) [msg <> " len=" <> show (length b) <> show0 opts " Just " b] []
+instance (PP p x ~ String, P p x) => P (ReadFile p) x where
+  type PP (ReadFile p) x = Maybe String
+  eval _ opts x = do
+    let msg0 = "ReadFile"
+    pp <- eval (Proxy @p) opts x
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right p -> do
+        let msg1 = msg0 <> "[" <> p <> "]"
+        mb <- runIO $ do
+                b <- doesFileExist p
+                if b then Just <$> readFile p
+                else pure Nothing
+        pure $ case mb of
+          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) [msg1 <> " must run in IO"] []
+          Just Nothing -> mkNode opts (PresentT Nothing) [msg1 <> " does not exist"] []
+          Just (Just b) -> mkNode opts (PresentT (Just b)) [msg1 <> " len=" <> show (length b) <> showLit0 opts " Just " b] []
 
 -- | does the directory exists
 --
@@ -5804,29 +5942,62 @@ instance KnownSymbol s => P (ReadDir s) a where
 --   True
 --   TrueT
 --
-data ReadEnv (s :: Symbol)
+data ReadDir p
+type DirExists p = ReadDir p >> IsJust
 
-instance KnownSymbol s => P (ReadEnv s) a where
-  type PP (ReadEnv s) a = Maybe String
-  eval _ opts _ = do
-    let s = symb @s
-        msg = "ReadEnv[" <> s <> "]"
-    mb <- runIO $ lookupEnv s
-    pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg <> " must run in IO")) [msg <> " must run in IO"] []
-      Just Nothing -> mkNode opts (PresentT Nothing) [msg <> " does not exist"] []
-      Just (Just v) -> mkNode opts (PresentT (Just v)) [msg <> showLit0 opts " " v] []
+instance (PP p x ~ String, P p x) => P (ReadDir p) x where
+  type PP (ReadDir p) x = Maybe [FilePath]
+  eval _ opts x = do
+    let msg0 = "ReadDir"
+    pp <- eval (Proxy @p) opts x
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right p -> do
+        let msg1 = msg0 <> "[" <> p <> "]"
+        mb <- runIO $ do
+                b <- doesDirectoryExist p
+                if b then Just <$> listDirectory p
+                else pure Nothing
+        pure $ case mb of
+          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) [msg1 <> " must run in IO"] []
+          Just Nothing -> mkNode opts (PresentT Nothing) [msg1 <> " does not exist"] []
+          Just (Just b) -> mkNode opts (PresentT (Just b)) [msg1 <> " len=" <> show (length b) <> show0 opts " Just " b] []
+
+-- | does the directory exists
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(DirExists ".") ()
+--   True
+--   TrueT
+--
+data ReadEnv p
+
+instance (PP p x ~ String, P p x) => P (ReadEnv p) x where
+  type PP (ReadEnv p) x = Maybe String
+  eval _ opts x = do
+    let msg0 = "ReadEnv"
+    pp <- eval (Proxy @p) opts x
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right p -> do
+        let msg1 = msg0 <> "[" <> p <> "]"
+        mb <- runIO $ lookupEnv p
+        pure $ case mb of
+          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) [msg1 <> " must run in IO"] []
+          Just Nothing -> mkNode opts (PresentT Nothing) [msg1 <> " does not exist"] []
+          Just (Just v) -> mkNode opts (PresentT (Just v)) [msg1 <> showLit0 opts " " v] []
 
 data ReadEnvAll
 
 instance P ReadEnvAll a where
   type PP ReadEnvAll a = [(String,String)]
   eval _ opts _ = do
-    let msg = "ReadEnvAll"
+    let msg0 = "ReadEnvAll"
     mb <- runIO $ getEnvironment
     pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg <> " must run in IO")) [msg <> " must run in IO"] []
-      Just v -> mkNode opts (PresentT v) [msg <> " count=" <> show (length v)] []
+      Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
+      Just v -> mkNode opts (PresentT v) [msg0 <> " count=" <> show (length v)] []
 
 data TimeU
 
@@ -6107,10 +6278,11 @@ instance (KnownNat (TupleLenT as)
       Right (s,(a,as),ss,pp) -> do
         let len :: Int = 1 + nat @(TupleLenT as)
             msg1 = msg0 <> "(" <> show len <> ")"
+            hhs = [hh ss, hh pp]
         lr <- catchitNF @_ @E.SomeException (prtC @bs s (reverseTupleC (a,as)))
         pure $ case lr of
-          Left e -> mkNode opts (FailT (msg1 <> "(" <> e <> ")")) [msg1 <> show0 opts " " a <> " s=" <> s] [hh ss, hh pp]
-          Right ret -> mkNode opts (PresentT ret) [msg1 <> " [" <> showLit0 opts "" ret <> "]" <> showA opts " | (a,as)=" (a,as) <> showLit0 opts " | s=" s] [hh ss, hh pp]
+          Left e -> mkNode opts (FailT (msg1 <> "(" <> e <> ")")) [msg1 <> show0 opts " " a <> " s=" <> s] hhs
+          Right ret -> mkNode opts (PresentT ret) [msg1 <> " [" <> showLit0 opts "" ret <> "]" <> showA opts " | (a,as)=" (a,as) <> showLit0 opts " | s=" s] hhs
 
 type family CheckT (tp :: Type) :: Bool where
   CheckT () = GL.TypeError ('GL.Text "Printfn: inductive tuple cannot be empty")

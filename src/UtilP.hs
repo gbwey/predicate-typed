@@ -417,14 +417,13 @@ data ROpt =
   deriving (Show,Eq,Ord,Enum,Bounded)
 
 -- | compile a regex using the type level symbol
-compileRegex :: forall s rs a . (KnownSymbol s, GetROpts rs)
-  => POpts -> String -> Either (TT a) RH.Regex
-compileRegex opts nm =
-    let s = symb @s
-        rs = getROpts @rs
+compileRegex :: forall rs a . GetROpts rs
+  => POpts -> String -> String -> [Holder] -> Either (TT a) RH.Regex
+compileRegex opts nm s hhs =
+    let rs = getROpts @rs
         mm = nm <> " " <> show rs
     in flip left (RH.compileM (B8.pack s) rs)
-          $ \e -> mkNode opts (FailT "Regex failed to compile") [mm <> " compile failed with regex msg[" <> e <> "]"] []
+          $ \e -> mkNode opts (FailT "Regex failed to compile") [mm <> " compile failed with regex msg[" <> e <> "]"] hhs
 
 -- | extract the regex options from the type level list
 class GetROpts (os :: [ROpt]) where
@@ -458,6 +457,14 @@ instance GetROpt 'No_auto_capture where getROpt = RL.no_auto_capture
 instance GetROpt 'Ungreedy where getROpt = RL.ungreedy
 instance GetROpt 'Utf8 where getROpt = RL.utf8
 instance GetROpt 'No_utf8_check where getROpt = RL.no_utf8_check
+
+-- | used by 'Predicate.ReplaceImpl' and 'RH.sub' and 'RH.gsub' to allow more flexible replacement
+--   These parallel the RegexReplacement (not exported) class in "Text.Regex.PCRE.Heavy" but have overlappable instances which is problematic for this code so I use 'RR'
+data RR =
+     RR String
+   | RR1 (String -> [String] -> String)
+   | RR2 (String -> String)
+   | RR3 ([String] -> String)
 
 -- | extract values from the trees or if there are errors returned a tree with added context
 splitAndAlign :: Show x =>

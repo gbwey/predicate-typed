@@ -54,8 +54,8 @@ unnamedTests = [
 
   , (@?=) [(unsafeRefined 7, "")] (reads @(Refined (Between 2 10) Int) "Refined {unRefined = 7}")
   , (@?=) [] (reads @(Refined (Between 2 10) Int) "Refined {unRefined = 0}")
-  , (@?=) [(unsafeRefined "abcaaaabb", "")] (reads @(Refined (Re "^[abc]+$") String) "Refined {unRefined = \"abcaaaabb\"}")
-  , (@?=) [] (reads @(Refined (Re "^[abc]+$") String) "Refined {unRefined = \"abcaaaabbx\"}")
+  , (@?=) [(unsafeRefined "abcaaaabb", "")] (reads @(Refined (Re "^[abc]+$" Id) String) "Refined {unRefined = \"abcaaaabb\"}")
+  , (@?=) [] (reads @(Refined (Re "^[abc]+$" Id) String) "Refined {unRefined = \"abcaaaabbx\"}")
 
   , expectJ (Left ["Error in $: Refined:FalseP"]) (toFrom (unsafeRefined @(Between 4 7 || Gt 14) 12))
   , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @(Between 4 7 || Gt 14) 22))
@@ -77,34 +77,34 @@ allProps =
 
 type Ip4RE = "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$"
 
-type Ip4 = Rescan Ip4RE >> OneP >> Map (ReadBaseInt 10) Snd >> Ip4guard
+type Ip4 = Rescan Ip4RE Id >> OneP >> Map (ReadBaseInt 10) Snd >> Ip4guard
 
 type Ip4guard = Guard "4octets" (Len >> Same 4) >> Guard "0-255" (All (Between 0 255))
 
-type Ip6 = Resplit ":"
+type Ip6 = Resplit ":" Id
         >> Guard "count is bad" (Len >> Between 0 8)
         >> Guard "not a hex" (All (All (Elem Id "abcdefABCDEF0123456789")))
         >> Guard "len is bad" (All (Len >> Le 4))
 
-type Ip6A = Map (If (Id == "") "0" Id) (Resplit ":")
+type Ip6A = Map (If (Id == "") "0" Id) (Resplit ":" Id)
          >> Map (ReadBaseInt 16) Id
 
 type Ip6B = Guard "count is bad" (Len >> Between 0 8)
          >> Guard "out of bounds" (All (Between 0 65535))
          >> 'True
 
-type Ip6A' = Resplit ":"
+type Ip6A' = Resplit ":" Id
          >> Map (If (Id == "") "0" Id) Id
          >> Map (ReadBaseInt 16) Id
          >> PadL 8 0 Id
 
-type Ip6A'' = Map (If (Id == "") 0 (ReadBaseInt 16)) (Resplit ":") >> PadL 8 0 Id
+type Ip6A'' = Map (If (Id == "") 0 (ReadBaseInt 16)) (Resplit ":" Id) >> PadL 8 0 Id
 
 type Ip6B' = Guard "count is bad" (Len >> Same 8)
          >> Guard "out of bounds" (All (Between 0 65535))
          >> 'True
 
-type Ip4A = Map (ReadBaseInt 10) (Resplit "\\.")
+type Ip4A = Map (ReadBaseInt 10) (Resplit "\\." Id)
 type Ip4B = Guard "expected 4 numbers" (Len >> Same 4)
          >> Guard "each number must be between 0 and 255" (All (Between 0 255))
          >> 'True

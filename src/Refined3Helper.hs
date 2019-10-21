@@ -46,7 +46,7 @@ import qualified Data.Semigroup as SG
 -- credit card with luhn algorithm
 type Ccip = Map (ReadP Int) (Remove "-" Id >> Ones)
 type Ccop (n :: Nat) = Guard ('(n,Len) >> Printf2 "expected %d digits but found %d") (Len >> Same n) >> Luhn
-type Ccfmt (ns :: [Nat]) = ConcatMap ShowP Id >> SplitAts ns >> Intercalate '["-"] Id >> Concat
+type Ccfmt (ns :: [Nat]) = ConcatMap ShowP Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
 
 type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
 
@@ -64,19 +64,19 @@ type Dtip1 t = ParseTimeP t "%F %T" Id
 
 -- extra check to validate the time as parseTime doesnt validate the time component
 type Dtop1 =
-   Map (ReadP Int) (FormatTimeP "%H %M %S" >> Resplit "\\s+")
+   Map (ReadP Int) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
      >> Guards '[ '(Printf2 "guard %d invalid hours %d", Between 0 23)
                 , '(Printf2 "guard %d invalid minutes %d", Between 0 59)
                 , '(Printf2 "guard %d invalid seconds %d", Between 0 59)
                 ] >> 'True
-type Dtfmt1 = FormatTimeP "%F %T"
+type Dtfmt1 = FormatTimeP "%F %T" Id
 
 ssn :: Proxy Ssn
 ssn = mkProxy3
 
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
-type Ssnip = Map (ReadP Int) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd)
+type Ssnip = Map (ReadP Int) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Snd)
 type Ssnop = GuardsQuick (Printf2 "number for group %d invalid: found %d")
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
                       >> 'True
@@ -91,7 +91,7 @@ hms = mkProxy3
 
 type Hms = '(Hmsip, Hmsop >> 'True, Hmsfmt, String)
 
-type Hmsip = Map (ReadP Int) (Resplit ":")
+type Hmsip = Map (ReadP Int) (Resplit ":" Id)
 type Hmsop = Guard (Printf "expected len 3 but found %d" Len) (Len >> Same 3)
              >> Guards '[ '(Printf2 "guard(%d) %d hours is out of range", Between 0 23)
                         , '(Printf2 "guard(%d) %d mins is out of range", Between 0 59)
@@ -107,7 +107,7 @@ ip = mkProxy3
 ip1 :: Proxy Ip1
 ip1 = mkProxy3
 
-type Ipip = Map (ReadP Int) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" >> OneP >> Snd)
+type Ipip = Map (ReadP Int) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd)
 type Ipop = GuardsQuick (Printf2 "guard(%d) octet out of range 0-255 found %d") (RepeatT 4 (Between 0 255)) >> 'True
 type Ipop' = Guards '[
           '(Printf2 "octet %d out of range 0-255 found %d", Between 0 255)
@@ -118,7 +118,7 @@ type Ipop' = Guards '[
 type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d"
 
 type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- padded only -- dumb because strict validation should not be done twice: ie in ip and op!
-type Hmsconv = Do '[Rescan HmsRE, Head, Snd, Map (ReadBaseInt 10) Id]
+type Hmsconv = Do '[Rescan HmsRE Id, Head, Snd, Map (ReadBaseInt 10) Id]
 type Hmsval = GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 0 23, Between 0 59, Between 0 59]
 
 type Hms4 = '(Hmsconv, Hmsval >> 'True, Hmsfmt, String)
@@ -132,10 +132,10 @@ type Ip4strictRE = "^" `AppendSymbol` IntersperseT "\\." (RepeatT 4 OctetRE) `Ap
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
 type DateFmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
-type DateN = '(ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d", String)
+type DateN = '(ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)
 
 type DateTimeFmts = '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]
-type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S", String)
+type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
 
 type BaseN (n :: Nat) = '(ReadBase Integer n, 'True, ShowBase n, String)
 
