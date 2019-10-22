@@ -4844,7 +4844,7 @@ instance (PP prt (Int, a) ~ String
 --   FailT "expected > 3"
 --
 --   >>> pl @(Guard (Printf "%d not > 3" Id) (Gt 3)) (-99)
---   Error -99 not > 3
+--   Error -99 not > 3
 --   FailT "-99 not > 3"
 --
 data Guard prt p
