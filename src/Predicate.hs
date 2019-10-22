@@ -6498,7 +6498,12 @@ evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) o0 i))
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Trim Snd) (20," abc   ")
+--   >>> pl @(Trim Snd) (20," abc   " :: String)
+--   Present "abc"
+--   PresentT "abc"
+--
+--   >>> import Data.Text (Text)
+--   >>> pl @(Trim Snd) (20," abc   " :: Text)
 --   Present "abc"
 --   PresentT "abc"
 --
@@ -6520,9 +6525,10 @@ instance (FailIfT (NotT (OrT l r))
            ('GL.Text "Trim': left and right cannot both be False")
         , GetBool l
         , GetBool r
-        , PP p x ~ String
-        , P p x) => P (Trim' l r p) x where
-  type PP (Trim' l r p) x = String
+        , IsText (PP p x)
+        , P p x
+        ) => P (Trim' l r p) x where
+  type PP (Trim' l r p) x = PP p x
   eval _ opts x = do
     let msg0 = "Trim" ++ (if l && r then "" else if l then "Start" else "End")
         l = getBool @l
@@ -6530,17 +6536,22 @@ instance (FailIfT (NotT (OrT l r))
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right p ->
+      Right (view unpacked -> p) ->
         let fl = if l then dropWhile isSpace else id
             fr = if r then dropWhileEnd isSpace else id
             b =  (fl . fr) p
-        in mkNode opts (PresentT b) [msg0 <> showLit0 opts "" b <> showLit opts " | " p] [hh pp]
+        in mkNode opts (PresentT (b ^. packed)) [msg0 <> showLit0 opts "" b <> showLit opts " | " p] [hh pp]
 
 -- | similar to 'T.stripLeft' 'T.stripRight'
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(StripLeft "xyz" Id) "xyzHello"
+--   >>> pl @(StripLeft "xyz" Id) ("xyzHello" :: String)
+--   Present Just "Hello"
+--   PresentT (Just "Hello")
+--
+--   >>> import Data.Text (Text)
+--   >>> pl @(StripLeft "xyz" Id) ("xyzHello" :: Text)
 --   Present Just "Hello"
 --   PresentT (Just "Hello")
 --
@@ -6563,24 +6574,24 @@ type StripLeft p q = StripLR 'False p q
 instance (GetBool r
         , PP p x ~ String
         , P p x
-        , PP q x ~ String
+        , IsText (PP q x)
         , P q x
         ) => P (StripLR r p q) x where
-  type PP (StripLR r p q) x = Maybe String
+  type PP (StripLR r p q) x = Maybe (PP q x)
   eval _ opts x = do
     let msg0 = "Strip" ++ (if r then "Right" else "Left")
         r = getBool @r
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq)  ->
+      Right (p,view unpacked -> q,pp,qq) ->
         let b = if r then
                   let (before,after) = splitAt (length q - length p) q
                   in if after == p then Just before else Nothing
                 else
                   let (before,after) = splitAt (length p) q
                   in if before == p then Just after else Nothing
-        in mkNode opts (PresentT b) [msg0 <> show0 opts "" b <> showLit opts " | p=" p <> showLit opts " | q=" q] [hh pp, hh qq]
+        in mkNode opts (PresentT (fmap (view packed) b)) [msg0 <> show0 opts "" b <> showLit opts " | p=" p <> showLit opts " | q=" q] [hh pp, hh qq]
 
 
 
