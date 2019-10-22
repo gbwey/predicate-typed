@@ -51,10 +51,10 @@ Left FalseP
 
 6. reads in a string as time and does simple validation
 ```haskell
->prtRefinedIO @(Resplit ":" >> Map (ReadP Int) Id >> Len == 3) ol "12:01:05"
+>prtRefinedIO @(Resplit ":" Id >> Map (ReadP Int) Id >> Len == 3) ol "12:01:05"
 Right (Refined {unRefined = "12:01:05"})
 ```
-  * `Resplit ":"`
+  * `Resplit ":" Id`
      split using regex using a colon as a delimiter  ["12","01","05"]
   * `Map (ReadP Int) Id`
      Read in the values as Ints                      [12,1,5]
@@ -68,9 +68,9 @@ _pe2_ does not have that restriction so you can run the whole thing or the indiv
 (for less detail use _pl_)
 
 ```haskell
->pe2 @(Resplit ":" >> Map (ReadP Int) Id >> Len == 3) "12:01:05"
+>pe2 @(Resplit ":" Id >> Map (ReadP Int) Id >> Len == 3) "12:01:05"
 
->pe2 @(Resplit ":") "12:01:05"
+>pe2 @(Resplit ":" Id) "12:01:05"
 
 >pe2 @(Map (ReadP Int) Id) ["12","01","05"]
 
