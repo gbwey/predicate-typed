@@ -79,7 +79,6 @@ import Data.Binary (Binary)
 --
 -- >>> :set -XTypeApplications
 -- >>> :set -XDataKinds
--- >>> :set -XTypeOperators
 -- >>> :m + Data.Time.Calendar.WeekDate
 -- >>> prtRefinedIO @(Between 10 14) ol 13
 -- Right (Refined {unRefined = 13})
@@ -87,6 +86,7 @@ import Data.Binary (Binary)
 -- >>> prtRefinedIO @(Between 10 14) ol 99
 -- Left FalseP
 --
+-- >>> :set -XTypeOperators
 -- >>> prtRefinedIO @(Last >> Len == 4) ol ["one","two","three","four"]
 -- Right (Refined {unRefined = ["one","two","three","four"]})
 --

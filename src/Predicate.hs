@@ -1440,11 +1440,11 @@ instance KnownSymbol s => P (s :: Symbol) a where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> :set -XTypeOperators
 --   >>> pl @'(Snd, Fst) ("helo",123)
 --   Present (123,"helo")
 --   PresentT (123,"helo")
 --
+--   >>> :set -XTypeOperators
 --   >>> pl @'(Len, Id <> "|" <> Reverse) "helo"
 --   Present (4,"helo|oleh")
 --   PresentT (4,"helo|oleh")
@@ -1566,7 +1566,6 @@ instance P ('[] :: [k]) a where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> :set -XTypeOperators
 --   >>> :set -XNoStarIsType
 --   >>> pl @'[1, 2, 3] 999
 --   Present [1,2,3]
@@ -1580,6 +1579,7 @@ instance P ('[] :: [k]) a where
 --   Present [1,2,3,3996,998]
 --   PresentT [1,2,3,3996,998]
 --
+--   >>> :set -XTypeOperators
 --   >>> pl @'[Id * 4, Pred] 999
 --   Present [3996,998]
 --   PresentT [3996,998]
@@ -4844,14 +4844,14 @@ instance (PP prt (Int, a) ~ String
 --   FailT "expected > 3"
 --
 --   >>> pl @(Guard (Printf "%d not > 3" Id) (Gt 3)) (-99)
---   Error -99 not > 3
+--   Error -99 not > 3
 --   FailT "-99 not > 3"
 --
 data Guard prt p
 type Guard' p = Guard "Guard" p
 
-type Exitwhen prt p = Guard prt (p >> Not)
-type Exitwhen' p = Exitwhen "Exitwhen" p
+type ExitWhen prt p = Guard prt (p >> Not)
+type ExitWhen' p = ExitWhen "ExitWhen" p
 
 instance (Show a
         , P prt a
@@ -5247,19 +5247,34 @@ instance (Show a
          b = f th
      in pure $ mkNodeB opts b ["IsTh '" <> t <> showA opts " | " th] []
 
--- | similar 'Control.Arrow.|||'
+-- | similar to 'these'
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Pred ||| Id) (Left 13)
---   Present 12
---   PresentT 12
+--   >>> pl @(TheseIn Id Len (Fst + Length Snd)) (This 13)
+--   Present 13
+--   PresentT 13
 --
---   >>> pl @(ShowP ||| Id) (Right "hello")
---   Present "hello"
---   PresentT "hello"
+--   >>> pl @(TheseIn Id Len (Fst + Length Snd)) (That "this is a long string")
+--   Present 21
+--   PresentT 21
 --
-
+--   >>> pl @(TheseIn Id Len (Fst + Length Snd)) (These 20 "somedata")
+--   Present 28
+--   PresentT 28
+--
+--   >>> pl @(TheseIn (Left _) (Right _) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (That "this is a long string")
+--   Present Right "this is a long string"
+--   PresentT (Right "this is a long string")
+--
+--   >>> pl @(TheseIn (Left _) (Right _) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 1 "this is a long string")
+--   Present Right "this is a long string"
+--   PresentT (Right "this is a long string")
+--
+--   >>> pl @(TheseIn (Left _) (Right _) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 100 "this is a long string")
+--   Present Left 100
+--   PresentT (Left 100)
+--
 data TheseIn p q r
 type Theseid p q = TheseIn '(I, p) '(q, I) I
 
@@ -6594,5 +6609,10 @@ instance (GetBool r
         in mkNode opts (PresentT (fmap (view packed) b)) [msg0 <> show0 opts "" b <> showLit opts " | p=" p <> showLit opts " | q=" q] [hh pp, hh qq]
 
 
-
+-- PP is k -> * -> * but we need [k]: need to unwrap into [k]
+data RepeatP (n :: Nat) p
+instance (P (RepeatT n p) x) => P (RepeatP n p) x where
+  type PP (RepeatP n p) x = PP (RepeatT n p) x
+  eval _ opts x =
+    eval (Proxy @(RepeatT n p)) opts x
 

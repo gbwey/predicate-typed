@@ -114,7 +114,7 @@ type Ip4C = Printfnt 4 "%03d.%03d.%03d.%03d"
 -- base n number of length x and then convert to a list of length x of (0 to (n-1))
 -- checks that each digit is between 0 and n-1
 type MM1 (n :: Nat) = Map (ReadBase Int n) Ones
-type MM2 (n :: Nat) = Exitwhen "found empty" IsEmpty >> Guard "0<=x<n" (All (Ge 0 && Lt n))
+type MM2 (n :: Nat) = ExitWhen "found empty" IsEmpty >> Guard "0<=x<n" (All (Ge 0 && Lt n))
 
 -- prtRefinedT tst1
 tst1 :: Monad m => POpts -> Int -> Int -> RefinedT m (Int,Int)
