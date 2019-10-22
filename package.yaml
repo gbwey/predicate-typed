@@ -1,5 +1,5 @@
 name:                predicate-typed
-version:             0.1.0.0
+version:             0.1.0.1
 github:              "github.com/gbwey/predicate-typed"
 synopsis:            Predicates, Refinement types and Dsl
 license:             BSD3
@@ -15,33 +15,31 @@ description:         Please see the README on GitHub at <https://github.com/gbwe
 
 dependencies:
 - base >= 4.7 && < 5
+- QuickCheck
+- aeson
+- binary
+- bytestring
+- comonad
 - containers
+- deepseq
+- directory
+- ghc-prim
+- lens
 - mtl
 - pcre-heavy
 - pcre-light
-- lens
 - pretty
 - pretty-terminal
-- pretty-tree
-- tree-view
-- discrimination
 - safe
-- bytestring
+- semialign
+- template-haskell
 - text
-- ghc-prim
+- th-lift
+- th-orphans
 - these
 - these-lens
-- semialign
 - time
-- aeson
-- deepseq
-- directory
-- comonad
-- template-haskell
-- th-orphans
-- th-lift
-- QuickCheck
-- binary
+- tree-view
 
 library:
   source-dirs: src

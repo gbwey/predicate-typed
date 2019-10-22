@@ -44,19 +44,16 @@ import Data.List
 import qualified Data.Tree.View as TV
 import Data.Tree
 import Data.Tree.Lens
-import Data.Tree.Pretty
 import Data.Proxy
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.Char
 import Data.Data
 import System.Console.Pretty
-import qualified Text.PrettyPrint as PP
 import qualified Data.Type.Equality as DE
 import GHC.Exts (Constraint)
 import qualified Text.Regex.PCRE.Heavy as RH
 import qualified Text.Regex.PCRE.Light as RL
 import qualified Data.ByteString.Char8 as B8
-import qualified Data.Discrimination as D
 import qualified Data.Text as T
 import Data.ByteString (ByteString)
 import GHC.Word (Word8)
@@ -235,9 +232,7 @@ data POpts = POpts { oShowA :: Maybe Int -- ^ length of data to display for 'sho
 
 -- | display format for the tree
 data Disp = NormalDisp -- ^ draw horizontal tree
-          | Vertical !Int -- ^ draw vertical tree
           | Unicode  -- ^ use unicode
-          | PPTree  -- ^ pretty printer tree
           deriving (Show, Eq)
 
 instance Show POpts where
@@ -293,10 +288,6 @@ o3 = defOpts { oDebug = 3, oShowA = Just 400 }
 seta :: Int -> POpts -> POpts
 seta w o = o { oShowA = Just w }
 
--- | helper method to display the tree vertically
-setv :: Int -> POpts -> POpts
-setv w o = o { oDisp = Vertical w }
-
 -- | helper method to set the debug level
 setd :: Int -> POpts -> POpts
 setd v o = o { oDebug = v }
@@ -347,13 +338,9 @@ color4 =
     TrueP -> color Green
     PresentP -> bgColor Yellow
 
-defh, defv, defu :: POpts
+defh, defu :: POpts
 defh = o1
-defv = defv' defaultGap
 defu = setu o1
-
-defv' :: Width -> POpts
-defv' w = setv w o1
 
 -- | fix PresentT Bool to TrueT or FalseT
 fixBoolT :: TT Bool -> TT Bool
@@ -466,6 +453,13 @@ data RR =
    | RR2 (String -> String)
    | RR3 ([String] -> String)
 
+instance Show RR where
+  show = \case
+           RR s -> "RR " ++ s
+           RR1 {} -> "RR1 <fn>"
+           RR2 {} -> "RR2 <fn>"
+           RR3 {} -> "RR3 <fn>"
+
 -- | extract values from the trees or if there are errors returned a tree with added context
 splitAndAlign :: Show x =>
                     POpts
@@ -513,7 +507,7 @@ _boolT = prism' (bool FalseT TrueT)
               FailT {} -> Nothing
 
 groupErrors :: [String] -> String
-groupErrors = intercalate " | " . map (\xs -> head xs <> (if length xs > 1 then "(" <> show (length xs) <> ")" else "")) . D.group
+groupErrors = intercalate " | " . map (\xs -> head xs <> (if length xs > 1 then "(" <> show (length xs) <> ")" else "")) . group
 
 _FailT :: Prism' (BoolT a) String
 _FailT = prism' FailT $ \case
@@ -766,8 +760,6 @@ showImpl o =
   case oDisp o of
     Unicode -> TV.showTree
     NormalDisp -> drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
-    Vertical w -> drawVerticalTreeWith w
-    PPTree -> (<>"\n") . PP.render . ppTree PP.text -- no newlines!
 
 lite :: POpts -> POpts
 lite o = o { oLite = True }
@@ -777,22 +769,6 @@ unicode o = o { oDisp = Unicode }
 
 horizontal :: POpts -> POpts
 horizontal o = o { oDisp = NormalDisp }
-
-vertical :: POpts -> POpts
-vertical = vertical' defaultGap
-
-vertical' :: Width -> POpts -> POpts
-vertical' w o = o { oDisp = Vertical w }
-
-
--- | display in document in tree format
-ppTree :: (a -> PP.Doc) -> Tree a -> PP.Doc
-ppTree pp = ppT
-  where
-    ppT (Node x []) = pp x
-    ppT (Node x xs) = PP.parens $ PP.hang (pp x) 2 $
-        PP.sep $ map ppT xs
-
 
 prettyRational :: Rational -> String
 prettyRational (numerator &&& denominator -> (n,d)) =

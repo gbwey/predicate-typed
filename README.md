@@ -65,7 +65,8 @@ Right (Refined {unRefined = "12:01:05"})
 ### Testing out predicates
 When using _Refined_ the expression in _p_ must result in a True/False\
 _pe2_ does not have that restriction so you can run the whole thing or the individual pieces\
-(for less detail use _pl_)
+for less detail use _pl_\
+if using a unicode-supported OS then _pu_ gives you nicer rendering than _pe2_\
 
 ```haskell
 >pe2 @(Resplit ":" Id >> Map (ReadP Int) Id >> Len == 3) "12:01:05"

@@ -60,7 +60,6 @@ import Numeric
 import Data.Char
 import Data.Function
 import Data.These
-import Data.These.Lens ()
 import qualified Data.Align as TA
 import Data.Ratio
 import Data.Time
@@ -77,6 +76,7 @@ import Data.Bool
 import Data.Either
 import qualified Data.Type.Equality as DE
 import Data.Time.Calendar.WeekDate
+import Data.These.Lens ()
 
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Main.>>'
 class P p a where
@@ -5452,7 +5452,6 @@ instance (GetBool lc
 --   FalseT
 data Luhn
 
-
 instance a ~ [Int] => P Luhn a where
   type PP Luhn a = Bool
   eval _ opts as =
@@ -5464,7 +5463,7 @@ instance a ~ [Int] => P Luhn a where
     in pure $ if ret == 0 then mkNode opts TrueT [msg <> show0 opts " | " as] []
        else mkNode opts FalseT [msg <> " map=" <> show ys <> " sum=" <> show z <> " ret=" <> show ret <> showA opts " | as=" as] []
 
-pe0, pe, pe1, pe2, pex, pe3, pl, plc :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
+pe0, pe, pe1, pe2, pu, pex, pe3, pl, plc :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
 pe0  = peWith @p o0
 pe  = peWith @p o02
 pex  = peWith @p o03
@@ -5473,6 +5472,7 @@ pe2 = peWith @p o2
 pe3 = peWith @p o3
 pl = peWith @p ol
 plc = peWith @p olc
+pu = peWith @p o2 { oDisp = Unicode }
 
 peWith :: forall p a . (Show (PP p a), P p a) =>  -- Typeable (Proxy p),
      POpts -> a -> IO (BoolT (PP p a))
