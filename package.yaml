@@ -1,7 +1,7 @@
 name:                predicate-typed
 version:             0.1.0.0
 github:              "github.com/gbwey/predicate-typed"
-synopsis:            Predicate-typed - Refinement types and Dsl
+synopsis:            Predicates, Refinement types and Dsl
 license:             BSD3
 author:              "Grant Weyburne"
 maintainer:          "gbwey9@gmail.com"
