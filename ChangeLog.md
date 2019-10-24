@@ -1,3 +1,3 @@
 # Changelog for predicate-typed
 
-## Unreleased changes
+## 0.1.0.1 remove pretty-tree and discrimation dependencies

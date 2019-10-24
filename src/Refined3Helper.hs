@@ -55,7 +55,7 @@ import qualified Data.Semigroup as SG
 --
 type Ccip = Map (ReadP Int) (Remove "-" Id >> Ones)
 type Ccop (n :: Nat) = Guard ('(n,Len) >> Printf2 "expected %d digits but found %d") (Len >> Same n) >> Luhn
-type Ccfmt (ns :: [Nat]) = ConcatMap ShowP Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
+type Ccfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
 
 type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
 
@@ -98,19 +98,19 @@ ssn = mkProxy3
 -- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
 --
 -- >>> prtEval3P ssn ol "666-01-2211"
--- Left Step 2. Failed Boolean Check(op) | number for group 0 invalid: found 666
+-- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 666
 --
 -- >>> prtEval3P ssn ol "666-01-2211"
--- Left Step 2. Failed Boolean Check(op) | number for group 0 invalid: found 666
+-- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 666
 --
 -- >>> prtEval3P ssn ol "667-00-2211"
--- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 0
+-- Left Step 2. Failed Boolean Check(op) | number for group 2 invalid: found 0
 --
 -- >>> prtEval3P ssn ol "666-01-2211"
--- Left Step 2. Failed Boolean Check(op) | number for group 0 invalid: found 666
+-- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 666
 --
 -- >>> prtEval3P ssn ol "991-22-9999"
--- Left Step 2. Failed Boolean Check(op) | number for group 0 invalid: found 991
+-- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 991
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
@@ -132,10 +132,10 @@ type Ssnfmt = Printfnt 3 "%03d-%02d-%04d"
 -- Right (Refined3 {r3In = [23,13,59], r3Out = "23:13:59"})
 --
 -- >>> prtEval3P hms ol "23:13:60"
--- Left Step 2. Failed Boolean Check(op) | guard(2) 60 secs is out of range
+-- Left Step 2. Failed Boolean Check(op) | guard(3) 60 secs is out of range
 --
 -- >>> prtEval3P hms ol "26:13:59"
--- Left Step 2. Failed Boolean Check(op) | guard(0) 26 hours is out of range
+-- Left Step 2. Failed Boolean Check(op) | guard(1) 26 hours is out of range
 --
 hms :: Proxy Hms
 hms = mkProxy3
@@ -157,32 +157,22 @@ type Hmsfmt = Printfnt 3 "%02d:%02d:%02d"
 -- Right (Refined3 {r3In = [1,223,14,1], r3Out = "001.223.014.001"})
 --
 -- >>> prtEval3P ip ol "001.223.14.999"
--- Left Step 2. Failed Boolean Check(op) | guard(3) octet out of range 0-255 found 999
+-- Left Step 2. Failed Boolean Check(op) | guard(4) octet out of range 0-255 found 999
 --
 -- >>> prtEval3P ip ol "001.223.14.999.1"
 -- Left Step 1. Initial Conversion(ip) Failed | Regex no results
 --
 -- >>> prtEval3P ip ol "001.257.14.1"
--- Left Step 2. Failed Boolean Check(op) | guard(1) octet out of range 0-255 found 257
+-- Left Step 2. Failed Boolean Check(op) | guard(2) octet out of range 0-255 found 257
 --
 type Ip = '(Ipip, Ipop, Ipfmt, String)
-type Ip1 = '(Ipip, Ipop', Ipfmt, String)
 
 ip :: Proxy Ip
 ip = mkProxy3
 
-ip1 :: Proxy Ip1
-ip1 = mkProxy3
-
 type Ipip = Map (ReadP Int) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
-type Ipop = GuardsQuick (Printf2 "guard(%d) octet out of range 0-255 found %d") (RepeatT 4 (Between 0 255)) >> 'True
-type Ipop' = Guards '[
-          '(Printf2 "octet %d out of range 0-255 found %d", Between 0 255)
-        , '(Printf2 "octet %d out of range 0-255 found %d", Between 0 255)
-        , '(Printf2 "octet %d out of range 0-255 found %d", Between 0 255)
-        , '(Printf2 "octet %d out of range 0-255 found %d", Between 0 255)
-        ] >> 'True
+type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d") 4 (Between 0 255) >> 'True
 type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d"
 
 type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- padded only -- dumb because strict validation should not be done twice: ie in ip and op!
@@ -195,8 +185,8 @@ hms4 :: Proxy Hms4
 hms4 = mkProxy3
 
 type OctetRE = "(25[0-5]|2[0..4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])" -- no padded numbers allowed
---type Ip4strictRE = "^" `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "$"
-type Ip4strictRE = "^" `AppendSymbol` IntersperseT "\\." (RepeatT 4 OctetRE) `AppendSymbol` "$"
+--type Ip4StrictRE = "^" `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "$"
+type Ip4StrictRE = "^" `AppendSymbol` IntersperseT "\\." (RepeatT 4 OctetRE) `AppendSymbol` "$"
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
 type DateFmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
@@ -231,20 +221,20 @@ type LuhnR' (n :: Nat) = MakeR3 (LuhnX n)
 -- uses builtin Luhn vs long winded version LuhnX
 type LuhnY (n :: Nat) =
    '(Map (ReadP Int) Ones
-   , Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP]))
+   , Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id]))
            (Len >> Same n)
      >> Guard ("luhn check failed") Luhn >> 'True
-   , ConcatMap ShowP Id
+   , ConcatMap (ShowP Id) Id
    , String)
 
 type LuhnX (n :: Nat) =
    '(Map (ReadP Int) Ones
    , Luhn'' n >> 'True
-   , ConcatMap ShowP Id
+   , ConcatMap (ShowP Id) Id
    , String)
 
 type Luhn'' (n :: Nat) =
-         Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP])) (Len >> Same n)
+         Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id])) (Len >> Same n)
       >> Do '[
               Reverse
              ,Ziplc [1,2] Id
@@ -327,8 +317,8 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, ReadBa
 -- >>> prtEval3P (Proxy @(ReadShow Value)) ol "Number 123.4"
 -- Right (Refined3 {r3In = Number 123.4, r3Out = "Number 123.4"})
 --
-type ReadShow (t :: Type) = '(ReadP t, 'True, ShowP, String)
+type ReadShow (t :: Type) = '(ReadP t, 'True, ShowP Id, String)
 type ReadShowR (t :: Type) = MakeR3 (ReadShow t)
 
-type ReadShow' (t :: Type) p = '(ReadP t, p, ShowP, String)
+type ReadShow' (t :: Type) p = '(ReadP t, p, ShowP Id, String)
 type ReadShowR' (t :: Type) p = MakeR3 (ReadShow' t p)

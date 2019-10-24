@@ -99,10 +99,10 @@ import Data.Binary (Binary)
 -- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> 'True) ol "141.213.1"
 -- Left (FailP "bad length: found 3")
 --
--- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsQuick (Printf2 "octet %d out of range %d") (RepeatT 4 (Between 0 255)) >> 'True) ol "141.213.1.444"
--- Left (FailP "octet 3 out of range 444")
+-- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d") 4 (Between 0 255) >> 'True) ol "141.213.1.444"
+-- Left (FailP "octet 4 out of range 444")
 --
--- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsQuick (Printf2 "octet %d out of range %d") (RepeatT 4 (Between 0 255)) >> 'True) ol "141.213.1x34.444"
+-- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d") 4 (Between 0 255) >> 'True) ol "141.213.1x34.444"
 -- Left (FailP "ReadP Int (1x34) failed")
 --
 -- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) Id >> Luhn) ol "12344"
@@ -111,10 +111,10 @@ import Data.Binary (Binary)
 -- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) Id >> Luhn) ol "12340"
 -- Left FalseP
 --
--- >>> prtRefinedIO @(Any Prime) ol [11,13,17,18]
+-- >>> prtRefinedIO @(Any (Prime Id) Id) ol [11,13,17,18]
 -- Right (Refined {unRefined = [11,13,17,18]})
 --
--- >>> prtRefinedIO @(All Prime) ol [11,13,17,18]
+-- >>> prtRefinedIO @(All (Prime Id) Id) ol [11,13,17,18]
 -- Left FalseP
 --
 -- >>> prtRefinedIO @(Snd !! Fst >> Len > 5) ol (2,["abc","defghij","xyzxyazsfd"])

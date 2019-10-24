@@ -175,13 +175,13 @@ An example of an invalid refined3TH call
 
 #### This example is successful as it is a valid hexadecimal and is in the range 10 though 256
 ```haskell
->eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe\""
+>eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
 Right (Refined3 {in3 = 254, out3 = "254"})
 ```
 
 #### This example fails as the value is not a valid hexadecimal string
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16) 'True ShowP String) "\"00feg\""
+>either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16) 'True (ShowP Id) String) "\"00feg\""
 Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ***Step 1. Initial Conversion(ip) Failed ***
@@ -194,7 +194,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 #### This example fails as the hexadecimal value is valid but is not between 10 and 256
 
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) ShowP String) "\"00fe443a\""
+>either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
 Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
 
 ***Step 1. Success Initial Conversion(ip) [16663610] ***

@@ -283,6 +283,9 @@ o2 = defOpts { oDebug = 2, oShowA = Just 200 }
 o3 :: POpts
 o3 = defOpts { oDebug = 3, oShowA = Just 400 }
 
+ou :: POpts
+ou = o2 { oDisp = Unicode }
+
 
 -- | helper method to set the width of data to be shown in the tree
 seta :: Int -> POpts -> POpts
@@ -899,10 +902,10 @@ type family TupleLenT (t :: Type) :: Nat where
 
 -- partially apply the 2nd arg to an ADT -- $ and & work with functions only
 -- doesnt apply more than once because we need to eval it
-type family (p :: k -> k1) % (q :: k) :: k1 where
-  p % q = p q
+type family (p :: k -> k1) %% (q :: k) :: k1 where
+  p %% q = p q
 
-infixl 9 %
+infixl 9 %%
 
 type family (p :: k) %& (q :: k -> k1) :: k1 where
   p %& q = q p

@@ -297,9 +297,9 @@ arbRefined3With _ opts f =
 -- >>> :set -XDataKinds
 -- >>> import Control.Arrow ((+++))
 -- >>> import Data.Time
--- >>> type K1 = MakeR3 '(ReadP Day, 'True, ShowP, String)
--- >>> type K2 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-03-30") (ReadP' Day "2019-06-01"), ShowP, String)
--- >>> type K3 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-05-30") (ReadP' Day "2019-06-01"), ShowP, String)
+-- >>> type K1 = MakeR3 '(ReadP Day, 'True, ShowP Id, String)
+-- >>> type K2 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-03-30") (ReadP' Day "2019-06-01"), ShowP Id, String)
+-- >>> type K3 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-05-30") (ReadP' Day "2019-06-01"), ShowP Id, String)
 -- >>> r = unsafeRefined3' ol "2019-04-23" :: K1
 -- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
