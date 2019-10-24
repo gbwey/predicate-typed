@@ -85,13 +85,13 @@ unnamedTests = [
   , expectRight (testRefined3P (Proxy @(Ccn '[1,2,1])) ol "1-23-0")
 
   , expect3 (Left $ XF "Regex no results")
-                  $ eval3 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int) Snd)
+                  $ eval3 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int) (Snd Id))
                           @((Len >> Same 4) && All (Between 0 255) Id)
                           @(Printfnt 4 "%03d.%03d.%03d.%03d")
                           ol "1.21.x31.4"
 
   , expect3 (Right $ unsafeRefined3 [1,21,31,4] "001.021.031.004")
-                  $ eval3 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int) Snd)
+                  $ eval3 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int) (Snd Id))
                           @((Len >> Same 4) && All (Between 0 255) Id)
                           @(Printfnt 4 "%03d.%03d.%03d.%03d")
                           ol "1.21.31.4"
@@ -124,7 +124,7 @@ unnamedTests = [
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
                   $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10) Snd)
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10) (Snd Id))
                   @(Guard "expected 3" (Len >> Same 3)
                  >> Guard "3 digits" (Ix' 0 >> Between 0 999)
                  >> Guard "2 digits" (Ix' 1 >> Between 0 99)
@@ -135,8 +135,8 @@ unnamedTests = [
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz")
                   $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10) Snd)
-                  @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 0 999, Between 0 99, Between 0 9999]) >> 'True)
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10) (Snd Id))
+                  @(GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
                   @"xyz"
                   ol "123-45-6789"
 
@@ -153,13 +153,13 @@ unnamedTests = [
                   ol "123::Ffff:::11"
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
-                  $ eval3 @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBaseInt 10) Snd)
+                  $ eval3 @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBaseInt 10) (Snd Id))
                            @(Ddmmyyyyval >> 'True)
                            @"xyz"
                            ol "31-11-1999"
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10) Snd)
-                  @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 0 999, Between 0 99, Between 0 9999]) >> 'True)
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10) (Snd Id))
+                  @(GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
                   @"xyz"
                   ol "123-45-6789"
 
@@ -206,7 +206,7 @@ ip4expands = mkProxy3
 
 -- this works but ParseTimeP is easier
 type DdmmyyyyRE = "^(\\d{2})-(\\d{2})-(\\d{4})$"
-type Ddmmyyyyval' = Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])
+type Ddmmyyyyval' = GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050]
 type Ddmmyyyyval =
     Guards '[ '(Printf2 "guard(%d) day %d is out of range", Between 1 31)
             , '(Printf2 "guard(%d) month %d is out of range", Between 1 12)
@@ -216,8 +216,8 @@ cc :: Proxy CC11
 cc = mkProxy3
 
 type Ipz1 = '(Id &&& Ip4A
-           , Snd >> Ip4B
-           , Snd >> Para (RepeatT 4 (Printf "%03d" Id)) >> Intercalate '["."] Id >> Concat
+           , (Snd Id) >> Ip4B
+           , (Snd Id) >> Para (RepeatT 4 (Printf "%03d" Id)) >> Intercalate '["."] Id >> Concat
            , String)
 type Ipz2 = '(Id, Ip4A, Ip4B, String) -- skips fmt and just uses the original input
 type Ipz3 = '(Ip4A, Ip4B, Id, String)
@@ -225,21 +225,21 @@ type Ipz3 = '(Ip4A, Ip4B, Id, String)
 -- need to add 'True to make it a predicate
 -- guards checks also that there are exactly 3 entries!
 type Hmsz1 = '(Hmsconv &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-            , Fst >> Hmsval >> 'True
-            , Snd
+            , Fst Id >> Hmsval >> 'True
+            , (Snd Id)
             , String)
 
 -- better error messages cos doesnt do a strict regex match
 type Hmsz2 = '(Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-             , Fst >> Hmsop >> 'True
-             , Snd
+             , Fst Id >> Hmsop >> 'True
+             , (Snd Id)
              , String)
 
 type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-type Hmsop2 = Fst >> Hmsop >> 'True
+type Hmsop2 = Fst Id >> Hmsop >> 'True
 
--- >mkProxy3 @Hmsip2 @Hmsop2 @(Snd >> FormatTimeP "%F %T" Id) @String
-hms2E :: Proxy '(Hmsip2, Hmsop2, Snd >> FormatTimeP "%T" Id, String)
+-- >mkProxy3 @Hmsip2 @Hmsop2 @((Snd Id) >> FormatTimeP "%F %T" Id) @String
+hms2E :: Proxy '(Hmsip2, Hmsop2, (Snd Id) >> FormatTimeP "%T" Id, String)
 hms2E = mkProxy3P
 
 

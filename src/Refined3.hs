@@ -123,18 +123,18 @@ import Data.Binary (Binary)
 -- >>> prtEval3 @(Map (ReadP Int) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1"
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
--- >>> prtEval3 @(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id) @(Guard "expected a Sunday" (Snd >> Snd == 7) >> 'True) @(Fst >> UnMkDay) ol (2019,(10,13))
--- Right (Refined3 {r3In = (2019-10-13,(41,7)), r3Out = (2019,(10,13))})
+-- >>> prtEval3 @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) ol (2019,10,13)
+-- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
--- >>> prtEval3 @(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id) @(Guard "expected a Sunday" (Snd >> Snd == 7) >> 'True) @(Fst >> UnMkDay) ol (2019,(10,12))
+-- >>> prtEval3 @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) ol (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
--- >>> type T4 k = '(MkDay Fst (Snd >> Fst) (Snd >> Snd) >> 'Just Id, Guard "expected a Sunday" (Snd >> Snd == 7) >> 'True, Fst >> UnMkDay, k)
--- >>> prtEval3P (Proxy @(T4 _)) ol (2019,(10,12))
+-- >>> type T4 k = '(MkDay >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
+-- >>> prtEval3P (Proxy @(T4 _)) ol (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
--- >>> prtEval3P (Proxy @(T4 _)) ol (2019,(10,13))
--- Right (Refined3 {r3In = (2019-10-13,(41,7)), r3Out = (2019,(10,13))})
+-- >>> prtEval3P (Proxy @(T4 _)) ol (2019,10,13)
+-- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
 data Refined3 ip op fmt i = Refined3 { r3In :: PP ip i, r3Out :: PP fmt (PP ip i) }
 

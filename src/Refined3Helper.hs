@@ -53,8 +53,8 @@ import qualified Data.Semigroup as SG
 -- >>> prtEval3P cc11 ol "1234-5678-903"
 -- Right (Refined3 {r3In = [1,2,3,4,5,6,7,8,9,0,3], r3Out = "1234-5678-903"})
 --
-type Ccip = Map (ReadP Int) (Remove "-" Id >> Ones)
-type Ccop (n :: Nat) = Guard ('(n,Len) >> Printf2 "expected %d digits but found %d") (Len >> Same n) >> Luhn
+type Ccip = Map (ReadP Int) (Ones (Remove "-" Id))
+type Ccop (n :: Nat) = Guard ('(n,Len) >> Printf2 "expected %d digits but found %d") (Len >> Same n) >> Luhn Id
 type Ccfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
 
 type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
@@ -114,7 +114,7 @@ ssn = mkProxy3
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
-type Ssnip = Map (ReadP Int) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Snd)
+type Ssnip = Map (ReadP Int) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> (Snd Id))
 type Ssnop = GuardsQuick (Printf2 "number for group %d invalid: found %d")
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
                       >> 'True
@@ -170,13 +170,13 @@ type Ip = '(Ipip, Ipop, Ipfmt, String)
 ip :: Proxy Ip
 ip = mkProxy3
 
-type Ipip = Map (ReadP Int) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd)
+type Ipip = Map (ReadP Int) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> (Snd Id))
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
 type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d") 4 (Between 0 255) >> 'True
 type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d"
 
 type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- padded only -- dumb because strict validation should not be done twice: ie in ip and op!
-type Hmsconv = Do '[Rescan HmsRE Id, Head, Snd, Map (ReadBaseInt 10) Id]
+type Hmsconv = Do '[Rescan HmsRE Id, Head, (Snd Id), Map (ReadBaseInt 10) Id]
 type Hmsval = GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 0 23, Between 0 59, Between 0 59]
 
 type Hms4 = '(Hmsconv, Hmsval >> 'True, Hmsfmt, String)
@@ -220,15 +220,15 @@ type LuhnR' (n :: Nat) = MakeR3 (LuhnX n)
 
 -- uses builtin Luhn vs long winded version LuhnX
 type LuhnY (n :: Nat) =
-   '(Map (ReadP Int) Ones
+   '(Map (ReadP Int) (Ones Id)
    , Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id]))
            (Len >> Same n)
-     >> Guard ("luhn check failed") Luhn >> 'True
+     >> GuardSimple (Luhn Id) >> 'True
    , ConcatMap (ShowP Id) Id
    , String)
 
 type LuhnX (n :: Nat) =
-   '(Map (ReadP Int) Ones
+   '(Map (ReadP Int) (Ones Id)
    , Luhn'' n >> 'True
    , ConcatMap (ShowP Id) Id
    , String)
@@ -238,7 +238,7 @@ type Luhn'' (n :: Nat) =
       >> Do '[
               Reverse
              ,Ziplc [1,2] Id
-             ,Map (Fst * Snd >> If (Id >= 10) (Id - 9) Id) Id
+             ,Map (Fst Id * (Snd Id) >> If (Id >= 10) (Id - 9) Id) Id
              ,FoldMap (SG.Sum Int) Id
              ]
         >> Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)
@@ -247,11 +247,11 @@ type Luhn' (n :: Nat) =
        Msg "Luhn'" (Do
        '[Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, Id])) (Len >> Same n)
         ,Do
-            '[Ones
+            '[Ones Id
             ,Map (ReadP Int) Id
             ,Reverse
             ,Ziplc [1,2] Id
-            ,Map (Fst * Snd >> If (Id >= 10) (Id - 9) Id) Id
+            ,Map (Fst Id * (Snd Id) >> If (Id >= 10) (Id - 9) Id) Id
             ,FoldMap (SG.Sum Int) Id
            ]
         ,Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)

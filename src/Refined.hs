@@ -105,10 +105,10 @@ import Data.Binary (Binary)
 -- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d") 4 (Between 0 255) >> 'True) ol "141.213.1x34.444"
 -- Left (FailP "ReadP Int (1x34) failed")
 --
--- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) Id >> Luhn) ol "12344"
+-- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) Id >> Luhn Id) ol "12344"
 -- Right (Refined {unRefined = "12344"})
 --
--- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) Id >> Luhn) ol "12340"
+-- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) Id >> Luhn Id) ol "12340"
 -- Left FalseP
 --
 -- >>> prtRefinedIO @(Any (Prime Id) Id) ol [11,13,17,18]
@@ -117,13 +117,13 @@ import Data.Binary (Binary)
 -- >>> prtRefinedIO @(All (Prime Id) Id) ol [11,13,17,18]
 -- Left FalseP
 --
--- >>> prtRefinedIO @(Snd !! Fst >> Len > 5) ol (2,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @(Snd Id !! Fst Id >> Len > 5) ol (2,["abc","defghij","xyzxyazsfd"])
 -- Right (Refined {unRefined = (2,["abc","defghij","xyzxyazsfd"])})
 --
--- >>> prtRefinedIO @(Snd !! Fst >> Len > 5) ol (27,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @(Snd Id !! Fst Id >> Len > 5) ol (27,["abc","defghij","xyzxyazsfd"])
 -- Left (FailP "(!!) index not found")
 --
--- >>> prtRefinedIO @(Snd !! Fst >> Len <= 5) ol (2,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @(Snd Id !! Fst Id >> Len <= 5) ol (2,["abc","defghij","xyzxyazsfd"])
 -- Left FalseP
 newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
 

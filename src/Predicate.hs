@@ -1,3 +1,4 @@
+-- guard : grab part of the root msg as part of the failure reason if just false
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -88,13 +89,13 @@ evalBool :: (MonadEval m, P p a, PP p a ~ Bool) => Proxy p -> POpts -> a -> m (T
 evalBool p opts a = fixBoolT <$> eval p opts a
 
 -- | a type level predicate for a monotonic increasing list
-type Asc = Ands (Map (Fst <= Snd) Pairs)
+type Asc = Ands (Map (Fst Id <= (Snd Id)) Pairs)
 -- | a type level predicate for a strictly increasing list
-type Asc' = Ands (Map (Fst < Snd) Pairs)
+type Asc' = Ands (Map (Fst Id < (Snd Id)) Pairs)
 -- | a type level predicate for a monotonic decreasing list
-type Desc = Ands (Map (Fst >= Snd) Pairs)
+type Desc = Ands (Map (Fst Id >= (Snd Id)) Pairs)
 -- | a type level predicate for a strictly decreasing list
-type Desc' = Ands (Map (Fst > Snd) Pairs)
+type Desc' = Ands (Map (Fst Id > (Snd Id)) Pairs)
 
 -- | A predicate that determines if the value is between \'p\' and \'q\'
 type Between p q = Ge p && Le q
@@ -105,8 +106,8 @@ type Between' p q r = r >= p && r <= q
 type AllPositive = Ands (Map Positive Id)
 -- | a type level predicate for all negative elements in a list
 type AllNegative = Ands (Map Negative Id)
-type Positive = Ge 0
-type Negative = Le 0
+type Positive = Gt 0
+type Negative = Lt 0
 
 type AllPositive' = FoldMap SG.All (Map Positive Id)
 type AllNegative' = FoldMap SG.All (Map Negative Id)
@@ -115,7 +116,7 @@ type All x p = Ands (Map x p)
 type Any x p = Ors (Map x p)
 
 -- | 'unzip' equivalent
-type Unzip = (Map Fst Id, Map Snd Id)
+type Unzip = (Map (Fst Id) Id, Map (Snd Id) Id)
 
 -- | represents a predicate using a 'Symbol' as a regular expression
 --   evaluates 'Re' and returns True if there is a match
@@ -165,7 +166,7 @@ instance (GetROpts rs
 --   Present [("13:05:25",["13","05","25"])]
 --   PresentT [("13:05:25",["13","05","25"])]
 --
---   >>> pl @(Rescan Snd "13:05:25") ('a',"^(\\d{2}):(\\d{2}):(\\d{2})$")
+--   >>> pl @(Rescan (Snd Id) "13:05:25") ('a',"^(\\d{2}):(\\d{2}):(\\d{2})$")
 --   Present [("13:05:25",["13","05","25"])]
 --   PresentT [("13:05:25",["13","05","25"])]
 --
@@ -242,7 +243,7 @@ instance (GetROpts rs
 --   Present ["141","201","1","22"]
 --   PresentT ["141","201","1","22"]
 --
---   >>> pl @(Resplit (Singleton Fst) Snd) (':', "12:13:1")
+--   >>> pl @(Resplit (Singleton (Fst Id)) (Snd Id)) (':', "12:13:1")
 --   Present ["12","13","1"]
 --   PresentT ["12","13","1"]
 --
@@ -334,7 +335,7 @@ instance (PP p x ~ (String -> [String] -> String)
 --   Requires "Text.Show.Functions"
 --
 --   >>> :m + Text.Show.Functions
---   >>> pl @(ReplaceAll "\\." (MakeRR2 Fst) Snd) (\x -> x <> ":" <> x, "141.201.1.22")
+--   >>> pl @(ReplaceAll "\\." (MakeRR2 (Fst Id)) (Snd Id)) (\x -> x <> ":" <> x, "141.201.1.22")
 --   Present "141.:.201.:.1.:.22"
 --   PresentT "141.:.201.:.1.:.22"
 --
@@ -355,7 +356,7 @@ instance (PP p x ~ (String -> String)
 --   Requires "Text.Show.Functions"
 --
 --   >>> :m + Text.Show.Functions
---   >>> pl @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (MakeRR3 Fst) Snd) (\ys -> intercalate  " | " $ map (show . succ . read @Int) ys, "141.201.1.22")
+--   >>> pl @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (MakeRR3 (Fst Id)) (Snd Id)) (\ys -> intercalate  " | " $ map (show . succ . read @Int) ys, "141.201.1.22")
 --   Present "142 | 202 | 2 | 23"
 --   PresentT "142 | 202 | 2 | 23"
 --
@@ -566,21 +567,29 @@ instance Show a => P Tails [a] where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @Ones [4,8,3,9]
+--   >>> pl @(Ones Id) [4,8,3,9]
 --   Present [[4],[8],[3],[9]]
 --   PresentT [[4],[8],[3],[9]]
 --
---   >>> pl @Ones []
+--   >>> pl @(Ones Id) []
 --   Present []
 --   PresentT []
 --
-data Ones
+data Ones p
 
-instance (as ~ [a], Show a) => P Ones as where
-  type PP Ones as = [as]
-  eval _ opts as =
-    let xs = map (:[]) as
-    in pure $ mkNode opts (PresentT xs) ["Ones" <> show0 opts " " xs <> showA opts " | " as] []
+instance ( PP p x ~ [a]
+         , P p x
+         , Show a
+         ) => P (Ones p) x where
+  type PP (Ones p) x = [PP p x]
+  eval _ opts x = do
+    let msg0 = "Ones"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let d = map (:[]) p
+        in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | " p] [hh pp]
 
 -- | similar to 'show'
 --
@@ -620,7 +629,7 @@ instance (Show (PP p x), P p x) => P (ShowP p) x where
 --   Present "2019-05-24 05:19:59"
 --   PresentT "2019-05-24 05:19:59"
 --
---   >>> pl @(FormatTimeP Fst Snd) ("the date is %d/%m/%Y", read "2019-05-24" :: Day)
+--   >>> pl @(FormatTimeP (Fst Id) (Snd Id)) ("the date is %d/%m/%Y", read "2019-05-24" :: Day)
 --   Present "the date is 24/05/2019"
 --   PresentT "the date is 24/05/2019"
 --
@@ -689,7 +698,7 @@ instance (ParseTime (PP t a)
 --   Present 2019-03-11 01:22:33
 --   PresentT 2019-03-11 01:22:33
 --
---   >>> pl @(ParseTimes LocalTime Fst Snd) (["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"], "03/11/19 01:22:33")
+--   >>> pl @(ParseTimes LocalTime (Fst Id) (Snd Id)) (["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"], "03/11/19 01:22:33")
 --   Present 2019-03-11 01:22:33
 --   PresentT 2019-03-11 01:22:33
 --
@@ -723,28 +732,29 @@ instance (ParseTime (PP t a)
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> :set -XTypeOperators
---   >>> pl @(MkDay Fst (Snd >> Fst) (Snd >> Snd)) (2019,(12,30))
---   Present Just (2019-12-30,(1,1))
---   PresentT (Just (2019-12-30,(1,1)))
+--   >>> pl @MkDay (2019,12,30)
+--   Present Just (2019-12-30,1,1)
+--   PresentT (Just (2019-12-30,1,1))
 --
---   >>> pl @(MkDay Fst (Snd >> Fst) (Snd >> Snd)) (2019,(99,99999))
+--   >>> pl @(MkDay' (Fst Id) (Snd Id) (Thd Id)) (2019,99,99999)
 --   Present Nothing
 --   PresentT Nothing
 --
---   >>> pl @(MkDay Fst (Snd >> Fst) (Snd >> Snd)) (1999,(3,13))
---   Present Just (1999-03-13,(10,6))
---   PresentT (Just (1999-03-13,(10,6)))
+--   >>> pl @MkDay (1999,3,13)
+--   Present Just (1999-03-13,10,6)
+--   PresentT (Just (1999-03-13,10,6))
 --
-data MkDay p q r
+data MkDay' p q r
+type MkDay = MkDay' (Fst Id) (Snd Id) (Thd Id)
+
 instance (P p x
         , P q x
         , P r x
         , PP p x ~ Int
         , PP q x ~ Int
         , PP r x ~ Int
-        ) => P (MkDay p q r) x where
-  type PP (MkDay p q r) x = Maybe (Day, (Int, Int))
+        ) => P (MkDay' p q r) x where
+  type PP (MkDay' p q r) x = Maybe (Day, Int, Int)
   eval _ opts x = do
     let msg0 = "MkDay"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
@@ -759,25 +769,30 @@ instance (P p x
             let mday = fromGregorianValid (fromIntegral p) q r
                 b = mday <&> \day ->
                       let (_, week, dow) = toWeekDate day
-                      in (day, (week, dow))
+                      in (day, week, dow)
             in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | (y,m,d)=" (p,q,r)] (hhs <> [hh rr])
 
 -- | uncreate a 'Day' returning year month and day
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @UnMkDay (read "2019-12-30")
---   Present (2019,(12,30))
---   PresentT (2019,(12,30))
+--   >>> pl @(UnMkDay Id) (read "2019-12-30")
+--   Present (2019,12,30)
+--   PresentT (2019,12,30)
 --
-data UnMkDay
-instance a ~ Day => P UnMkDay a where
-  type PP UnMkDay a = (Int, (Int, Int))
-  eval _ opts day =
+data UnMkDay p
+
+instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
+  type PP (UnMkDay p) x = (Int, Int, Int)
+  eval _ opts x = do
     let msg0 = "UnMkDay"
-        (y,m,d) = toGregorian day
-        b = (fromIntegral y,(m,d))
-    in pure $ mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " day] []
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let (fromIntegral -> y, m, d) = toGregorian p
+            b = (y, m, d)
+        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] []
 
 -- | uses the 'Read' of the given type \'t\' and \'p\' which points to the content to read
 --
@@ -871,7 +886,7 @@ instance (Ord a, Show a) => P Max [a] where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(SortOn Fst Id) [(10,"abc"), (3,"def"), (4,"gg"), (10,"xyz"), (1,"z")]
+--   >>> pl @(SortOn (Fst Id) Id) [(10,"abc"), (3,"def"), (4,"gg"), (10,"xyz"), (1,"z")]
 --   Present [(1,"z"),(3,"def"),(4,"gg"),(10,"abc"),(10,"xyz")]
 --   PresentT [(1,"z"),(3,"def"),(4,"gg"),(10,"abc"),(10,"xyz")]
 --
@@ -903,8 +918,8 @@ instance (P p (a,a)
                               eval (Proxy @(SortByHelper p))
                          else eval (Proxy @(Hide (SortByHelper p)))) opts (map (w,) ys)
 --                  pp <- eval (Proxy @(Hide (Partition (p >> Id == 'GT) Id))) opts (map (w,) ys)
--- too much output: dont need (Map Snd *** Map Snd) -- just do map snd in code
---                  pp <- eval (Proxy @(Partition (p >> (Id == 'GT)) Id >> (Map Snd *** Map Snd))) opts (map (w,) ys)
+-- too much output: dont need (Map (Snd Id) *** Map (Snd Id)) -- just do map snd in code
+--                  pp <- eval (Proxy @(Partition (p >> (Id == 'GT)) Id >> (Map (Snd Id) *** Map (Snd Id)))) opts (map (w,) ys)
                   case getValueLR opts msg0 pp [] of
                     Left e -> pure e
                     Right (ll', rr') -> do
@@ -975,191 +990,294 @@ instance (PP p x ~ t a
         let n = length as
         in mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " as] []
 
--- | similar to 'Control.Lens._1'
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @(FstL _ Id) (10,"Abc")
---   Present 10
---   PresentT 10
---
-data FstL' t p
-type FstL (t :: Type) p = FstL' (Hole t) p
-
-instance (PP p x ~ s
-        , P p x
-        , Show s
-        , Field1 s s (PP t x) (PP t x)
-        , Show (PP t x)
-        ) => P (FstL' t p) x where
-  type PP (FstL' t p) x = PP t x
-  eval _ opts x = do
-    let msg0 = "FstL"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let a = p ^. _1
-        in mkNode opts (PresentT a) [msg0 <> show0 opts " " a <> showA opts " | " p] [hh pp]
-
--- | similar to 'Control.Lens._2'
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @(SndL _ Id) (10,"Abc")
---   Present "Abc"
---   PresentT "Abc"
---
-data SndL' t p
-type SndL (t :: Type) p = SndL' (Hole t) p
-
-instance (PP p x ~ s
-        , P p x
-        , Show s
-        , Field2 s s (PP t x) (PP t x)
-        , Show (PP t x)
-        ) => P (SndL' t p) x where
-  type PP (SndL' t p) x = PP t x
-  eval _ opts x = do
-    let msg0 = "SndL"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let a = p ^. _2
-        in mkNode opts (PresentT a) [msg0 <> show0 opts " " a <> showA opts " s=" p] [hh pp]
-
--- | similar to 'Control.Lens._3'
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @(ThdL _ Id) (10,"Abc",'x')
---   Present 'x'
---   PresentT 'x'
---
-data ThdL' t p
-type ThdL (t :: Type) p = ThdL' (Hole t) p
-
-instance (PP p x ~ s
-        , P p x
-        , Show s
-        , Field3 s s (PP t x) (PP t x)
-        , Show (PP t x)
-        ) => P (ThdL' t p) x where
-  type PP (ThdL' t p) x = PP t x
-  eval _ opts x = do
-    let msg0 = "ThdL"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let a = p ^. _3
-        in mkNode opts (PresentT a) [msg0 <> show0 opts " " a <> showA opts " | " p] [hh pp]
-
--- since we support '(,,,) so have to support Field4 to be able to retrieve those values
-
--- | similar to 'Control.Lens._4'
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @(FthL _ Id) (10,"Abc",'x',True)
---   Present True
---   PresentT True
---
-data FthL' t p
-type FthL (t :: Type) p = FthL' (Hole t) p
-
-instance (PP p x ~ s
-        , P p x
-        , Show s
-        , Field4 s s (PP t x) (PP t x)
-        , Show (PP t x)
-        ) => P (FthL' t p) x where
-  type PP (FthL' t p) x = PP t x
-  eval _ opts x = do
-    let msg0 = "FthL"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let a = p ^. _4
-        in mkNode opts (PresentT a) [msg0 <> show0 opts " " a <> showA opts " | " p] [hh pp]
-
 -- | similar to 'fst'
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @Fst (10,"Abc")
+--   >>> pl @(Fst Id) (10,"Abc")
 --   Present 10
 --   PresentT 10
 --
-data Fst
+--   >>> pl @(Fst Id) (10,"Abc",'x')
+--   Present 10
+--   PresentT 10
+--
+--   >>> pl @(Fst Id) (10,"Abc",'x',False)
+--   Present 10
+--   PresentT 10
+--
+data L1 p
+type Fst p = L1 p
 
-instance (Show x, Show a) => P Fst (a,x) where
-  type PP Fst (a,x) = a
-  eval _ opts (a,x) =
-    pure $ mkNode opts (PresentT a) ["Fst" <> show0 opts " " a <> showA opts " | " (a,x)] []
+instance (Show (ExtractL1T (PP p x))
+        , ExtractL1C (PP p x)
+        , P p x
+        , Show (PP p x)
+        ) => P (L1 p) x where
+  type PP (L1 p) x = ExtractL1T (PP p x)
+  eval _ opts x = do
+    let msg0 = "L1"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = extractL1C p
+        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+
+class ExtractL1C tp where
+  type ExtractL1T tp
+  extractL1C :: tp -> ExtractL1T tp
+instance ExtractL1C (a,b) where
+  type ExtractL1T (a,b) = a
+  extractL1C (a,_) = a
+instance ExtractL1C (a,b,c) where
+  type ExtractL1T (a,b,c) = a
+  extractL1C (a,_,_) = a
+instance ExtractL1C (a,b,c,d) where
+  type ExtractL1T (a,b,c,d) = a
+  extractL1C (a,_,_,_) = a
+instance ExtractL1C (a,b,c,d,e) where
+  type ExtractL1T (a,b,c,d,e) = a
+  extractL1C (a,_,_,_,_) = a
+instance ExtractL1C (a,b,c,d,e,f) where
+  type ExtractL1T (a,b,c,d,e,f) = a
+  extractL1C (a,_,_,_,_,_) = a
 
 -- | similar to 'snd'
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @Snd (10,"Abc")
+--   >>> pl @(Snd Id) (10,"Abc")
 --   Present "Abc"
 --   PresentT "Abc"
 --
-data Snd
-
-instance (Show x, Show b) => P Snd (x,b) where
-  type PP Snd (x,b) = b
-  eval _ opts (x,b) =
-    pure $ mkNode opts (PresentT b) ["Snd" <> show0 opts " " b <> showA opts " | " (x,b)] []
-
-
--- | 'fst' for a 3-tuple
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @Fst3 (10,"Abc",True)
---   Present 10
---   PresentT 10
---
-data Fst3
-
-instance (Show x, Show y, Show a) => P Fst3 (a,x,y) where
-  type PP Fst3 (a,x,y) = a
-  eval _ opts (a,x,y) =
-    pure $ mkNode opts (PresentT a) ["Fst3" <> show0 opts " " a <> showA opts " | " (a,x,y)] []
-
--- | 'snd' for a 3-tuple
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> pl @Snd3 (10,"Abc",True)
+--   >>> pl @(Snd Id) (10,"Abc",True)
 --   Present "Abc"
 --   PresentT "Abc"
 --
-data Snd3
+data L2 p
+type Snd p = L2 p
 
-instance (Show x, Show y, Show b) => P Snd3 (x,b,y) where
-  type PP Snd3 (x,b,y) = b
-  eval _ opts (x,b,y) =
-    pure $ mkNode opts (PresentT b) ["Snd3" <> show0 opts " " b <> showA opts " | " (x,b,y)] []
+instance (Show (ExtractL2T (PP p x))
+        , ExtractL2C (PP p x)
+        , P p x
+        , Show (PP p x)
+        ) => P (L2 p) x where
+  type PP (L2 p) x = ExtractL2T (PP p x)
+  eval _ opts x = do
+    let msg0 = "L2"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = extractL2C p
+        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
 
--- | access to third element in a 3-tuple
+class ExtractL2C tp where
+  type ExtractL2T tp
+  extractL2C :: tp -> ExtractL2T tp
+instance ExtractL2C (a,b) where
+  type ExtractL2T (a,b) = b
+  extractL2C (_,b) = b
+instance ExtractL2C (a,b,c) where
+  type ExtractL2T (a,b,c) = b
+  extractL2C (_,b,_) = b
+instance ExtractL2C (a,b,c,d) where
+  type ExtractL2T (a,b,c,d) = b
+  extractL2C (_,b,_,_) = b
+instance ExtractL2C (a,b,c,d,e) where
+  type ExtractL2T (a,b,c,d,e) = b
+  extractL2C (_,b,_,_,_) = b
+instance ExtractL2C (a,b,c,d,e,f) where
+  type ExtractL2T (a,b,c,d,e,f) = b
+  extractL2C (_,b,_,_,_,_) = b
+
+-- | similar to 3rd element in a n-tuple
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @Thd3 (10,True,"Abc")
---   Present "Abc"
---   PresentT "Abc"
+--   >>> pl @(Thd Id) (10,"Abc",133)
+--   Present 133
+--   PresentT 133
 --
-data Thd3
+--   >>> pl @(Thd Id) (10,"Abc",133,True)
+--   Present 133
+--   PresentT 133
+--
+data L3 p
+type Thd p = L3 p
 
-instance (Show x, Show y, Show b) => P Thd3 (x,y,b) where
-  type PP Thd3 (x,y,b) = b
-  eval _ opts (x,y,b) =
-    pure $ mkNode opts (PresentT b) ["Thd3" <> show0 opts " " b <> showA opts " | " (x,y,b)] []
+instance (Show (ExtractL3T (PP p x))
+        , ExtractL3C (PP p x)
+        , P p x
+        , Show (PP p x)
+        ) => P (L3 p) x where
+  type PP (L3 p) x = ExtractL3T (PP p x)
+  eval _ opts x = do
+    let msg0 = "L3"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = extractL3C p
+        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+
+class ExtractL3C tp where
+  type ExtractL3T tp
+  extractL3C :: tp -> ExtractL3T tp
+instance ExtractL3C (a,b) where
+  type ExtractL3T (a,b) = GL.TypeError ('GL.Text "L3 doesn't work for 2-tuples")
+  extractL3C _ = error "dude"
+instance ExtractL3C (a,b,c) where
+  type ExtractL3T (a,b,c) = c
+  extractL3C (_,_,c) = c
+instance ExtractL3C (a,b,c,d) where
+  type ExtractL3T (a,b,c,d) = c
+  extractL3C (_,_,c,_) = c
+instance ExtractL3C (a,b,c,d,e) where
+  type ExtractL3T (a,b,c,d,e) = c
+  extractL3C (_,_,c,_,_) = c
+instance ExtractL3C (a,b,c,d,e,f) where
+  type ExtractL3T (a,b,c,d,e,f) = c
+  extractL3C (_,_,c,_,_,_) = c
+
+-- | similar to 4th element in a n-tuple
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(L4 Id) (10,"Abc",'x',True)
+--   Present True
+--   PresentT True
+--
+--   >>> pl @(L4 (Fst (Snd Id))) ('x',((10,"Abc",'x',999),"aa",1),9)
+--   Present 999
+--   PresentT 999
+--
+data L4 p
+
+instance (Show (ExtractL4T (PP p x))
+        , ExtractL4C (PP p x)
+        , P p x
+        , Show (PP p x)
+        ) => P (L4 p) x where
+  type PP (L4 p) x = ExtractL4T (PP p x)
+  eval _ opts x = do
+    let msg0 = "L4"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = extractL4C p
+        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+
+class ExtractL4C tp where
+  type ExtractL4T tp
+  extractL4C :: tp -> ExtractL4T tp
+instance ExtractL4C (a,b) where
+  type ExtractL4T (a,b) = GL.TypeError ('GL.Text "L4 doesn't work for 2-tuples")
+  extractL4C _ = error "dude"
+instance ExtractL4C (a,b,c) where
+  type ExtractL4T (a,b,c) = GL.TypeError ('GL.Text "L4 doesn't work for 3-tuples")
+  extractL4C _ = error "dude"
+instance ExtractL4C (a,b,c,d) where
+  type ExtractL4T (a,b,c,d) = d
+  extractL4C (_,_,_,d) = d
+instance ExtractL4C (a,b,c,d,e) where
+  type ExtractL4T (a,b,c,d,e) = d
+  extractL4C (_,_,_,d,_) = d
+instance ExtractL4C (a,b,c,d,e,f) where
+  type ExtractL4T (a,b,c,d,e,f) = d
+  extractL4C (_,_,_,d,_,_) = d
+
+-- | similar to 5th element in a n-tuple
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(L5 Id) (10,"Abc",'x',True,1)
+--   Present 1
+--   PresentT 1
+--
+data L5 p
+
+instance (Show (ExtractL5T (PP p x))
+        , ExtractL5C (PP p x)
+        , P p x
+        , Show (PP p x)
+        ) => P (L5 p) x where
+  type PP (L5 p) x = ExtractL5T (PP p x)
+  eval _ opts x = do
+    let msg0 = "L5"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = extractL5C p
+        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+
+class ExtractL5C tp where
+  type ExtractL5T tp
+  extractL5C :: tp -> ExtractL5T tp
+instance ExtractL5C (a,b) where
+  type ExtractL5T (a,b) = GL.TypeError ('GL.Text "L5 doesn't work for 2-tuples")
+  extractL5C _ = error "dude"
+instance ExtractL5C (a,b,c) where
+  type ExtractL5T (a,b,c) = GL.TypeError ('GL.Text "L5 doesn't work for 3-tuples")
+  extractL5C _ = error "dude"
+instance ExtractL5C (a,b,c,d) where
+  type ExtractL5T (a,b,c,d) = GL.TypeError ('GL.Text "L5 doesn't work for 4-tuples")
+  extractL5C _ = error "dude"
+instance ExtractL5C (a,b,c,d,e) where
+  type ExtractL5T (a,b,c,d,e) = e
+  extractL5C (_,_,_,_,e) = e
+instance ExtractL5C (a,b,c,d,e,f) where
+  type ExtractL5T (a,b,c,d,e,f) = e
+  extractL5C (_,_,_,_,e,_) = e
+
+
+-- | similar to 6th element in a n-tuple
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(L6 Id) (10,"Abc",'x',True,1,99)
+--   Present 99
+--   PresentT 99
+--
+data L6 p
+
+instance (Show (ExtractL6T (PP p x))
+        , ExtractL6C (PP p x)
+        , P p x
+        , Show (PP p x)
+        ) => P (L6 p) x where
+  type PP (L6 p) x = ExtractL6T (PP p x)
+  eval _ opts x = do
+    let msg0 = "L6"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = extractL6C p
+        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+
+class ExtractL6C tp where
+  type ExtractL6T tp
+  extractL6C :: tp -> ExtractL6T tp
+instance ExtractL6C (a,b) where
+  type ExtractL6T (a,b) = GL.TypeError ('GL.Text "L6 doesn't work for 2-tuples")
+  extractL6C _ = error "dude"
+instance ExtractL6C (a,b,c) where
+  type ExtractL6T (a,b,c) = GL.TypeError ('GL.Text "L6 doesn't work for 3-tuples")
+  extractL6C _ = error "dude"
+instance ExtractL6C (a,b,c,d) where
+  type ExtractL6T (a,b,c,d) = GL.TypeError ('GL.Text "L6 doesn't work for 4-tuples")
+  extractL6C _ = error "dude"
+instance ExtractL6C (a,b,c,d,e) where
+  type ExtractL6T (a,b,c,d,e) = GL.TypeError ('GL.Text "L6 doesn't work for 5-tuples")
+  extractL6C _ = error "dude"
+instance ExtractL6C (a,b,c,d,e,f) where
+  type ExtractL6T (a,b,c,d,e,f) = f
+  extractL6C (_,_,_,_,_,f) = f
+
 
 -- | identity function
 --
@@ -1456,7 +1574,7 @@ instance KnownSymbol s => P (s :: Symbol) a where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @'(Snd, Fst) ("helo",123)
+--   >>> pl @'(Snd Id, Fst Id) ("helo",123)
 --   Present (123,"helo")
 --   PresentT (123,"helo")
 --
@@ -1931,11 +2049,11 @@ instance (Show (PP p a)
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(EitherB (Fst > 4) (Snd >> Fst) (Snd >> Snd)) (24,(-1,999))
+--   >>> pl @(EitherB (Fst Id > 4) (Snd Id >> Fst Id) (Snd Id >> (Snd Id))) (24,(-1,999))
 --   Present Right 999
 --   PresentT (Right 999)
 --
---   >>> pl @(EitherB (Fst > 4) (Snd >> Fst) (Snd >> Snd)) (1,(-1,999))
+--   >>> pl @(EitherB (Fst Id > 4) (Snd Id >> Fst Id) (Snd Id >> (Snd Id))) (1,(-1,999))
 --   Present Left (-1)
 --   PresentT (Left (-1))
 --
@@ -1961,7 +2079,7 @@ instance (Show (PP p a)
           Right p -> mkNode opts (PresentT (Left p)) [msg0 <> "(False)" <> show0 opts " Left " p] [hh bb, hh pp]
       Right True -> do
         qq <- eval (Proxy @q) opts z
-        pure $ case getValueLR opts (msg0 <> " p failed") qq [hh bb] of
+        pure $ case getValueLR opts (msg0 <> " q failed") qq [hh bb] of
           Left e -> e
           Right q -> mkNode opts (PresentT (Right q)) [msg0 <> "(True)" <> show0 opts " Right " q] [hh bb, hh qq]
 
@@ -2026,11 +2144,11 @@ instance (P prt a
 --   Present [999,999,999,12,13]
 --   PresentT [999,999,999,12,13]
 --
---   >>> pl @(PadR 5 Fst '[12,13]) (999,'x')
+--   >>> pl @(PadR 5 (Fst Id) '[12,13]) (999,'x')
 --   Present [12,13,999,999,999]
 --   PresentT [12,13,999,999,999]
 --
---   >>> pl @(PadR 2 Fst '[12,13,14]) (999,'x')
+--   >>> pl @(PadR 2 (Fst Id) '[12,13,14]) (999,'x')
 --   Present [12,13,14]
 --   PresentT [12,13,14]
 --
@@ -2120,13 +2238,13 @@ instance (P ns x
 --   Present ("","hello world")
 --   PresentT ("","hello world")
 --
---   >>> pl @(SplitAt Snd Fst) ("hello world",4)
+--   >>> pl @(SplitAt (Snd Id) (Fst Id)) ("hello world",4)
 --   Present ("hell","o world")
 --   PresentT ("hell","o world")
 --
 data SplitAt n p
-type Take n p = SplitAt n p >> Fst
-type Drop n p = SplitAt n p >> Snd
+type Take n p = SplitAt n p >> Fst Id
+type Drop n p = SplitAt n p >> (Snd Id)
 
 instance (PP p a ~ [b]
         , P n a
@@ -2145,10 +2263,10 @@ instance (PP p a ~ [b]
             (x,y) = splitAt n p
        in mkNode opts (PresentT (x,y)) [msg1 <> show0 opts " " (x,y) <> showA opts " | n=" n <> showA opts " | " p] [hh pp, hh qq]
 
-type Tail = Uncons >> 'Just Snd
-type Head = Uncons >> 'Just Fst
-type Init = Unsnoc >> 'Just Fst
-type Last = Unsnoc >> 'Just Snd
+type Tail = Uncons >> 'Just (Snd Id)
+type Head = Uncons >> 'Just (Fst Id)
+type Init = Unsnoc >> 'Just (Fst Id)
+type Last = Unsnoc >> 'Just (Snd Id)
 
 -- | similar to 'Control.Arrow.&&&'
 type p &&& q = W '(p, q)
@@ -2318,11 +2436,11 @@ instance GetBinOp 'BAdd where
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
 --   >>> :set -XNoStarIsType
---   >>> pl @(Fst * Snd) (13,5)
+--   >>> pl @(Fst Id * (Snd Id)) (13,5)
 --   Present 65
 --   PresentT 65
 --
---   >>> pl @(Fst + 4 * (Snd >> Len) - 4) (3,"hello")
+--   >>> pl @(Fst Id + 4 * (Snd Id >> Len) - 4) (3,"hello")
 --   Present 19
 --   PresentT 19
 --
@@ -2349,7 +2467,7 @@ instance (GetBinOp op
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst / Snd) (13,2)
+--   >>> pl @(Fst Id / (Snd Id)) (13,2)
 --   Present 6.5
 --   PresentT 6.5
 --
@@ -2386,7 +2504,7 @@ instance (PP p a ~ PP q a
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
 --   >>> :set -XNoStarIsType
---   >>> pl @(Fst % Snd) (13,2)
+--   >>> pl @(Fst Id % (Snd Id)) (13,2)
 --   Present 13 % 2
 --   PresentT (13 % 2)
 --
@@ -2430,6 +2548,10 @@ instance (PP p a ~ PP q a
 --   Present LT
 --   PresentT LT
 --
+--   >>> pl @(15 % 3 / 4 % 2) ()
+--   Present 5 % 2
+--   PresentT (5 % 2)
+--
 data p % q
 infixl 8 %
 
@@ -2469,7 +2591,7 @@ instance (Integral (PP p x)
 --   Present -14
 --   PresentT (-14)
 --
---   >>> pl @(Negate (Fst * Snd)) (14,3)
+--   >>> pl @(Negate (Fst Id * (Snd Id))) (14,3)
 --   Present -42
 --   PresentT (-42)
 --
@@ -2481,7 +2603,7 @@ instance (Integral (PP p x)
 --   Present (-5) % 1
 --   PresentT ((-5) % 1)
 --
---   >>> pl @(Negate (Fst % Snd)) (14,3)
+--   >>> pl @(Negate (Fst Id % (Snd Id))) (14,3)
 --   Present (-14) % 3
 --   PresentT ((-14) % 3)
 --
@@ -2507,7 +2629,7 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Negate p) x where
 --   Present 14
 --   PresentT 14
 --
---   >>> pl @(Abs Snd) ("xx",14)
+--   >>> pl @(Abs (Snd Id)) ("xx",14)
 --   Present 14
 --   PresentT 14
 --
@@ -2796,72 +2918,86 @@ instance (Show (p a b)
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @SuccB' (13 :: Int)
+--   >>> pl @(SuccB' Id) (13 :: Int)
 --   Present 14
 --   PresentT 14
 --
---   >>> pl @SuccB' LT
+--   >>> pl @(SuccB' Id) LT
 --   Present EQ
 --   PresentT EQ
 --
---   >>> pl @(SuccB 'LT) GT
+--   >>> pl @(SuccB 'LT Id) GT
 --   Present LT
 --   PresentT LT
 --
---   >>> pl @SuccB' GT
+--   >>> pl @(SuccB' Id) GT
 --   Error Succ bounded failed
 --   FailT "Succ bounded failed"
 --
-data SuccB def
-type SuccB' = SuccB (Failp "Succ bounded failed")
+data SuccB p q
+type SuccB' q = SuccB (Failp "Succ bounded failed") q
 
-instance (P def (Proxy a)
-        , PP def (Proxy a) ~ a
+instance (PP q x ~ a
+        , P q x
+        , P p (Proxy a)
+        , PP p (Proxy a) ~ a
         , Show a
         , Eq a
         , Bounded a
         , Enum a
-        ) => P (SuccB def) a where
-  type PP (SuccB def) a = a
-  eval _ opts a = do
+        ) => P (SuccB p q) x where
+  type PP (SuccB p q) x = PP q x
+  eval _ opts x = do
     let msg0 = "SuccB"
-    case succMay a of
-      Nothing -> do
-         let msg1 = msg0 <> " out of range"
-         pp <- eval (Proxy @def) opts (Proxy @a)
-         pure $ case getValueLR opts msg1 pp [] of
-           Left e -> e
-           Right _ -> mkNode opts (_tBool pp) [msg1] [hh pp]
-      Just n -> pure $ mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " a] []
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case succMay q of
+          Nothing -> do
+             let msg1 = msg0 <> " out of range"
+             pp <- eval (Proxy @p) opts (Proxy @a)
+             pure $ case getValueLR opts msg1 pp [hh qq] of
+               Left e -> e
+               Right _ -> mkNode opts (_tBool pp) [msg1] [hh qq, hh pp]
+          Just n -> pure $ mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " q] [hh qq]
 
 -- | bounded 'pred' function
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @PredB' (13 :: Int)
+--   >>> pl @(PredB' Id) (13 :: Int)
 --   Present 12
 --   PresentT 12
-data PredB def
-type PredB' = PredB (Failp "Pred bounded failed")
 
-instance (P def (Proxy a)
-        , PP def (Proxy a) ~ a
+data PredB p q
+type PredB' q = PredB (Failp "Pred bounded failed") q
+
+instance (PP q x ~ a
+        , P q x
+        , P p (Proxy a)
+        , PP p (Proxy a) ~ a
         , Show a
         , Eq a
         , Bounded a
         , Enum a
-        ) => P (PredB def) a where
-  type PP (PredB def) a = a
-  eval _ opts a = do
+        ) => P (PredB p q) x where
+  type PP (PredB p q) x = PP q x
+  eval _ opts x = do
     let msg0 = "PredB"
-    case predMay a of
-      Nothing -> do
-         let msg1 = msg0 <> " out of range"
-         pp <- eval (Proxy @def) opts (Proxy @a)
-         pure $ case getValueLR opts msg1 pp [] of
-           Left e -> e
-           Right _ -> mkNode opts (_tBool pp) [msg1] [hh pp]
-      Just n -> pure $ mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " a] []
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case predMay q of
+          Nothing -> do
+             let msg1 = msg0 <> " out of range"
+             pp <- eval (Proxy @p) opts (Proxy @a)
+             pure $ case getValueLR opts msg1 pp [hh qq] of
+               Left e -> e
+               Right _ -> mkNode opts (_tBool pp) [msg1] [hh qq, hh pp]
+          Just n -> pure $ mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " q] [hh qq]
+
 
 -- | unbounded 'succ' function
 --
@@ -3064,7 +3200,7 @@ instance (PP p x ~ a
 --   False
 --   FalseT
 --
---   >>> pl @(Not Fst) (True,22)
+--   >>> pl @(Not (Fst Id)) (True,22)
 --   False
 --   FalseT
 --
@@ -3145,11 +3281,11 @@ instance (GetBool keep
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Elem Fst Snd) ('x',"abcdxy")
+--   >>> pl @(Elem (Fst Id) (Snd Id)) ('x',"abcdxy")
 --   True
 --   TrueT
 --
---   >>> pl @(Elem Fst Snd) ('z',"abcdxy")
+--   >>> pl @(Elem (Fst Id) (Snd Id)) ('z',"abcdxy")
 --   False
 --   FalseT
 --
@@ -3234,24 +3370,24 @@ type InitFail msg q = GFail (Unsnoc >> Fmap_1) msg q
 
 -- 'x' and 'a' for Just condition
 -- 'x' for Nothing condition
--- Snd at the end says we only want to process the Maybe which is the rhs of &&& ie Snd
-type GDef' z p q r = '(I, r >> z) >> MaybeXP (X >> p) q Snd
+-- (Snd Id) at the end says we only want to process the Maybe which is the rhs of &&& ie (Snd Id)
+type GDef' z p q r = '(I, r >> z) >> MaybeXP (X >> p) q (Snd Id)
 type JustDef' p q r = GDef' I p q r
 
 -- access everything ie 'x' and Proxy a for Nothing condition
 -- 'x' and 'a' for Just condition
-type GDef'' z p q r = '(I, r >> z) >> MaybeXP p q Snd
+type GDef'' z p q r = '(I, r >> z) >> MaybeXP p q (Snd Id)
 type JustDef'' p q r = GDef'' I p q r
 
-type PA = Snd -- 'Proxy a' -- to distinguish from A
-type A = Snd -- 'a'
-type X = Fst >> Fst -- 'x' ie the whole original environment
+type PA = (Snd Id) -- 'Proxy a' -- to distinguish from A
+type A = (Snd Id) -- 'a'
+type X = Fst Id >> Fst Id -- 'x' ie the whole original environment
 type XA = I -- ie noop
 type XPA = I -- ie noop
 
 -- Nothing has access to 'x' only
 -- Just has access to (x,a)
---type GDef_X z p q r = (I &&& (r >> z)) >> MaybeXP (Fst >> Fst >> p) ((Fst *** I) >> q) Snd
+--type GDef_X z p q r = (I &&& (r >> z)) >> MaybeXP (Fst Id >> Fst Id >> p) ((Fst Id *** I) >> q) (Snd Id)
 type GDef_X z p q r = '(I, r >> z) >> MaybeXP (X >> p) ('(X,A) >> q) A
 type JustDef''' p q r = GDef_X I p q r
 
@@ -3259,8 +3395,8 @@ type JustDef''' p q r = GDef_X I p q r
 -- Just has access to (x,a)
 type GDef_PA z p q r = Hide % '(I, r >> z) >> MaybeXP (PA >> p) ('(X,A) >> q) A
 
--- Nothing case sees ((I,qz), Proxy a) -- hence the Fst >> Fst
--- Just case sees (I,qz), a) -- hence the Snd to get the 'a' only -- if you want the 'x' then Fst >> Fst
+-- Nothing case sees ((I,qz), Proxy a) -- hence the Fst Id >> Fst Id
+-- Just case sees (I,qz), a) -- hence the (Snd Id) to get the 'a' only -- if you want the 'x' then Fst Id >> Fst Id
 -- we have lost 'x' on the rhs: use GDef_X to access 'x' and 'a' for the Just condition
 type GDef z p q     = '(I, q >> z) >> MaybeXP (X >> p) A A  -- Hide % immediately before MaybeXP
 type GProxy z q     = '(I, q >> z) >> MaybeXP (PA >> MEmptyP) A A
@@ -3309,7 +3445,7 @@ type TheseFail msg q = GFail TheseToMaybe msg q
 -- tacks on a Proxy to Nothing side! but a Proxy a not Proxy of the final result
 -- this is for default use cases for either/these/head/tail/last/init etc
 data MaybeXP p q r
-type MaybeX p q r = MaybeXP (Fst >> p) q r
+type MaybeX p q r = MaybeXP (Fst Id >> p) q r
 
 instance (P r x
         , P p (x, Proxy a)
@@ -3398,15 +3534,15 @@ instance P TheseToMaybe (These a b) where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(EitherX (ShowP ((Fst >> Fst) + Snd)) (ShowP Id) Snd) (9,Left 123)
+--   >>> pl @(EitherX (ShowP ((Fst Id >> Fst Id) + (Snd Id))) (ShowP Id) (Snd Id)) (9,Left 123)
 --   Present "132"
 --   PresentT "132"
 --
---   >>> pl @(EitherX (ShowP ((Fst >> Fst) + Snd)) (ShowP Id) Snd) (9,Right 'x')
+--   >>> pl @(EitherX (ShowP ((Fst Id >> Fst Id) + (Snd Id))) (ShowP Id) (Snd Id)) (9,Right 'x')
 --   Present "((9,Right 'x'),'x')"
 --   PresentT "((9,Right 'x'),'x')"
 --
---   >>> pl @(EitherX (ShowP Id) (ShowP (Second (Succ Id))) Snd) (9,Right 'x')
+--   >>> pl @(EitherX (ShowP Id) (ShowP (Second (Succ Id))) (Snd Id)) (9,Right 'x')
 --   Present "((9,Right 'x'),'y')"
 --   PresentT "((9,Right 'x'),'y')"
 --
@@ -3444,19 +3580,19 @@ type family EitherXT lr x p where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(TheseX (((Fst >> Fst) + Snd) >> ShowP Id) (ShowP Id) (Snd >> Snd) Snd) (9,This 123)
+--   >>> pl @(TheseX (((Fst Id >> Fst Id) + (Snd Id)) >> ShowP Id) (ShowP Id) (Snd Id >> (Snd Id)) (Snd Id)) (9,This 123)
 --   Present "132"
 --   PresentT "132"
 --
---   >>> pl @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (This 123)
+--   >>> pl @(TheseX '(Snd Id,"fromthis") '(Negate 99,(Snd Id)) (Snd Id) Id) (This 123)
 --   Present (123,"fromthis")
 --   PresentT (123,"fromthis")
 --
---   >>> pl @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (That "fromthat")
+--   >>> pl @(TheseX '(Snd Id,"fromthis") '(Negate 99,(Snd Id)) (Snd Id) Id) (That "fromthat")
 --   Present (-99,"fromthat")
 --   PresentT (-99,"fromthat")
 --
---   >>> pl @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (These 123 "fromthese")
+--   >>> pl @(TheseX '(Snd Id,"fromthis") '(Negate 99,(Snd Id)) (Snd Id) Id) (These 123 "fromthese")
 --   Present (123,"fromthese")
 --   PresentT (123,"fromthese")
 --
@@ -3586,7 +3722,7 @@ instance (P n a
 --   Present [4]
 --   PresentT [4]
 --
---   >>> pl @(Pure (Either String) Fst) (13,True)
+--   >>> pl @(Pure (Either String) (Fst Id)) (13,True)
 --   Present Right 13
 --   PresentT (Right 13)
 --
@@ -3650,7 +3786,7 @@ instance Monoid a => P MEmptyProxy (Proxy (a :: Type)) where
 --   Present ""
 --   PresentT ""
 --
---   >>> pl @(EmptyT (Either String) Fst) (13,True)
+--   >>> pl @(EmptyT (Either String) (Fst Id)) (13,True)
 --   Present Left ""
 --   PresentT (Left "")
 --
@@ -3687,17 +3823,21 @@ instance P (MkNothing' t) a where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @MkJust 44
+--   >>> pl @(MkJust Id) 44
 --   Present Just 44
 --   PresentT (Just 44)
 --
-data MkJust
-instance Show a => P MkJust a where
-  type PP MkJust a = Maybe a
-  eval _ opts a =
+data MkJust p
+instance (PP p x ~ a, P p x, Show a) => P (MkJust p) x where
+  type PP (MkJust p) x = Maybe (PP p x)
+  eval _ opts x = do
     let msg0 = "MkJust"
-        d = Just a
-    in pure $ mkNode opts (PresentT d) [msg0 <> show0 opts " Just " a] []
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let d = Just p
+        in mkNode opts (PresentT d) [msg0 <> show0 opts " Just " p] [hh pp]
 
 -- | 'Data.Either.Left' constructor
 --
@@ -3794,7 +3934,7 @@ instance (Show (PP p x), P p x) => P (MkThat' t p) x where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(MkThese Fst Snd) (44,'x')
+--   >>> pl @(MkThese (Fst Id) (Snd Id)) (44,'x')
 --   Present These 44 'x'
 --   PresentT (These 44 'x')
 --
@@ -3867,7 +4007,7 @@ instance (PP p x ~ [a]
 --   Present "abcDeFG"
 --   PresentT "abcDeFG"
 --
---   >>> pl @(Concat Snd) ('x',["abc","D","eF","","G"])
+--   >>> pl @(Concat (Snd Id)) ('x',["abc","D","eF","","G"])
 --   Present "abcDeFG"
 --   PresentT "abcDeFG"
 --
@@ -4010,7 +4150,7 @@ instance (P q a
 data Lookup p q
 type p !!! q = Lookup p q >> MaybeIn (Failp "index not found") Id -- use !!
 -- Lookup' is interesting but just use Lookup or !!
-type Lookup' (t :: Type) p q = q &&& Lookup p q >> If (Snd >> IsNothing) (ShowP Fst >> Fail (Hole t) (Printf "index(%s) not found" Id)) (Snd >> 'Just Id)
+type Lookup' (t :: Type) p q = q &&& Lookup p q >> If (Snd Id >> IsNothing) (ShowP (Fst Id) >> Fail (Hole t) (Printf "index(%s) not found" Id)) (Snd Id >> 'Just Id)
 
 
 instance (P q a
@@ -4111,11 +4251,11 @@ instance (PP p x ~ t a
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst :+ Snd) (99,[1,2,3,4])
+--   >>> pl @(Fst Id :+ (Snd Id)) (99,[1,2,3,4])
 --   Present [99,1,2,3,4]
 --   PresentT [99,1,2,3,4]
 --
---   >>> pl @(Snd :+ Fst) ([],5)
+--   >>> pl @(Snd Id :+ Fst Id) ([],5)
 --   Present [5]
 --   PresentT [5]
 --
@@ -4145,11 +4285,11 @@ instance (P p x
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Snd +: Fst) (99,[1,2,3,4])
+--   >>> pl @(Snd Id +: Fst Id) (99,[1,2,3,4])
 --   Present [1,2,3,4,99]
 --   PresentT [1,2,3,4,99]
 --
---   >>> pl @(Fst +: Snd) ([],5)
+--   >>> pl @(Fst Id +: (Snd Id)) ([],5)
 --   Present [5]
 --   PresentT [5]
 --
@@ -4321,7 +4461,7 @@ instance (Show a, Show b) => P PartitionEithers [Either a b] where
     let b = partitionEithers as
     in pure $ mkNode opts (PresentT b) ["PartitionEithers" <> show0 opts " " b <> showA opts " | " as] []
 
--- | similar to 'partitionThese'. returns a 3-tuple with the results so use 'Fst3' 'Snd3' 'Thd3' to extract
+-- | similar to 'partitionThese'. returns a 3-tuple with the results so use 'Fst' 'Snd' 'Thd' to extract
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
@@ -4336,9 +4476,9 @@ instance (Show a, Show b) => P PartitionThese [These a b] where
     let b = partitionThese as
     in pure $ mkNode opts (PresentT b) ["PartitionThese" <> show0 opts " " b <> showA opts " | " as] []
 
-type Thiss = PartitionThese >> Fst3
-type Thats = PartitionThese >> Snd3
-type Theses = PartitionThese >> Thd3
+type Thiss = PartitionThese >> Fst Id
+type Thats = PartitionThese >> Snd Id
+type Theses = PartitionThese >> Thd Id
 
 -- want to pass Proxy b to q but then we have no way to calculate 'b'
 
@@ -4346,7 +4486,7 @@ type Theses = PartitionThese >> Thd3
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Scanl (Snd :+ Fst) Fst Snd) ([99],[1..5])
+--   >>> pl @(Scanl (Snd Id :+ Fst Id) (Fst Id) (Snd Id)) ([99],[1..5])
 --   Present [[99],[1,99],[2,1,99],[3,2,1,99],[4,3,2,1,99],[5,4,3,2,1,99]]
 --   PresentT [[99],[1,99],[2,1,99],[3,2,1,99],[4,3,2,1,99],[5,4,3,2,1,99]]
 --
@@ -4363,8 +4503,8 @@ data Scanl p q r
 -- scanr :: (a -> b -> b) -> b -> [a] -> [b]
 -- result is scanl but signature is flipped ((a,b) -> b) -> b -> [a] -> [b]
 
-type ScanN n p q = Scanl (Fst >> q) p (EnumFromTo 1 n) -- n times using q then run p
-type ScanNA q = ScanN Fst Snd q
+type ScanN n p q = Scanl (Fst Id >> q) p (EnumFromTo 1 n) -- n times using q then run p
+type ScanNA q = ScanN (Fst Id) (Snd Id) q
 
 type FoldN n p q = Last' (ScanN n p q)
 type Foldl p q r = Last' (Scanl p q r)
@@ -4421,11 +4561,11 @@ type family UnfoldT mbs where
 --   PresentT [4,5,6,7]
 --
 data Unfoldr p q
---type IterateN (t :: Type) n f = Unfoldr (If (Fst == 0) (MkNothing t) (Snd &&& (Pred Id *** f) >> MkJust)) '(n, Id)
-type IterateN n f = Unfoldr (MaybeB (Fst > 0) '(Snd, Pred Id *** f)) '(n, Id)
+--type IterateN (t :: Type) n f = Unfoldr (If (Fst Id == 0) (MkNothing t) (Snd Id &&& (Pred Id *** f) >> MkJust Id)) '(n, Id)
+type IterateN n f = Unfoldr (MaybeB (Fst Id > 0) '(Snd Id, Pred Id *** f)) '(n, Id)
 type IterateUntil p f = IterateWhile (Not p) f
 type IterateWhile p f = Unfoldr (MaybeB p '(Id, f)) Id
-type IterateNWhile n p f = '(n, Id) >> IterateWhile (Fst > 0 && (Snd >> p)) (Pred Id *** f) >> Map Snd Id
+type IterateNWhile n p f = '(n, Id) >> IterateWhile (Fst Id > 0 && (Snd Id >> p)) (Pred Id *** f) >> Map (Snd Id) Id
 type IterateNUntil n p f = IterateNWhile n (Not p) f
 
 instance (PP q a ~ s
@@ -4578,7 +4718,7 @@ instance Show a => P Pairs [a] where
 --
 data Partition p q
 
-type FilterBy p q = Partition p q >> Fst
+type FilterBy p q = Partition p q >> Fst Id
 
 instance (P p x
         , Show x
@@ -4728,7 +4868,7 @@ instance P p a => P (W p) a where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Catch (Succ Id) (Fst >> Second (ShowP Id) >> Printf2 "%s %s" >> 'LT)) GT
+--   >>> pl @(Catch (Succ Id) (Fst Id >> Second (ShowP Id) >> Printf2 "%s %s" >> 'LT)) GT
 --   Present LT
 --   PresentT LT
 --
@@ -4745,7 +4885,7 @@ instance P p a => P (W p) a where
 -- need the proxy so we can fail without having to explicitly specify a type
 data Catch p q -- catch p and if fails runs q only on failt
 type Catch' p s = Catch p (FailCatch s) -- eg set eg s=Printf "%d" Id or Printf "%s" (ShowP Id)
-type FailCatch s = Fail (Snd >> Unproxy) (Fst >> s)
+type FailCatch s = Fail (Snd Id >> Unproxy) (Fst Id >> s)
 
 instance (P p x
         , P q ((String, x)
@@ -4767,18 +4907,18 @@ instance (P p x
 
 type Even = Mod I 2 >> Same 0
 type Odd = Mod I 2 >> Same 1
-type Div' p q = DivMod p q >> Fst
-type Mod' p q = DivMod p q >> Snd
+type Div' p q = DivMod p q >> Fst Id
+type Mod' p q = DivMod p q >> (Snd Id)
 
 -- | similar to 'div'
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Div Fst Snd) (10,4)
+--   >>> pl @(Div (Fst Id) (Snd Id)) (10,4)
 --   Present 2
 --   PresentT 2
 --
---   >>> pl @(Div Fst Snd) (10,0)
+--   >>> pl @(Div (Fst Id) (Snd Id)) (10,0)
 --   Error Div zero denominator
 --   FailT "Div zero denominator"
 --
@@ -4807,11 +4947,11 @@ instance (PP p a ~ PP q a
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Mod Fst Snd) (10,3)
+--   >>> pl @(Mod (Fst Id) (Snd Id)) (10,3)
 --   Present 1
 --   PresentT 1
 --
---   >>> pl @(Mod Fst Snd) (10,0)
+--   >>> pl @(Mod (Fst Id) (Snd Id)) (10,0)
 --   Error Mod zero denominator
 --   FailT "Mod zero denominator"
 --
@@ -4839,23 +4979,23 @@ instance (PP p a ~ PP q a
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(DivMod Fst Snd) (10,3)
+--   >>> pl @(DivMod (Fst Id) (Snd Id)) (10,3)
 --   Present (3,1)
 --   PresentT (3,1)
 --
---   >>> pl @(DivMod Fst Snd) (10,-3)
+--   >>> pl @(DivMod (Fst Id) (Snd Id)) (10,-3)
 --   Present (-4,-2)
 --   PresentT (-4,-2)
 --
---   >>> pl @(DivMod Fst Snd) (-10,3)
+--   >>> pl @(DivMod (Fst Id) (Snd Id)) (-10,3)
 --   Present (-4,2)
 --   PresentT (-4,2)
 --
---   >>> pl @(DivMod Fst Snd) (-10,-3)
+--   >>> pl @(DivMod (Fst Id) (Snd Id)) (-10,-3)
 --   Present (3,-1)
 --   PresentT (3,-1)
 --
---   >>> pl @(DivMod Fst Snd) (10,0)
+--   >>> pl @(DivMod (Fst Id) (Snd Id)) (10,0)
 --   Error DivMod zero denominator
 --   FailT "DivMod zero denominator"
 --
@@ -4884,23 +5024,23 @@ instance (PP p a ~ PP q a
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(QuotRem Fst Snd) (10,3)
+--   >>> pl @(QuotRem (Fst Id) (Snd Id)) (10,3)
 --   Present (3,1)
 --   PresentT (3,1)
 --
---   >>> pl @(QuotRem Fst Snd) (10,-3)
+--   >>> pl @(QuotRem (Fst Id) (Snd Id)) (10,-3)
 --   Present (-3,1)
 --   PresentT (-3,1)
 --
---   >>> pl @(QuotRem Fst Snd) (-10,-3)
+--   >>> pl @(QuotRem (Fst Id) (Snd Id)) (-10,-3)
 --   Present (3,-1)
 --   PresentT (3,-1)
 --
---   >>> pl @(QuotRem Fst Snd) (-10,3)
+--   >>> pl @(QuotRem (Fst Id) (Snd Id)) (-10,3)
 --   Present (-3,-1)
 --   PresentT (-3,-1)
 --
---   >>> pl @(QuotRem Fst Snd) (10,0)
+--   >>> pl @(QuotRem (Fst Id) (Snd Id)) (10,0)
 --   Error QuotRem zero denominator
 --   FailT "QuotRem zero denominator"
 --
@@ -4925,8 +5065,8 @@ instance (PP p a ~ PP q a
              _ -> let d = p `quotRem` q
                   in mkNode opts (PresentT d) [show p <> " `quotRem` " <> show q <> " = " <> show d] hhs
 
-type Quot p q = QuotRem p q >> Fst
-type Rem p q = QuotRem p q >> Snd
+type Quot p q = QuotRem p q >> Fst Id
+type Rem p q = QuotRem p q >> (Snd Id)
 
 --type OneP = Guard "expected list of length 1" (Len >> Same 1) >> Head'
 type OneP = Guard (Printf "expected list of length 1 but found length=%d" Len) (Len >> Same 1) >> Head
@@ -5061,7 +5201,7 @@ instance (Show a
   eval _ opts a = do
     let msg0 = "Guard"
     pp <- evalBool (Proxy @p) opts a
-    case getValueLR opts (msg0 <> " p failed") pp [] of
+    case getValueLR opts msg0 pp [] of
       Left e -> pure e
       Right False -> do
         qq <- eval (Proxy @prt) opts a
@@ -5069,6 +5209,43 @@ instance (Show a
           Left e -> e
           Right msgx -> mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] [hh pp, hh qq]
       Right True -> pure $ mkNode opts (PresentT a) [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]  -- dont show the guard message if successful
+
+
+-- | similar to 'Guard' but uses the root message of the False predicate case as the failure message
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(GuardSimple (Luhn Id)) [1..4]
+--   Error Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]
+--   FailT "Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]"
+--
+--   >>> pl @(GuardSimple (Luhn Id)) [1,2,3,0]
+--   Present [1,2,3,0]
+--   PresentT [1,2,3,0]
+--
+--   >>> pl @(GuardSimple (Len > 30)) [1,2,3,0]
+--   Error 4 > 30
+--   FailT "4 > 30"
+--
+data GuardSimple p
+
+instance (Show a
+        , P p a
+        , PP p a ~ Bool
+        ) => P (GuardSimple p) a where
+  type PP (GuardSimple p) a = a
+  eval _ opts a = do
+    let msg0 = "GuardSimple"
+        b = oLite opts
+    pp <- evalBool (Proxy @p) (if b then o02 else opts) a -- to not lose the message in oLite mode we use non lite and then fix it up after
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right False ->
+        let msgx = fromMaybe msg0 $ pp ^? tStrings . ix 0
+        in mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] [hh pp]
+      Right True ->
+        mkNode opts (PresentT a) [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]
+
 
 -- | just run the effect but skip the value
 --   for example for use with Stdout so it doesnt interfere with the \'a\' on the rhs unless there is an error
@@ -5083,7 +5260,7 @@ instance (Show (PP p a), P p a) => P (Skip p) a where
   eval _ opts a = do
     let msg0 = "Skip"
     pp <- eval (Proxy @p) opts a
-    pure $ case getValueLR opts (msg0 <> " p failed") pp [] of
+    pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p -> mkNode opts (PresentT a) [msg0 <> show0 opts " " p] [hh pp]
 
@@ -5093,7 +5270,7 @@ instance (Show (PP p a), P p a) => P (Skip p) a where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst >> Succ (Id !! 0)) ([11,12],'x')
+--   >>> pl @(Fst Id >> Succ (Id !! 0)) ([11,12],'x')
 --   Present 12
 --   PresentT 12
 --
@@ -5129,11 +5306,11 @@ instance (Show (PP p a)
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst && (Snd >> Len >> Ge 4)) (True,[11,12,13,14])
+--   >>> pl @(Fst Id && (Snd Id >> Len >> Ge 4)) (True,[11,12,13,14])
 --   True
 --   TrueT
 --
---   >>> pl @(Fst && (Snd >> Len >> Same 4)) (True,[12,11,12,13,14])
+--   >>> pl @(Fst Id && (Snd Id >> Len >> Same 4)) (True,[12,11,12,13,14])
 --   False
 --   FalseT
 --
@@ -5156,11 +5333,11 @@ instance (P p a
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst || (Snd >> Len >> Ge 4)) (False,[11,12,13,14])
+--   >>> pl @(Fst Id || (Snd Id >> Len >> Ge 4)) (False,[11,12,13,14])
 --   True
 --   TrueT
 --
---   >>> pl @((Not Fst) || (Snd >> Len >> Same 4)) (True,[12,11,12,13,14])
+--   >>> pl @((Not (Fst Id)) || (Snd Id >> Len >> Same 4)) (True,[12,11,12,13,14])
 --   False
 --   FalseT
 --
@@ -5183,19 +5360,19 @@ instance (P p a
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst ~> (Snd >> Len >> Ge 4)) (True,[11,12,13,14])
+--   >>> pl @(Fst Id ~> (Snd Id >> Len >> Ge 4)) (True,[11,12,13,14])
 --   True
 --   TrueT
 --
---   >>> pl @(Fst ~> (Snd >> Len >> Same 4)) (True,[12,11,12,13,14])
+--   >>> pl @(Fst Id ~> (Snd Id >> Len >> Same 4)) (True,[12,11,12,13,14])
 --   False
 --   FalseT
 --
---   >>> pl @(Fst ~> (Snd >> Len >> Same 4)) (False,[12,11,12,13,14])
+--   >>> pl @(Fst Id ~> (Snd Id >> Len >> Same 4)) (False,[12,11,12,13,14])
 --   True
 --   TrueT
 --
---   >>> pl @(Fst ~> (Snd >> Len >> Ge 4)) (False,[11,12,13,14])
+--   >>> pl @(Fst Id ~> (Snd Id >> Len >> Ge 4)) (False,[11,12,13,14])
 --   True
 --   TrueT
 --
@@ -5222,23 +5399,28 @@ infix 4 ===
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst === Snd) (10,9)
+--   >>> pl @(Fst Id === (Snd Id)) (10,9)
 --   Present GT
 --   PresentT GT
 --
---   >>> pl @(14 % 3 === Fst %- Snd) (-10,7)
+--   >>> pl @(14 % 3 === Fst Id %- (Snd Id)) (-10,7)
 --   Present GT
 --   PresentT GT
 --
---   >>> pl @(OrdP Fst Snd) (10,10)
---   Present EQ
---   PresentT EQ
---
---   >>> pl @(Fst === Snd) (10,11)
+--   >>> pl @(Fst Id === (Snd Id)) (10,11)
 --   Present LT
 --   PresentT LT
 --
-type OrdA' p q = OrdP (Fst >> p) (Snd >> q)
+--   >>> pl @(Snd Id === (Fst Id >> Snd Id >> Head' Id)) (('x',[10,12,13]),10)
+--   Present EQ
+--   PresentT EQ
+--
+--   >>> pl @(Snd Id === Head' (Snd (Fst Id))) (('x',[10,12,13]),10)
+--   Present EQ
+--   PresentT EQ
+--
+
+type OrdA' p q = OrdP (Fst Id >> p) (Snd Id >> q)
 type OrdA p = OrdA' p p
 
 instance (Ord (PP p a)
@@ -5261,11 +5443,11 @@ instance (Ord (PP p a)
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst ===? Snd) ("abC","aBc")
+--   >>> pl @(Fst Id ===? (Snd Id)) ("abC","aBc")
 --   Present EQ
 --   PresentT EQ
 --
---   >>> pl @(Fst ===? Snd) ("abC","DaBc")
+--   >>> pl @(Fst Id ===? (Snd Id)) ("abC","DaBc")
 --   Present LT
 --   PresentT LT
 --
@@ -5356,7 +5538,7 @@ instance (Show x
   eval _ opts x = do
     let msg0 = "IToList"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts (msg0 <> " p failed") pp [] of
+    pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
         let b = itoList p
@@ -5367,9 +5549,25 @@ instance (Show x
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @ToList "aBc"
+--   >>> pl @ToList ("aBc" :: String)
 --   Present "aBc"
 --   PresentT "aBc"
+--
+--   >>> pl @ToList (Just 14)
+--   Present [14]
+--   PresentT [14]
+--
+--   >>> pl @ToList Nothing
+--   Present []
+--   PresentT []
+--
+--   >>> pl @ToList (Left "xx")
+--   Present []
+--   PresentT []
+--
+--   >>> pl @ToList (These 12 "xx")
+--   Present ["xx"]
+--   PresentT ["xx"]
 --
 data ToList
 instance (Show (t a)
@@ -5380,6 +5578,48 @@ instance (Show (t a)
   eval _ opts as =
     let z = toList as
     in pure $ mkNode opts (PresentT z) ["ToList" <> show0 opts " " z <> showA opts " | " as] []
+
+-- | similar to 'toList'
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(ToList' Id) ("aBc" :: String)
+--   Present "aBc"
+--   PresentT "aBc"
+--
+--   >>> pl @(ToList' Id) (Just 14)
+--   Present [14]
+--   PresentT [14]
+--
+--   >>> pl @(ToList' Id) Nothing
+--   Present []
+--   PresentT []
+--
+--   >>> pl @(ToList' Id) (Left "xx")
+--   Present []
+--   PresentT []
+--
+--   >>> pl @(ToList' Id) (These 12 "xx")
+--   Present ["xx"]
+--   PresentT ["xx"]
+--
+data ToList' p
+
+instance (PP p x ~ t a
+        , P p x
+        , Show (t a)
+        , Foldable t
+        , Show a
+        ) => P (ToList' p) x where
+  type PP (ToList' p) x = [ExtractAFromTA (PP p x)] -- extra layer of indirection means pe (ToList' Id) "abc" won't work without setting the type of "abc" unlike ToList
+  eval _ opts x = do
+    let msg0 = "ToList'"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = toList p
+        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
 
 data ToListExt
 
@@ -5418,60 +5658,67 @@ instance (Show l
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @IsThis (This "aBc")
+--   >>> pl @(IsThis Id) (This "aBc")
 --   True
 --   TrueT
 --
---   >>> pl @IsThis (These 1 'a')
+--   >>> pl @(IsThis Id) (These 1 'a')
 --   False
 --   FalseT
 --
---   >>> pl @IsThese (These 1 'a')
+--   >>> pl @(IsThese Id) (These 1 'a')
 --   True
 --   TrueT
 --
-data IsTh (th :: These x y) -- x y can be anything
+data IsTh (th :: These x y) p -- x y can be anything
 
-type IsThis = IsTh ('This '())
-type IsThat = IsTh ('That '())
-type IsThese = IsTh ('These '() '())
+type IsThis p = IsTh ('This '()) p
+type IsThat p = IsTh ('That '()) p
+type IsThese p = IsTh ('These '() '()) p
 
 -- trying to avoid show instance cos of ambiguities
-instance (Show a
+instance (PP p x ~ These a b
+        , P p x
+        , Show a
         , Show b
         , GetThese th
-        ) => P (IsTh (th :: These x y)) (These a b) where
-  type PP (IsTh th) (These a b) = Bool
-  eval _ opts th =
-     let (t,f) = getThese (Proxy @th)
-         b = f th
-     in pure $ mkNodeB opts b ["IsTh '" <> t <> showA opts " | " th] []
+        ) => P (IsTh (th :: These x1 x2) p) x where
+  type PP (IsTh th p) x = Bool
+  eval _ opts x = do
+    let msg0 = "IsTh"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let (t,f) = getThese (Proxy @th)
+            b = f p
+        in mkNodeB opts b [msg0 <> " " <> t <> showA opts " | " p] []
 
 -- | similar to 'these'
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(TheseIn Id Len (Fst + Length Snd)) (This 13)
+--   >>> pl @(TheseIn Id Len (Fst Id + Length (Snd Id))) (This 13)
 --   Present 13
 --   PresentT 13
 --
---   >>> pl @(TheseIn Id Len (Fst + Length Snd)) (That "this is a long string")
+--   >>> pl @(TheseIn Id Len (Fst Id + Length (Snd Id))) (That "this is a long string")
 --   Present 21
 --   PresentT 21
 --
---   >>> pl @(TheseIn Id Len (Fst + Length Snd)) (These 20 "somedata")
+--   >>> pl @(TheseIn Id Len (Fst Id + Length (Snd Id))) (These 20 "somedata")
 --   Present 28
 --   PresentT 28
 --
---   >>> pl @(TheseIn (Left _) (Right _) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (That "this is a long string")
+--   >>> pl @(TheseIn (Left _) (Right _) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (That "this is a long string")
 --   Present Right "this is a long string"
 --   PresentT (Right "this is a long string")
 --
---   >>> pl @(TheseIn (Left _) (Right _) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 1 "this is a long string")
+--   >>> pl @(TheseIn (Left _) (Right _) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 1 "this is a long string")
 --   Present Right "this is a long string"
 --   PresentT (Right "this is a long string")
 --
---   >>> pl @(TheseIn (Left _) (Right _) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 100 "this is a long string")
+--   >>> pl @(TheseIn (Left _) (Right _) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 100 "this is a long string")
 --   Present Left 100
 --   PresentT (Left 100)
 --
@@ -5548,7 +5795,7 @@ instance (P p x, Show (PP p x))
   eval _ opts x = do
     let msg0 = "Singleton"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts (msg0 <> " p failed") pp [] of
+    pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
         let b = [p]
@@ -5576,11 +5823,11 @@ instance (KnownSymbol s, NullT s ~ 'False) => P (Char1 s) a where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(ZipThese Fst Snd) ("aBc", [1..5])
+--   >>> pl @(ZipThese (Fst Id) (Snd Id)) ("aBc", [1..5])
 --   Present [These 'a' 1,These 'B' 2,These 'c' 3,That 4,That 5]
 --   PresentT [These 'a' 1,These 'B' 2,These 'c' 3,That 4,That 5]
 --
---   >>> pl @(ZipThese Fst Snd) ("aBcDeF", [1..3])
+--   >>> pl @(ZipThese (Fst Id) (Snd Id)) ("aBcDeF", [1..3])
 --   Present [These 'a' 1,These 'B' 2,These 'c' 3,This 'D',This 'e',This 'F']
 --   PresentT [These 'a' 1,These 'B' 2,These 'c' 3,This 'D',This 'e',This 'F']
 --
@@ -5639,15 +5886,15 @@ type family ExtractAFromTA (ta :: Type) :: Type where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Ziplc Fst Snd) ("abc", [1..5])
+--   >>> pl @(Ziplc (Fst Id) (Snd Id)) ("abc", [1..5])
 --   Present [('a',1),('b',2),('c',3),('a',4),('b',5)]
 --   PresentT [('a',1),('b',2),('c',3),('a',4),('b',5)]
 --
---   >>> pl @(Ziplc Fst Snd) ("abcdefg", [1..5])
+--   >>> pl @(Ziplc (Fst Id) (Snd Id)) ("abcdefg", [1..5])
 --   Present [('a',1),('b',2),('c',3),('d',4),('e',5)]
 --   PresentT [('a',1),('b',2),('c',3),('d',4),('e',5)]
 --
---   >>> pl @(Ziprc Fst Snd) ("abcdefg", [1..5])
+--   >>> pl @(Ziprc (Fst Id) (Snd Id)) ("abcdefg", [1..5])
 --   Present [('a',1),('b',2),('c',3),('d',4),('e',5),('f',1),('g',2)]
 --   PresentT [('a',1),('b',2),('c',3),('d',4),('e',5),('f',1),('g',2)]
 --
@@ -5688,25 +5935,32 @@ instance (GetBool lc
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @Luhn [1,2,3,0]
+--   >>> pl @(Luhn Id) [1,2,3,0]
 --   True
 --   TrueT
 --
---   >>> pl @Luhn [1,2,3,4]
+--   >>> pl @(Luhn Id) [1,2,3,4]
 --   False
 --   FalseT
-data Luhn
+data Luhn p
 
-instance a ~ [Int] => P Luhn a where
-  type PP Luhn a = Bool
-  eval _ opts as =
-    let xs = zipWith (*) (reverse as) (cycle [1,2])
-        ys = map (\x -> if x>=10 then x-9 else x) xs
-        z = sum ys
-        ret = z `mod` 10
-        msg = "Luhn"
-    in pure $ if ret == 0 then mkNode opts TrueT [msg <> show0 opts " | " as] []
-       else mkNode opts FalseT [msg <> " map=" <> show ys <> " sum=" <> show z <> " ret=" <> show ret <> showA opts " | as=" as] []
+instance (PP p x ~ [Int]
+        , P p x
+        ) => P (Luhn p) x where
+  type PP (Luhn p) x = Bool
+  eval _ opts x = do
+    let msg0 = "Luhn"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let xs = zipWith (*) (reverse p) (cycle [1,2])
+            ys = map (\w -> if w>=10 then w-9 else w) xs
+            z = sum ys
+            ret = z `mod` 10
+            hhs = [hh pp]
+        in if ret == 0 then mkNodeB opts True [msg0 <> show0 opts " | " p] hhs
+           else mkNodeB opts False [msg0 <> " map=" <> show ys <> " sum=" <> show z <> " ret=" <> show ret <> showA opts " | " p] hhs
 
 pe0, pe, pe1, pe2, pu, pex, pe3, pl, plc :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
 pe0  = peWith @p o0
@@ -5772,7 +6026,7 @@ instance (Typeable (PP t x)
         msg0 = "ReadBase(" <> t <> "," <> show n <> ")"
         t = showT @(PP t x)
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts (msg0 <> " p failed") pp [] of
+    pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
         let (ff,p1) = case p of
@@ -5822,10 +6076,10 @@ instance (Show a
         b = showIntAtBase (fromIntegral n) (xs !!) a' ""
     in pure $ mkNode opts (PresentT (ff b)) [msg <> showLit0 opts " " (ff b) <> showA opts " | " a] []
 
-type Assocl = '(I *** Fst, Snd >> Snd)
-type Assocr = '(Fst >> Fst, Snd *** I)
---type Assocl = (I *** Fst) &&& (Snd >> Snd)
---type Assocr = (Fst >> Fst) &&& (Snd *** I)
+type Assocl = '(I *** Fst Id, (Snd Id) >> (Snd Id))
+type Assocr = '(Fst Id >> Fst Id, (Snd Id) *** I)
+--type Assocl = (I *** Fst Id) &&& (Snd Id >> (Snd Id))
+--type Assocr = (Fst Id >> Fst Id) &&& (Snd Id *** I)
 
 -- | Intercalate
 --
@@ -6001,19 +6255,19 @@ instance (KnownNat n
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Case (FailS "asdf" >> Snd >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 50
+--   >>> pl @(Case (FailS "asdf" >> (Snd Id) >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 50
 --   Present "50 is same50"
 --   PresentT "50 is same50"
 --
---   >>> pl @(Case (FailS "asdf" >> Snd >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 9
+--   >>> pl @(Case (FailS "asdf" >> (Snd Id) >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 9
 --   Present "9 is lt10"
 --   PresentT "9 is lt10"
 --
---   >>> pl @(Case (FailS "asdf" >> Snd >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 3
+--   >>> pl @(Case (FailS "asdf" >> (Snd Id) >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 3
 --   Present "3 is lt4"
 --   PresentT "3 is lt4"
 --
---   >>> pl @(Case (FailS "asdf" >> Snd >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 99
+--   >>> pl @(Case (FailS "asdf" >> (Snd Id) >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 99
 --   Error asdf
 --   FailT "asdf"
 --
@@ -6023,10 +6277,10 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- r = the value
 -- e = otherwise  -- leave til later
 data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
-type Case' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd >> Failp "Case:no match") ps qs r
+type Case' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd Id >> Failp "Case:no match") ps qs r
 type Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (FailCase s) ps qs r -- eg s= Printf "%s" (ShowP Id)
 
-type FailCase p = Fail (Snd >> Unproxy) (Fst >> p)
+type FailCase p = Fail (Snd Id >> Unproxy) (Fst Id >> p)
 
 
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out
@@ -6372,6 +6626,10 @@ type Nothing' = Guard "expected Nothing" IsNothing
 --   False
 --   FalseT
 --
+--   >>> pl @(IsSuffix "bCd" "aBcbCd") ()
+--   True
+--   TrueT
+--
 -- prefix infix suffix for strings
 data IsFixImpl (cmp :: Ordering) (ignore :: Bool) p q
 
@@ -6400,7 +6658,7 @@ instance (GetBool ignore
                     EQ -> (isInfixOf, "IsInfix")
                     GT -> (isSuffixOf, "IsSuffix")
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts (msg0 <> " p failed") pp [] of
+    case getValueLR opts msg0 pp [] of
         Left e -> pure e
         Right s0 -> do
           let msg1 = msg0 <> (if ignore then "I" else "") <> "(" <> s0 <> ")"
@@ -6413,14 +6671,14 @@ instance (GetBool ignore
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst <> Snd) ("abc","def")
+--   >>> pl @(Fst Id <> (Snd Id)) ("abc","def")
 --   Present "abcdef"
 --   PresentT "abcdef"
 --
 data p <> q
 infixr 6 <>
-type Sapa' (t :: Type) = Wrap t Fst <> Wrap t Snd
-type Sapa = Fst <> Snd
+type Sapa' (t :: Type) = Wrap t (Fst Id) <> Wrap t (Snd Id)
+type Sapa = Fst Id <> (Snd Id)
 
 instance (Semigroup (PP p x)
         , PP p x ~ PP q x
@@ -6511,10 +6769,10 @@ data Printfn s p
 type Printfnt (n :: Nat) s =  Printfn s (TupleList n)
 type PrintfntLax (n :: Nat) s = Printfn s (TupleListLax n)
 
-type Printf2 (s :: Symbol) = Printfn s '(Fst,'(Snd, '()))
+type Printf2 (s :: Symbol) = Printfn s '(Fst Id,'(Snd Id, '()))
 -- Printf3/Printf3' expected format is (a, (b,c)) : we dont support (a,b,c) ever!
-type Printf3 (s :: Symbol) = Printfn s '(Fst, '(Snd >> Fst, '(Snd >> Snd, '())))
-type Printf3' (s :: Symbol) = Printfn s (TupleI '[Fst, Snd >> Fst, Snd >> Snd])
+type Printf3 (s :: Symbol) = Printfn s '(Fst Id, '(Snd Id >> Fst Id, '(Snd Id >> (Snd Id), '())))
+type Printf3' (s :: Symbol) = Printfn s (TupleI '[Fst Id, (Snd Id) >> Fst Id, (Snd Id) >> (Snd Id)])
 
 instance (KnownNat (TupleLenT as)
         , PrintC bs
@@ -6562,7 +6820,7 @@ type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst <$ Snd) ("abc",Just 20)
+--   >>> pl @(Fst Id <$ (Snd Id)) ("abc",Just 20)
 --   Present Just "abc"
 --   PresentT (Just "abc")
 --
@@ -6593,7 +6851,7 @@ infixl 4 <*
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst <* Snd) (Just "abc",Just 20)
+--   >>> pl @(Fst Id <* (Snd Id)) (Just "abc",Just 20)
 --   Present Just "abc"
 --   PresentT (Just "abc")
 --
@@ -6622,15 +6880,15 @@ instance (Show (t c)
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Fst <|> Snd) (Nothing,Just 20)
+--   >>> pl @(Fst Id <|> (Snd Id)) (Nothing,Just 20)
 --   Present Just 20
 --   PresentT (Just 20)
 --
---   >>> pl @(Fst <|> Snd) (Just 10,Just 20)
+--   >>> pl @(Fst Id <|> (Snd Id)) (Just 10,Just 20)
 --   Present Just 10
 --   PresentT (Just 10)
 --
---   >>> pl @(Fst <|> Snd) (Nothing,Nothing)
+--   >>> pl @(Fst Id <|> (Snd Id)) (Nothing,Nothing)
 --   Present Nothing
 --   PresentT Nothing
 --
@@ -6758,20 +7016,20 @@ evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) o0 i))
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(Trim Snd) (20," abc   " :: String)
+--   >>> pl @(Trim (Snd Id)) (20," abc   " :: String)
 --   Present "abc"
 --   PresentT "abc"
 --
 --   >>> import Data.Text (Text)
---   >>> pl @(Trim Snd) (20," abc   " :: Text)
+--   >>> pl @(Trim (Snd Id)) (20," abc   " :: Text)
 --   Present "abc"
 --   PresentT "abc"
 --
---   >>> pl @(TrimStart Snd) (20," abc   ")
+--   >>> pl @(TrimStart (Snd Id)) (20," abc   ")
 --   Present "abc   "
 --   PresentT "abc   "
 --
---   >>> pl @(TrimEnd Snd) (20," abc   ")
+--   >>> pl @(TrimEnd (Snd Id)) (20," abc   ")
 --   Present " abc"
 --   PresentT " abc"
 --
@@ -6955,7 +7213,8 @@ instance (P (RepeatT n p) a
   eval _ opts a =
     eval (Proxy @(RepeatT n p)) opts a
 
--- same as \'DoN n p\' == \'FoldN n p Id\' but more efficient
+-- \'DoN n p\' == \'FoldN n p Id\' but more efficient
+
 -- | leverages 'Do' for repeating predicates (passthrough method)
 --   same as \'DoN n p\' == \'FoldN n p Id\' but more efficient
 --

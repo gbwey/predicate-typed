@@ -784,7 +784,7 @@ fixit ((i, _), t) = prefixMsg ("i=" <> show i <> ":") t
 
 prefixMsg :: String -> TT a -> TT a
 prefixMsg msg t =
-   t & tStrings .ix 0 %~ (msg <>)
+   t & tStrings . ix 0 %~ (msg <>)
 
 showNat :: forall n . KnownNat n => String
 showNat = show (nat @n :: Integer)

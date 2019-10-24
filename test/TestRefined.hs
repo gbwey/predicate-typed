@@ -49,8 +49,8 @@ namedTests =
 unnamedTests :: [IO ()]
 unnamedTests = [
     (@?=) (unsafeRefined @'True ("1.2.3.4" :: String)) $$(refinedTH "1.2.3.4")
-  , (@?=) (unsafeRefined @((Len >> Same 4) && Luhn) [1,2,3,0]) $$(refinedTH [1,2,3,0])
-  , (@?=) (unsafeRefined @(Not ((Len >> Same 4) && Luhn)) [1,2,3,1]) $$(refinedTH [1,2,3,1])
+  , (@?=) (unsafeRefined @((Len >> Same 4) && Luhn Id) [1,2,3,0]) $$(refinedTH [1,2,3,0])
+  , (@?=) (unsafeRefined @(Not ((Len >> Same 4) && Luhn Id)) [1,2,3,1]) $$(refinedTH [1,2,3,1])
 
   , (@?=) [(unsafeRefined 7, "")] (reads @(Refined (Between 2 10) Int) "Refined {unRefined = 7}")
   , (@?=) [] (reads @(Refined (Between 2 10) Int) "Refined {unRefined = 0}")
@@ -77,7 +77,7 @@ allProps =
 
 type Ip4RE = "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$"
 
-type Ip4 = Rescan Ip4RE Id >> OneP >> Map (ReadBaseInt 10) Snd >> Ip4guard
+type Ip4 = Rescan Ip4RE Id >> OneP >> Map (ReadBaseInt 10) (Snd Id) >> Ip4guard
 
 type Ip4guard = Guard "4octets" (Len >> Same 4) >> Guard "0-255" (All (Between 0 255) Id)
 
@@ -113,7 +113,7 @@ type Ip4C = Printfnt 4 "%03d.%03d.%03d.%03d"
 
 -- base n number of length x and then convert to a list of length x of (0 to (n-1))
 -- checks that each digit is between 0 and n-1
-type MM1 (n :: Nat) = Map (ReadBase Int n) Ones
+type MM1 (n :: Nat) = Map (ReadBase Int n) (Ones Id)
 type MM2 (n :: Nat) = ExitWhen "found empty" IsEmpty >> Guard "0<=x<n" (All (Ge 0 && Lt n) Id)
 
 -- prtRefinedT tst1
