@@ -40,7 +40,7 @@ import UtilP
 import Safe
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
-import qualified GHC.TypeNats as GN
+--import qualified GHC.TypeNats as GN
 import Control.Lens hiding (strict,iall)
 import Data.List
 import Data.Text.Lens
@@ -97,7 +97,6 @@ type Desc = Ands (Map (Fst >= Snd) Pairs)
 type Desc' = Ands (Map (Fst > Snd) Pairs)
 
 -- | A predicate that determines if the value is between \'p\' and \'q\'
---   The values can be rational numbers using 'Rat' or plain Natural numbers
 type Between p q = Ge p && Le q
 -- | This is the same as 'Between' but where \'r\' is 'Id'
 type Between' p q r = r >= p && r <= q
@@ -595,7 +594,7 @@ instance (as ~ [a], Show a) => P Ones as where
 --   Present "'x'"
 --   PresentT "'x'"
 --
---   >>> pl @(ShowP (NegR 42 10)) 'x'
+--   >>> pl @(ShowP (42 %- 10)) 'x'
 --   Present "(-21) % 5"
 --   PresentT "(-21) % 5"
 --
@@ -1997,101 +1996,6 @@ instance (P p a
                 -- only PresentP makes sense here (ie not TrueP/FalseP: ok in base case tho
                 Right ws -> mkNode opts (PresentT (w,ws)) [msg <> show0 opts " " a] [hh pp, hh qq]
 
--- | type level representation of signed rational numbers/integers
---
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> :set -XNoStarIsType
---   >>> pl @(NegR 14 3) ()
---   Present (-14) % 3
---   PresentT ((-14) % 3)
---
---   >>> pl @(PosR 14 3) ()
---   Present 14 % 3
---   PresentT (14 % 3)
---
---   >>> pl @(CmpRat (NegR 14 3) (Neg 5)) ()
---   Present GT
---   PresentT GT
---
---   >>> pl @(NegR 14 3 * Neg 5) ()
---   Present 70 % 3
---   PresentT (70 % 3)
---
---   >>> pl @(NegR 14 3 - Pos 5) ()
---   Present (-29) % 3
---   PresentT ((-29) % 3)
---
---   >>> pl @(CmpRat (PosR 14 3) 5) ()
---   Present LT
---   PresentT LT
-
-data Rat (pos :: Bool) (num :: Nat) (den :: Nat)
--- | constructs a positive integer as a rational number 'Rat'
-type Pos (n :: Nat) = Rat 'True n 1
--- | constructs a negative integer as a rational number 'Rat'
-type Neg (n :: Nat) = Rat 'False n 1
-
--- | constructs a valid positive rational number 'Rat'
-type family PosR (n :: Nat) (d :: Nat) where
-  PosR n 0 = GL.TypeError ('GL.Text "PosR has a 0 denominator where numerator=" ':<>: 'GL.ShowType n)
-  PosR n d = Rat 'True n d
-
--- | constructs a valid negative rational number 'Rat'
-type family NegR (n :: Nat) (d :: Nat) where
-  NegR n 0 = GL.TypeError ('GL.Text "NegR has a 0 denominator where numerator=" ':<>: 'GL.ShowType n)
-  NegR n d = Rat 'False n d
-
-instance (GetBool pos
-        , KnownNat num
-        , KnownNat den
-        , NotZeroT den
-        ) => P (Rat pos num den) a where
-  type PP (Rat pos num den) a = Rational
-  eval _ opts _ =
-    let pos = getBool @pos
-        num = nat @num
-        den = nat @den
-        msg = "Rat " <> show r
-        r = (if pos then id else negate) (num % den)
-    in pure $ mkNode opts (PresentT r) [msg] []
-
--- | compares 2 numbers where the numbers are type level signed rationals or Nats
-type family CmpRat (m :: k) (n :: k1) :: Ordering where
-  CmpRat (Rat x n 0) z = GL.TypeError ('GL.Text "CmpRat: lhs has 0 denominator" ':$$: 'GL.ShowType (Rat x n 0) ':<>: 'GL.Text " `CmpRat` " ':<>: 'GL.ShowType z)
-  CmpRat z (Rat x n 0) = GL.TypeError ('GL.Text "CmpRat: rhs has 0 denominator" ':$$: 'GL.ShowType z ':<>: 'GL.Text " `CmpRat` " ':<>: 'GL.ShowType (Rat x n 0))
-  CmpRat (m :: Nat) (n :: Nat) = GN.CmpNat m n
-  CmpRat (Rat x n d) (w :: Nat) = CmpRat (Rat x n d) (Pos w)
-  CmpRat (w :: Nat) (Rat x n d) = CmpRat (Pos w) (Rat x n d)
-  CmpRat (Rat x 0 d) (Rat x1 0 d1) = 'EQ
-  CmpRat (Rat 'True n d) (Rat 'False n1 d1) = 'GT
-  CmpRat (Rat 'False n d) (Rat 'True n1 d1) = 'LT
-  CmpRat (Rat 'False n d) (Rat 'False n1 d1) =
-    CmpRat (Rat 'True n1 d1) (Rat 'True n d)
-  CmpRat (Rat 'True n d) (Rat 'True n1 d1) =
-    IfT (GN.CmpNat (GN.Div n d) (GN.Div n1 d1) DE.== 'EQ)
-       (GN.CmpNat (n GN.* d1) (n1 GN.* d))
-       (GN.CmpNat (GN.Div n d) (GN.Div n1 d1))
-
--- | get a list of 'Rational's from the type level
-class GetRats as where
-  getRats :: [Rational]
-instance GetRats '[] where
-  getRats = []
-instance (GetRat n, GetRats ns) => GetRats (n ': ns) where
-  getRats = getRat @n : getRats @ns
-
--- | get a 'Rational' from the type level
-class GetRat a where
-  getRat :: Rational
-instance KnownNat n => GetRat (n :: Nat) where
-  getRat = nat @n
-instance (GetBool pos, KnownNat num, KnownNat den, NotZeroT den) => GetRat (Rat (pos :: Bool) (num :: Nat) (den :: Nat)) where
-  getRat = let s = getBool @pos
-               n = nat @num
-               d = nat @den
-           in (if s then 1 else (-1)) * n % d
-
 -- | add a message to give more context to the evaluation tree
 --
 --   >>> :set -XTypeApplications
@@ -2449,7 +2353,7 @@ instance (GetBinOp op
 --   Present 6.5
 --   PresentT 6.5
 --
---   >>> pl @(Pos 13 / Id) 0
+--   >>> pl @(ToRational 13 / Id) 0
 --   Error DivF zero denominator
 --   FailT "DivF zero denominator"
 --
@@ -2481,6 +2385,7 @@ instance (PP p a ~ PP q a
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
+--   >>> :set -XNoStarIsType
 --   >>> pl @(Fst % Snd) (13,2)
 --   Present 13 % 2
 --   PresentT (13 % 2)
@@ -2489,8 +2394,49 @@ instance (PP p a ~ PP q a
 --   Error MkRatio zero denominator
 --   FailT "MkRatio zero denominator"
 --
+--   >>> pl @(4 % 3 + 5 % 7) "asfd"
+--   Present 43 % 21
+--   PresentT (43 % 21)
+--
+--   >>> pl @(4 %- 7 * 5 %- 3) "asfd"
+--   Present 20 % 21
+--   PresentT (20 % 21)
+--
+--   >>> pl @(Negate (14 % 3)) ()
+--   Present (-14) % 3
+--   PresentT ((-14) % 3)
+--
+--   >>> pl @(14 % 3) ()
+--   Present 14 % 3
+--   PresentT (14 % 3)
+--
+--   >>> pl @(Negate (14 % 3) === FromIntegral _ (Negate 5)) ()
+--   Present GT
+--   PresentT GT
+--
+--   >>> pl @(14 -% 3 === 5 %- 1) "aa"
+--   Present GT
+--   PresentT GT
+--
+--   >>> pl @(Negate (14 % 3) === Negate 5 % 2) ()
+--   Present LT
+--   PresentT LT
+--
+--   >>> pl @(14 -% 3 * 5 -% 1) ()
+--   Present 70 % 3
+--   PresentT (70 % 3)
+--
+--   >>> pl @(14 % 3 === 5 % 1) ()
+--   Present LT
+--   PresentT LT
+--
 data p % q
-infixl 7 %
+infixl 8 %
+
+type p %- q = Negate (p % q)
+infixl 8 %-
+type p -% q = Negate (p % q)
+infixl 8 -%
 
 instance (Integral (PP p x)
         , Integral (PP q x)
@@ -2527,11 +2473,11 @@ instance (Integral (PP p x)
 --   Present -42
 --   PresentT (-42)
 --
---   >>> pl @(Negate (NegR 15 4)) "abc"
+--   >>> pl @(Negate (15 %- 4)) "abc"
 --   Present 15 % 4
 --   PresentT (15 % 4)
 --
---   >>> pl @(Negate (PosR 15 3)) ()
+--   >>> pl @(Negate (15 % 3)) ()
 --   Present (-5) % 1
 --   PresentT ((-5) % 1)
 --
@@ -3877,7 +3823,23 @@ instance (P p a
 --   PresentT (Sum {getSum = 59})
 --
 data MConcat p
-type FoldMap (t :: Type) p = Map (Wrap t Id) p >> MConcat Id >> Unwrap Id
+
+
+-- | similar to a limited form of 'foldMap'
+--
+--   >>> :set -XTypeApplications
+--   >>> :set -XDataKinds
+--   >>> pl @(FoldMap (SG.Sum _) Id) [44, 12, 3]
+--   Present 59
+--   PresentT 59
+--
+--   >>> pl @(FoldMap (SG.Product _) Id) [44, 12, 3]
+--   Present 1584
+--   PresentT 1584
+--
+
+--type FoldMap (t :: Type) p = Map (Wrap t Id) p >> MConcat Id >> Unwrap Id
+type FoldMap (t :: Type) p = Map (Wrap t Id) p >> Unwrap (MConcat Id)
 
 type Sum (t :: Type) = FoldMap (SG.Sum t) Id
 type Min' (t :: Type) = FoldMap (SG.Min t) Id -- requires t be Bounded for monoid instance
@@ -3887,7 +3849,7 @@ instance (PP p x ~ [a]
         , Show a
         , Monoid a
         ) => P (MConcat p) x where
-  type PP (MConcat p) x = MapTX (PP p x)
+  type PP (MConcat p) x = ExtractAFromTA (PP p x)
   eval _ opts x = do
     let msg0 = "MConcat"
     pp <- eval (Proxy @p) opts x
@@ -3917,7 +3879,7 @@ instance (Show a
         , P p x
         , Foldable t
         ) => P (Concat p) x where
-  type PP (Concat p) x = MapTX (PP p x)
+  type PP (Concat p) x = ExtractAFromTA (PP p x)
   eval _ opts x = do
     let msg0 = "Concat"
     pp <- eval (Proxy @p) opts x
@@ -4359,7 +4321,7 @@ instance (Show a, Show b) => P PartitionEithers [Either a b] where
     let b = partitionEithers as
     in pure $ mkNode opts (PresentT b) ["PartitionEithers" <> show0 opts " " b <> showA opts " | " as] []
 
--- | similar to 'partitionThese'
+-- | similar to 'partitionThese'. returns a 3-tuple with the results so use 'Fst3' 'Snd3' 'Thd3' to extract
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
@@ -4378,11 +4340,6 @@ type Thiss = PartitionThese >> Fst3
 type Thats = PartitionThese >> Snd3
 type Theses = PartitionThese >> Thd3
 
-type CatMaybesa t = Foldl (Fst <> (Snd >> MaybeIn MEmptyP '[Id])) (MEmptyT t) Id
-type CatMaybesx t = Foldl (JustDef' Fst ((Fst >> Fst >> Fst) +: Snd) Snd) (MEmptyT [t]) Id
-type CatMaybesy t = Foldl (JustDef'' (Fst >> Fst >> Fst) ((Fst >> Fst >> Fst) +: Snd) Snd) (MEmptyT [t]) Id
-type CatMaybesz t = Foldl (JustDef''' Fst ((Fst >> Fst) +: Snd) Snd) (MEmptyT [t]) Id
-
 -- want to pass Proxy b to q but then we have no way to calculate 'b'
 
 -- | similar to 'scanl'
@@ -4393,12 +4350,22 @@ type CatMaybesz t = Foldl (JustDef''' Fst ((Fst >> Fst) +: Snd) Snd) (MEmptyT [t
 --   Present [[99],[1,99],[2,1,99],[3,2,1,99],[4,3,2,1,99],[5,4,3,2,1,99]]
 --   PresentT [[99],[1,99],[2,1,99],[3,2,1,99],[4,3,2,1,99],[5,4,3,2,1,99]]
 --
+--   >>> pl @(ScanN 4 Id (Succ Id)) 'c'
+--   Present "cdefg"
+--   PresentT "cdefg"
+--
+--   >>> pl @(FoldN 4 Id (Succ Id)) 'c'
+--   Present 'g'
+--   PresentT 'g'
+--
+
 data Scanl p q r
 -- scanr :: (a -> b -> b) -> b -> [a] -> [b]
 -- result is scanl but signature is flipped ((a,b) -> b) -> b -> [a] -> [b]
 
 type ScanN n p q = Scanl (Fst >> q) p (EnumFromTo 1 n) -- n times using q then run p
 type ScanNA q = ScanN Fst Snd q
+
 type FoldN n p q = Last' (ScanN n p q)
 type Foldl p q r = Last' (Scanl p q r)
 
@@ -4454,7 +4421,7 @@ type family UnfoldT mbs where
 --   PresentT [4,5,6,7]
 --
 data Unfoldr p q
---type Iteraten (t :: Type) n f = Unfoldr (If (Fst == 0) (MkNothing t) (Snd &&& (Pred Id *** f) >> MkJust)) '(n, Id)
+--type IterateN (t :: Type) n f = Unfoldr (If (Fst == 0) (MkNothing t) (Snd &&& (Pred Id *** f) >> MkJust)) '(n, Id)
 type IterateN n f = Unfoldr (MaybeB (Fst > 0) '(Snd, Pred Id *** f)) '(n, Id)
 type IterateUntil p f = IterateWhile (Not p) f
 type IterateWhile p f = Unfoldr (MaybeB p '(Id, f)) Id
@@ -4513,7 +4480,7 @@ instance (Show (PP p a)
         , Show (f a)
         , Foldable f
         ) => P (Map p q) x where
-  type PP (Map p q) x = [PP p (MapTX (PP q x))]
+  type PP (Map p q) x = [PP p (ExtractAFromTA (PP q x))]
   eval _ opts x = do
     let msg0 = "Map"
     qq <- eval (Proxy @q) opts x
@@ -4524,9 +4491,6 @@ instance (Show (PP p a)
         pure $ case splitAndAlign opts [msg0] ts of
              Left e -> e
              Right (vals, _) -> mkNode opts (PresentT vals) [msg0 <> show0 opts " " vals <> showA opts " | " as] (hh qq : map (hh . fixit) ts)
-
-type family MapTX ta where
-  MapTX (t a) = a
 
 -- | if p then run q else run r
 --
@@ -4562,7 +4526,7 @@ instance (Show (PP r a)
           Left e -> e
           Right ret -> mkNode opts (_tBool qqrr) [msg0 <> " " <> if b then "(true cond)" else "(false cond)" <> show0 opts " " ret] [hh pp, hh qqrr]
 
--- | creates a list of overlapping pairs of elements
+-- | creates a list of overlapping pairs of elements. requires two or more elements
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
@@ -4600,7 +4564,20 @@ instance Show a => P Pairs [a] where
 --   Present ([10,4,7,3,3,5],[1,1])
 --   PresentT ([10,4,7,3,3,5],[1,1])
 --
+--   >>> pl @(Partition (Prime Id) Id) [10,4,1,7,3,1,3,5]
+--   Present ([7,3,3,5],[10,4,1,1])
+--   PresentT ([7,3,3,5],[10,4,1,1])
+--
+--   >>> pl @(Partition (Ge 300) Id) [10,4,1,7,3,1,3,5]
+--   Present ([],[10,4,1,7,3,1,3,5])
+--   PresentT ([],[10,4,1,7,3,1,3,5])
+--
+--   >>> pl @(Partition (Id < 300) Id) [10,4,1,7,3,1,3,5]
+--   Present ([10,4,1,7,3,1,3,5],[])
+--   PresentT ([10,4,1,7,3,1,3,5],[])
+--
 data Partition p q
+
 type FilterBy p q = Partition p q >> Fst
 
 instance (P p x
@@ -5093,7 +5070,8 @@ instance (Show a
           Right msgx -> mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] [hh pp, hh qq]
       Right True -> pure $ mkNode opts (PresentT a) [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]  -- dont show the guard message if successful
 
--- just run the effect but skip the value: eg use for Stdout so doesnt interfere with 'a' unless there is an error
+-- | just run the effect but skip the value
+--   for example for use with Stdout so it doesnt interfere with the \'a\' on the rhs unless there is an error
 data Skip p
 type p |> q = Skip p >> q
 infixr 1 |>
@@ -5109,7 +5087,7 @@ instance (Show (PP p a), P p a) => P (Skip p) a where
       Left e -> e
       Right p -> mkNode opts (PresentT a) [msg0 <> show0 opts " " p] [hh pp]
 
--- advantage of (>>) over 'Do [k] is we can use different kinds for (>>) without having to wrap in W
+-- advantage of (>>) over 'Do [k] is we can use different kinds for (>>) without having to wrap with 'W'
 
 -- | This is composition for predicates
 --
@@ -5244,7 +5222,11 @@ infix 4 ===
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds
---   >>> pl @(OrdP Fst Snd) (10,9)
+--   >>> pl @(Fst === Snd) (10,9)
+--   Present GT
+--   PresentT GT
+--
+--   >>> pl @(14 % 3 === Fst %- Snd) (-10,7)
 --   Present GT
 --   PresentT GT
 --
@@ -5252,7 +5234,7 @@ infix 4 ===
 --   Present EQ
 --   PresentT EQ
 --
---   >>> pl @(OrdP Fst Snd) (10,11)
+--   >>> pl @(Fst === Snd) (10,11)
 --   Present LT
 --   PresentT LT
 --
@@ -5370,7 +5352,7 @@ instance (Show x
         , PP p x ~ f a
         , Show a
         ) => P (IToList' t p) x where
-  type PP (IToList' t p) x = [(PP t (PP p x), UnIToListT (PP p x))]
+  type PP (IToList' t p) x = [(PP t (PP p x), ExtractAFromTA (PP p x))]
   eval _ opts x = do
     let msg0 = "IToList"
     pp <- eval (Proxy @p) opts x
@@ -5380,9 +5362,6 @@ instance (Show x
         let b = itoList p
             t = showT @(PP t (PP p x))
         in mkNode opts (PresentT b) [msg0 <> "(" <> t <> ")" <> show0 opts " " b <> showA opts " | " x] [hh pp]
-
-type family UnIToListT fa where
-  UnIToListT (f a) = a
 
 -- | similar to 'toList'
 --
@@ -5629,15 +5608,15 @@ data ZipTheseF p q
 instance (Show (f y)
         , PP p a ~ f x
         , PP q a ~ f y
-        , ExtractT (f x) ~ x
-        , ExtractT (f y) ~ y
+        , ExtractAFromTA (f x) ~ x
+        , ExtractAFromTA (f y) ~ y
         , Show (f x)
         , TA.Align f
         , Show (f (These x y))
         , P p a
         , P q a)
   => P (ZipTheseF p q) a where
-  type PP (ZipTheseF p q) a = ApplyConstT (PP p a) (These (ExtractT (PP p a)) (ExtractT (PP q a)))
+  type PP (ZipTheseF p q) a = ApplyConstT (PP p a) (These (ExtractAFromTA (PP p a)) (ExtractAFromTA (PP q a)))
   eval _ opts a = do
     let msg0 = "ZipTheseF"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
@@ -5647,10 +5626,10 @@ instance (Show (f y)
         let d = TA.align p q
         in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
 
-type family ExtractT (ta :: Type) :: Type where
-  ExtractT (t a) = a
-  ExtractT ta = GL.TypeError (
-      'GL.Text "ExtractT: expected (t a) but found something else"
+type family ExtractAFromTA (ta :: Type) :: Type where
+  ExtractAFromTA (t a) = a
+  ExtractAFromTA ta = GL.TypeError (
+      'GL.Text "ExtractAFromTA: expected (t a) but found something else"
       ':$$: 'GL.Text "t a = "
       ':<>: 'GL.ShowType ta)
 
@@ -6976,7 +6955,9 @@ instance (P (RepeatT n p) a
   eval _ opts a =
     eval (Proxy @(RepeatT n p)) opts a
 
+-- same as \'DoN n p\' == \'FoldN n p Id\' but more efficient
 -- | leverages 'Do' for repeating predicates (passthrough method)
+--   same as \'DoN n p\' == \'FoldN n p Id\' but more efficient
 --
 --   >>> :set -XTypeApplications
 --   >>> :set -XDataKinds

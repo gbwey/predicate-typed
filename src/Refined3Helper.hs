@@ -290,19 +290,19 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, ReadBa
 -- >>> prtEval3P (Proxy @(ReadShow Rational)) ol "13x % 3"
 -- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3) failed
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (Pos 3) (Pos 5)))) ol "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (3 % 1) (5 % 1)))) ol "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (NegR 11 2) (Neg 3)))) ol "-13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (11 %- 2) (3 %- 1)))) ol "-13 % 3"
 -- Right (Refined3 {r3In = (-13) % 3, r3Out = "(-13) % 3"})
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > Pos 15))) ol "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (15 % 1)))) ol "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Guard (Printf "invalid=%3.2f" (FromRational Double Id)) (Id > Pos 15) >> 'True))) ol "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Guard (Printf "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1)) >> 'True))) ol "13 % 3"
 -- Left Step 2. Failed Boolean Check(op) | invalid=4.33
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > Pos 11))) ol "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (11 % 1)))) ol "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
 -- >>> let tmString = "2018-10-19 14:53:11.5121359 UTC"

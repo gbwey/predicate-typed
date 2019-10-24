@@ -98,16 +98,16 @@ unnamedTests = [
 
   , expect3 (Left $ XTFalse (-6.3))
                   $ eval3 @(ReadP Double)
-                          @(Cmp 'Cgt (ToRational Id) (NegR 7 3))
+                          @(Cmp 'Cgt (ToRational Id) (7 %- 3))
                           @(Printf "%5.3f" Id)
                           ol "-6.3"
 
   , expect3 (Right $ unsafeRefined3 4.123 "")
-                  $ eval3 @(ReadP Double) @(Cmp 'Cgt (ToRational Id) (NegR 7 3)) @""
+                  $ eval3 @(ReadP Double) @(Cmp 'Cgt (ToRational Id) (7 %- 3)) @""
                   ol "4.123"
 
   , expect3 (Right $ unsafeRefined3 4.123 (4123 % 1000))
-                  $ eval3 @Id @(Gt (NegR 7 3)) @(PosR 4123 1000)
+                  $ eval3 @Id @(Gt (7 %- 3)) @(4123 % 1000)
                   ol 4.123
 
   , expect3 (Right $ unsafeRefined3 [1,2,3,4] "")

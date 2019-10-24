@@ -70,8 +70,8 @@ allTests =
   , expectPE FalseT $ pl @(HeadDef 10 Fst >> Le 6) ([],True)
   , expectPE (FailT "zz") $ pl @(HeadFail "zz" Fst >> Le 6) ([],True)
   , expectPE (FailT "failed1") $ pl @((HeadFail "failed1" Fst >> Le 6) `OR` 'False) ([],True)
-  , expectPE TrueT $ pl @((Fst >> HeadFail "failed2" Id >> Le (Neg 6)) `OR` 'False) ([-9],True)
-  , expectPE (FailT "failed3") $ pl @((Fst >> Failt _ "failed3" >> Le (Neg 6)) `OR` 'False) ([-5],True)
+  , expectPE TrueT $ pl @((Fst >> HeadFail "failed2" Id >> Le (6 %- 1)) `OR` 'False) ([-9],True)
+  , expectPE (FailT "failed3") $ pl @((Fst >> Failt _ "failed3" >> Le (6 %- 1)) `OR` 'False) ([-5],True)
   , expectPE TrueT $ pl @(MaybeIn 'True Id) (Nothing @Bool) -- need @() else breaks
   , expectPE (PresentT 10) $ pl @(MaybeIn (Failt _ "failed4") Id) (Just 10)
   , expectPE (PresentT 10) $ pl @(Just' Id) (Just 10)
@@ -96,9 +96,9 @@ allTests =
   , expectPE TrueT $ pl @(Ors (Map (Same 2) Id)) [1,4,5,2,1]
   , expectPE TrueT $ pl @(Elem Id '[2,3,4]) 2
   , expectPE FalseT $ pl @(Elem Id '[2,3,4]) 6
-  , expectPE TrueT $ pl @(Elem Id '[PosR 13 2]) 6.5
-  , expectPE TrueT $ pl @(Elem Id '[PosR 13 2, Pos 12]) 6.5
-  , expectPE FalseT $ pl @(Elem Id '[PosR 13 2, Pos 12]) 6
+  , expectPE TrueT $ pl @(Elem Id '[13 % 2]) 6.5
+  , expectPE TrueT $ pl @(Elem Id '[13 % 2, 12 % 1]) 6.5
+  , expectPE FalseT $ pl @(Elem Id '[13 % 2, 12 % 1]) 6
   , expectPE (FailT "lhs") $ pl @(Map Len Id >> (Ix 3 (Failp "lhs")) &&& (Ix 0 5) >> Fst == Snd) [[1..4],[4..5]]
   , expectPE FalseT $ pl @(Map Len Id >> (Ix 0 (Failp "lhs")) &&& (Ix 1 5) >> Fst == Snd) [[1..4],[4..5]]
   , expectPE (FailT "rhs") $ pl @(Map Len Id >> (Ix 1 (Failp "lhs")) &&& (Ix 3 (Failp "rhs")) >> Fst == Snd) [[1..4],[4..5]]
@@ -142,8 +142,8 @@ allTests =
   , expectPE (PresentT 3) $ pl @((HeadFail "failedn" Id) &&& (Len >> Same 1 >> ExitWhen' (Not Id)) >> Fst) [3]
   , expectPE (FailT "ExitWhen") $ pl @(ExitWhen' (Len >> Ne 1) >> HeadFail "failedn" Id) [3,1]
   , expectPE (PresentT 3) $ pl @(ExitWhen' (Len >> Ne 1) >> HeadFail "failedn" Id) [3]
-  , expectPE TrueT $ pl @(ExitWhen' (Len >> Ne 1) >> HeadFail "failedn" Id >> Gt (Neg 20)) [3]
-  , expectPE FalseT $ pl @(ExitWhen' (Len >> Ne 1) >> HeadFail "failedn" Id >> Gt (Neg 20)) [-23]
+  , expectPE TrueT $ pl @(ExitWhen' (Len >> Ne 1) >> HeadFail "failedn" Id >> Gt (20 %- 1 )) [3]
+  , expectPE FalseT $ pl @(ExitWhen' (Len >> Ne 1) >> HeadFail "failedn" Id >> Gt (20 %- 1 )) [-23]
   , expectPE (PresentT (-1.0)) $ pl @(Negate Id >> Dup >> First (Succ Id) >> Swap >> Fst - Snd) 4
   , expectPE (PresentT (Right 12)) $ pl @(Not Id +++ Id) (Right @Bool 12)
   , expectPE (PresentT Cgt) $ pl @(FromEnum ("aa" === Id) >> ToEnum OrderingP Id) "aaaa"
@@ -243,7 +243,7 @@ allTests =
   , expectPE (PresentT [('a',1),('b',2),('c',3),('d',4),('a',5),('b',6),('c',7)]) $ pl @(Ziplc "abcd" Id) [1..7]
   , expectPE (PresentT [('a',1),('b',2),('c',3),('d',4)]) $ pl @(Zipn "abcd" Id) [1..7]
   , expectPE (PresentT []) $ pl @(Zipn "" Id) [1..7]
-  , expectPE (PresentT [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(1 % 1,'d')]) $ pl @(Ziplc '[Pos 1, Pos 2, Pos 3] Id) ("abcd" )
+  , expectPE (PresentT [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(1 % 1,'d')]) $ pl @(Ziplc '[1 % 1 , 2 % 1 , 3 % 1 ] Id) ("abcd" )
   , expectPE (PresentT []) $ pl @(Ziprc (EmptyT _ Id) Id) "abcd"
   , expectPE (PresentT [9,2,7,4]) $ pl @ToList (M.fromList (zip ['a'..] [9,2,7,4]))
   , expectPE (PresentT [(0,9),(1,2),(2,7),(3,4)]) $ pl @(IToList _) [9,2,7,4]
@@ -399,7 +399,7 @@ allTests =
   , expectPE (PresentT 6) $ pl @(Do '[4,5,6]) ()
   , expectPE (PresentT "hhhhh") $ pl @(Do '["abc", "Def", "ggg", "hhhhh"]) ()
   , expectPE (PresentT GT) $ pl @(Do '[ 'LT, 'EQ, 'GT ]) ()
-  , expectPE (PresentT (-3 % 1)) $ pl @(Do '[Rat 'True 4 4,Pos 22,NegR 12 4]) ()
+  , expectPE (PresentT (-3 % 1)) $ pl @(Do '[4 % 4,22 % 1 ,12 %- 4]) ()
   , expectPE (PresentT [10,2,5,8]) $ pl @(GuardsLax (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 0 11, Between 1 4,Between 3 5])) [10::Int,2,5,8]
   , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBaseInt 10) Snd >> Ddmmyyyyval) "31-11-1999"
   , expectPE (PresentT [31,11,1999]) $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11,1999::Int]
@@ -499,13 +499,13 @@ allTests =
   , expectPE (FailT "expected Nothing") $ pl @Nothing' (Just 10)
   , expectPE (FailT "'Nothing found Just") $ pl @'Nothing (Just 12)
   , expectPE (PresentT (Just 10,((),()))) $ pl @(Id &&& '() &&& ()) (Just 10)
-  , expectPE (PresentT [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (Neg 999) >> Wrap (MM.First _) Id)) Id >> Map Sapa Id >> Map (Just' (Unwrap Id)) Id) [Nothing,Just 10,Just 20,Nothing,Just 30]
+  , expectPE (PresentT [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 %- 1 ) >> Wrap (MM.First _) Id)) Id >> Map Sapa Id >> Map (Just' (Unwrap Id)) Id) [Nothing,Just 10,Just 20,Nothing,Just 30]
   , expectPE (PresentT 12) $ pl @(MaybeIn 99 Id) (Just 12)
   , expectPE (PresentT 12) $ pl @(JustDef 99 Id) (Just 12)
   , expectPE (PresentT 99) $ pl @(MaybeIn 99 Id) Nothing
   , expectPE (PresentT 99) $ pl @(JustDef 99 Id) Nothing
-  , expectPE (PresentT (-99)) $ pl @(MaybeIn (Neg 99) Id) Nothing
-  , expectPE (PresentT (-99)) $ pl @(JustDef (Neg 99) Id) Nothing
+  , expectPE (PresentT (-99)) $ pl @(MaybeIn (99 %- 1 ) Id) Nothing
+  , expectPE (PresentT (-99)) $ pl @(JustDef (99 %- 1 ) Id) Nothing
   , expectPE (PresentT [1,2,3,4,12]) $ pl @(ParaN 5 (Guard "0-255" (Between 0 255))) [1,2,3,4,12]
   , expectPE (FailT "0-255") $ pl @(ParaN 5 (Guard "0-255" (Between 0 255))) [1,2,3,400,12]
   , expectPE (PresentT ["141","021","003","000"]) $ pl @(ParaN 4 (Printf "%03d" Id)) [141,21,3,0::Int]
@@ -556,7 +556,7 @@ allTests =
   , expectPE TrueT $ pl @(IsSuffix "bw" Id) "xyzabw"
   , expectPE FalseT $ pl @(IsSuffix "bw" Id) "xyzbaw"
   , expectPE TrueT $ pl @(IsInfix Fst Snd) ("ab","xyzabw")
-  , expectPE (PresentT [1 % 1,(-3) % 2,(-3) % 1]) $ pl @'[Pos 1,NegR 3 2,Neg 3] ()
+  , expectPE (PresentT [1 % 1,(-3) % 2,(-3) % 1]) $ pl @'[1 % 1 ,3 %- 2,3 %- 1 ] ()
   , expectPE (PresentT [4, 7, 8, 9]) $ pl @'[4,7,8,9] ()
   , expectPE (PresentT ["aa","b","","ddd"]) $ pl @'["aa","b","","ddd"] ()
   , expectPE (PresentT 17) $ pl @(DoN 4 (Add Id 4)) 1
@@ -578,7 +578,7 @@ allTests =
   , expectPE TrueT $ pl @(Fst /= Snd) ("ab","xyzabw")
   , expectPE FalseT $ pl @(Fst == Snd) ("ab","xyzabw")
   , expectPE (PresentT 157) $ pl @(Fst * (Snd >> Fst) + (Snd >> Snd) `Div` 2) (12,(13,3))
-  , expectPE TrueT $ pl @(Fst >= Snd || Snd > 23 || NegR 12 5 <= ToRational Fst) (12,13)
+  , expectPE TrueT $ pl @(Fst >= Snd || Snd > 23 || 12 %- 5 <= ToRational Fst) (12,13)
   , expectPE (PresentT LT) $ pl @(Fst === Snd) (3,12)
   , expectPE TrueT $ pl @(Fst ==? Snd) ("aBc","AbC")
   , expectPE (PresentT EQ) $ pl @(Fst ===? Snd) ("aBc","AbC")
@@ -703,7 +703,7 @@ allTests =
   , expectPE (PresentT []) $ pl @'[] 4
   , expectPE (PresentT (SG.Sum 3)) $ pl @(FromInteger (SG.Sum _) Fst) (3,"A")
   , expectPE (PresentT (123 :: DiffTime)) $ pl @(FromInteger DiffTime 123) 'x'
-  , expectPE (PresentT (0.8 :: Float)) $ pl @(FromRational Float (PosR 4 5)) ()
+  , expectPE (PresentT (0.8 :: Float)) $ pl @(FromRational Float (4 % 5)) ()
   , expectPE (PresentT (14 % 1)) $ pl @(ToRational 14) ()
   , expectPE (PresentT ('y',3)) $ pl @(Id !! 1) [('x',14),('y',3),('z',5)]
   , expectPE (PresentT ('y',3)) $ pl @(Id !!! 1) [('x',14),('y',3),('z',5)]
@@ -715,15 +715,15 @@ allTests =
   , expectPE (PresentT 'a') $ pl @(SndL _ Id) (99,'a',False,"someval","abc",1.3)
   , expectPE (PresentT False) $ pl @(ThdL _ Id) (99,'a',False,"someval","abc",1.3)
   , expectPE (PresentT "someval") $ pl @(FthL _ Id) (99,'a',False,"someval","abc",1.3)
-  , expectPE (PresentT [1,-5,5,-1]) $ pl @('[Pos 1,Negate (PosR 33 7), PosR 21 4,Signum (NegR 7 5)] >> Map (Floor _ Id) Id) ()
-  , expectPE (PresentT [1,-4,6,-1]) $ pl @('[Pos 1,Negate (PosR 33 7), PosR 21 4,Signum (NegR 7 5)] >> Map (Ceiling _ Id) Id) ()
-  , expectPE (PresentT [1,-4,5,-1]) $ pl @('[Pos 1,Negate (PosR 33 7), PosR 21 4,Signum (NegR 7 5)] >> Map (Truncate _ Id) Id) ()
+  , expectPE (PresentT [1,-5,5,-1]) $ pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 %- 5)] >> Map (Floor _ Id) Id) ()
+  , expectPE (PresentT [1,-4,6,-1]) $ pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 %- 5)] >> Map (Ceiling _ Id) Id) ()
+  , expectPE (PresentT [1,-4,5,-1]) $ pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 %- 5)] >> Map (Truncate _ Id) Id) ()
   , expectPE (PresentT @Integer 2) $ pl @(Truncate' (Fst >> Unproxy ) Snd) (Proxy @Integer,2.3)
   , expectPE (PresentT @Int 2) $ pl @(Truncate' Fst Snd) (1::Int,2.3)
   , expectPE (PresentT @Float 0.4) $ pl @(FromRational' Fst Snd) (1::Float,2 % 5)
   , expectPE (PresentT (5 % 3)) $ pl @((ToRational 5) / (ToRational 3)) 'x'
-  , expectPE (PresentT (-5 % 3)) $ pl @(Pos 5 / Neg 3) 'x'
-  , expectPE (PresentT (-5 % 3)) $ pl @(Neg 5 / Fst) (3,'x')
+  , expectPE (PresentT (-5 % 3)) $ pl @(5 % 1 / 3 %- 1 ) 'x'
+  , expectPE (PresentT (-5 % 3)) $ pl @(5 %- 1 / Fst) (3,'x')
   , expectPE (PresentT (-5 % 3)) $ pl @(Snd / Fst) (-3,5)
   , expectPE (FailT "DivF zero denominator") $ pl @(Snd / Fst) (0,5)
   , expectPE (PresentT 16) $ pl @(Foldl (Guard "someval" (Fst < Snd) >> Snd) (Head' Id) Tail) [1,4,7,9,16]
