@@ -29,7 +29,6 @@ import TestRefined hiding (namedTests,unnamedTests,allProps)
 import Refined
 import Refined3
 import Refined3Helper
-import UtilP
 import UtilP_TH
 import Data.Ratio
 
@@ -216,8 +215,8 @@ cc :: Proxy CC11
 cc = mkProxy3
 
 type Ipz1 = '(Id &&& Ip4A
-           , (Snd Id) >> Ip4B
-           , (Snd Id) >> Para (RepeatT 4 (Printf "%03d" Id)) >> Intercalate '["."] Id >> Concat
+           , Snd Id >> Ip4B
+           , Snd Id >> Para (RepeatT 4 (Printf "%03d" Id)) >> Intercalate '["."] Id >> Concat
            , String)
 type Ipz2 = '(Id, Ip4A, Ip4B, String) -- skips fmt and just uses the original input
 type Ipz3 = '(Ip4A, Ip4B, Id, String)
@@ -226,13 +225,13 @@ type Ipz3 = '(Ip4A, Ip4B, Id, String)
 -- guards checks also that there are exactly 3 entries!
 type Hmsz1 = '(Hmsconv &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
             , Fst Id >> Hmsval >> 'True
-            , (Snd Id)
+            , Snd Id
             , String)
 
 -- better error messages cos doesnt do a strict regex match
 type Hmsz2 = '(Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
              , Fst Id >> Hmsop >> 'True
-             , (Snd Id)
+             , Snd Id
              , String)
 
 type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id

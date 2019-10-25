@@ -26,7 +26,6 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import Predicate
 import Refined
-import UtilP
 import UtilP_TH
 
 import Control.Lens

@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE PackageImports #-}
 -- |
 -- Module      : TH_Orphans
 -- Description : Mainly contains useful Template Haskell Lift instances for Date Time
@@ -12,7 +13,6 @@
 --
 module TH_Orphans where
 import qualified Language.Haskell.TH.Syntax as TH
-import qualified Language.Haskell.TH.Instances () -- other orphans
 import qualified Language.Haskell.TH.Lift as TL
 import Data.Time
 import Data.Fixed

@@ -8,22 +8,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE DeriveLift #-}
 -- |
 -- Module      : Refined3Helper
 -- Description : Contains convenient prepackaged 4-tuples to use with Refined3
@@ -36,7 +27,6 @@
 module Refined3Helper where
 import Refined3
 import Predicate
-import UtilP
 import Data.Proxy
 import GHC.TypeLits (AppendSymbol,Nat,KnownNat)
 import Data.Kind (Type)
@@ -108,7 +98,7 @@ ssn = mkProxy3
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
-type Ssnip = Map (ReadP Int) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> (Snd Id))
+type Ssnip = Map (ReadP Int) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd OneP)
 type Ssnop = GuardsQuick (Printf2 "number for group %d invalid: found %d")
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
                       >> 'True
@@ -160,7 +150,7 @@ type Ip = '(Ipip, Ipop, Ipfmt, String)
 ip :: Proxy Ip
 ip = mkProxy3
 
-type Ipip = Map (ReadP Int) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> (Snd Id))
+type Ipip = Map (ReadP Int) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd Id)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
 type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d") 4 (Between 0 255) >> 'True
 type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d"
@@ -226,7 +216,7 @@ type Luhn'' (n :: Nat) =
       >> Do '[
               Reverse
              ,Ziplc [1,2] Id
-             ,Map (Fst Id * (Snd Id) >> If (Id >= 10) (Id - 9) Id) Id
+             ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
              ,FoldMap (SG.Sum Int) Id
              ]
         >> Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)
@@ -239,7 +229,7 @@ type Luhn' (n :: Nat) =
             ,Map (ReadP Int) Id
             ,Reverse
             ,Ziplc [1,2] Id
-            ,Map (Fst Id * (Snd Id) >> If (Id >= 10) (Id - 9) Id) Id
+            ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
             ,FoldMap (SG.Sum Int) Id
            ]
         ,Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)

@@ -6,18 +6,14 @@
 {-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoOverloadedLists #-} -- overloaded lists breaks some predicates
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
 module TastyExtras where
 import Test.Tasty
@@ -73,6 +69,6 @@ expectJ lhs rhs =
     (Right _r,Left e) -> assertFailure $ "expected right but found left " <> e
     (Left ss, Left e)
        | all (`isInfixOf` e) ss -> pure ()
-       | otherwise -> assertFailure $ "both left but expected " <> (show ss) <> " in " <> e
+       | otherwise -> assertFailure $ "both left but expected " <> show ss <> " in " <> e
 
 

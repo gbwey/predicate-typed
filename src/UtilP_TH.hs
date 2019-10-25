@@ -4,8 +4,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE PolyKinds #-}
 -- |
@@ -25,7 +23,7 @@ module UtilP_TH
  ) where
 import Refined3
 import Refined
-import Predicate
+import PredicateCore
 import qualified Language.Haskell.TH.Syntax as TH
 import Data.Functor.Identity
 import UtilP

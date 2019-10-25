@@ -2,7 +2,7 @@
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
-{-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -15,14 +15,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveLift #-}
 {- |
 Module      : Refined3
@@ -72,8 +70,7 @@ module Refined3 (
  ) where
 import Refined
 import Predicate
-import UtilP
-import Control.Lens hiding (strict,iall)
+import Data.Functor.Identity (Identity(..))
 import Data.Tree
 import Data.Proxy
 import Control.Monad.Except
@@ -87,6 +84,7 @@ import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
+import Data.Maybe (fromMaybe)
 -- | Refinement type that differentiates the input type from output type
 --
 -- @
@@ -143,9 +141,8 @@ unsafeRefined3' :: forall ip op fmt i
                 -> Refined3 ip op fmt i
 unsafeRefined3' opts i =
   let (ret,mr) = eval3 @ip @op @fmt opts i
-  in case mr of
-  Nothing -> error $ show (prt3Impl opts ret)
-  Just r -> r
+  in fromMaybe (error $ show (prt3Impl opts ret)) mr
+
 -- | directly load values into 'Refined3' without any checking
 unsafeRefined3 :: forall ip op fmt i . PP ip i -> PP fmt (PP ip i) -> Refined3 ip op fmt i
 unsafeRefined3 = Refined3
@@ -285,6 +282,7 @@ arbRefined3With _ opts f =
 -- | 'Binary' instance for 'Refined3'
 --
 -- >>> import Control.Arrow ((+++))
+-- >>> import Control.Lens
 -- >>> import Data.Time
 -- >>> type K1 = MakeR3 '(ReadP Day, 'True, ShowP Id, String)
 -- >>> type K2 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-03-30") (ReadP' Day "2019-06-01"), ShowP Id, String)
@@ -601,7 +599,7 @@ eval3MSkip :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
    -> PP ip i
    -> m (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
 eval3MSkip opts a = do
-   let t1 = Node (PE (TrueP) ["skipped PP ip i = Id"]) []
+   let t1 = Node (PE TrueP ["skipped PP ip i = Id"]) []
    rr@(fromTT -> t2) <- evalBool (Proxy @op) opts a
    case getValLR (_tBool rr) of
         Right True -> do

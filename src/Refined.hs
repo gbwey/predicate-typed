@@ -3,15 +3,11 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -22,12 +18,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveLift #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 -- |
 -- Module      : Refined
 -- Description : Traditional refinement type with only one type
@@ -59,8 +51,8 @@ module Refined (
   , unsafeRefined'
  ) where
 import Predicate
-import UtilP
-import Control.Lens hiding (strict,iall)
+import Control.Lens ((^.))
+import Data.Functor.Identity (Identity(..))
 import Data.Proxy
 import Control.Monad.Except
 import Control.Monad.Writer (WriterT(..), runWriterT, MonadWriter, tell)
@@ -194,6 +186,7 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 -- | 'Binary' instance for 'Refined'
 --
 -- >>> import Data.Time
+-- >>> import Control.Lens
 -- >>> import Control.Arrow ((+++))
 -- >>> type K1 = Refined (ReadP Day >> 'True) String
 -- >>> type K2 = Refined (ReadP Day >> Between (ReadP' Day "2019-03-30") (ReadP' Day "2019-06-01")) String
