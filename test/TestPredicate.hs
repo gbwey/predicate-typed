@@ -44,7 +44,6 @@ import qualified Data.Text as T
 import qualified Data.Monoid as MM
 import qualified Data.Semigroup as SG
 import Data.These
-import Data.These.Lens ()
 
 suite :: IO ()
 suite = defaultMain $ testGroup "TestPredicate" (orderTests allTests)
@@ -657,8 +656,8 @@ allTests =
   , expectPE (PresentT ("abc",9)) $ pl @(9 & "abc" & I) (,)
   , expectPE (PresentT "28") $ pl @(Fst Id $ Snd Id) (show . (7*),4)
   , expectPE (PresentT (12,"12")) $ pl @(Fst Id $ (Snd Id) $ (Snd Id >> ShowP Id)) ((,),12)
-  , expectPE (PresentT (Just (This [1,2,3,4]))) $ pl @(ZipTheseF (Fst Id) (Snd Id)) (Just [1..4],Nothing @())
-  , expectPE (PresentT [These 1 'a',These 2 'b',These 3 'c',This 4]) $ pl @(ZipTheseF (Fst Id) (Snd Id)) ([1..4],['a'..'c'])
+--  , expectPE (PresentT (Just (This [1,2,3,4]))) $ pl @(ZipTheseF (Fst Id) (Snd Id)) (Just [1..4],Nothing @())
+--  , expectPE (PresentT [These 1 'a',These 2 'b',These 3 'c',This 4]) $ pl @(ZipTheseF (Fst Id) (Snd Id)) ([1..4],['a'..'c'])
   , expectPE (PresentT [True,True,True,True]) $ pl @('True <$ Id) [1..4]
   , expectPE (PresentT (Compose (Just "aaaa"))) $ pl @(Char1 "ab" <$ Id) (Compose $ Just [1..4])
   , expectPE (PresentT (4,("aa",'x'))) $ pl @'(4,'(Fst Id,Snd Id)) ("aa",'x')

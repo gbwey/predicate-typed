@@ -104,9 +104,6 @@ import Data.Binary (Binary)
 --
 -- Although the most common scenario is String as input, you are free to choose any input type you like
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
--- >>> :set -XTypeOperators
 -- >>> :m + Data.Time.Calendar.WeekDate
 -- >>> prtEval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x" Id) ol "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
@@ -170,8 +167,6 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> :set -XOverloadedStrings
 -- >>> reads @(Refined3 (ReadBase Int 16) (Between 0 255) (ShowBase 16) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
 -- [(Refined3 {r3In = 254, r3Out = "fe"},"")]
@@ -210,8 +205,6 @@ instance (Eq i, Show i, Show (PP ip i), Refined3C ip op fmt i, Read (PP ip i), R
 
 -- | 'ToJSON' instance for 'Refined3'
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> :set -XOverloadedStrings
 -- >>> encode (unsafeRefined3 @(ReadBase Int 16) @(Between 0 255) @(ShowBase 16) 254 "fe")
 -- "\"fe\""
@@ -225,8 +218,6 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 
 -- | 'FromJSON' instance for 'Refined3'
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> :set -XOverloadedStrings
 -- >>> eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe\""
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
@@ -293,8 +284,6 @@ arbRefined3With _ opts f =
 
 -- | 'Binary' instance for 'Refined3'
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> import Control.Arrow ((+++))
 -- >>> import Data.Time
 -- >>> type K1 = MakeR3 '(ReadP Day, 'True, ShowP Id, String)

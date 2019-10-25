@@ -45,8 +45,6 @@ import qualified Data.Semigroup as SG
 
 -- | credit card with luhn algorithm
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> prtEval3P cc11 ol "1234-5678-901"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
@@ -70,8 +68,6 @@ cc11 = mkProxy3P
 
 -- | read in a datetime
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> prtEval3P (Proxy @(DateTime1 UTCTime)) ol "2018-09-14 02:57:04"
 -- Right (Refined3 {r3In = 2018-09-14 02:57:04 UTC, r3Out = "2018-09-14 02:57:04"})
 --
@@ -92,8 +88,6 @@ ssn = mkProxy3
 
 -- | read in an ssn
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> prtEval3P ssn ol "134-01-2211"
 -- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
 --
@@ -126,8 +120,6 @@ type Ssnfmt = Printfnt 3 "%03d-%02d-%04d"
 
 -- | read in a time and validate it
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> prtEval3P hms ol "23:13:59"
 -- Right (Refined3 {r3In = [23,13,59], r3Out = "23:13:59"})
 --
@@ -151,8 +143,6 @@ type Hmsfmt = Printfnt 3 "%02d:%02d:%02d"
 
 -- | read in an ipv4 address and validate it
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> prtEval3P ip ol "001.223.14.1"
 -- Right (Refined3 {r3In = [1,223,14,1], r3Out = "001.223.014.001"})
 --
@@ -197,8 +187,6 @@ type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m
 
 -- | convert a string from the given base \'i\' but stores it internally as a string of base \'j\'
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> prtEval3P (Proxy @(BaseN 16)) ol "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
@@ -267,8 +255,6 @@ type OkNotR (t :: Type) = MakeR3 (OkNot t)
 
 -- | convert a string from the given base \'i\' but stores it internally as a string of base \'j\'
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> prtEval3P (Proxy @(BaseIJ 16 2)) ol "fe"
 -- Right (Refined3 {r3In = "11111110", r3Out = "fe"})
 --
@@ -280,9 +266,6 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, ReadBa
 
 -- | take any valid Read/Show instance and turn it into a valid Refined3
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
--- >>> :set -XTypeOperators
 -- >>> :m + Data.Ratio
 -- >>> prtEval3P (Proxy @(ReadShow Rational)) ol "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})

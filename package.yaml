@@ -2,6 +2,7 @@ name:                predicate-typed
 version:             0.1.0.1
 github:              "gbwey/predicate-typed"
 synopsis:            Predicates, Refinement types and Dsl
+category:            Data
 license:             BSD3
 author:              "Grant Weyburne <gbwey9@gmail.com>"
 maintainer:          "Grant Weyburne <gbwey9@gmail.com>"
@@ -26,20 +27,18 @@ dependencies:
 - ghc-prim
 - lens
 - mtl
-- pcre-heavy
+- pcre-heavy >= 1.0.0.2
 - pcre-light
 - pretty
-- pretty-terminal
+- pretty-terminal >= 0.1.0.0
 - safe
-- semialign
 - template-haskell
 - text
-- th-lift
+- th-lift >= 0.8.0.1
 - th-orphans
-- these
-- these-lens
+- these >= 1
 - time
-- tree-view
+- tree-view >= 0.5
 
 library:
   source-dirs: src

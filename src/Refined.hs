@@ -77,8 +77,6 @@ import qualified Data.Binary as B
 import Data.Binary (Binary)
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> :m + Data.Time.Calendar.WeekDate
 -- >>> prtRefinedIO @(Between 10 14) ol 13
 -- Right (Refined {unRefined = 13})
@@ -86,7 +84,6 @@ import Data.Binary (Binary)
 -- >>> prtRefinedIO @(Between 10 14) ol 99
 -- Left FalseP
 --
--- >>> :set -XTypeOperators
 -- >>> prtRefinedIO @(Last >> Len == 4) ol ["one","two","three","four"]
 -- Right (Refined {unRefined = ["one","two","three","four"]})
 --
@@ -129,8 +126,6 @@ newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH
 
 -- | 'Read' instance for 'Refined'
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> :set -XOverloadedStrings
 -- >>> reads @(Refined (Between 0 255) Int) "Refined {unRefined = 254}"
 -- [(Refined {unRefined = 254},"")]
@@ -167,8 +162,6 @@ instance ToJSON a => ToJSON (Refined p a) where
 
 -- | 'FromJSON' instance for 'Refined'
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> :set -XOverloadedStrings
 -- >>> eitherDecode' @(Refined (Between 10 14) Int) "13"
 -- Right (Refined {unRefined = 13})
@@ -200,8 +193,6 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 
 -- | 'Binary' instance for 'Refined'
 --
--- >>> :set -XTypeApplications
--- >>> :set -XDataKinds
 -- >>> import Data.Time
 -- >>> import Control.Arrow ((+++))
 -- >>> type K1 = Refined (ReadP Day >> 'True) String

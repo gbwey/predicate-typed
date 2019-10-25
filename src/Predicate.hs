@@ -61,7 +61,7 @@ import Numeric
 import Data.Char
 import Data.Function
 import Data.These
-import qualified Data.Align as TA
+--import qualified Data.Align as TA
 import Data.Ratio
 import Data.Time
 import Data.Coerce
@@ -77,7 +77,6 @@ import Data.Bool
 import Data.Either
 import qualified Data.Type.Equality as DE
 import Data.Time.Calendar.WeekDate
-import Data.These.Lens ()
 
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Main.>>'
 class P p a where
@@ -121,8 +120,6 @@ type Unzip = (Map (Fst Id) Id, Map (Snd Id) Id)
 -- | represents a predicate using a 'Symbol' as a regular expression
 --   evaluates 'Re' and returns True if there is a match
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Re "^\\d{2}:\\d{2}:\\d{2}$" Id) "13:05:25"
 --   True
 --   TrueT
@@ -160,8 +157,6 @@ instance (GetROpts rs
 
 -- | runs a regex matcher returning the original values and optionally any groups
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
 --   Present [("13:05:25",["13","05","25"])]
 --   PresentT [("13:05:25",["13","05","25"])]
@@ -201,8 +196,6 @@ instance (GetROpts rs
 
 -- | similar to 'Rescan' but gives the column start and ending positions instead of values
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(RescanRanges "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
 --   Present [((0,8),[(0,2),(3,5),(6,8)])]
 --   PresentT [((0,8),[(0,2),(3,5),(6,8)])]
@@ -237,8 +230,6 @@ instance (GetROpts rs
 
 -- | splits a string on a regex delimiter
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Resplit "\\." Id) "141.201.1.22"
 --   Present ["141","201","1","22"]
 --   PresentT ["141","201","1","22"]
@@ -280,8 +271,6 @@ _MX = 100
 
 -- | replaces regex \'s\' with a string \'s1\' inside the value
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ReplaceAllString "\\." ":" Id) "141.201.1.22"
 --   Present "141:201:1:22"
 --   PresentT "141:201:1:22"
@@ -409,8 +398,6 @@ instance (GetBool b
 
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> import qualified Data.Text as T
 --   >>> pl @IsLower "abc"
 --   True
@@ -492,8 +479,6 @@ instance (GetCharSet cs
 
 -- | converts a string 'Data.Text.Lens.IsText' value to lower case
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @ToLower "HeLlO wOrld!"
 --   Present "hello world!"
 --   PresentT "hello world!"
@@ -508,8 +493,6 @@ instance (Show a, IsText a) => P ToLower a where
 
 -- | converts a string 'Data.Text.Lens.IsText' value to upper case
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @ToUpper "HeLlO wOrld!"
 --   Present "HELLO WORLD!"
 --   PresentT "HELLO WORLD!"
@@ -525,8 +508,6 @@ instance (Show a, IsText a) => P ToUpper a where
 
 -- | similar to 'Data.List.inits'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Inits [4,8,3,9]
 --   Present [[],[4],[4,8],[4,8,3],[4,8,3,9]]
 --   PresentT [[],[4],[4,8],[4,8,3],[4,8,3,9]]
@@ -545,8 +526,6 @@ instance Show a => P Inits [a] where
 
 -- | similar to 'Data.List.tails'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Tails [4,8,3,9]
 --   Present [[4,8,3,9],[8,3,9],[3,9],[9],[]]
 --   PresentT [[4,8,3,9],[8,3,9],[3,9],[9],[]]
@@ -565,8 +544,6 @@ instance Show a => P Tails [a] where
 
 -- | split a list into single values
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Ones Id) [4,8,3,9]
 --   Present [[4],[8],[3],[9]]
 --   PresentT [[4],[8],[3],[9]]
@@ -593,8 +570,6 @@ instance ( PP p x ~ [a]
 
 -- | similar to 'show'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ShowP Id) [4,8,3,9]
 --   Present "[4,8,3,9]"
 --   PresentT "[4,8,3,9]"
@@ -623,8 +598,6 @@ instance (Show (PP p x), P p x) => P (ShowP p) x where
 -- | type level expression representing a formatted time
 --   similar to 'Data.Time.formatTime' using a type level 'Symbol' to get the formatting string
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(FormatTimeP "%F %T" Id) (read "2019-05-24 05:19:59" :: LocalTime)
 --   Present "2019-05-24 05:19:59"
 --   PresentT "2019-05-24 05:19:59"
@@ -654,8 +627,6 @@ instance (PP p x ~ String
 
 -- | similar to 'Data.Time.parseTimeM' where \'t\' is the 'Data.Time.ParseTime' type, \'p\' is the datetime format and \'q\' points to the content to parse
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ParseTimeP LocalTime "%F %T" Id) "2019-05-24 05:19:59"
 --   Present 2019-05-24 05:19:59
 --   PresentT 2019-05-24 05:19:59
@@ -692,8 +663,6 @@ instance (ParseTime (PP t a)
 
 -- | A convenience method to match against many different datetime formats to find a match
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ParseTimes LocalTime '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"] "03/11/19 01:22:33") ()
 --   Present 2019-03-11 01:22:33
 --   PresentT 2019-03-11 01:22:33
@@ -730,8 +699,6 @@ instance (ParseTime (PP t a)
 
 -- | create a 'Day' from three int values passed in as year month and day
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @MkDay (2019,12,30)
 --   Present Just (2019-12-30,1,1)
 --   PresentT (Just (2019-12-30,1,1))
@@ -774,8 +741,6 @@ instance (P p x
 
 -- | uncreate a 'Day' returning year month and day
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(UnMkDay Id) (read "2019-12-30")
 --   Present (2019,12,30)
 --   PresentT (2019,12,30)
@@ -796,9 +761,6 @@ instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
 
 -- | uses the 'Read' of the given type \'t\' and \'p\' which points to the content to read
 --
---   >>> :set -XTypeApplications
---   >>> :set -XTypeOperators
---   >>> :set -XDataKinds
 --   >>> pl @(ReadP Rational) "4 % 5"
 --   Present 4 % 5
 --   PresentT (4 % 5)
@@ -836,8 +798,6 @@ instance (P p x
 
 -- | similar to 'minimum'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Min [10,4,5,12,3,4]
 --   Present 3
 --   PresentT 3
@@ -859,8 +819,6 @@ instance (Ord a, Show a) => P Min [a] where
 
 -- | similar to 'maximum'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Max [10,4,5,12,3,4]
 --   Present 12
 --   PresentT 12
@@ -884,8 +842,6 @@ instance (Ord a, Show a) => P Max [a] where
 
 -- | sort a list
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(SortOn (Fst Id) Id) [(10,"abc"), (3,"def"), (4,"gg"), (10,"xyz"), (1,"z")]
 --   Present [(1,"z"),(3,"def"),(4,"gg"),(10,"abc"),(10,"xyz")]
 --   PresentT [(1,"z"),(3,"def"),(4,"gg"),(10,"abc"),(10,"xyz")]
@@ -941,8 +897,6 @@ instance (P p (a,a)
 
 -- | similar to 'length'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Len [10,4,5,12,3,4]
 --   Present 6
 --   PresentT 6
@@ -960,8 +914,6 @@ instance (Show a, as ~ [a]) => P Len as where
 
 -- | similar to 'length' for 'Foldable' instances
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Length Id) (Left "aa")
 --   Present 0
 --   PresentT 0
@@ -992,8 +944,6 @@ instance (PP p x ~ t a
 
 -- | similar to 'fst'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id) (10,"Abc")
 --   Present 10
 --   PresentT 10
@@ -1045,8 +995,6 @@ instance ExtractL1C (a,b,c,d,e,f) where
 
 -- | similar to 'snd'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Snd Id) (10,"Abc")
 --   Present "Abc"
 --   PresentT "Abc"
@@ -1094,8 +1042,6 @@ instance ExtractL2C (a,b,c,d,e,f) where
 
 -- | similar to 3rd element in a n-tuple
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Thd Id) (10,"Abc",133)
 --   Present 133
 --   PresentT 133
@@ -1143,8 +1089,6 @@ instance ExtractL3C (a,b,c,d,e,f) where
 
 -- | similar to 4th element in a n-tuple
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(L4 Id) (10,"Abc",'x',True)
 --   Present True
 --   PresentT True
@@ -1191,8 +1135,6 @@ instance ExtractL4C (a,b,c,d,e,f) where
 
 -- | similar to 5th element in a n-tuple
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(L5 Id) (10,"Abc",'x',True,1)
 --   Present 1
 --   PresentT 1
@@ -1236,8 +1178,6 @@ instance ExtractL5C (a,b,c,d,e,f) where
 
 -- | similar to 6th element in a n-tuple
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(L6 Id) (10,"Abc",'x',True,1,99)
 --   Present 99
 --   PresentT 99
@@ -1281,8 +1221,6 @@ instance ExtractL6C (a,b,c,d,e,f) where
 
 -- | identity function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @I 23
 --   Present 23
 --   PresentT 23
@@ -1297,8 +1235,6 @@ instance P I a where
 --
 --   even more constraints than 'I' so we might need to add explicit type signatures
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Id 23
 --   Present 23
 --   PresentT 23
@@ -1312,8 +1248,6 @@ instance Show a => P Id a where
 --
 --   even more constraints than 'Id' so we might need to explicitly add types (Typeable)
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @IdT 23
 --   Present 23
 --   PresentT 23
@@ -1326,8 +1260,6 @@ instance (Typeable a, Show a) => P IdT a where
 
 -- | 'fromString' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> :set -XOverloadedStrings
 --   >>> pl @(FromStringP (Identity _) Id) "abc"
 --   Present Identity "abc"
@@ -1357,8 +1289,6 @@ instance (P s a
 
 -- | 'fromInteger' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(FromInteger (SG.Sum _) Id) 23
 --   Present Sum {getSum = 23}
 --   PresentT (Sum {getSum = 23})
@@ -1383,8 +1313,6 @@ instance (Num (PP t a)
 
 -- | 'fromIntegral' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(FromIntegral (SG.Sum _) Id) 23
 --   Present Sum {getSum = 23}
 --   PresentT (Sum {getSum = 23})
@@ -1409,8 +1337,6 @@ instance (Num (PP t a)
 
 -- | 'toRational' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ToRational Id) 23.5
 --   Present 47 % 2
 --   PresentT (47 % 2)
@@ -1434,8 +1360,6 @@ instance (a ~ PP p x
 
 -- | 'fromRational' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(FromRational Rational Id) 23.5
 --   Present 47 % 2
 --   PresentT (47 % 2)
@@ -1459,8 +1383,6 @@ instance (P r a
 
 -- | 'truncate' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Truncate Int Id) (23 % 5)
 --   Present 4
 --   PresentT 4
@@ -1485,8 +1407,6 @@ instance (Show (PP p x)
 
 -- | 'ceiling' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Ceiling Int Id) (23 % 5)
 --   Present 5
 --   PresentT 5
@@ -1511,8 +1431,6 @@ instance (Show (PP p x)
 
 -- | 'floor' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Floor Int Id) (23 % 5)
 --   Present 4
 --   PresentT 4
@@ -1542,8 +1460,6 @@ instance (Show (PP p x)
 
 -- | pulls the type level 'Bool' to the value level
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @'True "ignore this"
 --   True
 --   TrueT
@@ -1559,8 +1475,6 @@ instance GetBool b => P (b :: Bool) a where
 
 -- | pulls the type level 'Symbol' to the value level
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @"hello world" ()
 --   Present "hello world"
 --   PresentT "hello world"
@@ -1572,13 +1486,10 @@ instance KnownSymbol s => P (s :: Symbol) a where
 
 -- | run the predicates in a promoted 2-tuple; similar to 'Control.Arrow.&&&'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @'(Snd Id, Fst Id) ("helo",123)
 --   Present (123,"helo")
 --   PresentT (123,"helo")
 --
---   >>> :set -XTypeOperators
 --   >>> pl @'(Len, Id <> "|" <> Reverse) "helo"
 --   Present (4,"helo|oleh")
 --   PresentT (4,"helo|oleh")
@@ -1594,8 +1505,6 @@ instance (P p a, P q a) => P '(p,q) a where
 
 -- | run the predicates in a promoted 3-tuple
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @'(Len, Id, Reverse) "helo"
 --   Present (4,"helo","oleh")
 --   PresentT (4,"helo","oleh")
@@ -1618,8 +1527,6 @@ instance (P p a
 
 -- | run the predicates in a promoted 4-tuple
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @'(Len, Id, "inj", 999) "helo"
 --   Present (4,"helo","inj",999)
 --   PresentT (4,"helo","inj",999)
@@ -1643,8 +1550,6 @@ instance (P p a
 
 -- | extracts the value level representation of the promoted 'Ordering'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @'LT "not used"
 --   Present LT
 --   PresentT LT
@@ -1661,8 +1566,6 @@ instance GetOrdering cmp => P (cmp :: Ordering) a where
 
 -- | extracts the value level representation of the type level 'Nat'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @123 ()
 --   Present 123
 --   PresentT 123
@@ -1674,8 +1577,6 @@ instance KnownNat n => P (n :: Nat) a where
 
 -- | extracts the value level representation of the type level \'()
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @'() ()
 --   Present ()
 --   PresentT ()
@@ -1687,8 +1588,6 @@ instance P '() a where
 
 -- | extracts the value level representation of the type level \'[]
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @'[] False
 --   Present []
 --   PresentT []
@@ -1698,9 +1597,6 @@ instance P ('[] :: [k]) a where
 
 -- | runs each predicate in turn from the promoted list
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> :set -XNoStarIsType
 --   >>> pl @'[1, 2, 3] 999
 --   Present [1,2,3]
 --   PresentT [1,2,3]
@@ -1713,7 +1609,6 @@ instance P ('[] :: [k]) a where
 --   Present [1,2,3,3996,998]
 --   PresentT [1,2,3,3996,998]
 --
---   >>> :set -XTypeOperators
 --   >>> pl @'[Id * 4, Pred Id] 999
 --   Present [3996,998]
 --   PresentT [3996,998]
@@ -1745,8 +1640,6 @@ instance (Show (PP p a)
 
 -- | extracts the \'a\' from type level \'Maybe a\' if the value exists
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @('Just Id) (Just 123)
 --   Present 123
 --   PresentT 123
@@ -1777,8 +1670,6 @@ instance (Show (PP p a)
 -- | expects Nothing otherwise it fails
 --   if the value is Nothing then it returns \'Proxy a\' as this provides more information than '()'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @'Nothing Nothing
 --   Present Proxy
 --   PresentT Proxy
@@ -1798,8 +1689,6 @@ instance P 'Nothing (Maybe a) where
 -- omitted Show x so we can have less ambiguity
 -- | extracts the \'a\' from type level \'Either a b\' if the value exists
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @('Left Id) (Left 123)
 --   Present 123
 --   PresentT 123
@@ -1825,8 +1714,6 @@ instance (Show a
 
 -- | extracts the \'b\' from type level \'Either a b\' if the value exists
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @('Right Id) (Right 123)
 --   Present 123
 --   PresentT 123
@@ -1854,8 +1741,6 @@ instance (Show a
 
 -- | extracts the \'a\' from type level \'These a b\' if the value exists
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @('This Id) (This 123)
 --   Present 123
 --   PresentT 123
@@ -1885,8 +1770,6 @@ instance (Show a
 
 -- | extracts the \'b\' from type level \'These a b\' if the value exists
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @('That Id) (That 123)
 --   Present 123
 --   PresentT 123
@@ -1917,8 +1800,6 @@ instance (Show a
 
 -- | extracts the (a,b) from type level 'These a b' if the value exists
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @('These Id Id) (These 123 "abc")
 --   Present (123,"abc")
 --   PresentT (123,"abc")
@@ -1959,8 +1840,6 @@ instance (Show a
 
 -- | converts the value to the corresponding 'Proxy'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @'Proxy 'x'
 --   Present Proxy
 --   PresentT Proxy
@@ -1978,8 +1857,6 @@ instance Show a => P 'Proxy a where
 
 -- | converts a value to a 'Proxy': the same as '\'Proxy'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @MkProxy 'x'
 --   Present Proxy
 --   PresentT Proxy
@@ -2000,8 +1877,6 @@ type family DoExpandT (ps :: [k]) :: Type where
 
 -- | processes a type level list predicates running each in sequence: see 'Predicate.>>'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Do [Pred Id, ShowP Id, Id &&& Len]) 9876543
 --   Present ("9876542",7)
 --   PresentT ("9876542",7)
@@ -2014,8 +1889,6 @@ instance (P (DoExpandT ps) a) => P (Do ps) a where
 -- | Convenient method to convert a value \'p\' to a 'Maybe' based on a predicate '\b\'
 --   if '\b\' then Just \'p'\ else Nothing
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MaybeB (Id > 4) Id) 24
 --   Present Just 24
 --   PresentT (Just 24)
@@ -2047,8 +1920,6 @@ instance (Show (PP p a)
 -- | Convenient method to convert a \'p\' or '\q'\ to a 'Either' based on a predicate '\b\'
 --   if \'b\' then Right \'p\' else Left '\q\'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(EitherB (Fst Id > 4) (Snd Id >> Fst Id) (Snd Id >> (Snd Id))) (24,(-1,999))
 --   Present Right 999
 --   PresentT (Right 999)
@@ -2085,8 +1956,6 @@ instance (Show (PP p a)
 
 -- | create inductive tuples from a type level list of predicates
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(TupleI '[Id,ShowP Id,Pred Id,W "str", W 999]) 666
 --   Present (666,("666",(665,("str",(999,())))))
 --   PresentT (666,("666",(665,("str",(999,())))))
@@ -2116,8 +1985,6 @@ instance (P p a
 
 -- | add a message to give more context to the evaluation tree
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pe @(Msg' "somemessage" Id) 999
 --   P [somemessage] Id 999
 --   PresentT 999
@@ -2138,8 +2005,6 @@ instance (P prt a
 
 -- | pad \'q\' with '\n'\ values from '\p'\
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(PadL 5 999 Id) [12,13]
 --   Present [999,999,999,12,13]
 --   PresentT [999,999,999,12,13]
@@ -2187,8 +2052,6 @@ instance (P n a
 
 -- | split a list \'p\' into parts using the lengths in the type level list \'ns\'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(SplitAts '[2,3,1,1] Id) "hello world"
 --   Present ["he","llo"," ","w","orld"]
 --   PresentT ["he","llo"," ","w","orld"]
@@ -2224,8 +2087,6 @@ instance (P ns x
 
 -- | similar to 'splitAt'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(SplitAt 4 Id) "hello world"
 --   Present ("hell","o world")
 --   PresentT ("hell","o world")
@@ -2274,8 +2135,6 @@ infixr 3 &&&
 
 -- | similar to 'Control.Arrow.***'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Pred Id *** ShowP Id) (13, True)
 --   Present (12,"True")
 --   PresentT (12,"True")
@@ -2307,8 +2166,6 @@ instance (Show (PP p a)
 
 -- | similar 'Control.Arrow.|||'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Pred Id ||| Id) (Left 13)
 --   Present 12
 --   PresentT 12
@@ -2346,8 +2203,6 @@ instance (Show (PP p a)
 
 -- | similar 'Control.Arrow.+++'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Pred Id +++ Id) (Left 13)
 --   Present Left 12
 --   PresentT (Left 12)
@@ -2433,9 +2288,6 @@ instance GetBinOp 'BAdd where
 
 -- | addition, multiplication and subtraction
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> :set -XNoStarIsType
 --   >>> pl @(Fst Id * (Snd Id)) (13,5)
 --   Present 65
 --   PresentT 65
@@ -2465,8 +2317,6 @@ instance (GetBinOp op
 
 -- | fractional division
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id / (Snd Id)) (13,2)
 --   Present 6.5
 --   PresentT 6.5
@@ -2501,9 +2351,6 @@ instance (PP p a ~ PP q a
 
 -- | creates a 'Ratio'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> :set -XNoStarIsType
 --   >>> pl @(Fst Id % (Snd Id)) (13,2)
 --   Present 13 % 2
 --   PresentT (13 % 2)
@@ -2584,9 +2431,6 @@ instance (Integral (PP p x)
 
 -- | similar to 'negate'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
---   >>> :set -XTypeOperators
 --   >>> pl @(Negate Id) 14
 --   Present -14
 --   PresentT (-14)
@@ -2623,8 +2467,6 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Negate p) x where
 
 -- | similar to 'abs'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Abs Id) (-14)
 --   Present 14
 --   PresentT 14
@@ -2658,8 +2500,6 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Abs p) x where
 
 -- | similar to 'signum'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Signum Id) (-14)
 --   Present -1
 --   PresentT (-1)
@@ -2687,8 +2527,6 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Signum p) x where
 
 -- | unwraps a value (see 'Control.Lens.Unwrapped')
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Unwrap Id) (SG.Sum (-13))
 --   Present -13
 --   PresentT (-13)
@@ -2713,8 +2551,6 @@ instance (PP p x ~ s
 
 -- | wraps a value (see 'Control.Lens.Wrapped' and 'Control.Lens.Unwrapped')
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> :m + Data.List.NonEmpty
 --   >>> pl @(Wrap (SG.Sum _) Id) (-13)
 --   Present Sum {getSum = -13}
@@ -2749,8 +2585,6 @@ instance (Show (PP p x)
 
 -- | similar to 'coerce'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Coerce (SG.Sum Integer)) (Identity (-13))
 --   Present Sum {getSum = -13}
 --   PresentT (Sum {getSum = -13})
@@ -2770,8 +2604,6 @@ instance (Show a
 
 -- | see 'Coerce': coerce over a functor
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Coerce2 (SG.Sum Integer)) [Identity (-13), Identity 4, Identity 99]
 --   Present [Sum {getSum = -13},Sum {getSum = 4},Sum {getSum = 99}]
 --   PresentT [Sum {getSum = -13},Sum {getSum = 4},Sum {getSum = 99}]
@@ -2797,8 +2629,6 @@ instance (Show (f a)
 
 -- | lift mempty over a Functor
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MEmptyT2 (SG.Product Int)) [Identity (-13), Identity 4, Identity 99]
 --   Present [Product {getProduct = 1},Product {getProduct = 1},Product {getProduct = 1}]
 --   PresentT [Product {getProduct = 1},Product {getProduct = 1},Product {getProduct = 1}]
@@ -2818,8 +2648,6 @@ instance (Show (f a)
 
 -- | lift pure over a Functor
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Pure2 (Either String)) [1,2,4]
 --   Present [Right 1,Right 2,Right 4]
 --   PresentT [Right 1,Right 2,Right 4]
@@ -2840,8 +2668,6 @@ instance (Show (f (t a))
 
 -- | similar to 'reverse'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Reverse [1,2,4]
 --   Present [4,2,1]
 --   PresentT [4,2,1]
@@ -2860,8 +2686,6 @@ instance (Show a, as ~ [a]) => P Reverse as where
 
 -- | reverses using 'reversing'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> import Data.Text (Text)
 --   >>> pl @ReverseL ("AbcDeF" :: Text)
 --   Present "FeDcbA"
@@ -2877,8 +2701,6 @@ instance (Show t, Reversing t) => P ReverseL t where
 
 -- | swaps using 'swapped'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Swap (Left 123)
 --   Present Right 123
 --   PresentT (Right 123)
@@ -2906,18 +2728,31 @@ instance (Show t, Reversing t) => P ReverseL t where
 data Swap
 
 instance (Show (p a b)
-        , Swapped p
+        , SwappedC p
         , Show (p b a)
         ) => P Swap (p a b) where
   type PP Swap (p a b) = p b a
   eval _ opts pab =
-    let d = pab ^. swapped
+    let d = swappedC pab
     in pure $ mkNode opts (PresentT d) ["Swap" <> show0 opts " " d <> showA opts " | " pab] []
+
+class SwappedC p where
+  swappedC :: p a b -> p b a
+instance SwappedC These where
+  swappedC = \case
+               This a -> That a
+               That b -> This b
+               These a b -> These b a
+instance SwappedC Either where
+  swappedC = \case
+               Left a -> Right a
+               Right b -> Left b
+instance SwappedC (,) where
+  swappedC (a,b) = (b,a)
+
 
 -- | bounded 'succ' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(SuccB' Id) (13 :: Int)
 --   Present 14
 --   PresentT 14
@@ -2964,8 +2799,6 @@ instance (PP q x ~ a
 
 -- | bounded 'pred' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(PredB' Id) (13 :: Int)
 --   Present 12
 --   PresentT 12
@@ -3001,8 +2834,6 @@ instance (PP q x ~ a
 
 -- | unbounded 'succ' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Succ Id) 13
 --   Present 14
 --   PresentT 14
@@ -3037,8 +2868,6 @@ instance (Show a
 
 -- | unbounded 'pred' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Pred Id) 13
 --   Present 12
 --   PresentT 12
@@ -3065,8 +2894,6 @@ instance (Show a
 
 -- | 'fromEnum' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(FromEnum Id) 'x'
 --   Present 120
 --   PresentT 120
@@ -3091,8 +2918,6 @@ instance (Show a
 
 -- | unsafe 'toEnum' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ToEnum Char Id) 120
 --   Present 'x'
 --   PresentT 'x'
@@ -3120,8 +2945,6 @@ instance (PP p x ~ a
 
 -- | bounded 'toEnum' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ToEnumB Ordering LT) 2
 --   Present GT
 --   PresentT GT
@@ -3160,8 +2983,6 @@ instance (P def (Proxy (PP t a))
 
 -- | a predicate on prime numbers
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Prime Id) 2
 --   True
 --   TrueT
@@ -3190,8 +3011,6 @@ instance (PP p x ~ a
 
 -- | 'not' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Not Id) False
 --   True
 --   TrueT
@@ -3220,8 +3039,6 @@ instance (PP p x ~ Bool, P p x) => P (Not p) x where
 
 -- | filters a list \'q\' keeping or removing those elements in \'p\'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Keep '[5] '[1,5,5,2,5,2]) ()
 --   Present [5,5,5]
 --   PresentT [5,5,5]
@@ -3279,8 +3096,6 @@ instance (GetBool keep
 
 -- | 'elem' function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Elem (Fst Id) (Snd Id)) ('x',"abcdxy")
 --   True
 --   TrueT
@@ -3309,8 +3124,6 @@ instance ([PP p a] ~ PP q a
 
 -- | 'const' () function
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @() "Asf"
 --   Present ()
 --   PresentT ()
@@ -3326,8 +3139,6 @@ type Init' p = InitFail "Init(empty)" p
 
 -- | similar to fmap fst
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Fmap_1 (Just (13,"Asf"))
 --   Present Just 13
 --   PresentT (Just 13)
@@ -3341,8 +3152,6 @@ instance Functor f => P Fmap_1 (f (a,x)) where
 
 -- | similar to fmap snd
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Fmap_2 (Just ("asf",13))
 --   Present Just 13
 --   PresentT (Just 13)
@@ -3479,8 +3288,6 @@ type family MaybeXPT lr x q where
 
 -- | similar to either Just (const Nothing)
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @LeftToMaybe (Left 13)
 --   Present Just 13
 --   PresentT (Just 13)
@@ -3497,8 +3304,6 @@ instance P LeftToMaybe (Either a x) where
 
 -- | similar to either (const Nothing) Just
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @RightToMaybe (Right 13)
 --   Present Just 13
 --   PresentT (Just 13)
@@ -3532,8 +3337,6 @@ instance P TheseToMaybe (These a b) where
 
 -- | similar to 'Control.Arrow.|||' but additionally gives \'p\' and \'q\' the original input
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(EitherX (ShowP ((Fst Id >> Fst Id) + (Snd Id))) (ShowP Id) (Snd Id)) (9,Left 123)
 --   Present "132"
 --   PresentT "132"
@@ -3578,8 +3381,6 @@ type family EitherXT lr x p where
 
 -- | similar to 'Data.These.mergeTheseWith' but additionally provides \'p\', '\q'\ and \'r\' the original input as the first element in the tuple
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(TheseX (((Fst Id >> Fst Id) + (Snd Id)) >> ShowP Id) (ShowP Id) (Snd Id >> (Snd Id)) (Snd Id)) (9,This 123)
 --   Present "132"
 --   PresentT "132"
@@ -3639,8 +3440,6 @@ type family TheseXT lr x p where
 --
 --   similar to 'MaybeX' but provides a Proxy to the result of \'q\' and does not provide the surrounding context
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MaybeIn "foundnothing" (ShowP (Pred Id))) (Just 20)
 --   Present "19"
 --   PresentT "19"
@@ -3681,8 +3480,6 @@ instance (P q a
 
 -- | similar to 'SG.stimes'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(STimes 4 Id) (SG.Sum 3)
 --   Present Sum {getSum = 12}
 --   PresentT (Sum {getSum = 12})
@@ -3712,8 +3509,6 @@ instance (P n a
 
 -- | similar to 'pure'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Pure Maybe Id) 4
 --   Present Just 4
 --   PresentT (Just 4)
@@ -3746,8 +3541,6 @@ type PMEmpty = MEmptyT' 'Proxy  -- lifts 'a' to 'Proxy a' then we can use it wit
 
 -- | similar to 'mempty'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MEmptyT (SG.Sum Int)) ()
 --   Present Sum {getSum = 0}
 --   PresentT (Sum {getSum = 0})
@@ -3772,8 +3565,6 @@ instance Monoid a => P MEmptyProxy (Proxy (a :: Type)) where
 
 -- | similar to 'empty'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(EmptyT Maybe Id) ()
 --   Present Nothing
 --   PresentT Nothing
@@ -3821,8 +3612,6 @@ instance P (MkNothing' t) a where
 
 -- | 'Just' constructor
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MkJust Id) 44
 --   Present Just 44
 --   PresentT (Just 44)
@@ -3841,8 +3630,6 @@ instance (PP p x ~ a, P p x, Show a) => P (MkJust p) x where
 
 -- | 'Data.Either.Left' constructor
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MkLeft _ Id) 44
 --   Present Left 44
 --   PresentT (Left 44)
@@ -3863,8 +3650,6 @@ instance (Show (PP p x), P p x) => P (MkLeft' t p) x where
 
 -- | 'Data.Either.Right' constructor
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MkRight _ Id) 44
 --   Present Right 44
 --   PresentT (Right 44)
@@ -3885,8 +3670,6 @@ instance (Show (PP p x), P p x) => P (MkRight' t p) x where
 
 -- | 'Data.These.This' constructor
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MkThis _ Id) 44
 --   Present This 44
 --   PresentT (This 44)
@@ -3907,8 +3690,6 @@ instance (Show (PP p x), P p x) => P (MkThis' t p) x where
 
 -- | 'Data.These.That' constructor
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MkThat _ Id) 44
 --   Present That 44
 --   PresentT (That 44)
@@ -3932,8 +3713,6 @@ instance (Show (PP p x), P p x) => P (MkThat' t p) x where
 
 -- | 'Data.These.These' constructor
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MkThese (Fst Id) (Snd Id)) (44,'x')
 --   Present These 44 'x'
 --   PresentT (These 44 'x')
@@ -3956,8 +3735,6 @@ instance (P p a
 
 -- | similar to 'mconcat'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(MConcat Id) [SG.Sum 44, SG.Sum 12, SG.Sum 3]
 --   Present Sum {getSum = 59}
 --   PresentT (Sum {getSum = 59})
@@ -3967,8 +3744,6 @@ data MConcat p
 
 -- | similar to a limited form of 'foldMap'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(FoldMap (SG.Sum _) Id) [44, 12, 3]
 --   Present 59
 --   PresentT 59
@@ -4001,8 +3776,6 @@ instance (PP p x ~ [a]
 
 -- | similar to 'concat'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Concat Id) ["abc","D","eF","","G"]
 --   Present "abcDeFG"
 --   PresentT "abcDeFG"
@@ -4045,8 +3818,6 @@ instance Typeable t => P (ProxyT' (t :: Type)) a where
 
 -- | similar to 'Data.List.!!'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Ix 4 "not found") ["abc","D","eF","","G"]
 --   Present "G"
 --   PresentT "G"
@@ -4078,8 +3849,6 @@ instance (P def (Proxy a)
 
 -- | similar to 'Data.List.!!' leveraging 'Ixed'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> import qualified Data.Map.Strict as M
 --   >>> pl @(Id !! 2) ["abc","D","eF","","G"]
 --   Present "eF"
@@ -4124,8 +3893,6 @@ instance (P q a
 
 -- | 'lookup' leveraging 'Ixed'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> import qualified Data.Map.Strict as M
 --   >>> pl @(Id !!! 2) ["abc","D","eF","","G"]
 --   Present "eF"
@@ -4177,8 +3944,6 @@ instance (P q a
 
 -- | 'Data.List.ands'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Ands Id) [True,True,True]
 --   True
 --   TrueT
@@ -4212,8 +3977,6 @@ instance (PP p x ~ t a
 
 -- | 'Data.List.ors'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Ors Id) [False,False,False]
 --   False
 --   FalseT
@@ -4249,8 +4012,6 @@ instance (PP p x ~ t a
 
 -- | similar to cons
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id :+ (Snd Id)) (99,[1,2,3,4])
 --   Present [99,1,2,3,4]
 --   PresentT [99,1,2,3,4]
@@ -4283,8 +4044,6 @@ instance (P p x
 
 -- | similar to snoc
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Snd Id +: Fst Id) (99,[1,2,3,4])
 --   Present [1,2,3,4,99]
 --   PresentT [1,2,3,4,99]
@@ -4318,8 +4077,6 @@ instance (P p x
 
 -- | 'Control.Lens.uncons'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Uncons [1,2,3,4]
 --   Present Just (1,[2,3,4])
 --   PresentT (Just (1,[2,3,4]))
@@ -4341,8 +4098,6 @@ instance (Show (ConsT s)
 
 -- | 'Control.Lens.unsnoc'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Unsnoc [1,2,3,4]
 --   Present Just ([1,2,3],4)
 --   PresentT (Just ([1,2,3],4))
@@ -4364,8 +4119,6 @@ instance (Show (ConsT s)
 
 -- | similar to 'null' using 'AsEmpty'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @IsEmpty [1,2,3,4]
 --   False
 --   FalseT
@@ -4392,8 +4145,6 @@ instance (Show as, AsEmpty as) => P IsEmpty as where
 
 -- | similar to 'null' using 'Foldable'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Null [1,2,3,4]
 --   False
 --   FalseT
@@ -4415,8 +4166,6 @@ instance (Show (t a)
 
 -- | similar to 'enumFromTo'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(EnumFromTo 2 5) ()
 --   Present [2,3,4,5]
 --   PresentT [2,3,4,5]
@@ -4447,8 +4196,6 @@ type CatMaybes q = MapMaybe Id q
 
 -- | similar to 'partitionEithers'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @PartitionEithers [Left 'a',Right 2,Left 'c',Right 4,Right 99]
 --   Present ("ac",[2,4,99])
 --   PresentT ("ac",[2,4,99])
@@ -4463,8 +4210,6 @@ instance (Show a, Show b) => P PartitionEithers [Either a b] where
 
 -- | similar to 'partitionThese'. returns a 3-tuple with the results so use 'Fst' 'Snd' 'Thd' to extract
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @PartitionThese [This 'a', That 2, This 'c', These 'z' 1, That 4, These 'a' 2, That 99]
 --   Present ("ac",[2,4,99],[('z',1),('a',2)])
 --   PresentT ("ac",[2,4,99],[('z',1),('a',2)])
@@ -4484,8 +4229,6 @@ type Theses = PartitionThese >> Thd Id
 
 -- | similar to 'scanl'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Scanl (Snd Id :+ Fst Id) (Fst Id) (Snd Id)) ([99],[1..5])
 --   Present [[99],[1,99],[2,1,99],[3,2,1,99],[4,3,2,1,99],[5,4,3,2,1,99]]
 --   PresentT [[99],[1,99],[2,1,99],[3,2,1,99],[4,3,2,1,99],[5,4,3,2,1,99]]
@@ -4550,8 +4293,6 @@ type family UnfoldT mbs where
 
 -- | similar to 'unfoldr'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Unfoldr (MaybeB (Not Null) (SplitAt 2 Id)) Id) [1..5]
 --   Present [[1,2],[3,4],[5]]
 --   PresentT [[1,2],[3,4],[5]]
@@ -4603,8 +4344,6 @@ instance (PP q a ~ s
 
 -- | similar to 'map'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Map (Pred Id) Id) [1..5]
 --   Present [0,1,2,3,4]
 --   PresentT [0,1,2,3,4]
@@ -4634,8 +4373,6 @@ instance (Show (PP p a)
 
 -- | if p then run q else run r
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(If (Gt 4) "greater than 4" "less than or equal to 4" ) 10
 --   Present "greater than 4"
 --   PresentT "greater than 4"
@@ -4668,8 +4405,6 @@ instance (Show (PP r a)
 
 -- | creates a list of overlapping pairs of elements. requires two or more elements
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Pairs [1,2,3,4]
 --   Present [(1,2),(2,3),(3,4)]
 --   PresentT [(1,2),(2,3),(3,4)]
@@ -4698,8 +4433,6 @@ instance Show a => P Pairs [a] where
 
 -- | similar to 'partition'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Partition (Ge 3) Id) [10,4,1,7,3,1,3,5]
 --   Present ([10,4,7,3,3,5],[1,1])
 --   PresentT ([10,4,7,3,3,5],[1,1])
@@ -4744,8 +4477,6 @@ instance (P p x
 
 -- | similar to 'break'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Break (Ge 3) Id) [10,4,1,7,3,1,3,5]
 --   Present ([],[10,4,1,7,3,1,3,5])
 --   PresentT ([],[10,4,1,7,3,1,3,5])
@@ -4796,8 +4527,6 @@ instance (P p x
 
 -- | Fails the computation with a message
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Failt Int (Printf "value=%03d" Id)) 99
 --   Error value=099
 --   FailT "value=099"
@@ -4848,8 +4577,6 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 
 -- | transparent predicate wrapper to make k of kind Type so it can be in a promoted list (cant mix kinds) see 'Do'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Do '[W 123, W "xyz", Len &&& Id, Pred Id *** Id<>Id]) ()
 --   Present (2,"xyzxyz")
 --   PresentT (2,"xyzxyz")
@@ -4866,8 +4593,6 @@ instance P p a => P (W p) a where
 
 -- | catch a failure
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Catch (Succ Id) (Fst Id >> Second (ShowP Id) >> Printf2 "%s %s" >> 'LT)) GT
 --   Present LT
 --   PresentT LT
@@ -4912,8 +4637,6 @@ type Mod' p q = DivMod p q >> (Snd Id)
 
 -- | similar to 'div'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Div (Fst Id) (Snd Id)) (10,4)
 --   Present 2
 --   PresentT 2
@@ -4945,8 +4668,6 @@ instance (PP p a ~ PP q a
 
 -- | similar to 'mod'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Mod (Fst Id) (Snd Id)) (10,3)
 --   Present 1
 --   PresentT 1
@@ -4977,8 +4698,6 @@ instance (PP p a ~ PP q a
 
 -- | similar to 'divMod'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(DivMod (Fst Id) (Snd Id)) (10,3)
 --   Present (3,1)
 --   PresentT (3,1)
@@ -5022,8 +4741,6 @@ instance (PP p a ~ PP q a
 
 -- | similar to 'quotRem'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(QuotRem (Fst Id) (Snd Id)) (10,3)
 --   Present (3,1)
 --   PresentT (3,1)
@@ -5081,8 +4798,6 @@ strictmsg = if getBool @strict then "" else "Lax"
 -- | Guards contain a type level list of tuples the action to run on failure of the predicate and the predicate itself
 --   Each tuple validating against the corresponding value in a value list
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 4)]) [17,4]
 --   Present [17,4]
 --   PresentT [17,4]
@@ -5171,8 +4886,6 @@ instance (PP prt (Int, a) ~ String
 
 -- | \'p\' is the predicate and on failure of the predicate runs \'prt\'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Guard "expected > 3" (Gt 3)) 17
 --   Present 17
 --   PresentT 17
@@ -5213,8 +4926,6 @@ instance (Show a
 
 -- | similar to 'Guard' but uses the root message of the False predicate case as the failure message
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(GuardSimple (Luhn Id)) [1..4]
 --   Error Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]
 --   FailT "Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]"
@@ -5268,8 +4979,6 @@ instance (Show (PP p a), P p a) => P (Skip p) a where
 
 -- | This is composition for predicates
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id >> Succ (Id !! 0)) ([11,12],'x')
 --   Present 12
 --   PresentT 12
@@ -5304,8 +5013,6 @@ instance (Show (PP p a)
 
 -- | similar to 'Prelude.&&'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id && (Snd Id >> Len >> Ge 4)) (True,[11,12,13,14])
 --   True
 --   TrueT
@@ -5331,8 +5038,6 @@ instance (P p a
 
 -- | similar to 'Prelude.||'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id || (Snd Id >> Len >> Ge 4)) (False,[11,12,13,14])
 --   True
 --   TrueT
@@ -5358,8 +5063,6 @@ instance (P p a
 
 -- | implication
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id ~> (Snd Id >> Len >> Ge 4)) (True,[11,12,13,14])
 --   True
 --   TrueT
@@ -5397,8 +5100,6 @@ infix 4 ===
 
 -- | similar to 'compare'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id === (Snd Id)) (10,9)
 --   Present GT
 --   PresentT GT
@@ -5441,8 +5142,6 @@ instance (Ord (PP p a)
 
 -- | compare two strings ignoring case
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id ===? (Snd Id)) ("abC","aBc")
 --   Present EQ
 --   PresentT EQ
@@ -5517,8 +5216,6 @@ type Ne n = Cmp 'Cne I n
 
 -- | similar to 'Control.Lens.itoList'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(IToList _) ("aBc" :: String)
 --   Present [(0,'a'),(1,'B'),(2,'c')]
 --   PresentT [(0,'a'),(1,'B'),(2,'c')]
@@ -5547,8 +5244,6 @@ instance (Show x
 
 -- | similar to 'toList'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @ToList ("aBc" :: String)
 --   Present "aBc"
 --   PresentT "aBc"
@@ -5581,8 +5276,6 @@ instance (Show (t a)
 
 -- | similar to 'toList'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ToList' Id) ("aBc" :: String)
 --   Present "aBc"
 --   PresentT "aBc"
@@ -5656,8 +5349,6 @@ instance (Show l
 
 -- | predicate on 'These'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(IsThis Id) (This "aBc")
 --   True
 --   TrueT
@@ -5696,8 +5387,6 @@ instance (PP p x ~ These a b
 
 -- | similar to 'these'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(TheseIn Id Len (Fst Id + Length (Snd Id))) (This 13)
 --   Present 13
 --   PresentT 13
@@ -5759,8 +5448,6 @@ instance (Show a
 
 -- | creates an empty list of the given type
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Id :+ EmptyList _) 99
 --   Present [99]
 --   PresentT [99]
@@ -5777,8 +5464,6 @@ type Singleton p = p :+ EmptyT [] p
 
 -- | creates a singleton from a value
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Singleton (Char1 "aBc")) ()
 --   Present "a"
 --   PresentT "a"
@@ -5804,8 +5489,6 @@ instance (P p x, Show (PP p x))
 
 -- | extracts the first character from a non empty 'Symbol'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Char1 "aBc") ()
 --   Present 'a'
 --   PresentT 'a'
@@ -5821,8 +5504,6 @@ instance (KnownSymbol s, NullT s ~ 'False) => P (Char1 s) a where
 --
 --   the key is that all information about both lists are preserved
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ZipThese (Fst Id) (Snd Id)) ("aBc", [1..5])
 --   Present [These 'a' 1,These 'B' 2,These 'c' 3,That 4,That 5]
 --   PresentT [These 'a' 1,These 'B' 2,These 'c' 3,That 4,That 5]
@@ -5847,9 +5528,17 @@ instance (PP p a ~ [x]
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
-        let d = TA.align p q
+        let d = simpleAlign p q
         in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
 
+simpleAlign :: [a] -> [b] -> [These a b]
+simpleAlign as [] = map This as
+simpleAlign [] bs = map That bs
+simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
+
+
+
+{-
 data ZipTheseF p q
 
 instance (Show (f y)
@@ -5872,7 +5561,7 @@ instance (Show (f y)
       Right (p,q,pp,qq) ->
         let d = TA.align p q
         in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
-
+-}
 type family ExtractAFromTA (ta :: Type) :: Type where
   ExtractAFromTA (t a) = a
   ExtractAFromTA ta = GL.TypeError (
@@ -5884,8 +5573,6 @@ type family ExtractAFromTA (ta :: Type) :: Type where
 
 -- | Zip two lists optionally cycling the one of the lists to match the size
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Ziplc (Fst Id) (Snd Id)) ("abc", [1..5])
 --   Present [('a',1),('b',2),('c',3),('a',4),('b',5)]
 --   PresentT [('a',1),('b',2),('c',3),('a',4),('b',5)]
@@ -5933,8 +5620,6 @@ instance (GetBool lc
 
 -- | Luhn predicate check on last digit
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Luhn Id) [1,2,3,0]
 --   True
 --   TrueT
@@ -5991,8 +5676,6 @@ peWith opts a = do
 -- could get n::Nat as a predicate but it is fine as is!
 -- | Read a number base 2 via 36
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ReadBase Int 16) "00feD"
 --   Present 4077
 --   PresentT 4077
@@ -6044,8 +5727,6 @@ getValidBase n = take n (['0'..'9'] <> ['a'..'z'])
 
 -- | Display a number at base 2 to 36
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ShowBase 16) 4077
 --   Present "fed"
 --   PresentT "fed"
@@ -6083,8 +5764,6 @@ type Assocr = '(Fst Id >> Fst Id, (Snd Id) *** I)
 
 -- | Intercalate
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Intercalate '["aB"] '["xxxx","yz","z","www","xyz"]) ()
 --   Present ["xxxx","aB","yz","aB","z","aB","www","aB","xyz"]
 --   PresentT ["xxxx","aB","yz","aB","z","aB","www","aB","xyz"]
@@ -6117,8 +5796,6 @@ getStringPrefix = fix (\k z -> \case
 
 -- | uses Printf to format output
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Printf "value=%03d" Id) 12
 --   Present "value=012"
 --   PresentT "value=012"
@@ -6162,8 +5839,6 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 
 -- | runs values in parallel unlike 'Do'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Para '[Id,Id + 1,Id * 4]) [10,20,30]
 --   Present [10,21,120]
 --   PresentT [10,21,120]
@@ -6253,8 +5928,6 @@ instance (KnownNat n
 
 -- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Case (FailS "asdf" >> (Snd Id) >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 50
 --   Present "50 is same50"
 --   PresentT "50 is same50"
@@ -6381,8 +6054,6 @@ instance (KnownNat n
 
 -- | similar to 'sequenceA'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Sequence [Just 10, Just 20, Just 30]
 --   Present Just [10,20,30]
 --   PresentT (Just [10,20,30])
@@ -6417,8 +6088,6 @@ instance P p x => P (Hide p) x where
 
 -- | similar to 'readFile'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ReadFile ".ghci" >> 'Just Id >> Len >> Gt 0) ()
 --   True
 --   TrueT
@@ -6450,8 +6119,6 @@ instance (PP p x ~ String, P p x) => P (ReadFile p) x where
 
 -- | does the directory exists
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(DirExists ".") ()
 --   True
 --   TrueT
@@ -6479,8 +6146,6 @@ instance (PP p x ~ String, P p x) => P (ReadDir p) x where
 
 -- | does the directory exists
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(DirExists ".") ()
 --   True
 --   TrueT
@@ -6612,8 +6277,6 @@ type Nothing' = Guard "expected Nothing" IsNothing
 
 -- | 'isInfixOf' 'isPrefixOf' 'isSuffixOf' equivalents
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(IsInfixI "abc" "axAbCd") ()
 --   True
 --   TrueT
@@ -6669,8 +6332,6 @@ instance (GetBool ignore
 
 -- | similar to 'SG.<>'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id <> (Snd Id)) ("abc","def")
 --   Present "abcdef"
 --   PresentT "abcdef"
@@ -6755,8 +6416,6 @@ instance (ReverseTupleC tp
 
 -- | Printfn prints
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Printfn "%s %s" Id) ("123",("def",()))
 --   Present "123 def"
 --   PresentT "123 def"
@@ -6818,8 +6477,6 @@ type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
 
 -- | similar to 'Control.Applicative.<$'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id <$ (Snd Id)) ("abc",Just 20)
 --   Present Just "abc"
 --   PresentT (Just "abc")
@@ -6849,8 +6506,6 @@ infixl 4 <*
 
 -- | similar to 'Control.Applicative.<*'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id <* (Snd Id)) (Just "abc",Just 20)
 --   Present Just "abc"
 --   PresentT (Just "abc")
@@ -6878,8 +6533,6 @@ instance (Show (t c)
 
 -- | similar to 'Control.Applicative.<|>'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Fst Id <|> (Snd Id)) (Nothing,Just 20)
 --   Present Just 20
 --   PresentT (Just 20)
@@ -6915,8 +6568,6 @@ instance (P p x
 
 -- | similar to 'Control.Comonad.extract'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Extract (Nothing,Just 20)
 --   Present Just 20
 --   PresentT (Just 20)
@@ -6938,8 +6589,6 @@ instance (Show (t a)
 
 -- | similar to 'Control.Comonad.duplicate'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Duplicate (20,"abc")
 --   Present (20,(20,"abc"))
 --   PresentT (20,(20,"abc"))
@@ -6958,8 +6607,6 @@ instance (Show (t a)
 
 -- | similar to 'Control.Monad.join'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @Join  (Just (Just 20))
 --   Present Just 20
 --   PresentT (Just 20)
@@ -7014,8 +6661,6 @@ evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) o0 i))
 
 -- | similar to 'T.strip' 'T.stripStart' 'T.stripEnd'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Trim (Snd Id)) (20," abc   " :: String)
 --   Present "abc"
 --   PresentT "abc"
@@ -7077,8 +6722,6 @@ instance (FailIfT (NotT (OrT l r))
 
 -- | similar to 'T.stripLeft' 'T.stripRight'
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(StripLeft "xyz" Id) ("xyzHello" :: String)
 --   Present Just "Hello"
 --   PresentT (Just "Hello")
@@ -7136,8 +6779,6 @@ instance (GetBool r
 
 -- | leverages 'Para' for repeating predicates (passthrough method)
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(ParaImplN 'True 4 (Succ Id)) [1..4]
 --   Present [2,3,4,5]
 --   PresentT [2,3,4,5]
@@ -7168,8 +6809,6 @@ instance ( P (ParaImpl (LenT (RepeatT n p)) strict (RepeatT n p)) [a]
 
 -- | leverages 'GuardsQuick' for repeating predicates (passthrough method)
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d") 4 (Between 0 255)) [121,33,7,256]
 --   Error id=4 must be between 0 and 255, found 256
 --   FailT "id=4 must be between 0 and 255, found 256"
@@ -7196,8 +6835,6 @@ instance ( GetBool strict
 
 -- | creates a promoted list of predicates and then evaluates them into a list. see PP instance for '[k]
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(Repeat 4 (Succ Id)) 'c'
 --   Present "dddd"
 --   PresentT "dddd"
@@ -7218,8 +6855,6 @@ instance (P (RepeatT n p) a
 -- | leverages 'Do' for repeating predicates (passthrough method)
 --   same as \'DoN n p\' == \'FoldN n p Id\' but more efficient
 --
---   >>> :set -XTypeApplications
---   >>> :set -XDataKinds
 --   >>> pl @(DoN 4 (Succ Id)) 'c'
 --   Present 'g'
 --   PresentT 'g'
