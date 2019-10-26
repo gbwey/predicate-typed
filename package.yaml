@@ -1,5 +1,5 @@
 name:                predicate-typed
-version:             0.1.0.3
+version:             0.1.0.4
 github:              "gbwey/predicate-typed"
 synopsis:            Predicates, Refinement types and Dsl
 category:            Data
@@ -7,10 +7,6 @@ license:             BSD3
 author:              "Grant Weyburne <gbwey9@gmail.com>"
 maintainer:          "Grant Weyburne <gbwey9@gmail.com>"
 copyright:           "Copyright 2019, Grant Weyburne"
-
-extra-source-files:
-- README.md
-- ChangeLog.md
 
 description:         Please see the README on GitHub at <https://github.com/gbwey/predicate-typed#readme>
 

@@ -366,14 +366,14 @@ lit01' opts msg0 ret fmt as = msg0 <> show0 opts " " ret <> showLit1 opts (" | "
 
 -- | display all data regardless of debug level
 showLit0 :: POpts -> String -> String -> String
-showLit0 o s a = showLit' o 0 s a
+showLit0 o s a = showLitImpl o 0 s a
 
 -- | more restrictive: only display data at debug level 1 or less
 showLit1 :: POpts -> String -> String -> String
-showLit1 o s a = showLit' o 1 s a
+showLit1 o s a = showLitImpl o 1 s a
 
-showLit' :: POpts -> Int -> String -> String -> String
-showLit' o i s a =
+showLitImpl :: POpts -> Int -> String -> String -> String
+showLitImpl o i s a =
   if oDebug o >= i then
     let f n = let ss = take n a
               in ss <> (if length ss==n then " ..." else "")
@@ -390,7 +390,7 @@ show1 :: Show a => POpts -> String -> a -> String
 show1 o s a = showAImpl o 1 s a
 
 showAImpl :: Show a => POpts -> Int -> String -> a -> String
-showAImpl o i s a = showLit' o i s (show a)
+showAImpl o i s a = showLitImpl o i s (show a)
 
 -- | Regex options for Rescan Resplit Re etc
 data ROpt =
