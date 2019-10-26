@@ -139,7 +139,7 @@ TrueT
 PresentT "fe"
 ```
 
-**_Replace '$$(refinedTH ...)' $$(refinedTH' o2 ...)' for an evaluation tree **
+**_Replace '$$(refinedTH ...)' $$(refinedTH' o2 ...)' for an evaluation tree_**
 
 ### Template Haskell versions
 
@@ -150,7 +150,7 @@ ex1 = $$(refinedTH "123")
 
 ### Refined3 is the most useful refined type as you can control the input and output types (see documentation and [doctests](src/Refined3.hs))
 
-**_Replace '$$(refined3TH ...)' $$(refined3TH' o2 ...)' for a colored evaluation tree **
+**_Replace '$$(refined3TH ...)' $$(refined3TH' o2 ...)' for a colored evaluation tree_**
 
 ```haskell
 type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
