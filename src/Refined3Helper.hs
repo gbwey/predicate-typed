@@ -58,19 +58,41 @@ cc11 = mkProxy3P
 
 -- | read in a datetime
 --
--- >>> prtEval3P (Proxy @(DateTime1 UTCTime)) ol "2018-09-14 02:57:04"
--- Right (Refined3 {r3In = 2018-09-14 02:57:04 UTC, r3Out = "2018-09-14 02:57:04"})
+-- >>> prtEval3P (Proxy @(DateTime1 LocalTime)) ol "2018-09-14 02:57:04"
+-- Right (Refined3 {r3In = 2018-09-14 02:57:04, r3Out = "2018-09-14 02:57:04"})
+--
+-- >>> prtEval3P (Proxy @(DateTime1 LocalTime)) ol "2018-09-14 99:98:97"
+-- Left Step 2. Failed Boolean Check(op) | hours invalid: found 99
+--
+-- >>> prtEval3P (Proxy @(DateTime1 LocalTime)) ol "2018-09-14 23:01:97"
+-- Left Step 2. Failed Boolean Check(op) | seconds invalid: found 97
+--
+-- >>> prtEval3P (Proxy @(DateTime1 UTCTime)) ol "2018-09-14 99:98:97"
+-- Right (Refined3 {r3In = 2018-09-18 04:39:37 UTC, r3Out = "2018-09-18 04:39:37"})
 --
 type DateTime1 (t :: Type) = '(Dtip1 t, Dtop1, Dtfmt1, String)
 type Dtip1 t = ParseTimeP t "%F %T" Id
 
 -- extra check to validate the time as parseTime doesnt validate the time component
-type Dtop1 =
+-- ZonedTime LocalTime and TimeOfDay do no validation and allow invalid stuff through : eg 99:98:97 is valid
+-- UTCTime will do the same but any overages get tacked on to the day and time as necessary: makes the time valid! 99:98:97 becomes 04:39:37
+--    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
+
+type Dtop1' =
    Map (ReadP Int) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
      >> Guards '[ '(Printf2 "guard %d invalid hours %d", Between 0 23)
                 , '(Printf2 "guard %d invalid minutes %d", Between 0 59)
                 , '(Printf2 "guard %d invalid seconds %d", Between 0 59)
                 ] >> 'True
+
+type Dtop1 =
+   Map (ReadP Int) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
+     >> GuardsDetail "%s invalid: found %d"
+                  '[ '("hours", Between 0 23)
+                   , '("minutes",Between 0 59)
+                   , '("seconds",Between 0 59)
+                   ] >> 'True
+
 type Dtfmt1 = FormatTimeP "%F %T" Id
 
 ssn :: Proxy Ssn
@@ -102,10 +124,11 @@ type Ssnip = Map (ReadP Int) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd On
 type Ssnop = GuardsQuick (Printf2 "number for group %d invalid: found %d")
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
                       >> 'True
-type Ssnop' = Guards '[ '(Printf2 "guard %d invalid: found %d", Between 1 899 && Id /= 666)
-                  , '(Printf2 "group %d invalid: found %d", Between 1 99)
-                  , '(Printf2 "group %d invalid: found %d", Between 1 9999)
-                  ] >> 'True
+type Ssnop' = GuardsDetail "%s invalid: found %d"
+                          '[ '("first", Between 1 899 && Id /= 666)
+                           , '("second", Between 1 99)
+                           , '("third" , Between 1 9999)
+                           ] >> 'True
 type Ssnfmt = Printfnt 3 "%03d-%02d-%04d"
 
 -- | read in a time and validate it

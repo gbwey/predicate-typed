@@ -5520,7 +5520,7 @@ type ToPara (os :: [k]) = Proxy (ParaImplW 'True os)
 type ToGuards (prt :: k) (os :: [k1]) = Proxy (Guards (ToGuardsT prt os))
 
 type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
---  ToGuardsT prt '[] = '[]  -- error condition
+  ToGuardsT prt '[] = GL.TypeError ('GL.Text "ToGuardsT cannot be empty")
   ToGuardsT prt '[p] = '(prt,p) : '[]
   ToGuardsT prt (p ': ps) = '(prt,p) ': ToGuardsT prt ps
 
@@ -6123,15 +6123,15 @@ type PrintfntLax (n :: Nat) s = Printfn s (TupleListLax n)
 -- Present "fst=ab snd=123"
 -- PresentT "fst=ab snd=123"
 --
-type Printf2 (s :: Symbol) = Printfn s '(Fst Id,'(Snd Id, '()))
+type Printf2 s = Printfn s '(Fst Id,'(Snd Id, '()))
 -- | print a 3-tuple
 --
 -- >>> pl @(Printf3 "fst=%s snd=%03d thd=%s") ("ab",123,"xx")
 -- Present "fst=ab snd=123 thd=xx"
 -- PresentT "fst=ab snd=123 thd=xx"
 --
-type Printf3 (s :: Symbol) = Printfn s '(Fst Id, '(Snd Id, '(Thd Id, '())))
-type Printf3' (s :: Symbol) = Printfn s (TupleI '[Fst Id, Snd Id, Thd Id])
+type Printf3 s = Printfn s '(Fst Id, '(Snd Id, '(Thd Id, '())))
+type Printf3' s = Printfn s (TupleI '[Fst Id, Snd Id, Thd Id])
 
 
 instance (KnownNat (TupleLenT as)
@@ -6596,3 +6596,87 @@ instance (P (DoExpandT (RepeatT n p)) a
   type PP (DoN n p) a = PP (Do (RepeatT n p)) a
   eval _ opts a =
     eval (Proxy @(Do (RepeatT n p))) opts a
+
+
+-- | allows you to provide a print template and symbol and predicate pairs and if there is an error then the corresponding symbol will be passed to the print function
+--
+-- >>> pl @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [13,59,61]
+-- Error seconds invalid: found 61
+-- FailT "seconds invalid: found 61"
+--
+-- >>> pl @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [27,59,12]
+-- Error hours invalid: found 27
+-- FailT "hours invalid: found 27"
+--
+-- >>> pl @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [23,59,12]
+-- Present [23,59,12]
+-- PresentT [23,59,12]
+--
+data GuardsImplX (n :: Nat) (strict :: Bool) (os :: [(k,k1)])
+
+type GuardsDetail (prt :: Symbol) (os :: [(k0,k1)]) = GuardsImplXX 'True (ToGuardsDetailT prt os)
+
+type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
+  ToGuardsDetailT prt '[ '(s,p) ] = '(Printfn prt '(s,'(Id,'())), p) : '[]
+  ToGuardsDetailT prt ( '(s,p) ': ps) = '(Printfn prt '(s,'(Id,'())), p) ': ToGuardsDetailT prt ps
+  ToGuardsDetailT prt '[] = GL.TypeError ('GL.Text "ToGuardsDetailT cannot be empty")
+
+data GuardsImplXX (strict :: Bool) (ps :: [(k,k1)])
+
+instance (GetBool strict, GetLen ps, P (GuardsImplX (LenT ps) strict ps) [a]) => P (GuardsImplXX strict ps) [a] where
+  type PP (GuardsImplXX strict ps) [a] = PP (GuardsImplX (LenT ps) strict ps) [a]
+  eval _ opts as = do
+    let strict = getBool @strict
+        msgbase0 = "Guards" <> strictmsg @strict
+        n = getLen @ps
+    if strict && n /= length as then
+       let xx = msgbase0 <> ": data elements(" <> show (length as) <> ") /= predicates(" <> show n <> ")"
+       in pure $ mkNode opts (FailT xx) [xx] []
+    else eval (Proxy @(GuardsImplX (LenT ps) strict ps)) opts as
+
+instance (KnownNat n
+        , GetBool strict
+        , Show a
+        ) => P (GuardsImplX n strict ('[] :: [(k,k1)])) [a] where
+  type PP (GuardsImplX n strict ('[] :: [(k,k1)])) [a] = [a]
+  eval _ opts as =
+    let msg0 = "Guards" <> strictmsg @strict <> "(" <> show n <> ")"
+        n :: Int = nat @n
+    in pure $ mkNode opts (PresentT as) [msg0 <> " done!" <> if null as then "" else show1 opts " | leftovers=" as] []
+
+instance (PP prt a ~ String
+        , P prt a
+        , KnownNat n
+        , GetBool strict
+        , GetLen ps
+        , P p a
+        , PP p a ~ Bool
+        , P (GuardsImplX n strict ps) [a]
+        , PP (GuardsImplX n strict ps) [a] ~ [a]
+        , Show a
+        ) => P (GuardsImplX n strict ('(prt,p) ': ps)) [a] where
+  type PP (GuardsImplX n strict ('(prt,p) ': ps)) [a] = [a]
+  eval _ opts as' = do
+     let msgbase0 = "Guards" <> strictmsg @strict <> "(" <> show (n-pos) <> ":" <> show n <> ")"
+         msgbase1 = "Guard" <> strictmsg @strict <> "(" <> show (n-pos) <> ")"
+         msgbase2 = "Guards" <> strictmsg @strict
+         n :: Int = nat @n
+         pos = getLen @ps
+     case as' of
+         [] -> pure $ mkNode opts mempty [msgbase0 <> " (ran out of data!!)"] []
+         a:as -> do
+                    pp <- evalBool (Proxy @p) opts a
+                    case getValueLR opts (msgbase1 <> " p failed") pp [] of
+                         Left e -> pure e
+                         Right False -> do
+                           qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
+                           pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+                              Left e -> e
+                              Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] [hh pp, hh qq]
+                         Right True -> do
+                           ss <- eval (Proxy @(GuardsImplX n strict ps)) opts as
+                           pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
+                             Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
+                             Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
+
+
