@@ -19,14 +19,17 @@ data Refined p a = Refined a
 * **_a_** is the input type
 * **_p_** predicate on **_a_**
 
+**_If you want to see an evaluation tree with colors for any of the examples, just replace 'ol' with 'o2' or if on unix use 'ou' (unicode)_**
+
 ### Examples of Refined (for more information see [doctests](src/Refined.hs))
+
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
 >prtRefinedIO @(ReadP Int >> Id > 99) ol "123"
 Right (Refined {unRefined = "123"})
 ```
 
-2. reads in a number but fails at compile-time
+2. tries to read in a number but fails
 ```haskell
 >prtRefinedIO @(ReadP Int >> Id > 99) ol "1x2y3"
 Left (FailP "ReadP Int (1x2y3) failed")
@@ -38,7 +41,7 @@ Left (FailP "ReadP Int (1x2y3) failed")
 Right (Refined {unRefined = "000fe"})
 ```
 
-4. reads in a hexadecimal string but fails the predicate check so doesnt compile
+4. reads in a hexadecimal string but fails the predicate check
 ```haskell
 >prtRefinedIO @(ReadBase Int 16 >> Between 99 253) ol "000fe"
 Left FalseP
@@ -136,6 +139,8 @@ TrueT
 PresentT "fe"
 ```
 
+**_Replace '$$(refinedTH ...)' $$(refinedTH' o2 ...)' for an evaluation tree **
+
 ### Template Haskell versions
 
 ```haskell
@@ -143,11 +148,51 @@ ex1 :: Refined (ReadP Int >> Id > 99) String
 ex1 = $$(refinedTH "123")
 ```
 
+### Refined3 is the most useful refined type as you can control the input and output types (see documentation and [doctests](src/Refined3.hs))
+
+**_Replace '$$(refined3TH ...)' $$(refined3TH' o2 ...)' for a colored evaluation tree **
+
 ```haskell
 type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
 
-ex2 :: MakeR3 Hex
-ex2 = $$(refined3TH "0000fe")
+$$(refined3TH "0000fe") :: MakeR3 Hex
+```
+
+Here is an example where the predicate fails at compile-time and we choose to show the details using o2.
+```haskell
+>type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
+
+>$$(refined3TH' o2 "000ffff") :: MakeR3 Hex
+
+<interactive>:18:4: error:
+    *
+*** Step 1. Success Initial Conversion(ip) [65535] ***
+
+P ReadBase(Int,16) 65535 | "000ffff"
+|
+`- P Id "000ffff"
+
+*** Step 2. False Boolean Check(op) ***
+
+False True && False
+|
++- True  65535 >= 0
+|  |
+|  +- P I
+|  |
+|  `- P '0
+|
+`- False 65535 <= 255
+   |
+   +- P I
+   |
+   `- P '255
+
+refined3TH: predicate failed with Step 2. False Boolean Check(op) | FalseP
+    * In the Template Haskell splice $$(refined3TH' o0 "000ffff")
+      In the expression: $$(refined3TH' o0 "000ffff") :: MakeR3 Hex
+      In an equation for `it':
+          it = $$(refined3TH' o0 "000ffff") :: MakeR3 Hex
 ```
 
 ### Any valid Read/Show instance can be used with Refined3
