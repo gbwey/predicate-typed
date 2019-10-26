@@ -221,12 +221,12 @@ getValueLRImpl showError opts msg0 tt hs =
 newtype PColor = PColor { unPColor :: BoolP -> String -> String }
 
 -- | customizable options
-data POpts = POpts { oShowA :: Maybe Int -- ^ length of data to display for 'showA'
+data POpts = POpts { oWidth :: Maybe Int -- ^ length of data to display for 'showLitImpl'
                    , oDebug :: !Int  -- ^ debug level
-                   , oDisp :: Disp -- ^ how to display the tree orientation and unicode etc
+                   , oDisp :: Disp -- ^ display the tree using the normal tree or unicode
                    , oHide :: !Int -- ^ hides one layer of a tree
                    , oColor :: !(String, PColor) -- ^ color palette used
-                   , oLite :: !Bool
+                   , oLite :: !Bool -- ^ skip the tree entirely and display the end result
                    }
 
 -- | display format for the tree
@@ -236,7 +236,7 @@ data Disp = NormalDisp -- ^ draw horizontal tree
 
 instance Show POpts where
   show opts =
-    "POpts: showA=" <> show (oShowA opts)
+    "POpts: showA=" <> show (oWidth opts)
     <> " debug=" <> show (oDebug opts)
     <> " disp=" <> show (oDisp opts)
     <> " hide=" <> show (oHide opts)
@@ -245,8 +245,8 @@ instance Show POpts where
 
 defOpts :: POpts
 defOpts = POpts
-    { oShowA = Just 110
-    , oDebug = 0
+    { oWidth = Just 200
+    , oDebug = 2
     , oDisp = NormalDisp
     , oHide = 0
     , oColor = color1
@@ -255,48 +255,49 @@ defOpts = POpts
 
 -- | skip colors and just return the summary
 ol :: POpts
-ol = o0 { oColor = color0, oLite = True }
+ol = defOpts { oColor = color0, oLite = True }
 
 -- | skip the detail and just return the summary but keep the colors
 olc :: POpts
 olc = ol { oColor = color1 }
 
+-- | displays the detailed evaluation tree without colors.
 o0 :: POpts
 o0 = defOpts { oColor = color0 }
 
--- | skip colors
-o02 :: POpts
-o02 = o2 { oColor = color0 }
-
-o03 :: POpts
-o03 = o3 { oColor = color0 }
-
-
-o1 :: POpts
-o1 = defOpts { oDebug = 1, oShowA = Just 120 }
-
--- | colors and details
+-- | displays the detailed evaluation tree using colors.
 o2 :: POpts
-o2 = defOpts { oDebug = 2, oShowA = Just 200 }
+o2 = defOpts { oDebug = 2 }
 
+-- | same as 'o2' but for narrower display width
+o2n :: POpts
+o2n = o2 { oWidth = Just 120 }
+
+-- | same as 'o2' but for larger display width
 o3 :: POpts
-o3 = defOpts { oDebug = 3, oShowA = Just 400 }
+o3 = defOpts { oDebug = 3, oWidth = Just 400 }
 
+-- | displays the detailed evaluation tree using unicode and colors. ('o2' works better on Windows)
 ou :: POpts
-ou = o2 { oDisp = Unicode }
+ou = defOpts { oDisp = Unicode }
 
+-- | same as 'ou' but for narrower display width
+oun :: POpts
+oun = ou { oWidth = Just 120 }
 
--- | helper method to set the width of data to be shown in the tree
-seta :: Int -> POpts -> POpts
-seta w o = o { oShowA = Just w }
+-- | helper method to limit the width of the tree
+setw :: Int -> POpts -> POpts
+setw w o = o { oWidth = Just w }
 
 -- | helper method to set the debug level
 setd :: Int -> POpts -> POpts
 setd v o = o { oDebug = v }
 
+-- | set display to unicode and colors
 setu :: POpts -> POpts
 setu o = o { oDisp = Unicode }
 
+-- | set a color palette
 setc :: (String, PColor) -> POpts -> POpts
 setc pc o = o { oColor = pc }
 
@@ -307,11 +308,15 @@ setc2 o = o { oColor = color2 }
 setc3 o = o { oColor = color3 }
 setc4 o = o { oColor = color4 }
 
--- | italics dont work but underline does
 -- | color palettes
+--
+-- italics dont work but underline does
 color0, color1, color2, color3, color4 :: (String, PColor)
+
+-- | no colors are displayed
 color0 = ("color0", PColor $ flip const)
 
+-- | default color palette
 color1 =
   ("color1",) $ PColor $ \case
     FailP {} -> bgColor Magenta
@@ -340,10 +345,6 @@ color4 =
     TrueP -> color Green
     PresentP -> bgColor Yellow
 
-defh, defu :: POpts
-defh = o1
-defu = setu o1
-
 -- | fix PresentT Bool to TrueT or FalseT
 fixBoolT :: TT Bool -> TT Bool
 fixBoolT t =
@@ -351,34 +352,45 @@ fixBoolT t =
     Nothing -> t
     Just b -> t & tBool .~ _boolT # b
 
+show01 :: (Show a1, Show a2) => POpts -> String -> a1 -> a2 -> String
+show01 opts msg0 ret as = lit01 opts msg0 ret (show as)
+
+lit01 :: Show a1 => POpts -> String -> a1 -> String -> String
+lit01 opts msg0 ret as = lit01' opts msg0 ret "" as
+
+show01' :: (Show a1, Show a2) => POpts -> String -> a1 -> String -> a2 -> String
+show01' opts msg0 ret fmt as = lit01' opts msg0 ret fmt (show as)
+
+lit01' :: Show a1 => POpts -> String -> a1 -> String -> String -> String
+lit01' opts msg0 ret fmt as = msg0 <> show0 opts " " ret <> showLit1 opts (" | " ++ fmt) as
+
+-- | display all data regardless of debug level
 showLit0 :: POpts -> String -> String -> String
 showLit0 o s a = showLit' o 0 s a
 
-showLit3 :: POpts -> String -> String -> String
-showLit3 o s a = showLit' o 3 s a
-
-showLit :: POpts -> String -> String -> String
-showLit o s a = showLit' o 1 s a
+-- | more restrictive: only display data at debug level 1 or less
+showLit1 :: POpts -> String -> String -> String
+showLit1 o s a = showLit' o 1 s a
 
 showLit' :: POpts -> Int -> String -> String -> String
 showLit' o i s a =
   if oDebug o >= i then
     let f n = let ss = take n a
               in ss <> (if length ss==n then " ..." else "")
-    in maybe "" (\n -> s <> f n) (oShowA o)
+    in maybe "" (\n -> s <> f n) (oWidth o)
   else ""
 
 show0 :: Show a => POpts -> String -> a -> String
-show0 o s a = showA' o 0 s a
+show0 o s a = showAImpl o 0 s a
 
 show3 :: Show a => POpts -> String -> a -> String
-show3 o s a = showA' o 3 s a
+show3 o s a = showAImpl o 3 s a
 
-showA :: Show a => POpts -> String -> a -> String
-showA o s a = showA' o 1 s a
+show1 :: Show a => POpts -> String -> a -> String
+show1 o s a = showAImpl o 1 s a
 
-showA' :: Show a => POpts -> Int -> String -> a -> String
-showA' o i s a = showLit' o i s (show a)
+showAImpl :: Show a => POpts -> Int -> String -> a -> String
+showAImpl o i s a = showLit' o i s (show a)
 
 -- | Regex options for Rescan Resplit Re etc
 data ROpt =
@@ -481,7 +493,7 @@ splitAndAlign opts msgs ts =
      ([], tfs) -> Right (valsFromTTs (map snd ts), tfs)
 
 formatList :: forall x z . Show x => POpts -> [((Int, x), z)] -> String
-formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showA' opts 0 ", a=" a <> ")")
+formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts 0 ", a=" a <> ")")
 
 -- | extract all root values from a list of trees
 valsFromTTs :: [TT a] -> [a]

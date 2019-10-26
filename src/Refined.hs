@@ -22,7 +22,7 @@
 {-# LANGUAGE DeriveLift #-}
 -- |
 -- Module      : Refined
--- Description : Traditional refinement type with only one type
+-- Description : Simple refinement type with only one type and a predicate
 -- Copyright   : (c) Grant Weyburne, 2019
 -- License     : BSD-3
 -- Maintainer  : gbwey9@gmail.com
@@ -125,7 +125,6 @@ newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH
 -- >>> reads @(Refined (Between 0 255) Int) "Refined {unRefined = 300}"
 -- []
 --
-
 instance (RefinedC p a, Read a) => Read (Refined p a) where
   readPrec
     = GR.parens

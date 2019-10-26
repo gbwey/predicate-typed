@@ -451,8 +451,9 @@ allTests =
   , expectPE (FailT "invalid base 16") $ pl @(MM1 16 >> MM2 16) "aef9g"
   , expectPE (FailT "found empty") $ pl @(MM1 16 >> MM2 16) ""
   , expectPE (FailT "0<=x<n") $ pl @(MM2 16) [10,1,17,1,-3,7]
-  , expectPE (PresentT ((10,'c'),True)) $ pl @AssocL (10,('c',True))
-  , expectPE (PresentT (10,('c',True))) $ pl @AssocR ((10,'c'),True)
+  , expectPE (PresentT ((10,'c'),True)) $ pl @Unassoc (10,('c',True))
+  , expectPE (PresentT (10,('c',True))) $ pl @Assoc ((10,'c'),True)
+  , expectPE (PresentT ((10,'c'),True)) $ pl @(Assoc >> Unassoc) ((10,'c'),True)
   , expectPE (PresentT 70) $ pl @(Luhn' 11) "79927398713"
   , expectPE (FailT "expected 71 mod 10 = 0 but found 1") $ pl @(Luhn' 11) "79927398714"
 

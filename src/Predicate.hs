@@ -42,7 +42,6 @@ import UtilP
 import Safe
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
---import qualified GHC.TypeNats as GN
 import Control.Lens hiding (strict,iall)
 --import Control.Lens (Unwrapped, Wrapped, _Unwrapped', _Wrapped', Ixed, IxValue, Index, Reversing, Cons, Snoc, AsEmpty, FoldableWithIndex, allOf, (%~), (<&>), (^.), (^?), coerced, view, reversed, ix, cons, snoc, _Cons, _Snoc, (^?!), (.~), itoList, Identity(..), _Empty, has)
 import Data.List
@@ -63,6 +62,8 @@ import Numeric
 import Data.Char
 import Data.Function
 import Data.These (These(..), these, partitionThese)
+import qualified Data.Bifunctor.Swap as SW (Swap(..))
+import qualified Data.Bifunctor.Assoc as AS (Assoc(..))
 import Data.Ratio
 import Data.Time
 import Data.Coerce
@@ -219,7 +220,7 @@ instance (GetROpts rs
             Left tta -> tta
             Right regex ->
                let b = q RH.=~ regex
-               in mkNodeB opts b [msg1 <> showLit opts " | " q] hhs
+               in mkNodeB opts b [msg1 <> showLit1 opts " | " q] hhs
 
 -- only way with rescan is to be explicit: no repeats! and useanchors but not (?m)
 -- or just use Re' but then we only get a bool ie doesnt capture groups
@@ -260,10 +261,10 @@ instance (GetROpts rs
           Left tta -> tta
           Right regex ->
             case splitAt _MX $ RH.scan regex q of
-              (b, _:_) -> mkNode opts (FailT "Regex looping") [msg1 <> " Looping? " <> show (take 10 b) <> "..." <> showA opts " | " q] hhs
+              (b, _:_) -> mkNode opts (FailT "Regex looping") [msg1 <> " Looping? " <> show (take 10 b) <> "..." <> show1 opts " | " q] hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
-                         mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> showA opts " | " q] [hh pp, hh qq]
-              (b, _) -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit opts " | " q] [hh pp, hh qq]
+                         mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> show1 opts " | " q] [hh pp, hh qq]
+              (b, _) -> mkNode opts (PresentT b) [lit01 opts msg1 b q] [hh pp, hh qq]
 
 
 -- | similar to 'Rescan' but gives the column start and ending positions instead of values
@@ -295,10 +296,10 @@ instance (GetROpts rs
           Left tta -> tta
           Right regex ->
             case splitAt _MX $ RH.scanRanges regex q of
-              (b, _:_) -> mkNode opts (FailT "Regex looping") [msg1 <> " Looping? " <> show (take 10 b) <> "..." <> showA opts " | " q] hhs
+              (b, _:_) -> mkNode opts (FailT "Regex looping") [msg1 <> " Looping? " <> show (take 10 b) <> "..." <> show1 opts " | " q] hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
-                         mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> showA opts " | " q] hhs
-              (b, _) -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit opts " | " q] hhs
+                         mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> show1 opts " | " q] hhs
+              (b, _) -> mkNode opts (PresentT b) [lit01 opts msg1 b q] hhs
 
 -- | splits a string on a regex delimiter
 --
@@ -333,10 +334,10 @@ instance (GetROpts rs
           Left tta -> tta
           Right regex ->
             case splitAt _MX $ RH.split regex q of
-              (b, _:_) -> mkNode opts (FailT "Regex looping") [msg1 <> " Looping? " <> show (take 10 b) <> "..." <> showA opts " | " q] hhs
+              (b, _:_) -> mkNode opts (FailT "Regex looping") [msg1 <> " Looping? " <> show (take 10 b) <> "..." <> show1 opts " | " q] hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
-                         mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> showA opts " | " q] hhs
-              (b, _) -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit opts " | " q] hhs
+                         mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> show1 opts " | " q] hhs
+              (b, _) -> mkNode opts (PresentT b) [lit01 opts msg1 b q] hhs
 
 _MX :: Int
 _MX = 100
@@ -373,7 +374,7 @@ instance (PP p x ~ String
       Left e -> e
       Right p ->
         let b = RR p
-        in mkNode opts (PresentT b) [msg0 <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [msg0 <> show1 opts " | " p] [hh pp]
 
 -- | A replacement function (String -> [String] -> String) which returns the whole match and the groups
 -- Used by 'RH.sub' and 'RH.sub'
@@ -466,7 +467,7 @@ instance (GetBool b
                            RR1 s -> (if alle then RH.gsub else RH.sub) regex s r
                            RR2 s -> (if alle then RH.gsub else RH.sub) regex s r
                            RR3 s -> (if alle then RH.gsub else RH.sub) regex s r
-               in mkNode opts (PresentT ret) [msg1 <> showLit opts " " r <> showLit opts " | " ret] (hhs <> [hh rr])
+               in mkNode opts (PresentT ret) [msg1 <> showLit0 opts " " r <> showLit1 opts " | " ret] (hhs <> [hh rr])
 
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
@@ -572,7 +573,7 @@ instance (GetCharSet cs
     let b = allOf TL.text f as
         msg0 = "IsCharSet " ++ show cs
         (cs,f) = getCharSet @cs
-    in pure $ mkNodeB opts b [msg0 <> showA opts " | " as] []
+    in pure $ mkNodeB opts b [msg0 <> show1 opts " | " as] []
 
 
 -- | converts a string 'Data.Text.Lens.IsText' value to lower case
@@ -586,8 +587,9 @@ data ToLower
 instance (Show a, TL.IsText a) => P ToLower a where
   type PP ToLower a = a
   eval _ opts as =
-    let xs = as & TL.text %~ toLower
-    in pure $ mkNode opts (PresentT xs) ["ToLower" <> show0 opts " " xs <> showA opts " | " as] []
+    let msg0 = "ToLower"
+        xs = as & TL.text %~ toLower
+    in pure $ mkNode opts (PresentT xs) [show01 opts msg0 xs as] []
 
 -- | converts a string 'Data.Text.Lens.IsText' value to upper case
 --
@@ -600,8 +602,9 @@ data ToUpper
 instance (Show a, TL.IsText a) => P ToUpper a where
   type PP ToUpper a = a
   eval _ opts as =
-    let xs = as & TL.text %~ toUpper
-    in pure $ mkNode opts (PresentT xs) ["ToUpper" <> show0 opts " " xs <> showA opts " | " as] []
+    let msg0 = "ToUpper"
+        xs = as & TL.text %~ toUpper
+    in pure $ mkNode opts (PresentT xs) [show01 opts msg0 xs as] []
 
 
 -- | similar to 'Data.List.inits'
@@ -619,8 +622,9 @@ data Inits
 instance Show a => P Inits [a] where
   type PP Inits [a] = [[a]]
   eval _ opts as =
-    let xs = inits as
-    in pure $ mkNode opts (PresentT xs) ["Inits" <> show0 opts " " xs <> showA opts " | " as] []
+    let msg0 = "Inits"
+        xs = inits as
+    in pure $ mkNode opts (PresentT xs) [show01 opts msg0 xs as] []
 
 -- | similar to 'Data.List.tails'
 --
@@ -637,8 +641,9 @@ data Tails
 instance Show a => P Tails [a] where
   type PP Tails [a] = [[a]]
   eval _ opts as =
-    let xs = tails as
-    in pure $ mkNode opts (PresentT xs) ["Tails" <> show0 opts " " xs <> showA opts " | " as] []
+    let msg0 = "Tails"
+        xs = tails as
+    in pure $ mkNode opts (PresentT xs) [show01 opts msg0 xs as] []
 
 -- | split a list into single values
 --
@@ -664,7 +669,7 @@ instance ( PP p x ~ [a]
       Left e -> e
       Right p ->
         let d = map (:[]) p
-        in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
 -- | similar to 'show'
 --
@@ -691,7 +696,7 @@ instance (Show (PP p x), P p x) => P (ShowP p) x where
       Left e -> e
       Right p ->
         let d = show p
-        in mkNode opts (PresentT d) [msg0 <> showLit0 opts " " d <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT d) [msg0 <> showLit0 opts " " d <> show1 opts " | " p] [hh pp]
 
 -- | type level expression representing a formatted time
 -- similar to 'Data.Time.formatTime' using a type level 'Symbol' to get the formatting string
@@ -721,7 +726,7 @@ instance (PP p x ~ String
       Right (p,q,pp,qq) ->
         let msg1 = msg0 <> " (" <> p <> ")"
             b = formatTime defaultTimeLocale p q
-        in mkNode opts (PresentT b) [msg1 <> showLit0 opts " " b <> showA opts " | " q] [hh pp, hh qq]
+        in mkNode opts (PresentT b) [msg1 <> showLit0 opts " " b <> show1 opts " | " q] [hh pp, hh qq]
 
 -- | similar to 'Data.Time.parseTimeM' where \'t\' is the 'Data.Time.ParseTime' type, \'p\' is the datetime format and \'q\' points to the content to parse
 --
@@ -756,7 +761,7 @@ instance (ParseTime (PP t a)
         let msg1 = msg0 <> " (" <> p <> ")"
             hhs = [hh pp, hh qq]
         in case parseTimeM @Maybe @(PP t a) True defaultTimeLocale p q of
-             Just b -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit0 opts " | fmt=" p <> showA opts " | " q] hhs
+             Just b -> mkNode opts (PresentT b) [lit01' opts msg1 b "fmt=" p <> show1 opts " | " q] hhs
              Nothing -> mkNode opts (FailT (msg1 <> " failed to parse")) [msg1 <> " failed"] hhs
 
 -- | A convenience method to match against many different datetime formats to find a match
@@ -793,7 +798,7 @@ instance (ParseTime (PP t a)
             zs = map (\d -> (d,) <$> parseTimeM @Maybe @(PP t a) True defaultTimeLocale d q) p
         in case catMaybes zs of
              [] -> mkNode opts (FailT ("no match on [" ++ q ++ "]")) [msg1 <> " no match"] hhs
-             (d,b):_ -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit0 opts " | fmt=" d <> showA opts " | " q] hhs
+             (d,b):_ -> mkNode opts (PresentT b) [lit01' opts msg1 b "fmt=" d <> show1 opts " | " q] hhs
 
 -- | create a 'Day' from three int values passed in as year month and day
 --
@@ -835,7 +840,7 @@ instance (P p x
                 b = mday <&> \day ->
                       let (_, week, dow) = toWeekDate day
                       in (day, week, dow)
-            in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | (y,m,d)=" (p,q,r)] (hhs <> [hh rr])
+            in mkNode opts (PresentT b) [show01' opts msg0 b "(y,m,d)=" (p,q,r)] (hhs <> [hh rr])
 
 -- | uncreate a 'Day' returning year month and day
 --
@@ -855,7 +860,7 @@ instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
       Right p ->
         let (fromIntegral -> y, m, d) = toGregorian p
             b = (y, m, d)
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] []
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] []
 
 -- | uses the 'Read' of the given type \'t\' and \'p\' which points to the content to read
 --
@@ -891,7 +896,7 @@ instance (P p x
       Right s ->
         let msg1 = msg0 <> " (" <> s <> ")"
         in case reads @(PP t x) s of
-           [(b,"")] -> mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showLit opts " | " s] [hh pp]
+           [(b,"")] -> mkNode opts (PresentT b) [lit01 opts msg1 b s] [hh pp]
            _ -> mkNode opts (FailT (msg1 <> " failed")) [msg1 <> " failed"] [hh pp]
 
 -- | similar to 'minimum'
@@ -908,12 +913,13 @@ data Min
 
 instance (Ord a, Show a) => P Min [a] where
   type PP Min [a] = a
-  eval _ opts as' =
-     pure $ case as' of
-       [] -> mkNode opts (FailT "empty list") ["Min(empty list)"] []
-       as@(_:_) ->
-         let v = minimum as
-         in mkNode opts (PresentT v) ["Min" <> show0 opts " " v <> showA opts " | " as] []
+  eval _ opts as' = do
+    let msg0 = "Min"
+    pure $ case as' of
+     [] -> mkNode opts (FailT "empty list") [msg0 <> "(empty list)"] []
+     as@(_:_) ->
+       let v = minimum as
+       in mkNode opts (PresentT v) [show01 opts msg0 v as] []
 
 -- | similar to 'maximum'
 --
@@ -931,12 +937,13 @@ type Max' t = FoldMap (SG.Max t) Id
 
 instance (Ord a, Show a) => P Max [a] where
   type PP Max [a] = a
-  eval _ opts as' =
+  eval _ opts as' = do
+    let msg0 = "Max"
     pure $ case as' of
-      [] -> mkNode opts (FailT "empty list") ["Max(empty list)"] []
+      [] -> mkNode opts (FailT "empty list") [msg0 <> "(empty list)"] []
       as@(_:_) ->
         let v = maximum as
-        in mkNode opts (PresentT v) ["Max" <> show0 opts " " v <> showA opts " | " as] []
+        in mkNode opts (PresentT v) [show01 opts msg0 v as] []
 
 -- | sort a list
 --
@@ -1007,8 +1014,9 @@ data Len
 instance (Show a, as ~ [a]) => P Len as where
   type PP Len as = Int
   eval _ opts as =
-    let n = length as
-    in pure $ mkNode opts (PresentT n) ["Len" <> show0 opts " " n <> showA opts " | " as] []
+    let msg0 = "Len"
+        n = length as
+    in pure $ mkNode opts (PresentT n) [show01 opts msg0 n as] []
 
 -- | similar to 'length' for 'Foldable' instances
 --
@@ -1042,7 +1050,7 @@ instance (PP p x ~ t a
       Left e -> e
       Right as ->
         let n = length as
-        in mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " as] []
+        in mkNode opts (PresentT n) [show01 opts msg0 n as] []
 
 -- | similar to 'fst'
 --
@@ -1074,7 +1082,7 @@ instance (Show (ExtractL1T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL1C p
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 class ExtractL1C tp where
   type ExtractL1T tp
@@ -1121,7 +1129,7 @@ instance (Show (ExtractL2T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL2C p
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 class ExtractL2C tp where
   type ExtractL2T tp
@@ -1168,7 +1176,7 @@ instance (Show (ExtractL3T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL3C p
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 class ExtractL3C tp where
   type ExtractL3T tp
@@ -1214,7 +1222,7 @@ instance (Show (ExtractL4T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL4C p
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 class ExtractL4C tp where
   type ExtractL4T tp
@@ -1256,7 +1264,7 @@ instance (Show (ExtractL5T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL5C p
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 class ExtractL5C tp where
   type ExtractL5T tp
@@ -1299,7 +1307,7 @@ instance (Show (ExtractL6T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL6C p
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 class ExtractL6C tp where
   type ExtractL6T tp
@@ -1396,7 +1404,7 @@ instance (Num (PP t a)
       Left e -> e
       Right n ->
         let b = fromIntegral n
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " n] [hh nn]
+        in mkNode opts (PresentT b) [show01 opts msg0 b n] [hh nn]
 
 -- | 'toRational' function
 --
@@ -1419,7 +1427,7 @@ instance (a ~ PP p x
       Left e -> e
       Right a ->
         let r = (toRational a)
-        in mkNode opts (PresentT r) [msg0 <> show0 opts " " r <> showA opts " | " a] [hh pp]
+        in mkNode opts (PresentT r) [show01 opts msg0 r a] [hh pp]
 
 -- | 'fromRational' function where you need to provide the type \'t\' of the result
 --
@@ -1442,7 +1450,7 @@ instance (P r a
       Left e -> e
       Right r ->
         let b = fromRational @(PP t a) r
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " r] [hh rr]
+        in mkNode opts (PresentT b) [show01 opts msg0 b r] [hh rr]
 
 -- | 'truncate' function where you need to provide the type \'t\' of the result
 --
@@ -1466,7 +1474,7 @@ instance (Show (PP p x)
       Left e -> e
       Right p ->
         let b = truncate p
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 -- | 'ceiling' function where you need to provide the type \'t\' of the result
 --
@@ -1490,7 +1498,7 @@ instance (Show (PP p x)
       Left e -> e
       Right p ->
         let b = ceiling p
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 -- | 'floor' function where you need to provide the type \'t\' of the result
 --
@@ -1514,7 +1522,7 @@ instance (Show (PP p x)
       Left e -> e
       Right p ->
         let b = floor p
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 -- | converts a value to a 'Proxy': the same as '\'Proxy'
 --
@@ -1527,8 +1535,9 @@ data MkProxy
 instance Show a => P MkProxy a where
   type PP MkProxy a = Proxy a
   eval _ opts a =
-    let b = Proxy @a
-    in pure $ mkNode opts (PresentT b) ["MkProxy" <> showA opts " | " a] []
+    let msg0 = "MkProxy"
+        b = Proxy @a
+    in pure $ mkNode opts (PresentT b) [msg0 <> show1 opts " | " a] []
 
 type family DoExpandT (ps :: [k]) :: Type where
   DoExpandT '[] = GL.TypeError ('GL.Text "'[] invalid: requires at least one predicate in the list")
@@ -1642,17 +1651,17 @@ instance (P p a
   type PP (TupleI (p ': ps)) a = (PP p a, PP (TupleI ps) a)
   eval _ opts a = do
     pp <- eval (Proxy @p) opts a
-    let msg = "TupleI" -- "'[](" <> show len <> ")"
-    case getValueLR opts msg pp [] of
+    let msg0 = "TupleI" -- "'[](" <> show len <> ")"
+    case getValueLR opts msg0 pp [] of
          Left e -> pure e
          Right w -> do
            qq <- eval (Proxy @(TupleI ps)) opts a
-           pure $ case getValueLR opts msg qq [hh pp] of
+           pure $ case getValueLR opts msg0 qq [hh pp] of
                 Left e -> e
                 -- only PresentP makes sense here (ie not TrueP/FalseP: ok in base case tho
-                Right ws -> mkNode opts (PresentT (w,ws)) [msg <> show0 opts " " a] [hh pp, hh qq]
+                Right ws -> mkNode opts (PresentT (w,ws)) [msg0 <> show0 opts " " a] [hh pp, hh qq]
 
-type Msg' prt p = Msg (Printf "[%s] " prt) p -- msg is in square brackets
+type Msg' prt p = Msg (Printf "[%s] " prt) p -- msg0 is in square brackets
 
 -- | pad \'q\' with '\n'\ values from '\p'\
 --
@@ -1699,7 +1708,7 @@ instance (P n a
                 bs = if lft
                      then (replicate diff p) <> q
                      else q <> (replicate diff p)
-            in mkNode opts (PresentT bs) [msg1 <> show0 opts " " bs <> showA opts " | " q] (hhs <> [hh qq])
+            in mkNode opts (PresentT bs) [show01 opts msg1 bs q] (hhs <> [hh qq])
 
 -- | split a list \'p\' into parts using the lengths in the type level list \'ns\'
 --
@@ -1726,15 +1735,15 @@ instance (P ns x
         ) => P (SplitAts ns p) x where
   type PP (SplitAts ns p) x = [PP p x]
   eval _ opts x = do
-    let msg = "SplitAts"
-    lr <- runPQ msg (Proxy @ns) (Proxy @p) opts x
+    let msg0 = "SplitAts"
+    lr <- runPQ msg0 (Proxy @ns) (Proxy @p) opts x
     pure $ case lr of
       Left e -> e
       Right (ns,p,nn,pp) ->
         let zs = foldr (\n k s -> let (a,b) = splitAt (fromIntegral n) s
                               in a:k b
                    ) (\as -> if null as then [] else [as]) ns p
-        in mkNode opts (PresentT zs) [msg <> show0 opts " " zs <> showA opts " | ns=" ns <> showA opts " | " p] [hh nn, hh pp]
+        in mkNode opts (PresentT zs) [show01' opts msg0 zs "ns=" ns <> show1 opts " | " p] [hh nn, hh pp]
 
 -- | similar to 'splitAt'
 --
@@ -1773,7 +1782,8 @@ instance (PP p a ~ [b]
       Right (fromIntegral -> n,p,pp,qq) ->
         let msg1 = msg0 <> show0 opts " " n <> show0 opts " " p
             (x,y) = splitAt n p
-       in mkNode opts (PresentT (x,y)) [msg1 <> show0 opts " " (x,y) <> showA opts " | n=" n <> showA opts " | " p] [hh pp, hh qq]
+            ret = (x,y)
+       in mkNode opts (PresentT ret) [show01' opts msg1 ret "n=" n <> show1 opts " | " p] [hh pp, hh qq]
 
 type Tail = Uncons >> 'Just (Snd Id)
 type Head = Uncons >> 'Just (Fst Id)
@@ -1805,15 +1815,15 @@ instance (Show (PP p a)
         ) => P (p *** q) (a,b) where
   type PP (p *** q) (a,b) = (PP p a, PP q b)
   eval _ opts (a,b) = do
-    let msg = "(***)"
+    let msg0 = "(***)"
     pp <- eval (Proxy @p) opts a
-    case getValueLR opts msg pp [] of
+    case getValueLR opts msg0 pp [] of
       Left e -> pure e
       Right a1 -> do
         qq <- eval (Proxy @q) opts b
-        pure $ case getValueLR opts msg qq [hh pp] of
+        pure $ case getValueLR opts msg0 qq [hh pp] of
           Left e -> e
-          Right b1 -> mkNode opts (PresentT (a1,b1)) [msg <> show0 opts " " (a1,b1) <> showA opts " | " (a,b)] [hh pp, hh qq]
+          Right b1 -> mkNode opts (PresentT (a1,b1)) [msg0 <> show0 opts " " (a1,b1) <> show1 opts " | " (a,b)] [hh pp, hh qq]
 
 -- | similar 'Control.Arrow.|||'
 --
@@ -1839,18 +1849,22 @@ instance (Show (PP p a)
         , Show b
         ) => P (p ||| q) (Either a b) where
   type PP (p ||| q) (Either a b) = PP p a
-  eval _ opts (Left a) = do
-    let msg = "|||"
-    pp <- eval (Proxy @p) opts a
-    pure $ case getValueLR opts msg pp [] of
-      Left e -> e
-      Right a1 -> mkNode opts (_tBool pp) ["Left" <> show0 opts " " a1 <> showA opts " | " a] [hh pp]
-  eval _ opts (Right a) = do
-    let msg = "|||"
-    qq <- eval (Proxy @q) opts a
-    pure $ case getValueLR opts msg qq [] of
-      Left e -> e
-      Right a1 -> mkNode opts (_tBool qq) ["Right" <> show0 opts " " a1 <> showA opts " | " a] [hh qq]
+  eval _ opts lr = do
+    let msg0 = "|||"
+    case lr of
+      Left a -> do
+        pp <- eval (Proxy @p) opts a
+        pure $ case getValueLR opts msg0 pp [] of
+          Left e -> e
+          Right a1 -> let msg1 = msg0 ++ " Left"
+                      in mkNode opts (_tBool pp) [show01 opts msg1 a1 a] [hh pp]
+      Right a -> do
+        qq <- eval (Proxy @q) opts a
+        pure $ case getValueLR opts msg0 qq [] of
+          Left e -> e
+          Right a1 ->
+            let msg1 = msg0 ++ " Right"
+            in mkNode opts (_tBool qq) [show01 opts msg1 a1 a] [hh qq]
 
 -- | similar 'Control.Arrow.+++'
 --
@@ -1873,18 +1887,23 @@ instance (Show (PP p a)
         , Show b
         ) => P (p +++ q) (Either a b) where
   type PP (p +++ q) (Either a b) = Either (PP p a) (PP q b)
-  eval _ opts (Left a) = do
-    let msg = "+++"
-    pp <- eval (Proxy @p) opts a
-    pure $ case getValueLR opts msg pp [] of
-      Left e -> e
-      Right a1 -> mkNode opts (PresentT (Left a1)) ["(+++) Left" <> show0 opts " Left " a1 <> showA opts " | " a] [hh pp]
-  eval _ opts (Right a) = do
-    let msg = "+++"
-    qq <- eval (Proxy @q) opts a
-    pure $ case getValueLR opts msg qq [] of
-      Left e -> e
-      Right a1 -> mkNode opts (PresentT (Right a1)) ["(+++) Right" <> show0 opts " Right" a1 <> showA opts " | " a] [hh qq]
+  eval _ opts lr = do
+    let msg0 = "+++"
+    case lr of
+      Left a -> do
+        pp <- eval (Proxy @p) opts a
+        pure $ case getValueLR opts msg0 pp [] of
+          Left e -> e
+          Right a1 ->
+            let msg1 = msg0 ++ " Left"
+            in mkNode opts (PresentT (Left a1)) [msg1 <> show0 opts " Left " a1 <> show1 opts " | " a] [hh pp]
+      Right a -> do
+        qq <- eval (Proxy @q) opts a
+        pure $ case getValueLR opts msg0 qq [] of
+          Left e -> e
+          Right a1 ->
+            let msg1 = msg0 ++ " Right"
+            in mkNode opts (PresentT (Right a1)) [msg1 <> show0 opts " Right" a1 <> show1 opts " | " a] [hh qq]
 
 type Dup = '(Id, Id)
 
@@ -1989,12 +2008,12 @@ instance (PP p a ~ PP q a
         ) => P (DivF p q) a where
   type PP (DivF p q) a = PP p a
   eval _ opts a = do
-    let msg = "DivF"
-    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
+    let msg0 = "DivF"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)
-         | q == 0 -> let msg1 = msg <> " zero denominator"
+         | q == 0 -> let msg1 = msg0 <> " zero denominator"
                      in mkNode opts (FailT msg1) [msg1] [hh pp, hh qq]
          | otherwise ->
             let d = p / q
@@ -2121,7 +2140,7 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Negate p) x where
       Left e -> e
       Right p ->
         let d = negate p
-        in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
 
 -- | similar to 'abs'
@@ -2153,7 +2172,7 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Abs p) x where
       Left e -> e
       Right p ->
         let d = abs p
-        in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
 
 
@@ -2182,7 +2201,7 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Signum p) x where
       Left e -> e
       Right p ->
         let d = signum p
-        in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
 -- | unwraps a value (see 'Control.Lens.Unwrapped')
 --
@@ -2206,7 +2225,7 @@ instance (PP p x ~ s
       Left e -> e
       Right p ->
         let d = p ^. _Wrapped'
-        in mkNode opts (PresentT d) ["Unwrap" <> show0 opts " " d <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
 -- | wraps a value (see 'Control.Lens.Wrapped' and 'Control.Lens.Unwrapped')
 --
@@ -2240,7 +2259,7 @@ instance (Show (PP p x)
       Left e -> e
       Right p ->
         let d = p ^. _Unwrapped'
-        in mkNode opts (PresentT d) ["Wrap" <> show0 opts " " d <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
 -- | similar to 'coerce'
 --
@@ -2256,8 +2275,9 @@ instance (Show a
         ) => P (Coerce t) a where
   type PP (Coerce t) a = t
   eval _ opts a =
-    let d = a ^. coerced
-    in pure $ mkNode opts (PresentT d) ["Coerce" <> show0 opts " " d <> showA opts " | " a] []
+    let msg0 = "Coerce"
+        d = a ^. coerced
+    in pure $ mkNode opts (PresentT d) [show01 opts msg0 d a] []
 
 -- can coerce over a functor: but need to provide type of 'a' and 't' explicitly
 
@@ -2283,8 +2303,9 @@ instance (Show (f a)
         ) => P (Coerce2 t) (f a) where
   type PP (Coerce2 t) (f a) = f t
   eval _ opts fa =
-    let d = view coerced <$> fa
-    in pure $ mkNode opts (PresentT d) ["Coerce2" <> show0 opts " " d <> showA opts " | " fa] []
+    let msg0 = "Coerce2"
+        d = view coerced <$> fa
+    in pure $ mkNode opts (PresentT d) [show01 opts msg0 d fa] []
 
 -- | lift mempty over a Functor
 --
@@ -2302,8 +2323,9 @@ instance (Show (f a)
         ) => P (MEmptyT2' t) (f a) where
   type PP (MEmptyT2' t) (f a) = f (PP t (f a))
   eval _ opts fa =
-    let b = mempty <$> fa
-    in pure $ mkNode opts (PresentT b) ["MEmptyT2" <> show0 opts " " b <> showA opts " | " fa] []
+    let msg0 = "MEmptyT2"
+        b = mempty <$> fa
+    in pure $ mkNode opts (PresentT b) [show01 opts msg0 b fa] []
 
 -- | lift pure over a Functor
 --
@@ -2322,8 +2344,9 @@ instance (Show (f (t a))
         ) => P (Pure2 t) (f a) where
   type PP (Pure2 t) (f a) = f (t a)
   eval _ opts fa =
-    let b = fmap pure fa
-    in pure $ mkNode opts (PresentT b) ["Pure2" <> show0 opts " " b <> showA opts " | " fa] []
+    let msg0 = "Pure2"
+        b = fmap pure fa
+    in pure $ mkNode opts (PresentT b) [show01 opts msg0 b fa] []
 
 -- | similar to 'reverse'
 --
@@ -2340,8 +2363,9 @@ data Reverse
 instance (Show a, as ~ [a]) => P Reverse as where
   type PP Reverse as = as
   eval _ opts as =
-    let d = reverse as
-    in pure $ mkNode opts (PresentT d) ["Reverse" <> show0 opts " " d <> showA opts " | " as] []
+    let msg0 = "Reverse"
+        d = reverse as
+    in pure $ mkNode opts (PresentT d) [show01 opts msg0 d as] []
 
 -- | reverses using 'reversing'
 --
@@ -2359,10 +2383,11 @@ data ReverseL
 instance (Show t, Reversing t) => P ReverseL t where
   type PP ReverseL t = t
   eval _ opts as =
-    let d = as ^. reversed
-    in pure $ mkNode opts (PresentT d) ["ReverseL" <> show0 opts " " d <> showA opts " | " as] []
+    let msg0 = "ReverseL"
+        d = as ^. reversed
+    in pure $ mkNode opts (PresentT d) [show01 opts msg0 d as] []
 
--- | swaps using 'swapped'
+-- | swaps using 'SW.swap'
 --
 -- >>> pl @Swap (Left 123)
 -- Present Right 123
@@ -2399,28 +2424,82 @@ instance (Show t, Reversing t) => P ReverseL t where
 data Swap
 
 instance (Show (p a b)
-        , SwappedC p
+        , SW.Swap p
         , Show (p b a)
         ) => P Swap (p a b) where
   type PP Swap (p a b) = p b a
   eval _ opts pab =
-    let d = swappedC pab
-    in pure $ mkNode opts (PresentT d) ["Swap" <> show0 opts " " d <> showA opts " | " pab] []
+    let msg0 = "Swap"
+        d = SW.swap pab
+    in pure $ mkNode opts (PresentT d) [show01 opts msg0 d pab] []
 
-class SwappedC p where
-  swappedC :: p a b -> p b a
-instance SwappedC These where
-  swappedC = \case
-               This a -> That a
-               That b -> This b
-               These a b -> These b a
-instance SwappedC Either where
-  swappedC = \case
-               Left a -> Right a
-               Right b -> Left b
-instance SwappedC (,) where
-  swappedC (a,b) = (b,a)
+-- | assoc using 'AS.assoc'
+--
+-- >>> pl @Assoc (This (These 123 'x'))
+-- Present These 123 (This 'x')
+-- PresentT (These 123 (This 'x'))
+--
+-- >>> pl @Assoc ((99,'a'),True)
+-- Present (99,('a',True))
+-- PresentT (99,('a',True))
+--
+-- >>> pl @Assoc ((99,'a'),True)
+-- Present (99,('a',True))
+-- PresentT (99,('a',True))
+--
+-- >>> pl @Assoc (Right "Abc" :: Either (Either () ()) String)
+-- Present Right (Right "Abc")
+-- PresentT (Right (Right "Abc"))
+--
+-- >>> pl @Assoc (Left (Left 'x'))
+-- Present Left 'x'
+-- PresentT (Left 'x')
+--
+data Assoc
 
+instance (Show (p (p a b) c)
+        , Show (p a (p b c))
+        , AS.Assoc p
+        ) => P Assoc (p (p a b) c) where
+  type PP Assoc (p (p a b) c) = p a (p b c)
+  eval _ opts pabc =
+    let msg0 = "Assoc"
+        d = AS.assoc pabc
+    in pure $ mkNode opts (PresentT d) [show01 opts msg0 d pabc] []
+
+-- | unassoc using 'AS.unassoc'
+--
+-- >>> pl @Unassoc (These 123 (This 'x'))
+-- Present This (These 123 'x')
+-- PresentT (This (These 123 'x'))
+--
+-- >>> pl @Unassoc (99,('a',True))
+-- Present ((99,'a'),True)
+-- PresentT ((99,'a'),True)
+--
+-- >>> pl @Unassoc (This 10 :: These Int (These Bool ()))
+-- Present This (This 10)
+-- PresentT (This (This 10))
+--
+-- >>> pl @Unassoc (Right (Right 123))
+-- Present Right 123
+-- PresentT (Right 123)
+--
+-- >>> pl @Unassoc (Left 'x' :: Either Char (Either Bool Double))
+-- Present Left (Left 'x')
+-- PresentT (Left (Left 'x'))
+--
+data Unassoc
+
+instance (Show (p (p a b) c)
+        , Show (p a (p b c))
+        , AS.Assoc p
+        ) => P Unassoc (p a (p b c)) where
+  type PP Unassoc (p a (p b c)) = p (p a b) c
+  eval _ opts pabc =
+    let msg0 = "Unassoc"
+        d = AS.unassoc pabc
+    in pure $ mkNode opts (PresentT d) [show01 opts msg0 d pabc] []
 
 -- | bounded 'succ' function
 --
@@ -2466,7 +2545,7 @@ instance (PP q x ~ a
              pure $ case getValueLR opts msg1 pp [hh qq] of
                Left e -> e
                Right _ -> mkNode opts (_tBool pp) [msg1] [hh qq, hh pp]
-          Just n -> pure $ mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " q] [hh qq]
+          Just n -> pure $ mkNode opts (PresentT n) [show01 opts msg0 n q] [hh qq]
 
 -- | bounded 'pred' function
 --
@@ -2504,7 +2583,7 @@ instance (PP q x ~ a
              pure $ case getValueLR opts msg1 pp [hh qq] of
                Left e -> e
                Right _ -> mkNode opts (_tBool pp) [msg1] [hh qq, hh pp]
-          Just n -> pure $ mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " q] [hh qq]
+          Just n -> pure $ mkNode opts (PresentT n) [show01 opts msg0 n q] [hh qq]
 
 
 -- | unbounded 'succ' function
@@ -2538,7 +2617,7 @@ instance (Show a
         lr <- catchit @_ @E.SomeException (succ p)
         pure $ case lr of
           Left e -> mkNode opts (FailT (msg0 <> " " <> e)) [msg0 <> show0 opts " " p] [hh pp]
-          Right n -> mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " p] [hh pp]
+          Right n -> mkNode opts (PresentT n) [show01 opts msg0 n p] [hh pp]
 
 
 -- | unbounded 'pred' function
@@ -2569,7 +2648,7 @@ instance (Show a
         lr <- catchit @_ @E.SomeException (pred p)
         pure $ case lr of
           Left e -> mkNode opts (FailT (msg0 <> " " <> e)) [msg0 <> show0 opts " " p] [hh pp]
-          Right n -> mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " p] [hh pp]
+          Right n -> mkNode opts (PresentT n) [show01 opts msg0 n p] [hh pp]
 
 
 -- | 'fromEnum' function
@@ -2594,7 +2673,7 @@ instance (Show a
       Left e -> e
       Right p ->
         let n = fromEnum p
-        in mkNode opts (PresentT n) ["FromEnum" <> show0 opts " " n <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT n) [show01 opts msg0 n p] [hh pp]
 
 -- | unsafe 'toEnum' function
 --
@@ -2621,7 +2700,7 @@ instance (PP p x ~ a
         lr <- catchit @_ @E.SomeException (toEnum $! fromIntegral p)
         pure $ case lr of
           Left e -> mkNode opts (FailT (msg0 <> " " <> e)) [msg0 <> show0 opts " " p] [hh pp]
-          Right n -> mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " p] [hh pp]
+          Right n -> mkNode opts (PresentT n) [show01 opts msg0 n p] [hh pp]
 
 -- | bounded 'toEnum' function
 --
@@ -2659,7 +2738,7 @@ instance (P def (Proxy (PP t a))
          pure $ case getValueLR opts msg1 pp [] of
            Left e -> e
            Right _ -> mkNode opts (_tBool pp) [msg1] [hh pp]
-      Just n -> pure $ mkNode opts (PresentT n) [msg0 <> show0 opts " " n <> showA opts " | " a] []
+      Just n -> pure $ mkNode opts (PresentT n) [show01 opts msg0 n a] []
 
 -- | a predicate on prime numbers
 --
@@ -2686,7 +2765,7 @@ instance (PP p x ~ a
       Left e -> e
       Right p ->
         let b = isPrime $ fromIntegral p
-        in mkNodeB opts b [msg0 <> showA opts " | " p] []
+        in mkNodeB opts b [msg0 <> show1 opts " | " p] []
 
 
 -- | 'not' function
@@ -2772,7 +2851,7 @@ instance (GetBool keep
       Left e -> e
       Right (p,q,pp,qq) ->
         let ret = filter (bool not id keep . (`elem` p)) q
-        in mkNode opts (PresentT ret) [msg0 <> show0 opts " " ret <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
+        in mkNode opts (PresentT ret) [show01' opts msg0 ret "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
 
 -- | 'elem' function
 --
@@ -3145,7 +3224,7 @@ instance (P q a
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts msg1 qq [] of
           Left e -> e
-          Right b -> mkNode opts (_tBool qq) [msg1 <> show0 opts " " b <> showA opts " | " a] [hh qq]
+          Right b -> mkNode opts (_tBool qq) [show01 opts msg1 b a] [hh qq]
 
 
 -- | similar to 'SG.stimes'
@@ -3174,7 +3253,7 @@ instance (P n a
       Right (fromIntegral -> (n::Int),p,pp,qq) ->
         let msg1 = msg0 <> show0 opts " " n <> " p=" <> show p
             b = SG.stimes n p
-            in mkNode opts (PresentT b) [msg1 <> show0 opts " " b <> showA opts " | n=" n <> showA opts " | " p] [hh pp, hh qq]
+            in mkNode opts (PresentT b) [show01' opts msg1 b "n=" n <> show1 opts " | " p] [hh pp, hh qq]
 
 
 -- | similar to 'pure'
@@ -3205,7 +3284,7 @@ instance (P p x
       Left e -> e
       Right a ->
         let b = pure a
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " a] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b a] [hh pp]
 
 type PMEmpty = MEmptyT' 'Proxy  -- lifts 'a' to 'Proxy a' then we can use it with MEmptyP
 
@@ -3223,15 +3302,17 @@ type MEmptyP = MEmptyT' Unproxy -- expects a proxy: so only some things work wit
 instance (Show (PP t a), Monoid (PP t a)) => P (MEmptyT' t) a where
   type PP (MEmptyT' t) a = PP t a
   eval _ opts _ =
-    let b = mempty @(PP t a)
-    in pure $ mkNode opts (PresentT b) ["MEmptyT" <> show0 opts " " b] []
+    let msg0 = "MEmptyT"
+        b = mempty @(PP t a)
+    in pure $ mkNode opts (PresentT b) [msg0 <> show0 opts " " b] []
 
 data MEmptyProxy
 instance Monoid a => P MEmptyProxy (Proxy (a :: Type)) where
   type PP MEmptyProxy (Proxy a) = a
   eval _ opts _pa =
-    let b = mempty @a
-    in pure $ mkNode opts (PresentT b) ["MEmptyProxy"] []
+    let msg0 = "MEmptyProxy"
+        b = mempty @a
+    in pure $ mkNode opts (PresentT b) [msg0] []
 
 -- | similar to 'empty'
 --
@@ -3268,7 +3349,7 @@ instance (P p x
       Left e -> e
       Right p ->
         let b = empty @t
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 data MkNothing' t -- works always! MaybeB is a good alternative and then dont need the extra 't'
 type MkNothing (t :: Type) = MkNothing' (Hole t)
@@ -3277,8 +3358,8 @@ type MkNothing (t :: Type) = MkNothing' (Hole t)
 instance P (MkNothing' t) a where
   type PP (MkNothing' t) a = Maybe (PP t a)
   eval _ opts _ =
-    let msg = "MkNothing"
-    in pure $ mkNode opts (PresentT Nothing) [msg] []
+    let msg0 = "MkNothing"
+    in pure $ mkNode opts (PresentT Nothing) [msg0] []
 
 -- | 'Just' constructor
 --
@@ -3442,7 +3523,7 @@ instance (PP p x ~ [a]
       Left e -> e
       Right p ->
         let b = mconcat p
-        in mkNode opts (PresentT b) ["MConcat" <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 -- | similar to 'concat'
 --
@@ -3470,7 +3551,7 @@ instance (Show a
       Left e -> e
       Right p ->
         let b = concat p
-        in mkNode opts (PresentT b) ["Concat" <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 data ProxyT' t
 type ProxyT (t :: Type) = ProxyT' (Hole t)
@@ -3554,7 +3635,7 @@ instance (P q a
                 pure $ case getValueLR opts msg1 rr [hh pp, hh qq] of
                   Left e -> e
                   Right _ -> mkNode opts (_tBool rr) [msg1 <> " index not found"] [hh pp, hh qq]
-             Just ret -> pure $ mkNode opts (PresentT ret) [msg1 <> show0 opts " " ret <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
+             Just ret -> pure $ mkNode opts (PresentT ret) [show01' opts msg1 ret "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
 
 -- | 'lookup' leveraging 'Ixed'
 --
@@ -3584,7 +3665,6 @@ type p !!! q = Lookup p q >> MaybeIn (Failp "index not found") Id -- use !!
 -- Lookup' is interesting but just use Lookup or !!
 type Lookup' (t :: Type) p q = q &&& Lookup p q >> If (Snd Id >> IsNothing) (ShowP (Fst Id) >> Fail (Hole t) (Printf "index(%s) not found" Id)) (Snd Id >> 'Just Id)
 
-
 instance (P q a
         , P p a
         , Show (PP p a)
@@ -3605,7 +3685,7 @@ instance (P q a
             hhs = [hh pp, hh qq]
         in case p ^? ix q of
              Nothing -> mkNode opts (PresentT Nothing) [msg1 <> " not found"] hhs
-             Just ret -> mkNode opts (PresentT (Just ret)) [msg1 <> show0 opts " " ret <> showA opts " | p=" p <> showA opts " | q=" q] hhs
+             Just ret -> mkNode opts (PresentT (Just ret)) [show01' opts msg1 ret "p=" p <> show1 opts " | q=" q] hhs
 
 -- | 'Data.List.ands'
 --
@@ -3638,7 +3718,7 @@ instance (PP p x ~ t a
       Left e -> e
       Right p ->
         let b = and p
-        in mkNodeB opts b [msg0 <> showA opts " | " p] [hh pp]
+        in mkNodeB opts b [msg0 <> show1 opts " | " p] [hh pp]
 
 -- | 'Data.List.ors'
 --
@@ -3671,7 +3751,7 @@ instance (PP p x ~ t a
       Left e -> e
       Right p ->
         let b = or p
-        in mkNodeB opts b [msg0 <> showA opts " | " p] [hh pp]
+        in mkNodeB opts b [msg0 <> show1 opts " | " p] [hh pp]
 
 -- cant directly create a singleton type using '[] since the type of '[] is unknown. instead use 'Singleton' or 'EmptyT'
 
@@ -3705,7 +3785,7 @@ instance (P p x
       Left e -> e
       Right (p,q,pp,qq) ->
         let b = p `cons` q
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
+        in mkNode opts (PresentT b) [show01' opts msg0 b "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
 
 -- | similar to snoc
 --
@@ -3738,7 +3818,7 @@ instance (P p x
       Left e -> e
       Right (p,q,pp,qq) ->
         let b = p `snoc` q
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
+        in mkNode opts (PresentT b) [show01' opts msg0 b "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
 
 -- | 'Control.Lens.uncons'
 --
@@ -3758,8 +3838,9 @@ instance (Show (ConsT s)
         ) => P Uncons s where
   type PP Uncons s = Maybe (ConsT s,s)
   eval _ opts as =
-    let b = as ^? _Cons
-    in pure $ mkNode opts (PresentT b) ["Uncons" <> show0 opts " " b <> showA opts " | " as] []
+    let msg0 = "Uncons"
+        b = as ^? _Cons
+    in pure $ mkNode opts (PresentT b) [show01 opts msg0 b as] []
 
 -- | 'Control.Lens.unsnoc'
 --
@@ -3779,8 +3860,9 @@ instance (Show (ConsT s)
         ) => P Unsnoc s where
   type PP Unsnoc s = Maybe (s,ConsT s)
   eval _ opts as =
-    let b = as ^? _Snoc
-    in pure $ mkNode opts (PresentT b) ["Unsnoc" <> show0 opts " " b <> showA opts " | " as] []
+    let msg0 = "Unsnoc"
+        b = as ^? _Snoc
+    in pure $ mkNode opts (PresentT b) [show01 opts msg0 b as] []
 
 -- | similar to 'null' using 'AsEmpty'
 --
@@ -3806,7 +3888,7 @@ instance (Show as, AsEmpty as) => P IsEmpty as where
   type PP IsEmpty as = Bool
   eval _ opts as =
     let b = has _Empty as
-    in pure $ mkNodeB opts b ["IsEmpty" <> showA opts " | " as] []
+    in pure $ mkNodeB opts b ["IsEmpty" <> show1 opts " | " as] []
 
 -- | similar to 'null' using 'Foldable'
 --
@@ -3827,7 +3909,7 @@ instance (Show (t a)
   type PP Null as = Bool
   eval _ opts as =
     let b = null as
-    in pure $ mkNodeB opts b ["Null" <> showA opts " | " as] []
+    in pure $ mkNodeB opts b ["Null" <> show1 opts " | " as] []
 
 -- | similar to 'enumFromTo'
 --
@@ -3870,8 +3952,9 @@ data PartitionEithers
 instance (Show a, Show b) => P PartitionEithers [Either a b] where
   type PP PartitionEithers [Either a b] = ([a], [b])
   eval _ opts as =
-    let b = partitionEithers as
-    in pure $ mkNode opts (PresentT b) ["PartitionEithers" <> show0 opts " " b <> showA opts " | " as] []
+    let msg0 = "PartitionEithers"
+        b = partitionEithers as
+    in pure $ mkNode opts (PresentT b) [show01 opts msg0 b as] []
 
 -- | similar to 'partitionThese'. returns a 3-tuple with the results so use 'Fst' 'Snd' 'Thd' to extract
 --
@@ -3883,8 +3966,9 @@ data PartitionThese
 instance (Show a, Show b) => P PartitionThese [These a b] where
   type PP PartitionThese [These a b] = ([a], [b], [(a, b)])
   eval _ opts as =
-    let b = partitionThese as
-    in pure $ mkNode opts (PresentT b) ["PartitionThese" <> show0 opts " " b <> showA opts " | " as] []
+    let msg0 = "PartitionThese"
+        b = partitionThese as
+    in pure $ mkNode opts (PresentT b) [show01 opts msg0 b as] []
 
 type Thiss = PartitionThese >> Fst Id
 type Thats = PartitionThese >> Snd Id
@@ -3951,7 +4035,7 @@ instance (PP p (b,a) ~ b
              Right (vals,itts) ->
                case lrx of
                  Left e -> mkNode opts (_tBool e) [msg1] (hh qq : hh rr : map (hh . fixit) itts ++ [hh e])
-                 Right () -> mkNode opts (PresentT vals) [msg1 <> show0 opts " " vals <> showA opts " | b=" q <> showA opts " | as=" r] (hh qq : hh rr : map (hh . fixit) itts)
+                 Right () -> mkNode opts (PresentT vals) [show01' opts msg1 vals "b=" q <> show1 opts " | as=" r] (hh qq : hh rr : map (hh . fixit) itts)
 
 type family UnfoldT mbs where
   UnfoldT (Maybe (b,s)) = b
@@ -4005,7 +4089,7 @@ instance (PP q a ~ s
                  Left e -> mkNode opts (_tBool e) [msg1] (hh qq : map (hh . fixit) itts ++ [hh e])
                  Right () ->
                    let ret = fst <$> catMaybes vals
-                   in mkNode opts (PresentT ret) [msg1 <> show0 opts " " ret <> showA opts " | s=" q ] (hh qq : map (hh . fixit) itts)
+                   in mkNode opts (PresentT ret) [show01' opts msg1 ret "s=" q ] (hh qq : map (hh . fixit) itts)
 
 -- | similar to 'map'
 --
@@ -4034,7 +4118,7 @@ instance (Show (PP p a)
         ts <- zipWithM (\i a -> ((i, a),) <$> eval (Proxy @p) opts a) [0::Int ..] (toList as)
         pure $ case splitAndAlign opts [msg0] ts of
              Left e -> e
-             Right (vals, _) -> mkNode opts (PresentT vals) [msg0 <> show0 opts " " vals <> showA opts " | " as] (hh qq : map (hh . fixit) ts)
+             Right (vals, _) -> mkNode opts (PresentT vals) [show01 opts msg0 vals as] (hh qq : map (hh . fixit) ts)
 
 -- | if p then run q else run r
 --
@@ -4093,7 +4177,7 @@ instance Show a => P Pairs [a] where
                _:bs@(_:_) -> Right (zip as bs)
     in pure $ case lr of
          Left e -> mkNode opts (FailT e) [e] []
-         Right zs -> mkNode opts (PresentT zs) [msg0 <> show0 opts " " zs <> showA opts " | " as ] []
+         Right zs -> mkNode opts (PresentT zs) [show01 opts msg0 zs as ] []
 
 
 -- | similar to 'partition'
@@ -4137,7 +4221,7 @@ instance (P p x
                Right (vals, tfs) ->
                  let w0 = partition fst $ zip vals tfs
                      zz1 = (map (snd . fst . snd) *** map (snd . fst . snd)) w0
-                 in mkNode opts (PresentT zz1) [msg0 <> show0 opts " " zz1 <> showA opts " | s=" as] (hh qq : map (hh . fixit) tfs)
+                 in mkNode opts (PresentT zz1) [show01' opts msg0 zz1 "s=" as] (hh qq : map (hh . fixit) tfs)
 
 
 -- | similar to 'break'
@@ -4212,11 +4296,11 @@ instance (P prt a
         ) => P (Fail t prt) a where
   type PP (Fail t prt) a = PP t a
   eval _ opts a = do
-    let msg = "Fail"
+    let msg0 = "Fail"
     pp <- eval (Proxy @prt) opts a
-    pure $ case getValueLR opts msg pp [] of
+    pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right s -> mkNode opts (FailT s) [msg <> " " <> s] [hh pp]
+      Right s -> mkNode opts (FailT s) [msg0 <> " " <> s] [hh pp]
 
 data Hole (t :: Type)
 type T (t :: Type) = Hole t -- easier to type
@@ -4229,16 +4313,16 @@ type T (t :: Type) = Hole t -- easier to type
 instance Typeable t => P (Hole t) a where
   type PP (Hole t) a = t -- can only be Type not Type -> Type (can use Proxy but then we go down the rabbithole)
   eval _ opts _a =
-    let msg = "Hole(" <> showT @t <> ")"
-    in pure $ mkNode opts (FailT msg) [msg <> " you probably meant to get access to the type of PP only and not evaluate"] []
+    let msg0 = "Hole(" <> showT @t <> ")"
+    in pure $ mkNode opts (FailT msg0) [msg0 <> " you probably meant to get access to the type of PP only and not evaluate"] []
 
 data Unproxy
 
 instance Typeable a => P Unproxy (Proxy (a :: Type)) where
   type PP Unproxy (Proxy a) = a
   eval _ opts _a =
-    let msg = "Unproxy(" <> showT @a <> ")"
-    in pure $ mkNode opts (FailT msg) [msg <> " you probably meant to get access to the type of PP only and not evaluate"] []
+    let msg0 = "Unproxy(" <> showT @a <> ")"
+    in pure $ mkNode opts (FailT msg0) [msg0 <> " you probably meant to get access to the type of PP only and not evaluate"] []
 
 -- | catch a failure
 --
@@ -4303,14 +4387,14 @@ instance (PP p a ~ PP q a
         ) => P (Div p q) a where
   type PP (Div p q) a = PP p a
   eval _ opts a = do
-    let msg = "Div"
-    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
+    let msg0 = "Div"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
          let hhs = [hh pp, hh qq]
          in case q of
-              0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] hhs
+              0 -> mkNode opts (FailT (msg0 <> " zero denominator")) [msg0 <> " zero denominator"] hhs
               _ -> let d = p `div` q
                    in mkNode opts (PresentT d) [show p <> " `div` " <> show q <> " = " <> show d] hhs
 
@@ -4334,14 +4418,14 @@ instance (PP p a ~ PP q a
         ) => P (Mod p q) a where
   type PP (Mod p q) a = PP p a
   eval _ opts a = do
-    let msg = "Mod"
-    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
+    let msg0 = "Mod"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
          let hhs = [hh pp, hh qq]
          in case q of
-              0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] hhs
+              0 -> mkNode opts (FailT (msg0 <> " zero denominator")) [msg0 <> " zero denominator"] hhs
               _ -> let d = p `mod` q
                    in mkNode opts (PresentT d) [show p <> " `mod` " <> show q <> " = " <> show d] hhs
 
@@ -4377,14 +4461,14 @@ instance (PP p a ~ PP q a
         ) => P (DivMod p q) a where
   type PP (DivMod p q) a = (PP p a, PP p a)
   eval _ opts a = do
-    let msg = "DivMod"
-    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
+    let msg0 = "DivMod"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
         let hhs = [hh pp, hh qq]
         in case q of
-             0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] hhs
+             0 -> mkNode opts (FailT (msg0 <> " zero denominator")) [msg0 <> " zero denominator"] hhs
              _ -> let d = p `divMod` q
                   in mkNode opts (PresentT d) [show p <> " `divMod` " <> show q <> " = " <> show d] hhs
 
@@ -4420,14 +4504,14 @@ instance (PP p a ~ PP q a
         ) => P (QuotRem p q) a where
   type PP (QuotRem p q) a = (PP p a, PP p a)
   eval _ opts a = do
-    let msg = "QuotRem"
-    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
+    let msg0 = "QuotRem"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
         let hhs = [hh pp, hh qq]
         in case q of
-             0 -> mkNode opts (FailT (msg <> " zero denominator")) [msg <> " zero denominator"] hhs
+             0 -> mkNode opts (FailT (msg0 <> " zero denominator")) [msg0 <> " zero denominator"] hhs
              _ -> let d = p `quotRem` q
                   in mkNode opts (PresentT d) [show p <> " `quotRem` " <> show q <> " = " <> show d] hhs
 
@@ -4494,9 +4578,9 @@ instance (KnownNat n
         ) => P (GuardsImpl n strict ('[] :: [(k,k1)])) [a] where
   type PP (GuardsImpl n strict ('[] :: [(k,k1)])) [a] = [a]
   eval _ opts as =
-    let msg = "Guards" <> strictmsg @strict <> "(" <> show n <> ")"
+    let msg0 = "Guards" <> strictmsg @strict <> "(" <> show n <> ")"
         n :: Int = nat @n
-    in pure $ mkNode opts (PresentT as) [msg <> " done!" <> if null as then "" else showA opts " | leftovers=" as] []
+    in pure $ mkNode opts (PresentT as) [msg0 <> " done!" <> if null as then "" else show1 opts " | leftovers=" as] []
 
 instance (PP prt (Int, a) ~ String
         , P prt (Int, a)
@@ -4597,7 +4681,7 @@ instance (Show a
   eval _ opts a = do
     let msg0 = "GuardSimple"
         b = oLite opts
-    pp <- evalBool (Proxy @p) (if b then o02 else opts) a -- to not lose the message in oLite mode we use non lite and then fix it up after
+    pp <- evalBool (Proxy @p) (if b then o0 else opts) a -- to not lose the message in oLite mode we use non lite and then fix it up after
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right False ->
@@ -4650,7 +4734,7 @@ instance (Show (PP p a)
         ) => P (p >> q) a where
   type PP (p >> q) a = PP q (PP p a)
   eval _ opts a = do
-    let msg = ">>"
+    let msg0 = ">>"
     pp <- eval (Proxy @p) opts a
     case getValueLRHide opts "lhs failed >>" pp [] of
       Left e -> pure e
@@ -4658,7 +4742,7 @@ instance (Show (PP p a)
         qq <- eval (Proxy @q) opts p
         pure $ case getValueLRHide opts (show p <> " >> rhs failed") qq [hh pp] of
           Left e -> e
-          Right q -> mkNode opts (_tBool qq) [msg <> show0 opts " " q <> showA opts " | " p] [hh pp, hh qq]
+          Right q -> mkNode opts (_tBool qq) [show01 opts msg0 q p] [hh pp, hh qq]
 
 -- | similar to 'Prelude.&&'
 --
@@ -4889,7 +4973,7 @@ instance (Show x
       Right p ->
         let b = itoList p
             t = showT @(PP t (PP p x))
-        in mkNode opts (PresentT b) [msg0 <> "(" <> t <> ")" <> show0 opts " " b <> showA opts " | " x] [hh pp]
+        in mkNode opts (PresentT b) [msg0 <> "(" <> t <> ")" <> show0 opts " " b <> show1 opts " | " x] [hh pp]
 
 -- | similar to 'toList'
 --
@@ -4920,8 +5004,9 @@ instance (Show (t a)
         ) => P ToList (t a) where
   type PP ToList (t a) = [a]
   eval _ opts as =
-    let z = toList as
-    in pure $ mkNode opts (PresentT z) ["ToList" <> show0 opts " " z <> showA opts " | " as] []
+    let msg0 = "ToList"
+        z = toList as
+    in pure $ mkNode opts (PresentT z) [show01 opts msg0 z as] []
 
 -- | similar to 'toList'
 --
@@ -4961,7 +5046,7 @@ instance (PP p x ~ t a
       Left e -> e
       Right p ->
         let b = toList p
-        in mkNode opts (PresentT b) [msg0 <> show0 opts " " b <> showA opts " | " p] [hh pp]
+        in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 data ToListExt
 
@@ -4971,8 +5056,9 @@ instance (Show l
         ) => P ToListExt l where
   type PP ToListExt l = [Ge.Item l]
   eval _ opts as =
-    let z = Ge.toList as
-    in pure $ mkNode opts (PresentT z) ["ToListExt" <> show0 opts " " z <> showA opts " | " as] []
+    let msg0 = "ToListExt"
+        z = Ge.toList as
+    in pure $ mkNode opts (PresentT z) [show01 opts msg0 z as] []
 
 data FromList (t :: Type) -- doesnt work with OverloadedLists unless you cast to [a] explicitly
 
@@ -4982,8 +5068,9 @@ instance (a ~ Ge.Item t
         ) => P (FromList t) [a] where
   type PP (FromList t) [a] = t
   eval _ opts as =
-    let z = Ge.fromList (as :: [Ge.Item t]) :: t
-    in pure $ mkNode opts (PresentT z) ["FromList" <> show0 opts " " z] []
+    let msg0 = "FromList"
+        z = Ge.fromList (as :: [Ge.Item t]) :: t
+    in pure $ mkNode opts (PresentT z) [msg0 <> show0 opts " " z] []
 
 data FromListF (t :: Type) -- works only with overloadedlists
 -- l ~ l' is key
@@ -4993,8 +5080,9 @@ instance (Show l
         ) => P (FromListF l') l where
   type PP (FromListF l') l = l'
   eval _ opts as =
-     let z = Ge.fromList (Ge.toList @l as)
-     in pure $ mkNode opts (PresentT z) ["FromListF" <> show0 opts " " z] []
+    let msg0 = "FromListF"
+        z = Ge.fromList (Ge.toList @l as)
+    in pure $ mkNode opts (PresentT z) [msg0 <> show0 opts " " z] []
 
 -- | predicate on 'These'
 --
@@ -5032,7 +5120,7 @@ instance (PP p x ~ These a b
       Right p ->
         let (t,f) = getThese (Proxy @th)
             b = f p
-        in mkNodeB opts b [msg0 <> " " <> t <> showA opts " | " p] []
+        in mkNodeB opts b [msg0 <> " " <> t <> show1 opts " | " p] []
 
 -- | similar to 'these'
 --
@@ -5077,23 +5165,23 @@ instance (Show a
   eval _ opts =
      \case
         This a -> do
-          let msg = "This"
+          let msg0 = "This"
           pp <- eval (Proxy @p) opts a
-          pure $ case getValueLR opts (msg <> " p failed") pp [] of
+          pure $ case getValueLR opts (msg0 <> " p failed") pp [] of
                Left e -> e
-               Right c -> mkNode opts (PresentT c) [msg <> show0 opts " " c <> showA opts " | This " a] [hh pp]
+               Right c -> mkNode opts (PresentT c) [show01' opts msg0 c "This " a] [hh pp]
         That b -> do
-          let msg = "That"
+          let msg0 = "That"
           qq <- eval (Proxy @q) opts b
-          pure $ case getValueLR opts (msg <> " q failed") qq [] of
+          pure $ case getValueLR opts (msg0 <> " q failed") qq [] of
                Left e -> e
-               Right c -> mkNode opts (PresentT c) [msg <> show0 opts " " c <> showA opts " | That " b] [hh qq]
+               Right c -> mkNode opts (PresentT c) [show01' opts msg0 c "That " b] [hh qq]
         These a b -> do
-          let msg = "TheseIn"
+          let msg0 = "TheseIn"
           rr <- eval (Proxy @r) opts (a,b)
-          pure $ case getValueLR opts (msg <> " r failed") rr [] of
+          pure $ case getValueLR opts (msg0 <> " r failed") rr [] of
                Left e -> e
-               Right c -> mkNode opts (PresentT c) [msg <> show0 opts " " c <> showA opts " | " (These a b)] [hh rr]
+               Right c -> mkNode opts (PresentT c) [show01 opts msg0 c (These a b)] [hh rr]
 
 -- | creates an empty list of the given type
 --
@@ -5167,7 +5255,7 @@ instance (PP p a ~ [x]
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = simpleAlign p q
-        in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
+        in mkNode opts (PresentT d) [show01' opts msg0 d "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
 
 simpleAlign :: [a] -> [b] -> [These a b]
 simpleAlign as [] = map This as
@@ -5228,7 +5316,7 @@ instance (GetBool lc
                   (True,False) -> zip (take (length q) (cycle p)) q
                   (False,True) -> zip p (take (length p) (cycle q))
                   _ -> zip p q
-        in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
+        in mkNode opts (PresentT d) [show01' opts msg0 d "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
 
 -- | Luhn predicate check on last digit
 --
@@ -5257,7 +5345,7 @@ instance (PP p x ~ [Int]
             ret = z `mod` 10
             hhs = [hh pp]
         in if ret == 0 then mkNodeB opts True [msg0 <> show0 opts " | " p] hhs
-           else mkNodeB opts False [msg0 <> " map=" <> show ys <> " sum=" <> show z <> " ret=" <> show ret <> showA opts " | " p] hhs
+           else mkNodeB opts False [msg0 <> " map=" <> show ys <> " sum=" <> show z <> " ret=" <> show ret <> show1 opts " | " p] hhs
 
 -- could get n::Nat as a predicate but it is fine as is!
 -- | Read a number base 2 via 36
@@ -5305,7 +5393,7 @@ instance (Typeable (PP t x)
             ((`elem` xs) . toLower)
             (fromJust . (`elemIndex` xs) . toLower)
             p1 of
-             [(b,"")] -> mkNode opts (PresentT (ff b)) [msg0 <> show0 opts " " (ff b) <> showA opts " | " p] [hh pp]
+             [(b,"")] -> mkNode opts (PresentT (ff b)) [msg0 <> show0 opts " " (ff b) <> show1 opts " | " p] [hh pp]
              o -> mkNode opts (FailT ("invalid base " <> show n)) [msg0 <> " as=" <> p <> " err=" <> show o] [hh pp]
 
 getValidBase :: Int -> String
@@ -5355,20 +5443,11 @@ instance (PP p x ~ a
       Right p ->
         let (ff,a') = if p < 0 then (('-':), abs p) else (id,p)
             b = showIntAtBase (fromIntegral n) (xs !!) a' ""
-        in mkNode opts (PresentT (ff b)) [msg0 <> showLit0 opts " " (ff b) <> showA opts " | " p] []
+        in mkNode opts (PresentT (ff b)) [msg0 <> showLit0 opts " " (ff b) <> show1 opts " | " p] []
 
--- | change associativity of nested pairs
---
--- >>> pl @AssocL (99,('a',True))
--- Present ((99,'a'),True)
--- PresentT ((99,'a'),True)
---
--- >>> pl @AssocR ((99,'a'),True)
--- Present (99,('a',True))
--- PresentT (99,('a',True))
---
-type AssocL = '(I *** Fst I, Snd I >> Snd I)
-type AssocR = '(Fst I >> Fst I, Snd I *** I)
+-- use Assoc and Unassoc
+--type AssocL = '(I *** Fst I, Snd I >> Snd I)
+--type AssocR = '(Fst I >> Fst I, Snd I *** I)
 
 -- | Intercalate
 --
@@ -5392,7 +5471,7 @@ instance (PP p x ~ [a]
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = intercalate p (map (:[]) q)
-        in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | " p <> showA opts " | " q] [hh pp, hh qq]
+        in mkNode opts (PresentT d) [show01 opts msg0 d p <> show1 opts " | " q] [hh pp, hh qq]
 
 getStringPrefix :: String -> (String,String)
 getStringPrefix = fix (\k z -> \case
@@ -5428,7 +5507,7 @@ instance (PrintfArg (PP p x)
         lr <- catchitNF @_ @E.SomeException (printf s p)
         pure $ case lr of
           Left e -> mkNode opts (FailT (msg1 <> " (" <> e <> ")")) [msg1 <> show0 opts " " p <> " s=" <> s] [hh ss, hh pp]
-          Right ret -> mkNode opts (PresentT ret) [msg1 <> " [" <> showLit0 opts "" ret <> "]" <> showA opts " | p=" p <> showLit opts " | s=" s] [hh ss, hh pp]
+          Right ret -> mkNode opts (PresentT ret) [msg1 <> " [" <> showLit0 opts "" ret <> "]" <> show1 opts " | p=" p <> showLit1 opts " | s=" s] [hh ss, hh pp]
 
 type family GuardsT (ps :: [k]) where
   GuardsT '[] = '[]
@@ -5501,9 +5580,9 @@ instance (Show (PP p a)
         pp <- eval (Proxy @p) opts a
         pure $ case getValueLR opts msgbase1 pp [] of
           Left e -> e
-          -- showA opts " " [b]  fails but using 'b' is ok and (b : []) also works!
+          -- show1 opts " " [b]  fails but using 'b' is ok and (b : []) also works!
           -- Ge.List error
-          Right b -> mkNode opts (PresentT [b]) [msgbase1 <> (if null as then " done!" else " Truncated") <> show0 opts " " (b : []) <> showA opts " | " a <> (if strict then "" else showA opts " | leftovers=" as)] [hh pp]
+          Right b -> mkNode opts (PresentT [b]) [msgbase1 <> (if null as then " done!" else " Truncated") <> show0 opts " " (b : []) <> show1 opts " | " a <> (if strict then "" else show1 opts " | leftovers=" as)] [hh pp]
 
 instance (KnownNat n
         , GetBool strict
@@ -5532,7 +5611,7 @@ instance (KnownNat n
                         qq <- eval (Proxy @(ParaImpl n strict (p1 ': ps))) opts as
                         pure $ case getValueLRHide opts (msgbase1 <> " rhs failed " <> show b) qq [hh pp] of
                           Left e -> e
-                          Right bs -> mkNode opts (PresentT (b:bs)) [msgbase1 <> show0 opts " " (b:bs) <> showA opts " | " as'] [hh pp, hh qq]
+                          Right bs -> mkNode opts (PresentT (b:bs)) [msgbase1 <> show0 opts " " (b:bs) <> show1 opts " | " as'] [hh pp, hh qq]
 
 -- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
 --
@@ -5616,12 +5695,12 @@ instance (P r x
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR opts msgbase0 qq [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (PresentT b) [msgbase0 <> show0 opts " " b <> showA opts " | " a] [hh rr, hh pp, hh qq]
+              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] [hh rr, hh pp, hh qq]
           Right False -> do
             ee <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
             pure $ case getValueLR opts (msgbase0 <> "  otherwise failed") ee [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (PresentT b) [msgbase0 <> show0 opts " " b <> showA opts " | " a] [hh rr, hh pp, hh ee]
+              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] [hh rr, hh pp, hh ee]
 
 instance (KnownNat n
         , GetLen ps
@@ -5653,12 +5732,12 @@ instance (KnownNat n
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR opts msgbase0 qq [hh rr] of
               Left e -> e
-              Right b -> mkNode opts (PresentT b) [msgbase0 <> show0 opts " " b <> showA opts " | " a] [hh rr, hh pp, hh qq]
+              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] [hh rr, hh pp, hh qq]
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
             pure $ case getValueLR opts (msgbase1 <> " failed rhs") ww [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (PresentT b) [msgbase1 <> show0 opts " " b <> showA opts " | " a] [hh rr, hh pp, hh ww]
+              Right b -> mkNode opts (PresentT b) [show01 opts msgbase1 b a] [hh rr, hh pp, hh ww]
 
 -- | similar to 'sequenceA'
 --
@@ -5682,7 +5761,7 @@ instance (Show (f (t a))
   type PP Sequence (t (f a)) = f (t a)
   eval _ opts tfa =
      let d = sequenceA tfa
-     in pure $ mkNode opts (PresentT d) ["Sequence" <> show0 opts " " d <> showA opts " | " tfa] []
+     in pure $ mkNode opts (PresentT d) ["Sequence" <> show0 opts " " d <> show1 opts " | " tfa] []
 
 data Hide p
 type H = Hide
@@ -5791,22 +5870,22 @@ data TimeU
 instance P TimeU a where
   type PP TimeU a = UTCTime
   eval _ opts _a = do
-    let msg = "TimeU"
+    let msg0 = "TimeU"
     mb <- runIO $ getCurrentTime
     pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg <> " must run in IO")) [msg <> " must run in IO"] []
-      Just v -> mkNode opts (PresentT v) [msg <> show0 opts " " v] []
+      Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
+      Just v -> mkNode opts (PresentT v) [msg0 <> show0 opts " " v] []
 
 data TimeZ
 
 instance P TimeZ a where
   type PP TimeZ a = ZonedTime
   eval _ opts _a = do
-    let msg = "TimeZ"
+    let msg0 = "TimeZ"
     mb <- runIO $ getZonedTime
     pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg <> " must run in IO")) [msg <> " must run in IO"] []
-      Just v -> mkNode opts (PresentT v) [msg <> show0 opts " " v] []
+      Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
+      Just v -> mkNode opts (PresentT v) [msg0 <> show0 opts " " v] []
 
 data FHandle s = FStdout | FStderr | FOther s WFMode deriving Show
 
@@ -5836,7 +5915,7 @@ instance (GetFHandle fh
   type PP (WritefileImpl fh p) a = ()
   eval _ opts a = do
     let fh = getFHandle @fh
-        msg = case fh of
+        msg0 = case fh of
                       FStdout -> "Stdout"
                       FStderr -> "Stderr"
                       FOther s w -> (<>("[" <> s <> "]")) $ case w of
@@ -5844,7 +5923,7 @@ instance (GetFHandle fh
                          WFWrite -> "Writefile"
                          WFWriteForce -> "Writefile'"
     pp <- eval (Proxy @p) opts a
-    case getValueLR opts msg pp [] of
+    case getValueLR opts msg0 pp [] of
       Left e -> pure e
       Right ss -> do
           mb <- runIO $ do
@@ -5860,25 +5939,25 @@ instance (GetFHandle fh
                                              _ -> WriteMode
                                       fmap (left show) $ E.try @E.SomeException $ withFile s md (flip hPutStr ss)
           pure $ case mb of
-            Nothing -> mkNode opts (FailT (msg <> " must run in IO")) [msg <> " must run in IO"] [hh pp]
-            Just (Left e) -> mkNode opts (FailT e) [msg <> " " <> e] [hh pp]
-            Just (Right ()) -> mkNode opts (PresentT ()) [msg] [hh pp]
+            Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] [hh pp]
+            Just (Left e) -> mkNode opts (FailT e) [msg0 <> " " <> e] [hh pp]
+            Just (Right ()) -> mkNode opts (PresentT ()) [msg0] [hh pp]
 
 data Stdin
 
 instance P Stdin a where
   type PP Stdin a = String
   eval _ opts _a = do
-    let msg = "Stdin"
+    let msg0 = "Stdin"
     mb <- runIO $ do
                       lr <- E.try $ hGetContents stdin
                       pure $ case lr of
                         Left (e :: E.SomeException) -> Left $ show e
                         Right ss -> Right ss
     pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg <> " must run in IO")) [msg <> " must run in IO"] []
-      Just (Left e) -> mkNode opts (FailT e) [msg <> " " <> e] []
-      Just (Right ss) -> mkNode opts (PresentT ss) [msg <> "[" <> showLit opts "" ss <> "]"] []
+      Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
+      Just (Left e) -> mkNode opts (FailT e) [msg0 <> " " <> e] []
+      Just (Right ss) -> mkNode opts (PresentT ss) [msg0 <> "[" <> showLit1 opts "" ss <> "]"] []
 
 --type Just' = JustFail "expected Just" Id
 type Nothing' = Guard "expected Nothing" IsNothing
@@ -5992,11 +6071,12 @@ instance (Show a
   type PP (TupleListImpl strict n) [a] = TupleListT (ToN n) a
   eval _ opts as = do
     let strict = getBool @strict
-        n :: Int = nat @n
-        msg = "TupleList" <> (if strict then "" else "Lax") <> "(" <> show n <> ")"
+        n :: Int
+        n = nat @n
+        msg0 = "TupleList" <> (if strict then "" else "Lax") <> "(" <> show n <> ")"
     pure $ case tupleListD @(ToN n) @a strict as of
-      Left e -> mkNode opts (FailT (msg <> " " <> e)) [msg <> " " <> e] []
-      Right ret -> mkNode opts (PresentT ret) [msg <> show0 opts " " ret <> showA opts " | " as] []
+      Left e -> mkNode opts (FailT (msg0 <> " " <> e)) [msg0 <> " " <> e] []
+      Right ret -> mkNode opts (PresentT ret) [show01 opts msg0 ret as] []
 
 -- | reverses inductive tuples
 --
@@ -6021,7 +6101,7 @@ instance (ReverseTupleC tp
   type PP ReverseTupleN tp = ReverseTupleP tp
   eval _ opts tp =
     let ret = reverseTupleC tp
-    in pure $ mkNode opts (PresentT ret) ["ReverseTupleN" <> show0 opts " " ret <> showA opts " | " tp] []
+    in pure $ mkNode opts (PresentT ret) ["ReverseTupleN" <> show0 opts " " ret <> show1 opts " | " tp] []
 
 -- | Printfn prints an inductive tuple
 --
@@ -6080,7 +6160,7 @@ instance (KnownNat (TupleLenT as)
         lr <- catchitNF @_ @E.SomeException (prtC @bs s (reverseTupleC (a,as)))
         pure $ case lr of
           Left e -> mkNode opts (FailT (msg1 <> "(" <> e <> ")")) [msg1 <> show0 opts " " a <> " s=" <> s] hhs
-          Right ret -> mkNode opts (PresentT ret) [msg1 <> " [" <> showLit0 opts "" ret <> "]" <> showA opts " | (a,as)=" (a,as) <> showLit0 opts " | s=" s] hhs
+          Right ret -> mkNode opts (PresentT ret) [msg1 <> " [" <> showLit0 opts "" ret <> "]" <> show1 opts " | (a,as)=" (a,as) <> showLit0 opts " | s=" s] hhs
 
 type family CheckT (tp :: Type) :: Bool where
   CheckT () = GL.TypeError ('GL.Text "Printfn: inductive tuple cannot be empty")
@@ -6150,7 +6230,7 @@ instance (Show (t c)
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = p <* q
-        in mkNode opts (PresentT d) [msg0 <> show0 opts " " p <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
+        in mkNode opts (PresentT d) [show01' opts msg0 p "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
 
 -- | similar to 'Control.Applicative.<|>'
 --
@@ -6184,7 +6264,7 @@ instance (P p x
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = p <|> q
-        in mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | p=" p <> showA opts " | q=" q] [hh pp, hh qq]
+        in mkNode opts (PresentT d) [show01' opts msg0 d "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
 
 
 -- | similar to 'Control.Comonad.extract'
@@ -6206,7 +6286,7 @@ instance (Show (t a)
   eval _ opts ta =
     let msg0 = "Extract"
         d = extract ta
-    in pure $ mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | " ta] []
+    in pure $ mkNode opts (PresentT d) [show01 opts msg0 d ta] []
 
 -- | similar to 'Control.Comonad.duplicate'
 --
@@ -6224,7 +6304,7 @@ instance (Show (t a)
   eval _ opts ta =
     let msg0 = "Duplicate"
         d = duplicate ta
-    in pure $ mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | " ta] []
+    in pure $ mkNode opts (PresentT d) [show01 opts msg0 d ta] []
 
 -- | similar to 'Control.Monad.join'
 --
@@ -6246,14 +6326,11 @@ instance (Show (t (t a))
   eval _ opts tta =
     let msg0 = "Join"
         d = join tta
-    in pure $ mkNode opts (PresentT d) [msg0 <> show0 opts " " d <> showA opts " | " tta] []
+    in pure $ mkNode opts (PresentT d) [show01 opts msg0 d tta] []
 
 -- same as $ but shows 'a' and 'b'
 data p $ q
 infixl 0 $
-
-type p & q = q $ p -- flips the args eg a & b & (,) = (b,a)
-infixr 1 &
 
 instance (P p x
         , P q x
@@ -6272,6 +6349,28 @@ instance (P p x
       Right (p,q,pp,qq)  ->
         let d = p q
         in mkNode opts (PresentT d) ["fn $ " <> show q <> " = " <> show d] [hh pp, hh qq]
+
+-- reify this so we can combine (type synonyms dont work as well)
+data q & p -- flips the args eg a & b & (,) = (b,a)
+infixr 1 &
+
+instance (P p x
+        , P q x
+        , PP p x ~ (a -> b)
+        , FnT (PP p x) ~ b
+        , PP q x ~ a
+        , Show a
+        , Show b
+        ) => P (q & p) x where
+  type PP (q & p) x = FnT (PP p x)
+  eval _ opts x = do
+    let msg0 = "(&)"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq)  ->
+        let d = p q
+        in mkNode opts (PresentT d) ["fn & " <> show q <> " = " <> show d] [hh pp, hh qq]
 
 type family FnT ab :: Type where
   FnT (a -> b) = b
@@ -6342,7 +6441,7 @@ instance (FailIfT (NotT (OrT l r))
         let fl = if l then dropWhile isSpace else id
             fr = if r then dropWhileEnd isSpace else id
             b =  (fl . fr) p
-        in mkNode opts (PresentT (b ^. TL.packed)) [msg0 <> showLit0 opts "" b <> showLit opts " | " p] [hh pp]
+        in mkNode opts (PresentT (b ^. TL.packed)) [msg0 <> showLit0 opts "" b <> showLit1 opts " | " p] [hh pp]
 
 -- | similar to 'T.stripLeft' 'T.stripRight'
 --
@@ -6399,7 +6498,7 @@ instance (GetBool r
                 else
                   let (before,after) = splitAt (length p) q
                   in if before == p then Just after else Nothing
-        in mkNode opts (PresentT (fmap (view TL.packed) b)) [msg0 <> show0 opts "" b <> showLit opts " | p=" p <> showLit opts " | q=" q] [hh pp, hh qq]
+        in mkNode opts (PresentT (fmap (view TL.packed) b)) [msg0 <> show0 opts "" b <> showLit1 opts " | p=" p <> showLit1 opts " | q=" q] [hh pp, hh qq]
 
 -- | leverages 'Para' for repeating predicates (passthrough method)
 --
