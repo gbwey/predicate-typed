@@ -120,7 +120,18 @@ type Desc' = Ands (Map (Fst Id > Snd Id) Pairs)
 -- False
 -- FalseT
 --
+-- >>> pl @(10 % 4 <..> 40 % 5) 4
+-- True
+-- TrueT
+--
+-- >>> pl @(10 % 4 <..> 40 % 5) 33
+-- False
+-- FalseT
+--
 type Between p q = Ge p && Le q
+type p <..> q = Ge p && Le q
+infix 4 <..>
+
 -- | This is the same as 'Between' but where \'r\' is 'Id'
 type Between' p q r = r >= p && r <= q
 
