@@ -33,11 +33,24 @@ see 'Refined3'
 contains Json and Read instances and arbitrary functions
 -}
 module Refined3 (
+  -- ** Refined3
     Refined3(r3In,r3Out)
   , Refined3C
+  -- ** Display
+  , prtEval3P
+  , prtEval3PIO
+  , prtEval3
+  , prt3IO
+  , prt3
+  -- ** Evaluation
+  , eval3P
+  , eval3
+  , eval3M
+  -- ** Proxy manipulation
   , mkProxy3
   , mkProxy3P
   , MkProxy3T
+  -- ** Create Refined3 methods
   , withRefined3TIO
   , withRefined3T
   , withRefined3TP
@@ -46,27 +59,21 @@ module Refined3 (
   , newRefined3TPIO
   , convertRefined3T
   , convertRefined3TP
-  , rapply3
-  , rapply3P
-  , prtEval3P
-  , prtEval3PIO
-  , prtEval3
-  , eval3P
-  , eval3
-  , eval3M
-  , eval3PX
-  , eval3X
-  , prt3IO
-  , prt3
+  -- ** QuickCheck methods
   , arbRefined3
   , arbRefined3With
+  -- ** Miscellaneous
+  , rapply3
+  , rapply3P
   , Msg3 (..)
-  , prt3Impl
   , MakeR3
   , Results (..)
   , RResults (..)
   , unsafeRefined3
   , unsafeRefined3'
+  , prt3Impl
+  , eval3PX
+  , eval3X
  ) where
 import Refined
 import Predicate
@@ -85,6 +92,13 @@ import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
 import Data.Maybe (fromMaybe)
+
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XTypeOperators
+-- >>> :set -XNoStarIsType
+
 -- | Refinement type that differentiates the input type from output type
 --
 -- @
@@ -95,10 +109,10 @@ import Data.Maybe (fromMaybe)
 -- PP fmt (PP ip i) should be valid input to Refined3
 -- @
 --
--- If we fix the input type to String then it looks similar to:
--- 1. read into an internal type
+-- Setting the input type \'i\' to 'String' then it is similar to 'Read'/'Show'
+-- 1. 'read' into an internal type
 -- 2. validate internal type with a predicate function
--- 3. show/format the  internal type
+-- 3. 'show' the internal type
 --
 -- Although the most common scenario is String as input, you are free to choose any input type you like
 --
@@ -177,7 +191,13 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 -- >>> reads @(Refined3 (Map (ReadP Int) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) (Printfnt 4 "%d.%d.%d.%d") String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
 -- [(Refined3 {r3In = [192,168,0,1], r3Out = "192.168.0.1"},"")]
 --
-instance (Eq i, Show i, Show (PP ip i), Refined3C ip op fmt i, Read (PP ip i), Read (PP fmt (PP ip i))) => Read (Refined3 ip op fmt i) where
+instance ( Eq i
+         , Show i
+         , Show (PP ip i)
+         , Refined3C ip op fmt i
+         , Read (PP ip i)
+         , Read (PP fmt (PP ip i))
+         ) => Read (Refined3 ip op fmt i) where
     readPrec
       = GR.parens
           (PCR.prec
@@ -245,7 +265,11 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 --    `- P '256
 -- <BLANKLINE>
 --
-instance (Show (PP fmt (PP ip i)), Show (PP ip i), Refined3C ip op fmt i, FromJSON i) => FromJSON (Refined3 ip op fmt i) where
+instance (Show ( PP fmt (PP ip i))
+        , Show (PP ip i)
+        , Refined3C ip op fmt i
+        , FromJSON i
+        ) => FromJSON (Refined3 ip op fmt i) where
   parseJSON z = do
                   i <- parseJSON @i z
                   let (ret,mr) = eval3 @ip @op @fmt o2 i
@@ -264,7 +288,9 @@ instance (Arbitrary (PP ip i)
 arbRefined3 :: forall ip op fmt i .
    ( Arbitrary (PP ip i)
    , Refined3C ip op fmt i
-   ) => Proxy '(ip,op,fmt,i) -> POpts -> Gen (Refined3 ip op fmt i)
+   ) => Proxy '(ip,op,fmt,i)
+     -> POpts
+     -> Gen (Refined3 ip op fmt i)
 arbRefined3 _ = suchThatMap (arbitrary @(PP ip i)) . eval3MQuickIdentity @ip @op @fmt
 
 -- help things along a little
@@ -324,7 +350,11 @@ arbRefined3With _ opts f =
 --       `- P '2019-06-01
 -- <BLANKLINE>
 --
-instance (Show (PP fmt (PP ip i)), Show (PP ip i), Refined3C ip op fmt i, Binary i) => Binary (Refined3 ip op fmt i) where
+instance ( Show (PP fmt (PP ip i))
+         , Show (PP ip i)
+         , Refined3C ip op fmt i
+         , Binary i
+         ) => Binary (Refined3 ip op fmt i) where
   get = do
           i <- B.get @i
           let (ret,mr) = eval3 @ip @op @fmt o2 i
@@ -391,7 +421,10 @@ newRefined3TP :: forall m ip op fmt i proxy
 newRefined3TP = newRefined3TPImpl (return . runIdentity)
 
 newRefined3TPIO :: forall m ip op fmt i proxy
-   . (Refined3C ip op fmt i, MonadIO m, Show (PP ip i), Show i)
+   . (Refined3C ip op fmt i
+    , MonadIO m
+    , Show (PP ip i)
+    , Show i)
   => proxy '(ip,op,fmt,i)
   -> POpts
   -> i
@@ -402,7 +435,11 @@ newRefined3TPIO = newRefined3TPImpl liftIO
 -- eval (PP op i) ~ True and eval (PP fmt i) to get the other value
 -- input is set to @Id meaning that PP fmt (PP ip i) /= i doesnt hold
 newRefined3TPImpl :: forall n m ip op fmt i proxy
-   . (Refined3C ip op fmt i, Monad m, MonadEval n, Show (PP ip i), Show (PP fmt (PP ip i)))
+   . (Refined3C ip op fmt i
+    , Monad m
+    , MonadEval n
+    , Show (PP ip i)
+    , Show (PP fmt (PP ip i)))
   => (forall x . n x -> RefinedT m x)
    -> proxy '(ip,op,fmt,i)
    -> POpts
@@ -599,16 +636,15 @@ eval3MSkip :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
    -> PP ip i
    -> m (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
 eval3MSkip opts a = do
-   let t1 = Node (PE TrueP ["skipped PP ip i = Id"]) []
    rr@(fromTT -> t2) <- evalBool (Proxy @op) opts a
    case getValLR (_tBool rr) of
         Right True -> do
           ss@(fromTT -> t3) <- eval (Proxy @fmt) opts a
           pure $ case getValLR (_tBool ss) of
-               Right b -> (RTTrueT a t1 t2 b t3, Just (Refined3 a b))
-               Left e -> (RTTrueF a t1 t2 e t3, Nothing)
-        Right False -> pure (RTFalse a t1 t2, Nothing)
-        Left e -> pure (RTF a t1 e t2, Nothing)
+               Right b -> (RTTrueT a mkNodeSkipP t2 b t3, Just (Refined3 a b))
+               Left e -> (RTTrueF a mkNodeSkipP t2 e t3, Nothing)
+        Right False -> pure (RTFalse a mkNodeSkipP t2, Nothing)
+        Left e -> pure (RTF a mkNodeSkipP e t2, Nothing)
 
 -- calculates from internal value
 eval3MQuickIdentity :: forall ip op fmt i . Refined3C ip op fmt i

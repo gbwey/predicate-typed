@@ -16,10 +16,11 @@
 -- Template Haskell methods for creating Refined and Refined3 refinement types
 --
 module UtilP_TH
-  ( refined3TH
-  , refined3TH'
-  , refinedTH
+  (
+    refinedTH
   , refinedTH'
+  , refined3TH
+  , refined3TH'
  ) where
 import Refined3
 import Refined
@@ -27,6 +28,12 @@ import PredicateCore
 import qualified Language.Haskell.TH.Syntax as TH
 import Data.Functor.Identity
 import UtilP
+
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XTypeOperators
+-- >>> :set -XNoStarIsType
 
 -- | creates a 'Refined.Refined' refinement type with terse output
 --

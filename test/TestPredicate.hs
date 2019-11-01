@@ -45,8 +45,8 @@ suite = defaultMain $ testGroup "TestPredicate" (orderTests allTests)
 
 allTests :: [IO ()]
 allTests =
-   [expectPE (PresentT LT) $ pl @("aa" === Id) "aaaa"
-  , expectPE FalseT $ pl @(FromEnum ("aa" === Id) >> Same 1) "aaaa"
+   [expectPE (PresentT LT) $ pl @("aa" ==! Id) "aaaa"
+  , expectPE FalseT $ pl @(FromEnum ("aa" ==! Id) >> Same 1) "aaaa"
   , expectPE (PresentT (Right 1)) $ pl @(HeadDef 'False Id +++ Id) (Right @[Bool] 1) -- need @[Bool] cos we said 'False!
   , expectPE (PresentT (Left True)) $ pl @(HeadDef 'False Id +++ Id) (Left @_ @Int [True,False]) -- need @[Bool] cos we said 'False!
   , expectPE (PresentT (Right True)) $ pl @(Not Id +++ Id) (Right True)
@@ -63,9 +63,9 @@ allTests =
   , expectPE (FailT "Head(empty)") $ pl @(Head' (Fst Id) >> Le 6) ([] @Int, True)
   , expectPE FalseT $ pl @(HeadDef 10 (Fst Id) >> Le 6) ([],True)
   , expectPE (FailT "zz") $ pl @(HeadFail "zz" (Fst Id) >> Le 6) ([],True)
-  , expectPE (FailT "failed1") $ pl @((HeadFail "failed1" (Fst Id) >> Le 6) `OR` 'False) ([],True)
-  , expectPE TrueT $ pl @((Fst Id >> HeadFail "failed2" Id >> Le (6 %- 1)) `OR` 'False) ([-9],True)
-  , expectPE (FailT "failed3") $ pl @((Fst Id >> Failt _ "failed3" >> Le (6 %- 1)) `OR` 'False) ([-5],True)
+  , expectPE (FailT "failed1") $ pl @((HeadFail "failed1" (Fst Id) >> Le 6) || 'False) ([],True)
+  , expectPE TrueT $ pl @((Fst Id >> HeadFail "failed2" Id >> Le (6 %- 1)) || 'False) ([-9],True)
+  , expectPE (FailT "failed3") $ pl @((Fst Id >> Failt _ "failed3" >> Le (6 %- 1)) || 'False) ([-5],True)
   , expectPE TrueT $ pl @(MaybeIn 'True Id) (Nothing @Bool) -- need @() else breaks
   , expectPE (PresentT 10) $ pl @(MaybeIn (Failt _ "failed4") Id) (Just 10)
   , expectPE (PresentT 10) $ pl @(Just' Id) (Just 10)
@@ -140,7 +140,7 @@ allTests =
   , expectPE FalseT $ pl @(ExitWhen' (Len >> Ne 1) >> HeadFail "failedn" Id >> Gt (20 %- 1 )) [-23]
   , expectPE (PresentT (-1.0)) $ pl @(Negate Id >> Dup >> First (Succ Id) >> Swap >> Fst Id - Snd Id) 4
   , expectPE (PresentT (Right 12)) $ pl @(Not Id +++ Id) (Right @Bool 12)
-  , expectPE (PresentT Cgt) $ pl @(FromEnum ("aa" === Id) >> ToEnum OrderingP Id) "aaaa"
+  , expectPE (PresentT Cgt) $ pl @(FromEnum ("aa" ==! Id) >> ToEnum OrderingP Id) "aaaa"
   , expectPE (PresentT False) $ pl @(Msg "someval4" (Gt 4 >> Id)) 4
   , expectPE (PresentT ()) $ pl @(Snd Id >> Snd Id >> Snd Id >> Snd Id >> Id) (1,('a',(3,(True,()))))
   , expectPE TrueT $ pl @(Re "\\d{4}-\\d{3}" Id) "1234-123"
@@ -161,7 +161,7 @@ allTests =
   , expectPE (PresentT [False,False,True,True,True]) $ pl @(Map (ExitWhen' (Gt 10) >> Gt 2) Id) [1..5]
   , expectPE (PresentT ([1,2],[3,4,5,6,7,8,9,10,11])) $ pl @(Break (Gt 2) Id) [1..11]
   , expectPE (PresentT ([1,2,3],[4,5,6,7,8,9,10,11])) $ pl @(Span (Lt 4) Id) [1..11]
-  , expectPE (PresentT [GT,GT,LT,EQ]) $ pl @(Pairs >> Map (First (Succ Id >> Succ Id) >> Fst Id === Snd Id) Id) [1,2,3,6,8]
+  , expectPE (PresentT [GT,GT,LT,EQ]) $ pl @(Pairs >> Map (First (Succ Id >> Succ Id) >> Fst Id ==! Snd Id) Id) [1,2,3,6,8]
   , expectPE TrueT $ pl @(Re "^\\d{1,3}(?:\\.\\d{1,3}){3}$" Id) "123.1.1.21"
   , expectPE (PresentT [("123.",["."]),("8.",["."]),("99.",["."]),("21",[])]) $ pl @(Rescan "\\d{1,3}(\\.)?" Id) "123.8.99.21"
   , expectPE (PresentT 117) $ pl @(MaybeIn (Failp "err") (Succ Id)) (Just 116)
@@ -169,8 +169,8 @@ allTests =
   , expectPE (FailT "someval") $ pl @(MaybeIn (Failp "someval") (Succ Id)) (Nothing @())
   , expectPE TrueT $ pl @(MaybeIn 'True 'False) (Nothing @())
   , expectPE FalseT $ pl @(MaybeIn 'True 'False) (Just "aa")
-  , expectPE (PresentT LT) $ pl @(MaybeIn MEmptyP (Fst Id === Snd Id)) (Just ('x','z'))
-  , expectPE (PresentT EQ) $ pl @(MaybeIn MEmptyP (Fst Id === Snd Id)) (Nothing @(Char,Char))
+  , expectPE (PresentT LT) $ pl @(MaybeIn MEmptyP (Fst Id ==! Snd Id)) (Just ('x','z'))
+  , expectPE (PresentT EQ) $ pl @(MaybeIn MEmptyP (Fst Id ==! Snd Id)) (Nothing @(Char,Char))
   , expectPE TrueT $ pl @('True ||| 'False) (Left @_ @() "someval")
   , expectPE FalseT $ pl @('True ||| 'False) (Right @() "someval")
   , expectPE (PresentT 123) $ pl @('Left Id) (Left 123)
@@ -225,7 +225,7 @@ allTests =
   , expectPE (PresentT LT) $ pl @(FoldN 0 Id (Succ Id)) LT
   , expectPE (PresentT LT) $ pl @(FoldN 2 Id (Succ Id) >> FoldN 2 Id (Pred Id)) LT
   , expectPE (PresentT ["2","2"]) $ pl @(Map (Fst Id) (Rescan "." (ShowP Id)) >> FilterBy (Same "2") Id) 12324
-  , expectPE (PresentT [LT,LT,LT,GT,EQ,LT]) $ pl @((Ones Id << ShowP Id) >> Map (Fst Id === Snd Id) Pairs) 1234223
+  , expectPE (PresentT [LT,LT,LT,GT,EQ,LT]) $ pl @((Ones Id << ShowP Id) >> Map (Fst Id ==! Snd Id) Pairs) 1234223
   , expectPE (PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]) $ pl @(IToList _) ("abcd" :: String)
   , expectPE (PresentT "abcd") $ pl @ToList (M.fromList $ zip [0..] "abcd")
   , expectPE (PresentT [123]) $ pl @ToList (Just 123)
@@ -234,11 +234,11 @@ allTests =
   , expectPE (FailT "err") $ pl @(MaybeIn (Failp "err") Id) (Nothing @Int)
   , expectPE (FailT "err") $ pl @(MaybeIn (Failp "err") Id) (Nothing @())
   , expectPE (PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]) $ pl @(IToList _) (M.fromList $ itoList ("abcd" :: String))
-  , expectPE (PresentT [('a',1),('b',2),('c',3),('d',4),('a',5),('b',6),('c',7)]) $ pl @(Ziplc "abcd" Id) [1..7]
-  , expectPE (PresentT [('a',1),('b',2),('c',3),('d',4)]) $ pl @(Zipn "abcd" Id) [1..7]
-  , expectPE (PresentT []) $ pl @(Zipn "" Id) [1..7]
-  , expectPE (PresentT [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(1 % 1,'d')]) $ pl @(Ziplc '[1 % 1 , 2 % 1 , 3 % 1 ] Id) "abcd"
-  , expectPE (PresentT []) $ pl @(Ziprc (EmptyT _ Id) Id) "abcd"
+  , expectPE (PresentT [('a',1),('b',2),('c',3),('d',4),('a',5),('b',6),('c',7)]) $ pl @(ZipL "abcd" Id) [1..7]
+  , expectPE (PresentT [('a',1),('b',2),('c',3),('d',4)]) $ pl @(ZipTrunc "abcd" Id) [1..7]
+  , expectPE (PresentT []) $ pl @(ZipTrunc "" Id) [1..7]
+  , expectPE (PresentT [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(1 % 1,'d')]) $ pl @(ZipL '[1 % 1 , 2 % 1 , 3 % 1 ] Id) "abcd"
+  , expectPE (PresentT []) $ pl @(ZipR (EmptyT _ Id) Id) "abcd"
   , expectPE (PresentT [9,2,7,4]) $ pl @ToList (M.fromList (zip ['a'..] [9,2,7,4]))
   , expectPE (PresentT [(0,9),(1,2),(2,7),(3,4)]) $ pl @(IToList _) [9,2,7,4]
   , expectPE (PresentT [('a',9),('b',2),('c',7),('d',4)]) $ pl @(IToList _) (M.fromList (zip ['a'..] [9,2,7,4]))
@@ -329,7 +329,7 @@ allTests =
   , expectPE (PresentT ("ffe0","fFe0")) $ pl @((ReadBaseInt 16 &&& Id) >> First (ShowBase 16)) "fFe0"
   , expectPE FalseT $ pl @(Id == "Abc") "abc"
   , expectPE TrueT $ pl @("Abc" ==? Id) "abc"
-  , expectPE (PresentT LT) $ pl @("Abc" === Id) "abc"
+  , expectPE (PresentT LT) $ pl @("Abc" ==! Id) "abc"
   , expectPE (PresentT EQ) $ pl @("Abc" ===? Id) "abc"
   , expectPE (PresentT 'd') $ pl @(Id !! 3) ('a','b','c','d','e')
   , expectPE (PresentT 99) $ pl @(Id !! "s") $ M.fromList [("t",1), ("s", 20), ("s", 99)]
@@ -338,7 +338,7 @@ allTests =
   , expectPE (PresentT (Just ([1,2,3,4],5))) $ pl @Unsnoc [1..5]
   , expectPE (PresentT [(0,1),(1,2),(2,3),(3,4),(4,5)]) $ pl @(IToList _) [1..5]
   , expectPE (PresentT [(0,'a'),(1,'b'),(2,'c')]) $ pl @(IToList _) ['a','b','c']
-  , expectPE (PresentT [(1,'a'),(2,'b'),(3,'c'),(4,'d'),(5,'e')]) $ pl @(Zipn (Fst Id) (Snd Id)) ([1..5],['a'..'z'])
+  , expectPE (PresentT [(1,'a'),(2,'b'),(3,'c'),(4,'d'),(5,'e')]) $ pl @(ZipTrunc (Fst Id) (Snd Id)) ([1..5],['a'..'z'])
   , expectPE (PresentT [1,2,3,8,8]) $ pl @(PadR 5 8 Id) [1..3]
   , expectPE (PresentT [1,2,3,4,5]) $ pl @(PadR 5 0 Id) [1..5]
   , expectPE (PresentT [1,2,3,4,5,6]) $ pl @(PadR 5 0 Id) [1..6]
@@ -395,13 +395,13 @@ allTests =
   , expectPE (PresentT "hhhhh") $ pl @(Do '["abc", "Def", "ggg", "hhhhh"]) ()
   , expectPE (PresentT GT) $ pl @(Do '[ 'LT, 'EQ, 'GT ]) ()
   , expectPE (PresentT (-3 % 1)) $ pl @(Do '[4 % 4,22 % 1 ,12 %- 4]) ()
-  , expectPE (PresentT [10,2,5,8]) $ pl @(GuardsLax (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 0 11, Between 1 4,Between 3 5])) [10::Int,2,5,8]
+  , expectPE (PresentT [10,2,5,8]) $ pl @(GuardsQuickLax (Printf2 "guard(%d) %d is out of range") '[Between 0 11, Between 1 4,Between 3 5]) [10::Int,2,5,8]
   , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBaseInt 10) (Snd Id) >> Ddmmyyyyval) "31-11-1999"
-  , expectPE (PresentT [31,11,1999]) $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11,1999::Int]
-  , expectPE (PresentT [31,11,1999,123,44]) $ pl @(GuardsLax (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11,1999,123,44::Int]
-  , expectPE (FailT "Guards: data elements(2) /= predicates(3)") $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11::Int]
-  , expectPE (FailT "guard(2) 13 is out of range") $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,13,1999::Int]
-  , expectPE (FailT "guard(1) 0 is out of range") $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [0,44,1999::Int]
+  , expectPE (PresentT [31,11,1999]) $ pl @(GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,1999::Int]
+  , expectPE (PresentT [31,11,1999,123,44]) $ pl @(GuardsQuickLax (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,1999,123,44::Int]
+  , expectPE (FailT "Guards: data elements(2) /= predicates(3)") $ pl @(GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11::Int]
+  , expectPE (FailT "guard(2) 13 is out of range") $ pl @(GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050]) [31,13,1999::Int]
+  , expectPE (FailT "guard(1) 0 is out of range") $ pl @(GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050]) [0,44,1999::Int]
   , expectPE (PresentT (fromGregorian 1999 11 30)) $ pl @(ReadP Day) "1999-11-30"
   , expectPE (FailT "ReadP Day (1999-02-29) failed") $ pl @(ReadP Day) "1999-02-29"
   , expectPE (PresentT (TimeOfDay 14 59 20)) $ pl @(ReadP TimeOfDay) "14:59:20"
@@ -409,8 +409,8 @@ allTests =
   , expectPE (FailT "ParseTimeP TimeOfDay (%H:%M%S) failed to parse") $ pl @(ParseTimeP TimeOfDay "%H:%M%S" Id) "14:04:61"
   , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay) "23:13:59"
   , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay) "23:13:60"
-  , expectPE (FailT "Guards: data elements(5) /= predicates(3)") $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11,2000,1,2::Int]
-  , expectPE (PresentT [31,11,2000,1,2]) $ pl @(GuardsLax (ToGuardsT (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050])) [31,11,2000,1,2::Int]
+  , expectPE (FailT "Guards: data elements(5) /= predicates(3)") $ pl @(GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,2000,1,2::Int]
+  , expectPE (PresentT [31,11,2000,1,2]) $ pl @(GuardsQuickLax (Printf2 "guard(%d) %d is out of range") '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,2000,1,2::Int]
   , expectPE (PresentT [0,0,0,0,0,0,0,1,2,3]) $ pl @(PadL 10 0 Id) [1..3]
   , expectPE (PresentT (124,["1","2","2"])) $ pl @('Left Id >> (Succ Id &&& (Pred Id >> ShowP Id >> Ones Id))) (Left 123)
   , expectPE (PresentT [1,2,3,4]) $ pl @(GuardsN (Printf2 "guard(%d) %d is out of range") 4 (Between 0 255)) [1,2,3,4::Int]
@@ -423,9 +423,9 @@ allTests =
   , expectPE (PresentT 0) $ pl @(LastDef 0 Id) []
   , expectPE (PresentT (1,("asdf",True))) $ pl @'(1,'("asdf",'True)) ()
   , expectPE (PresentT (1,("asdf",(True,())))) $ pl @(TupleI '[W 1,W "asdf",W 'True]) ()
-  , expectPE (PresentT ("abc", True)) $ pl @(Theseid 'True "xyz") (This "abc")
-  , expectPE (PresentT ("xyz", False)) $ pl @(Theseid 'True "xyz") (That False)
-  , expectPE (PresentT ("abc", False)) $ pl @(Theseid 'True "xyz") (These "abc" False)
+  , expectPE (PresentT ("abc", True)) $ pl @(TheseId 'True "xyz") (This "abc")
+  , expectPE (PresentT ("xyz", False)) $ pl @(TheseId 'True "xyz") (That False)
+  , expectPE (PresentT ("abc", False)) $ pl @(TheseId 'True "xyz") (These "abc" False)
   , expectPE (PresentT ("xyz", True)) $ pl @(TheseDef '("xyz",'True) Id) (This "abc")
   , expectPE (PresentT ("xyz", True)) $ pl @(TheseDef '("xyz",'True) Id) (That False)
   , expectPE (PresentT ("abc", False)) $ pl @(TheseDef '("xyz",'True) Id) (These "abc" False)
@@ -491,8 +491,6 @@ allTests =
   , expectPE (PresentT "abcd") $ pl @(Map (FromEnum Id) Id >> Map (ToEnum Char Id) Id) ("abcd" :: String)
   , expectPE (FailT "ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2)") $ pl @(Map (FromEnum Id) Id >> Map (Sub Id 97 >> ToEnum Ordering Id) Id) ("abcde" :: String)
   , expectPE (PresentT ([2,3,5,7,11,13], [1,4,6,8,9,10,12,14,15])) $ pl @(Partition (Prime Id) Id) [1..15]
-  , expectPE (PresentT Nothing) $ pl @Nothing' (Nothing @Int)
-  , expectPE (FailT "expected Nothing") $ pl @Nothing' (Just 10)
   , expectPE (FailT "'Nothing found Just") $ pl @'Nothing (Just 12)
   , expectPE (PresentT (Just 10,((),()))) $ pl @(Id &&& '() &&& ()) (Just 10)
   , expectPE (PresentT [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 %- 1 ) >> Wrap (MM.First _) Id)) Id >> Map Sapa Id >> Map (Just' (Unwrap Id)) Id) [Nothing,Just 10,Just 20,Nothing,Just 30]
@@ -565,34 +563,34 @@ allTests =
   , expectPE (FailT "Para: data elements(3) /= predicates(4)") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
   , expectPE (PresentT [True, False, False]) $ pl @(ParaLax '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
   , expectPE (FailT "Para: data elements(7) /= predicates(4)") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999,1,1,2]
-  , expectPE (FailT "guard(2) err 002") $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'False, Lt 2 ])) [1,2,-99,-999]
-  , expectPE (FailT "Guards: data elements(3) /= predicates(4)") $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'False, Lt 2 ])) [1,2,-99]
-  , expectPE (FailT "Guards: data elements(7) /= predicates(4)") $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'True, Lt 2 ])) [1,22,-99,-999,1,1,2]
-  , expectPE (PresentT [1,22,-99,-999,1,1,2]) $ pl @(GuardsLax (ToGuardsT (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'True, Lt 2 ])) [1,22,-99,-999,1,1,2]
-  , expectPE (PresentT [1,22]) $ pl @(GuardsLax (ToGuardsT (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'True, Lt 2 ])) [1,22]
-  , expectPE (PresentT [1,22,-99,-999]) $ pl @(Guards (ToGuardsT (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'True, Lt 2 ])) [1,22,-99,-999]
+  , expectPE (FailT "guard(2) err 002") $ pl @(GuardsQuick (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999]
+  , expectPE (FailT "Guards: data elements(3) /= predicates(4)") $ pl @(GuardsQuick (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
+  , expectPE (FailT "Guards: data elements(7) /= predicates(4)") $ pl @(GuardsQuick (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999,1,1,2]
+  , expectPE (PresentT [1,22,-99,-999,1,1,2]) $ pl @(GuardsQuickLax (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999,1,1,2]
+  , expectPE (PresentT [1,22]) $ pl @(GuardsQuickLax (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22]
+  , expectPE (PresentT [1,22,-99,-999]) $ pl @(GuardsQuickLax (Printf2 "guard(%d) err %03d") '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999]
   , expectPE TrueT $ pl @(Fst Id /= Snd Id) ("ab","xyzabw")
   , expectPE FalseT $ pl @(Fst Id == Snd Id) ("ab","xyzabw")
   , expectPE (PresentT 157) $ pl @(Fst Id * (Snd Id >> Fst Id) + (Snd Id >> Snd Id) `Div` 2) (12,(13,3))
   , expectPE TrueT $ pl @(Fst Id >= Snd Id || Snd Id > 23 || 12 %- 5 <= ToRational (Fst Id)) (12,13)
-  , expectPE (PresentT LT) $ pl @(Fst Id === Snd Id) (3,12)
+  , expectPE (PresentT LT) $ pl @(Fst Id ==! Snd Id) (3,12)
   , expectPE TrueT $ pl @(Fst Id ==? Snd Id) ("aBc","AbC")
   , expectPE (PresentT EQ) $ pl @(Fst Id ===? Snd Id) ("aBc","AbC")
   , expectPE FalseT $ pl @(Fst Id == Snd Id) ("aBc","AbC")
-  , expectPE (PresentT GT) $ pl @(Fst Id === Snd Id) ("aBc","AbC")
-  , expectPE (PresentT LT) $ pl @(Snd Id === Fst Id) ("aBc","AbC")
+  , expectPE (PresentT GT) $ pl @(Fst Id ==! Snd Id) ("aBc","AbC")
+  , expectPE (PresentT LT) $ pl @(Snd Id ==! Fst Id) ("aBc","AbC")
   , expectPE TrueT $ pl @(Fst Id ==? Snd Id && Fst Id == Snd Id) ("Abc","Abc")
-  , expectPE (PresentT (EQ,EQ)) $ pl @(Fst Id ===? Snd Id &&& Fst Id === Snd Id) ("abc","abc")
+  , expectPE (PresentT (EQ,EQ)) $ pl @(Fst Id ===? Snd Id &&& Fst Id ==! Snd Id) ("abc","abc")
   , expectPE (PresentT "ask%dfas%kef00035 hey %") $ pl @(Printf "ask%%dfas%%kef%05d hey %%" Id) (35 :: Int)
   , expectPE (PresentT 100) $ pl @(Id !! 2 !! 0) [[1..5],[10..14],[100..110]]
   , expectPE (FailT "(!!) index not found") $ pl @(Id !! 1 !! 7) [[1..5],[10..14],[100..110]]
   , expectPE (PresentT '2') $ pl @(IxL Id 1 (Char1 "x")) ("123" :: T.Text)
   , expectPE (PresentT 'x') $ pl @(IxL Id 15 (Char1 "x")) ("123" :: T.Text)
   , expectPE (FailT "someval int=45") $ pl @(Fail () (Printf "someval int=%d" Id)) (45 :: Int)
-  , expectPE (FailT "failing with 45") $ pl @(If (Gt 4) (Fail (T _) (Printf "failing with %d" Id)) ()) 45
-  , expectPE (PresentT 21) $ pl @(If (Gt 4) (Fail (T _) (Printf "failing with %d" Id)) (Id * 7)) 3
-  , expectPE (PresentT ["2","1"]) $ pl @(If (Gt 4) (Fail (T _) (Printf "failing with %d" Id)) (Id * 7 >> ShowP Id >> Ones Id)) 3
-  , expectPE (FailT "failing with 19") $ pl @(If (Gt 4) (Fail (T _) (Printf "failing with %d" Id)) (ShowP (Id * 7) >> Ones Id)) 19
+  , expectPE (FailT "failing with 45") $ pl @(If (Gt 4) (Fail (Hole _) (Printf "failing with %d" Id)) ()) 45
+  , expectPE (PresentT 21) $ pl @(If (Gt 4) (Fail (Hole _) (Printf "failing with %d" Id)) (Id * 7)) 3
+  , expectPE (PresentT ["2","1"]) $ pl @(If (Gt 4) (Fail (Hole _) (Printf "failing with %d" Id)) (Id * 7 >> ShowP Id >> Ones Id)) 3
+  , expectPE (FailT "failing with 19") $ pl @(If (Gt 4) (Fail (Hole _) (Printf "failing with %d" Id)) (ShowP (Id * 7) >> Ones Id)) 19
   , expectPE (PresentT 31) $ pl @(DoN 4 (Id + 7)) 3
   , expectPE (PresentT 9) $ pl @(DoN 4 9) ()
   , expectPE (PresentT 3) $ pl @(Do '[1,2,3]) ()
@@ -757,8 +755,6 @@ allTests =
   -- check for infinite loops
   , expectPE (FailT "Unfoldr (9999,1):failed at i=100") $ pl @(IterateNUntil 9999 'False I) 1
   , expectPE (FailT "Scanl:failed at i=100") $ pl @(Foldl (Fst Id) '() (EnumFromTo 1 9999)) ()
-  , expectPE (PresentT [1,2,3,4,5,99]) $ pl @(MaybeX (Fst Id) (Fst (Fst Id) +: Snd Id) (Snd Id)) ([1..5],Just 99)
-  , expectPE (PresentT [1,2,3,4,5]) $ pl @(MaybeX (Fst Id) (Fst (Fst Id) +: Snd Id) (Snd Id)) ([1..5],Nothing)
   , expectPE (PresentT "a=9 b=rhs") $ pl @(TheseX (Printf "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (Snd Id >> Printf2 "a=%d b=%s") Id) (These @Int 9 "rhs")
   , expectPE (PresentT "a=10") $ pl @(TheseX (Printf "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (Snd Id >> Printf2 "a=%d b=%s") Id) (This @Int 9)
   , expectPE (PresentT "b=rhs") $ pl @(TheseX (Printf "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (Snd Id >> Printf2 "a=%d b=%s") Id) (That @Int "rhs")
@@ -782,7 +778,7 @@ allTests =
   , expectPE (FailT "char=x") $ pl @(LookupFail (Printf "char=%c" (Snd Id)) (Fst Id) 49) (map SG.Min [1::Int ..10],'x')
   , expectPE (FailT "someval=13") $ pl @(LeftFail (Printf "someval=%d" (Fst Id)) (Snd Id)) (13::Int,Right @(SG.Sum Int) "abc")
   , expectPE (FailT "someval=Right \"abc\"") $ pl @(LeftFail (Printf "someval=%s" (ShowP Id)) Id) (Right @(SG.Sum Int) "abc")
-  , expectPE (FailT "msg=(\"ASfd\",[]) Asdf") $ pl @(GFail Uncons (Printf "msg=%s Asdf" (ShowP Id)) (Snd Id)) ("ASfd",[]::[Int])
+  , expectPE (FailT "msg=Abc def") $ pl @(HeadFail (Printf "msg=%s def" (Fst Id)) (Snd Id)) ("Abc" :: String,[]::[Int])
   , expectPE (PresentT 'c') $ pl @(LookupDef' (Fst Id) (Snd Id) (Char1 "xx") Id) (['a'..'e'],2)
   , expectPE (PresentT 'x') $ pl @(LookupDef' (Fst Id) (Snd Id) (Char1 "xx") Id) (['a'..'e'],999)
   , expectPE (PresentT 'x') $ pl @(LookupDef' (Fst Id) (Snd Id) (Char1 "xx") Id) ([],2)
@@ -822,11 +818,6 @@ allTests =
   , expectPE (PresentT "xxabcd") $ pl @(JustDef' "dd" (Snd (Fst (Fst Id)) <> Snd Id) (Fst Id)) (Just "abcd","xx")
   , expectPE (PresentT "dd")   $ pl @(JustDef' "dd" (Snd (Fst (Fst Id)) <> Snd Id) (Fst Id)) (Nothing,"xx")
   , expectPE (PresentT "xx")   $ pl @(JustDef' (Snd Id) (Snd (Fst (Fst Id)) <> Snd Id) (Fst Id)) (Nothing,"xx")
-
-  , expectPE (PresentT "xxya") $ pl @((Id &&& Snd Id) >> MaybeXP (Fst (Fst (Fst Id))) (Fst (Fst (Fst Id)) <> Snd Id) (Snd Id)) ("xx",Just "ya")
-  , expectPE (PresentT "xxya") $ pl @((Id &&& Fst Id) >> MaybeXP (Snd (Fst (Fst Id))) (Snd (Fst (Fst Id)) <> Snd Id) (Snd Id)) (Just "ya","xx")
-
-  , expectPE (PresentT "xx") $ pl @((Id &&& Snd Id) >> MaybeXP (Fst (Fst (Fst Id))) (Fst (Fst (Fst Id)) <> Snd Id) (Snd Id)) ("xx",Nothing)
 
   , expectPE (PresentT "aabb") $ pl @(JustDef''' (Fst Id) (Fst (Fst Id) <> Snd Id) (Snd Id)) ("aa", Just "bb")
   , expectPE (PresentT "aa") $ pl @(JustDef''' (Fst Id) (Fst (Fst Id) <> Snd Id) (Snd Id)) ("aa", Nothing)

@@ -31,7 +31,12 @@ import Data.Proxy
 import GHC.TypeLits (AppendSymbol,Nat,KnownNat)
 import Data.Kind (Type)
 import Data.Time
-import qualified Data.Semigroup as SG
+
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XTypeOperators
+-- >>> :set -XNoStarIsType
 
 -- | credit card with luhn algorithm
 --
@@ -217,7 +222,14 @@ datetimen = mkProxy3
 type BetweenR m n = Refined3 Id (Between m n) Id Int
 
 type LuhnR (n :: Nat) = MakeR3 (LuhnY n)
-type LuhnR' (n :: Nat) = MakeR3 (LuhnX n)
+
+-- | Luhn check
+--
+-- >>> prtEval3P (Proxy @(LuhnY 4)) ol "1230"
+-- Right (Refined3 {r3In = [1,2,3,0], r3Out = "1230"})
+--
+-- >>> prtEval3P (Proxy @(LuhnY 4)) ol "1234"
+-- Left Step 2. Failed Boolean Check(op) | Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]
 
 -- uses builtin Luhn vs long winded version LuhnX
 type LuhnY (n :: Nat) =
@@ -227,36 +239,6 @@ type LuhnY (n :: Nat) =
      >> GuardSimple (Luhn Id) >> 'True
    , ConcatMap (ShowP Id) Id
    , String)
-
-type LuhnX (n :: Nat) =
-   '(Map (ReadP Int) (Ones Id)
-   , Luhn'' n >> 'True
-   , ConcatMap (ShowP Id) Id
-   , String)
-
-type Luhn'' (n :: Nat) =
-         Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id])) (Len >> Same n)
-      >> Do '[
-              Reverse
-             ,Ziplc [1,2] Id
-             ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
-             ,FoldMap (SG.Sum Int) Id
-             ]
-        >> Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)
-
-type Luhn' (n :: Nat) =
-       Msg "Luhn'" (Do
-       '[Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, Id])) (Len >> Same n)
-        ,Do
-            '[Ones Id
-            ,Map (ReadP Int) Id
-            ,Reverse
-            ,Ziplc [1,2] Id
-            ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
-            ,FoldMap (SG.Sum Int) Id
-           ]
-        ,Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)
-        ])
 
 -- noop true
 type Ok (t :: Type) = '(Id, 'True, Id, t)

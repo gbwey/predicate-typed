@@ -22,9 +22,31 @@ Copyright   : (c) Grant Weyburne, 2019
 License     : BSD-3
 Maintainer  : gbwey9@gmail.com
 
-class P is the main class. Contains a minimal set of instances of P to prevent orphans
+contains class P with a minimal set of instances
 -}
-module PredicateCore where
+module PredicateCore (
+    P(..)
+ -- ** basic types
+  , I
+  , Id
+  , IdT
+  , W
+  , Msg
+  -- ** display predicates
+  , pe
+  , pe2
+  , pe2n
+  , pu
+  , pun
+  , pe3
+  , pl
+  , plc
+--  , peWith
+  -- ** miscellaneous
+  , runPQ
+  , evalBool
+  , evalQuick
+  ) where
 import UtilP
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
 import Control.Lens ((^.))
@@ -32,6 +54,12 @@ import Data.Proxy
 import Data.Typeable
 import Data.Kind (Type)
 import Data.These (These(..))
+import Data.Functor.Identity
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XTypeOperators
+-- >>> :set -XNoStarIsType
 
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Main.>>'
 class P p a where
@@ -41,6 +69,10 @@ class P p a where
 -- | A specialised form of 'eval' that works only on predicates
 evalBool :: (MonadEval m, P p a, PP p a ~ Bool) => Proxy p -> POpts -> a -> m (TT (PP p a))
 evalBool p opts a = fixBoolT <$> eval p opts a
+
+evalQuick :: forall p i . P p i => i -> Either String (PP p i)
+evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) o0 i))
+
 
 -- | identity function
 --
@@ -90,6 +122,10 @@ instance (Typeable a, Show a) => P IdT a where
 -- Present [123,99]
 -- PresentT [123,99]
 --
+-- >>> pl @'[W "abc", W "def", Id, Id] "ghi"
+-- Present ["abc","def","ghi","ghi"]
+-- PresentT ["abc","def","ghi","ghi"]
+--
 data W (p :: k)
 instance P p a => P (W p) a where
   type PP (W p) a = PP p a
@@ -99,6 +135,10 @@ instance P p a => P (W p) a where
 --
 -- >>> pe @(Msg "[somemessage] " Id) 999
 -- P [somemessage] Id 999
+-- PresentT 999
+--
+-- >>> pe @(Msg Id 999) "info message:"
+-- P info message:'999
 -- PresentT 999
 --
 data Msg prt p
@@ -120,11 +160,11 @@ instance (P prt a
 -- Present ()
 -- PresentT ()
 --
-instance Show a => P () a where
+instance P () a where
   type PP () a = ()
-  eval _ opts a =
+  eval _ opts _ =
     let msg0 = "()"
-    in pure $ mkNode opts (PresentT ()) [msg0 <> show0 opts " " a] []
+    in pure $ mkNode opts (PresentT ()) [msg0] []
 
 instance P (Proxy t) a where
   type PP (Proxy t) a = Proxy t
@@ -137,7 +177,7 @@ instance P (Proxy t) a where
 
 -- | pulls the type level 'Bool' to the value level
 --
--- >>> pl @'True "ignore this"
+-- >>> pl @'True "not used"
 -- True
 -- TrueT
 --
@@ -150,7 +190,7 @@ instance GetBool b => P (b :: Bool) a where
     let b = getBool @b
     in pure $ mkNodeB opts b ["'" <> show b] []
 
--- | pulls the type level 'Symbol' to the value level
+-- | pulls the type level 'Symbol' to the value level as a 'String'
 --
 -- >>> pl @"hello world" ()
 -- Present "hello world"

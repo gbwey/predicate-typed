@@ -41,6 +41,9 @@ import TH_Orphans () -- need this else refined*TH' fails for dates
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree
+import Test.QuickCheck ((===))
+import qualified Data.Semigroup as SG
+import GHC.TypeLits (Nat)
 
 suite :: IO ()
 suite = defaultMain $ testGroup "TestRefined3" (namedTests <> orderTests unnamedTests <> allProps)
@@ -388,3 +391,34 @@ expect3 :: (HasCallStack, Show i, Show r, Eq i, Eq r, Eq j, Show j)
 expect3 lhs (rhs,mr) = do
   (@?=) lhs $ maybe (Left $ toRResults3 rhs) Right mr
 
+type LuhnR' (n :: Nat) = MakeR3 (LuhnX n)
+
+type LuhnX (n :: Nat) =
+   '(Map (ReadP Int) (Ones Id)
+   , Luhn'' n >> 'True
+   , ConcatMap (ShowP Id) Id
+   , String)
+
+type Luhn'' (n :: Nat) =
+         Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id])) (Len >> Same n)
+      >> Do '[
+              Reverse
+             ,ZipL [1,2] Id
+             ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
+             ,FoldMap (SG.Sum Int) Id
+             ]
+        >> Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)
+
+type Luhn' (n :: Nat) =
+       Msg "Luhn'" (Do
+       '[Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, Id])) (Len >> Same n)
+        ,Do
+            '[Ones Id
+            ,Map (ReadP Int) Id
+            ,Reverse
+            ,ZipL [1,2] Id
+            ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
+            ,FoldMap (SG.Sum Int) Id
+           ]
+        ,Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)
+        ])

@@ -28,25 +28,31 @@
 -- Maintainer  : gbwey9@gmail.com
 --
 module Refined (
+  -- ** Refined
     Refined(unRefined)
   , RefinedC
-  , arbRefined
-  , rapply
-  , rapply0
-  , rapply1
-  , convertRefinedT
-  , withRefinedT
-  , withRefinedTIO
   , newRefined
-  , prtRefinedIO
-  , newRefinedT
-  , newRefinedTIO
   , RefinedT(..)
+  -- ** Print methods
+  , prtRefinedIO
   , prtRefinedTIO
   , prtRefinedT
+  -- ** Create Refined
+  , withRefinedT
+  , withRefinedTIO
+  , newRefinedT
+  , newRefinedTIO
+  -- ** QuickCheck method
+  , arbRefined
+  -- ** Miscellaneous
+  , convertRefinedT
   , unRavelT
   , unRavelTIO
   , unRavelTI
+  , rapply
+  , rapply0
+  , rapply1
+  -- ** unsafe create Refined
   , unsafeRefined
   , unsafeRefined'
  ) where
@@ -67,6 +73,12 @@ import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XTypeOperators
+-- >>> :set -XNoStarIsType
+
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
 -- >>> :m + Data.Time.Calendar.WeekDate

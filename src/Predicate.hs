@@ -35,7 +35,502 @@ Most of this code contains instances of the class 'P' enabling evaluation of exp
 module Predicate (
    module UtilP
  , module PredicateCore
- , module Predicate
+  , Asc
+  , Asc'
+  , Desc
+  , Desc'
+  , Between
+  , type (<..>)
+  , Between'
+  , AllPositive
+  , AllNegative
+  , Positive
+  , Negative
+  , AllPositive'
+  , AllNegative'
+  , All
+  , Any
+  , Unzip
+   -- ** Regex
+  , Re'
+  , Re
+  , Rescan'
+  , Rescan
+  , RescanRanges'
+  , RescanRanges
+  , Resplit'
+  , Resplit
+  , ReplaceAll'
+  , ReplaceAll
+  , ReplaceOne'
+  , ReplaceOne
+  , ReplaceAllString'
+  , ReplaceAllString
+  , ReplaceOneString'
+  , ReplaceOneString
+  , MakeRR
+  , MakeRR1
+  , MakeRR2
+  , MakeRR3
+  -- ** N-Tuple functions
+  , Fst
+  , Snd
+  , Thd
+  , L1
+  , L2
+  , L3
+  , L4
+  , L5
+  , L6
+ -- ** Data.Char functions
+  , IsCharSet
+  , CharSet(..)
+  , IsLower
+  , IsUpper
+  , IsNumber
+  , IsSpace
+  , IsPunctuation
+  , IsControl
+  , IsHexDigit
+  , IsOctDigit
+  , IsSeparator
+  , IsLatin1
+  , ToLower
+  , ToUpper
+  -- ** Time functions
+  , FormatTimeP
+  , ParseTimeP'
+  , ParseTimeP
+  , ParseTimes'
+  , ParseTimes
+  , MkDay'
+  , MkDay
+  , UnMkDay
+  -- ** Num / Real / Fractional etc
+  , Mult
+  , Add
+  , Sub
+  , type (+)
+  , type (-)
+  , type (*)
+  , Bin
+  , DivF
+  , type (/)
+  , type (%)
+  , type (%-)
+  , type (-%)
+  , Negate
+  , Abs
+  , Signum
+  , FromInteger'
+  , FromInteger
+  , FromIntegerP
+  , FromIntegral'
+  , FromIntegral
+  , ToRational
+  , FromRational'
+  , FromRational
+  , Truncate'
+  , Truncate
+  , Ceiling'
+  , Ceiling
+  , Floor'
+  , Floor
+ -- ** Miscellaneous
+  , Inits
+  , Tails
+  , Ones
+  , ShowP
+  , ReadP''
+  , ReadP
+  , ReadP'
+  , Min
+  , Max
+  , Max'
+  , SortBy
+  , SortOn
+  , SortOnDesc
+  , Len
+  , Length
+  , FromStringP'
+  , FromStringP
+  , MkProxy
+  , Do
+  , MaybeB
+  , EitherB
+  , TupleI
+  , PadL
+  , PadR
+  , SplitAts
+  , SplitAt
+  , Take
+  , Drop
+  , Tail
+  , Head
+  , Init
+  , Last
+  , EitherIn
+  , IsLeft
+  , IsRight
+  , Dup
+  -- ** arrow functions
+  , type (&&&)
+  , type (***)
+  , Star
+  , First
+  , Second
+  , type (|||)
+  , type (+++)
+ -- ** compare
+  , type (>)
+  , type (>=)
+  , type (==)
+  , type (/=)
+  , type (<=)
+  , type (<)
+  , type (>?)
+  , type (>=?)
+  , type (==?)
+  , type (/=?)
+  , type (<=?)
+  , type (<?)
+  , OrdP
+  , type (==!)
+  , OrdA'
+  , OrdA
+  , OrdI
+  , type (===?)
+  , Cmp
+  , CmpI
+  , Gt
+  , Ge
+  , Same
+  , Le
+  , Lt
+  , Ne
+
+  , Unwrap
+  , Wrap'
+  , Wrap
+  , Coerce
+  , Coerce2
+  , MEmptyT2'
+  , MEmptyT2
+  , Pure2
+  , MkRightAlt
+  , MkLeftAlt
+  , Reverse
+  , ReverseL
+  , Swap
+  , Assoc
+  , Unassoc
+  -- ** Enum functions
+  , SuccB
+  , SuccB'
+  , PredB
+  , PredB'
+  , Succ
+  , Pred
+  , FromEnum
+  , ToEnum'
+  , ToEnum
+  , ToEnumB'
+  , ToEnumB
+  , ToEnumBF
+  , EnumFromTo
+
+  , Prime
+  , Not
+  , Remove
+  , Keep
+  , Elem
+  , Head'
+  , Tail'
+  , Last'
+  , Init'
+  , Fmap_1
+  , Fmap_2
+  , HeadDef
+  , HeadP
+  , HeadFail
+  , TailDef
+  , TailP
+  , TailFail
+  , LastDef
+  , LastP
+  , LastFail
+  , InitDef
+  , InitP
+  , InitFail
+  , JustDef'
+  , JustDef''
+  , JustDef'''
+  , LookupDef'
+  , LookupP'
+  , LookupFail'
+  , LookupDef
+  , LookupP
+  , LookupFail
+  , Just'
+  , Left'
+  , Right'
+  , This'
+  , That'
+  , TheseIn'
+  , JustDef
+  , JustP
+  , JustFail
+  , LeftDef
+  , LeftP
+  , LeftFail
+  , RightDef
+  , RightP
+  , RightFail
+  , ThisDef
+  , ThisP
+  , ThisFail
+  , ThatDef
+  , ThatP
+  , ThatFail
+  , TheseDef
+  , TheseP
+  , TheseFail
+  , LeftToMaybe
+  , RightToMaybe
+  , ThisToMaybe
+  , ThatToMaybe
+  , TheseToMaybe
+  , EitherX
+  , TheseX
+  , MaybeIn
+  , IsNothing
+  , IsJust
+  , STimes
+  , Pure
+  , PMEmpty
+  -- ** construct values
+  , MEmptyT'
+  , MEmptyT
+  , MEmptyP
+  , MEmptyProxy
+  , EmptyT
+  , MkNothing'
+  , MkNothing
+  , MkJust
+  , MkLeft'
+  , MkLeft
+  , MkRight'
+  , MkRight
+  , MkThis'
+  , MkThis
+  , MkThat'
+  , MkThat
+  , MkThese
+  , MConcat
+  , FoldMap
+  , Sum
+  , Min'
+  , Concat
+  , ProxyT'
+  , ProxyT
+  -- ** indexing functions
+  , Ix
+  , Ix'
+  , IxL
+  , type (!!)
+  , Lookup
+  , type (!!!)
+  , Lookup'
+  , Ands
+  , Ands'
+  , Ors
+  , Ors'
+  , type (:+)
+  , type (+:)
+  , Uncons
+  , Unsnoc
+  , IsEmpty
+  , Null
+  , MapMaybe
+  , CatMaybes
+  -- ** These functions
+  , PartitionEithers
+  , PartitionThese
+  , Thiss
+  , Thats
+  , Theses
+  , Scanl
+  , ScanN
+  , ScanNA
+  , FoldN
+  , Foldl
+  , Unfoldr
+  , IterateN
+  , IterateUntil
+  , IterateWhile
+  , IterateNWhile
+  , IterateNUntil
+  , Map
+  , ConcatMap
+  , If
+  , Pairs
+  , Partition
+  , FilterBy
+  , Break
+  , Span
+  , Fail
+  , Failp
+  , Failt
+  , FailS
+  , FailPrt
+  , FailPrt2
+  , Hole
+  , Unproxy
+  , Catch
+  , Catch'
+  , FailCatch
+  , Even
+  , Odd
+  , Div'
+  , Mod'
+  , Div
+  , Mod
+  , DivMod
+  , QuotRem
+  , Quot
+  , Rem
+  , OneP
+  , Skip
+  , type (|>)
+  , type (>|)
+  , type (>>)
+  , type (<<)
+  -- ** boolean functions
+  , type (&&)
+  , type (||)
+  , type (~>)
+ -- ** list functions
+  , IToList'
+  , IToList
+  , ToList
+  , ToList'
+  , ToListExt
+  , FromList
+  , FromListF
+--  , IsTh
+  -- ** these functions
+  , IsThis
+  , IsThat
+  , IsThese
+  , TheseIn
+  , TheseId
+  , EmptyList'
+  , EmptyList
+  , Singleton
+  , ZipThese
+  , Char1
+--  , ExtractAFromTA
+--  , Zip
+  , ZipL
+  , ZipR
+  , ZipTrunc
+  , Luhn
+  , ReadBase'
+  , ReadBase
+  , ReadBaseInt
+  , ShowBase'
+  , ShowBase
+  , Intercalate
+  , Printf
+  -- ** guards
+  , Guards
+  , GuardsLax
+  , GuardsQuick
+  , GuardsQuickLax
+  , Guard
+  , Guard'
+  , ExitWhen
+  , ExitWhen'
+  , GuardSimple
+  , Guards'
+  , ToGuards
+  , GuardsN
+  , GuardsNLax
+-- ** parallel
+  , ToPara
+  , Para
+  , ParaLax
+  , ParaN
+  , ParaNLax
+  , Repeat
+  , DoN
+  , GuardsDetail
+  -- ** case
+  , Case
+  , Case'
+  , Case''
+  , FailCase
+  , Hide
+  , H
+  -- ** IO functions
+  , ReadFile
+  , FileExists
+  , ReadDir
+  , DirExists
+  , ReadEnv
+  , ReadEnvAll
+  , TimeU
+  , TimeZ
+--  , FHandle
+--  , WFMode
+  , AppendFile
+  , WriteFile'
+  , WriteFile
+  , Stdout
+  , Stderr
+  , Stdin
+--  , Nothing'
+  -- ** string functions
+--  , Trim'
+  , Trim
+  , TrimStart
+  , TrimEnd
+  , StripLR
+  , StripRight
+  , StripLeft
+  , IsPrefixI
+  , IsInfixI
+  , IsSuffixI
+
+  , IsPrefix
+  , IsInfix
+  , IsSuffix
+  , type (<>)
+  , Sapa'
+  , Sapa
+  -- ** printf functions
+  , Printfn
+  , Printfnt
+  , PrintfntLax
+  , Printf2
+  , Printf3
+  , Printf3'
+--  , TupleList
+--  , TupleListLax
+  , ReverseTupleN
+  -- ** hof functions
+  , type (<$)
+  , type (<*)
+  , type (*>)
+  , type (<|>)
+  , Extract
+  , Duplicate
+  , Join
+  , Sequence
+  , Traverse
+  -- ** combine ADTS
+  , type ($)
+  , type (&)
  ) where
 import PredicateCore
 import UtilP
@@ -80,6 +575,12 @@ import Data.Either
 import qualified Data.Type.Equality as DE
 import Data.Time.Calendar.WeekDate
 
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XTypeOperators
+-- >>> :set -XNoStarIsType
+
 -- | a type level predicate for a monotonic increasing list
 --
 -- >>> pl @Asc "aaacdef"
@@ -98,6 +599,9 @@ import Data.Time.Calendar.WeekDate
 -- False
 -- FalseT
 --
+
+
+-- | a type level predicate for a monotonic increasing list
 type Asc = Ands (Map (Fst Id <= Snd Id) Pairs)
 -- | a type level predicate for a strictly increasing list
 type Asc' = Ands (Map (Fst Id < Snd Id) Pairs)
@@ -105,6 +609,9 @@ type Asc' = Ands (Map (Fst Id < Snd Id) Pairs)
 type Desc = Ands (Map (Fst Id >= Snd Id) Pairs)
 -- | a type level predicate for a strictly decreasing list
 type Desc' = Ands (Map (Fst Id > Snd Id) Pairs)
+
+--type AscAlt = SortOn Id Id == Id
+--type DescAlt = SortOnDesc Id Id == Id
 
 -- | A predicate that determines if the value is between \'p\' and \'q\'
 --
@@ -745,7 +1252,7 @@ instance (PP p x ~ String
 -- Present 2019-05-24 05:19:59
 -- PresentT 2019-05-24 05:19:59
 --
--- >>> pl @(ParseTimeP LocalTime "%F %T" "2019-05-24 05:19:59") (Right "we ignore this using Symbol and not Id")
+-- >>> pl @(ParseTimeP LocalTime "%F %T" "2019-05-24 05:19:59") (Right "never used")
 -- Present 2019-05-24 05:19:59
 -- PresentT 2019-05-24 05:19:59
 --
@@ -962,11 +1469,31 @@ instance (Ord a, Show a) => P Max [a] where
 -- Present [(1,"z"),(3,"def"),(4,"gg"),(10,"abc"),(10,"xyz")]
 -- PresentT [(1,"z"),(3,"def"),(4,"gg"),(10,"abc"),(10,"xyz")]
 --
+-- >>> pl @(SortBy (OrdP (Snd Id) (Fst Id)) Id) [(10,"ab"),(4,"x"),(20,"bbb")]
+-- Present [(20,"bbb"),(10,"ab"),(4,"x")]
+-- PresentT [(20,"bbb"),(10,"ab"),(4,"x")]
+--
+-- >>> pl @(SortBy 'LT Id) [1,5,2,4,7,0]
+-- Present [1,5,2,4,7,0]
+-- PresentT [1,5,2,4,7,0]
+--
+-- >>> pl @(SortBy 'GT Id) [1,5,2,4,7,0]
+-- Present [0,7,4,2,5,1]
+-- PresentT [0,7,4,2,5,1]
+--
+-- >>> pl @(SortBy ((Fst (Fst Id) ==! Fst (Snd Id)) <> (Snd (Fst Id) ==! Snd (Snd Id))) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
+-- Present [(4,"a"),(4,"x"),(4,"y"),(10,"ab"),(20,"bbb")]
+-- PresentT [(4,"a"),(4,"x"),(4,"y"),(10,"ab"),(20,"bbb")]
+--
+-- >>> pl @(SortBy ((Fst (Fst Id) ==! Fst (Snd Id)) <> (Snd (Snd Id) ==! Snd (Fst Id))) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
+-- Present [(4,"y"),(4,"x"),(4,"a"),(10,"ab"),(20,"bbb")]
+-- PresentT [(4,"y"),(4,"x"),(4,"a"),(10,"ab"),(20,"bbb")]
+--
 data SortBy p q
 type SortOn p q = SortBy (OrdA p) q
 type SortOnDesc p q = SortBy (Swap >> OrdA p) q
 
-type SortByHelper p = Partition (p >> Id == 'GT) Id
+type SortByHelper p = Partition (p == 'GT) Id
 
 instance (P p (a,a)
         , P q x
@@ -1374,6 +1901,15 @@ instance (P s a
 -- >>> pl @(FromInteger (SG.Sum _) Id) 23
 -- Present Sum {getSum = 23}
 -- PresentT (Sum {getSum = 23})
+--
+-- >>> pl @(FromInteger Rational 44) 12
+-- Present 44 % 1
+-- PresentT (44 % 1)
+--
+-- >>> pl @(FromInteger Rational Id) 12
+-- Present 12 % 1
+-- PresentT (12 % 1)
+--
 data FromInteger' t n
 type FromInteger (t :: Type) p = FromInteger' (Hole t) p
 type FromIntegerP n = FromInteger' Unproxy n
@@ -1609,7 +2145,7 @@ instance (Show (PP p a)
 -- Present Right 999
 -- PresentT (Right 999)
 --
--- >>> pl @(EitherB (Fst Id > 4) (Snd Id >> Fst Id) (Snd Id >> Snd Id)) (1,(-1,999))
+-- >>> pl @(EitherB (Fst Id > 4) (Fst (Snd Id)) (Snd (Snd Id))) (1,(-1,999))
 -- Present Left (-1)
 -- PresentT (Left (-1))
 --
@@ -1672,7 +2208,7 @@ instance (P p a
                 -- only PresentP makes sense here (ie not TrueP/FalseP: ok in base case tho
                 Right ws -> mkNode opts (PresentT (w,ws)) [msg0 <> show0 opts " " a] [hh pp, hh qq]
 
-type Msg' prt p = Msg (Printf "[%s] " prt) p -- msg0 is in square brackets
+--type Msg' prt p = Msg (Printf "[%s] " prt) p -- msg0 is in square brackets
 
 -- | pad \'q\' with '\n'\ values from '\p'\
 --
@@ -1973,7 +2509,7 @@ instance GetBinOp 'BAdd where
 -- Present 65
 -- PresentT 65
 --
--- >>> pl @(Fst Id + 4 * (Snd Id >> Len) - 4) (3,"hello")
+-- >>> pl @(Fst Id + 4 * Length (Snd Id) - 4) (3,"hello")
 -- Present 19
 -- PresentT 19
 --
@@ -2005,6 +2541,10 @@ instance (GetBinOp op
 -- >>> pl @(ToRational 13 / Id) 0
 -- Error DivF zero denominator
 -- FailT "DivF zero denominator"
+--
+-- >>> pl @(12 % 7 / 14 % 5 + Id) 12.4
+-- Present 3188 % 245
+-- PresentT (3188 % 245)
 --
 data DivF p q
 type p / q = DivF p q
@@ -2064,15 +2604,15 @@ instance (PP p a ~ PP q a
 -- Present 14 % 3
 -- PresentT (14 % 3)
 --
--- >>> pl @(Negate (14 % 3) === FromIntegral _ (Negate 5)) ()
+-- >>> pl @(Negate (14 % 3) ==! FromIntegral _ (Negate 5)) ()
 -- Present GT
 -- PresentT GT
 --
--- >>> pl @(14 -% 3 === 5 %- 1) "aa"
+-- >>> pl @(14 -% 3 ==! 5 %- 1) "aa"
 -- Present GT
 -- PresentT GT
 --
--- >>> pl @(Negate (14 % 3) === Negate 5 % 2) ()
+-- >>> pl @(Negate (14 % 3) ==! Negate 5 % 2) ()
 -- Present LT
 -- PresentT LT
 --
@@ -2080,7 +2620,7 @@ instance (PP p a ~ PP q a
 -- Present 70 % 3
 -- PresentT (70 % 3)
 --
--- >>> pl @(14 % 3 === 5 % 1) ()
+-- >>> pl @(14 % 3 ==! 5 % 1) ()
 -- Present LT
 -- PresentT LT
 --
@@ -2345,8 +2885,8 @@ instance (Show (f a)
 -- PresentT [Right 1,Right 2,Right 4]
 --
 data Pure2 (t :: Type -> Type)
-type Right t = Pure (Either t) Id
-type Left t = Right t >> Swap
+type MkRightAlt t p = Pure (Either t) p
+type MkLeftAlt t p = MkRightAlt t p >> Swap
 
 instance (Show (f (t a))
         , Show (f a)
@@ -2778,6 +3318,8 @@ instance (PP p x ~ a
         let b = isPrime $ fromIntegral p
         in mkNodeB opts b [msg0 <> show1 opts " | " p] []
 
+isPrime :: Integer -> Bool
+isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
 
 -- | 'not' function
 --
@@ -2921,8 +3463,63 @@ instance Functor f => P Fmap_2 (f (x,a)) where
   type PP Fmap_2 (f (x,a)) = f a
   eval _ opts mb = pure $ mkNode opts (PresentT (snd <$> mb)) ["Fmap_2"] []
 
+-- | takes the head or default of a list-like object
+--
+-- see 'ConsT' for other supported types eg 'Seq.Seq'
+--
+-- >>> pl @(HeadDef 444 Id) []
+-- Present 444
+-- PresentT 444
+--
+-- >>> pl @(HeadDef 444 Id) [1..5]
+-- Present 1
+-- PresentT 1
+--
+-- >>> pl @(HeadDef 444 Id) [1..5]
+-- Present 1
+-- PresentT 1
+--
+-- >>> pl @(HeadDef (Char1 "w") Id) (Seq.fromList "abcdef")
+-- Present 'a'
+-- PresentT 'a'
+--
+-- >>> pl @(HeadDef (Char1 "w") Id) Seq.empty
+-- Present 'w'
+-- PresentT 'w'
+--
 type HeadDef p q   = GDef (Uncons >> Fmap_1) p q
+
+
+-- | takes the head of a list or defaults to the monoid instance
+--
+-- see 'ConsT' for other supported types eg 'Seq.Seq'
+--
+-- >>> pl @(HeadP '[ "abc","def","asdfadf" ]) ()
+-- Present "abc"
+-- PresentT "abc"
+--
+-- >>> pl @(HeadP (Snd Id)) (123,[ "abc","def","asdfadf" ])
+-- Present "abc"
+-- PresentT "abc"
+--
+-- >>> pl @(HeadP (Snd Id)) (123,[])
+-- Present ()
+-- PresentT ()
+--
 type HeadP q       = GProxy (Uncons >> Fmap_1) q
+-- | takes the head of a list or fail
+--
+-- see 'ConsT' for other supported types eg 'Seq.Seq'
+--
+-- >>> pl @(HeadFail "dude" Id) [ "abc","def","asdfadf" ]
+-- Present "abc"
+-- PresentT "abc"
+--
+-- >>> pl @(HeadFail "empty list" Id) []
+-- Error empty list
+-- FailT "empty list"
+--
+
 type HeadFail msg q = GFail (Uncons >> Fmap_1) msg q
 
 type TailDef p q   = GDef (Uncons >> Fmap_2) p q
@@ -2951,18 +3548,11 @@ type JustDef'' p q r = GDef'' I p q r
 type PA = Snd I -- 'Proxy a' -- to distinguish from A
 type A = Snd I -- 'a'
 type X = Fst (Fst I) -- 'x' ie the whole original environment
-type XA = I -- ie noop
-type XPA = I -- ie noop
 
 -- Nothing has access to 'x' only
 -- Just has access to (x,a)
---type GDef_X z p q r = (I &&& (r >> z)) >> MaybeXP (Fst Id >> Fst Id >> p) ((Fst Id *** I) >> q) (Snd Id)
 type GDef_X z p q r = '(I, r >> z) >> MaybeXP (X >> p) ('(X,A) >> q) A
 type JustDef''' p q r = GDef_X I p q r
-
--- Nothing has access to 'Proxy a' only
--- Just has access to (x,a)
-type GDef_PA z p q r = Hide % '(I, r >> z) >> MaybeXP (PA >> p) ('(X,A) >> q) A
 
 -- Nothing case sees ((I,qz), Proxy a) -- hence the Fst Id >> Fst Id
 -- Just case sees (I,qz), a) -- hence the (Snd Id) to get the 'a' only -- if you want the 'x' then Fst Id >> Fst Id
@@ -3013,9 +3603,36 @@ type TheseFail msg q = GFail TheseToMaybe msg q
 
 -- tacks on a Proxy to Nothing side! but a Proxy a not Proxy of the final result
 -- this is for default use cases for either/these/head/tail/last/init etc
-data MaybeXP p q r
-type MaybeX p q r = MaybeXP (Fst Id >> p) q r
 
+-- | MaybeXP combinator
+--
+-- >>> pl @((Id &&& Snd Id) >> MaybeXP (Fst (Fst (Fst Id))) (Fst (Fst (Fst Id)) <> Snd Id) (Snd Id)) ("xx",Just "ya")
+-- Present "xxya"
+-- PresentT "xxya"
+--
+-- >>> pl @((Id &&& Fst Id) >> MaybeXP (Snd (Fst (Fst Id))) (Snd (Fst (Fst Id)) <> Snd Id) (Snd Id)) (Just "ya","xx")
+-- Present "xxya"
+-- PresentT "xxya"
+--
+-- >>> pl @((Id &&& Snd Id) >> MaybeXP (Fst (Fst (Fst Id))) (Fst (Fst (Fst Id)) <> Snd Id) (Snd Id)) ("xx",Nothing)
+-- Present "xx"
+-- PresentT "xx"
+--
+
+data MaybeXP p q r
+{-
+-- | MaybeX combinator
+--
+-- >>> pl @(MaybeX (Fst Id) (Fst (Fst Id) +: Snd Id) (Snd Id)) ([1..5],Just 99)
+-- Present [1,2,3,4,5,99]
+-- PresentT [1,2,3,4,5,99]
+--
+-- >>> pl @(MaybeX (Fst Id) (Fst (Fst Id) +: Snd Id) (Snd Id)) ([1..5],Nothing)
+-- Present [1,2,3,4,5]
+-- PresentT [1,2,3,4,5]
+
+type MaybeX p q r = MaybeXP (Fst Id >> p) q r
+-}
 instance (P r x
         , P p (x, Proxy a)
         , P q (x,a)
@@ -3141,7 +3758,7 @@ type family EitherXT lr x p where
 
 -- | similar to 'Data.These.mergeTheseWith' but additionally provides \'p\', '\q'\ and \'r\' the original input as the first element in the tuple
 --
--- >>> pl @(TheseX (((Fst Id >> Fst Id) + Snd Id) >> ShowP Id) (ShowP Id) (Snd (Snd Id)) (Snd Id)) (9,This 123)
+-- >>> pl @(TheseX ((Fst (Fst Id) + Snd Id) >> ShowP Id) (ShowP Id) (Snd (Snd Id)) (Snd Id)) (9,This 123)
 -- Present "132"
 -- PresentT "132"
 --
@@ -3841,6 +4458,15 @@ instance (P p x
 -- Present Nothing
 -- PresentT Nothing
 --
+-- >>> pl @Uncons (Seq.fromList "abc")
+-- Present Just ('a',fromList "bc")
+-- PresentT (Just ('a',fromList "bc"))
+--
+-- >>> import qualified Data.Text as T
+-- >>> pl @Uncons ("xyz" :: T.Text)
+-- Present Just ('x',"yz")
+-- PresentT (Just ('x',"yz"))
+--
 data Uncons
 
 instance (Show (ConsT s)
@@ -3862,6 +4488,11 @@ instance (Show (ConsT s)
 -- >>> pl @Unsnoc []
 -- Present Nothing
 -- PresentT Nothing
+--
+-- >>> import qualified Data.Text as T
+-- >>> pl @Unsnoc ("xyz" :: T.Text)
+-- Present Just ("xy",'z')
+-- PresentT (Just ("xy",'z'))
 --
 data Unsnoc
 
@@ -3911,6 +4542,10 @@ instance (Show as, AsEmpty as) => P IsEmpty as where
 -- True
 -- TrueT
 --
+-- >>> pl @Null Nothing
+-- True
+-- TrueT
+--
 data Null
 
 instance (Show (t a)
@@ -3928,9 +4563,17 @@ instance (Show (t a)
 -- Present [2,3,4,5]
 -- PresentT [2,3,4,5]
 --
--- >>> pl @(EnumFromTo LT GT) ()
+-- >>> pl @(EnumFromTo 'LT 'GT) ()
 -- Present [LT,EQ,GT]
 -- PresentT [LT,EQ,GT]
+--
+-- >>> pl @(EnumFromTo 'GT 'LT) ()
+-- Present []
+-- PresentT []
+--
+-- >>> pl @(EnumFromTo (Pred Id) (Succ Id)) (SG.Max 10)
+-- Present [Max {getMax = 9},Max {getMax = 10},Max {getMax = 11}]
+-- PresentT [Max {getMax = 9},Max {getMax = 10},Max {getMax = 11}]
 --
 
 data EnumFromTo p q
@@ -3957,6 +4600,18 @@ type CatMaybes q = MapMaybe Id q
 -- >>> pl @PartitionEithers [Left 'a',Right 2,Left 'c',Right 4,Right 99]
 -- Present ("ac",[2,4,99])
 -- PresentT ("ac",[2,4,99])
+--
+-- >>> pl @PartitionEithers [Right 2,Right 4,Right 99]
+-- Present ([],[2,4,99])
+-- PresentT ([],[2,4,99])
+--
+-- >>> pl @PartitionEithers [Left 'a',Left 'c']
+-- Present ("ac",[])
+-- PresentT ("ac",[])
+--
+-- >>> pl @PartitionEithers ([] @(Either _ _))
+-- Present ([],[])
+-- PresentT ([],[])
 --
 data PartitionEithers
 
@@ -4314,7 +4969,6 @@ instance (P prt a
       Right s -> mkNode opts (FailT s) [msg0 <> " " <> s] [hh pp]
 
 data Hole (t :: Type)
-type T (t :: Type) = Hole t -- easier to type
 
 -- | Acts as a proxy in this dsl where you can explicitly set the Type.
 --
@@ -4374,6 +5028,16 @@ instance (P p x
             Right _ -> mkNode opts (_tBool qq) [msg0 <> " caught exception[" <> emsg <> "]"] [hh pp, hh qq]
       Right _ -> pure $ mkNode opts (_tBool pp) [msg0 <> " did not fire"] [hh pp]
 
+-- | similar to 'even'
+--
+-- >>> pl @(Map Even Id) [9,-4,12,1,2,3]
+-- Present [False,True,True,False,True,False]
+-- PresentT [False,True,True,False,True,False]
+--
+-- >>> pl @(Map '(Even,Odd) Id) [9,-4,12,1,2,3]
+-- Present [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
+-- PresentT [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
+--
 type Even = Mod I 2 == 0
 type Odd = Mod I 2  == 1
 type Div' p q = Fst (DivMod p q)
@@ -4530,7 +5194,7 @@ type Quot p q = Fst (QuotRem p q)
 type Rem p q = Snd (QuotRem p q)
 
 --type OneP = Guard "expected list of length 1" (Len >> Same 1) >> Head'
-type OneP = Guard (Printf "expected list of length 1 but found length=%d" Len) (Len >> Same 1) >> Head
+type OneP = Guard (Printf "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head
 
 strictmsg :: forall strict . GetBool strict => String
 strictmsg = if getBool @strict then "" else "Lax"
@@ -4570,6 +5234,7 @@ data GuardsImpl (n :: Nat) (strict :: Bool) (os :: [(k,k1)])
 type Guards (os :: [(k,k1)]) = GuardsImplW 'True os
 type GuardsLax (os :: [(k,k1)]) = GuardsImplW 'False os
 type GuardsQuick (prt :: k) (os :: [k1]) = Guards (ToGuardsT prt os)
+type GuardsQuickLax (prt :: k) (os :: [k1]) = GuardsLax (ToGuardsT prt os)
 
 data GuardsImplW (strict :: Bool) (ps :: [(k,k1)])
 instance (GetBool strict, GetLen ps, P (GuardsImpl (LenT ps) strict ps) [a]) => P (GuardsImplW strict ps) [a] where
@@ -4761,12 +5426,11 @@ instance (Show (PP p a)
 -- True
 -- TrueT
 --
--- >>> pl @(Fst Id && (Snd Id >> Len >> Same 4)) (True,[12,11,12,13,14])
+-- >>> pl @(Fst Id && (Length (Snd Id) == 4)) (True,[12,11,12,13,14])
 -- False
 -- FalseT
 --
 data (&&) (p :: k) (q :: k1)
-type And p q = p && q
 infixr 3 &&
 
 instance (P p a
@@ -4782,16 +5446,15 @@ instance (P p a
 
 -- | similar to 'Prelude.||'
 --
--- >>> pl @(Fst Id || (Snd Id >> Len >> Ge 4)) (False,[11,12,13,14])
+-- >>> pl @(Fst Id || (Length (Snd Id) >= 4)) (False,[11,12,13,14])
 -- True
 -- TrueT
 --
--- >>> pl @((Not (Fst Id)) || (Snd Id >> Len >> Same 4)) (True,[12,11,12,13,14])
+-- >>> pl @(Not (Fst Id) || (Length (Snd Id) == 4)) (True,[12,11,12,13,14])
 -- False
 -- FalseT
 --
 data (||) (p :: k) (q :: k1)
-type OR p q = p || q
 infixr 2 ||
 
 instance (P p a
@@ -4807,24 +5470,23 @@ instance (P p a
 
 -- | implication
 --
--- >>> pl @(Fst Id ~> (Snd Id >> Len >> Ge 4)) (True,[11,12,13,14])
+-- >>> pl @(Fst Id ~> (Length (Snd Id) >= 4)) (True,[11,12,13,14])
 -- True
 -- TrueT
 --
--- >>> pl @(Fst Id ~> (Snd Id >> Len >> Same 4)) (True,[12,11,12,13,14])
+-- >>> pl @(Fst Id ~> (Length (Snd Id) == 4)) (True,[12,11,12,13,14])
 -- False
 -- FalseT
 --
--- >>> pl @(Fst Id ~> (Snd Id >> Len >> Same 4)) (False,[12,11,12,13,14])
+-- >>> pl @(Fst Id ~> (Length (Snd Id) == 4)) (False,[12,11,12,13,14])
 -- True
 -- TrueT
 --
--- >>> pl @(Fst Id ~> (Snd Id >> Len >> Ge 4)) (False,[11,12,13,14])
+-- >>> pl @(Fst Id ~> (Length (Snd Id) >= 4)) (False,[11,12,13,14])
 -- True
 -- TrueT
 --
 data (~>) (p :: k) (q :: k1)
-type Imply p q = p ~> q
 infixr 1 ~>
 
 instance (P p a
@@ -4839,32 +5501,31 @@ instance (P p a
     pure $ evalBinStrict opts "~>" imply pp qq
 
 data OrdP p q
-type p === q = OrdP p q
-infix 4 ===
+type p ==! q = OrdP p q
+infix 4 ==!
 
 -- | similar to 'compare'
 --
--- >>> pl @(Fst Id === Snd Id) (10,9)
+-- >>> pl @(Fst Id ==! Snd Id) (10,9)
 -- Present GT
 -- PresentT GT
 --
--- >>> pl @(14 % 3 === Fst Id %- Snd Id) (-10,7)
+-- >>> pl @(14 % 3 ==! Fst Id %- Snd Id) (-10,7)
 -- Present GT
 -- PresentT GT
 --
--- >>> pl @(Fst Id === Snd Id) (10,11)
+-- >>> pl @(Fst Id ==! Snd Id) (10,11)
 -- Present LT
 -- PresentT LT
 --
--- >>> pl @(Snd Id === (Fst Id >> Snd Id >> Head' Id)) (('x',[10,12,13]),10)
+-- >>> pl @(Snd Id ==! (Fst Id >> Snd Id >> Head' Id)) (('x',[10,12,13]),10)
 -- Present EQ
 -- PresentT EQ
 --
--- >>> pl @(Snd Id === Head' (Snd (Fst Id))) (('x',[10,12,13]),10)
+-- >>> pl @(Snd Id ==! Head' (Snd (Fst Id))) (('x',[10,12,13]),10)
 -- Present EQ
 -- PresentT EQ
 --
-
 type OrdA' p q = OrdP (Fst Id >> p) (Snd Id >> q)
 type OrdA p = OrdA' p p
 
@@ -5147,20 +5808,20 @@ instance (PP p x ~ These a b
 -- Present 28
 -- PresentT 28
 --
--- >>> pl @(TheseIn (Left _) (Right _) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (That "this is a long string")
+-- >>> pl @(TheseIn (MkLeftAlt _ Id) (MkRightAlt _ Id) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (That "this is a long string")
 -- Present Right "this is a long string"
 -- PresentT (Right "this is a long string")
 --
--- >>> pl @(TheseIn (Left _) (Right _) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 1 "this is a long string")
+-- >>> pl @(TheseIn (MkLeftAlt _ Id) (MkRightAlt _ Id) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 1 "this is a long string")
 -- Present Right "this is a long string"
 -- PresentT (Right "this is a long string")
 --
--- >>> pl @(TheseIn (Left _) (Right _) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 100 "this is a long string")
+-- >>> pl @(TheseIn (MkLeftAlt _ Id) (MkRightAlt _ Id) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 100 "this is a long string")
 -- Present Left 100
 -- PresentT (Left 100)
 --
 data TheseIn p q r
-type Theseid p q = TheseIn '(I, p) '(q, I) I
+type TheseId p q = TheseIn '(I, p) '(q, I) I
 
 instance (Show a
         , Show b
@@ -5249,6 +5910,18 @@ instance (KnownSymbol s, NullT s ~ 'False) => P (Char1 s) a where
 -- Present [These 'a' 1,These 'B' 2,These 'c' 3,This 'D',This 'e',This 'F']
 -- PresentT [These 'a' 1,These 'B' 2,These 'c' 3,This 'D',This 'e',This 'F']
 --
+-- >>> pl @(ZipThese Id Reverse) "aBcDeF"
+-- Present [These 'a' 'F',These 'B' 'e',These 'c' 'D',These 'D' 'c',These 'e' 'B',These 'F' 'a']
+-- PresentT [These 'a' 'F',These 'B' 'e',These 'c' 'D',These 'D' 'c',These 'e' 'B',These 'F' 'a']
+--
+-- >>> pl @(ZipThese Id '[]) "aBcDeF"
+-- Present [This 'a',This 'B',This 'c',This 'D',This 'e',This 'F']
+-- PresentT [This 'a',This 'B',This 'c',This 'D',This 'e',This 'F']
+--
+-- >>> pl @(ZipThese '[] Id) "aBcDeF"
+-- Present [That 'a',That 'B',That 'c',That 'D',That 'e',That 'F']
+-- PresentT [That 'a',That 'B',That 'c',That 'D',That 'e',That 'F']
+--
 data ZipThese p q
 
 instance (PP p a ~ [x]
@@ -5258,7 +5931,7 @@ instance (PP p a ~ [x]
         , Show x
         , Show y
         ) => P (ZipThese p q) a where
-  type PP (ZipThese p q) a = [These (ArrT (PP p a)) (ArrT (PP q a))]
+  type PP (ZipThese p q) a = [These (ExtractAFromList (PP p a)) (ExtractAFromList (PP q a))]
   eval _ opts a = do
     let msg0 = "ZipThese"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
@@ -5275,33 +5948,44 @@ simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
 
 type family ExtractAFromTA (ta :: Type) :: Type where
   ExtractAFromTA (t a) = a
-  ExtractAFromTA ta = GL.TypeError (
+  ExtractAFromTA z = GL.TypeError (
       'GL.Text "ExtractAFromTA: expected (t a) but found something else"
       ':$$: 'GL.Text "t a = "
-      ':<>: 'GL.ShowType ta)
+      ':<>: 'GL.ShowType z)
 
--- todo: get ArrT error to fire if wrong Type
+-- todo: get ExtractAFromList error to fire if wrong Type
+-- | extract \'a\' from \'[a]\' which I need for type PP
+type family ExtractAFromList (as :: Type) :: Type where
+  ExtractAFromList [a] = a
+  ExtractAFromList z = GL.TypeError (
+      'GL.Text "ExtractAFromList: expected [a] but found something else"
+      ':$$: 'GL.Text "as = "
+      ':<>: 'GL.ShowType z)
+
 
 -- | Zip two lists optionally cycling the one of the lists to match the size
 --
--- >>> pl @(Ziplc (Fst Id) (Snd Id)) ("abc", [1..5])
+-- >>> pl @(ZipL (Fst Id) (Snd Id)) ("abc", [1..5])
 -- Present [('a',1),('b',2),('c',3),('a',4),('b',5)]
 -- PresentT [('a',1),('b',2),('c',3),('a',4),('b',5)]
 --
--- >>> pl @(Ziplc (Fst Id) (Snd Id)) ("abcdefg", [1..5])
+-- >>> pl @(ZipL (Fst Id) (Snd Id)) ("abcdefg", [1..5])
 -- Present [('a',1),('b',2),('c',3),('d',4),('e',5)]
 -- PresentT [('a',1),('b',2),('c',3),('d',4),('e',5)]
 --
--- >>> pl @(Ziprc (Fst Id) (Snd Id)) ("abcdefg", [1..5])
+-- >>> pl @(ZipR (Fst Id) (Snd Id)) ("abcdefg", [1..5])
 -- Present [('a',1),('b',2),('c',3),('d',4),('e',5),('f',1),('g',2)]
 -- PresentT [('a',1),('b',2),('c',3),('d',4),('e',5),('f',1),('g',2)]
 --
 data Zip (lc :: Bool) (rc :: Bool) p q
-type Ziplc p q = Zip 'True 'False p q
-type Ziprc p q = Zip 'False 'True p q
-type Zipn p q = Zip 'False 'False p q
+type ZipL p q = Zip 'True 'False p q
+type ZipR p q = Zip 'False 'True p q
+type ZipTrunc p q = Zip 'False 'False p q
+--type ZipWith r p q = ZipTrunc p q >> Map r Id
 
-instance (GetBool lc
+instance (FailIfT (AndT lc rc)
+           ('GL.Text "Zip': left and right cannot both be True")
+        , GetBool lc
         , GetBool rc
         , PP p a ~ [x]
         , PP q a ~ [y]
@@ -5310,14 +5994,14 @@ instance (GetBool lc
         , Show x
         , Show y
         ) => P (Zip lc rc p q) a where
-  type PP (Zip lc rc p q) a = [(ArrT (PP p a), ArrT (PP q a))]
+  type PP (Zip lc rc p q) a = [(ExtractAFromList (PP p a), ExtractAFromList (PP q a))]
   eval _ opts a = do
     let msg0 = "Zip" <> cyc
         lc = getBool @lc
         rc = getBool @rc
         cyc = case (lc,rc) of
-               (True,False) -> "LC"
-               (False,True) -> "RC"
+               (True,False) -> "L"
+               (False,True) -> "R"
                _ -> ""
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
@@ -5338,6 +6022,11 @@ instance (GetBool lc
 -- >>> pl @(Luhn Id) [1,2,3,4]
 -- False
 -- FalseT
+--
+-- >>> pl @(GuardSimple (Luhn Id)) [15,4,3,1,99]
+-- Error Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99]
+-- FailT "Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99]"
+--
 data Luhn p
 
 instance (PP p x ~ [Int]
@@ -5377,7 +6066,6 @@ instance (PP p x ~ [Int]
 data ReadBase' t (n :: Nat) p
 type ReadBase (t :: Type) (n :: Nat) = ReadBase' (Hole t) n Id
 type ReadBaseInt (n :: Nat) = ReadBase' (Hole Int) n Id
-
 
 instance (Typeable (PP t x)
         , BetweenT 2 36 n
@@ -5456,15 +6144,19 @@ instance (PP p x ~ a
             b = showIntAtBase (fromIntegral n) (xs !!) a' ""
         in mkNode opts (PresentT (ff b)) [msg0 <> showLit0 opts " " (ff b) <> show1 opts " | " p] []
 
--- use Assoc and Unassoc
---type AssocL = '(I *** Fst I, Snd I >> Snd I)
---type AssocR = '(Fst I >> Fst I, Snd I *** I)
-
 -- | Intercalate
 --
 -- >>> pl @(Intercalate '["aB"] '["xxxx","yz","z","www","xyz"]) ()
 -- Present ["xxxx","aB","yz","aB","z","aB","www","aB","xyz"]
 -- PresentT ["xxxx","aB","yz","aB","z","aB","www","aB","xyz"]
+--
+-- >>> pl @(Intercalate '[W 99,Negate 98] Id) [1..5]
+-- Present [1,99,-98,2,99,-98,3,99,-98,4,99,-98,5]
+-- PresentT [1,99,-98,2,99,-98,3,99,-98,4,99,-98,5]
+--
+-- >>> pl @(Intercalate '[99,100] Id) [1..5]
+-- Present [1,99,100,2,99,100,3,99,100,4,99,100,5]
+--PresentT [1,99,100,2,99,100,3,99,100,4,99,100,5]
 --
 data Intercalate p q
 
@@ -5484,21 +6176,12 @@ instance (PP p x ~ [a]
         let d = intercalate p (map (:[]) q)
         in mkNode opts (PresentT d) [show01 opts msg0 d p <> show1 opts " | " q] [hh pp, hh qq]
 
-getStringPrefix :: String -> (String,String)
-getStringPrefix = fix (\k z -> \case
-                                   [] -> (z,[])
-                                   '%':x:xs | x == '%' -> k (z <> ['%']) xs
-                                            | otherwise -> (z,'%':x:xs)
-                                   x:xs -> k (z <> [x]) xs
-                      ) []
-
 -- | uses Printf to format output
 --
 -- >>> pl @(Printf "value=%03d" Id) 12
 -- Present "value=012"
 -- PresentT "value=012"
 --
--- splits string into pieces before "%" that way we have a chance of catching any errors
 data Printf s p
 
 instance (PrintfArg (PP p x)
@@ -5526,8 +6209,6 @@ type family GuardsT (ps :: [k]) where
 
 type Guards' (ps :: [k]) = Para (GuardsT ps)
 
-type ToPara (os :: [k]) = Proxy (ParaImplW 'True os)
-
 type ToGuards (prt :: k) (os :: [k1]) = Proxy (Guards (ToGuardsT prt os))
 
 type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
@@ -5544,6 +6225,7 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 data ParaImpl (n :: Nat) (strict :: Bool) (os :: [k])
 type Para (os :: [k]) = ParaImplW 'True os
 type ParaLax (os :: [k]) = ParaImplW 'False os
+type ToPara (os :: [k]) = Proxy (ParaImplW 'True os)
 
 data ParaImplW (strict :: Bool) (ps :: [k])
 
@@ -5551,7 +6233,7 @@ type family GuardsViaParaT prt ps where
   GuardsViaParaT prt '[] = '[]
   GuardsViaParaT prt (p ': ps) = Guard prt p ': GuardsViaParaT prt ps
 
-type GuardsViaPara prt ps = Para (GuardsViaParaT prt ps)
+--type GuardsViaPara prt ps = Para (GuardsViaParaT prt ps)
 
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out
 instance (GetBool strict, GetLen ps, P (ParaImpl (LenT ps) strict ps) [a]) => P (ParaImplW strict ps) [a] where
@@ -5571,7 +6253,6 @@ instance GL.TypeError ('GL.Text "ParaImpl '[] invalid: requires at least one val
   type PP (ParaImpl n strict ('[] :: [k])) [a] = Void
   eval _ _ _ = error "should not get this far"
 
--- forall k (p :: k) (n :: Nat) (strict :: Bool) a .
 instance (Show (PP p a)
         , KnownNat n
         , GetBool strict
@@ -5844,7 +6525,7 @@ instance (PP p x ~ String, P p x) => P (ReadDir p) x where
 
 -- | does the directory exists
 --
--- >>> pl @(DirExists ".") ()
+-- >>> pl @(ReadEnv "PATH" >> 'Just Id >> 'True) ()
 -- True
 -- TrueT
 --
@@ -5912,27 +6593,27 @@ instance GetMode 'WFAppend where getMode = WFAppend
 instance GetMode 'WFWriteForce where getMode = WFWriteForce
 instance GetMode 'WFWrite where getMode = WFWrite
 
-data WritefileImpl (hh :: FHandle Symbol) p
-type Appendfile (s :: Symbol) p = WritefileImpl ('FOther s 'WFAppend) p
-type Writefile' (s :: Symbol) p = WritefileImpl ('FOther s 'WFWriteForce) p
-type Writefile (s :: Symbol) p = WritefileImpl ('FOther s 'WFWrite) p
-type Stdout p = WritefileImpl 'FStdout p
-type Stderr p = WritefileImpl 'FStderr p
+data WriteFileImpl (hh :: FHandle Symbol) p
+type AppendFile (s :: Symbol) p = WriteFileImpl ('FOther s 'WFAppend) p
+type WriteFile' (s :: Symbol) p = WriteFileImpl ('FOther s 'WFWriteForce) p
+type WriteFile (s :: Symbol) p = WriteFileImpl ('FOther s 'WFWrite) p
+type Stdout p = WriteFileImpl 'FStdout p
+type Stderr p = WriteFileImpl 'FStderr p
 
 instance (GetFHandle fh
         , P p a
         , PP p a ~ String
-        ) => P (WritefileImpl fh p) a where
-  type PP (WritefileImpl fh p) a = ()
+        ) => P (WriteFileImpl fh p) a where
+  type PP (WriteFileImpl fh p) a = ()
   eval _ opts a = do
     let fh = getFHandle @fh
         msg0 = case fh of
                       FStdout -> "Stdout"
                       FStderr -> "Stderr"
                       FOther s w -> (<>("[" <> s <> "]")) $ case w of
-                         WFAppend -> "Appendfile"
-                         WFWrite -> "Writefile"
-                         WFWriteForce -> "Writefile'"
+                         WFAppend -> "AppendFile"
+                         WFWrite -> "WriteFile"
+                         WFWriteForce -> "WriteFile'"
     pp <- eval (Proxy @p) opts a
     case getValueLR opts msg0 pp [] of
       Left e -> pure e
@@ -5971,7 +6652,7 @@ instance P Stdin a where
       Just (Right ss) -> mkNode opts (PresentT ss) [msg0 <> "[" <> showLit1 opts "" ss <> "]"] []
 
 --type Just' = JustFail "expected Just" Id
-type Nothing' = Guard "expected Nothing" IsNothing
+--type Nothing' = Guard "expected Nothing" IsNothing
 
 -- | 'isInfixOf' 'isPrefixOf' 'isSuffixOf' equivalents
 --
@@ -6037,6 +6718,22 @@ instance (GetBool ignore
 -- >>> pl @("abcd" <> "ef" <> Id) "ghi"
 -- Present "abcdefghi"
 -- PresentT "abcdefghi"
+--
+-- >>> pl @("abcd" <> "ef" <> Id) "ghi"
+-- Present "abcdefghi"
+-- PresentT "abcdefghi"
+--
+-- >>> pl @(Wrap (SG.Sum _) Id <> FromInteger _ 10) 13
+-- Present Sum {getSum = 23}
+-- PresentT (Sum {getSum = 23})
+--
+-- >>> pl @(Wrap (SG.Product _) Id <> FromInteger _ 10) 13
+-- Present Product {getProduct = 130}
+-- PresentT (Product {getProduct = 130})
+--
+-- >>> pl @('(FromInteger _ 10,"def") <> Id) (SG.Sum 12, "_XYZ")
+-- Present (Sum {getSum = 22},"def_XYZ")
+-- PresentT (Sum {getSum = 22},"def_XYZ")
 --
 data p <> q
 infixr 6 <>
@@ -6390,9 +7087,6 @@ type family FnT ab :: Type where
       ':$$: 'GL.Text "ab = "
       ':<>: 'GL.ShowType ab)
 
-evalQuick :: forall p i . P p i => i -> Either String (PP p i)
-evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) o0 i))
-
 -- | similar to 'T.strip' 'T.stripStart' 'T.stripEnd'
 --
 -- >>> pl @(Trim (Snd Id)) (20," abc   " :: String)
@@ -6689,5 +7383,4 @@ instance (PP prt a ~ String
                            pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
                              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
                              Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
-
 

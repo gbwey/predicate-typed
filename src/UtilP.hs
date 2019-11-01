@@ -32,7 +32,123 @@
 -- License     : BSD-3
 -- Maintainer  : gbwey9@gmail.com
 --
-module UtilP where
+module UtilP (
+  -- ** TT
+    TT(..)
+  , tBool
+  , tStrings
+  , tForest
+  , fixBoolT
+ -- ** BoolT
+  , BoolT(..)
+  , _FailT
+  , _PresentT
+  , _FalseT
+  , _TrueT
+--  , pStrings
+ -- ** BoolP
+  , boolT2P
+  , BoolP
+  , PE(PE)  --- todo
+-- ** create TT functions
+  , mkNode
+  , mkNodeB
+  , mkNodeSkipP
+  , getValLRFromTT
+  , getValLR
+  , fromTT
+  , hh
+  , getValueLR
+  , getValueLRHide
+  -- ** display options
+  , POpts(..)
+  , defOpts
+  , ol
+  , olc
+  , o0
+  , o2
+  , o2n
+  , o3
+  , ou
+  , oun
+  , setw
+  , setd
+  , setu
+  , setc
+  , setc0, setc1, setc2, setc3, setc4
+
+  , show01
+  , lit01
+  , show01'
+  , lit01'
+  , showLit0
+  , showLit1
+  , show0
+  , show3
+  , show1
+  -- ** Regex
+  , ROpt(..)
+  , compileRegex
+  , GetROpts(..)
+  , RR(..)
+
+  , splitAndAlign
+  , imply
+  , evalBinStrict
+  -- ** useful type families
+  , BetweenT
+  , NullT
+  , FailIfT
+  , AndT
+  , OrT
+  , NotT
+
+  , nat
+  , symb
+  , GetNats(..)
+  , GetSymbs(..)
+  , getLen
+  , GetLen(..)
+  , showThese
+  , GetThese(..)
+  , GetOrdering(..)
+  , GetBool(..)
+  , ToN
+--  , FromN
+  , OrderingP(..)
+  , GetOrd(..)
+  , colorMe
+  , prtTTIO
+  , prtTT
+  , prtTree
+  , prtImpl
+  , fixLite
+  , prtTreePure
+  , lite
+  , unicode
+  , horizontal
+  , prettyRational
+  , fixit
+  , prefixMsg
+  , showT
+  , prettyOrd
+  , RepeatT
+  , IntersperseT
+  , LenT
+  , ReverseTupleC(..)
+  , TupleListT
+  , TupleListD(..)
+  , TupleLenT
+  , FlipT
+  , IfT
+  , SumT
+  , MapT
+  , ConsT
+  , removeAnsiForDocTest
+  , MonadEval(..)
+  , type (%%)
+  , type (%&)
+    ) where
 import qualified GHC.TypeNats as GN
 import Data.Ratio
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
@@ -44,11 +160,10 @@ import qualified Data.Tree.View as TV
 import Data.Tree
 import Data.Tree.Lens
 import Data.Proxy
-import Data.List.NonEmpty (NonEmpty(..))
 import Data.Char
 import Data.Data
 import System.Console.Pretty
-import qualified Data.Type.Equality as DE
+--import qualified Data.Type.Equality as DE
 import GHC.Exts (Constraint)
 import qualified Text.Regex.PCRE.Heavy as RH
 import qualified Text.Regex.PCRE.Light as RL
@@ -59,7 +174,6 @@ import GHC.Word (Word8)
 import Data.Sequence (Seq)
 import Control.Applicative (ZipList)
 import Data.Kind (Type)
-import Data.Either
 import Data.These
 import Data.These.Combinators
 import qualified Control.Exception as E
@@ -67,6 +181,12 @@ import Control.DeepSeq
 import System.IO.Unsafe (unsafePerformIO)
 import Data.Bool
 import Data.Foldable
+
+-- $setup
+-- >>> :set -XDataKinds
+-- >>> :set -XTypeApplications
+-- >>> :set -XTypeOperators
+-- >>> :set -XNoStarIsType
 
 -- | describes the evaluation tree for predicates
 data TT a = TT { _tBool :: BoolT a  -- ^ the value at this root node
@@ -93,8 +213,8 @@ tStrings afb s = (\b -> s { _tStrings = b }) <$> afb (_tStrings s)
 tForest :: Lens' (TT a) (Forest PE)
 tForest afb s = (\b -> s { _tForest = b }) <$> afb (_tForest s)
 
-pStrings :: Lens' PE [String]
-pStrings afb s = (\b -> s { _pStrings = b }) <$> afb (_pStrings s)
+--pStrings :: Lens' PE [String]
+--pStrings afb s = (\b -> s { _pStrings = b }) <$> afb (_pStrings s)
 
 -- | a lens from typed BoolT to the untyped BoolP
 boolT2P :: Lens' (BoolT a) BoolP
@@ -106,10 +226,10 @@ boolT2P afb = \case
 
 -- | contains the untyped result from evaluating the expression tree to this point
 data BoolP =
-    FailP String
-  | FalseP
-  | TrueP
-  | PresentP
+    FailP String -- ^ fails the entire evaluation
+  | FalseP       -- ^ False predicate
+  | TrueP        -- ^ True predicate
+  | PresentP     -- ^ Any value
   deriving (Show, Eq)
 
 -- need a semigroup constraint else we have to throw away one of the PresentT a ie First or Last
@@ -145,15 +265,8 @@ mkNode opts bt ss hs
 mkNodeB :: POpts -> Bool -> [String] -> [Holder] -> TT Bool
 mkNodeB opts b = mkNode opts (bool FalseT TrueT b)
 
--- | partition a tree into failures and non failures
-partitionTTs :: [TT a] -> ([TT x], [TT a])
-partitionTTs = partitionEithers . map getTTLR
-
-getTTLR :: TT a -> Either (TT x) (TT a)
-getTTLR t =
-  case _tBool t of
-    FailT e -> Left $ t & tBool .~ FailT e
-    _ -> Right t
+mkNodeSkipP :: Tree PE
+mkNodeSkipP = Node (PE TrueP ["skipped PP ip i = Id"]) []
 
 partitionTTExtended :: (w, TT a) -> ([((w, TT x), String)], [(w, TT a)])
 partitionTTExtended z@(_, t) =
@@ -172,20 +285,12 @@ getValLR = \case
     FalseT -> Right False
     PresentT a -> Right a
 
-shortTT :: BoolT Bool -> Either String String
-shortTT z = case z of
-    FailT e -> Left $ "FailT " <> e
-    TrueT -> Right $ show z
-    FalseT -> Left $ show z
-    PresentT True -> Right $ show z
-    PresentT False -> Left $ show z
-
 -- | converts a typed tree to an untyped on for display
 fromTT :: TT a -> Tree PE
 fromTT (TT bt ss tt) = Node (PE (bt ^. boolT2P) ss) tt
 
 -- | a monomorphic container of trees
-data Holder = forall w . Holder { unHolder :: TT w }
+data Holder = forall w . Holder (TT w)
 
 -- | converts a typed tree into an untyped one
 fromTTH :: Holder -> Tree PE
@@ -218,7 +323,7 @@ getValueLRImpl showError opts msg0 tt hs =
           (getValLRFromTT tt)
 
 -- | the color palette for displaying the expression tree
-newtype PColor = PColor { unPColor :: BoolP -> String -> String }
+newtype PColor = PColor (BoolP -> String -> String)
 
 -- | customizable options
 data POpts = POpts { oWidth :: Maybe Int -- ^ length of data to display for 'showLitImpl'
@@ -505,10 +610,6 @@ instance Foldable TT where
 instance Foldable BoolT where
   foldMap am = either (const mempty) am . getValLR
 
-isTrue :: BoolT Bool -> Bool
-isTrue = and
---isTrue = or
-
 -- cant use: is / isn't / has cos only FailT will be False: use Fold
 -- this is more specific to TrueP FalseP
 -- | prism from BoolT to Bool
@@ -576,9 +677,6 @@ type family BetweenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
              ':$$: 'GL.ShowType m
              ':<>: 'GL.Text " and "
              ':<>: 'GL.ShowType n)
-
--- | makes zero invalid at the type level
-type NotZeroT v = FailIfT (v DE.== 0) ('GL.Text "found zero value")
 
 -- | typelevel Null on Symbol
 type family NullT (x :: Symbol) :: Bool where
@@ -679,7 +777,7 @@ data N = S N | Z
 type family ToN (n :: Nat) :: N where
   ToN 0 = 'Z
   ToN n = 'S (ToN (n GL.- 1))
-
+{-
 -- | converts an inductive number to Nat
 type family FromN (n :: N) :: Nat where
   FromN 'Z = 0
@@ -695,6 +793,7 @@ instance GetNatN n => GetNatN ('S n) where
 
 getN :: Typeable t => Proxy (t :: N) -> Int
 getN p = length (show (typeRep p)) `div` 5
+-}
 
 data OrderingP = Cgt | Cge | Ceq | Cle | Clt | Cne deriving (Show, Eq, Enum, Bounded)
 
@@ -797,14 +896,8 @@ prefixMsg :: String -> TT a -> TT a
 prefixMsg msg t =
    t & tStrings . ix 0 %~ (msg <>)
 
-showNat :: forall n . KnownNat n => String
-showNat = show (nat @n :: Integer)
-
 showT :: forall (t :: Type) . Typeable t => String
 showT = show (typeRep (Proxy @t))
-
-showTProxy :: forall p . Typeable (Proxy p) => String
-showTProxy = drop 8 $ show (typeOf (Proxy @p))
 
 prettyOrd :: Ordering -> String
 prettyOrd = \case
@@ -825,12 +918,6 @@ type family IntersperseT (s :: Symbol) (xs :: [Symbol]) :: Symbol where
 type family LenT (xs :: [k]) :: Nat where
   LenT '[] = 0
   LenT (x ': xs) = 1 GN.+ LenT xs
-
-
-type NEmptyT k = ('[] ':| '[] :: NonEmpty [k])
-
-isPrime :: Integer -> Bool
-isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
 
 type family TupleListT (n :: N) a where
   TupleListT 'Z a = ()
@@ -895,14 +982,6 @@ instance ReverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,())))))))))))) where
   type ReverseTupleP (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,())))))))))))) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
   reverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,())))))))))))) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
 
--- a hack to get 'a' from '[a]' which I need for type PP
-type family ArrT (as :: Type) :: Type where
-  ArrT [a] = a
-  ArrT as = GL.TypeError (
-      'GL.Text "ArrT: expected [a] but found something else"
-      ':$$: 'GL.Text "as = "
-      ':<>: 'GL.ShowType as)
-
 type family TupleLenT (t :: Type) :: Nat where
   TupleLenT () = 0
   TupleLenT (_,ts) = 1 GN.+ TupleLenT ts
@@ -939,6 +1018,7 @@ type family MapT (f :: k -> k1) (xs :: [k]) :: [k1] where
   MapT f '[] = '[]
   MapT f (x ': xs) = f x ': MapT f xs
 
+-- | Extract \'a\' from a list like container
 type family ConsT s where
   ConsT [a] = a
   ConsT (ZipList a) = a
@@ -946,7 +1026,7 @@ type family ConsT s where
   ConsT ByteString = Word8
   ConsT (Seq a) = a
   ConsT s  = GL.TypeError (
-      'GL.Text "ConsT: not a valid ConsT"
+      'GL.Text "invalid ConsT instance"
       ':$$: 'GL.Text "s = "
       ':<>: 'GL.ShowType s)
 
