@@ -112,7 +112,7 @@ import Data.Maybe (fromMaybe)
 --   * __fmt__ outputs the internal type @PP fmt (PP ip i) ~ i@
 --   * __PP fmt (PP ip i)__ should be valid as input for Refined3
 --
--- Setting __ip__ to @Id@ and __fmt__ to @Id@ makes it equivalent to 'Refined': see 'RefinedEmulate'
+-- Setting __ip__ to @Id@ and __fmt__ to @Id@ makes it equivalent to 'Refined.Refined': see 'RefinedEmulate'
 --
 -- Setting the input type __i__ to 'GHC.Base.String' resembles the corresponding Read/Show instances but with an additional predicate on the read value
 --
@@ -776,7 +776,7 @@ prt3Impl opts v =
          in mkMsg3 m n r
 
 
--- | emulates 'Refined3' but uses 'Refined'
+-- | emulates 'Refined3' but uses 'Refined.Refined'
 -- reuses the mkProxy3 but returns Refined vs Refined3
 -- using plain Refined to emulate Refined3 sort of
 -- we just output fmt instead of embedding it in Refined3
@@ -810,5 +810,5 @@ eval3X opts i = runIdentity $ do
               Left e -> pure (RTF a t1 e t2, Nothing)
        Left e -> pure (RF e t1, Nothing)
 
--- | emulates 'Refined' using 'Refined3' ie the input conversion and output formatting are noops
+-- | emulates 'Refined.Refined' using 'Refined3' ie the input conversion and output formatting are noops
 type RefinedEmulate p a = Refined3 Id p Id a

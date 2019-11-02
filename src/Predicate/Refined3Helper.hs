@@ -317,7 +317,7 @@ daten = mkProxy3
 datetimen :: Proxy DateTimeN
 datetimen = mkProxy3
 
--- | ensures that two numbers are in a given range (emulates 'Refined')
+-- | ensures that two numbers are in a given range (emulates 'Refined.Refined')
 --
 -- >>> prtEval3P (between @10 @16) ol 14
 -- Right (Refined3 {r3In = 14, r3Out = 14})
