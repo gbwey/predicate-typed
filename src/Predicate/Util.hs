@@ -35,28 +35,36 @@ module Predicate.Util (
   , tStrings
   , tForest
   , fixBoolT
+
  -- ** BoolT
   , BoolT(..)
   , _FailT
   , _PresentT
   , _FalseT
   , _TrueT
---  , pStrings
+
  -- ** BoolP
   , boolT2P
   , BoolP
-  , PE(PE)  --- todo
--- ** create TT functions
+  , PE(PE)
+
+ -- ** create tree functions
   , mkNode
   , mkNodeB
   , mkNodeSkipP
+
+ -- ** tree manipulation
   , getValLRFromTT
   , getValLR
   , fromTT
-  , hh
   , getValueLR
   , getValueLRHide
-  -- ** display options
+  , fixLite
+  , fixit
+  , prefixMsg
+  , splitAndAlign
+
+ -- ** display options
   , POpts(..)
   , defOpts
   , ol
@@ -71,8 +79,17 @@ module Predicate.Util (
   , setd
   , setu
   , setc
-  , setc0, setc1, setc2, setc3, setc4
+  , setc0
+  , setc1
+  , setc2
+  , setc3
+  , setc4
+  , colorMe
+  , lite
+  , unicode
+  , horizontal
 
+-- ** formatting functions
   , show01
   , lit01
   , show01'
@@ -82,15 +99,13 @@ module Predicate.Util (
   , show0
   , show3
   , show1
+
   -- ** Regex
   , ROpt(..)
   , compileRegex
   , GetROpts(..)
   , RR(..)
 
-  , splitAndAlign
-  , imply
-  , evalBinStrict
   -- ** useful type families
   , BetweenT
   , NullT
@@ -98,36 +113,6 @@ module Predicate.Util (
   , AndT
   , OrT
   , NotT
-
-  , nat
-  , symb
-  , GetNats(..)
-  , GetSymbs(..)
-  , getLen
-  , GetLen(..)
-  , showThese
-  , GetThese(..)
-  , GetOrdering(..)
-  , GetBool(..)
-  , ToN
---  , FromN
-  , OrderingP(..)
-  , GetOrd(..)
-  , colorMe
-  , prtTTIO
-  , prtTT
-  , prtTree
-  , prtImpl
-  , fixLite
-  , prtTreePure
-  , lite
-  , unicode
-  , horizontal
-  , prettyRational
-  , fixit
-  , prefixMsg
-  , showT
-  , prettyOrd
   , RepeatT
   , IntersperseT
   , LenT
@@ -140,10 +125,42 @@ module Predicate.Util (
   , SumT
   , MapT
   , ConsT
-  , removeAnsi
-  , MonadEval(..)
   , type (%%)
   , type (%&)
+
+ -- ** extract values from the type level
+  , nat
+  , symb
+  , GetNats(..)
+  , GetSymbs(..)
+  , getLen
+  , GetLen(..)
+  , showThese
+  , GetThese(..)
+  , GetOrdering(..)
+  , GetBool(..)
+  , ToN
+  , OrderingP(..)
+  , GetOrd(..)
+
+ -- ** printing methods
+  , prtTTIO
+  , prtTT
+  , prtTree
+  , prtImpl
+  , prtTreePure
+  , prettyRational
+
+ -- ** boolean methods
+  , imply
+  , evalBinStrict
+
+ -- ** miscellaneous
+  , hh
+  , showT
+  , prettyOrd
+  , removeAnsi
+  , MonadEval(..)
     ) where
 import qualified GHC.TypeNats as GN
 import Data.Ratio
@@ -208,9 +225,6 @@ tStrings afb s = (\b -> s { _tStrings = b }) <$> afb (_tStrings s)
 tForest :: Lens' (TT a) (Forest PE)
 tForest afb s = (\b -> s { _tForest = b }) <$> afb (_tForest s)
 
---pStrings :: Lens' PE [String]
---pStrings afb s = (\b -> s { _pStrings = b }) <$> afb (_pStrings s)
-
 -- | a lens from typed BoolT to the untyped BoolP
 boolT2P :: Lens' (BoolT a) BoolP
 boolT2P afb = \case
@@ -219,7 +233,7 @@ boolT2P afb = \case
   FalseT -> FalseT <$ afb FalseP
   PresentT a -> PresentT a <$ afb PresentP
 
--- | contains the untyped result from evaluating the expression tree to this point
+-- | contains the untyped result from evaluating the expression tree
 data BoolP =
     FailP String -- ^ fails the entire evaluation
   | FalseP       -- ^ False predicate
@@ -641,6 +655,20 @@ _TrueT = prism' (const TrueT) $
                TrueT -> Just ()
                _ -> Nothing
 
+-- | boolean implication
+--
+-- >>> True `imply` False
+-- False
+--
+-- >>> True `imply` True
+-- True
+--
+-- >>> False `imply` False
+-- True
+--
+-- >>> False `imply` True
+-- True
+
 imply :: Bool -> Bool -> Bool
 imply p q = not p || q
 
@@ -679,8 +707,8 @@ type family NullT (x :: Symbol) :: Bool where
   NullT ("" :: Symbol) = 'True
   NullT _ = 'False
 
--- | helper method to fail with an error if the True
 -- todo: constraint \'c\' is not passed on properly
+-- | helper method to fail with an error if the True
 type family FailIfT (b :: Bool) (c :: Constraint) (msg :: GL.ErrorMessage) :: Constraint where
   FailIfT 'False c _ = c
   FailIfT 'True _ e = GL.TypeError e
@@ -701,14 +729,24 @@ type family NotT (b :: Bool) :: Bool where
   NotT 'False = 'True
 
 -- | get a Nat from the typelevel
+--
+-- >>> nat @14
+-- 14
+--
 nat :: forall n a . (KnownNat n, Num a) => a
 nat = fromIntegral (GL.natVal (Proxy @n))
 
 -- | gets the Symbol from the typelevel
+-- >>> symb @"abc"
+-- "abc"
+--
 symb :: forall s . KnownSymbol s => String
 symb = GL.symbolVal (Proxy @s)
 
 -- | get a list of Nats from the typelevel
+--
+-- >>> getNats @'[10,12,1]
+-- [10,12,1]
 class GetNats as where
   getNats :: [Int]
 instance GetNats '[] where
@@ -717,6 +755,10 @@ instance (KnownNat n, GetNats ns) => GetNats (n ': ns) where
   getNats = nat @n : getNats @ns
 
 -- | get a list of Symbols from the typelevel
+--
+-- >>> getSymbs @'["abc","def","g"]
+-- ["abc","def","g"]
+--
 class GetSymbs ns where
   getSymbs :: [String]
 instance GetSymbs '[] where
@@ -724,6 +766,11 @@ instance GetSymbs '[] where
 instance (KnownSymbol s, GetSymbs ss) => GetSymbs (s ': ss) where
   getSymbs = symb @s : getSymbs @ss
 
+-- | get the length of a typelevel list
+--
+-- >>> getLen @'["abc","def","g"]
+-- 3
+--
 getLen :: forall xs . GetLen xs => Int
 getLen = getLenP (Proxy @xs)
 
@@ -1027,6 +1074,7 @@ type family ConsT s where
       ':$$: 'GL.Text "s = "
       ':<>: 'GL.ShowType s)
 
+-- | a typeclass for choosing which monad to run in
 class Monad m => MonadEval m where
   runIO :: IO a -> m (Maybe a)
   catchit :: E.Exception e => a -> m (Either String a)
@@ -1045,6 +1093,7 @@ instance MonadEval IO where
   catchitNF v = E.evaluate (Right $!! v) `E.catch` (\(E.SomeException e) -> pure $ Left ("IO e=" <> show e))
   liftEval = id
 
+-- | strip ansi characters from a string
 removeAnsi :: Show a => Either String a -> IO ()
 removeAnsi =
   \case

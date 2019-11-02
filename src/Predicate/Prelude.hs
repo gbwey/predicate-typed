@@ -29,44 +29,52 @@
      Contains instances of the class 'P' for evaluating expressions at the type level.
 -}
 module Predicate.Prelude (
-    Asc
+  -- ** boolean methods
+    type (&&)
+  , type (||)
+  , type (~>)
+  , Not
+  , Ands
+  , Ors
+  , Asc
   , Asc'
   , Desc
   , Desc'
   , Between
   , type (<..>)
   , Between'
-  , AllPositive
-  , AllNegative
-  , Positive
-  , Negative
-  , AllPositive'
-  , AllNegative'
   , All
   , Any
-  , Unzip
-   -- ** Regex
-  , Re'
+  , AllPositive
+  , AllPositive'
+  , Positive
+  , AllNegative
+  , AllNegative'
+  , Negative
+
+  -- ** regex methods
   , Re
-  , Rescan'
+  , Re'
   , Rescan
-  , RescanRanges'
+  , Rescan'
   , RescanRanges
-  , Resplit'
+  , RescanRanges'
   , Resplit
-  , ReplaceAll'
+  , Resplit'
   , ReplaceAll
-  , ReplaceOne'
+  , ReplaceAll'
   , ReplaceOne
-  , ReplaceAllString'
+  , ReplaceOne'
   , ReplaceAllString
-  , ReplaceOneString'
+  , ReplaceAllString'
   , ReplaceOneString
+  , ReplaceOneString'
   , MakeRR
   , MakeRR1
   , MakeRR2
   , MakeRR3
-  -- ** N-Tuple functions
+
+  -- ** tuple methods
   , Fst
   , Snd
   , Thd
@@ -76,8 +84,15 @@ module Predicate.Prelude (
   , L4
   , L5
   , L6
- -- ** Data.Char functions
-  , IsCharSet
+  , Dup
+  , Swap
+  , Assoc
+  , Unassoc
+  , ReverseTupleN
+  , TupleI
+  , Pairs
+
+ -- ** character methods
   , CharSet(..)
   , IsLower
   , IsUpper
@@ -89,9 +104,8 @@ module Predicate.Prelude (
   , IsOctDigit
   , IsSeparator
   , IsLatin1
-  , ToLower
-  , ToUpper
-  -- ** Date/Time functions
+
+  -- ** date time methods
   , FormatTimeP
   , ParseTimeP
   , ParseTimeP'
@@ -100,16 +114,13 @@ module Predicate.Prelude (
   , MkDay
   , MkDay'
   , UnMkDay
-  -- ** Num / Real / Fractional etc
-  , Mult
-  , Add
-  , Sub
+
+  -- ** numeric methods
   , type (+)
   , type (-)
   , type (*)
-  , Bin
-  , DivF
   , type (/)
+
   , type (%)
   , type (%-)
   , type (-%)
@@ -118,7 +129,6 @@ module Predicate.Prelude (
   , Signum
   , FromInteger
   , FromInteger'
-  , FromIntegerP
   , FromIntegral
   , FromIntegral'
   , ToRational
@@ -130,50 +140,41 @@ module Predicate.Prelude (
   , Ceiling'
   , Floor
   , Floor'
- -- ** Miscellaneous
-  , Inits
-  , Tails
-  , Ones
+  , Even
+  , Odd
+  , Div
+  , Mod
+  , DivMod
+  , QuotRem
+  , Quot
+  , Rem
+
+ -- ** proxy methods
+  , MkProxy
+  , ProxyT
+  , ProxyT'
+  , Unproxy
+
+ -- ** read / show methods
   , ShowP
   , ReadP
   , ReadP'
   , ReadP''
-  , Min
-  , Max
-  , SortBy
-  , SortOn
-  , SortOnDesc
-  , Len
-  , Length
-  , FromStringP
-  , FromStringP'
-  , MkProxy
-  , MaybeB
-  , EitherB
-  , TupleI
-  , PadL
-  , PadR
-  , SplitAts
-  , SplitAt
-  , Take
-  , Drop
-  , Tail
-  , Head
-  , Init
-  , Last
-  , EitherIn
-  , IsLeft
-  , IsRight
-  , Dup
-  -- ** arrow functions
+  , ReadBase
+  , ReadBase'
+  , ReadBaseInt
+  , ShowBase
+  , ShowBase'
+
+  -- ** arrow methods
   , type (&&&)
   , type (***)
-  , Star
   , First
   , Second
   , type (|||)
   , type (+++)
- -- ** compare
+
+ -- ** compare methods
   , type (>)
   , type (>=)
   , type (==)
@@ -201,45 +202,76 @@ module Predicate.Prelude (
   , Cmp
   , CmpI
 
-  -- ** Enum functions
+  -- ** enum methods
+  , Succ
+  , Pred
+  , FromEnum
+  , ToEnum
+  , ToEnum'
+  , EnumFromTo
   , SuccB
   , SuccB'
   , PredB
   , PredB'
-  , Succ
-  , Pred
-  , FromEnum
-  , ToEnum'
-  , ToEnum
-  , ToEnumB'
   , ToEnumB
+  , ToEnumB'
   , ToEnumBF
-  , EnumFromTo
 
+ -- ** wrap / unwrap methods
   , Unwrap
-  , Wrap'
   , Wrap
+  , Wrap'
   , Coerce
   , Coerce2
-  , MEmptyT2'
-  , MEmptyT2
-  , Pure2
-  , MkRightAlt
-  , MkLeftAlt
+
+  -- ** list / foldable methods
+  , Map
+  , Concat
+  , ConcatMap
+  , Partition
+  , FilterBy
+  , Break
+  , Span
+  , Intercalate
+  , Elem
+  , Inits
+  , Tails
+  , Ones
+  , OneP
+  , Len
+  , Length
+  , PadL
+  , PadR
+  , SplitAts
+  , SplitAt
+  , Take
+  , Drop
+  , Head
+  , Tail
+  , Init
+  , Last
+  , Min
+  , Max
+  , Sum
+  , IsEmpty
+  , Null
+  , ToList
+  , ToList'
+  , IToList
+  , IToList'
+  , ToListExt
+  , FromList
+  , FromListExt
+  , EmptyList
+  , EmptyList'
+  , Singleton
   , Reverse
   , ReverseL
-  , Swap
-  , Assoc
-  , Unassoc
-  , Prime
+  , SortBy
+  , SortOn
+  , SortOnDesc
   , Remove
   , Keep
-  , Elem
-  , Head'
-  , Tail'
-  , Last'
-  , Init'
-  -- ** Extract values
   , HeadDef
   , HeadP
   , HeadFail
@@ -252,30 +284,104 @@ module Predicate.Prelude (
   , InitDef
   , InitP
   , InitFail
-  , JustDef'
-  , JustDef''
-  , JustDef'''
-  , LookupDef'
-  , LookupP'
-  , LookupFail'
-  , LookupDef
-  , LookupP
-  , LookupFail
+  , Head'
+  , Tail'
+  , Last'
+  , Init'
+
+ -- ** maybe methods
+  , MkNothing
+  , MkNothing'
+  , MkJust
+  , IsNothing
+  , IsJust
+  , MapMaybe
+  , CatMaybes
   , Just'
-  , Left'
-  , Right'
-  , This'
-  , That'
-  , TheseIn'
   , JustDef
   , JustP
   , JustFail
+  , MaybeX
+  , MaybeIn
+  , MaybeBool
+  , JustDef'
+  , JustDef''
+  , JustDef'''
+
+ -- ** either methods
+  , PartitionEithers
+  , IsLeft
+  , IsRight
+  , MkLeft
+  , MkLeft'
+  , MkRight
+  , MkRight'
+  , Left'
+  , Right'
   , LeftDef
   , LeftP
   , LeftFail
   , RightDef
   , RightP
   , RightFail
+  , EitherBool
+  , MkRightAlt
+  , MkLeftAlt
+  , EitherIn
+
+  -- ** semigroup / monoid methods
+  , type (<>)
+  , MConcat
+  , STimes
+  , Ands'
+  , Ors'
+  , Min'
+  , Max'
+  , Sum'
+  , Sapa
+  , Sapa'
+  , MEmptyT
+  , MEmptyT'
+  , MEmptyP
+  , MEmptyT2
+  , MEmptyT2'
+
+  -- ** indexing methods
+  , Ix
+  , Ix'
+  , IxL
+  , type (!!)
+  , Lookup
+  , type (!!!)
+  , Lookup'
+  , LookupDef
+  , LookupDef'
+  , LookupP
+  , LookupP'
+  , LookupFail
+  , LookupFail'
+
+ -- cons / uncons methods
+  , type (:+)
+  , type (+:)
+  , Uncons
+  , Unsnoc
+
+ -- ** these methods
+  , PartitionThese
+  , Thiss
+  , Thats
+  , Theses
+  , This'
+  , That'
+  , IsThis
+  , IsThat
+  , IsThese
+  , MkThis
+  , MkThis'
+  , MkThat
+  , MkThat'
+  , MkThese
   , ThisDef
   , ThisP
   , ThisFail
@@ -285,65 +391,12 @@ module Predicate.Prelude (
   , TheseDef
   , TheseP
   , TheseFail
-  , EitherX
+  , TheseIn
+  , TheseIn'
+  , TheseId
   , TheseX
-  , MaybeIn
-  , IsNothing
-  , IsJust
-  , STimes
-  , Pure
-  , PMEmpty
-  -- ** construct values
-  , MEmptyT'
-  , MEmptyT
-  , MEmptyP
-  , MEmptyProxy
-  , EmptyT
-  , MkNothing'
-  , MkNothing
-  , MkJust
-  , MkLeft'
-  , MkLeft
-  , MkRight'
-  , MkRight
-  , MkThis'
-  , MkThis
-  , MkThat'
-  , MkThat
-  , MkThese
-  , MConcat
-  , FoldMap
-  , Sum
-  , Min'
-  , Concat
-  , ProxyT'
-  , ProxyT
-  -- ** indexing functions
-  , Ix
-  , Ix'
-  , IxL
-  , type (!!)
-  , Lookup
-  , type (!!!)
-  , Lookup'
-  , Ands
-  , Ands'
-  , Ors
-  , Ors'
-  , type (:+)
-  , type (+:)
-  , Uncons
-  , Unsnoc
-  , IsEmpty
-  , Null
-  , MapMaybe
-  , CatMaybes
-  -- ** These functions
-  , PartitionEithers
-  , PartitionThese
-  , Thiss
-  , Thats
-  , Theses
+
+ -- ** fold / unfold methods
   , Scanl
   , ScanN
   , ScanNA
@@ -355,77 +408,29 @@ module Predicate.Prelude (
   , IterateWhile
   , IterateNWhile
   , IterateNUntil
-  , Map
-  , ConcatMap
-  , If
-  , Pairs
-  , Partition
-  , FilterBy
-  , Break
-  , Span
+
+  -- ** failure methods
   , Fail
   , Failp
   , Failt
   , FailS
   , FailPrt
   , FailPrt2
-  , Hole
-  , Unproxy
   , Catch
   , Catch'
-  , FailCatch
-  , Even
-  , Odd
-  , Div'
-  , Mod'
-  , Div
-  , Mod
-  , DivMod
-  , QuotRem
-  , Quot
-  , Rem
-  , OneP
-  , Skip
-  , type (|>)
-  , type (>|)
-  , type (>>)
-  , type (<<)
-  -- ** boolean functions
-  , type (&&)
-  , type (||)
-  , type (~>)
-  , Not
- -- ** list functions
-  , IToList'
-  , IToList
-  , ToList
-  , ToList'
-  , ToListExt
-  , FromList
-  , FromListF
 
-  , IsThis
-  , IsThat
-  , IsThese
-  , TheseIn
-  , TheseId
-  , EmptyList'
-  , EmptyList
-  , Singleton
+  -- ** zip methods
   , ZipThese
-  , Char1
   , ZipL
   , ZipR
   , ZipTrunc
-  , Luhn
-  , ReadBase'
-  , ReadBase
-  , ReadBaseInt
-  , ShowBase'
-  , ShowBase
-  , Intercalate
-  , Printf
-  -- ** guards
+  , Unzip
+
+  -- ** conditional methods
+  , If
+  , Case
+  , Case'
+  , Case''
   , Guards
   , GuardsLax
   , GuardsQuick
@@ -440,42 +445,34 @@ module Predicate.Prelude (
   , GuardsN
   , GuardsNLax
   , GuardsDetail
--- ** parallel
+
+-- ** parallel methods
   , ToPara
   , Para
   , ParaLax
   , ParaN
   , ParaNLax
   , Repeat
--- ** others
-  , DoN
-  , Do
-  -- ** case
-  , Case
-  , Case'
-  , Case''
-  , FailCase
-  , Hide
-  , H
-  , type (<>)
-  , Sapa'
-  , Sapa
-  -- ** IO functions
+
+  -- ** IO methods
   , ReadFile
   , FileExists
   , ReadDir
   , DirExists
   , ReadEnv
   , ReadEnvAll
-  , TimeU
-  , TimeZ
+  , TimeUtc
+  , TimeZt
   , AppendFile
-  , WriteFile'
   , WriteFile
+  , WriteFile'
   , Stdout
   , Stderr
   , Stdin
-  -- ** string functions
+
+  -- ** string methods
+  , ToLower
+  , ToUpper
   , Trim
   , TrimStart
   , TrimEnd
@@ -488,30 +485,53 @@ module Predicate.Prelude (
   , IsPrefixI
   , IsInfixI
   , IsSuffixI
+  , FromStringP
+  , FromStringP'
 
-  -- ** printf functions
+  -- ** printf methods
+  , Printf
   , Printfn
   , Printfnt
   , PrintfntLax
   , Printf2
   , Printf3
   , Printf3'
-  , ReverseTupleN
-  -- ** higher order functions
-  , Fmap_1
-  , Fmap_2
+
+  -- ** higher order methods
+  , Pure
+  , Pure2
+  , FoldMap
   , type (<$)
   , type (<*)
   , type (*>)
+  , Fmap_1
+  , Fmap_2
+  , Sequence
+  , Traverse
+  , Join
+  , EmptyT
   , type (<|>)
   , Extract
   , Duplicate
-  , Join
-  , Sequence
-  , Traverse
-  -- ** combine ADTS
+
+  -- ** expression combinators
   , type ($)
   , type (&)
+  , Do
+  , type (>>)
+  , type (<<)
+  , DoN
+
+  -- ** miscellaneous
+  , Prime
+  , Luhn
+  , Char1
+  , Hide
+  , Hole
+  , H
+  , Skip
+  , type (|>)
+  , type (>|)
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -550,7 +570,7 @@ import System.Directory
 import Control.Comonad
 import System.IO
 import System.Environment
-import qualified GHC.Exts as Ge
+import qualified GHC.Exts as GE
 import Data.Bool
 import Data.Either
 import qualified Data.Type.Equality as DE
@@ -561,6 +581,10 @@ import Data.Time.Calendar.WeekDate
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XNoStarIsType
+-- >>> :set -XOverloadedStrings
+-- >>> :set -XNoOverloadedLists
+-- >>> import qualified Data.Map.Strict as M
+-- >>> import qualified Data.Text as T
 
 -- | a type level predicate for a monotonic increasing list
 --
@@ -973,7 +997,6 @@ instance (GetBool b
 
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
--- >>> import qualified Data.Text as T
 -- >>> pl @IsLower "abc"
 -- True
 -- TrueT
@@ -1400,6 +1423,25 @@ instance (P p x
         in case reads @(PP t x) s of
            [(b,"")] -> mkNode opts (PresentT b) [lit01 opts msg1 b s] [hh pp]
            _ -> mkNode opts (FailT (msg1 <> " failed")) [msg1 <> " failed"] [hh pp]
+
+-- | similar to 'sum'
+--
+-- >>> pl @Sum [10,4,5,12,3,4]
+-- Present 38
+-- PresentT 38
+--
+-- >>> pl @Sum []
+-- Present 0
+-- PresentT 0
+--
+data Sum
+
+instance (Num a, Show a) => P Sum [a] where
+  type PP Sum [a] = a
+  eval _ opts as =
+    let msg0 = "Sum"
+        v = sum as
+    in pure $ mkNode opts (PresentT v) [show01 opts msg0 v as] []
 
 -- | similar to 'minimum'
 --
@@ -1853,7 +1895,6 @@ instance ExtractL6C (a,b,c,d,e,f) where
 
 -- | 'fromString' function where you need to provide the type \'t\' of the result
 --
--- >>> :set -XOverloadedStrings
 -- >>> pl @(FromStringP (Identity _) Id) "abc"
 -- Present Identity "abc"
 -- PresentT (Identity "abc")
@@ -1896,7 +1937,7 @@ instance (P s a
 --
 data FromInteger' t n
 type FromInteger (t :: Type) p = FromInteger' (Hole t) p
-type FromIntegerP n = FromInteger' Unproxy n
+--type FromIntegerP n = FromInteger' Unproxy n
 
 instance (Num (PP t a)
         , Integral (PP n a)
@@ -2094,24 +2135,24 @@ instance (P (DoExpandT ps) a) => P (Do ps) a where
 -- | Convenient method to convert a value \'p\' to a 'Maybe' based on a predicate '\b\'
 -- if '\b\' then Just \'p'\ else Nothing
 --
--- >>> pl @(MaybeB (Id > 4) Id) 24
+-- >>> pl @(MaybeBool (Id > 4) Id) 24
 -- Present Just 24
 -- PresentT (Just 24)
 --
--- >>> pl @(MaybeB (Id > 4) Id) (-5)
+-- >>> pl @(MaybeBool (Id > 4) Id) (-5)
 -- Present Nothing
 -- PresentT Nothing
 --
-data MaybeB b p
+data MaybeBool b p
 
 instance (Show (PP p a)
         , P b a
         , P p a
         , PP b a ~ Bool
-        ) => P (MaybeB b p) a where
-  type PP (MaybeB b p) a = Maybe (PP p a)
+        ) => P (MaybeBool b p) a where
+  type PP (MaybeBool b p) a = Maybe (PP p a)
   eval _ opts z = do
-    let msg0 = "MaybeB"
+    let msg0 = "MaybeBool"
     bb <- evalBool (Proxy @b) opts z
     case getValueLR opts (msg0 <> " b failed") bb [] of
       Left e -> pure e
@@ -2125,15 +2166,15 @@ instance (Show (PP p a)
 -- | Convenient method to convert a \'p\' or '\q'\ to a 'Either' based on a predicate '\b\'
 -- if \'b\' then Right \'p\' else Left '\q\'
 --
--- >>> pl @(EitherB (Fst Id > 4) (Snd Id >> Fst Id) (Snd Id >> Snd Id)) (24,(-1,999))
+-- >>> pl @(EitherBool (Fst Id > 4) (Snd Id >> Fst Id) (Snd Id >> Snd Id)) (24,(-1,999))
 -- Present Right 999
 -- PresentT (Right 999)
 --
--- >>> pl @(EitherB (Fst Id > 4) (Fst (Snd Id)) (Snd (Snd Id))) (1,(-1,999))
+-- >>> pl @(EitherBool (Fst Id > 4) (Fst (Snd Id)) (Snd (Snd Id))) (1,(-1,999))
 -- Present Left (-1)
 -- PresentT (Left (-1))
 --
-data EitherB b p q
+data EitherBool b p q
 
 instance (Show (PP p a)
         , P p a
@@ -2141,10 +2182,10 @@ instance (Show (PP p a)
         , P q a
         , P b a
         , PP b a ~ Bool
-        ) => P (EitherB b p q) a where
-  type PP (EitherB b p q) a = Either (PP p a) (PP q a)
+        ) => P (EitherBool b p q) a where
+  type PP (EitherBool b p q) a = Either (PP p a) (PP q a)
   eval _ opts z = do
-    let msg0 = "EitherB"
+    let msg0 = "EitherBool"
     bb <- evalBool (Proxy @b) opts z
     case getValueLR opts (msg0 <> " b failed") bb [] of
       Left e -> pure e
@@ -2332,10 +2373,9 @@ infixr 3 &&&
 -- PresentT (12,"True")
 --
 data (p :: k) *** (q :: k1)
-type Star p q = p *** q
 infixr 3 ***
-type First p = Star p I
-type Second q = Star I q
+type First p = p *** I
+type Second q = I *** q
 
 instance (Show (PP p a)
         , Show (PP q b)
@@ -2530,15 +2570,14 @@ instance (GetBinOp op
 -- PresentT 6.5
 --
 -- >>> pl @(ToRational 13 / Id) 0
--- Error DivF zero denominator
--- FailT "DivF zero denominator"
+-- Error (/) zero denominator
+-- FailT "(/) zero denominator"
 --
 -- >>> pl @(12 % 7 / 14 % 5 + Id) 12.4
 -- Present 3188 % 245
 -- PresentT (3188 % 245)
 --
-data DivF p q
-type p / q = DivF p q
+data p / q
 infixl 7 /
 
 instance (PP p a ~ PP q a
@@ -2547,10 +2586,10 @@ instance (PP p a ~ PP q a
         , P q a
         , Show (PP p a)
         , Fractional (PP p a)
-        ) => P (DivF p q) a where
-  type PP (DivF p q) a = PP p a
+        ) => P (p / q) a where
+  type PP (p / q) a = PP p a
   eval _ opts a = do
-    let msg0 = "DivF"
+    let msg0 = "(/)"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
     pure $ case lr of
       Left e -> e
@@ -2911,8 +2950,7 @@ instance (Show a, as ~ [a]) => P Reverse as where
 
 -- | reverses using 'reversing'
 --
--- >>> import Data.Text (Text)
--- >>> pl @ReverseL ("AbcDeF" :: Text)
+-- >>> pl @ReverseL (T.pack "AbcDeF")
 -- Present "FeDcbA"
 -- PresentT "FeDcbA"
 --
@@ -3585,7 +3623,7 @@ type TheseFail msg q = GFail TheseToMaybe msg q
 --
 
 data MaybeXP p q r
-{-
+
 -- | MaybeX combinator
 --
 -- >>> pl @(MaybeX (Fst Id) (Fst (Fst Id) +: Snd Id) (Snd Id)) ([1..5],Just 99)
@@ -3597,7 +3635,7 @@ data MaybeXP p q r
 -- PresentT [1,2,3,4,5]
 
 type MaybeX p q r = MaybeXP (Fst Id >> p) q r
--}
+
 instance (P r x
         , P p (x, Proxy a)
         , P q (x,a)
@@ -3879,7 +3917,7 @@ instance (P p x
         let b = pure a
         in mkNode opts (PresentT b) [show01 opts msg0 b a] [hh pp]
 
-type PMEmpty = MEmptyT' 'Proxy  -- lifts 'a' to 'Proxy a' then we can use it with MEmptyP
+-- type PMEmpty = MEmptyT' 'Proxy  -- lifts 'a' to 'Proxy a' then we can use it with MEmptyP
 
 -- | similar to 'mempty'
 --
@@ -3898,7 +3936,7 @@ instance (Show (PP t a), Monoid (PP t a)) => P (MEmptyT' t) a where
     let msg0 = "MEmptyT"
         b = mempty @(PP t a)
     in pure $ mkNode opts (PresentT b) [msg0 <> show0 opts " " b] []
-
+{-
 data MEmptyProxy
 instance Monoid a => P MEmptyProxy (Proxy (a :: Type)) where
   type PP MEmptyProxy (Proxy a) = a
@@ -3906,7 +3944,7 @@ instance Monoid a => P MEmptyProxy (Proxy (a :: Type)) where
     let msg0 = "MEmptyProxy"
         b = mempty @a
     in pure $ mkNode opts (PresentT b) [msg0] []
-
+-}
 -- | similar to 'empty'
 --
 -- >>> pl @(EmptyT Maybe Id) ()
@@ -3944,7 +3982,7 @@ instance (P p x
         let b = empty @t
         in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
-data MkNothing' t -- works always! MaybeB is a good alternative and then dont need the extra 't'
+data MkNothing' t -- works always! MaybeBool is a good alternative and then dont need the extra 't'
 type MkNothing (t :: Type) = MkNothing' (Hole t)
 
 -- for this to be useful has to have 't' else we end up with tons of problems
@@ -4097,11 +4135,11 @@ data MConcat p
 -- PresentT 1584
 --
 
---type FoldMap (t :: Type) p = Map (Wrap t Id) p >> MConcat Id >> Unwrap Id
 type FoldMap (t :: Type) p = Map (Wrap t Id) p >> Unwrap (MConcat Id)
 
-type Sum (t :: Type) = FoldMap (SG.Sum t) Id
+type Sum' (t :: Type) = FoldMap (SG.Sum t) Id
 type Min' (t :: Type) = FoldMap (SG.Min t) Id -- requires t be Bounded for monoid instance
+type Max' (t :: Type) = FoldMap (SG.Max t) Id -- requires t be Bounded for monoid instance
 
 instance (PP p x ~ [a]
         , P p x
@@ -4232,7 +4270,6 @@ instance (P q a
 
 -- | 'lookup' leveraging 'Ixed'
 --
--- >>> import qualified Data.Map.Strict as M
 -- >>> pl @(Id !!! 2) ["abc","D","eF","","G"]
 -- Present "eF"
 -- PresentT "eF"
@@ -4427,7 +4464,6 @@ instance (P p x
 -- Present Just ('a',fromList "bc")
 -- PresentT (Just ('a',fromList "bc"))
 --
--- >>> import qualified Data.Text as T
 -- >>> pl @Uncons ("xyz" :: T.Text)
 -- Present Just ('x',"yz")
 -- PresentT (Just ('x',"yz"))
@@ -4454,7 +4490,6 @@ instance (Show (ConsT s)
 -- Present Nothing
 -- PresentT Nothing
 --
--- >>> import qualified Data.Text as T
 -- >>> pl @Unsnoc ("xyz" :: T.Text)
 -- Present Just ("xy",'z')
 -- PresentT (Just ("xy",'z'))
@@ -4673,7 +4708,7 @@ type family UnfoldT mbs where
 
 -- | similar to 'unfoldr'
 --
--- >>> pl @(Unfoldr (MaybeB (Not Null) (SplitAt 2 Id)) Id) [1..5]
+-- >>> pl @(Unfoldr (MaybeBool (Not Null) (SplitAt 2 Id)) Id) [1..5]
 -- Present [[1,2],[3,4],[5]]
 -- PresentT [[1,2],[3,4],[5]]
 --
@@ -4683,9 +4718,9 @@ type family UnfoldT mbs where
 --
 data Unfoldr p q
 --type IterateN (t :: Type) n f = Unfoldr (If (Fst Id == 0) (MkNothing t) (Snd Id &&& (Pred Id *** f) >> MkJust Id)) '(n, Id)
-type IterateN n f = Unfoldr (MaybeB (Fst Id > 0) '(Snd Id, Pred Id *** f)) '(n, Id)
+type IterateN n f = Unfoldr (MaybeBool (Fst Id > 0) '(Snd Id, Pred Id *** f)) '(n, Id)
 type IterateUntil p f = IterateWhile (Not p) f
-type IterateWhile p f = Unfoldr (MaybeB p '(Id, f)) Id
+type IterateWhile p f = Unfoldr (MaybeBool p '(Id, f)) Id
 type IterateNWhile n p f = '(n, Id) >> IterateWhile (Fst Id > 0 && (Snd Id >> p)) (Pred Id *** f) >> Map (Snd Id) Id
 type IterateNUntil n p f = IterateNWhile n (Not p) f
 
@@ -5005,8 +5040,8 @@ instance (P p x
 --
 type Even = Mod I 2 == 0
 type Odd = Mod I 2  == 1
-type Div' p q = Fst (DivMod p q)
-type Mod' p q = Snd (DivMod p q)
+--type Div' p q = Fst (DivMod p q)
+--type Mod' p q = Snd (DivMod p q)
 
 -- | similar to 'div'
 --
@@ -5815,40 +5850,59 @@ instance (PP p x ~ t a
         let b = toList p
         in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
+-- | invokes 'GE.toList'
+--
+-- >>> pl @ToListExt (M.fromList [(1,'x'),(4,'y')])
+-- Present [(1,'x'),(4,'y')]
+-- PresentT [(1,'x'),(4,'y')]
+--
+-- >>> pl @ToListExt (T.pack "abc")
+-- Present "abc"
+-- PresentT "abc"
+--
 data ToListExt
 
 instance (Show l
-        , Ge.IsList l
-        , Show (Ge.Item l)
+        , GE.IsList l
+        , Show (GE.Item l)
         ) => P ToListExt l where
-  type PP ToListExt l = [Ge.Item l]
+  type PP ToListExt l = [GE.Item l]
   eval _ opts as =
     let msg0 = "ToListExt"
-        z = Ge.toList as
+        z = GE.toList as
     in pure $ mkNode opts (PresentT z) [show01 opts msg0 z as] []
 
 data FromList (t :: Type) -- doesnt work with OverloadedLists unless you cast to [a] explicitly
 
-instance (a ~ Ge.Item t
+instance (a ~ GE.Item t
         , Show t
-        , Ge.IsList t
+        , GE.IsList t
         ) => P (FromList t) [a] where
   type PP (FromList t) [a] = t
   eval _ opts as =
     let msg0 = "FromList"
-        z = Ge.fromList (as :: [Ge.Item t]) :: t
+        z = GE.fromList (as :: [GE.Item t]) :: t
     in pure $ mkNode opts (PresentT z) [msg0 <> show0 opts " " z] []
 
-data FromListF (t :: Type) -- works only with overloadedlists
+-- | invokes 'GE.fromList'
+--
+-- requires the OverloadedLists extension
+--
+-- >>> :set -XOverloadedLists
+-- >>> pl @(FromListExt (M.Map _ _)) [(4,"x"),(5,"dd")]
+-- Present fromList [(4,"x"),(5,"dd")]
+-- PresentT (fromList [(4,"x"),(5,"dd")])
+--
+data FromListExt (t :: Type)
 -- l ~ l' is key
 instance (Show l
-        , Ge.IsList l
+        , GE.IsList l
         , l ~ l'
-        ) => P (FromListF l') l where
-  type PP (FromListF l') l = l'
+        ) => P (FromListExt l') l where
+  type PP (FromListExt l') l = l'
   eval _ opts as =
-    let msg0 = "FromListF"
-        z = Ge.fromList (Ge.toList @l as)
+    let msg0 = "FromListExt"
+        z = GE.fromList (GE.toList @l as)
     in pure $ mkNode opts (PresentT z) [msg0 <> show0 opts " " z] []
 
 -- | predicate on 'These'
@@ -6311,9 +6365,21 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
   ToGuardsT prt '[p] = '(prt,p) : '[]
   ToGuardsT prt (p ': ps) = '(prt,p) ': ToGuardsT prt ps
 
--- | runs values in parallel unlike 'Do'
+-- | runs values in parallel unlike 'Do' which is serial
 --
 -- >>> pl @(Para '[Id,Id + 1,Id * 4]) [10,20,30]
+-- Present [10,21,120]
+-- PresentT [10,21,120]
+--
+-- >>> pl @(Para '[Id,Id + 1,Id * 4]) [10,20,30,40]
+-- Error Para: data elements(4) /= predicates(3)
+-- FailT "Para: data elements(4) /= predicates(3)"
+--
+-- >>> pl @(ParaLax '[Id,Id + 1,Id * 4]) [10,20,30,40,50,20,1]
+-- Present [10,21,120]
+-- PresentT [10,21,120]
+--
+-- >>> pl @(ParaLax '[Id,Id + 1,Id * 4,Id]) [10,20,30]
 -- Present [10,21,120]
 -- PresentT [10,21,120]
 --
@@ -6323,12 +6389,6 @@ type ParaLax (os :: [k]) = ParaImplW 'False os
 type ToPara (os :: [k]) = Proxy (ParaImplW 'True os)
 
 data ParaImplW (strict :: Bool) (ps :: [k])
-
-type family GuardsViaParaT prt ps where
-  GuardsViaParaT prt '[] = '[]
-  GuardsViaParaT prt (p ': ps) = Guard prt p ': GuardsViaParaT prt ps
-
---type GuardsViaPara prt ps = Para (GuardsViaParaT prt ps)
 
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out
 instance (GetBool strict, GetLen ps, P (ParaImpl (LenT ps) strict ps) [a]) => P (ParaImplW strict ps) [a] where
@@ -6342,7 +6402,7 @@ instance (GetBool strict, GetLen ps, P (ParaImpl (LenT ps) strict ps) [a]) => P 
        in pure $ mkNode opts (FailT xx) [xx] []
     else eval (Proxy @(ParaImpl (LenT ps) strict ps)) opts as
 
--- only allow non empty lists!
+-- only allow non empty lists
 instance GL.TypeError ('GL.Text "ParaImpl '[] invalid: requires at least one value in the list")
    => P (ParaImpl n strict ('[] :: [k])) [a] where
   type PP (ParaImpl n strict ('[] :: [k])) [a] = Void
@@ -6368,7 +6428,7 @@ instance (Show (PP p a)
         pure $ case getValueLR opts msgbase1 pp [] of
           Left e -> e
           -- show1 opts " " [b]  fails but using 'b' is ok and (b : []) also works!
-          -- Ge.List error
+          -- GE.List error
           Right b -> mkNode opts (PresentT [b]) [msgbase1 <> (if null as then " done!" else " Truncated") <> show0 opts " " (b : []) <> show1 opts " | " a <> (if strict then "" else show1 opts " | leftovers=" as)] [hh pp]
 
 instance (KnownNat n
@@ -6462,7 +6522,6 @@ type Case' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd Id >> Failp "Case:no m
 type Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (FailCase s) ps qs r -- eg s= Printf "%s" (ShowP Id)
 
 type FailCase p = Fail (Snd Id >> Unproxy) (Fst Id >> p)
-
 
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out
 instance (FailIfT (NotT (LenT ps DE.== LenT qs)) ((LenT ps DE.== LenT qs) ~ 'True)
@@ -6686,23 +6745,23 @@ instance P ReadEnvAll a where
       Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
       Just v -> mkNode opts (PresentT v) [msg0 <> " count=" <> show (length v)] []
 
-data TimeU
+data TimeUtc
 
-instance P TimeU a where
-  type PP TimeU a = UTCTime
+instance P TimeUtc a where
+  type PP TimeUtc a = UTCTime
   eval _ opts _a = do
-    let msg0 = "TimeU"
+    let msg0 = "TimeUtc"
     mb <- runIO $ getCurrentTime
     pure $ case mb of
       Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
       Just v -> mkNode opts (PresentT v) [msg0 <> show0 opts " " v] []
 
-data TimeZ
+data TimeZt
 
-instance P TimeZ a where
-  type PP TimeZ a = ZonedTime
+instance P TimeZt a where
+  type PP TimeZt a = ZonedTime
   eval _ opts _a = do
-    let msg0 = "TimeZ"
+    let msg0 = "TimeZt"
     mb <- runIO $ getZonedTime
     pure $ case mb of
       Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
@@ -7223,8 +7282,7 @@ type family FnT ab :: Type where
 -- Present "abc"
 -- PresentT "abc"
 --
--- >>> import Data.Text (Text)
--- >>> pl @(Trim (Snd Id)) (20," abc   " :: Text)
+-- >>> pl @(Trim (Snd Id)) (20,T.pack " abc   ")
 -- Present "abc"
 -- PresentT "abc"
 --
@@ -7284,8 +7342,7 @@ instance (FailIfT (NotT (OrT l r)) ()
 -- Present Just "Hello"
 -- PresentT (Just "Hello")
 --
--- >>> import Data.Text (Text)
--- >>> pl @(StripLeft "xyz" Id) ("xyzHello" :: Text)
+-- >>> pl @(StripLeft "xyz" Id) (T.pack "xyzHello")
 -- Present Just "Hello"
 -- PresentT (Just "Hello")
 --

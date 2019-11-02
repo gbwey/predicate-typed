@@ -20,13 +20,15 @@
 -}
 module Predicate.Core (
     P(..)
+
  -- ** basic types
   , I
   , Id
   , IdT
   , W
   , Msg
-  -- ** display predicates
+
+  -- ** display evaluation tree
   , pe
   , pe2
   , pe2n
@@ -35,8 +37,8 @@ module Predicate.Core (
   , pe3
   , pl
   , plc
---  , peWith
-  -- ** miscellaneous
+
+  -- ** evaluation methods
   , runPQ
   , evalBool
   , evalQuick
@@ -184,7 +186,7 @@ instance GetBool b => P (b :: Bool) a where
     let b = getBool @b
     in pure $ mkNodeB opts b ["'" <> show b] []
 
--- | pulls the type level 'Symbol' to the value level as a 'String'
+-- | pulls the type level 'Symbol' to the value level as a 'GHC.Base.String'
 --
 -- >>> pl @"hello world" ()
 -- Present "hello world"

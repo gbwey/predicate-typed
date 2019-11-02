@@ -29,18 +29,18 @@ module Predicate.Refined (
   , RefinedC
   , newRefined
   , RefinedT(..)
-  -- ** Print methods
+  -- ** print methods
   , prtRefinedIO
   , prtRefinedTIO
   , prtRefinedT
-  -- ** Create Refined
+  -- ** create Refined
   , withRefinedT
   , withRefinedTIO
   , newRefinedT
   , newRefinedTIO
   -- ** QuickCheck method
   , arbRefined
-  -- ** Miscellaneous
+  -- ** manipulate RefinedT values
   , convertRefinedT
   , unRavelT
   , unRavelTIO
@@ -48,7 +48,7 @@ module Predicate.Refined (
   , rapply
   , rapply0
   , rapply1
-  -- ** unsafe create Refined
+  -- ** create Refined unsafely
   , unsafeRefined
   , unsafeRefined'
  ) where
@@ -75,6 +75,7 @@ import Data.Binary (Binary)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XNoStarIsType
+-- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
 
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
@@ -127,7 +128,6 @@ newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH
 
 -- | 'Read' instance for 'Refined'
 --
--- >>> :set -XOverloadedStrings
 -- >>> reads @(Refined (Between 0 255) Int) "Refined {unRefined = 254}"
 -- [(Refined {unRefined = 254},"")]
 --

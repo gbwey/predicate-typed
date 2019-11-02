@@ -20,48 +20,63 @@
      Contains prepackaged 4-tuples to use with 'Refined3'
 -}
 module Predicate.Refined3Helper (
-    Ccn
-  , CC11
-  , ccn
-  , cc11
+  -- ** date time checkers
+    datetime1
   , DateTime1
-  , datetime1
-  , ssn
-  , Ssn
   , hms
   , Hms
+  , HmsRE
   , Hmsip
   , Hmsop
   , Hmsfmt
-  , Ip
-  , ip
-  , HmsRE
-  , OctetRE
-  , Ip4StrictRE
   , DateFmts
   , DateN
   , DateTimeFmts
   , DateTimeN
-  , BaseN
-  , BaseN'
+  , daten
+  , datetimen
+
+  -- ** credit cards
+  , ccn
+  , cc11
+  , Ccn
+  , CC11
+  , LuhnR
+  , LuhnT
+
+  -- ** ssn
+  , ssn
+  , Ssn
+
+  -- ** ipv4
+  , ip
+  , Ip
+  , OctetRE
+  , Ip4StrictRE
+
+ -- ** base n
   , basen
   , base16
   , basen'
-  , daten
-  , datetimen
-  , BetweenR
-  , LuhnR
-  , LuhnT
+  , BaseN
+  , BaseN'
+  , BaseIJ
+  , BaseIJ'
+
+  -- ** read / show
+  , readshow
+  , ReadShow
+  , ReadShowR
+  , readshow'
+  , ReadShow'
+  , ReadShowR'
+
+-- ** miscellaneous
   , Ok
   , OkR
   , OkNot
   , OkNotR
-  , BaseIJ
-  , BaseIJ'
-  , ReadShow
-  , ReadShowR
-  , ReadShow'
-  , ReadShowR'
+  , BetweenR
    ) where
 import Predicate.Refined3
 import Predicate.Core
@@ -342,13 +357,13 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, ReadBa
 -- | take any valid Read/Show instance and turn it into a valid 'Refined3'
 --
 -- >>> :m + Data.Ratio
--- >>> prtEval3P (Proxy @(ReadShow Rational)) ol "13 % 3"
+-- >>> prtEval3P (readshow @Rational) ol "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
--- >>> prtEval3P (Proxy @(ReadShow Rational)) ol "13x % 3"
+-- >>> prtEval3P (readshow @Rational) ol "13x % 3"
 -- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3) failed
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (3 % 1) (5 % 1)))) ol "13 % 3"
+-- >>> prtEval3P (readshow' @Rational @(Between (3 % 1) (5 % 1))) ol "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
 -- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (11 %- 2) (3 %- 1)))) ol "-13 % 3"
@@ -365,14 +380,14 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, ReadBa
 --
 -- >>> let tmString = "2018-10-19 14:53:11.5121359 UTC"
 -- >>> let tm = read tmString :: UTCTime
--- >>> prtEval3P (Proxy @(ReadShow UTCTime)) ol tmString
+-- >>> prtEval3P (readshow @UTCTime) ol tmString
 -- Right (Refined3 {r3In = 2018-10-19 14:53:11.5121359 UTC, r3Out = "2018-10-19 14:53:11.5121359 UTC"})
 --
 -- >>> :m + Data.Aeson
--- >>> prtEval3P (Proxy @(ReadShow Value)) ol "String \"jsonstring\""
+-- >>> prtEval3P (readshow @Value) ol "String \"jsonstring\""
 -- Right (Refined3 {r3In = String "jsonstring", r3Out = "String \"jsonstring\""})
 --
--- >>> prtEval3P (Proxy @(ReadShow Value)) ol "Number 123.4"
+-- >>> prtEval3P (readshow @Value) ol "Number 123.4"
 -- Right (Refined3 {r3In = Number 123.4, r3Out = "Number 123.4"})
 --
 type ReadShow (t :: Type) = '(ReadP t, 'True, ShowP Id, String)
@@ -380,3 +395,9 @@ type ReadShowR (t :: Type) = MakeR3 (ReadShow t)
 
 type ReadShow' (t :: Type) p = '(ReadP t, p, ShowP Id, String)
 type ReadShowR' (t :: Type) p = MakeR3 (ReadShow' t p)
+
+readshow :: Proxy (ReadShow t)
+readshow = mkProxy3
+
+readshow' :: Proxy (ReadShow' t p)
+readshow' = mkProxy3

@@ -75,8 +75,8 @@ type NameR1 = Refined (Name1 >> 'True) String
 type Name1 =
           Uncons
        >> 'Just Id
-       >> Guard (Printf "not upper first(%c)" (Fst Id)) (Fst Id >> '[Id] >> IsCharSet 'CUpper)
-       >> Guard (Printf "not lower rest(%s)" (Snd Id)) (Snd Id >> IsCharSet 'CLower)
+       >> Guard (Printf "not upper first(%c)" (Fst Id)) (Fst Id >> '[Id] >> IsUpper)
+       >> Guard (Printf "not lower rest(%s)" (Snd Id)) (Snd Id >> IsLower)
 
 type AgeR = Refined (Between 10 60) Int
 

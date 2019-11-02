@@ -11,8 +11,11 @@
 -}
 module Predicate.Util_TH
   (
+  -- ** Refined
     refinedTH
   , refinedTH'
+
+  -- ** Refined3
   , refined3TH
   , refined3TH'
  ) where

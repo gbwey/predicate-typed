@@ -30,26 +30,34 @@ module Predicate.Refined3 (
   -- ** Refined3
     Refined3(r3In,r3Out)
   , Refined3C
-  -- ** Display
+
+ -- ** display results
   , prtEval3P
   , prtEval3PIO
   , prtEval3
   , prt3IO
   , prt3
   , prt3Impl
-  -- ** Evaluation
+  , Msg3 (..)
+  , Results (..)
+  , RResults (..)
+
+  -- ** evaluation methods
   , eval3P
   , eval3
   , eval3M
   , eval3PX
   , eval3X
-  -- ** Proxy manipulation
+
+  -- ** proxy methods
   , mkProxy3
   , mkProxy3'
   , mkProxy3P
   , mkProxy3P'
   , MkProxy3T
-  -- ** Create Refined3
+  , MakeR3
+
+  -- ** create or combine Refined3 values
   , withRefined3TIO
   , withRefined3T
   , withRefined3TP
@@ -57,16 +65,14 @@ module Predicate.Refined3 (
   , newRefined3TP
   , newRefined3TPIO
   , convertRefined3TP
+  , rapply3
+  , rapply3P
+
   -- ** QuickCheck methods
   , arbRefined3
   , arbRefined3With
-  -- ** Miscellaneous
-  , rapply3
-  , rapply3P
-  , Msg3 (..)
-  , MakeR3
-  , Results (..)
-  , RResults (..)
+
+  -- ** unsafe methods for creating Refined3
   , unsafeRefined3
   , unsafeRefined3'
  ) where
@@ -94,22 +100,22 @@ import Data.Maybe (fromMaybe)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XNoStarIsType
+-- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
 
 -- | Refinement type that differentiates the input from output
 --
--- @
--- \'i\' is the input type
--- \'ip\' converts i to PP ip i which is the internal type
--- \'op\' validates that internal type using PP op (PP ip i) ~ Bool
--- \'fmt\' outputs the internal type PP fmt (PP ip i) ~ i
--- PP fmt (PP ip i) should be valid input to Refined3
--- @
+--   * __i__ is the input type
+--   * __ip__ converts @i@ to @PP ip i@ which is the internal type
+--   * __op__ validates that internal type using @PP op (PP ip i) ~ Bool@
+--   * __fmt__ outputs the internal type @PP fmt (PP ip i) ~ i@
+--   * __PP fmt (PP ip i)__ should be valid as input for Refined3
 --
--- Setting the input type \'i\' to 'String' then it is similar to 'Read'/'Show'
--- 1. 'read' into an internal type
--- 2. validate internal type with a predicate function
--- 3. 'show' the internal type
+-- Setting the input type __i__ to 'GHC.Base.String' resembles the corresponding Read/Show instances but with an additional predicate on the read value
+--
+--   * __read__ a string into an internal type and store in 'r3In'
+--   * __validate__ 'r3In' using the predicate __op__
+--   * __show__ 'r3In' and store that formatted result in 'r3Out'
 --
 -- Although the most common scenario is String as input, you are free to choose any input type you like
 --
@@ -175,7 +181,6 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
 --
--- >>> :set -XOverloadedStrings
 -- >>> reads @(Refined3 (ReadBase Int 16) (Between 0 255) (ShowBase 16) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
 -- [(Refined3 {r3In = 254, r3Out = "fe"},"")]
 --
@@ -219,7 +224,6 @@ instance ( Eq i
 
 -- | 'ToJSON' instance for 'Refined3'
 --
--- >>> :set -XOverloadedStrings
 -- >>> encode (unsafeRefined3 @(ReadBase Int 16) @(Between 0 255) @(ShowBase 16) 254 "fe")
 -- "\"fe\""
 --
@@ -232,7 +236,6 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 
 -- | 'FromJSON' instance for 'Refined3'
 --
--- >>> :set -XOverloadedStrings
 -- >>> eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe\""
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
