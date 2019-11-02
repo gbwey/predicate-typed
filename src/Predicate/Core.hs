@@ -305,7 +305,7 @@ instance P '() a where
 -- PresentT []
 instance P ('[] :: [k]) a where
   type PP ('[] :: [k]) a = [a]
-  eval _ opts _ = pure $ mkNode opts mempty ["'[]"] []
+  eval _ opts _ = pure $ mkNode opts (PresentT mempty) ["'[]"] []
 
 -- | runs each predicate in turn from the promoted list
 --
@@ -568,6 +568,7 @@ pe  = peWith @p o0
 pe2 = peWith @p o2
 -- | same as 'pe2' but truncates the display tree horizontally: see 'o2n'
 pe2n = peWith @p o2n
+-- | same as 'pe2' but wider display
 pe3 = peWith @p o3
 -- | skips the evaluation tree and just displays the end result
 pl = peWith @p ol

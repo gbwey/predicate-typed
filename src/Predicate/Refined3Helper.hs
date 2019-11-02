@@ -71,12 +71,18 @@ module Predicate.Refined3Helper (
   , ReadShow'
   , ReadShowR'
 
--- ** miscellaneous
+  -- ** between
+  , between
+  , BetweenR
+  , BetweenN
+
+  -- ** miscellaneous
+  , ok
   , Ok
   , OkR
+  , oknot
   , OkNot
   , OkNotR
-  , BetweenR
    ) where
 import Predicate.Refined3
 import Predicate.Core
@@ -311,7 +317,43 @@ daten = mkProxy3
 datetimen :: Proxy DateTimeN
 datetimen = mkProxy3
 
-type BetweenR m n = Refined3 Id (Between m n) Id Int
+-- | ensures that two numbers are in a given range (emulates 'Refined')
+--
+-- >>> prtEval3P (between @10 @16) ol 14
+-- Right (Refined3 {r3In = 14, r3Out = 14})
+--
+-- >>> prtEval3P (between @10 @16) ol 17
+-- Left Step 2. False Boolean Check(op) | FalseP
+--
+-- >>> prtEval3P (between @10 @16) o0 17
+-- Left Step 2. False Boolean Check(op) | FalseP
+-- <BLANKLINE>
+-- *** Step 1. Success Initial Conversion(ip) [17] ***
+-- <BLANKLINE>
+-- P Id 17
+-- <BLANKLINE>
+-- *** Step 2. False Boolean Check(op) ***
+-- <BLANKLINE>
+-- False True && False
+-- |
+-- +- True  17 >= 10
+-- |  |
+-- |  +- P I
+-- |  |
+-- |  `- P '10
+-- |
+-- `- False 17 <= 16
+--    |
+--    +- P I
+--    |
+--    `- P '16
+-- <BLANKLINE>
+--
+between :: Proxy (BetweenN m n)
+between = mkProxy3
+
+type BetweenN m n = '(Id, Between m n, Id, Int)
+type BetweenR m n = RefinedEmulate (Between m n) Int
 
 type LuhnR (n :: Nat) = MakeR3 (LuhnT n)
 
@@ -332,13 +374,19 @@ type LuhnT (n :: Nat) =
    , ConcatMap (ShowP Id) Id
    , String)
 
--- noop true
+-- | noop true
 type Ok (t :: Type) = '(Id, 'True, Id, t)
 type OkR (t :: Type) = MakeR3 (Ok t)
 
--- noop false
+ok :: Proxy (Ok t)
+ok = mkProxy3
+
+-- | noop false
 type OkNot (t :: Type) = '(Id, 'False, Id, t)
 type OkNotR (t :: Type) = MakeR3 (OkNot t)
+
+oknot :: Proxy (OkNot t)
+oknot = mkProxy3
 
 -- | convert a string from a given base \'i\' and store it internally as a base \'j\' string
 --

@@ -1536,7 +1536,7 @@ instance (P p (a,a)
       Right as -> do
         let ff :: MonadEval m => [a] -> m (TT [a])
             ff = \case
-                [] -> pure $ mkNode opts mempty [msg0 <> " empty"] []
+                [] -> pure $ mkNode opts (PresentT mempty) [msg0 <> " empty"] []
                 [w] -> pure $ mkNode opts (PresentT [w]) [msg0 <> " one element " <> show w] []
                 w:ys@(_:_) -> do
                   pp <- (if oDebug opts >= 3 then
@@ -5277,7 +5277,7 @@ instance (PP prt (Int, a) ~ String
          n :: Int = nat @n
          pos = getLen @ps
      case as' of
-         [] -> pure $ mkNode opts mempty [msgbase0 <> " (ran out of data!!)"] []
+         [] -> pure $ mkNode opts (PresentT mempty) [msgbase0 <> " (ran out of data!!)"] []
          a:as -> do
                     pp <- evalBool (Proxy @p) opts a
                     case getValueLR opts (msgbase1 <> " p failed") pp [] of
@@ -5359,7 +5359,7 @@ instance (PP prt a ~ String
          n :: Int = nat @n
          pos = getLen @ps
      case as' of
-         [] -> pure $ mkNode opts mempty [msgbase0 <> " (ran out of data!!)"] []
+         [] -> pure $ mkNode opts (PresentT mempty) [msgbase0 <> " (ran out of data!!)"] []
          a:as -> do
                     pp <- evalBool (Proxy @p) opts a
                     case getValueLR opts (msgbase1 <> " p failed") pp [] of
@@ -5531,7 +5531,19 @@ instance (Show (PP p a)
 
 -- | similar to 'Prelude.&&'
 --
--- >>> pl @(Fst Id && (Snd Id >> Len >> Ge 4)) (True,[11,12,13,14])
+-- >>> pl @(Fst Id && Snd Id) (True, True)
+-- True
+-- TrueT
+--
+-- >>> pl @(Id > 15 && Id < 17) 16
+-- True
+-- TrueT
+--
+-- >>> pl @(Id > 15 && Id < 17) 30
+-- False
+-- FalseT
+--
+-- >>> pl @(Fst Id && (Length (Snd Id) >= 4)) (True,[11,12,13,14])
 -- True
 -- TrueT
 --
@@ -6196,8 +6208,7 @@ instance (PP p x ~ [Int]
         in if ret == 0 then mkNodeB opts True [msg0 <> show0 opts " | " p] hhs
            else mkNodeB opts False [msg0 <> " map=" <> show ys <> " sum=" <> show z <> " ret=" <> show ret <> show1 opts " | " p] hhs
 
--- could get n::Nat as a predicate but it is fine as is!
--- | Read a number base 2 via 36
+-- | Read a number using base 2 through a maximum of 36
 --
 -- >>> pl @(ReadBase Int 16) "00feD"
 -- Present 4077
@@ -6210,6 +6221,10 @@ instance (PP p x ~ [Int]
 -- >>> pl @(ReadBase Int 2) "10010011"
 -- Present 147
 -- PresentT 147
+--
+-- >>> pl @(ReadBase Int 8) "Abff"
+-- Error invalid base 8
+-- FailT "invalid base 8"
 --
 -- supports negative numbers unlike readInt
 data ReadBase' t (n :: Nat) p
@@ -6293,7 +6308,7 @@ instance (PP p x ~ a
             b = showIntAtBase (fromIntegral n) (xs !!) a' ""
         in mkNode opts (PresentT (ff b)) [msg0 <> showLit0 opts " " (ff b) <> show1 opts " | " p] []
 
--- | Intercalate
+-- | intercalate two lists
 --
 -- >>> pl @(Intercalate '["aB"] '["xxxx","yz","z","www","xyz"]) ()
 -- Present ["xxxx","aB","yz","aB","z","aB","www","aB","xyz"]
@@ -6330,6 +6345,14 @@ instance (PP p x ~ [a]
 -- >>> pl @(Printf "value=%03d" Id) 12
 -- Present "value=012"
 -- PresentT "value=012"
+--
+-- >>> pl @(Printf "%s" (Fst Id)) ("abc",'x')
+-- Present "abc"
+-- PresentT "abc"
+--
+-- >>> pl @(Printf "%d" (Fst Id)) ("abc",'x')
+-- Error Printf (IO e=printf: bad formatting char 'd')
+-- FailT "Printf (IO e=printf: bad formatting char 'd')"
 --
 data Printf s p
 
@@ -6422,7 +6445,7 @@ instance (Show (PP p a)
         n :: Int
         n = nat @n
     case as' of
-      [] -> pure $ mkNode opts mempty [msgbase1 <> " (ran out of data!!)"] []
+      [] -> pure $ mkNode opts (PresentT mempty) [msgbase1 <> " (ran out of data!!)"] []
       a:as -> do
         pp <- eval (Proxy @p) opts a
         pure $ case getValueLR opts msgbase1 pp [] of
@@ -6449,7 +6472,7 @@ instance (KnownNat n
          n = nat @n
          pos = 1 + getLen @ps -- cos p1!
      case as' of
-       [] -> pure $ mkNode opts mempty [msgbase0 <> " (ran out of data!!)"] []
+       [] -> pure $ mkNode opts (PresentT mempty) [msgbase0 <> " (ran out of data!!)"] []
        a:as -> do
          pp <- eval (Proxy @p) opts a
          case getValueLR opts msgbase0 pp [] of

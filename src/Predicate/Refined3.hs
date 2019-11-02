@@ -30,6 +30,7 @@ module Predicate.Refined3 (
   -- ** Refined3
     Refined3(r3In,r3Out)
   , Refined3C
+  , RefinedEmulate
 
  -- ** display results
   , prtEval3P
@@ -110,6 +111,8 @@ import Data.Maybe (fromMaybe)
 --   * __op__ validates that internal type using @PP op (PP ip i) ~ Bool@
 --   * __fmt__ outputs the internal type @PP fmt (PP ip i) ~ i@
 --   * __PP fmt (PP ip i)__ should be valid as input for Refined3
+--
+-- Setting __ip__ to @Id@ and __fmt__ to @Id@ makes it equivalent to 'Refined': see 'RefinedEmulate'
 --
 -- Setting the input type __i__ to 'GHC.Base.String' resembles the corresponding Read/Show instances but with an additional predicate on the read value
 --
@@ -806,3 +809,6 @@ eval3X opts i = runIdentity $ do
               Right False -> pure (RTFalse a t1 t2, Nothing)
               Left e -> pure (RTF a t1 e t2, Nothing)
        Left e -> pure (RF e t1, Nothing)
+
+-- | emulates 'Refined' using 'Refined3' ie the input conversion and output formatting are noops
+type RefinedEmulate p a = Refined3 Id p Id a

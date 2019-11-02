@@ -79,15 +79,15 @@ module Predicate.Util (
   , setd
   , setu
   , setc
-  , setc0
-  , setc1
-  , setc2
-  , setc3
-  , setc4
+  , color0
+  , color1
+  , color2
+  , color3
+  , color4
   , colorMe
   , lite
   , unicode
-  , horizontal
+  , normal
 
 -- ** formatting functions
   , show01
@@ -193,20 +193,22 @@ import Control.DeepSeq
 import System.IO.Unsafe (unsafePerformIO)
 import Data.Bool
 import Data.Foldable
-
+import Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as N
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XNoStarIsType
 
--- | describes the evaluation tree for predicates
+-- | represents the evaluation tree for predicates
 data TT a = TT { _tBool :: BoolT a  -- ^ the value at this root node
                , _tStrings :: [String]  -- ^ detailed information eg input and output and text
                , _tForest :: Forest PE } -- ^ the child nodes
                 deriving Show
 
--- | contains the typed result from evaluating the expression tree to this point
+-- | contains the typed result from evaluating the expression tree
+--
 data BoolT a where
   FailT :: String -> BoolT a  -- ^ failure with string
   FalseT :: BoolT Bool        -- ^ false predicate
@@ -216,6 +218,7 @@ data BoolT a where
 deriving instance Show a => Show (BoolT a)
 deriving instance Eq a => Eq (BoolT a)
 
+-- | lens for accessing 'BoolT' in 'TT'
 tBool :: Lens (TT a) (TT b) (BoolT a) (BoolT b)
 tBool afb s = (\b -> s { _tBool = b }) <$> afb (_tBool s)
 
@@ -225,7 +228,7 @@ tStrings afb s = (\b -> s { _tStrings = b }) <$> afb (_tStrings s)
 tForest :: Lens' (TT a) (Forest PE)
 tForest afb s = (\b -> s { _tForest = b }) <$> afb (_tForest s)
 
--- | a lens from typed BoolT to the untyped BoolP
+-- | a lens from typed 'BoolT' to the untyped 'BoolP'
 boolT2P :: Lens' (BoolT a) BoolP
 boolT2P afb = \case
   FailT e -> FailT e <$ afb (FailP e)
@@ -240,22 +243,6 @@ data BoolP =
   | TrueP        -- ^ True predicate
   | PresentP     -- ^ Any value
   deriving (Show, Eq)
-
--- need a semigroup constraint else we have to throw away one of the PresentT a ie First or Last
-instance Semigroup a => Semigroup (BoolT a) where
-  FailT e <> FailT e1 = FailT (e <> e1)
-  o@FailT {} <> _ = o
-  _ <> o@FailT {} = o
-  o@TrueT <> TrueT = o
-  o@FalseT <> _ = o
-  _ <> o@FalseT = o
-  -- cant pattern match on PresentT True on lhs (hence PresentT a) but can use 'a' as a Bool on rhs!
-  PresentT a <> TrueT = review _boolT a
-  TrueT <> PresentT a = review _boolT a
-  PresentT a <> PresentT a1 = PresentT (a <> a1)
-
-instance Monoid a => Monoid (BoolT a) where
-  mempty = PresentT mempty
 
 data PE = PE { _pBool :: BoolP -- ^ holds the result of running the predicate
              , _pStrings :: [String] -- ^ optional strings to include in the results
@@ -335,7 +322,7 @@ getValueLRImpl showError opts msg0 tt hs =
 newtype PColor = PColor (BoolP -> String -> String)
 
 -- | customizable options
-data POpts = POpts { oWidth :: Maybe Int -- ^ length of data to display for 'showLitImpl'
+data POpts = POpts { oWidth :: Int -- ^ length of data to display for 'showLitImpl'
                    , oDebug :: !Int  -- ^ debug level
                    , oDisp :: Disp -- ^ display the tree using the normal tree or unicode
                    , oHide :: !Int -- ^ hides one layer of a tree
@@ -344,7 +331,7 @@ data POpts = POpts { oWidth :: Maybe Int -- ^ length of data to display for 'sho
                    }
 
 -- | display format for the tree
-data Disp = NormalDisp -- ^ draw horizontal tree
+data Disp = NormalDisp -- ^ draw normal tree
           | Unicode  -- ^ use unicode
           deriving (Show, Eq)
 
@@ -359,7 +346,7 @@ instance Show POpts where
 
 defOpts :: POpts
 defOpts = POpts
-    { oWidth = Just 200
+    { oWidth = 200
     , oDebug = 2
     , oDisp = NormalDisp
     , oHide = 0
@@ -383,25 +370,25 @@ o0 = defOpts { oColor = color0 }
 o2 :: POpts
 o2 = defOpts { oDebug = 2 }
 
--- | same as 'o2' but for narrower display width
+-- | same as 'o2' but for a narrow display
 o2n :: POpts
-o2n = o2 { oWidth = Just 120 }
+o2n = o2 { oWidth = 120 }
 
--- | same as 'o2' but for larger display width
+-- | same as 'o2' for a wider display and more lenient debug mode setting
 o3 :: POpts
-o3 = defOpts { oDebug = 3, oWidth = Just 400 }
+o3 = defOpts { oDebug = 3, oWidth = 400 }
 
 -- | displays the detailed evaluation tree using unicode and colors. ('o2' works better on Windows)
 ou :: POpts
 ou = defOpts { oDisp = Unicode }
 
--- | same as 'ou' but for narrower display width
+-- | same as 'ou' but for a narrow display
 oun :: POpts
-oun = ou { oWidth = Just 120 }
+oun = ou { oWidth = 120 }
 
 -- | helper method to limit the width of the tree
 setw :: Int -> POpts -> POpts
-setw w o = o { oWidth = Just w }
+setw w o = o { oWidth = w }
 
 -- | helper method to set the debug level
 setd :: Int -> POpts -> POpts
@@ -414,13 +401,6 @@ setu o = o { oDisp = Unicode }
 -- | set a color palette
 setc :: (String, PColor) -> POpts -> POpts
 setc pc o = o { oColor = pc }
-
-setc0, setc1, setc2, setc3, setc4 :: POpts -> POpts
-setc0 o = o { oColor = color0 }
-setc1 o = o { oColor = color1 }
-setc2 o = o { oColor = color2 }
-setc3 o = o { oColor = color3 }
-setc4 o = o { oColor = color4 }
 
 -- | color palettes
 --
@@ -491,7 +471,7 @@ showLitImpl o i s a =
   if oDebug o >= i then
     let f n = let ss = take n a
               in ss <> (if length ss==n then " ..." else "")
-    in maybe "" (\n -> s <> f n) (oWidth o)
+    in s <> f (oWidth o)
   else ""
 
 show0 :: Show a => POpts -> String -> a -> String
@@ -619,7 +599,7 @@ instance Foldable TT where
 instance Foldable BoolT where
   foldMap am = either (const mempty) am . getValLR
 
--- cant use: is / isn't / has cos only FailT will be False: use Fold
+-- cant use: is / isn't / has as only FailT will be False: use Fold
 -- this is more specific to TrueP FalseP
 -- | prism from BoolT to Bool
 _boolT :: Prism' (BoolT Bool) Bool
@@ -631,7 +611,10 @@ _boolT = prism' (bool FalseT TrueT)
               FailT {} -> Nothing
 
 groupErrors :: [String] -> String
-groupErrors = intercalate " | " . map (\xs -> head xs <> (if length xs > 1 then "(" <> show (length xs) <> ")" else "")) . group
+groupErrors =
+     intercalate " | "
+   . map (\xs@(x :| _) -> x <> (if length xs > 1 then "(" <> show (length xs) <> ")" else ""))
+   . N.group
 
 _FailT :: Prism' (BoolT a) String
 _FailT = prism' FailT $ \case
@@ -851,7 +834,6 @@ instance GetOrd 'Cle where getOrd = ("<=",(<=))
 instance GetOrd 'Clt where getOrd = ("<", (<))
 instance GetOrd 'Cne where getOrd = ("/=",(/=))
 
--- only hides BoolP part! not sure of the point
 toNodeString :: POpts -> PE -> String
 toNodeString opts bpe
   | oLite opts = error $ "shouldnt be calling this if we are going lite: toNodeString oLite " ++ show bpe
@@ -918,14 +900,17 @@ showImpl o =
     Unicode -> TV.showTree
     NormalDisp -> drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
 
+-- | skip displaying the tree and just output the result
 lite :: POpts -> POpts
 lite o = o { oLite = True }
 
+-- | display in unicode (non-Windows)
 unicode :: POpts -> POpts
 unicode o = o { oDisp = Unicode }
 
-horizontal :: POpts -> POpts
-horizontal o = o { oDisp = NormalDisp }
+-- | normal display
+normal :: POpts -> POpts
+normal o = o { oDisp = NormalDisp }
 
 prettyRational :: Rational -> String
 prettyRational (numerator &&& denominator -> (n,d)) =
