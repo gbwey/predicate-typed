@@ -24,13 +24,14 @@ import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
+
 import Predicate
-import Refined
-import UtilP_TH
+import Predicate.Refined
+import Predicate.Util_TH
+import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 
 import Control.Lens
 import Data.Aeson
-import TH_Orphans () -- need this else refined*TH' fails for dates
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import GHC.TypeNats (Nat)

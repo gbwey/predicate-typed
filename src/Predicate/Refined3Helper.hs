@@ -15,20 +15,60 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
--- |
--- Module      : Refined3Helper
--- Description : Contains convenient prepackaged 4-tuples to use with Refined3
--- Copyright   : (c) Grant Weyburne, 2019
--- License     : BSD-3
--- Maintainer  : gbwey9@gmail.com
---
--- Prepackaged proxies for use with 'Refined3.Refined3'
---
-module Refined3Helper where
-import Refined3
-import Predicate
+{-# LANGUAGE TypeApplications #-}
+{- |
+     Contains prepackaged 4-tuples to use with 'Refined3'
+-}
+module Predicate.Refined3Helper (
+    Ccn
+  , CC11
+  , ccn
+  , cc11
+  , DateTime1
+  , datetime1
+  , ssn
+  , Ssn
+  , hms
+  , Hms
+  , Hmsip
+  , Hmsop
+  , Hmsfmt
+  , Ip
+  , ip
+  , HmsRE
+  , OctetRE
+  , Ip4StrictRE
+  , DateFmts
+  , DateN
+  , DateTimeFmts
+  , DateTimeN
+  , BaseN
+  , BaseN'
+  , basen
+  , base16
+  , basen'
+  , daten
+  , datetimen
+  , BetweenR
+  , LuhnR
+  , LuhnT
+  , Ok
+  , OkR
+  , OkNot
+  , OkNotR
+  , BaseIJ
+  , BaseIJ'
+  , ReadShow
+  , ReadShowR
+  , ReadShow'
+  , ReadShowR'
+   ) where
+import Predicate.Refined3
+import Predicate.Core
+import Predicate.Prelude
+import Predicate.Util
 import Data.Proxy
-import GHC.TypeLits (AppendSymbol,Nat,KnownNat)
+import GHC.TypeLits (AppendSymbol,Nat)
 import Data.Kind (Type)
 import Data.Time
 
@@ -46,6 +86,14 @@ import Data.Time
 -- >>> prtEval3P cc11 ol "1234-5678-903"
 -- Right (Refined3 {r3In = [1,2,3,4,5,6,7,8,9,0,3], r3Out = "1234-5678-903"})
 --
+-- >>> pl @(Ccip >> Ccop 11) "79927398713"
+-- True
+-- TrueT
+--
+-- >>> pl @(Ccip >> Ccop 10) "79927398713"
+-- Error expected 10 digits but found 11
+-- FailT "expected 10 digits but found 11"
+--
 type Ccip = Map (ReadP Int) (Ones (Remove "-" Id))
 type Ccop (n :: Nat) = Guard ('(n,Len) >> Printf2 "expected %d digits but found %d") (Len >> Same n) >> Luhn Id
 type Ccfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
@@ -55,42 +103,45 @@ type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
 type CC11 = Ccn '[4,4,3]
 
 -- not great for the general case: but specific case is easier
-ccn :: forall (ns :: [Nat]) . (KnownNat (SumT ns), P ns String, PP ns String ~ [Integer]) => Proxy (Ccn ns)
+ccn :: Proxy (Ccn ns)
 ccn = mkProxy3
 
 cc11 :: Proxy (Ccn '[4,4,3])   -- or Proxy CC11
 cc11 = mkProxy3P
 
--- | read in a datetime
+-- | read in a valid datetime
 --
--- >>> prtEval3P (Proxy @(DateTime1 LocalTime)) ol "2018-09-14 02:57:04"
+-- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 02:57:04"
 -- Right (Refined3 {r3In = 2018-09-14 02:57:04, r3Out = "2018-09-14 02:57:04"})
 --
--- >>> prtEval3P (Proxy @(DateTime1 LocalTime)) ol "2018-09-14 99:98:97"
+-- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 99:98:97"
 -- Left Step 2. Failed Boolean Check(op) | hours invalid: found 99
 --
--- >>> prtEval3P (Proxy @(DateTime1 LocalTime)) ol "2018-09-14 23:01:97"
+-- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 23:01:97"
 -- Left Step 2. Failed Boolean Check(op) | seconds invalid: found 97
 --
 -- >>> prtEval3P (Proxy @(DateTime1 UTCTime)) ol "2018-09-14 99:98:97"
 -- Right (Refined3 {r3In = 2018-09-18 04:39:37 UTC, r3Out = "2018-09-18 04:39:37"})
 --
-type DateTime1 (t :: Type) = '(Dtip1 t, Dtop1, Dtfmt1, String)
-type Dtip1 t = ParseTimeP t "%F %T" Id
+datetime1 :: Proxy (DateTime1 t)
+datetime1 = mkProxy3P
+
+type DateTime1 (t :: Type) = '(Dtip t, Dtop, Dtfmt, String)
+type Dtip t = ParseTimeP t "%F %T" Id
 
 -- extra check to validate the time as parseTime doesnt validate the time component
--- ZonedTime LocalTime and TimeOfDay do no validation and allow invalid stuff through : eg 99:98:97 is valid
+-- ZonedTime LocalTime and TimeOfDay don't do validation and allow invalid stuff through : eg 99:98:97 is valid
 -- UTCTime will do the same but any overages get tacked on to the day and time as necessary: makes the time valid! 99:98:97 becomes 04:39:37
 --    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
-
-type Dtop1' =
+{-
+type Dtop' =
    Map (ReadP Int) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
      >> Guards '[ '(Printf2 "guard %d invalid hours %d", Between 0 23)
                 , '(Printf2 "guard %d invalid minutes %d", Between 0 59)
                 , '(Printf2 "guard %d invalid seconds %d", Between 0 59)
                 ] >> 'True
-
-type Dtop1 =
+-}
+type Dtop =
    Map (ReadP Int) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
      >> GuardsDetail "%s invalid: found %d"
                   '[ '("hours", Between 0 23)
@@ -98,7 +149,7 @@ type Dtop1 =
                    , '("seconds",Between 0 59)
                    ] >> 'True
 
-type Dtfmt1 = FormatTimeP "%F %T" Id
+type Dtfmt = FormatTimeP "%F %T" Id
 
 ssn :: Proxy Ssn
 ssn = mkProxy3
@@ -129,11 +180,13 @@ type Ssnip = Map (ReadP Int) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd On
 type Ssnop = GuardsQuick (Printf2 "number for group %d invalid: found %d")
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
                       >> 'True
+{-
 type Ssnop' = GuardsDetail "%s invalid: found %d"
                           '[ '("first", Between 1 899 && Id /= 666)
                            , '("second", Between 1 99)
                            , '("third" , Between 1 9999)
                            ] >> 'True
+-}
 type Ssnfmt = Printfnt 3 "%03d-%02d-%04d"
 
 -- | read in a time and validate it
@@ -142,10 +195,10 @@ type Ssnfmt = Printfnt 3 "%03d-%02d-%04d"
 -- Right (Refined3 {r3In = [23,13,59], r3Out = "23:13:59"})
 --
 -- >>> prtEval3P hms ol "23:13:60"
--- Left Step 2. Failed Boolean Check(op) | guard(3) 60 secs is out of range
+-- Left Step 2. Failed Boolean Check(op) | seconds invalid: found 60
 --
 -- >>> prtEval3P hms ol "26:13:59"
--- Left Step 2. Failed Boolean Check(op) | guard(1) 26 hours is out of range
+-- Left Step 2. Failed Boolean Check(op) | hours invalid: found 26
 --
 hms :: Proxy Hms
 hms = mkProxy3
@@ -153,10 +206,14 @@ hms = mkProxy3
 type Hms = '(Hmsip, Hmsop >> 'True, Hmsfmt, String)
 
 type Hmsip = Map (ReadP Int) (Resplit ":" Id)
-type Hmsop = Guard (Printf "expected len 3 but found %d" Len) (Len >> Same 3)
+
+type Hmsop = GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]
+{-
+type Hmsop = Guard (Printf "expected len 3 but found %d" Len) (Length Id == 3)
              >> Guards '[ '(Printf2 "guard(%d) %d hours is out of range", Between 0 23)
                         , '(Printf2 "guard(%d) %d mins is out of range", Between 0 59)
                         , '(Printf2 "guard(%d) %d secs is out of range", Between 0 59)]
+-}
 type Hmsfmt = Printfnt 3 "%02d:%02d:%02d"
 
 -- | read in an ipv4 address and validate it
@@ -183,14 +240,7 @@ type Ipip = Map (ReadP Int) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3}
 type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d") 4 (Between 0 255) >> 'True
 type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d"
 
-type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- padded only -- dumb because strict validation should not be done twice: ie in ip and op!
-type Hmsconv = Do '[Rescan HmsRE Id, Head, (Snd Id), Map (ReadBaseInt 10) Id]
-type Hmsval = GuardsQuick (Printf2 "guard(%d) %d is out of range") '[Between 0 23, Between 0 59, Between 0 59]
-
-type Hms4 = '(Hmsconv, Hmsval >> 'True, Hmsfmt, String)
-
-hms4 :: Proxy Hms4
-hms4 = mkProxy3
+type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- strict validation should only be done in 'op' not 'ip'
 
 type OctetRE = "(25[0-5]|2[0..4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])" -- no padded numbers allowed
 --type Ip4StrictRE = "^" `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "$"
@@ -203,16 +253,43 @@ type DateN = '(ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, Str
 type DateTimeFmts = '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]
 type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
 
--- | convert a string from the given base \'i\' but stores it internally as a string of base \'j\'
+-- | convert a string from a given base \'i\' and store it internally as an base 10 integer
 --
--- >>> prtEval3P (Proxy @(BaseN 16)) ol "00fe"
+-- >>> prtEval3P base16 ol "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
-type BaseN (n :: Nat) = '(ReadBase Integer n, 'True, ShowBase n, String)
+-- >>> prtEval3P (basen' @16 @(Between 100 400)) ol "00fe"
+-- Right (Refined3 {r3In = 254, r3Out = "fe"})
+--
+-- >>> prtEval3P (basen' @16 @(GuardSimple (Id < 400) >> 'True)) ol "f0fe"
+-- Left Step 2. Failed Boolean Check(op) | 61694 < 400
+--
+type BaseN (n :: Nat) = BaseN' n 'True
+type BaseN' (n :: Nat) p = '(ReadBase Int n, p, ShowBase n, String)
 
 base16 :: Proxy (BaseN 16)
-base16 = mkProxy3
+base16 = basen @16
 
+-- replace with BetweenT 2 36 n
+--basen :: forall n . (KnownNat n, (n GN.<=? 36) ~ 'True, (2 GN.<=? n) ~ 'True) => Proxy (BaseN n)
+--basen = mkProxy3
+
+basen :: Proxy (BaseN n)
+basen = mkProxy3
+
+basen' :: Proxy (BaseN' n p)
+basen' = mkProxy3
+
+{-
+basen' :: forall n p
+       . (P p Int
+       , PP p Int ~ Bool
+       , KnownNat n
+       , (n GN.<=? 36) ~ 'True
+       , (2 GN.<=? n) ~ 'True
+       ) => Proxy (BaseN' n p)
+basen' = mkProxy3
+-}
 daten :: Proxy DateN
 daten = mkProxy3
 
@@ -221,18 +298,18 @@ datetimen = mkProxy3
 
 type BetweenR m n = Refined3 Id (Between m n) Id Int
 
-type LuhnR (n :: Nat) = MakeR3 (LuhnY n)
+type LuhnR (n :: Nat) = MakeR3 (LuhnT n)
 
 -- | Luhn check
 --
--- >>> prtEval3P (Proxy @(LuhnY 4)) ol "1230"
+-- >>> prtEval3P (Proxy @(LuhnT 4)) ol "1230"
 -- Right (Refined3 {r3In = [1,2,3,0], r3Out = "1230"})
 --
--- >>> prtEval3P (Proxy @(LuhnY 4)) ol "1234"
+-- >>> prtEval3P (Proxy @(LuhnT 4)) ol "1234"
 -- Left Step 2. Failed Boolean Check(op) | Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]
 
--- uses builtin Luhn vs long winded version LuhnX
-type LuhnY (n :: Nat) =
+-- | uses builtin 'Luhn'
+type LuhnT (n :: Nat) =
    '(Map (ReadP Int) (Ones Id)
    , Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id]))
            (Len >> Same n)
@@ -248,7 +325,7 @@ type OkR (t :: Type) = MakeR3 (Ok t)
 type OkNot (t :: Type) = '(Id, 'False, Id, t)
 type OkNotR (t :: Type) = MakeR3 (OkNot t)
 
--- | convert a string from the given base \'i\' but stores it internally as a string of base \'j\'
+-- | convert a string from a given base \'i\' and store it internally as a base \'j\' string
 --
 -- >>> prtEval3P (Proxy @(BaseIJ 16 2)) ol "fe"
 -- Right (Refined3 {r3In = "11111110", r3Out = "fe"})
@@ -256,10 +333,13 @@ type OkNotR (t :: Type) = MakeR3 (OkNot t)
 -- >>> prtEval3P (Proxy @(BaseIJ 16 2)) ol "fge"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
+-- >>> prtEval3P (Proxy @(BaseIJ' 16 2 (GuardSimple (ReadBase Int 2 < 1000) >> 'True))) ol "ffe"
+-- Left Step 2. Failed Boolean Check(op) | 4094 < 1000
+--
 type BaseIJ (i :: Nat) (j :: Nat) = BaseIJ' i j 'True
 type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, ReadBase Int j >> ShowBase i, String)
 
--- | take any valid Read/Show instance and turn it into a valid Refined3
+-- | take any valid Read/Show instance and turn it into a valid 'Refined3'
 --
 -- >>> :m + Data.Ratio
 -- >>> prtEval3P (Proxy @(ReadShow Rational)) ol "13 % 3"

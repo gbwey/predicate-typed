@@ -16,15 +16,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {- |
-Module      : PredicateCore
-Description : Dsl for evaluating and displaying type level expressions
-Copyright   : (c) Grant Weyburne, 2019
-License     : BSD-3
-Maintainer  : gbwey9@gmail.com
-
-contains class P with a minimal set of instances
+     Dsl for evaluating and displaying type level expressions
 -}
-module PredicateCore (
+module Predicate.Core (
     P(..)
  -- ** basic types
   , I
@@ -47,7 +41,7 @@ module PredicateCore (
   , evalBool
   , evalQuick
   ) where
-import UtilP
+import Predicate.Util
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
 import Control.Lens ((^.))
 import Data.Proxy

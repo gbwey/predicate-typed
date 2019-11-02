@@ -23,9 +23,9 @@ import Test.Tasty.HUnit
 import TestRefined
 import TestRefined3
 import Predicate
-import Refined
-import Refined3
-import Refined3Helper
+import Predicate.Refined
+import Predicate.Refined3
+import Predicate.Refined3Helper
 import Data.Ratio
 
 import Data.Typeable
@@ -328,9 +328,9 @@ allTests =
   , expectPE (FailT "invalid base 22") $ pl @(ReadBaseInt 22) "zzz"
   , expectPE (PresentT ("ffe0","fFe0")) $ pl @((ReadBaseInt 16 &&& Id) >> First (ShowBase 16)) "fFe0"
   , expectPE FalseT $ pl @(Id == "Abc") "abc"
-  , expectPE TrueT $ pl @("Abc" ==? Id) "abc"
+  , expectPE TrueT $ pl @("Abc" ==~ Id) "abc"
   , expectPE (PresentT LT) $ pl @("Abc" ==! Id) "abc"
-  , expectPE (PresentT EQ) $ pl @("Abc" ===? Id) "abc"
+  , expectPE (PresentT EQ) $ pl @("Abc" ===~ Id) "abc"
   , expectPE (PresentT 'd') $ pl @(Id !! 3) ('a','b','c','d','e')
   , expectPE (PresentT 99) $ pl @(Id !! "s") $ M.fromList [("t",1), ("s", 20), ("s", 99)]
   , expectPE (PresentT 1) $ pl @(Head' Id) [1,2,3]
@@ -445,8 +445,6 @@ allTests =
   , expectPE (PresentT 3) $ pl @(Id !! FromStringP _ "d") (M.fromList $ zip (map T.singleton "abcd") [0 ..])
   , expectPE (PresentT [7,9,9,2,7,3,9,8,7,1,3]) $ pl @(Map (ReadP Int) (Ones Id) >> Guard "checkdigit fail" (Luhn Id)) "79927398713"
   , expectPE (FailT "checkdigit fail") $ pl @(Map (ReadP Int) (Ones Id) >> Guard "checkdigit fail" (Luhn Id)) "79927398714"
-  , expectPE TrueT $ pl @(Ccip >> Ccop 11) "79927398713"
-  , expectPE (FailT "expected 10 digits but found 11") $ pl @(Ccip >> Ccop 10) "79927398713"
   , expectPE (PresentT [10,14,15,9]) $ pl @(MM1 16 >> MM2 16) "aef9"
   , expectPE (FailT "invalid base 16") $ pl @(MM1 16 >> MM2 16) "aef9g"
   , expectPE (FailT "found empty") $ pl @(MM1 16 >> MM2 16) ""
@@ -574,13 +572,13 @@ allTests =
   , expectPE (PresentT 157) $ pl @(Fst Id * (Snd Id >> Fst Id) + (Snd Id >> Snd Id) `Div` 2) (12,(13,3))
   , expectPE TrueT $ pl @(Fst Id >= Snd Id || Snd Id > 23 || 12 %- 5 <= ToRational (Fst Id)) (12,13)
   , expectPE (PresentT LT) $ pl @(Fst Id ==! Snd Id) (3,12)
-  , expectPE TrueT $ pl @(Fst Id ==? Snd Id) ("aBc","AbC")
-  , expectPE (PresentT EQ) $ pl @(Fst Id ===? Snd Id) ("aBc","AbC")
+  , expectPE TrueT $ pl @(Fst Id ==~ Snd Id) ("aBc","AbC")
+  , expectPE (PresentT EQ) $ pl @(Fst Id ===~ Snd Id) ("aBc","AbC")
   , expectPE FalseT $ pl @(Fst Id == Snd Id) ("aBc","AbC")
   , expectPE (PresentT GT) $ pl @(Fst Id ==! Snd Id) ("aBc","AbC")
   , expectPE (PresentT LT) $ pl @(Snd Id ==! Fst Id) ("aBc","AbC")
-  , expectPE TrueT $ pl @(Fst Id ==? Snd Id && Fst Id == Snd Id) ("Abc","Abc")
-  , expectPE (PresentT (EQ,EQ)) $ pl @(Fst Id ===? Snd Id &&& Fst Id ==! Snd Id) ("abc","abc")
+  , expectPE TrueT $ pl @(Fst Id ==~ Snd Id && Fst Id == Snd Id) ("Abc","Abc")
+  , expectPE (PresentT (EQ,EQ)) $ pl @(Fst Id ===~ Snd Id &&& Fst Id ==! Snd Id) ("abc","abc")
   , expectPE (PresentT "ask%dfas%kef00035 hey %") $ pl @(Printf "ask%%dfas%%kef%05d hey %%" Id) (35 :: Int)
   , expectPE (PresentT 100) $ pl @(Id !! 2 !! 0) [[1..5],[10..14],[100..110]]
   , expectPE (FailT "(!!) index not found") $ pl @(Id !! 1 !! 7) [[1..5],[10..14],[100..110]]

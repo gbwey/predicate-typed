@@ -6,28 +6,22 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE PolyKinds #-}
--- |
--- Module      : UtilP_TH
--- Description : Template Haskell methods for creating Refined and Refined3 refinement types
--- Copyright   : (c) Grant Weyburne, 2019
--- License     : BSD-3
--- Maintainer  : gbwey9@gmail.com
---
--- Template Haskell methods for creating Refined and Refined3 refinement types
---
-module UtilP_TH
+{- |
+     Template Haskell methods for creating Refined and Refined3 refinement types
+-}
+module Predicate.Util_TH
   (
     refinedTH
   , refinedTH'
   , refined3TH
   , refined3TH'
  ) where
-import Refined3
-import Refined
-import PredicateCore
+import Predicate.Refined3
+import Predicate.Refined
+import Predicate.Core
+import Predicate.Util
 import qualified Language.Haskell.TH.Syntax as TH
 import Data.Functor.Identity
-import UtilP
 
 -- $setup
 -- >>> :set -XDataKinds

@@ -19,9 +19,9 @@ import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
 import Predicate
-import Refined
-import Refined3
-import Refined3Helper
+import Predicate.Refined
+import Predicate.Refined3
+import Predicate.Refined3Helper
 import GHC.Generics (Generic)
 import Data.Text (Text)
 import Data.Aeson

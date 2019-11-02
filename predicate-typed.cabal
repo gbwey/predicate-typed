@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.1.
+-- This file has been generated from package.yaml by hpack version 0.31.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b124eaae809a099946ae43451fff6ad39559ef988b4c356e6f477f1632fdec22
+-- hash: 00bb6abe4d0dd08df7dd88c83a7919b024aa94cd0c2887a0a420142824ca6aac
 
 name:           predicate-typed
 version:        0.1.0.4
@@ -27,13 +27,14 @@ source-repository head
 library
   exposed-modules:
       Predicate
-      PredicateCore
-      Refined
-      Refined3
-      Refined3Helper
-      TH_Orphans
-      UtilP
-      UtilP_TH
+      Predicate.Core
+      Predicate.Prelude
+      Predicate.Refined
+      Predicate.Refined3
+      Predicate.Refined3Helper
+      Predicate.TH_Orphans
+      Predicate.Util
+      Predicate.Util_TH
   other-modules:
       Paths_predicate_typed
   hs-source-dirs:

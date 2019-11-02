@@ -23,16 +23,10 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE DeriveLift #-}
 {- |
-Module      : Refined3
-Description : Refinement type allowing the external type to differ from the internal type
-Copyright   : (c) Grant Weyburne, 2019
-License     : BSD-3
-Maintainer  : gbwey9@gmail.com
-
-see 'Refined3'
-contains Json and Read instances and arbitrary functions
+     Refinement type allowing the external type to differ from the internal type
+     see 'Refined3'
 -}
-module Refined3 (
+module Predicate.Refined3 (
   -- ** Refined3
     Refined3(r3In,r3Out)
   , Refined3C
@@ -42,22 +36,26 @@ module Refined3 (
   , prtEval3
   , prt3IO
   , prt3
+  , prt3Impl
   -- ** Evaluation
   , eval3P
   , eval3
   , eval3M
+  , eval3PX
+  , eval3X
   -- ** Proxy manipulation
   , mkProxy3
+  , mkProxy3'
   , mkProxy3P
+  , mkProxy3P'
   , MkProxy3T
-  -- ** Create Refined3 methods
+  -- ** Create Refined3
   , withRefined3TIO
   , withRefined3T
   , withRefined3TP
   , newRefined3T
   , newRefined3TP
   , newRefined3TPIO
-  , convertRefined3T
   , convertRefined3TP
   -- ** QuickCheck methods
   , arbRefined3
@@ -71,12 +69,10 @@ module Refined3 (
   , RResults (..)
   , unsafeRefined3
   , unsafeRefined3'
-  , prt3Impl
-  , eval3PX
-  , eval3X
  ) where
-import Refined
-import Predicate
+import Predicate.Refined
+import Predicate.Core
+import Predicate.Util
 import Data.Functor.Identity (Identity(..))
 import Data.Tree
 import Data.Proxy
@@ -98,8 +94,9 @@ import Data.Maybe (fromMaybe)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XNoStarIsType
+-- >>> :m + Predicate.Prelude
 
--- | Refinement type that differentiates the input type from output type
+-- | Refinement type that differentiates the input from output
 --
 -- @
 -- \'i\' is the input type
@@ -116,7 +113,6 @@ import Data.Maybe (fromMaybe)
 --
 -- Although the most common scenario is String as input, you are free to choose any input type you like
 --
--- >>> :m + Data.Time.Calendar.WeekDate
 -- >>> prtEval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x" Id) ol "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
@@ -132,6 +128,7 @@ import Data.Maybe (fromMaybe)
 -- >>> prtEval3 @(Map (ReadP Int) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1"
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
+-- >>> :m + Data.Time.Calendar.WeekDate
 -- >>> prtEval3 @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) ol (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
@@ -239,7 +236,7 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 -- >>> eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe\""
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> removeAnsiForDocTest $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe443a\""
+-- >>> removeAnsi $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe443a\""
 -- Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [16663610] ***
@@ -314,13 +311,13 @@ arbRefined3With _ opts f =
 -- >>> type K2 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-03-30") (ReadP' Day "2019-06-01"), ShowP Id, String)
 -- >>> type K3 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-05-30") (ReadP' Day "2019-06-01"), ShowP Id, String)
 -- >>> r = unsafeRefined3' ol "2019-04-23" :: K1
--- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
+-- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
 --
--- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
+-- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
 -- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
 --
--- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
+-- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
 -- Refined3:Step 2. False Boolean Check(op) | FalseP
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
@@ -363,15 +360,25 @@ instance ( Show (PP fmt (PP ip i))
             Just r -> return r
   put (Refined3 _ r) = B.put @i r
 
--- | wraps the parameters for 'Refined3' in a 4-tuple for use with methods such as 'withRefined3TP' and 'newRefined3TP'
-mkProxy3 :: forall ip op fmt i . Refined3C ip op fmt i => Proxy '(ip,op,fmt,i)
+-- | wraps the parameters for 'Refined3' in a 4-tuple
+--
+-- useful for methods such as 'withRefined3TP' and 'newRefined3TP'
+mkProxy3 :: forall ip op fmt i . Proxy '(ip,op,fmt,i)
 mkProxy3 = Proxy
 
--- | use type application to set the parameters then it will be wrapped into a 4-tuple
---   checks to make sure the proxy is consistent with Refined3C
--- use for passing into eval3P you can pass in a promoted 4 tuple to other methods
-mkProxy3P :: forall z ip op fmt i . (z ~ '(ip,op,fmt,i), Refined3C ip op fmt i) => Proxy '(ip,op,fmt,i)
+-- | same as 'mkProxy3' but checks to make sure the proxy is consistent with the Refined3C constraint
+mkProxy3' :: forall ip op fmt i . Refined3C ip op fmt i => Proxy '(ip,op,fmt,i)
+mkProxy3' = Proxy
+
+-- | use type application to set the parameters which then will be wrapped into a 4-tuple
+--
+-- useful for passing into 'eval3P' / 'prtEval3P'
+mkProxy3P :: forall z ip op fmt i . z ~ '(ip,op,fmt,i) => Proxy '(ip,op,fmt,i)
 mkProxy3P = Proxy
+
+-- | same as 'mkProxy3P' but checks to make sure the proxy is consistent with the Refined3C constraint
+mkProxy3P' :: forall z ip op fmt i . (z ~ '(ip,op,fmt,i), Refined3C ip op fmt i) => Proxy '(ip,op,fmt,i)
+mkProxy3P' = Proxy
 
 -- | convenience type family for converting from a 4-tuple '(ip,op,fmt,i) to a 'Refined3' signature
 type family MakeR3 p where
@@ -389,6 +396,46 @@ withRefined3TIO :: forall ip op fmt i m b
   -> RefinedT m b
 withRefined3TIO opts = (>>=) . newRefined3TPIO (Proxy @'(ip,op,fmt,i)) opts
 
+-- | create a 'Refined3' value and pass it to a continuation to be processed
+--
+-- This first example reads a hex string and makes sure it is between 100 and 200 and then
+-- reads a binary string and adds the values together
+--
+-- >>> :set -XPolyKinds
+-- >>> type Base n p = '(ReadBase Int n, p, ShowBase 16, String)
+-- >>> base16 = Proxy @(Base 16 (Between 100 200))
+-- >>> base2 = Proxy @(Base 2 'True)
+-- >>> prtRefinedTIO $ withRefined3TP base16 ol "a3" $ \x -> withRefined3TP base2 ol "1001110111" $ \y -> pure (r3In x + r3In y)
+-- 794
+--
+-- this example fails as the the hex value is out of range
+--
+-- >>> prtRefinedTIO $ withRefined3TP base16 o0 "a388" $ \x -> withRefined3TP base2 o0 "1001110111" $ \y -> pure (x,y)
+-- <BLANKLINE>
+-- *** Step 1. Success Initial Conversion(ip) [41864] ***
+-- <BLANKLINE>
+-- P ReadBase(Int,16) 41864 | "a388"
+-- |
+-- `- P Id "a388"
+-- <BLANKLINE>
+-- *** Step 2. False Boolean Check(op) ***
+-- <BLANKLINE>
+-- False True && False
+-- |
+-- +- True  41864 >= 100
+-- |  |
+-- |  +- P I
+-- |  |
+-- |  `- P '100
+-- |
+-- `- False 41864 <= 200
+--    |
+--    +- P I
+--    |
+--    `- P '200
+-- <BLANKLINE>
+-- failure msg[Step 2. False Boolean Check(op) | FalseP]
+--
 withRefined3T :: forall ip op fmt i m b
   . (Monad m, Refined3C ip op fmt i, Show (PP ip i), Show i)
   => POpts
@@ -397,7 +444,7 @@ withRefined3T :: forall ip op fmt i m b
   -> RefinedT m b
 withRefined3T opts = (>>=) . newRefined3TP (Proxy @'(ip,op,fmt,i)) opts
 
-withRefined3TP :: forall ip op fmt i m b proxy
+withRefined3TP :: forall m ip op fmt i b proxy
   . (Monad m, Refined3C ip op fmt i, Show (PP ip i), Show i)
   => proxy '(ip,op,fmt,i)
   -> POpts
@@ -412,6 +459,11 @@ newRefined3T :: forall m ip op fmt i . (Refined3C ip op fmt i, Monad m, Show (PP
    -> RefinedT m (Refined3 ip op fmt i)
 newRefined3T = newRefined3TP (Proxy @'(ip,op,fmt,i))
 
+-- | create a wrapped 'Refined3' type
+--
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(MkDay >> JustFail "asfd" Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) ol (2019,11,1)
+-- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
+--
 newRefined3TP :: forall m ip op fmt i proxy
    . (Refined3C ip op fmt i, Monad m, Show (PP ip i), Show i)
   => proxy '(ip,op,fmt,i)
@@ -472,22 +524,7 @@ newRefined3TPSkipIPImpl f _ opts a = do
     Nothing -> throwError $ m3Desc m3 <> " | " <> m3Short m3
     Just r -> return r
 
--- optional Refined3C ip op fmt i [not required!]
-convertRefined3T :: forall m ip op fmt i ip1 op1 fmt1 i1 .
-  ( Refined3C ip1 op1 fmt1 i1
-  , Monad m
-  , Show (PP ip i)
-  , PP ip i ~ PP ip1 i1
-  , Show i1)
-  => POpts
-  -> RefinedT m (Refined3 ip op fmt i)
-  -> RefinedT m (Refined3 ip1 op1 fmt1 i1)
-convertRefined3T opts ma = do
-  Refined3 x _ <- ma
-  -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) (Proxy @'(ip1, op1, fmt1, i1)) opts x
-  return (Refined3 a b)
-
+-- | attempts to cast a wrapped 'Refined3' to another 'Refined3' with different predicates
 convertRefined3TP :: forall m ip op fmt i ip1 op1 fmt1 i1 .
   ( Refined3C ip1 op1 fmt1 i1
   , Monad m
@@ -505,6 +542,7 @@ convertRefined3TP _ _ opts ma = do
   Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) (Proxy @'(ip1, op1, fmt1, i1)) opts x
   return (Refined3 a b)
 
+-- | applies a binary operation to two wrapped 'Refined3' parameters
 rapply3 :: forall m ip op fmt i .
   ( Refined3C ip op fmt i
   , Monad m
@@ -519,6 +557,8 @@ rapply3 = rapply3P (Proxy @'(ip,op,fmt,i))
 
 -- this is the most generic
 -- prtRefinedT $ rapply3P base16 (+) (newRefined3TP Proxy "ff") (newRefined3TP Proxy "22")
+
+-- | same as 'rapply3' but uses a 4-tuple proxy instead
 rapply3P :: forall m ip op fmt i proxy .
   ( Refined3C ip op fmt i
   , Monad m

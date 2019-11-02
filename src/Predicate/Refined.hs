@@ -20,14 +20,10 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveLift #-}
--- |
--- Module      : Refined
--- Description : Simple refinement type with only one type and a predicate
--- Copyright   : (c) Grant Weyburne, 2019
--- License     : BSD-3
--- Maintainer  : gbwey9@gmail.com
---
-module Refined (
+{- |
+     Simple refinement type with only one type and a predicate
+-}
+module Predicate.Refined (
   -- ** Refined
     Refined(unRefined)
   , RefinedC
@@ -56,7 +52,8 @@ module Refined (
   , unsafeRefined
   , unsafeRefined'
  ) where
-import Predicate
+import Predicate.Core
+import Predicate.Util
 import Control.Lens ((^.))
 import Data.Functor.Identity (Identity(..))
 import Data.Proxy
@@ -78,10 +75,10 @@ import Data.Binary (Binary)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XNoStarIsType
+-- >>> :m + Predicate.Prelude
 
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
--- >>> :m + Data.Time.Calendar.WeekDate
 -- >>> prtRefinedIO @(Between 10 14) ol 13
 -- Right (Refined {unRefined = 13})
 --
@@ -169,7 +166,7 @@ instance ToJSON a => ToJSON (Refined p a) where
 -- >>> eitherDecode' @(Refined (Between 10 14) Int) "13"
 -- Right (Refined {unRefined = 13})
 --
--- >>> removeAnsiForDocTest $ eitherDecode' @(Refined (Between 10 14) Int) "16"
+-- >>> removeAnsi $ eitherDecode' @(Refined (Between 10 14) Int) "16"
 -- Error in $: Refined:FalseP
 -- False True && False
 -- |
@@ -203,13 +200,13 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 -- >>> type K2 = Refined (ReadP Day >> Between (ReadP' Day "2019-03-30") (ReadP' Day "2019-06-01")) String
 -- >>> type K3 = Refined (ReadP Day >> Between (ReadP' Day "2019-05-30") (ReadP' Day "2019-06-01")) String
 -- >>> r = unsafeRefined' ol "2019-04-23" :: K1
--- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
+-- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined {unRefined = "2019-04-23"}
 --
--- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
+-- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
 -- Refined {unRefined = "2019-04-23"}
 --
--- >>> removeAnsiForDocTest $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
+-- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
 -- Refined:FalseP
 -- False >> False | 2019-04-23
 -- |
@@ -398,7 +395,7 @@ prtRefinedTImpl :: forall n m a . (MonadIO n, Show a) => (forall x . m x -> n x)
 prtRefinedTImpl f rt = do
   (lr,ws) <-  f $ unRavelT rt
   liftIO $ do
-    forM_ (zip [1::Int ..] ws) $ \(_,y) -> putStrLn y
+    forM_ (zip [1::Int ..] ws) $ \(_,y) -> unless (null y) $ putStrLn y
     case lr of
       Left e -> putStrLn $ "failure msg[" <> e <> "]"
       Right a -> print a

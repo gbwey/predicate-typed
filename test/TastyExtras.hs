@@ -18,7 +18,7 @@
 module TastyExtras where
 import Test.Tasty
 import Test.Tasty.HUnit
-import UtilP
+import Predicate.Util
 import Data.Aeson
 import Data.List
 import Text.Show.Functions ()

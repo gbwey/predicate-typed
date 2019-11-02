@@ -25,14 +25,10 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
--- |
--- Module      : UtilP
--- Description : Utility methods for Predicate / methods for displaying the evaluation tree ...
--- Copyright   : (c) Grant Weyburne, 2019
--- License     : BSD-3
--- Maintainer  : gbwey9@gmail.com
---
-module UtilP (
+{- |
+     Utility methods for Predicate / methods for displaying the evaluation tree ...
+-}
+module Predicate.Util (
   -- ** TT
     TT(..)
   , tBool
@@ -144,7 +140,7 @@ module UtilP (
   , SumT
   , MapT
   , ConsT
-  , removeAnsiForDocTest
+  , removeAnsi
   , MonadEval(..)
   , type (%%)
   , type (%&)
@@ -163,7 +159,6 @@ import Data.Proxy
 import Data.Char
 import Data.Data
 import System.Console.Pretty
---import qualified Data.Type.Equality as DE
 import GHC.Exts (Constraint)
 import qualified Text.Regex.PCRE.Heavy as RH
 import qualified Text.Regex.PCRE.Light as RL
@@ -671,6 +666,7 @@ evalBinStrict opts s fn ll rr =
 type family BetweenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
   BetweenT m n v =
      FailIfT (NotT (AndT (m GL.<=? v) (v GL.<=? n)))
+              ((m GL.<=? v) ~ 'True, (v GL.<=? n) ~ 'True)
             ('GL.Text "BetweenT failure"
              ':$$: 'GL.ShowType v
              ':$$: 'GL.Text " is outside of "
@@ -684,9 +680,10 @@ type family NullT (x :: Symbol) :: Bool where
   NullT _ = 'False
 
 -- | helper method to fail with an error if the True
-type family FailIfT (b :: Bool) (msg :: GL.ErrorMessage) :: Constraint where
-  FailIfT 'False _ = ()
-  FailIfT 'True e = GL.TypeError e
+-- todo: constraint \'c\' is not passed on properly
+type family FailIfT (b :: Bool) (c :: Constraint) (msg :: GL.ErrorMessage) :: Constraint where
+  FailIfT 'False c _ = c
+  FailIfT 'True _ e = GL.TypeError e
 
 -- | typelevel And
 type family AndT (b :: Bool) (b1 :: Bool) :: Bool where
@@ -1048,8 +1045,8 @@ instance MonadEval IO where
   catchitNF v = E.evaluate (Right $!! v) `E.catch` (\(E.SomeException e) -> pure $ Left ("IO e=" <> show e))
   liftEval = id
 
-removeAnsiForDocTest :: Show a => Either String a -> IO ()
-removeAnsiForDocTest =
+removeAnsi :: Show a => Either String a -> IO ()
+removeAnsi =
   \case
      Left e -> let esc = '\x1b'
                    f :: String -> Maybe (String, String)

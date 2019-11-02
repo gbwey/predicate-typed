@@ -26,18 +26,18 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import Predicate
 import TestRefined hiding (namedTests,unnamedTests,allProps)
-import Refined
-import Refined3
-import Refined3Helper
-import UtilP_TH
-import Data.Ratio
+import Predicate.Refined
+import Predicate.Refined3
+import Predicate.Refined3Helper
+import Predicate.Util_TH
+import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 
+import Data.Ratio
 import Data.Typeable
 import Control.Lens
 import Data.Time
 import GHC.Generics (Generic)
 import Data.Aeson
-import TH_Orphans () -- need this else refined*TH' fails for dates
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree
@@ -224,10 +224,13 @@ type Ipz1 = '(Id &&& Ip4A
 type Ipz2 = '(Id, Ip4A, Ip4B, String) -- skips fmt and just uses the original input
 type Ipz3 = '(Ip4A, Ip4B, Id, String)
 
+
 -- need to add 'True to make it a predicate
 -- guards checks also that there are exactly 3 entries!
+type Hmsconv = Do '[Rescan HmsRE Id, Head, (Snd Id), Map (ReadBaseInt 10) Id]
+
 type Hmsz1 = '(Hmsconv &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-            , Fst Id >> Hmsval >> 'True
+            , Fst Id >> Hmsop >> 'True
             , Snd Id
             , String)
 
