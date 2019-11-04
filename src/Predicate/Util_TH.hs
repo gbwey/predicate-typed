@@ -96,7 +96,7 @@ refinedTH' opts i = do
   let ((bp,e),mr) = runIdentity $ newRefined @p opts i
   case mr of
     Nothing ->
-      let msg1 = if oLite opts then "" else ("\n" ++ e ++ "\n")
+      let msg1 = if hasNoTree opts then "" else ("\n" ++ e ++ "\n")
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp -- ++ "\n" ++ e
     Just r -> TH.TExp <$> TH.lift r
 
@@ -166,7 +166,7 @@ refined3TH' opts i = do
       m3 = prt3Impl opts ret
   case mr of
     Nothing ->
-      let msg1 = if oLite opts then "" else (m3Long m3 ++ "\n")
+      let msg1 = if hasNoTree opts then "" else (m3Long m3 ++ "\n")
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m3Desc m3 <> " | " <> m3Short m3)
     Just r -> TH.TExp <$> TH.lift r
 

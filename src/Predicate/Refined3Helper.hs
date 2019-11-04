@@ -101,17 +101,17 @@ import Data.Time
 
 -- | credit card with luhn algorithm
 --
--- >>> prtEval3P cc11 ol "1234-5678-901"
+-- >>> prtEval3P cc11 oz "1234-5678-901"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P cc11 ol "1234-5678-903"
+-- >>> prtEval3P cc11 oz "1234-5678-903"
 -- Right (Refined3 {r3In = [1,2,3,4,5,6,7,8,9,0,3], r3Out = "1234-5678-903"})
 --
--- >>> pl @(Ccip >> Ccop 11) "79927398713"
+-- >>> pz @(Ccip >> Ccop 11) "79927398713"
 -- True
 -- TrueT
 --
--- >>> pl @(Ccip >> Ccop 10) "79927398713"
+-- >>> pz @(Ccip >> Ccop 10) "79927398713"
 -- Error expected 10 digits but found 11
 -- FailT "expected 10 digits but found 11"
 --
@@ -132,16 +132,16 @@ cc11 = mkProxy3P
 
 -- | read in a valid datetime
 --
--- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 02:57:04"
+-- >>> prtEval3P (datetime1 @LocalTime) oz "2018-09-14 02:57:04"
 -- Right (Refined3 {r3In = 2018-09-14 02:57:04, r3Out = "2018-09-14 02:57:04"})
 --
--- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 99:98:97"
+-- >>> prtEval3P (datetime1 @LocalTime) oz "2018-09-14 99:98:97"
 -- Left Step 2. Failed Boolean Check(op) | hours invalid: found 99
 --
--- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 23:01:97"
+-- >>> prtEval3P (datetime1 @LocalTime) oz "2018-09-14 23:01:97"
 -- Left Step 2. Failed Boolean Check(op) | seconds invalid: found 97
 --
--- >>> prtEval3P (Proxy @(DateTime1 UTCTime)) ol "2018-09-14 99:98:97"
+-- >>> prtEval3P (Proxy @(DateTime1 UTCTime)) oz "2018-09-14 99:98:97"
 -- Right (Refined3 {r3In = 2018-09-18 04:39:37 UTC, r3Out = "2018-09-18 04:39:37"})
 --
 datetime1 :: Proxy (DateTime1 t)
@@ -177,22 +177,22 @@ ssn = mkProxy3
 
 -- | read in an ssn
 --
--- >>> prtEval3P ssn ol "134-01-2211"
+-- >>> prtEval3P ssn oz "134-01-2211"
 -- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
 --
--- >>> prtEval3P ssn ol "666-01-2211"
+-- >>> prtEval3P ssn oz "666-01-2211"
 -- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 666
 --
--- >>> prtEval3P ssn ol "666-01-2211"
+-- >>> prtEval3P ssn oz "666-01-2211"
 -- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 666
 --
--- >>> prtEval3P ssn ol "667-00-2211"
+-- >>> prtEval3P ssn oz "667-00-2211"
 -- Left Step 2. Failed Boolean Check(op) | number for group 2 invalid: found 0
 --
--- >>> prtEval3P ssn ol "666-01-2211"
+-- >>> prtEval3P ssn oz "666-01-2211"
 -- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 666
 --
--- >>> prtEval3P ssn ol "991-22-9999"
+-- >>> prtEval3P ssn oz "991-22-9999"
 -- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 991
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
@@ -212,13 +212,13 @@ type Ssnfmt = Printfnt 3 "%03d-%02d-%04d" Id
 
 -- | read in a time and validate it
 --
--- >>> prtEval3P hms ol "23:13:59"
+-- >>> prtEval3P hms oz "23:13:59"
 -- Right (Refined3 {r3In = [23,13,59], r3Out = "23:13:59"})
 --
--- >>> prtEval3P hms ol "23:13:60"
+-- >>> prtEval3P hms oz "23:13:60"
 -- Left Step 2. Failed Boolean Check(op) | seconds invalid: found 60
 --
--- >>> prtEval3P hms ol "26:13:59"
+-- >>> prtEval3P hms oz "26:13:59"
 -- Left Step 2. Failed Boolean Check(op) | hours invalid: found 26
 --
 hms :: Proxy Hms
@@ -239,16 +239,16 @@ type Hmsfmt = Printfnt 3 "%02d:%02d:%02d" Id
 
 -- | read in an ipv4 address and validate it
 --
--- >>> prtEval3P ip ol "001.223.14.1"
+-- >>> prtEval3P ip oz "001.223.14.1"
 -- Right (Refined3 {r3In = [1,223,14,1], r3Out = "001.223.014.001"})
 --
--- >>> prtEval3P ip ol "001.223.14.999"
+-- >>> prtEval3P ip oz "001.223.14.999"
 -- Left Step 2. Failed Boolean Check(op) | guard(4) octet out of range 0-255 found 999
 --
--- >>> prtEval3P ip ol "001.223.14.999.1"
+-- >>> prtEval3P ip oz "001.223.14.999.1"
 -- Left Step 1. Initial Conversion(ip) Failed | Regex no results
 --
--- >>> prtEval3P ip ol "001.257.14.1"
+-- >>> prtEval3P ip oz "001.257.14.1"
 -- Left Step 2. Failed Boolean Check(op) | guard(2) octet out of range 0-255 found 257
 --
 type Ip = '(Ipip, Ipop, Ipfmt, String)
@@ -276,13 +276,13 @@ type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m
 
 -- | convert a string from a given base \'i\' and store it internally as an base 10 integer
 --
--- >>> prtEval3P base16 ol "00fe"
+-- >>> prtEval3P base16 oz "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> prtEval3P (basen' @16 @(Between 100 400)) ol "00fe"
+-- >>> prtEval3P (basen' @16 @(Between 100 400)) oz "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> prtEval3P (basen' @16 @(GuardSimple (Id < 400) >> 'True)) ol "f0fe"
+-- >>> prtEval3P (basen' @16 @(GuardSimple (Id < 400) >> 'True)) oz "f0fe"
 -- Left Step 2. Failed Boolean Check(op) | 61694 < 400
 --
 type BaseN (n :: Nat) = BaseN' n 'True
@@ -319,14 +319,14 @@ datetimen = mkProxy3
 
 -- | ensures that two numbers are in a given range (emulates 'Refined.Refined')
 --
--- >>> prtEval3P (between @10 @16) ol 14
+-- >>> prtEval3P (between @10 @16) oz 14
 -- Right (Refined3 {r3In = 14, r3Out = 14})
 --
--- >>> prtEval3P (between @10 @16) ol 17
+-- >>> prtEval3P (between @10 @16) oz 17
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
 -- >>> prtEval3P (between @10 @16) o0 17
--- Left Step 2. False Boolean Check(op) | FalseP
+-- Left Step 2. False Boolean Check(op) | {True && False}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [17] ***
 -- <BLANKLINE>
@@ -359,10 +359,10 @@ type LuhnR (n :: Nat) = MakeR3 (LuhnT n)
 
 -- | Luhn check
 --
--- >>> prtEval3P (Proxy @(LuhnT 4)) ol "1230"
+-- >>> prtEval3P (Proxy @(LuhnT 4)) oz "1230"
 -- Right (Refined3 {r3In = [1,2,3,0], r3Out = "1230"})
 --
--- >>> prtEval3P (Proxy @(LuhnT 4)) ol "1234"
+-- >>> prtEval3P (Proxy @(LuhnT 4)) oz "1234"
 -- Left Step 2. Failed Boolean Check(op) | Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]
 
 -- | uses builtin 'Luhn'
@@ -390,13 +390,13 @@ oknot = mkProxy3
 
 -- | convert a string from a given base \'i\' and store it internally as a base \'j\' string
 --
--- >>> prtEval3P (Proxy @(BaseIJ 16 2)) ol "fe"
+-- >>> prtEval3P (Proxy @(BaseIJ 16 2)) oz "fe"
 -- Right (Refined3 {r3In = "11111110", r3Out = "fe"})
 --
--- >>> prtEval3P (Proxy @(BaseIJ 16 2)) ol "fge"
+-- >>> prtEval3P (Proxy @(BaseIJ 16 2)) oz "fge"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prtEval3P (Proxy @(BaseIJ' 16 2 (GuardSimple (ReadBase Int 2 Id < 1000) >> 'True))) ol "ffe"
+-- >>> prtEval3P (Proxy @(BaseIJ' 16 2 (GuardSimple (ReadBase Int 2 Id < 1000) >> 'True))) oz "ffe"
 -- Left Step 2. Failed Boolean Check(op) | 4094 < 1000
 --
 type BaseIJ (i :: Nat) (j :: Nat) = BaseIJ' i j 'True
@@ -405,37 +405,37 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- | take any valid Read/Show instance and turn it into a valid 'Refined3'
 --
 -- >>> :m + Data.Ratio
--- >>> prtEval3P (readshow @Rational) ol "13 % 3"
+-- >>> prtEval3P (readshow @Rational) oz "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
--- >>> prtEval3P (readshow @Rational) ol "13x % 3"
+-- >>> prtEval3P (readshow @Rational) oz "13x % 3"
 -- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3) failed
 --
--- >>> prtEval3P (readshow' @Rational @(Between (3 % 1) (5 % 1))) ol "13 % 3"
+-- >>> prtEval3P (readshow' @Rational @(Between (3 % 1) (5 % 1))) oz "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (11 %- 2) (3 %- 1)))) ol "-13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (11 %- 2) (3 %- 1)))) oz "-13 % 3"
 -- Right (Refined3 {r3In = (-13) % 3, r3Out = "(-13) % 3"})
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (15 % 1)))) ol "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (15 % 1)))) oz "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Guard (Printf "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1)) >> 'True))) ol "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Guard (Printf "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1)) >> 'True))) oz "13 % 3"
 -- Left Step 2. Failed Boolean Check(op) | invalid=4.33
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (11 % 1)))) ol "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (11 % 1)))) oz "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
 -- >>> let tmString = "2018-10-19 14:53:11.5121359 UTC"
 -- >>> let tm = read tmString :: UTCTime
--- >>> prtEval3P (readshow @UTCTime) ol tmString
+-- >>> prtEval3P (readshow @UTCTime) oz tmString
 -- Right (Refined3 {r3In = 2018-10-19 14:53:11.5121359 UTC, r3Out = "2018-10-19 14:53:11.5121359 UTC"})
 --
 -- >>> :m + Data.Aeson
--- >>> prtEval3P (readshow @Value) ol "String \"jsonstring\""
+-- >>> prtEval3P (readshow @Value) oz "String \"jsonstring\""
 -- Right (Refined3 {r3In = String "jsonstring", r3Out = "String \"jsonstring\""})
 --
--- >>> prtEval3P (readshow @Value) ol "Number 123.4"
+-- >>> prtEval3P (readshow @Value) oz "Number 123.4"
 -- Right (Refined3 {r3In = Number 123.4, r3Out = "Number 123.4"})
 --
 type ReadShow (t :: Type) = '(ReadP t Id, 'True, ShowP Id, String)

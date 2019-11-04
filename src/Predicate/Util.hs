@@ -35,6 +35,8 @@ module Predicate.Util (
   , tStrings
   , tForest
   , fixBoolT
+  , topMessage
+  , hasNoTree
 
  -- ** BoolT
   , BoolT(..)
@@ -47,6 +49,8 @@ module Predicate.Util (
   , boolT2P
   , BoolP
   , PE(PE)
+  , pStrings
+  , pBool
 
  -- ** create tree functions
   , mkNode
@@ -66,7 +70,9 @@ module Predicate.Util (
 
  -- ** display options
   , POpts(..)
+  , ODebug(..)
   , defOpts
+  , oz
   , ol
   , olc
   , o0
@@ -76,7 +82,6 @@ module Predicate.Util (
   , ou
   , oun
   , setw
-  , setd
   , setu
   , setc
   , color0
@@ -85,9 +90,13 @@ module Predicate.Util (
   , color3
   , color4
   , colorMe
+  , zero
   , lite
-  , unicode
+  , subnormal
   , normal
+  , noisy
+  , ansi
+  , unicode
 
 -- ** formatting functions
   , show01
@@ -196,6 +205,7 @@ import Data.Bool
 import Data.Foldable
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as N
+--import Data.Maybe
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -252,11 +262,16 @@ data PE = PE { _pBool :: BoolP -- ^ holds the result of running the predicate
 pBool :: Lens' PE BoolP
 pBool afb (PE x y) = flip PE y <$> afb x
 
+pStrings :: Lens' PE [String]
+pStrings afb s = (\b -> s { _pStrings = b }) <$> afb (_pStrings s)
+
 -- | creates a Node for the evaluation tree
 mkNode :: POpts -> BoolT a -> [String] -> [Holder] -> TT a
-mkNode opts bt ss hs
-  | oLite opts = TT bt [] []
-  | otherwise = TT bt ss (map fromTTH hs)
+mkNode opts bt ss hs =
+  case oDebug opts of
+    OZero -> TT bt [] []
+    OLite -> TT bt (take 1 ss) [] -- keeps the last one so we can use the root to give more details on failure (especially for Refined and Refined3 types)
+    _ -> TT bt ss (map fromTTH hs)
 
 -- | creates a Boolean node for a predicate type
 mkNodeB :: POpts -> Bool -> [String] -> [Holder] -> TT Bool
@@ -324,15 +339,13 @@ newtype PColor = PColor (BoolP -> String -> String)
 
 -- | customizable options
 data POpts = POpts { oWidth :: Int -- ^ length of data to display for 'showLitImpl'
-                   , oDebug :: !Int  -- ^ debug level
+                   , oDebug :: !ODebug -- ^ debug level
                    , oDisp :: Disp -- ^ display the tree using the normal tree or unicode
-                   , oHide :: !Int -- ^ hides one layer of a tree
                    , oColor :: !(String, PColor) -- ^ color palette used
-                   , oLite :: !Bool -- ^ skip the tree entirely and display the end result
                    }
 
 -- | display format for the tree
-data Disp = NormalDisp -- ^ draw normal tree
+data Disp = Ansi -- ^ draw normal tree
           | Unicode  -- ^ use unicode
           deriving (Show, Eq)
 
@@ -341,23 +354,31 @@ instance Show POpts where
     "POpts: showA=" <> show (oWidth opts)
     <> " debug=" <> show (oDebug opts)
     <> " disp=" <> show (oDisp opts)
-    <> " hide=" <> show (oHide opts)
     <> " color=" <> show (fst (oColor opts))
-    <> " lite=" <> show (oLite opts)
 
 defOpts :: POpts
 defOpts = POpts
     { oWidth = 200
-    , oDebug = 2
-    , oDisp = NormalDisp
-    , oHide = 0
+    , oDebug = ONormal
+    , oDisp = Ansi
     , oColor = color1
-    , oLite = False
     }
+
+data ODebug =
+       OZero
+     | OLite
+     | OSubNormal
+     | ONormal
+     | ONoisy
+     deriving (Ord, Show, Eq, Enum, Bounded)
+
+-- | skip colors and just return the summary
+oz :: POpts
+oz = defOpts { oColor = color0, oDebug = OZero }
 
 -- | skip colors and just return the summary
 ol :: POpts
-ol = defOpts { oColor = color0, oLite = True }
+ol = defOpts { oColor = color0, oDebug = OLite }
 
 -- | skip the detail and just return the summary but keep the colors
 olc :: POpts
@@ -369,7 +390,7 @@ o0 = defOpts { oColor = color0 }
 
 -- | displays the detailed evaluation tree using colors.
 o2 :: POpts
-o2 = defOpts { oDebug = 2 }
+o2 = defOpts
 
 -- | same as 'o2' but for a narrow display
 o2n :: POpts
@@ -377,7 +398,7 @@ o2n = o2 { oWidth = 120 }
 
 -- | same as 'o2' for a wider display and more lenient debug mode setting
 o3 :: POpts
-o3 = defOpts { oDebug = 3, oWidth = 400 }
+o3 = defOpts { oDebug = ONoisy, oWidth = 400 }
 
 -- | displays the detailed evaluation tree using unicode and colors. ('o2' works better on Windows)
 ou :: POpts
@@ -392,8 +413,16 @@ setw :: Int -> POpts -> POpts
 setw w o = o { oWidth = w }
 
 -- | helper method to set the debug level
-setd :: Int -> POpts -> POpts
-setd v o = o { oDebug = v }
+noisy :: POpts -> POpts
+noisy o = o { oDebug = ONoisy }
+
+-- | helper method to set the debug level
+normal :: POpts -> POpts
+normal o = o { oDebug = ONormal }
+
+-- | helper method to set the debug level
+subnormal :: POpts -> POpts
+subnormal o = o { oDebug = OSubNormal }
 
 -- | set display to unicode and colors
 setu :: POpts -> POpts
@@ -461,13 +490,13 @@ lit01' opts msg0 ret fmt as = msg0 <> show0 opts " " ret <> showLit1 opts (" | "
 
 -- | display all data regardless of debug level
 showLit0 :: POpts -> String -> String -> String
-showLit0 o s a = showLitImpl o 0 s a
+showLit0 o s a = showLitImpl o OLite s a
 
 -- | more restrictive: only display data at debug level 1 or less
 showLit1 :: POpts -> String -> String -> String
-showLit1 o s a = showLitImpl o 1 s a
+showLit1 o s a = showLitImpl o OLite s a
 
-showLitImpl :: POpts -> Int -> String -> String -> String
+showLitImpl :: POpts -> ODebug -> String -> String -> String
 showLitImpl o i s a =
   if oDebug o >= i then
     let f n = let ss = take n a
@@ -476,15 +505,15 @@ showLitImpl o i s a =
   else ""
 
 show0 :: Show a => POpts -> String -> a -> String
-show0 o s a = showAImpl o 0 s a
+show0 o s a = showAImpl o OLite s a
 
 show3 :: Show a => POpts -> String -> a -> String
-show3 o s a = showAImpl o 3 s a
+show3 o s a = showAImpl o ONoisy s a
 
 show1 :: Show a => POpts -> String -> a -> String
-show1 o s a = showAImpl o 1 s a
+show1 o s a = showAImpl o OLite s a
 
-showAImpl :: Show a => POpts -> Int -> String -> a -> String
+showAImpl :: Show a => POpts -> ODebug -> String -> a -> String
 showAImpl o i s a = showLitImpl o i s (show a)
 
 -- | Regex options for Rescan Resplit Re etc
@@ -588,7 +617,7 @@ splitAndAlign opts msgs ts =
      ([], tfs) -> Right (valsFromTTs (map snd ts), tfs)
 
 formatList :: forall x z . Show x => POpts -> [((Int, x), z)] -> String
-formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts 0 ", a=" a <> ")")
+formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts OLite ", a=" a <> ")")
 
 -- | extract all root values from a list of trees
 valsFromTTs :: [TT a] -> [a]
@@ -840,9 +869,18 @@ instance GetOrd 'Clt where getOrd = ("<", (<))
 instance GetOrd 'Cne where getOrd = ("/=",(/=))
 
 toNodeString :: POpts -> PE -> String
-toNodeString opts bpe
-  | oLite opts = error $ "shouldnt be calling this if we are going lite: toNodeString oLite " ++ show bpe
-  | otherwise = showBoolP opts (_pBool bpe) <> " " <> displayMessages (_pStrings bpe)
+toNodeString opts bpe =
+  if hasNoTree opts then error $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
+  else showBoolP opts (_pBool bpe) <> " " <> displayMessages (_pStrings bpe)
+
+hasNoTree :: POpts -> Bool
+hasNoTree opts =
+  case oDebug opts of
+    OZero -> True
+    OLite -> True
+    OSubNormal -> False
+    ONormal -> False
+    ONoisy -> False
 
 nullSpace :: String -> String
 nullSpace s | null s = ""
@@ -885,7 +923,7 @@ prtImpl = (putStr .) . showImpl
 
 fixLite :: forall a . Show a => POpts -> a -> Tree PE -> String
 fixLite opts a t
-  | oLite opts = fixPresentP opts (t ^. root . pBool) a <> "\n"
+  | hasNoTree opts = fixPresentP opts (t ^. root . pBool) a <> "\n"
   | otherwise = prtTreePure opts t
 
 fixPresentP :: Show a => POpts -> BoolP -> a -> String
@@ -896,26 +934,32 @@ fixPresentP opts bp a =
 
 prtTreePure :: POpts -> Tree PE -> String
 prtTreePure opts t
-  | oLite opts = showBoolP opts (t ^. root . pBool)
+  | hasNoTree opts = showBoolP opts (t ^. root . pBool)
   | otherwise = showImpl opts $ fmap (toNodeString opts) t
+
+topMessage :: TT a -> String
+topMessage pp = maybe "" (\x -> " {" <> x <> "}") (pp ^? tStrings . ix 0)
 
 showImpl :: POpts -> Tree String -> String
 showImpl o =
   case oDisp o of
     Unicode -> TV.showTree
-    NormalDisp -> drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
+    Ansi -> drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
 
 -- | skip displaying the tree and just output the result
 lite :: POpts -> POpts
-lite o = o { oLite = True }
+lite o = o { oDebug = OLite }
+
+zero :: POpts -> POpts
+zero o = o { oDebug = OZero }
 
 -- | display in unicode (non-Windows)
 unicode :: POpts -> POpts
 unicode o = o { oDisp = Unicode }
 
 -- | normal display
-normal :: POpts -> POpts
-normal o = o { oDisp = NormalDisp }
+ansi :: POpts -> POpts
+ansi o = o { oDisp = Ansi }
 
 prettyRational :: Rational -> String
 prettyRational (numerator &&& denominator -> (n,d)) =

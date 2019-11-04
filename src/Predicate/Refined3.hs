@@ -95,6 +95,9 @@ import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
 import Data.Maybe (fromMaybe)
+import Control.Lens ((^?),ix)
+import Data.Tree.Lens (root)
+import Data.Char (isSpace)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -122,33 +125,33 @@ import Data.Maybe (fromMaybe)
 --
 -- Although a common scenario is String as input, you are free to choose any input type you like
 --
--- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 255) @(Printf "%x" Id) ol "00fe"
+-- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 255) @(Printf "%x" Id) oz "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 253) @(Printf "%x" Id) ol "00fe"
+-- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 253) @(Printf "%x" Id) oz "00fe"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 255) @(Printf "%x" Id) ol "00fg"
+-- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 255) @(Printf "%x" Id) oz "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) ol "198.162.3.1.5"
+-- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) oz "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) ol "198.162.3.1"
+-- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) oz "198.162.3.1"
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prtEval3 @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) ol (2019,10,13)
+-- >>> prtEval3 @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) oz (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
--- >>> prtEval3 @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) ol (2019,10,12)
+-- >>> prtEval3 @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) oz (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
 -- >>> type T4 k = '(MkDay >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
--- >>> prtEval3P (Proxy @(T4 _)) ol (2019,10,12)
+-- >>> prtEval3P (Proxy @(T4 _)) oz (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
--- >>> prtEval3P (Proxy @(T4 _)) ol (2019,10,13)
+-- >>> prtEval3P (Proxy @(T4 _)) oz (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
 data Refined3 ip op fmt i = Refined3 { r3In :: PP ip i, r3Out :: PP fmt (PP ip i) }
@@ -243,7 +246,7 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
 -- >>> removeAnsi $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
--- Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
+-- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [16663610] ***
 -- <BLANKLINE>
@@ -316,7 +319,7 @@ arbRefined3With _ opts f =
 -- >>> type K1 = MakeR3 '(ReadP Day Id, 'True, ShowP Id, String)
 -- >>> type K2 = MakeR3 '(ReadP Day Id, Between (ReadP Day "2019-03-30") (ReadP Day "2019-06-01"), ShowP Id, String)
 -- >>> type K3 = MakeR3 '(ReadP Day Id, Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01"), ShowP Id, String)
--- >>> r = unsafeRefined3' ol "2019-04-23" :: K1
+-- >>> r = unsafeRefined3' oz "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
 --
@@ -324,7 +327,7 @@ arbRefined3With _ opts f =
 -- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
--- Refined3:Step 2. False Boolean Check(op) | FalseP
+-- Refined3:Step 2. False Boolean Check(op) | {False && True}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
 -- <BLANKLINE>
@@ -411,7 +414,7 @@ withRefined3TIO opts = (>>=) . newRefined3TPIO (Proxy @'(ip,op,fmt,i)) opts
 -- >>> type Base n p = '(ReadBase Int n Id, p, ShowBase 16 Id, String)
 -- >>> base16 = Proxy @(Base 16 (Between 100 200))
 -- >>> base2 = Proxy @(Base 2 'True)
--- >>> prtRefinedTIO $ withRefined3TP base16 ol "a3" $ \x -> withRefined3TP base2 ol "1001110111" $ \y -> pure (r3In x + r3In y)
+-- >>> prtRefinedTIO $ withRefined3TP base16 oz "a3" $ \x -> withRefined3TP base2 oz "1001110111" $ \y -> pure (r3In x + r3In y)
 -- 794
 --
 -- this example fails as the the hex value is out of range
@@ -440,7 +443,7 @@ withRefined3TIO opts = (>>=) . newRefined3TPIO (Proxy @'(ip,op,fmt,i)) opts
 --    |
 --    `- P '200
 -- <BLANKLINE>
--- failure msg[Step 2. False Boolean Check(op) | FalseP]
+-- failure msg[Step 2. False Boolean Check(op) | {True && False}]
 --
 withRefined3T :: forall ip op fmt i m b
   . (Monad m, Refined3C ip op fmt i, Show (PP ip i), Show i)
@@ -467,7 +470,7 @@ newRefined3T = newRefined3TP (Proxy @'(ip,op,fmt,i))
 
 -- | create a wrapped 'Refined3' type
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(MkDay >> JustFail "asfd" Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) ol (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(MkDay >> JustFail "asfd" Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) oz (2019,11,1)
 -- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
 --
 newRefined3TP :: forall m ip op fmt i proxy
@@ -717,7 +720,7 @@ eval3MQuick opts a = do
 prt3IO :: (Show a, Show b) => POpts -> (RResults a b, Maybe r) -> IO (Either String r)
 prt3IO opts (ret,mr) = do
   let m3 = prt3Impl opts ret
-  unless (oLite opts) $ putStrLn $ m3Long m3
+  unless (hasNoTree opts) $ putStrLn $ m3Long m3
   return $ maybe (Left (m3Desc m3 <> " | " <> m3Short m3)) Right mr
 
 prt3 :: (Show a, Show b) => POpts -> (RResults a b, Maybe r) -> Either Msg3 r
@@ -734,7 +737,7 @@ prt3Impl :: (Show a, Show b)
 prt3Impl opts v =
   let outmsg msg = "\n*** " <> msg <> " ***\n\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
-      mkMsg3 m n r | oLite opts = Msg3 m n ""
+      mkMsg3 m n r | hasNoTree opts = Msg3 m n ""
                    | otherwise = Msg3 m n r
   in case v of
        RF e t1 ->
@@ -750,7 +753,10 @@ prt3Impl opts v =
               <> prtTreePure opts t2
          in mkMsg3 m n r
        RTFalse a t1 t2 ->
-         let (m,n) = ("Step 2. False Boolean Check(op)", "FalseP")
+         let (m,n) = ("Step 2. False Boolean Check(op)", z)
+             z = case t2 ^? root . pStrings . ix 0 of
+                   Just w -> if null (dropWhile isSpace w) then "FalseP" else ("{" <> w <> "}")
+                   Nothing -> "FalseP"
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg m

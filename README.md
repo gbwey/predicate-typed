@@ -188,7 +188,7 @@ False True && False
    |
    `- P '255
 
-refined3TH: predicate failed with Step 2. False Boolean Check(op) | FalseP
+refined3TH: predicate failed with Step 2. False Boolean Check(op) | {True && False}
     * In the Template Haskell splice $$(refined3TH' o0 "000ffff")
       In the expression: $$(refined3TH' o0 "000ffff") :: MakeR3 Hex
       In an equation for `it':
@@ -240,7 +240,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ```haskell
 >either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
-Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
+Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False}
 
 ***Step 1. Success Initial Conversion(ip) [16663610] ***
 

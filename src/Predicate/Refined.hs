@@ -80,49 +80,49 @@ import Data.Binary (Binary)
 
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
--- >>> prtRefinedIO @(Between 10 14) ol 13
+-- >>> prtRefinedIO @(Between 10 14) oz 13
 -- Right (Refined {unRefined = 13})
 --
--- >>> prtRefinedIO @(Between 10 14) ol 99
+-- >>> prtRefinedIO @(Between 10 14) oz 99
 -- Left FalseP
 --
--- >>> prtRefinedIO @(Last Id >> Len == 4) ol ["one","two","three","four"]
+-- >>> prtRefinedIO @(Last Id >> Len == 4) oz ["one","two","three","four"]
 -- Right (Refined {unRefined = ["one","two","three","four"]})
 --
--- >>> prtRefinedIO @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) ol "141.213.1.99"
+-- >>> prtRefinedIO @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) oz "141.213.1.99"
 -- Right (Refined {unRefined = "141.213.1.99"})
 --
--- >>> prtRefinedIO @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) ol "141.213.1"
+-- >>> prtRefinedIO @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) oz "141.213.1"
 -- Left FalseP
 --
--- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> 'True) ol "141.213.1"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> 'True) oz "141.213.1"
 -- Left (FailP "bad length: found 3")
 --
--- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) ol "141.213.1.444"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) oz "141.213.1.444"
 -- Left (FailP "octet 4 out of range 444")
 --
--- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) ol "141.213.1x34.444"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) oz "141.213.1x34.444"
 -- Left (FailP "ReadP Int (1x34) failed")
 --
--- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) ol "12344"
+-- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) oz "12344"
 -- Right (Refined {unRefined = "12344"})
 --
--- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) ol "12340"
+-- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) oz "12340"
 -- Left FalseP
 --
--- >>> prtRefinedIO @(Any (Prime Id) Id) ol [11,13,17,18]
+-- >>> prtRefinedIO @(Any (Prime Id) Id) oz [11,13,17,18]
 -- Right (Refined {unRefined = [11,13,17,18]})
 --
--- >>> prtRefinedIO @(All (Prime Id) Id) ol [11,13,17,18]
+-- >>> prtRefinedIO @(All (Prime Id) Id) oz [11,13,17,18]
 -- Left FalseP
 --
--- >>> prtRefinedIO @(Snd Id !! Fst Id >> Len > 5) ol (2,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @(Snd Id !! Fst Id >> Len > 5) oz (2,["abc","defghij","xyzxyazsfd"])
 -- Right (Refined {unRefined = (2,["abc","defghij","xyzxyazsfd"])})
 --
--- >>> prtRefinedIO @(Snd Id !! Fst Id >> Len > 5) ol (27,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @(Snd Id !! Fst Id >> Len > 5) oz (27,["abc","defghij","xyzxyazsfd"])
 -- Left (FailP "(!!) index not found")
 --
--- >>> prtRefinedIO @(Snd Id !! Fst Id >> Len <= 5) ol (2,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @(Snd Id !! Fst Id >> Len <= 5) oz (2,["abc","defghij","xyzxyazsfd"])
 -- Left FalseP
 newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
 
@@ -145,7 +145,7 @@ instance (RefinedC p a, Read a) => Read (Refined p a) where
                              "unRefined"
                              (PCR.reset GR.readPrec)
                GR.expectP (RL.Punc "}")
-               let (_,mr) = runIdentity $ newRefined @p ol fld0
+               let (_,mr) = runIdentity $ newRefined @p oz fld0
                case mr of
                  Nothing -> fail ""
                  Just _r -> pure (Refined fld0)
@@ -199,7 +199,7 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 -- >>> type K1 = Refined (ReadP Day Id >> 'True) String
 -- >>> type K2 = Refined (ReadP Day Id >> Between (ReadP Day "2019-03-30") (ReadP Day "2019-06-01")) String
 -- >>> type K3 = Refined (ReadP Day Id >> Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01")) String
--- >>> r = unsafeRefined' ol "2019-04-23" :: K1
+-- >>> r = unsafeRefined' oz "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined {unRefined = "2019-04-23"}
 --
@@ -321,7 +321,10 @@ prtRefinedIO :: forall p a
 prtRefinedIO opts a = do
   tt <- evalBool (Proxy @p) opts a
   let msg = (_tBool tt ^. boolT2P, prtTreePure opts (fromTT tt))
-  unless (oLite opts) $ putStrLn $ snd msg
+  case oDebug opts of
+     OZero -> pure ()
+     OLite -> putStrLn (topMessage tt)
+     _ -> putStrLn $ snd msg
   pure $ case getValueLR opts "" tt [] of
     Right True -> Right (Refined a)
     _ -> Left (fst msg)
