@@ -86,7 +86,7 @@ import Data.Binary (Binary)
 -- >>> prtRefinedIO @(Between 10 14) ol 99
 -- Left FalseP
 --
--- >>> prtRefinedIO @(Last >> Len == 4) ol ["one","two","three","four"]
+-- >>> prtRefinedIO @(Last Id >> Len == 4) ol ["one","two","three","four"]
 -- Right (Refined {unRefined = ["one","two","three","four"]})
 --
 -- >>> prtRefinedIO @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) ol "141.213.1.99"

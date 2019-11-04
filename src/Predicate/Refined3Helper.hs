@@ -29,17 +29,17 @@ module Predicate.Refined3Helper (
   , Hmsip
   , Hmsop
   , Hmsfmt
-  , DateFmts
-  , DateN
-  , DateTimeFmts
-  , DateTimeN
   , daten
+  , DateN
   , datetimen
+  , DateTimeN
+  , DateFmts
+  , DateTimeFmts
 
   -- ** credit cards
   , ccn
-  , cc11
   , Ccn
+  , cc11
   , CC11
   , LuhnR
   , LuhnT

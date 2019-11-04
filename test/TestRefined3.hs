@@ -227,7 +227,7 @@ type Ipz3 = '(Ip4A, Ip4B, Id, String)
 
 -- need to add 'True to make it a predicate
 -- guards checks also that there are exactly 3 entries!
-type Hmsconv = Do '[Rescan HmsRE Id, Head, (Snd Id), Map (ReadBaseInt 10 Id) Id]
+type Hmsconv = Do '[Rescan HmsRE Id, Head Id, (Snd Id), Map (ReadBaseInt 10 Id) Id]
 
 type Hmsz1 = '(Hmsconv &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
             , Fst Id >> Hmsop >> 'True

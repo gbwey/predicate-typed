@@ -1,7 +1,7 @@
 {- |
      Provides a type-level Dsl for refinement types
 
-     To use refinement types you will need to also import 'Predicate.Refined' and/or 'Predicate.Refined3'
+     To use refinement types you will need to also import "Predicate.Refined" and/or "Predicate.Refined3"
 -}
 module Predicate (
    module Predicate.Core

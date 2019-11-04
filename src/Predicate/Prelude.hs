@@ -29,7 +29,7 @@
      Contains instances of the class 'P' for evaluating expressions at the type level.
 -}
 module Predicate.Prelude (
-  -- ** boolean methods
+  -- ** boolean expressions
     type (&&)
   , type (||)
   , type (~>)
@@ -52,7 +52,7 @@ module Predicate.Prelude (
   , AllNegative'
   , Negative
 
-  -- ** regex methods
+  -- ** regex expressions
   , Re
   , Re'
   , Rescan
@@ -74,7 +74,7 @@ module Predicate.Prelude (
   , MakeRR2
   , MakeRR3
 
-  -- ** tuple methods
+  -- ** tuple expressions
   , Fst
   , Snd
   , Thd
@@ -91,7 +91,7 @@ module Predicate.Prelude (
   , TupleI
   , Pairs
 
- -- ** character methods
+ -- ** character expressions
   , IsLower
   , IsUpper
   , IsNumber
@@ -103,7 +103,7 @@ module Predicate.Prelude (
   , IsSeparator
   , IsLatin1
 
-  -- ** date time methods
+  -- ** datetime expressions
   , FormatTimeP
   , ParseTimeP
   , ParseTimeP'
@@ -113,7 +113,7 @@ module Predicate.Prelude (
   , MkDay'
   , UnMkDay
 
-  -- ** numeric methods
+  -- ** numeric expressions
   , type (+)
   , type (-)
   , type (*)
@@ -139,7 +139,8 @@ module Predicate.Prelude (
   , QuotRem
   , Quot
   , Rem
-  -- ** rational numbers
+
+  -- *** rational numbers
   , type (%)
   , type (%-)
   , type (-%)
@@ -147,13 +148,13 @@ module Predicate.Prelude (
   , FromRational
   , FromRational'
 
- -- ** proxy methods
+ -- ** proxy expressions
   , MkProxy
   , ProxyT
   , ProxyT'
   , Unproxy
 
- -- ** read / show methods
+ -- ** read / show expressions
   , ShowP
   , ReadP
   , ReadP'
@@ -166,7 +167,7 @@ module Predicate.Prelude (
   , ReadBaseInt
   , ShowBase
 
-  -- ** arrow methods
+  -- ** arrow expressions
   , type (&&&)
   , type (***)
   , First
@@ -174,7 +175,7 @@ module Predicate.Prelude (
   , type (|||)
   , type (+++)
 
- -- ** compare methods
+ -- ** compare expressions
   , type (>)
   , type (>=)
   , type (==)
@@ -202,29 +203,30 @@ module Predicate.Prelude (
   , Cmp
   , CmpI
 
-  -- ** enum methods
+  -- ** enum expressions
   , Succ
   , Pred
   , FromEnum
   , ToEnum
   , ToEnum'
   , EnumFromTo
+  -- *** bounded enum expressions
   , SuccB
   , SuccB'
   , PredB
   , PredB'
-  , ToEnumB
-  , ToEnumB'
-  , ToEnumBF
+  , ToEnumBDef
+  , ToEnumBDef'
+  , ToEnumBFail
 
- -- ** wrap / unwrap methods
+ -- ** wrap / unwrap expressions
   , Unwrap
   , Wrap
   , Wrap'
   , Coerce
   , Coerce2
 
-  -- ** list / foldable methods
+  -- ** list / foldable expressions
   , Map
   , Concat
   , ConcatMap
@@ -246,10 +248,6 @@ module Predicate.Prelude (
   , SplitAt
   , Take
   , Drop
-  , Head
-  , Tail
-  , Init
-  , Last
   , Min
   , Max
   , Sum
@@ -259,9 +257,7 @@ module Predicate.Prelude (
   , ToList'
   , IToList
   , IToList'
-  , ToListExt
   , FromList
-  , FromListExt
   , EmptyList
   , EmptyList'
   , Singleton
@@ -272,20 +268,11 @@ module Predicate.Prelude (
   , SortOnDesc
   , Remove
   , Keep
-  , HeadDef
-  , HeadFail
-  , TailDef
-  , TailFail
-  , LastDef
-  , LastFail
-  , InitDef
-  , InitFail
-  , Head'
-  , Tail'
-  , Last'
-  , Init'
+ -- *** overloaded list expressions
+  , ToListExt
+  , FromListExt
 
- -- ** maybe methods
+ -- ** maybe expressions
   , MkNothing
   , MkNothing'
   , MkJust
@@ -293,13 +280,13 @@ module Predicate.Prelude (
   , IsJust
   , MapMaybe
   , CatMaybes
-  , Just'
+  , Just
   , JustDef
   , JustFail
   , MaybeIn
   , MaybeBool
 
- -- ** either methods
+ -- ** either expressions
   , PartitionEithers
   , IsLeft
   , IsRight
@@ -318,7 +305,7 @@ module Predicate.Prelude (
   , MkLeftAlt
   , EitherIn
 
-  -- ** semigroup / monoid methods
+  -- ** semigroup / monoid expressions
   , type (<>)
   , MConcat
   , STimes
@@ -335,26 +322,36 @@ module Predicate.Prelude (
   , MEmptyT2
   , MEmptyT2'
 
-  -- ** indexing methods
+  -- ** indexing expressions
   , Ix
   , Ix'
   , IxL
   , type (!!)
   , Lookup
-  , type (!!!)
-  , type (!!!!)
   , LookupDef
   , LookupDef'
   , LookupFail
   , LookupFail'
 
- -- cons / uncons methods
+ -- cons / uncons expressions
   , type (:+)
   , type (+:)
   , Uncons
   , Unsnoc
+  , Head
+  , Tail
+  , Init
+  , Last
+  , HeadDef
+  , HeadFail
+  , TailDef
+  , TailFail
+  , LastDef
+  , LastFail
+  , InitDef
+  , InitFail
 
- -- ** these methods
+ -- ** these expressions
   , PartitionThese
   , Thiss
   , Thats
@@ -380,7 +377,7 @@ module Predicate.Prelude (
   , TheseId
   , TheseX
 
- -- ** fold / unfold methods
+ -- ** fold / unfold expressions
   , Scanl
   , ScanN
   , ScanNA
@@ -393,7 +390,7 @@ module Predicate.Prelude (
   , IterateNWhile
   , IterateNUntil
 
-  -- ** failure methods
+  -- ** failure expressions
   , Fail
   , Failp
   , Failt
@@ -403,14 +400,14 @@ module Predicate.Prelude (
   , Catch
   , Catch'
 
-  -- ** zip methods
+  -- ** zip expressions
   , ZipThese
   , ZipL
   , ZipR
   , ZipTrunc
   , Unzip
 
-  -- ** conditional methods
+  -- ** conditional expressions
   , If
   , Case
   , Case'
@@ -430,15 +427,7 @@ module Predicate.Prelude (
   , GuardsNLax
   , GuardsDetail
 
--- ** parallel methods
-  , ToPara
-  , Para
-  , ParaLax
-  , ParaN
-  , ParaNLax
-  , Repeat
-
-  -- ** IO methods
+  -- ** IO expressions
   , ReadFile
   , FileExists
   , ReadDir
@@ -454,7 +443,7 @@ module Predicate.Prelude (
   , Stderr
   , Stdin
 
-  -- ** string methods
+  -- ** string expressions
   , ToLower
   , ToUpper
   , Trim
@@ -472,7 +461,7 @@ module Predicate.Prelude (
   , FromStringP
   , FromStringP'
 
-  -- ** printf methods
+  -- ** printf expressions
   , Printf
   , Printfn
   , Printfnt
@@ -480,15 +469,15 @@ module Predicate.Prelude (
   , Printf2
   , Printf3
 
-  -- ** higher order methods
+  -- ** higher order expressions
   , Pure
   , Pure2
   , FoldMap
   , type (<$)
   , type (<*)
   , type (*>)
-  , Fmap_1
-  , Fmap_2
+  , FMapFst
+  , FMapSnd
   , Sequence
   , Traverse
   , Join
@@ -505,13 +494,20 @@ module Predicate.Prelude (
   , type (<<)
   , DoN
 
+  -- *** parallel expressions
+  , ToPara
+  , Para
+  , ParaLax
+  , ParaN
+  , ParaNLax
+  , Repeat
+
   -- ** miscellaneous
   , Prime
   , Luhn
   , Char1
   , Hide
   , Hole
-  , H
   , Skip
   , type (|>)
   , type (>|)
@@ -2388,10 +2384,10 @@ instance (PP p a ~ [b]
             ret = (x,y)
        in mkNode opts (PresentT ret) [show01' opts msg1 ret "n=" n <> show1 opts " | " p] [hh pp, hh qq]
 
-type Tail = Uncons >> 'Just (Snd Id)
-type Head = Uncons >> 'Just (Fst Id)
-type Init = Unsnoc >> 'Just (Fst Id)
-type Last = Unsnoc >> 'Just (Snd Id)
+--type Tail = Uncons >> 'Just (Snd Id)
+--type Head = Uncons >> 'Just (Fst Id)
+--type Init = Unsnoc >> 'Just (Fst Id)
+--type Last = Unsnoc >> 'Just (Snd Id)
 
 -- | similar to 'Control.Arrow.&&&'
 type p &&& q = W '(p, q)
@@ -3314,21 +3310,21 @@ instance (PP p x ~ a
 
 -- | bounded 'toEnum' function
 --
--- >>> pl @(ToEnumB Ordering LT) 2
+-- >>> pl @(ToEnumBDef Ordering LT) 2
 -- Present GT
 -- PresentT GT
 --
--- >>> pl @(ToEnumB Ordering LT) 6
+-- >>> pl @(ToEnumBDef Ordering LT) 6
 -- Present LT
 -- PresentT LT
 --
--- >>> pl @(ToEnumBF Ordering) 6
+-- >>> pl @(ToEnumBFail Ordering) 6
 -- Error ToEnum bounded failed
 -- FailT "ToEnum bounded failed"
 --
-data ToEnumB' t def
-type ToEnumB (t :: Type) def = ToEnumB' (Hole t) def
-type ToEnumBF (t :: Type) = ToEnumB' (Hole t) (Failp "ToEnum bounded failed")
+data ToEnumBDef' t def
+type ToEnumBDef (t :: Type) def = ToEnumBDef' (Hole t) def
+type ToEnumBFail (t :: Type) = ToEnumBDef' (Hole t) (Failp "ToEnum bounded failed")
 
 instance (P def (Proxy (PP t a))
         , PP def (Proxy (PP t a)) ~ (PP t a)
@@ -3337,10 +3333,10 @@ instance (P def (Proxy (PP t a))
         , Bounded (PP t a)
         , Enum (PP t a)
         , Integral a
-        ) => P (ToEnumB' t def) a where
-  type PP (ToEnumB' t def) a = PP t a
+        ) => P (ToEnumBDef' t def) a where
+  type PP (ToEnumBDef' t def) a = PP t a
   eval _ opts a = do
-    let msg0 = "ToEnumB"
+    let msg0 = "ToEnumBDef"
     case toEnumMay $ fromIntegral a of
       Nothing -> do
          let msg1 = msg0 <> " out of range"
@@ -3467,34 +3463,34 @@ instance ([PP p a] ~ PP q a
         let b = p `elem` q
         in mkNodeB opts b [show p <> " `elem` " <> show q] [hh pp, hh qq]
 
-type Head' p = HeadFail "Head(empty)" p
-type Tail' p = TailFail "Tail(empty)" p
-type Last' p = LastFail "Last(empty)" p
-type Init' p = InitFail "Init(empty)" p
+--type Head' p = HeadFail "Head(empty)" p
+--type Tail' p = TailFail "Tail(empty)" p
+--type Last p = LastFail "Last(empty)" p
+--type Init' p = InitFail "Init(empty)" p
 
 -- | similar to fmap fst
 --
--- >>> pl @Fmap_1 (Just (13,"Asf"))
+-- >>> pl @FMapFst (Just (13,"Asf"))
 -- Present Just 13
 -- PresentT (Just 13)
 --
 -- to make this work we grab the fst or snd out of the Maybe so it is a head or not/ is a tail or not etc!
 -- we still have access to the whole original list so we dont lose anything!
-data Fmap_1
-instance Functor f => P Fmap_1 (f (a,x)) where
-  type PP Fmap_1 (f (a,x)) = f a
-  eval _ opts mb = pure $ mkNode opts (PresentT (fst <$> mb)) ["Fmap_1"] []
+data FMapFst
+instance Functor f => P FMapFst (f (a,x)) where
+  type PP FMapFst (f (a,x)) = f a
+  eval _ opts mb = pure $ mkNode opts (PresentT (fst <$> mb)) ["FMapFst"] []
 
 -- | similar to fmap snd
 --
--- >>> pl @Fmap_2 (Just ("asf",13))
+-- >>> pl @FMapSnd (Just ("asf",13))
 -- Present Just 13
 -- PresentT (Just 13)
 --
-data Fmap_2
-instance Functor f => P Fmap_2 (f (x,a)) where
-  type PP Fmap_2 (f (x,a)) = f a
-  eval _ opts mb = pure $ mkNode opts (PresentT (snd <$> mb)) ["Fmap_2"] []
+data FMapSnd
+instance Functor f => P FMapSnd (f (x,a)) where
+  type PP FMapSnd (f (x,a)) = f a
+  eval _ opts mb = pure $ mkNode opts (PresentT (snd <$> mb)) ["FMapSnd"] []
 
 -- | takes the head or default of a list-like object
 --
@@ -3536,14 +3532,7 @@ instance Functor f => P Fmap_2 (f (x,a)) where
 -- Present ()
 -- PresentT ()
 --
-type HeadDef p q = JustDef p (q >> Uncons >> Fmap_1)
-
-
--- | takes the head of a list or defaults to the monoid instance
---
--- see 'ConsT' for other supported types eg 'Seq.Seq'
---
--- type HeadP q = GProxy (Uncons >> Fmap_1) q
+type HeadDef p q = JustDef p (q >> Uncons >> FMapFst)
 
 -- | takes the head of a list or fail
 --
@@ -3557,17 +3546,17 @@ type HeadDef p q = JustDef p (q >> Uncons >> Fmap_1)
 -- Error empty list
 -- FailT "empty list"
 --
-type HeadFail msg q = JustFail msg (q >> Uncons >> Fmap_1)
+type HeadFail msg q = JustFail msg (q >> Uncons >> FMapFst)
 
-type TailDef p q = JustDef p (q >> Uncons >> Fmap_2)
-type TailFail msg q = JustFail msg (q >> Uncons >> Fmap_2)
+type TailDef p q = JustDef p (q >> Uncons >> FMapSnd)
+type TailFail msg q = JustFail msg (q >> Uncons >> FMapSnd)
 
 
-type LastDef p q = JustDef p (q >> Unsnoc >> Fmap_2)
-type LastFail msg q = JustFail msg (q >> Unsnoc >> Fmap_2)
+type LastDef p q = JustDef p (q >> Unsnoc >> FMapSnd)
+type LastFail msg q = JustFail msg (q >> Unsnoc >> FMapSnd)
 
-type InitDef p q = JustDef p (q >> Unsnoc >> Fmap_1)
-type InitFail msg q = JustFail msg (q >> Unsnoc >> Fmap_1)
+type InitDef p q = JustDef p (q >> Unsnoc >> FMapFst)
+type InitFail msg q = JustFail msg (q >> Unsnoc >> FMapFst)
 
 type LookupDef' x y p q = JustDef p (q >> Lookup x y)
 type LookupFail' msg x y q = JustFail msg (q >> Lookup x y)
@@ -3575,7 +3564,7 @@ type LookupFail' msg x y q = JustFail msg (q >> Lookup x y)
 type LookupDef x y p    = LookupDef' x y p I
 type LookupFail msg x y = LookupFail' msg x y I
 
-type Just'  p = JustFail  "expected Just" p
+--type Just'  p = JustFail  "expected Just" p
 type Left'  p = LeftFail  "expected Left"  p
 type Right' p = RightFail "expected Right" p
 type This'  p = ThisFail  "expected This"  p
@@ -3689,7 +3678,7 @@ type family TheseXT lr x p where
 
 -- | similar to 'maybe'
 --
--- similar to 'MaybeX' but provides a Proxy to the result of \'q\' and does not provide the surrounding context
+-- provides a Proxy to the result of \'q\' but does not provide the surrounding context
 --
 -- >>> pl @(MaybeIn "foundnothing" (ShowP (Pred Id))) (Just 20)
 -- Present "19"
@@ -3703,8 +3692,7 @@ data MaybeIn p q
 type IsNothing = MaybeIn 'True 'False
 type IsJust = MaybeIn 'False 'True
 
--- tricky: the nothing case is the proxy of PP q a: ie proxy of the final result!!
--- this is different from MaybeXP which gives you a proxy of 'a' [you need both!]
+-- tricky: the nothing case is the proxy of PP q a: ie proxy of the final result
 instance (P q a
         , Show a
         , Show (PP q a)
@@ -3727,7 +3715,6 @@ instance (P q a
         pure $ case getValueLR opts msg1 qq [] of
           Left e -> e
           Right b -> mkNode opts (_tBool qq) [show01 opts msg1 b a] [hh qq]
-
 
 -- | similar to 'SG.stimes'
 --
@@ -3855,7 +3842,7 @@ instance P (MkNothing' t) a where
     let msg0 = "MkNothing"
     in pure $ mkNode opts (PresentT Nothing) [msg0] []
 
--- | 'Just' constructor
+-- | 'GHC.Maybe.Just' constructor
 --
 -- >>> pl @(MkJust Id) 44
 -- Present Just 44
@@ -4137,18 +4124,6 @@ instance (P q a
 
 -- | 'lookup' leveraging 'Ixed'
 --
--- >>> pl @(Id !!! 2) ["abc","D","eF","","G"]
--- Present "eF"
--- PresentT "eF"
---
--- >>> pl @(Id !!! 20) ["abc","D","eF","","G"]
--- Error index not found
--- FailT "index not found"
---
--- >>> pl @(Id !!! "eF") (M.fromList (flip zip [0..] ["abc","D","eF","","G"]))
--- Present 2
--- PresentT 2
---
 -- >>> pl @(Lookup Id 2) ["abc","D","eF","","G"]
 -- Present Just "eF"
 -- PresentT (Just "eF")
@@ -4158,9 +4133,6 @@ instance (P q a
 -- PresentT Nothing
 --
 data Lookup p q
-
-type p !!! q = JustFail "index not found" (Lookup p q)
-type p !!!! q = JustFail (Printf "index(%s) not found" (ShowP q)) (Lookup p q)
 
 instance (P q a
         , P p a
@@ -4531,8 +4503,8 @@ data Scanl p q r
 type ScanN n p q = Scanl (Fst Id >> q) p (EnumFromTo 1 n) -- n times using q then run p
 type ScanNA q = ScanN (Fst Id) (Snd Id) q
 
-type FoldN n p q = Last' (ScanN n p q)
-type Foldl p q r = Last' (Scanl p q r)
+type FoldN n p q = Last (ScanN n p q)
+type Foldl p q r = Last (Scanl p q r)
 
 instance (PP p (b,a) ~ b
         , PP q x ~ b
@@ -5060,8 +5032,8 @@ instance (PP p a ~ PP q a
 type Quot p q = Fst (QuotRem p q)
 type Rem p q = Snd (QuotRem p q)
 
---type OneP = Guard "expected list of length 1" (Len >> Same 1) >> Head'
-type OneP = Guard (Printf "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head
+--type OneP = Guard "expected list of length 1" (Len >> Same 1) >> Head Id
+type OneP = Guard (Printf "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
 
 strictmsg :: forall strict . GetBool strict => String
 strictmsg = if getBool @strict then "" else "Lax"
@@ -5532,11 +5504,11 @@ infix 4 ==!
 -- Present LT
 -- PresentT LT
 --
--- >>> pl @(Snd Id ==! (Fst Id >> Snd Id >> Head' Id)) (('x',[10,12,13]),10)
+-- >>> pl @(Snd Id ==! (Fst Id >> Snd Id >> Head Id)) (('x',[10,12,13]),10)
 -- Present EQ
 -- PresentT EQ
 --
--- >>> pl @(Snd Id ==! Head' (Snd (Fst Id))) (('x',[10,12,13]),10)
+-- >>> pl @(Snd Id ==! Head (Snd (Fst Id))) (('x',[10,12,13]),10)
 -- Present EQ
 -- PresentT EQ
 --
@@ -5822,7 +5794,7 @@ instance (PP p x ~ These a b
             b = f p
         in mkNodeB opts b [msg0 <> " " <> t <> show1 opts " | " p] []
 
--- | similar to 'these'
+-- | similar to 'Data.These.these'
 --
 -- >>> pl @(TheseIn Id Len (Fst Id + Length (Snd Id))) (This 13)
 -- Present 13
@@ -6533,7 +6505,6 @@ instance (Show (f (t a))
      in pure $ mkNode opts (PresentT d) ["Sequence" <> show0 opts " " d <> show1 opts " | " tfa] []
 
 data Hide p
-type H = Hide
 -- type H p = Hide p -- doesnt work with %   -- unsaturated!
 
 instance P p x => P (Hide p) x where
@@ -7122,7 +7093,16 @@ instance (Show (t (t a))
         d = join tta
     in pure $ mkNode opts (PresentT d) [show01 opts msg0 d tta] []
 
--- same as $ but shows 'a' and 'b'
+-- | function application for expressions: similar to 'GHC.Base.$'
+--
+-- pl @(Fst Id $ Snd Id) ((*16),4)
+-- Present 64
+-- PresentT 64
+--
+-- pl @(Id $ "def") ("abc"<>)
+-- Present "abcdef"
+-- PresentT "abcdef"
+--
 data p $ q
 infixl 0 $
 
@@ -7145,6 +7125,17 @@ instance (P p x
         in mkNode opts (PresentT d) ["fn $ " <> show q <> " = " <> show d] [hh pp, hh qq]
 
 -- reify this so we can combine (type synonyms dont work as well)
+
+-- | flipped function application for expressions: similar to 'Control.Lens.&'
+--
+-- pl @(Snd Id & Fst Id) ((*16),4)
+-- Present 64
+-- PresentT 64
+--
+-- pl @("def" & Id) ("abc"<>)
+-- Present "abcdef"
+-- PresentT "abcdef"
+--
 data q & p -- flips the args eg a & b & (,) = (b,a)
 infixr 1 &
 
@@ -7922,3 +7913,153 @@ getTheseType = \case
   This {} -> "This"
   That {} -> "That"
   These {} -> "These"
+
+-- | takes the head of a list like container
+--
+-- >>> pl @(Head Id) "abcd"
+-- Present 'a'
+-- PresentT 'a'
+--
+-- >>> pl @(Head Id) []
+-- Error Head(empty)
+-- FailT "Head(empty)"
+--
+data Head p
+
+instance (Show (ConsT s)
+        , Show s
+        , Cons s s (ConsT s) (ConsT s)
+        , PP p x ~ s
+        , P p x
+        ) => P (Head p) x where
+  type PP (Head p) x = ConsT (PP p x)
+  eval _ opts x = do
+    let msg0 = "Head"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p ^? _Cons of
+          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) [msg0 <> " no data"] [hh pp]
+          Just (a,_) -> mkNode opts (PresentT a) [show01 opts msg0 a p] [hh pp]
+
+-- | takes the tail of a list like container
+--
+-- >>> pl @(Tail Id) "abcd"
+-- Present "bcd"
+-- PresentT "bcd"
+--
+-- >>> pl @(Tail Id) []
+-- Error Tail(empty)
+-- FailT "Tail(empty)"
+--
+data Tail p
+
+instance (Show s
+        , Cons s s (ConsT s) (ConsT s)
+        , PP p x ~ s
+        , P p x
+        ) => P (Tail p) x where
+  type PP (Tail p) x = PP p x
+  eval _ opts x = do
+    let msg0 = "Tail"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p ^? _Cons of
+          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) [msg0 <> " no data"] [hh pp]
+          Just (_,as) -> mkNode opts (PresentT as) [show01 opts msg0 as p] [hh pp]
+
+
+-- | takes the last of a list like container
+--
+-- >>> pl @(Last Id) "abcd"
+-- Present 'd'
+-- PresentT 'd'
+--
+-- >>> pl @(Last Id) []
+-- Error Last(empty)
+-- FailT "Last(empty)"
+--
+
+data Last p
+
+instance (Show (ConsT s)
+        , Show s
+        , Snoc s s (ConsT s) (ConsT s)
+        , PP p x ~ s
+        , P p x
+        ) => P (Last p) x where
+  type PP (Last p) x = ConsT (PP p x)
+  eval _ opts x = do
+    let msg0 = "Last"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p ^? _Snoc of
+          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) [msg0 <> " no data"] [hh pp]
+          Just (_,a) -> mkNode opts (PresentT a) [show01 opts msg0 a p] [hh pp]
+
+-- | takes the init of a list like container
+--
+-- >>> pl @(Init Id) "abcd"
+-- Present "abc"
+-- PresentT "abc"
+--
+-- >>> pl @(Init Id) (T.pack "abcd")
+-- Present "abc"
+-- PresentT "abc"
+--
+-- >>> pl @(Init Id) []
+-- Error Init(empty)
+-- FailT "Init(empty)"
+--
+
+data Init p
+
+instance (Show s
+        , Snoc s s (ConsT s) (ConsT s)
+        , PP p x ~ s
+        , P p x
+        ) => P (Init p) x where
+  type PP (Init p) x = PP p x
+  eval _ opts x = do
+    let msg0 = "Init"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p ^? _Snoc of
+          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) [msg0 <> " no data"] [hh pp]
+          Just (as,_) -> mkNode opts (PresentT as) [show01 opts msg0 as p] [hh pp]
+
+
+-- | tries to extract @a@ from @Maybe a@ otherwise it fails
+--
+-- >>> pl @(Just Id) (Just "abc")
+-- Present "abc"
+-- PresentT "abc"
+--
+-- >>> pl @(Just Id) Nothing
+-- Error Just(empty)
+-- FailT "Just(empty)"
+--
+data Just p
+
+instance (Show a
+        , PP p x ~ Maybe a
+        , P p x
+        ) => P (Just p) x where
+  type PP (Just p) x = MaybeT (PP p x)
+  eval _ opts x = do
+    let msg0 = "Just"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p of
+          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) [msg0 <> " found Nothing"] [hh pp]
+          Just d -> mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
+

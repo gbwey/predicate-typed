@@ -57,7 +57,7 @@ import Data.Functor.Identity
 -- >>> :set -XTypeOperators
 -- >>> :set -XNoStarIsType
 
--- | This is the core class. Each instance of this class can be combined into a dsl using 'Main.>>'
+-- | This is the core class. Each instance of this class can be combined into a dsl using 'Predicate.Prelude.>>'
 class P p a where
   type PP (p :: k) a :: Type -- PP is the output type
   eval :: MonadEval m => Proxy p -> POpts -> a -> m (TT (PP p a)) -- ^ returns a tree of results
@@ -112,7 +112,7 @@ instance (Typeable a, Show a) => P IdT a where
         t = showT @a
     in pure $ mkNode opts (PresentT a) [msg0 <> show0 opts " " a] []
 
--- | transparent predicate wrapper to make k of kind 'Type' so it can be in a promoted list (cant mix kinds) see 'Predicate.Do'
+-- | transparent predicate wrapper to make k of kind 'Type' so it can be in a promoted list (cant mix kinds) see 'Predicate.Core.Do'
 --
 -- >>> pl @'[W 123, Id] 99
 -- Present [123,99]
@@ -287,7 +287,7 @@ instance KnownNat n => P (n :: Nat) a where
     let n = nat @n
     in pure $ mkNode opts (PresentT n) ["'" <> show n] []
 
--- | extracts the value level representation of the type level \'()
+-- | extracts the value level representation of the type level '()
 --
 -- >>> pl @'() ()
 -- Present ()
@@ -298,7 +298,7 @@ instance P '() a where
 
 -- todo: the type has to be [a] so we still need type PP '[p] a = [PP p a] to keep the types in line
 
--- | extracts the value level representation of the type level \'[]
+-- | extracts the value level representation of the type level '[]
 --
 -- >>> pl @'[] False
 -- Present []
@@ -321,7 +321,7 @@ instance (Show (PP p a), Show a, P p a) => P '[p] a where
   type PP '[p] a = [PP p a]
   eval _ opts a = do
     pp <- eval (Proxy @p) opts a
-    let msg0 = "" -- "'[](end)"
+    let msg0 = ""
     pure $ case getValueLR opts msg0 pp [] of
        Left e -> e
        Right b -> mkNode opts (PresentT [b]) [show01 opts msg0 b a] [hh pp] --  <> show0 opts " " a <> show1 opts " b=" b]) [hh pp]
