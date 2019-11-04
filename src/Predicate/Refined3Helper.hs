@@ -208,7 +208,7 @@ type Ssnop' = GuardsDetail "%s invalid: found %d"
                            , '("third" , Between 1 9999)
                            ] >> 'True
 -}
-type Ssnfmt = Printfnt 3 "%03d-%02d-%04d"
+type Ssnfmt = Printfnt 3 "%03d-%02d-%04d" Id
 
 -- | read in a time and validate it
 --
@@ -235,7 +235,7 @@ type Hmsop = Guard (Printf "expected len 3 but found %d" Len) (Length Id == 3)
                         , '(Printf2 "guard(%d) %d mins is out of range" Id, Between 0 59)
                         , '(Printf2 "guard(%d) %d secs is out of range" Id, Between 0 59)]
 -}
-type Hmsfmt = Printfnt 3 "%02d:%02d:%02d"
+type Hmsfmt = Printfnt 3 "%02d:%02d:%02d" Id
 
 -- | read in an ipv4 address and validate it
 --
@@ -259,7 +259,7 @@ ip = mkProxy3
 type Ipip = Map (ReadP Int Id) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd Id)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
 type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255) >> 'True
-type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d"
+type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d" Id
 
 type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- strict validation should only be done in 'op' not 'ip'
 

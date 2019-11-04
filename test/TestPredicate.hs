@@ -616,19 +616,19 @@ allTests =
   , expectPE (PresentT "ipaddress 001.002.003.004") $ pl @(TupleI '[1,2,3,4] >> Printfn "ipaddress %03d.%03d.%03d.%03d" Id) ()
   , expectPE (PresentT (1,(2,(3,(4,()))))) $ pl @(TupleI '[1,2,3,4]) 4
 
-  , expectPE (PresentT "001.002.003.004") $ pl @(Printfnt 4 "%03d.%03d.%03d.%03d") [1,2,3,4::Int]
-  , expectPE (FailT "TupleList(4) is strict and has 1 extra element") $ pl @(Printfnt 4 "%03d.%03d.%03d.%03d") [1,2,3,4,5::Int]
-  , expectPE (FailT "TupleList(4) no data left") $ pl @(Printfnt 4 "%03d.%03d.%03d.%03d") [1,2,3::Int]
+  , expectPE (PresentT "001.002.003.004") $ pl @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4::Int]
+  , expectPE (FailT "TupleList(4) is strict and has 1 extra element") $ pl @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4,5::Int]
+  , expectPE (FailT "TupleList(4) no data left") $ pl @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) [1,2,3::Int]
 
-  , expectPE (PresentT "001.002.003.004") $ pl @(PrintfntLax 4 "%03d.%03d.%03d.%03d") [1,2,3,4::Int]
-  , expectPE (PresentT "001.002.003.004") $ pl @(PrintfntLax 4 "%03d.%03d.%03d.%03d") [1,2,3,4,5::Int]
-  , expectPE (FailT "TupleListLax(4) no data left") $ pl @(PrintfntLax 4 "%03d.%03d.%03d.%03d") [1,2,3::Int]
+  , expectPE (PresentT "001.002.003.004") $ pl @(PrintfntLax 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4::Int]
+  , expectPE (PresentT "001.002.003.004") $ pl @(PrintfntLax 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4,5::Int]
+  , expectPE (FailT "TupleListLax(4) no data left") $ pl @(PrintfntLax 4 "%03d.%03d.%03d.%03d" Id) [1,2,3::Int]
   , expectPE (FailT "Pairs no data found") $ pl @Pairs ([] @())
   , expectPE (FailT "Pairs only one element found") $ pl @Pairs [1]
   , expectPE (PresentT [(1,2)]) $ pl @Pairs [1,2]
   , expectPE (PresentT [(1,2),(2,3)]) $ pl @Pairs [1,2,3]
   , expectPE (PresentT [(1,2),(2,3),(3,4)]) $ pl @Pairs [1,2,3,4]
-  , expectPE (PresentT "1    2 3 004") $ pl @(PrintfntLax 4 "%d %4d %-d %03d") [1..10::Int]
+  , expectPE (PresentT "1    2 3 004") $ pl @(PrintfntLax 4 "%d %4d %-d %03d" Id) [1..10::Int]
   , expectPE (PresentT "2019-08-17") $ pl @(FormatTimeP "%Y-%m-%d" Id) (read "2019-08-17" :: Day)
   , expectPE (PresentT (20,20)) $ pl @(Dup << Fst Id * Snd Id) (4,5)
   , expectPE (PresentT (20,20)) $ pl @(Fst Id * Snd Id >> Dup) (4,5)

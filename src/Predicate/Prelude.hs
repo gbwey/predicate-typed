@@ -139,7 +139,7 @@ module Predicate.Prelude (
   , QuotRem
   , Quot
   , Rem
-  -- * rational numbers
+  -- ** rational numbers
   , type (%)
   , type (%-)
   , type (-%)
@@ -1036,6 +1036,7 @@ instance GetCharSet 'CLatin1 where
   getCharSet = (CLatin1, isLatin1)
 
 -- | predicate for determining if a string is all lowercase
+--
 -- >>> pl @IsLower "abcdef213"
 -- False
 -- FalseT
@@ -1055,6 +1056,7 @@ instance GetCharSet 'CLatin1 where
 type IsLower = IsCharSet 'CLower
 type IsUpper = IsCharSet 'CUpper
 -- | predicate for determining if the string is all digits
+--
 -- >>> pl @IsNumber "213G"
 -- False
 -- FalseT
@@ -6906,8 +6908,8 @@ instance (ReverseTupleC tp
 -- PresentT "s=ab d=123"
 --
 data Printfn s p
-type Printfnt (n :: Nat) s =  Printfn s (TupleList n)
-type PrintfntLax (n :: Nat) s = Printfn s (TupleListLax n)
+type Printfnt (n :: Nat) s p =  p >> Printfn s (TupleList n)
+type PrintfntLax (n :: Nat) s p = p >> Printfn s (TupleListLax n)
 
 -- | print a 2-tuple
 --

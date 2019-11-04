@@ -89,13 +89,13 @@ unnamedTests = [
   , expect3 (Left $ XF "Regex no results")
                   $ eval3 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
                           @((Len >> Same 4) && All (Between 0 255) Id)
-                          @(Printfnt 4 "%03d.%03d.%03d.%03d")
+                          @(Printfnt 4 "%03d.%03d.%03d.%03d" Id)
                           ol "1.21.x31.4"
 
   , expect3 (Right $ unsafeRefined3 [1,21,31,4] "001.021.031.004")
                   $ eval3 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
                           @((Len >> Same 4) && All (Between 0 255) Id)
-                          @(Printfnt 4 "%03d.%03d.%03d.%03d")
+                          @(Printfnt 4 "%03d.%03d.%03d.%03d" Id)
                           ol "1.21.31.4"
 
   , expect3 (Left $ XTFalse (-6.3))
@@ -292,7 +292,7 @@ type Age = '(ReadP Int Id, Gt 4, ShowP Id, String)
 type Ip9 = '(
             Map (ReadP Int Id) (Resplit "\\." Id) -- split String on "." then convert to [Int]
            ,(Len >> Same 4) && All (Between 0 255) Id -- process [Int] and make sure length==4 and each octet is between 0 and 255
-           ,Printfnt 4 "%03d.%03d.%03d.%03d" -- printf [Int]
+           ,Printfnt 4 "%03d.%03d.%03d.%03d" Id -- printf [Int]
            ,String -- input type is string which is also the output type
            )
 

@@ -85,6 +85,6 @@ type Ip4R = MakeR3 '(Ip4ip, Ip4op >> 'True, Ip4fmt, String)
 type Ip4ip = Map (ReadP Int Id) (Resplit "\\." Id)
 type Ip4op = Guard (Printf "expected length 4 found %d" Len) (Len >> Same 4)
           >> GuardsN (Printf2 "guard(%d): expected between 0 and 255 found %d" Id) 4 (Between 0 255)
-type Ip4fmt = Printfnt 4 "%03d.%03d.%03d.%03d"
+type Ip4fmt = Printfnt 4 "%03d.%03d.%03d.%03d" Id
 
 type DateTimeNR = MakeR3 DateTimeN

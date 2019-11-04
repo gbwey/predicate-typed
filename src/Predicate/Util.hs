@@ -724,6 +724,7 @@ nat :: forall n a . (KnownNat n, Num a) => a
 nat = fromIntegral (GL.natVal (Proxy @n))
 
 -- | gets the Symbol from the typelevel
+--
 -- >>> symb @"abc"
 -- "abc"
 --
