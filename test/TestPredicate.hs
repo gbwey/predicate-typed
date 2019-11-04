@@ -131,13 +131,13 @@ allTests =
   , expectPE (PresentT ([2,4,6],[1,3,5])) $ pl @(Partition Even Id) [1..6]
   , expectPE TrueT $ pl @(Partition Even Id >> Null *** (Len >> Gt 4) >> Fst Id == Snd Id) [1..6]
   , expectPE (PresentT 5) $ pl @(Snd Id >> Snd Id >> Snd Id >> Snd Id >> Id) (9,(1,(2,(3,5))))
-  , expectPE (FailT "ExitWhen") $ pl @(HeadFail "failedn" Id &&& (Len >> Same 1 >> ExitWhen' Id) >> Fst Id) [3]
-  , expectPE (PresentT 3) $ pl @(Head Id &&& (Len >> Same 1 >> Not Id >> ExitWhen' Id) >> Fst Id) [3]
-  , expectPE (PresentT 3) $ pl @(Head Id &&& (Len >> Same 1 >> ExitWhen' (Not Id)) >> Fst Id) [3]
-  , expectPE (FailT "ExitWhen") $ pl @(ExitWhen' (Len >> Ne 1) >> Head Id) [3,1]
-  , expectPE (PresentT 3) $ pl @(ExitWhen' (Len >> Ne 1) >> Head Id) [3]
-  , expectPE TrueT $ pl @(ExitWhen' (Len >> Ne 1) >> Head Id >> Gt (20 %- 1 )) [3]
-  , expectPE FalseT $ pl @(ExitWhen' (Len >> Ne 1) >> Head Id >> Gt (20 %- 1 )) [-23]
+  , expectPE (FailT "ExitWhen") $ pl @(HeadFail "failedn" Id &&& (Len >> Same 1 >> ExitWhen "ExitWhen" Id) >> Fst Id) [3]
+  , expectPE (PresentT 3) $ pl @(Head Id &&& (Len >> Same 1 >> Not Id >> ExitWhen "ExitWhen" Id) >> Fst Id) [3]
+  , expectPE (PresentT 3) $ pl @(Head Id &&& (Len >> Same 1 >> ExitWhen "ExitWhen" (Not Id)) >> Fst Id) [3]
+  , expectPE (FailT "ExitWhen") $ pl @(ExitWhen "ExitWhen" (Len >> Ne 1) >> Head Id) [3,1]
+  , expectPE (PresentT 3) $ pl @(ExitWhen "ExitWhen" (Len >> Ne 1) >> Head Id) [3]
+  , expectPE TrueT $ pl @(ExitWhen "ExitWhen" (Len >> Ne 1) >> Head Id >> Gt (20 %- 1 )) [3]
+  , expectPE FalseT $ pl @(ExitWhen "ExitWhen" (Len >> Ne 1) >> Head Id >> Gt (20 %- 1 )) [-23]
   , expectPE (PresentT (-1.0)) $ pl @(Negate Id >> Dup >> First (Succ Id) >> Swap >> Fst Id - Snd Id) 4
   , expectPE (PresentT (Right 12)) $ pl @(Not Id +++ Id) (Right @Bool 12)
   , expectPE (PresentT Cgt) $ pl @(FromEnum ("aa" ==! Id) >> ToEnum OrderingP Id) "aaaa"
@@ -157,8 +157,8 @@ allTests =
   , expectPE (PresentT [('a',4),('a',14),('b',2),('c',10),('d',12),('z',1)]) $ pl @(SortOn (Fst Id) Id) (zip "cabdaz" [10,4,2,12,14,1])
   , expectPE (FailT "asdf(4)") $ pl @(SortOn (FailS "asdf") Id) [10,4,2,12,14]
   , expectPE TrueT $ pl @(Min &&& Max >> Id >> Fst Id < Snd Id) [10,4,2,12,14]
-  , expectPE (FailT "ExitWhen") $ pl @(Partition (ExitWhen' (Gt 10) >> Gt 2) Id) [1..11]
-  , expectPE (PresentT [False,False,True,True,True]) $ pl @(Map (ExitWhen' (Gt 10) >> Gt 2) Id) [1..5]
+  , expectPE (FailT "ExitWhen") $ pl @(Partition (ExitWhen "ExitWhen" (Gt 10) >> Gt 2) Id) [1..11]
+  , expectPE (PresentT [False,False,True,True,True]) $ pl @(Map (ExitWhen "ExitWhen" (Gt 10) >> Gt 2) Id) [1..5]
   , expectPE (PresentT ([1,2],[3,4,5,6,7,8,9,10,11])) $ pl @(Break (Gt 2) Id) [1..11]
   , expectPE (PresentT ([1,2,3],[4,5,6,7,8,9,10,11])) $ pl @(Span (Lt 4) Id) [1..11]
   , expectPE (PresentT [GT,GT,LT,EQ]) $ pl @(Pairs >> Map (First (Succ Id >> Succ Id) >> Fst Id ==! Snd Id) Id) [1,2,3,6,8]
@@ -214,8 +214,8 @@ allTests =
   , expectPE (PresentT 3) $ pl @(Id !! Head "d") (M.fromList $ zip "abcd" [0 ..]) -- had to String (instead of _) to keep this happy: ghci is fine
   , expectPE (PresentT ()) $ pl @(Id !! Head "d") (S.fromList "abcd") -- had to String (instead of _) to keep this happy: ghci is fine
   , expectPE (FailT "(!!) index not found") $ pl @(Id !! HeadFail "failedn" "e") (S.fromList "abcd") -- had to String (instead of _) to keep this happy: ghci is fine
-  , expectPE (PresentT 13.345) $ pl @(ExitWhen' (Re "^\\d+(?:\\.\\d+)?$" Id >> Not Id) >> ReadP Double Id) "13.345"
-  , expectPE (PresentT 13) $ pl @(ExitWhen' (Re "^\\d+(?:\\.\\d+)?$" Id >> Not Id) >> ReadP Double Id) "13"
+  , expectPE (PresentT 13.345) $ pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$" Id) >> ReadP Double Id) "13.345"
+  , expectPE (PresentT 13) $ pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$" Id) >> ReadP Double Id) "13"
   , expectPE (FailT "regex failed") $ pl @(ExitWhen "regex failed" (Not (Re "^\\d+(?:\\.\\d+)?$" Id)) >> ReadP Double Id) "-13.4"
   , expectPE (PresentT GT) $ pl @(FoldN 2 Id (Succ Id)) LT
   , expectPE (FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument") $ pl @(FoldN 30 Id (Succ Id)) LT
@@ -265,7 +265,7 @@ allTests =
   , expectPE (PresentT [12,0,1,13,0,1,14,0,1,15,0,1,16]) $ pl @(Intercalate (Fst Id) (Snd Id)) ([0,1], [12,13,14,15,16])
   , expectPE (PresentT [12,-5,13,-5,14,-5,15,-5,16]) $ pl @((Pure [] (Negate Len) &&& Id) >> Intercalate (Fst Id) (Snd Id)) [12,13,14,15,16]
   , expectPE (PresentT [13,16,17]) $ pl @(If (Len >> Gt 2) (Map (Succ Id) Id) (FailS "someval")) [12,15,16]
-  , expectPE (PresentT [13,16,17]) $ pl @(Guard' (Len >> Gt 2) >> Map (Succ Id) Id) [12,15,16]
+  , expectPE (PresentT [13,16,17]) $ pl @(Guard "oops" (Len >> Gt 2) >> Map (Succ Id) Id) [12,15,16]
   , expectPE (FailT "err") $ pl @(ExitWhen "err" (Len >> Gt 2) >> Map (Succ Id) Id) [12,15,16]
   , expectPE (PresentT [13]) $ pl @(ExitWhen "err" (Len >> Gt 2) >> Map (Succ Id) Id) [12]
   , expectPE (FailT "err") $ pl @(Guard "err" (Len >> Gt 2) >> Map (Succ Id) Id) [12]

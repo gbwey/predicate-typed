@@ -145,7 +145,7 @@ instance (RefinedC p a, Read a) => Read (Refined p a) where
                              "unRefined"
                              (PCR.reset GR.readPrec)
                GR.expectP (RL.Punc "}")
-               let (_,mr) = runIdentity $ newRefined @p oz fld0
+               let (_,mr) = runIdentity $ newRefined @p oz fld0 -- since we cant display the error message ...
                case mr of
                  Nothing -> fail ""
                  Just _r -> pure (Refined fld0)
@@ -186,7 +186,7 @@ instance ToJSON a => ToJSON (Refined p a) where
 instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
   parseJSON z = do
                   a <- parseJSON z
-                  let ((bp,e),mr) = runIdentity $ newRefined @p o2 a
+                  let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p o2 a
                   case mr of
                     Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
                     Just r -> return r
@@ -236,7 +236,7 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 instance (RefinedC p a, Binary a) => Binary (Refined p a) where
   get = do
           fld0 <- B.get @a
-          let ((bp,e),mr) = runIdentity $ newRefined @p o2 fld0
+          let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p o2 fld0
           case mr of
             Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
             Just r -> return r
@@ -333,11 +333,15 @@ prtRefinedIO opts a = do
 newRefined :: forall p a m . (MonadEval m, RefinedC p a)
    => POpts
    -> a
-   -> m ((BoolP, String), Maybe (Refined p a))
+   -> m ((BoolP, (String, String)), Maybe (Refined p a))
 newRefined opts a = do
   tt <- evalBool (Proxy @p) opts a
-  let msg = (_tBool tt ^. boolT2P, prtTreePure opts (fromTT tt))
-  pure $ (msg,) $ case getValueLR opts "" tt [] of
+  let rc = _tBool tt ^. boolT2P
+      ss = case oDebug opts of
+             OZero -> ("","")
+             OLite -> ("",topMessage tt)
+             _ -> (prtTreePure opts (fromTT tt),topMessage tt)
+  pure $ ((rc,ss),) $ case getValueLR opts "" tt [] of
        Right True -> Just (Refined a)
        _ -> Nothing
 

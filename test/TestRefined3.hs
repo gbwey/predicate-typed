@@ -179,9 +179,9 @@ unnamedTests = [
 allProps :: [TestTree]
 allProps =
   [
-    testProperty "base16" $ forAll (arbRefined3 (mkProxy3P @'(ReadBase Int 16 Id, 'True, ShowBase 16 Id, String)) ol) (\r -> evalQuick @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
-  , testProperty "readshow" $ forAll (arbRefined3 Proxy ol :: Gen HexLtR3) (\r -> read @HexLtR3 (show r) === r)
-  , testProperty "jsonroundtrip" $ forAll (arbRefined3 Proxy ol :: Gen HexLtR3) (\r -> testRefined3PJ Proxy ol (r3Out r) === Right r)
+    testProperty "base16" $ forAll (arbRefined3 (mkProxy3P @'(ReadBase Int 16 Id, 'True, ShowBase 16 Id, String))) (\r -> evalQuick @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
+  , testProperty "readshow" $ forAll (arbRefined3 Proxy :: Gen HexLtR3) (\r -> read @HexLtR3 (show r) === r)
+  , testProperty "jsonroundtrip" $ forAll (arbRefined3 Proxy :: Gen HexLtR3) (\r -> testRefined3PJ Proxy ol (r3Out r) === Right r)
   ]
 
 type HexLtR3 = Refined3 (ReadBase Int 16 Id) (Id < 500) (ShowBase 16 Id) String

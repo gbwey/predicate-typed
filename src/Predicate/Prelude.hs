@@ -417,12 +417,8 @@ module Predicate.Prelude (
   , GuardsQuick
   , GuardsQuickLax
   , Guard
-  , Guard'
   , ExitWhen
-  , ExitWhen'
   , GuardSimple
-  , Guards'
-  , ToGuards
   , GuardsN
   , GuardsNLax
   , GuardsDetail
@@ -495,7 +491,6 @@ module Predicate.Prelude (
   , DoN
 
   -- *** parallel expressions
-  , ToPara
   , Para
   , ParaLax
   , ParaN
@@ -2260,8 +2255,6 @@ instance (P p a
                 -- only PresentP makes sense here (ie not TrueP/FalseP: ok in base case tho
                 Right ws -> mkNode opts (PresentT (w,ws)) [msg0 <> show0 opts " " a] [hh pp, hh qq]
 
---type Msg' prt p = Msg (Printf "[%s] " prt) p -- msg0 is in square brackets
-
 -- | pad \'q\' with '\n'\ values from '\p'\
 --
 -- >>> pz @(PadL 5 999 Id) [12,13]
@@ -2811,7 +2804,7 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Signum p) x where
         let d = signum p
         in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
--- | unwraps a value (see 'Control.Lens.Unwrapped')
+-- | unwraps a value (see '_Wrapped'')
 --
 -- >>> pz @(Unwrap Id) (SG.Sum (-13))
 -- Present -13
@@ -2835,7 +2828,7 @@ instance (PP p x ~ s
         let d = p ^. _Wrapped'
         in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
--- | wraps a value (see 'Control.Lens.Wrapped' and 'Control.Lens.Unwrapped')
+-- | wraps a value (see '_Wrapped'' and '_Unwrapped'')
 --
 -- >>> :m + Data.List.NonEmpty
 -- >>> pz @(Wrap (SG.Sum _) Id) (-13)
@@ -4789,7 +4782,7 @@ instance (P p x
 -- Error value=099 string=somedata
 -- FailT "value=099 string=somedata"
 --
-data Fail t prt -- t=output type prt=msg
+data Fail t prt
 type Failp s = Fail Unproxy s
 type Failt (t :: Type) prt = Fail (Hole t) prt
 type FailS s = Fail I s
@@ -5256,10 +5249,8 @@ instance ( GetBool strict
 -- FailT "-99 not > 3"
 --
 data Guard prt p
-type Guard' p = Guard "Guard" p
 
 type ExitWhen prt p = Guard prt (Not p)
-type ExitWhen' p = ExitWhen "ExitWhen" p
 
 instance (Show a
         , P prt a
@@ -6214,11 +6205,11 @@ instance (PrintfArg (PP p x)
 
 type family GuardsT (ps :: [k]) where
   GuardsT '[] = '[]
-  GuardsT (p ': ps) = Guard' p ': GuardsT ps
+  GuardsT (p ': ps) = Guard "fromGuardsT" p ': GuardsT ps
 
-type Guards' (ps :: [k]) = Para (GuardsT ps)
+--type Guards' (ps :: [k]) = Para (GuardsT ps)
 
-type ToGuards (prt :: k) (os :: [k1]) = Proxy (Guards (ToGuardsT prt os))
+--type ToGuards (prt :: k) (os :: [k1]) = Proxy (Guards (ToGuardsT prt os))
 
 type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
   ToGuardsT prt '[] = GL.TypeError ('GL.Text "ToGuardsT cannot be empty")
@@ -6246,7 +6237,7 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 data ParaImpl (n :: Nat) (strict :: Bool) (os :: [k])
 type Para (os :: [k]) = ParaImplW 'True os
 type ParaLax (os :: [k]) = ParaImplW 'False os
-type ToPara (os :: [k]) = Proxy (ParaImplW 'True os)
+--type ToPara (os :: [k]) = Proxy (ParaImplW 'True os)
 
 data ParaImplW (strict :: Bool) (ps :: [k])
 

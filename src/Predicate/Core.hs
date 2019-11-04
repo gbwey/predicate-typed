@@ -68,7 +68,7 @@ evalBool :: (MonadEval m, P p a, PP p a ~ Bool) => Proxy p -> POpts -> a -> m (T
 evalBool p opts a = fixBoolT <$> eval p opts a
 
 evalQuick :: forall p i . P p i => i -> Either String (PP p i)
-evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) o0 i))
+evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) ol i))
 
 
 -- | identity function
@@ -567,14 +567,14 @@ pe, pe2, pe2n, pu, pun, pe3, pl, plc, pz :: forall p a . (Show (PP p a), P p a) 
 pe  = peWith @p o0
 -- | displays the evaluation tree using colors
 pe2 = peWith @p o2
--- | same as 'pe2' but truncates the display tree horizontally: see 'o2n'
+-- | same as 'pe2' but truncates the display tree width: see 'o2n'
 pe2n = peWith @p o2n
--- | same as 'pe2' but wider display
+-- | same as 'pe2' but allows for wider data
 pe3 = peWith @p o3
 -- | skips the evaluation tree and just displays the end result
-pl = peWith @p ol
--- | skips the evaluation tree and displays the end result with context
 pz = peWith @p oz
+-- | same as 'pz' but adds context to the end result
+pl = peWith @p ol
 -- | same as 'pz' but with colors
 plc = peWith @p olc
 -- | display the evaluation tree using unicode and colors
@@ -582,7 +582,7 @@ plc = peWith @p olc
 --   pu @'(Id, "abc", 123) [1..4]
 -- @
 pu = peWith @p ou
--- | same as 'pu' but truncates the display tree horizontally: see 'ou'
+-- | same as 'pu' but truncates the display tree width: see 'ou'
 pun = peWith @p oun
 
 peWith :: forall p a

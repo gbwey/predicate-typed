@@ -93,11 +93,11 @@ refinedTH' :: forall p i
   -> TH.Q (TH.TExp (Refined p i))
 refinedTH' opts i = do
   let msg0 = "refinedTH"
-  let ((bp,e),mr) = runIdentity $ newRefined @p opts i
+  let ((bp,(e,top)),mr) = runIdentity $ newRefined @p opts i
   case mr of
     Nothing ->
-      let msg1 = if hasNoTree opts then "" else ("\n" ++ e ++ "\n")
-      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp -- ++ "\n" ++ e
+      let msg1 = if hasNoTree opts then "" else "\n" ++ e ++ "\n"
+      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ top
     Just r -> TH.TExp <$> TH.lift r
 
 -- | creates a 'Refined3.Refined3' refinement type with terse output
@@ -166,7 +166,7 @@ refined3TH' opts i = do
       m3 = prt3Impl opts ret
   case mr of
     Nothing ->
-      let msg1 = if hasNoTree opts then "" else (m3Long m3 ++ "\n")
+      let msg1 = if hasNoTree opts then "" else m3Long m3 ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m3Desc m3 <> " | " <> m3Short m3)
     Just r -> TH.TExp <$> TH.lift r
 

@@ -135,7 +135,7 @@ testRefinedJ :: forall p a
    -> a
    -> Either String (Refined p a)
 testRefinedJ opts a =
-   let ((bp,e),mr) = runIdentity $ newRefined @p opts a
+   let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p opts a
    in case mr of
         Nothing -> error $ show bp ++ "\n" ++ e
         Just r -> eitherDecode @(Refined p a) $ encode r

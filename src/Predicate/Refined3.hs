@@ -219,11 +219,12 @@ instance ( Eq i
                                "r3Out" (PCR.reset GR.readPrec)
                  GR.expectP (RL.Punc "}")
 
-                 let (_ret,mr) = runIdentity $ eval3MSkip @_ @ip @op @fmt o2 fld1
+                 let (_ret,mr) = runIdentity $ eval3MSkip @_ @ip @op @fmt oz fld1
                  case mr of
-                   Nothing -> fail "" --   show (prt3Impl o2 _ret)
-                   Just (Refined3 _r1 r2) | r2 == fld2 -> pure (Refined3 fld1 fld2)
-                                         | otherwise -> fail "" -- "mismatch on r3Out fmt: found (" ++ show fld2 ++ ") but expected(" ++ show r2 ++ ")"
+                   Nothing -> fail ""
+                   Just (Refined3 _r1 r2)
+                     | r2 == fld2 -> pure (Refined3 fld1 fld2)
+                     | otherwise -> fail "" -- cant display a decent error message
              ))
     readList = GR.readListDefault
     readListPrec = GR.readListPrecDefault
@@ -289,15 +290,14 @@ instance (Arbitrary (PP ip i)
         , Show i
         , Refined3C ip op fmt i
         ) => Arbitrary (Refined3 ip op fmt i) where
-  arbitrary = suchThatMap (arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt o2
+  arbitrary = suchThatMap (arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt
 -}
 arbRefined3 :: forall ip op fmt i .
    ( Arbitrary (PP ip i)
    , Refined3C ip op fmt i
    ) => Proxy '(ip,op,fmt,i)
-     -> POpts
      -> Gen (Refined3 ip op fmt i)
-arbRefined3 _ = suchThatMap (arbitrary @(PP ip i)) . eval3MQuickIdentity @ip @op @fmt
+arbRefined3 _ = suchThatMap (arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt
 
 -- help things along a little
 arbRefined3With ::
@@ -305,11 +305,10 @@ arbRefined3With ::
   . (Arbitrary (PP ip i)
    , Refined3C ip op fmt i)
   => Proxy '(ip,op,fmt,i)
-  -> POpts
   -> (PP ip i -> PP ip i)
   -> Gen (Refined3 ip op fmt i)
-arbRefined3With _ opts f =
-  suchThatMap (f <$> arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt opts
+arbRefined3With _ f =
+  suchThatMap (f <$> arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt
 
 -- | 'Binary' instance for 'Refined3'
 --
@@ -492,9 +491,6 @@ newRefined3TPIO :: forall m ip op fmt i proxy
   -> RefinedT m (Refined3 ip op fmt i)
 newRefined3TPIO = newRefined3TPImpl liftIO
 
--- we call this cos we need to do the bool check and get fmt value
--- eval (PP op i) ~ True and eval (PP fmt i) to get the other value
--- input is set to @Id meaning that PP fmt (PP ip i) /= i doesnt hold
 newRefined3TPImpl :: forall n m ip op fmt i proxy
    . (Refined3C ip op fmt i
     , Monad m
@@ -697,17 +693,16 @@ eval3MSkip opts a = do
 
 -- calculates from internal value
 eval3MQuickIdentity :: forall ip op fmt i . Refined3C ip op fmt i
-   => POpts
-   -> PP ip i
+   => PP ip i
    -> Maybe (Refined3 ip op fmt i)
-eval3MQuickIdentity opts = runIdentity . eval3MQuick opts
+eval3MQuickIdentity = runIdentity . eval3MQuick
 
 -- from PP ip i
 eval3MQuick :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
-   => POpts
-   -> PP ip i
+   => PP ip i
    -> m (Maybe (Refined3 ip op fmt i))
-eval3MQuick opts a = do
+eval3MQuick a = do
+  let opts = oz
   rr <- evalBool (Proxy @op) opts a
   case getValLR (_tBool rr) of
     Right True -> do
@@ -755,7 +750,7 @@ prt3Impl opts v =
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", z)
              z = case t2 ^? root . pStrings . ix 0 of
-                   Just w -> if null (dropWhile isSpace w) then "FalseP" else ("{" <> w <> "}")
+                   Just w -> if null (dropWhile isSpace w) then "FalseP" else "{" <> w <> "}"
                    Nothing -> "FalseP"
              r = msg1 a
               <> fixLite opts a t1
