@@ -56,7 +56,7 @@ expectPE :: (Show a, Eq a, HasCallStack) => BoolT a -> IO (BoolT a) -> IO ()
 expectPE bp m = do
   x <- m
   print (x,bp)
-  bp @?= x
+  x @?= bp
 
 expectJ :: (HasCallStack, Show a, Eq a)
   => Either [String] a

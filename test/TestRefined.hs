@@ -77,7 +77,7 @@ allProps =
 
 type Ip4RE = "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$"
 
-type Ip4 = Rescan Ip4RE Id >> OneP >> Map (ReadBaseInt 10) (Snd Id) >> Ip4guard
+type Ip4 = Rescan Ip4RE Id >> OneP >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ip4guard
 
 type Ip4guard = Guard "4octets" (Len >> Same 4) >> Guard "0-255" (All (Between 0 255) Id)
 
@@ -87,7 +87,7 @@ type Ip6 = Resplit ":" Id
         >> Guard "len is bad" (All (Len >> Le 4) Id)
 
 type Ip6A = Map (If (Id == "") "0" Id) (Resplit ":" Id)
-         >> Map (ReadBaseInt 16) Id
+         >> Map (ReadBaseInt 16 Id) Id
 
 type Ip6B = Guard "count is bad" (Len >> Between 0 8)
          >> Guard "out of bounds" (All (Between 0 65535) Id)
@@ -95,16 +95,16 @@ type Ip6B = Guard "count is bad" (Len >> Between 0 8)
 
 type Ip6A' = Resplit ":" Id
          >> Map (If (Id == "") "0" Id) Id
-         >> Map (ReadBaseInt 16) Id
+         >> Map (ReadBaseInt 16 Id) Id
          >> PadL 8 0 Id
 
-type Ip6A'' = Map (If (Id == "") 0 (ReadBaseInt 16)) (Resplit ":" Id) >> PadL 8 0 Id
+type Ip6A'' = Map (If (Id == "") 0 (ReadBaseInt 16 Id)) (Resplit ":" Id) >> PadL 8 0 Id
 
 type Ip6B' = Guard "count is bad" (Len >> Same 8)
          >> Guard "out of bounds" (All (Between 0 65535) Id)
          >> 'True
 
-type Ip4A = Map (ReadBaseInt 10) (Resplit "\\." Id)
+type Ip4A = Map (ReadBaseInt 10 Id) (Resplit "\\." Id)
 type Ip4B = Guard "expected 4 numbers" (Len >> Same 4)
          >> Guard "each number must be between 0 and 255" (All (Between 0 255) Id)
          >> 'True
@@ -113,7 +113,7 @@ type Ip4C = Printfnt 4 "%03d.%03d.%03d.%03d"
 
 -- base n number of length x and then convert to a list of length x of (0 to (n-1))
 -- checks that each digit is between 0 and n-1
-type MM1 (n :: Nat) = Map (ReadBase Int n) (Ones Id)
+type MM1 (n :: Nat) = Map (ReadBase Int n Id) (Ones Id)
 type MM2 (n :: Nat) = ExitWhen "found empty" IsEmpty >> Guard "0<=x<n" (All (Ge 0 && Lt n) Id)
 
 -- prtRefinedT tst1

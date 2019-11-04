@@ -22,7 +22,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE NoOverloadedLists #-}
 {- |
      Dsl for evaluating and displaying type level expressions
 
@@ -88,12 +88,10 @@ module Predicate.Prelude (
   , Swap
   , Assoc
   , Unassoc
-  , ReverseTupleN
   , TupleI
   , Pairs
 
  -- ** character methods
-  , CharSet(..)
   , IsLower
   , IsUpper
   , IsNumber
@@ -120,10 +118,6 @@ module Predicate.Prelude (
   , type (-)
   , type (*)
   , type (/)
-
-  , type (%)
-  , type (%-)
-  , type (-%)
   , Negate
   , Abs
   , Signum
@@ -131,9 +125,6 @@ module Predicate.Prelude (
   , FromInteger'
   , FromIntegral
   , FromIntegral'
-  , ToRational
-  , FromRational
-  , FromRational'
   , Truncate
   , Truncate'
   , Ceiling
@@ -148,6 +139,13 @@ module Predicate.Prelude (
   , QuotRem
   , Quot
   , Rem
+  -- * rational numbers
+  , type (%)
+  , type (%-)
+  , type (-%)
+  , ToRational
+  , FromRational
+  , FromRational'
 
  -- ** proxy methods
   , MkProxy
@@ -159,12 +157,14 @@ module Predicate.Prelude (
   , ShowP
   , ReadP
   , ReadP'
-  , ReadP''
+  , ReadQ
+  , ReadQ'
+  , ReadMaybe
+  , ReadMaybe'
   , ReadBase
   , ReadBase'
   , ReadBaseInt
   , ShowBase
-  , ShowBase'
 
   -- ** arrow methods
   , type (&&&)
@@ -273,16 +273,12 @@ module Predicate.Prelude (
   , Remove
   , Keep
   , HeadDef
-  , HeadP
   , HeadFail
   , TailDef
-  , TailP
   , TailFail
   , LastDef
-  , LastP
   , LastFail
   , InitDef
-  , InitP
   , InitFail
   , Head'
   , Tail'
@@ -299,14 +295,9 @@ module Predicate.Prelude (
   , CatMaybes
   , Just'
   , JustDef
-  , JustP
   , JustFail
-  , MaybeX
   , MaybeIn
   , MaybeBool
-  , JustDef'
-  , JustDef''
-  , JustDef'''
 
  -- ** either methods
   , PartitionEithers
@@ -319,10 +310,8 @@ module Predicate.Prelude (
   , Left'
   , Right'
   , LeftDef
-  , LeftP
   , LeftFail
   , RightDef
-  , RightP
   , RightFail
   , EitherBool
   , MkRightAlt
@@ -353,11 +342,9 @@ module Predicate.Prelude (
   , type (!!)
   , Lookup
   , type (!!!)
-  , Lookup'
+  , type (!!!!)
   , LookupDef
   , LookupDef'
-  , LookupP
-  , LookupP'
   , LookupFail
   , LookupFail'
 
@@ -374,6 +361,7 @@ module Predicate.Prelude (
   , Theses
   , This'
   , That'
+  , These'
   , IsThis
   , IsThat
   , IsThese
@@ -383,16 +371,12 @@ module Predicate.Prelude (
   , MkThat'
   , MkThese
   , ThisDef
-  , ThisP
   , ThisFail
   , ThatDef
-  , ThatP
   , ThatFail
   , TheseDef
-  , TheseP
   , TheseFail
   , TheseIn
-  , TheseIn'
   , TheseId
   , TheseX
 
@@ -495,7 +479,6 @@ module Predicate.Prelude (
   , PrintfntLax
   , Printf2
   , Printf3
-  , Printf3'
 
   -- ** higher order methods
   , Pure
@@ -557,7 +540,7 @@ import qualified Data.Semigroup as SG
 import Numeric
 import Data.Char
 import Data.Function
-import Data.These (These(..), these, partitionThese)
+import Data.These (These(..), partitionThese)
 import qualified Data.Bifunctor.Swap as SW (Swap(..))
 import qualified Data.Bifunctor.Assoc as AS (Assoc(..))
 import Data.Ratio
@@ -1389,29 +1372,28 @@ instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
 
 -- | uses the 'Read' of the given type \'t\' and \'p\' which points to the content to read
 --
--- >>> pl @(ReadP Rational) "4 % 5"
+-- >>> pl @(ReadP Rational Id) "4 % 5"
 -- Present 4 % 5
 -- PresentT (4 % 5)
 --
--- >>> pl @(ReadP' Day Id >> Between (ReadP' Day "2017-04-11") (ReadP' Day "2018-12-30")) "2018-10-12"
+-- >>> pl @(ReadP Day Id >> Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30")) "2018-10-12"
 -- True
 -- TrueT
 --
--- >>> pl @(ReadP' Day Id >> Between (ReadP' Day "2017-04-11") (ReadP' Day "2018-12-30")) "2016-10-12"
+-- >>> pl @(ReadP Day Id >> Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30")) "2016-10-12"
 -- False
 -- FalseT
 --
-data ReadP'' t p
-type ReadP (t :: Type) = ReadP'' (Hole t) Id
-type ReadP' (t :: Type) p = ReadP'' (Hole t) p
+data ReadP' t p
+type ReadP (t :: Type) p = ReadP' (Hole t) p
 
 instance (P p x
         , PP p x ~ String
         , Typeable (PP t x)
         , Show (PP t x)
         , Read (PP t x)
-        ) => P (ReadP'' t p) x where
-  type PP (ReadP'' t p) x = PP t x
+        ) => P (ReadP' t p) x where
+  type PP (ReadP' t p) x = PP t x
   eval _ opts x = do
     let msg0 = "ReadP " <> t
         t = showT @(PP t x)
@@ -1420,9 +1402,56 @@ instance (P p x
       Left e -> e
       Right s ->
         let msg1 = msg0 <> " (" <> s <> ")"
+            hhs = [hh pp]
         in case reads @(PP t x) s of
-           [(b,"")] -> mkNode opts (PresentT b) [lit01 opts msg1 b s] [hh pp]
-           _ -> mkNode opts (FailT (msg1 <> " failed")) [msg1 <> " failed"] [hh pp]
+           [(b,"")] -> mkNode opts (PresentT b) [lit01 opts msg1 b s] hhs
+           o -> mkNode opts (FailT (msg1 <> " failed")) [msg1 <> " failed " <> show o] hhs
+
+-- [] (a,s) (a,[])
+
+-- | Read but returns the Maybe of the value and any remaining unparsed string
+--
+-- >>> pl @(ReadMaybe Int Id) "123x"
+-- Present Just (123,"x")
+-- PresentT (Just (123,"x"))
+--
+-- >>> pl @(ReadMaybe Int Id) "123"
+-- Present Just (123,"")
+-- PresentT (Just (123,""))
+--
+-- >>> pl @(ReadMaybe Int Id) "x123"
+-- Present Nothing
+-- PresentT Nothing
+--
+data ReadMaybe' t p
+type ReadMaybe (t :: Type) p = ReadMaybe' (Hole t) p
+
+-- | emulates ReadP
+type ReadQ' t p = ReadMaybe' t p >> MaybeIn (Failp "read failed") (Guard "oops" (Snd Id >> Null) >> Fst Id)
+type ReadQ (t :: Type) p = ReadQ' (Hole t) p
+
+-- not as good as ReadQ
+-- type ReadZ' t p = ReadMaybe' t p >> JustFail "read failed" Id >> (Guard "oops" (Snd Id >> Null) >> Fst Id)
+
+instance (P p x
+        , PP p x ~ String
+        , Typeable (PP t x)
+        , Show (PP t x)
+        , Read (PP t x)
+        ) => P (ReadMaybe' t p) x where
+  type PP (ReadMaybe' t p) x = Maybe (PP t x, String)
+  eval _ opts x = do
+    let msg0 = "ReadMaybe " <> t
+        t = showT @(PP t x)
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right s ->
+        let msg1 = msg0 <> " (" <> s <> ")"
+            hhs = [hh pp]
+        in case reads @(PP t x) s of
+           [(b,rest)] -> mkNode opts (PresentT (Just (b,rest))) [lit01 opts msg1 b s] hhs
+           o -> mkNode opts (PresentT Nothing) [msg1 <> " failed " <> show o] hhs
 
 -- | similar to 'sum'
 --
@@ -3236,8 +3265,7 @@ instance (Show a
 -- >>> pl @(FromEnum Id) 'x'
 -- Present 120
 -- PresentT 120
-
-
+--
 data FromEnum p
 
 instance (Show a
@@ -3490,26 +3518,31 @@ instance Functor f => P Fmap_2 (f (x,a)) where
 -- Present 'w'
 -- PresentT 'w'
 --
-type HeadDef p q   = GDef (Uncons >> Fmap_1) p q
+-- >>> pl @(HeadDef (MEmptyT _) Id) ([] @(SG.Sum _))
+-- Present Sum {getSum = 0}
+-- PresentT (Sum {getSum = 0})
+--
+-- >>> pl @(HeadDef (MEmptyT _) '[ "abc","def","asdfadf" ]) ()
+-- Present "abc"
+-- PresentT "abc"
+--
+-- >>> pl @(HeadDef (MEmptyT _) (Snd Id)) (123,[ "abc","def","asdfadf" ])
+-- Present "abc"
+-- PresentT "abc"
+--
+-- >>> pl @(HeadDef (MEmptyT _) (Snd Id)) (123,[])
+-- Present ()
+-- PresentT ()
+--
+type HeadDef p q = JustDef p (q >> Uncons >> Fmap_1)
 
 
 -- | takes the head of a list or defaults to the monoid instance
 --
 -- see 'ConsT' for other supported types eg 'Seq.Seq'
 --
--- >>> pl @(HeadP '[ "abc","def","asdfadf" ]) ()
--- Present "abc"
--- PresentT "abc"
---
--- >>> pl @(HeadP (Snd Id)) (123,[ "abc","def","asdfadf" ])
--- Present "abc"
--- PresentT "abc"
---
--- >>> pl @(HeadP (Snd Id)) (123,[])
--- Present ()
--- PresentT ()
---
-type HeadP q       = GProxy (Uncons >> Fmap_1) q
+-- type HeadP q = GProxy (Uncons >> Fmap_1) q
+
 -- | takes the head of a list or fail
 --
 -- see 'ConsT' for other supported types eg 'Seq.Seq'
@@ -3522,198 +3555,30 @@ type HeadP q       = GProxy (Uncons >> Fmap_1) q
 -- Error empty list
 -- FailT "empty list"
 --
+type HeadFail msg q = JustFail msg (q >> Uncons >> Fmap_1)
 
-type HeadFail msg q = GFail (Uncons >> Fmap_1) msg q
+type TailDef p q = JustDef p (q >> Uncons >> Fmap_2)
+type TailFail msg q = JustFail msg (q >> Uncons >> Fmap_2)
 
-type TailDef p q   = GDef (Uncons >> Fmap_2) p q
-type TailP q       = GProxy (Uncons >> Fmap_2) q
-type TailFail msg q = GFail (Uncons >> Fmap_2) msg q
 
-type LastDef p q   = GDef (Unsnoc >> Fmap_2) p q
-type LastP q       = GProxy (Unsnoc >> Fmap_2) q
-type LastFail msg q = GFail (Unsnoc >> Fmap_2) msg q
+type LastDef p q = JustDef p (q >> Unsnoc >> Fmap_2)
+type LastFail msg q = JustFail msg (q >> Unsnoc >> Fmap_2)
 
-type InitDef p q   = GDef (Unsnoc >> Fmap_1) p q
-type InitP q       = GProxy (Unsnoc >> Fmap_1) q
-type InitFail msg q = GFail (Unsnoc >> Fmap_1) msg q
+type InitDef p q = JustDef p (q >> Unsnoc >> Fmap_1)
+type InitFail msg q = JustFail msg (q >> Unsnoc >> Fmap_1)
 
--- 'x' and 'a' for Just condition
--- 'x' for Nothing condition
--- (Snd Id) at the end says we only want to process the Maybe which is the rhs of &&& ie (Snd Id)
-type GDef' z p q r = '(I, r >> z) >> MaybeXP (X >> p) q (Snd Id)
-type JustDef' p q r = GDef' I p q r
-
--- access everything ie 'x' and Proxy a for Nothing condition
--- 'x' and 'a' for Just condition
-type GDef'' z p q r = '(I, r >> z) >> MaybeXP p q (Snd Id)
-type JustDef'' p q r = GDef'' I p q r
-
-type PA = Snd I -- 'Proxy a' -- to distinguish from A
-type A = Snd I -- 'a'
-type X = Fst (Fst I) -- 'x' ie the whole original environment
-
--- Nothing has access to 'x' only
--- Just has access to (x,a)
-type GDef_X z p q r = '(I, r >> z) >> MaybeXP (X >> p) ('(X,A) >> q) A
-type JustDef''' p q r = GDef_X I p q r
-
--- Nothing case sees ((I,qz), Proxy a) -- hence the Fst Id >> Fst Id
--- Just case sees (I,qz), a) -- hence the (Snd Id) to get the 'a' only -- if you want the 'x' then Fst Id >> Fst Id
--- we have lost 'x' on the rhs: use GDef_X to access 'x' and 'a' for the Just condition
-type GDef z p q     = '(I, q >> z) >> MaybeXP (X >> p) A A  -- Hide % immediately before MaybeXP
-type GProxy z q     = '(I, q >> z) >> MaybeXP (PA >> MEmptyP) A A
-type GFail z msg q  = '(I, q >> z) >> MaybeXP (Fail (PA >> Unproxy) (X >> msg)) A A
-
--- use these!
-type LookupDef' x y p q    = GDef (Lookup x y) p q
-type LookupP' x y q        = GProxy (Lookup x y) q
-type LookupFail' msg x y q = GFail (Lookup x y) msg q
+type LookupDef' x y p q = JustDef p (q >> Lookup x y)
+type LookupFail' msg x y q = JustFail msg (q >> Lookup x y)
 
 type LookupDef x y p    = LookupDef' x y p I
-type LookupP x y        = LookupP' x y I
 type LookupFail msg x y = LookupFail' msg x y I
 
-type Just' p    = JustFail  "expected Just" p
-type Left' p    = LeftFail  "expected Left"  p
-type Right' p   = RightFail "expected Right" p
-type This' p    = ThisFail  "expected This"  p
-type That'  p   = ThatFail  "expected That"  p
-type TheseIn' p = TheseFail "expected These" p
-
-type JustDef p q    = GDef I p q
-type JustP q        = GProxy I q
-type JustFail msg q = GFail I msg q
-
-type LeftDef p q    = GDef LeftToMaybe p q
-type LeftP q        = GProxy LeftToMaybe q
-type LeftFail msg q = GFail LeftToMaybe msg q
-
-type RightDef p q    = GDef RightToMaybe p q
-type RightP q        = GProxy RightToMaybe q
-type RightFail msg q = GFail RightToMaybe msg q
-
-type ThisDef p q    = GDef ThisToMaybe p q
-type ThisP q       = GProxy ThisToMaybe q
-type ThisFail msg q = GFail ThisToMaybe msg q
-
-type ThatDef p q    = GDef ThatToMaybe p q
-type ThatP q       = GProxy ThatToMaybe q
-type ThatFail msg q = GFail ThatToMaybe msg q
-
-type TheseDef p q    = GDef TheseToMaybe p q
-type TheseP q       = GProxy TheseToMaybe q
-type TheseFail msg q = GFail TheseToMaybe msg q
-
--- tacks on a Proxy to Nothing side! but a Proxy a not Proxy of the final result
--- this is for default use cases for either/these/head/tail/last/init etc
-
--- | MaybeXP combinator
---
--- >>> pl @((Id &&& Snd Id) >> MaybeXP (Fst (Fst (Fst Id))) (Fst (Fst (Fst Id)) <> Snd Id) (Snd Id)) ("xx",Just "ya")
--- Present "xxya"
--- PresentT "xxya"
---
--- >>> pl @((Id &&& Fst Id) >> MaybeXP (Snd (Fst (Fst Id))) (Snd (Fst (Fst Id)) <> Snd Id) (Snd Id)) (Just "ya","xx")
--- Present "xxya"
--- PresentT "xxya"
---
--- >>> pl @((Id &&& Snd Id) >> MaybeXP (Fst (Fst (Fst Id))) (Fst (Fst (Fst Id)) <> Snd Id) (Snd Id)) ("xx",Nothing)
--- Present "xx"
--- PresentT "xx"
---
-
-data MaybeXP p q r
-
--- | MaybeX combinator
---
--- >>> pl @(MaybeX (Fst Id) (Fst (Fst Id) +: Snd Id) (Snd Id)) ([1..5],Just 99)
--- Present [1,2,3,4,5,99]
--- PresentT [1,2,3,4,5,99]
---
--- >>> pl @(MaybeX (Fst Id) (Fst (Fst Id) +: Snd Id) (Snd Id)) ([1..5],Nothing)
--- Present [1,2,3,4,5]
--- PresentT [1,2,3,4,5]
-
-type MaybeX p q r = MaybeXP (Fst Id >> p) q r
-
-instance (P r x
-        , P p (x, Proxy a)
-        , P q (x,a)
-        , PP r x ~ Maybe a
-        , PP p (x, Proxy a) ~ b
-        , PP q (x,a) ~ b
-        ) => P (MaybeXP p q r) x where
-  type PP (MaybeXP p q r) x = MaybeXPT (PP r x) x q
-  eval _ opts x = do
-    let msg0 = "MaybeXP"
-    rr <- eval (Proxy @r) opts x
-    case getValueLR opts msg0 rr [] of
-      Left e -> pure e
-      Right Nothing -> do
-        let msg1 = msg0 <> "(Nothing)"
-        pp <- eval (Proxy @p) opts (x, Proxy @a)
-        pure $ case getValueLR opts msg1 pp [hh rr] of
-          Left e -> e
-          Right _ -> mkNode opts (_tBool pp) [msg1] [hh rr, hh pp]
-      Right (Just a) -> do
-        let msg1 = msg0 <> "(Just)"
-        qq <- eval (Proxy @q) opts (x,a)
-        pure $ case getValueLR opts msg1 qq [hh rr] of
-          Left e -> e
-          Right _ -> mkNode opts (_tBool qq) [msg1] [hh rr, hh qq]
-
-type family MaybeXPT lr x q where
-  MaybeXPT (Maybe a) x q = PP q (x,a)
-
-
--- | similar to either Just (const Nothing)
---
--- >>> pl @LeftToMaybe (Left 13)
--- Present Just 13
--- PresentT (Just 13)
---
--- >>> pl @LeftToMaybe (Right 13)
--- Present Nothing
--- PresentT Nothing
---
-data LeftToMaybe
-instance P LeftToMaybe (Either a x) where
-  type PP LeftToMaybe (Either a x) = Maybe a
-  eval _ opts lr = pure $ mkNode opts (PresentT (either Just (const Nothing) lr)) ["LeftToMaybe"] []
-
-
--- | similar to either (const Nothing) Just
---
--- >>> pl @RightToMaybe (Right 13)
--- Present Just 13
--- PresentT (Just 13)
---
--- >>> pl @RightToMaybe (Left 13)
--- Present Nothing
--- PresentT Nothing
---
-data RightToMaybe
-instance P RightToMaybe (Either x a) where
-  type PP RightToMaybe (Either x a) = Maybe a
-  eval _ opts lr = pure $ mkNode opts (PresentT (either (const Nothing) Just lr)) ["RightToMaybe"] []
-
-data ThisToMaybe
-
-instance P ThisToMaybe (These a x) where
-  type PP ThisToMaybe (These a x) = Maybe a
-  eval _ opts th = pure $ mkNode opts (PresentT (these Just (const Nothing) (const . const Nothing) th)) ["ThisToMaybe"] []
-
-data ThatToMaybe
-
-instance P ThatToMaybe (These x a) where
-  type PP ThatToMaybe (These x a) = Maybe a
-  eval _ opts th = pure $ mkNode opts (PresentT (these (const Nothing) Just (const . const Nothing) th)) ["ThatToMaybe"] []
-
-data TheseToMaybe
-
-instance P TheseToMaybe (These a b) where
-  type PP TheseToMaybe (These a b) = Maybe (a,b)
-  eval _ opts th = pure $ mkNode opts (PresentT (these (const Nothing) (const Nothing) ((Just .) . (,)) th)) ["TheseToMaybe"] []
+type Just'  p = JustFail  "expected Just" p
+type Left'  p = LeftFail  "expected Left"  p
+type Right' p = RightFail "expected Right" p
+type This'  p = ThisFail  "expected This"  p
+type That'  p = ThatFail  "expected That"  p
+type These' p = TheseFail "expected These" p
 
 -- | similar to 'Control.Arrow.|||' but additionally gives \'p\' and \'q\' the original input
 --
@@ -3758,6 +3623,10 @@ instance (P r x
 
 type family EitherXT lr x p where
   EitherXT (Either a b) x p = PP p (x,a)
+  EitherXT o _ _ = GL.TypeError (
+      'GL.Text "EitherXT: expected 'Either a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
 
 -- | similar to 'Data.These.mergeTheseWith' but additionally provides \'p\', '\q'\ and \'r\' the original input as the first element in the tuple
 --
@@ -3936,15 +3805,7 @@ instance (Show (PP t a), Monoid (PP t a)) => P (MEmptyT' t) a where
     let msg0 = "MEmptyT"
         b = mempty @(PP t a)
     in pure $ mkNode opts (PresentT b) [msg0 <> show0 opts " " b] []
-{-
-data MEmptyProxy
-instance Monoid a => P MEmptyProxy (Proxy (a :: Type)) where
-  type PP MEmptyProxy (Proxy a) = a
-  eval _ opts _pa =
-    let msg0 = "MEmptyProxy"
-        b = mempty @a
-    in pure $ mkNode opts (PresentT b) [msg0] []
--}
+
 -- | similar to 'empty'
 --
 -- >>> pl @(EmptyT Maybe Id) ()
@@ -4055,6 +3916,10 @@ instance (Show (PP p x), P p x) => P (MkRight' t p) x where
 -- >>> pl @(MkThis _ Id) 44
 -- Present This 44
 -- PresentT (This 44)
+--
+-- >>> pl @(Proxy Int >> MkThis' Unproxy 10) []
+-- Present This 10
+-- PresentT (This 10)
 --
 data MkThis' t p
 type MkThis (t :: Type) p = MkThis' (Hole t) p
@@ -4291,9 +4156,9 @@ instance (P q a
 -- PresentT Nothing
 --
 data Lookup p q
-type p !!! q = Lookup p q >> MaybeIn (Failp "index not found") Id -- use !!
--- Lookup' is interesting but just use Lookup or !!
-type Lookup' (t :: Type) p q = q &&& Lookup p q >> If (Snd Id >> IsNothing) (ShowP (Fst Id) >> Fail (Hole t) (Printf "index(%s) not found" Id)) (Snd Id >> 'Just Id)
+
+type p !!! q = JustFail "index not found" (Lookup p q)
+type p !!!! q = JustFail (Printf "index(%s) not found" (ShowP q)) (Lookup p q)
 
 instance (P q a
         , P p a
@@ -4946,7 +4811,7 @@ instance (P p x
 -- Error value=099
 -- FailT "value=099"
 --
--- >>> pl @(FailS (Printf2 "value=%03d string=%s")) (99,"somedata")
+-- >>> pl @(FailS (Printf2 "value=%03d string=%s" Id)) (99,"somedata")
 -- Error value=099 string=somedata
 -- FailT "value=099 string=somedata"
 --
@@ -4954,8 +4819,8 @@ data Fail t prt -- t=output type prt=msg
 type Failp s = Fail Unproxy s
 type Failt (t :: Type) prt = Fail (Hole t) prt
 type FailS s = Fail I s
-type FailPrt (t :: Type) prt = Fail (Hole t)(Printf prt)
-type FailPrt2 (t :: Type) prt = Fail (Hole t)(Printf2 prt)
+type FailPrt (t :: Type) prt = Fail (Hole t) (Printf prt Id)
+type FailPrt2 (t :: Type) prt = Fail (Hole t) (Printf2 prt Id)
 
 instance (P prt a
         , PP prt a ~ String
@@ -4973,7 +4838,7 @@ data Hole (t :: Type)
 -- | Acts as a proxy in this dsl where you can explicitly set the Type.
 --
 --  It is passed around as an argument to help the type checker when needed.
---  see 'ReadP', 'ParseTimeP', 'ShowP'
+--  see 'ReadP, 'ParseTimeP', 'ShowP'
 --
 instance Typeable t => P (Hole t) a where
   type PP (Hole t) a = t -- can only be Type not Type -> Type (can use Proxy but then we go down the rabbithole)
@@ -4991,15 +4856,15 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 
 -- | catch a failure
 --
--- >>> pl @(Catch (Succ Id) (Fst Id >> Second (ShowP Id) >> Printf2 "%s %s" >> 'LT)) GT
+-- >>> pl @(Catch (Succ Id) (Fst Id >> Second (ShowP Id) >> Printf2 "%s %s" Id >> 'LT)) GT
 -- Present LT
 -- PresentT LT
 --
--- >>> pl @(Catch' (Succ Id) (Second (ShowP Id) >> Printf2 "%s %s")) GT
+-- >>> pl @(Catch' (Succ Id) (Second (ShowP Id) >> Printf2 "%s %s" Id)) GT
 -- Error Succ IO e=Prelude.Enum.Ordering.succ: bad argument GT
 -- FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument GT"
 --
--- >>> pl @(Catch' (Succ Id) (Second (ShowP Id) >> Printf2 "%s %s")) LT
+-- >>> pl @(Catch' (Succ Id) (Second (ShowP Id) >> Printf2 "%s %s" Id)) LT
 -- Present EQ
 -- PresentT EQ
 --
@@ -5218,15 +5083,15 @@ strictmsg = if getBool @strict then "" else "Lax"
 -- Error arg1 failed
 -- FailT "arg1 failed"
 --
--- >>> pl @(Guards '[ '(Printf2 "arg %d failed with value %d",Gt 4), '(Printf2 "%d %d", Same 4)]) [17,3]
+-- >>> pl @(Guards '[ '(Printf2 "arg %d failed with value %d" Id,Gt 4), '(Printf2 "%d %d" Id, Same 4)]) [17,3]
 -- Error 2 3
 -- FailT "2 3"
 --
--- >>> pl @(GuardsQuick (Printf2 "arg %d failed with value %d") '[Gt 4, Ge 3, Same 4]) [17,3,5]
+-- >>> pl @(GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5]
 -- Error arg 3 failed with value 5
 -- FailT "arg 3 failed with value 5"
 --
--- >>> pl @(GuardsQuick (Printf2 "arg %d failed with value %d") '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
+-- >>> pl @(GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
 -- Error Guards: data elements(4) /= predicates(3)
 -- FailT "Guards: data elements(4) /= predicates(3)"
 --
@@ -5377,11 +5242,11 @@ instance (PP prt a ~ String
 
 -- | leverages 'GuardsQuick' for repeating predicates (passthrough method)
 --
--- >>> pl @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d") 4 (Between 0 255)) [121,33,7,256]
+-- >>> pl @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
 -- Error id=4 must be between 0 and 255, found 256
 -- FailT "id=4 must be between 0 and 255, found 256"
 --
--- >>> pl @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d") 4 (Between 0 255)) [121,33,7,44]
+-- >>> pl @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
 -- Present [121,33,7,44]
 -- PresentT [121,33,7,44]
 --
@@ -6144,7 +6009,7 @@ type ZipR p q = Zip 'False 'True p q
 type ZipTrunc p q = Zip 'False 'False p q
 --type ZipWith r p q = ZipTrunc p q >> Map r Id
 
-instance (FailIfT (AndT lc rc) ()
+instance (FailWhenT (AndT lc rc)
            ('GL.Text "Zip': left and right cannot both be True")
         , GetBool lc
         , GetBool rc
@@ -6210,26 +6075,26 @@ instance (PP p x ~ [Int]
 
 -- | Read a number using base 2 through a maximum of 36
 --
--- >>> pl @(ReadBase Int 16) "00feD"
+-- >>> pl @(ReadBase Int 16 Id) "00feD"
 -- Present 4077
 -- PresentT 4077
 --
--- >>> pl @(ReadBase Int 16) "-ff"
+-- >>> pl @(ReadBase Int 16 Id) "-ff"
 -- Present -255
 -- PresentT (-255)
 --
--- >>> pl @(ReadBase Int 2) "10010011"
+-- >>> pl @(ReadBase Int 2 Id) "10010011"
 -- Present 147
 -- PresentT 147
 --
--- >>> pl @(ReadBase Int 8) "Abff"
+-- >>> pl @(ReadBase Int 8 Id) "Abff"
 -- Error invalid base 8
 -- FailT "invalid base 8"
 --
 -- supports negative numbers unlike readInt
 data ReadBase' t (n :: Nat) p
-type ReadBase (t :: Type) (n :: Nat) = ReadBase' (Hole t) n Id
-type ReadBaseInt (n :: Nat) = ReadBase' (Hole Int) n Id
+type ReadBase (t :: Type) (n :: Nat) p = ReadBase' (Hole t) n p
+type ReadBaseInt (n :: Nat) p = ReadBase' (Hole Int) n p
 
 instance (Typeable (PP t x)
         , BetweenT 2 36 n
@@ -6268,24 +6133,23 @@ getValidBase n =
 
 -- | Display a number at base 2 to 36, similar to 'showIntAtBase' but supports signed numbers
 --
--- >>> pl @(ShowBase 16) 4077
+-- >>> pl @(ShowBase 16 Id) 4077
 -- Present "fed"
 -- PresentT "fed"
 --
--- >>> pl @(ShowBase 16) (-255)
+-- >>> pl @(ShowBase 16 Id) (-255)
 -- Present "-ff"
 -- PresentT "-ff"
 --
--- >>> pl @(ShowBase 2) 147
+-- >>> pl @(ShowBase 2 Id) 147
 -- Present "10010011"
 -- PresentT "10010011"
 --
--- >>> pl @(ShowBase' 2 (Negate 147)) "whatever"
+-- >>> pl @(ShowBase 2 (Negate 147)) "whatever"
 -- Present "-10010011"
 -- PresentT "-10010011"
 --
-data ShowBase' (n :: Nat) p
-type ShowBase (n :: Nat) = ShowBase' n Id
+data ShowBase (n :: Nat) p
 
 instance (PP p x ~ a
         , P p x
@@ -6294,8 +6158,8 @@ instance (PP p x ~ a
         , n GL.<= 36
         , KnownNat n
         , Integral a
-        ) => P (ShowBase' n p) x where
-  type PP (ShowBase' n p) x = String
+        ) => P (ShowBase n p) x where
+  type PP (ShowBase n p) x = String
   eval _ opts x = do
     let n = nat @n
         xs = getValidBase n
@@ -6547,7 +6411,7 @@ type Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (FailCase s) ps qs r -- 
 type FailCase p = Fail (Snd Id >> Unproxy) (Fst Id >> p)
 
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out
-instance (FailIfT (NotT (LenT ps DE.== LenT qs)) ((LenT ps DE.== LenT qs) ~ 'True)
+instance (FailUnlessT (LenT ps DE.== LenT qs)
                   ('GL.Text "lengths are not the same "
                    ':<>: 'GL.ShowType (LenT ps)
                    ':<>: 'GL.Text " vs "
@@ -7012,6 +6876,14 @@ instance (Show a
 -- Present (999,())
 -- PresentT (999,())
 --
+-- >>> pl @(TupleI '[1,2,3,4] >> ReverseTupleN) 4
+-- Present (4,(3,(2,(1,()))))
+-- PresentT (4,(3,(2,(1,()))))
+--
+-- >>> pl @(TupleI '[1,2,3,4] >> ReverseTupleN >> ReverseTupleN) 4
+-- Present (1,(2,(3,(4,()))))
+-- PresentT (1,(2,(3,(4,()))))
+--
 data ReverseTupleN
 
 instance (ReverseTupleC tp
@@ -7039,19 +6911,19 @@ type PrintfntLax (n :: Nat) s = Printfn s (TupleListLax n)
 
 -- | print a 2-tuple
 --
--- >>> pl @(Printf2 "fst=%s snd=%03d") ("ab",123)
+-- >>> pl @(Printf2 "fst=%s snd=%03d" Id) ("ab",123)
 -- Present "fst=ab snd=123"
 -- PresentT "fst=ab snd=123"
 --
-type Printf2 s = Printfn s '(Fst Id,'(Snd Id, '()))
+type Printf2 s p = Printfn s '(Fst p,'(Snd p, '()))
 -- | print a 3-tuple
 --
--- >>> pl @(Printf3 "fst=%s snd=%03d thd=%s") ("ab",123,"xx")
+-- >>> pl @(Printf3 "fst=%s snd=%03d thd=%s" Id) ("ab",123,"xx")
 -- Present "fst=ab snd=123 thd=xx"
 -- PresentT "fst=ab snd=123 thd=xx"
 --
-type Printf3 s = Printfn s '(Fst Id, '(Snd Id, '(Thd Id, '())))
-type Printf3' s = Printfn s (TupleI '[Fst Id, Snd Id, Thd Id])
+type Printf3 s p = Printfn s '(Fst p, '(Snd p, '(Thd p, '())))
+--type Printf3' s p = Printfn s (TupleI '[Fst p, Snd p, Thd p])
 
 
 instance (KnownNat (TupleLenT as)
@@ -7338,7 +7210,7 @@ type Trim p = Trim' 'True 'True p
 type TrimStart p = Trim' 'True 'False p
 type TrimEnd p = Trim' 'False 'True p
 
-instance (FailIfT (NotT (OrT l r)) ()
+instance (FailUnlessT (OrT l r)
            ('GL.Text "Trim': left and right cannot both be False")
         , GetBool l
         , GetBool r
@@ -7454,3 +7326,597 @@ instance (P (DoExpandT (RepeatT n p)) a
   eval _ opts a =
     eval (Proxy @(Do (RepeatT n p))) opts a
 
+-- | extract the value from a 'Maybe' otherwise use the default value
+--
+-- >>> pl @(JustDef (1 % 4) Id) (Just 20.4)
+-- Present 102 % 5
+-- PresentT (102 % 5)
+--
+-- >>> pl @(JustDef (1 % 4) Id) Nothing
+-- Present 1 % 4
+-- PresentT (1 % 4)
+--
+-- >>> pl @(JustDef (MEmptyT _) Id) (Just "xy")
+-- Present "xy"
+-- PresentT "xy"
+--
+-- >>> pl @(JustDef (MEmptyT _) Id) Nothing
+-- Present ()
+-- PresentT ()
+--
+-- >>> pl @(JustDef (MEmptyT (SG.Sum _)) Id) Nothing
+-- Present Sum {getSum = 0}
+-- PresentT (Sum {getSum = 0})
+--
+data JustDef p q
+
+instance ( PP p x ~ a
+         , PP q x ~ Maybe a
+         , P p x
+         , P q x)
+    => P (JustDef p q) x where
+  type PP (JustDef p q) x = MaybeT (PP q x)
+  eval _ opts x = do
+    let msg0 = "JustDef"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          Just b -> pure $ mkNode opts (PresentT b) [msg0 <> " Just"] [hh qq]
+          Nothing -> do
+            pp <- eval (Proxy @p) opts x
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right b -> mkNode opts (PresentT b) [msg0 <> " Nothing"] [hh qq, hh pp]
+
+
+type family MaybeT mb where
+  MaybeT (Maybe a) = a
+  MaybeT o = GL.TypeError (
+      'GL.Text "MaybeT: expected 'Maybe a' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+-- | extract the value from a 'Maybe' or fail
+--
+-- >>> pl @(JustFail "nope" Id) (Just 99)
+-- Present 99
+-- PresentT 99
+--
+-- >>> pl @(JustFail "nope" Id) Nothing
+-- Error nope
+-- FailT "nope"
+--
+-- >>> pl @(JustFail (Printf "oops=%d" (Snd Id)) (Fst Id)) (Nothing, 123)
+-- Error oops=123
+-- FailT "oops=123"
+--
+-- >>> pl @(JustFail (Printf "oops=%d" (Snd Id)) (Fst Id)) (Just 'x', 123)
+-- Present 'x'
+-- PresentT 'x'
+--
+data JustFail p q
+
+instance ( PP p x ~ String
+         , PP q x ~ Maybe a
+         , P p x
+         , P q x)
+    => P (JustFail p q) x where
+  type PP (JustFail p q) x = MaybeT (PP q x)
+  eval _ opts x = do
+    let msg0 = "JustFail"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          Just b -> pure $ mkNode opts (PresentT b) [msg0 <> " Just"] [hh qq]
+          Nothing -> do
+            pp <- eval (Proxy @p) opts x
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (FailT p) [msg0 <> " Nothing"] [hh qq, hh pp]
+
+-- | extract the Left value from an 'Either' otherwise use the default value
+--
+-- if there is no Left value then \p\ is passed the Right value and the whole context
+--
+-- >>> pl @(LeftDef (1 % 4) Id) (Left 20.4)
+-- Present 102 % 5
+-- PresentT (102 % 5)
+--
+-- >>> pl @(LeftDef (1 % 4) Id) (Right "aa")
+-- Present 1 % 4
+-- PresentT (1 % 4)
+--
+-- >>> pl @(LeftDef (Printf2 "found right=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Right "xy")
+-- Present "found right=xy fst=123"
+-- PresentT "found right=xy fst=123"
+--
+-- >>> pl @(LeftDef (MEmptyT _) Id) (Right 222)
+-- Present ()
+-- PresentT ()
+--
+-- >>> pl @(LeftDef (MEmptyT (SG.Sum _)) Id) (Right 222)
+-- Present Sum {getSum = 0}
+-- PresentT (Sum {getSum = 0})
+--
+data LeftDef p q
+
+instance ( PP q x ~ Either a b
+         , PP p (b,x) ~ a
+         , P q x
+         , P p (b,x)
+    ) => P (LeftDef p q) x where
+  type PP (LeftDef p q) x = LeftT (PP q x)
+  eval _ opts x = do
+    let msg0 = "LeftDef"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          Left a -> pure $ mkNode opts (PresentT a) [msg0 <> " Left"] [hh qq]
+          Right b -> do
+            pp <- eval (Proxy @p) opts (b,x)
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (PresentT p) [msg0 <> " Right"] [hh qq, hh pp]
+
+type family LeftT lr where
+  LeftT (Either a b) = a
+  LeftT o = GL.TypeError (
+      'GL.Text "LeftT: expected 'Either a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+type family RightT lr where
+  RightT (Either a b) = b
+  RightT o = GL.TypeError (
+      'GL.Text "RightT: expected 'Either a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+-- | extract the Right value from an 'Either'
+--
+-- if there is no Right value then \p\ is passed the Left value and the whole context
+--
+-- >>> pl @(RightDef (1 % 4) Id) (Right 20.4)
+-- Present 102 % 5
+-- PresentT (102 % 5)
+--
+-- >>> pl @(RightDef (1 % 4) Id) (Left "aa")
+-- Present 1 % 4
+-- PresentT (1 % 4)
+--
+-- >>> pl @(RightDef (Printf2 "found left=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Left "xy")
+-- Present "found left=xy fst=123"
+-- PresentT "found left=xy fst=123"
+--
+-- >>> pl @(RightDef (MEmptyT _) Id) (Left 222)
+-- Present ()
+-- PresentT ()
+--
+-- >>> pl @(RightDef (MEmptyT (SG.Sum _)) Id) (Left 222)
+-- Present Sum {getSum = 0}
+-- PresentT (Sum {getSum = 0})
+--
+data RightDef p q
+
+instance ( PP q x ~ Either a b
+         , PP p (a,x) ~ b
+         , P q x
+         , P p (a,x)
+    ) => P (RightDef p q) x where
+  type PP (RightDef p q) x = RightT (PP q x)
+  eval _ opts x = do
+    let msg0 = "RightDef"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          Right b -> pure $ mkNode opts (PresentT b) [msg0 <> " Right"] [hh qq]
+          Left a -> do
+            pp <- eval (Proxy @p) opts (a,x)
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (PresentT p) [msg0 <> " Left"] [hh qq, hh pp]
+
+
+-- | extract the Left value from an 'Either' otherwise fail with an error message
+--
+-- if there is no Left value then \p\ is passed the Right value and the whole context
+--
+-- >>> pl @(LeftFail "oops" Id) (Left 20.4)
+-- Present 20.4
+-- PresentT 20.4
+--
+-- >>> pl @(LeftFail "oops" Id) (Right "aa")
+-- Error oops
+-- FailT "oops"
+--
+-- >>> pl @(LeftFail (Printf2 "found right=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Right "xy")
+-- Error found right=xy fst=123
+-- FailT "found right=xy fst=123"
+--
+-- >>> pl @(LeftFail (MEmptyT _) Id) (Right 222)
+-- Error
+-- FailT ""
+--
+data LeftFail p q
+
+instance ( PP p (b,x) ~ String
+         , PP q x ~ Either a b
+         , P p (b,x)
+         , P q x)
+    => P (LeftFail p q) x where
+  type PP (LeftFail p q) x = LeftT (PP q x)
+  eval _ opts x = do
+    let msg0 = "LeftFail"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          Left a -> pure $ mkNode opts (PresentT a) [msg0 <> " Left"] [hh qq]
+          Right b -> do
+            pp <- eval (Proxy @p) opts (b,x)
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (FailT p) [msg0 <> " Right"] [hh qq, hh pp]
+
+
+-- | extract the Right value from an 'Either' otherwise fail with an error message
+--
+-- if there is no Right value then \p\ is passed the Left value and the whole context
+--
+-- >>> pl @(RightFail "oops" Id) (Right 20.4)
+-- Present 20.4
+-- PresentT 20.4
+--
+-- >>> pl @(RightFail "oops" Id) (Left "aa")
+-- Error oops
+-- FailT "oops"
+--
+-- >>> pl @(RightFail (Printf2 "found left=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Left "xy")
+-- Error found left=xy fst=123
+-- FailT "found left=xy fst=123"
+--
+-- >>> pl @(RightFail (MEmptyT _) Id) (Left 222)
+-- Error
+-- FailT ""
+--
+data RightFail p q
+
+instance ( PP p (a,x) ~ String
+         , PP q x ~ Either a b
+         , P p (a,x)
+         , P q x)
+    => P (RightFail p q) x where
+  type PP (RightFail p q) x = RightT (PP q x)
+  eval _ opts x = do
+    let msg0 = "RightFail"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          Right b -> pure $ mkNode opts (PresentT b) [msg0 <> " Right"] [hh qq]
+          Left a -> do
+            pp <- eval (Proxy @p) opts (a,x)
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (FailT p) [msg0 <> " Left"] [hh qq, hh pp]
+
+
+
+-- | extract the This value from an 'These' otherwise use the default value
+--
+-- if there is no This value then \p\ is passed the whole context only
+--
+-- >>> pl @(ThisDef (1 % 4) Id) (This 20.4)
+-- Present 102 % 5
+-- PresentT (102 % 5)
+--
+-- >>> pl @(ThisDef (1 % 4) Id) (That "aa")
+-- Present 1 % 4
+-- PresentT (1 % 4)
+--
+-- >>> pl @(ThisDef (1 % 4) Id) (These 2.3 "aa")
+-- Present 1 % 4
+-- PresentT (1 % 4)
+--
+-- >>> pl @(ThisDef (Printf2 "found %s fst=%d" '(ShowP (Snd Id), Fst Id)) (Snd Id)) (123,That "xy")
+-- Present "found That \"xy\" fst=123"
+-- PresentT "found That \"xy\" fst=123"
+--
+-- >>> pl @(ThisDef (MEmptyT _) Id) (That 222)
+-- Present ()
+-- PresentT ()
+--
+-- >>> pl @(ThisDef (MEmptyT (SG.Sum _)) Id) (These 222 'x')
+-- Present Sum {getSum = 0}
+-- PresentT (Sum {getSum = 0})
+--
+data ThisDef p q
+
+instance ( PP q x ~ These a b
+         , PP p x ~ a
+         , P q x
+         , P p x
+    ) => P (ThisDef p q) x where
+  type PP (ThisDef p q) x = ThisT (PP q x)
+  eval _ opts x = do
+    let msg0 = "ThisDef"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          This a -> pure $ mkNode opts (PresentT a) [msg0 <> " This"] [hh qq]
+          _ -> do
+            pp <- eval (Proxy @p) opts x
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (PresentT p) [msg0 <> " " <> getTheseType q] [hh qq, hh pp]
+
+type family ThisT lr where
+  ThisT (These a b) = a
+  ThisT o = GL.TypeError (
+      'GL.Text "ThisT: expected 'These a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+type family ThatT lr where
+  ThatT (These a b) = b
+  ThatT o = GL.TypeError (
+      'GL.Text "ThatT: expected 'These a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+type family TheseT lr where
+  TheseT (These a b) = (a,b)
+  TheseT o = GL.TypeError (
+      'GL.Text "TheseT: expected 'These a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+
+-- | extract the That value from an 'These' otherwise use the default value
+--
+-- if there is no That value then \p\ is passed the whole context only
+--
+-- >>> pl @(ThatDef (1 % 4) Id) (That 20.4)
+-- Present 102 % 5
+-- PresentT (102 % 5)
+--
+-- >>> pl @(ThatDef (1 % 4) Id) (This "aa")
+-- Present 1 % 4
+-- PresentT (1 % 4)
+--
+-- >>> pl @(ThatDef (1 % 4) Id) (These "aa" 2.3)
+-- Present 1 % 4
+-- PresentT (1 % 4)
+--
+-- >>> pl @(ThatDef (Printf2 "found %s fst=%d" '(ShowP (Snd Id), Fst Id)) (Snd Id)) (123,This "xy")
+-- Present "found This \"xy\" fst=123"
+-- PresentT "found This \"xy\" fst=123"
+--
+-- >>> pl @(ThatDef (MEmptyT _) Id) (This 222)
+-- Present ()
+-- PresentT ()
+--
+-- >>> pl @(ThatDef (MEmptyT (SG.Sum _)) Id) (These 'x' 1120)
+-- Present Sum {getSum = 0}
+-- PresentT (Sum {getSum = 0})
+--
+data ThatDef p q
+
+instance ( PP q x ~ These a b
+         , PP p x ~ b
+         , P q x
+         , P p x
+    ) => P (ThatDef p q) x where
+  type PP (ThatDef p q) x = ThatT (PP q x)
+  eval _ opts x = do
+    let msg0 = "ThatDef"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          That a -> pure $ mkNode opts (PresentT a) [msg0 <> " That"] [hh qq]
+          _ -> do
+            pp <- eval (Proxy @p) opts x
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (PresentT p) [msg0 <> " " <> getTheseType q] [hh qq, hh pp]
+
+-- | extract the These value from an 'These' otherwise use the default value
+--
+-- if there is no These value then \p\ is passed the whole context only
+--
+-- >>> pl @(TheseDef '(1 % 4,"zz") Id) (These 20.4 "x")
+-- Present (102 % 5,"x")
+-- PresentT (102 % 5,"x")
+--
+-- >>> pl @(TheseDef '(1 % 4,"zz") Id) (This 20.4)
+-- Present (1 % 4,"zz")
+-- PresentT (1 % 4,"zz")
+--
+-- >>> pl @(TheseDef '(1 % 4,"zz") Id) (That "x")
+-- Present (1 % 4,"zz")
+-- PresentT (1 % 4,"zz")
+--
+-- >>> pl @(TheseDef '(Printf2 "found %s fst=%d" '(ShowP (Snd Id), Fst Id),999) (Snd Id)) (123,This "xy")
+-- Present ("found This \"xy\" fst=123",999)
+-- PresentT ("found This \"xy\" fst=123",999)
+--
+-- >>> pl @(TheseDef (MEmptyT (SG.Sum _, String)) Id) (This 222)
+-- Present (Sum {getSum = 0},"")
+-- PresentT (Sum {getSum = 0},"")
+--
+-- >>> pl @(TheseDef (MEmptyT _) Id) (These (222 :: SG.Sum Int) "aa")
+-- Present (Sum {getSum = 222},"aa")
+-- PresentT (Sum {getSum = 222},"aa")
+--
+data TheseDef p q
+
+instance ( PP q x ~ These a b
+         , PP p x ~ (a,b)
+         , P q x
+         , P p x
+    ) => P (TheseDef p q) x where
+  type PP (TheseDef p q) x = TheseT (PP q x)
+  eval _ opts x = do
+    let msg0 = "TheseDef"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          These a b -> pure $ mkNode opts (PresentT (a,b)) [msg0 <> " These"] [hh qq]
+          _ -> do
+            pp <- eval (Proxy @p) opts x
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (PresentT p) [msg0 <> " " <> getTheseType q] [hh qq, hh pp]
+
+
+-- | extract the This value from a 'These' otherwise fail with an error message
+--
+-- if there is no This value then \p\ is passed the whole context only
+--
+-- >>> pl @(ThisFail "oops" Id) (This 20.4)
+-- Present 20.4
+-- PresentT 20.4
+--
+-- >>> pl @(ThisFail "oops" Id) (That "aa")
+-- Error oops
+-- FailT "oops"
+--
+-- >>> pl @(ThisFail (Printf2 "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,That "xy")
+-- Error found That "xy" fst=123
+-- FailT "found That \"xy\" fst=123"
+--
+-- >>> pl @(ThisFail (MEmptyT _) Id) (That 222)
+-- Error
+-- FailT ""
+--
+data ThisFail p q
+
+instance ( PP p x ~ String
+         , PP q x ~ These a b
+         , P p x
+         , P q x)
+    => P (ThisFail p q) x where
+  type PP (ThisFail p q) x = ThisT (PP q x)
+  eval _ opts x = do
+    let msg0 = "ThisFail"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          This a -> pure $ mkNode opts (PresentT a) [msg0 <> " This"] [hh qq]
+          _ -> do
+            pp <- eval (Proxy @p) opts x
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (FailT p) [msg0 <> " " <> getTheseType q] [hh qq, hh pp]
+
+
+-- | extract the That value from a 'These' otherwise fail with an error message
+--
+-- if there is no That value then \p\ is passed the whole context only
+--
+-- >>> pl @(ThatFail "oops" Id) (That 20.4)
+-- Present 20.4
+-- PresentT 20.4
+--
+-- >>> pl @(ThatFail "oops" Id) (This "aa")
+-- Error oops
+-- FailT "oops"
+--
+-- >>> pl @(ThatFail (Printf2 "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,This "xy")
+-- Error found This "xy" fst=123
+-- FailT "found This \"xy\" fst=123"
+--
+-- >>> pl @(ThatFail (MEmptyT _) Id) (This 222)
+-- Error
+-- FailT ""
+--
+data ThatFail p q
+
+instance ( PP p x ~ String
+         , PP q x ~ These a b
+         , P p x
+         , P q x)
+    => P (ThatFail p q) x where
+  type PP (ThatFail p q) x = ThatT (PP q x)
+  eval _ opts x = do
+    let msg0 = "ThatFail"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          That a -> pure $ mkNode opts (PresentT a) [msg0 <> " That"] [hh qq]
+          _ -> do
+            pp <- eval (Proxy @p) opts x
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (FailT p) [msg0 <> " " <> getTheseType q] [hh qq, hh pp]
+
+
+
+
+-- | extract the These value from a 'These' otherwise fail with an error message
+--
+-- if there is no These value then \p\ is passed the whole context only
+--
+-- >>> pl @(TheseFail "oops" Id) (These "abc" 20.4)
+-- Present ("abc",20.4)
+-- PresentT ("abc",20.4)
+--
+-- >>> pl @(TheseFail "oops" Id) (That "aa")
+-- Error oops
+-- FailT "oops"
+--
+-- >>> pl @(TheseFail (Printf2 "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,That "xy")
+-- Error found That "xy" fst=123
+-- FailT "found That \"xy\" fst=123"
+--
+-- >>> pl @(TheseFail (MEmptyT _) Id) (That 222)
+-- Error
+-- FailT ""
+--
+data TheseFail p q
+
+instance ( PP p x ~ String
+         , PP q x ~ These a b
+         , P p x
+         , P q x)
+    => P (TheseFail p q) x where
+  type PP (TheseFail p q) x = TheseT (PP q x)
+  eval _ opts x = do
+    let msg0 = "TheseFail"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        case q of
+          These a b -> pure $ mkNode opts (PresentT (a,b)) [msg0 <> " These"] [hh qq]
+          _ -> do
+            pp <- eval (Proxy @p) opts x
+            pure $ case getValueLR opts msg0 pp [hh qq] of
+              Left e -> e
+              Right p -> mkNode opts (FailT p) [msg0 <> " " <> getTheseType q] [hh qq, hh pp]
+
+getTheseType :: These a b -> String
+getTheseType = \case
+  This {} -> "This"
+  That {} -> "That"
+  These {} -> "These"

@@ -95,19 +95,19 @@ import Data.Binary (Binary)
 -- >>> prtRefinedIO @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) ol "141.213.1"
 -- Left FalseP
 --
--- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> 'True) ol "141.213.1"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> 'True) ol "141.213.1"
 -- Left (FailP "bad length: found 3")
 --
--- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d") 4 (Between 0 255) >> 'True) ol "141.213.1.444"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) ol "141.213.1.444"
 -- Left (FailP "octet 4 out of range 444")
 --
--- >>> prtRefinedIO @(Map (ReadP Int) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d") 4 (Between 0 255) >> 'True) ol "141.213.1x34.444"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) ol "141.213.1x34.444"
 -- Left (FailP "ReadP Int (1x34) failed")
 --
--- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) Id >> Luhn Id) ol "12344"
+-- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) ol "12344"
 -- Right (Refined {unRefined = "12344"})
 --
--- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int) Id >> Luhn Id) ol "12340"
+-- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) ol "12340"
 -- Left FalseP
 --
 -- >>> prtRefinedIO @(Any (Prime Id) Id) ol [11,13,17,18]
@@ -196,9 +196,9 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 -- >>> import Data.Time
 -- >>> import Control.Lens
 -- >>> import Control.Arrow ((+++))
--- >>> type K1 = Refined (ReadP Day >> 'True) String
--- >>> type K2 = Refined (ReadP Day >> Between (ReadP' Day "2019-03-30") (ReadP' Day "2019-06-01")) String
--- >>> type K3 = Refined (ReadP Day >> Between (ReadP' Day "2019-05-30") (ReadP' Day "2019-06-01")) String
+-- >>> type K1 = Refined (ReadP Day Id >> 'True) String
+-- >>> type K2 = Refined (ReadP Day Id >> Between (ReadP Day "2019-03-30") (ReadP Day "2019-06-01")) String
+-- >>> type K3 = Refined (ReadP Day Id >> Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01")) String
 -- >>> r = unsafeRefined' ol "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined {unRefined = "2019-04-23"}

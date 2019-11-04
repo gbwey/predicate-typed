@@ -109,7 +109,8 @@ module Predicate.Util (
   -- ** useful type families
   , BetweenT
   , NullT
-  , FailIfT
+  , FailWhenT
+  , FailUnlessT
   , AndT
   , OrT
   , NotT
@@ -676,8 +677,7 @@ evalBinStrict opts s fn ll rr =
 -- | type level Between
 type family BetweenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
   BetweenT m n v =
-     FailIfT (NotT (AndT (m GL.<=? v) (v GL.<=? n)))
-              ((m GL.<=? v) ~ 'True, (v GL.<=? n) ~ 'True)
+     FailUnlessT (AndT (m GL.<=? v) (v GL.<=? n))
             ('GL.Text "BetweenT failure"
              ':$$: 'GL.ShowType v
              ':$$: 'GL.Text " is outside of "
@@ -690,11 +690,15 @@ type family NullT (x :: Symbol) :: Bool where
   NullT ("" :: Symbol) = 'True
   NullT _ = 'False
 
--- todo: constraint \'c\' is not passed on properly
--- | helper method to fail with an error if the True
-type family FailIfT (b :: Bool) (c :: Constraint) (msg :: GL.ErrorMessage) :: Constraint where
-  FailIfT 'False c _ = c
-  FailIfT 'True _ e = GL.TypeError e
+-- | helper method to fail with an error when True
+type family FailWhenT (b :: Bool) (msg :: GL.ErrorMessage) :: Constraint where
+  FailWhenT 'False _ = ()
+  FailWhenT 'True e = GL.TypeError e
+
+-- | helper method to fail with an error when False
+type family FailUnlessT (b :: Bool) (msg :: GL.ErrorMessage) :: Constraint where
+  FailUnlessT 'True _ = ()
+  FailUnlessT 'False e = GL.TypeError e
 
 -- | typelevel And
 type family AndT (b :: Bool) (b1 :: Bool) :: Bool where

@@ -25,41 +25,41 @@ data Refined p a = Refined a
 
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
->prtRefinedIO @(ReadP Int >> Id > 99) ol "123"
+>prtRefinedIO @(ReadP Int Id >> Id > 99) ol "123"
 Right (Refined {unRefined = "123"})
 ```
 
 2. tries to read in a number but fails
 ```haskell
->prtRefinedIO @(ReadP Int >> Id > 99) ol "1x2y3"
+>prtRefinedIO @(ReadP Int Id >> Id > 99) ol "1x2y3"
 Left (FailP "ReadP Int (1x2y3) failed")
 ```
 
 3. reads in a hexadecimal string and checks to see that it is between 99 and 256
 ```haskell
->prtRefinedIO @(ReadBase Int 16 >> Between 99 256) ol "000fe"
+>prtRefinedIO @(ReadBase Int 16 Id >> Between 99 256) ol "000fe"
 Right (Refined {unRefined = "000fe"})
 ```
 
 4. reads in a hexadecimal string but fails the predicate check
 ```haskell
->prtRefinedIO @(ReadBase Int 16 >> Between 99 253) ol "000fe"
+>prtRefinedIO @(ReadBase Int 16 Id >> Between 99 253) ol "000fe"
 Left FalseP
 ```
 
 5. same as 4. above but now we get details of where it went wrong
 ```haskell
->prtRefinedIO @(ReadBase Int 16 >> Between 99 253) o2 "000fe"
+>prtRefinedIO @(ReadBase Int 16 Id >> Between 99 253) o2 "000fe"
 ```
 
 6. reads in a string as time and does simple validation
 ```haskell
->prtRefinedIO @(Resplit ":" Id >> Map (ReadP Int) Id >> Len == 3) ol "12:01:05"
+>prtRefinedIO @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) ol "12:01:05"
 Right (Refined {unRefined = "12:01:05"})
 ```
   * `Resplit ":" Id`
      split using regex using a colon as a delimiter  ["12","01","05"]
-  * `Map (ReadP Int) Id`
+  * `Map (ReadP Int Id) Id`
      Read in the values as Ints                      [12,1,5]
   * `Len == 3`
      Check to see that the length of the list of Ints is 3
@@ -72,11 +72,11 @@ for less detail use _pl_\
 if using a unicode-supported OS then _pu_ gives you nicer rendering than _pe2_\
 
 ```haskell
->pe2 @(Resplit ":" Id >> Map (ReadP Int) Id >> Len == 3) "12:01:05"
+>pe2 @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
 
 >pe2 @(Resplit ":" Id) "12:01:05"
 
->pe2 @(Map (ReadP Int) Id) ["12","01","05"]
+>pe2 @(Map (ReadP Int Id) Id) ["12","01","05"]
 
 >pe2 @(Len == 3) [12,1,5]
 ```
@@ -84,16 +84,16 @@ if using a unicode-supported OS then _pu_ gives you nicer rendering than _pe2_\
 ### An example using Refined3 (for more information see [doctests](src/Refined3.hs) and [doctests](src/Refined3Helper.hs))
 
 ```haskell
->type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
+>type Hex = '(ReadBase Int 16 Id, Between 0 255, ShowBase 16 Id, String)
 
 >prtEval3PIO (Proxy @Hex) ol "0000fe"
 Refined3 {in3 = 254, out3 = "fe"}
 ```
-1. `ReadBase Int 16`
+1. `ReadBase Int 16 Id`
     reads a hexadecimal string and returns 254
 2. `Between 0 255`
     checks to make sure the predicate holds ie the number is between 0 and 255
-3. `ShowBase 16`
+3. `ShowBase 16 Id`
     formats the output as "fe" which is compatible with the input
 
 run this to get details in color of each evaluation step:
@@ -129,7 +129,7 @@ P ShowBase 16 fe | 254
 
 Read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as output
 ```haskell
->pe2 @(ReadBase Int 16) "0000fe"
+>pe2 @(ReadBase Int 16 Id) "0000fe"
 PresentT 254
 
 >pe2 @(Between 0 255) 254
@@ -144,7 +144,7 @@ PresentT "fe"
 ### Template Haskell versions
 
 ```haskell
-ex1 :: Refined (ReadP Int >> Id > 99) String
+ex1 :: Refined (ReadP Int Id >> Id > 99) String
 ex1 = $$(refinedTH "123")
 ```
 
@@ -153,14 +153,14 @@ ex1 = $$(refinedTH "123")
 **_Replace '$$(refined3TH ...)' with '$$(refined3TH' o2 ...)' for a colored evaluation tree_**
 
 ```haskell
-type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
+type Hex = '(ReadBase Int 16 Id, Between 0 255, ShowBase 16 Id, String)
 
 $$(refined3TH "0000fe") :: MakeR3 Hex
 ```
 
 Here is an example where the predicate fails at compile-time and we choose to show the details using o2.
 ```haskell
->type Hex = '(ReadBase Int 16, Between 0 255, ShowBase 16, String)
+>type Hex = '(ReadBase Int 16 Id, Between 0 255, ShowBase 16 Id, String)
 
 >$$(refined3TH' o2 "000ffff") :: MakeR3 Hex
 
@@ -220,13 +220,13 @@ An example of an invalid refined3TH call
 
 #### This example is successful as it is a valid hexadecimal and is in the range 10 though 256
 ```haskell
->eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
+>eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
 Right (Refined3 {in3 = 254, out3 = "254"})
 ```
 
 #### This example fails as the value is not a valid hexadecimal string
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16) 'True (ShowP Id) String) "\"00feg\""
+>either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) 'True (ShowP Id) String) "\"00feg\""
 Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ***Step 1. Initial Conversion(ip) Failed ***
@@ -239,7 +239,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 #### This example fails as the hexadecimal value is valid but is not between 10 and 256
 
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
+>either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
 Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
 
 ***Step 1. Success Initial Conversion(ip) [16663610] ***

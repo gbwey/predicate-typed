@@ -116,25 +116,25 @@ import Data.Maybe (fromMaybe)
 --
 -- Setting the input type __i__ to 'GHC.Base.String' resembles the corresponding Read/Show instances but with an additional predicate on the read value
 --
---   * __read__ a string into an internal type and store in 'r3In'
---   * __validate__ 'r3In' using the predicate __op__
---   * __show__ 'r3In' and store that formatted result in 'r3Out'
+--   * __read__ a string using /ip/ into an internal type and store in 'r3In'
+--   * __validate__ 'r3In' using the predicate /op/
+--   * __show__ 'r3In' using /fmt/ and store that formatted result in 'r3Out'
 --
--- Although the most common scenario is String as input, you are free to choose any input type you like
+-- Although a common scenario is String as input, you are free to choose any input type you like
 --
--- >>> prtEval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x" Id) ol "00fe"
+-- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 255) @(Printf "%x" Id) ol "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> prtEval3 @(ReadBase Int 16) @(Lt 253) @(Printf "%x" Id) ol "00fe"
+-- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 253) @(Printf "%x" Id) ol "00fe"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3 @(ReadBase Int 16) @(Lt 255) @(Printf "%x" Id) ol "00fg"
+-- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 255) @(Printf "%x" Id) ol "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prtEval3 @(Map (ReadP Int) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1.5"
+-- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> prtEval3 @(Map (ReadP Int) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1"
+-- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d") ol "198.162.3.1"
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
@@ -184,16 +184,16 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
 --
--- >>> reads @(Refined3 (ReadBase Int 16) (Between 0 255) (ShowBase 16) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
+-- >>> reads @(Refined3 (ReadBase Int 16 Id) (Between 0 255) (ShowBase 16 Id) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
 -- [(Refined3 {r3In = 254, r3Out = "fe"},"")]
 --
--- >>> reads @(Refined3 (ReadBase Int 16) (Between 0 255) (ShowBase 16) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
+-- >>> reads @(Refined3 (ReadBase Int 16 Id) (Between 0 255) (ShowBase 16 Id) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
 -- []
 --
--- >>> reads @(Refined3 (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
+-- >>> reads @(Refined3 (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
 -- [(Refined3 {r3In = -1234, r3Out = "-4d2"},"")]
 --
--- >>> reads @(Refined3 (Map (ReadP Int) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) (Printfnt 4 "%d.%d.%d.%d") String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined3 (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) (Printfnt 4 "%d.%d.%d.%d") String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
 -- [(Refined3 {r3In = [192,168,0,1], r3Out = "192.168.0.1"},"")]
 --
 instance ( Eq i
@@ -227,7 +227,7 @@ instance ( Eq i
 
 -- | 'ToJSON' instance for 'Refined3'
 --
--- >>> encode (unsafeRefined3 @(ReadBase Int 16) @(Between 0 255) @(ShowBase 16) 254 "fe")
+-- >>> encode (unsafeRefined3 @(ReadBase Int 16 Id) @(Between 0 255) @(ShowBase 16 Id) 254 "fe")
 -- "\"fe\""
 --
 -- >>> encode (unsafeRefined3 @Id @'True @Id 123 123)
@@ -239,10 +239,10 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 
 -- | 'FromJSON' instance for 'Refined3'
 --
--- >>> eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe\""
+-- >>> eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe\""
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> removeAnsi $ eitherDecode' @(Refined3 (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe443a\""
+-- >>> removeAnsi $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
 -- Error in $: Refined3:Step 2. False Boolean Check(op) | FalseP
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [16663610] ***
@@ -313,9 +313,9 @@ arbRefined3With _ opts f =
 -- >>> import Control.Arrow ((+++))
 -- >>> import Control.Lens
 -- >>> import Data.Time
--- >>> type K1 = MakeR3 '(ReadP Day, 'True, ShowP Id, String)
--- >>> type K2 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-03-30") (ReadP' Day "2019-06-01"), ShowP Id, String)
--- >>> type K3 = MakeR3 '(ReadP Day, Between (ReadP' Day "2019-05-30") (ReadP' Day "2019-06-01"), ShowP Id, String)
+-- >>> type K1 = MakeR3 '(ReadP Day Id, 'True, ShowP Id, String)
+-- >>> type K2 = MakeR3 '(ReadP Day Id, Between (ReadP Day "2019-03-30") (ReadP Day "2019-06-01"), ShowP Id, String)
+-- >>> type K3 = MakeR3 '(ReadP Day Id, Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01"), ShowP Id, String)
 -- >>> r = unsafeRefined3' ol "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
@@ -408,7 +408,7 @@ withRefined3TIO opts = (>>=) . newRefined3TPIO (Proxy @'(ip,op,fmt,i)) opts
 -- reads a binary string and adds the values together
 --
 -- >>> :set -XPolyKinds
--- >>> type Base n p = '(ReadBase Int n, p, ShowBase 16, String)
+-- >>> type Base n p = '(ReadBase Int n Id, p, ShowBase 16 Id, String)
 -- >>> base16 = Proxy @(Base 16 (Between 100 200))
 -- >>> base2 = Proxy @(Base 2 'True)
 -- >>> prtRefinedTIO $ withRefined3TP base16 ol "a3" $ \x -> withRefined3TP base2 ol "1001110111" $ \y -> pure (r3In x + r3In y)

@@ -115,8 +115,8 @@ import Data.Time
 -- Error expected 10 digits but found 11
 -- FailT "expected 10 digits but found 11"
 --
-type Ccip = Map (ReadP Int) (Ones (Remove "-" Id))
-type Ccop (n :: Nat) = Guard ('(n,Len) >> Printf2 "expected %d digits but found %d") (Len >> Same n) >> Luhn Id
+type Ccip = Map (ReadP Int Id) (Ones (Remove "-" Id))
+type Ccop (n :: Nat) = Guard (Printf2 "expected %d digits but found %d" '(n,Len)) (Len >> Same n) >> Luhn Id
 type Ccfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
 
 type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
@@ -156,14 +156,14 @@ type Dtip t = ParseTimeP t "%F %T" Id
 --    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
 {-
 type Dtop' =
-   Map (ReadP Int) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
-     >> Guards '[ '(Printf2 "guard %d invalid hours %d", Between 0 23)
-                , '(Printf2 "guard %d invalid minutes %d", Between 0 59)
-                , '(Printf2 "guard %d invalid seconds %d", Between 0 59)
+   Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
+     >> Guards '[ '(Printf2 "guard %d invalid hours %d" Id, Between 0 23)
+                , '(Printf2 "guard %d invalid minutes %d" Id, Between 0 59)
+                , '(Printf2 "guard %d invalid seconds %d" Id, Between 0 59)
                 ] >> 'True
 -}
 type Dtop =
-   Map (ReadP Int) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
+   Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
      >> GuardsDetail "%s invalid: found %d"
                   '[ '("hours", Between 0 23)
                    , '("minutes",Between 0 59)
@@ -197,8 +197,8 @@ ssn = mkProxy3
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
-type Ssnip = Map (ReadP Int) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd OneP)
-type Ssnop = GuardsQuick (Printf2 "number for group %d invalid: found %d")
+type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd OneP)
+type Ssnop = GuardsQuick (Printf2 "number for group %d invalid: found %d" Id)
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
                       >> 'True
 {-
@@ -226,14 +226,14 @@ hms = mkProxy3
 
 type Hms = '(Hmsip, Hmsop >> 'True, Hmsfmt, String)
 
-type Hmsip = Map (ReadP Int) (Resplit ":" Id)
+type Hmsip = Map (ReadP Int Id) (Resplit ":" Id)
 
 type Hmsop = GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]
 {-
 type Hmsop = Guard (Printf "expected len 3 but found %d" Len) (Length Id == 3)
-             >> Guards '[ '(Printf2 "guard(%d) %d hours is out of range", Between 0 23)
-                        , '(Printf2 "guard(%d) %d mins is out of range", Between 0 59)
-                        , '(Printf2 "guard(%d) %d secs is out of range", Between 0 59)]
+             >> Guards '[ '(Printf2 "guard(%d) %d hours is out of range" Id, Between 0 23)
+                        , '(Printf2 "guard(%d) %d mins is out of range" Id, Between 0 59)
+                        , '(Printf2 "guard(%d) %d secs is out of range" Id, Between 0 59)]
 -}
 type Hmsfmt = Printfnt 3 "%02d:%02d:%02d"
 
@@ -256,9 +256,9 @@ type Ip = '(Ipip, Ipop, Ipfmt, String)
 ip :: Proxy Ip
 ip = mkProxy3
 
-type Ipip = Map (ReadP Int) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd Id)
+type Ipip = Map (ReadP Int Id) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd Id)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
-type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d") 4 (Between 0 255) >> 'True
+type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255) >> 'True
 type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d"
 
 type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- strict validation should only be done in 'op' not 'ip'
@@ -286,7 +286,7 @@ type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m
 -- Left Step 2. Failed Boolean Check(op) | 61694 < 400
 --
 type BaseN (n :: Nat) = BaseN' n 'True
-type BaseN' (n :: Nat) p = '(ReadBase Int n, p, ShowBase n, String)
+type BaseN' (n :: Nat) p = '(ReadBase Int n Id, p, ShowBase n Id, String)
 
 base16 :: Proxy (BaseN 16)
 base16 = basen @16
@@ -367,7 +367,7 @@ type LuhnR (n :: Nat) = MakeR3 (LuhnT n)
 
 -- | uses builtin 'Luhn'
 type LuhnT (n :: Nat) =
-   '(Map (ReadP Int) (Ones Id)
+   '(Map (ReadP Int Id) (Ones Id)
    , Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id]))
            (Len >> Same n)
      >> GuardSimple (Luhn Id) >> 'True
@@ -396,11 +396,11 @@ oknot = mkProxy3
 -- >>> prtEval3P (Proxy @(BaseIJ 16 2)) ol "fge"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prtEval3P (Proxy @(BaseIJ' 16 2 (GuardSimple (ReadBase Int 2 < 1000) >> 'True))) ol "ffe"
+-- >>> prtEval3P (Proxy @(BaseIJ' 16 2 (GuardSimple (ReadBase Int 2 Id < 1000) >> 'True))) ol "ffe"
 -- Left Step 2. Failed Boolean Check(op) | 4094 < 1000
 --
 type BaseIJ (i :: Nat) (j :: Nat) = BaseIJ' i j 'True
-type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, ReadBase Int j >> ShowBase i, String)
+type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, ReadBase Int j Id >> ShowBase i Id, String)
 
 -- | take any valid Read/Show instance and turn it into a valid 'Refined3'
 --
@@ -438,10 +438,10 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, ReadBa
 -- >>> prtEval3P (readshow @Value) ol "Number 123.4"
 -- Right (Refined3 {r3In = Number 123.4, r3Out = "Number 123.4"})
 --
-type ReadShow (t :: Type) = '(ReadP t, 'True, ShowP Id, String)
+type ReadShow (t :: Type) = '(ReadP t Id, 'True, ShowP Id, String)
 type ReadShowR (t :: Type) = MakeR3 (ReadShow t)
 
-type ReadShow' (t :: Type) p = '(ReadP t, p, ShowP Id, String)
+type ReadShow' (t :: Type) p = '(ReadP t Id, p, ShowP Id, String)
 type ReadShowR' (t :: Type) p = MakeR3 (ReadShow' t p)
 
 readshow :: Proxy (ReadShow t)
