@@ -506,6 +506,7 @@ module Predicate.Prelude (
   , Skip
   , type (|>)
   , type (>|)
+  , type (>|>)
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -5026,7 +5027,7 @@ type Quot p q = Fst (QuotRem p q)
 type Rem p q = Snd (QuotRem p q)
 
 --type OneP = Guard "expected list of length 1" (Len >> Same 1) >> Head Id
-type OneP = Guard (Printf "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
+type OneP = (Skip (Guard (Printf "expected list of length 1 but found length=%d" Len) (Len == 1)) >> Head Id)
 
 strictmsg :: forall strict . GetBool strict => String
 strictmsg = if getBool @strict then "" else "Lax"
@@ -5038,35 +5039,35 @@ strictmsg = if getBool @strict then "" else "Lax"
 -- | Guards contain a type level list of tuples the action to run on failure of the predicate and the predicate itself
 -- Each tuple validating against the corresponding value in a value list
 --
--- >>> pz @(Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 4)]) [17,4]
+-- >>> pz @(Skip (Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 4)])) [17,4]
 -- Present [17,4]
 -- PresentT [17,4]
 --
--- >>> pz @(Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 5)]) [17,4]
+-- >>> pz @(Skip (Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 5)])) [17,4]
 -- Error arg2 failed
 -- FailT "arg2 failed"
 --
--- >>> pz @(Guards '[ '("arg1 failed",Gt 99), '("arg2 failed", Same 4)]) [17,4]
+-- >>> pz @(Skip (Guards '[ '("arg1 failed",Gt 99), '("arg2 failed", Same 4)])) [17,4]
 -- Error arg1 failed
 -- FailT "arg1 failed"
 --
--- >>> pz @(Guards '[ '(Printf2 "arg %d failed with value %d" Id,Gt 4), '(Printf2 "%d %d" Id, Same 4)]) [17,3]
+-- >>> pz @(Skip (Guards '[ '(Printf2 "arg %d failed with value %d" Id,Gt 4), '(Printf2 "%d %d" Id, Same 4)])) [17,3]
 -- Error 2 3
 -- FailT "2 3"
 --
--- >>> pz @(GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5]
+-- >>> pz @(Skip (GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4])) [17,3,5]
 -- Error arg 3 failed with value 5
 -- FailT "arg 3 failed with value 5"
 --
--- >>> pz @(GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
+-- >>> pz @(Skip (GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4])) [17,3,5,99]
 -- Error Guards: data elements(4) /= predicates(3)
 -- FailT "Guards: data elements(4) /= predicates(3)"
 --
 data GuardsImpl (n :: Nat) (strict :: Bool) (os :: [(k,k1)])
-type Guards (os :: [(k,k1)]) = GuardsImplW 'True os
-type GuardsLax (os :: [(k,k1)]) = GuardsImplW 'False os
-type GuardsQuick (prt :: k) (os :: [k1]) = Guards (ToGuardsT prt os)
-type GuardsQuickLax (prt :: k) (os :: [k1]) = GuardsLax (ToGuardsT prt os)
+type Guards (os :: [(k,k1)]) = GuardsImplW 'True os >> 'True
+type GuardsLax (os :: [(k,k1)]) = GuardsImplW 'False os >> 'True
+type GuardsQuick (prt :: k) (os :: [k1]) = Guards (ToGuardsT prt os) >> 'True
+type GuardsQuickLax (prt :: k) (os :: [k1]) = GuardsLax (ToGuardsT prt os) >> 'True
 
 data GuardsImplW (strict :: Bool) (ps :: [(k,k1)])
 instance (GetBool strict, GetLen ps, P (GuardsImpl (LenT ps) strict ps) [a]) => P (GuardsImplW strict ps) [a] where
@@ -5128,21 +5129,21 @@ instance (PP prt (Int, a) ~ String
 
 -- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
 --
--- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [13,59,61]
+-- >>> pz @(Skip (GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)])) [13,59,61]
 -- Error seconds invalid: found 61
 -- FailT "seconds invalid: found 61"
 --
--- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [27,59,12]
+-- >>> pz @(Skip (GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)])) [27,59,12]
 -- Error hours invalid: found 27
 -- FailT "hours invalid: found 27"
 --
--- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [23,59,12]
+-- >>> pz @(Skip (GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)])) [23,59,12]
 -- Present [23,59,12]
 -- PresentT [23,59,12]
 --
 data GuardsImplX (n :: Nat) (strict :: Bool) (os :: [(k,k1)])
 
-type GuardsDetail (prt :: Symbol) (os :: [(k0,k1)]) = GuardsImplXX 'True (ToGuardsDetailT prt os)
+type GuardsDetail (prt :: Symbol) (os :: [(k0,k1)]) = GuardsImplXX 'True (ToGuardsDetailT prt os) >> 'True
 
 type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
   ToGuardsDetailT prt '[ '(s,p) ] = '(Printfn prt '(s,'(Id,'())), p) : '[]
@@ -5209,17 +5210,17 @@ instance (PP prt a ~ String
 
 -- | leverages 'GuardsQuick' for repeating predicates (passthrough method)
 --
--- >>> pz @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
+-- >>> pz @(Skip (GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255))) [121,33,7,256]
 -- Error id=4 must be between 0 and 255, found 256
 -- FailT "id=4 must be between 0 and 255, found 256"
 --
--- >>> pz @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
+-- >>> pz @(Skip (GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255))) [121,33,7,44]
 -- Present [121,33,7,44]
 -- PresentT [121,33,7,44]
 --
 data GuardsNImpl (strict :: Bool) prt (n :: Nat) p
-type GuardsN prt (n :: Nat) p = GuardsNImpl 'True prt n p
-type GuardsNLax prt (n :: Nat) p = GuardsNImpl 'False prt n p
+type GuardsN prt (n :: Nat) p = GuardsNImpl 'True prt n p >> 'True
+type GuardsNLax prt (n :: Nat) p = GuardsNImpl 'False prt n p >> 'True
 
 instance ( GetBool strict
          , GetLen (ToGuardsT prt (RepeatT n p))
@@ -5236,15 +5237,15 @@ instance ( GetBool strict
 
 -- | \'p\' is the predicate and on failure of the predicate runs \'prt\'
 --
--- >>> pz @(Guard "expected > 3" (Gt 3)) 17
+-- >>> pz @(Skip (Guard "expected > 3" (Gt 3))) 17
 -- Present 17
 -- PresentT 17
 --
--- >>> pz @(Guard "expected > 3" (Gt 3)) 1
+-- >>> pz @(Skip (Guard "expected > 3" (Gt 3))) 1
 -- Error expected > 3
 -- FailT "expected > 3"
 --
--- >>> pz @(Guard (Printf "%d not > 3" Id) (Gt 3)) (-99)
+-- >>> pz @(Skip (Guard (Printf "%d not > 3" Id) (Gt 3))) (-99)
 -- Error -99 not > 3
 -- FailT "-99 not > 3"
 --
@@ -5258,7 +5259,7 @@ instance (Show a
         , P p a
         , PP p a ~ Bool
         ) => P (Guard prt p) a where
-  type PP (Guard prt p) a = a
+  type PP (Guard prt p) a = Bool
   eval _ opts a = do
     let msg0 = "Guard"
     pp <- evalBool (Proxy @p) opts a
@@ -5269,7 +5270,7 @@ instance (Show a
         pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
           Right msgx -> mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] [hh pp, hh qq]
-      Right True -> pure $ mkNode opts (PresentT a) [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]  -- dont show the guard message if successful
+      Right True -> pure $ mkNodeB opts True [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]  -- dont show the guard message if successful
 
 
 -- | similar to 'Guard' but uses the root message of the False predicate case as the failure message
@@ -5278,11 +5279,11 @@ instance (Show a
 -- Error Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]
 -- FailT "Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]"
 --
--- >>> pz @(GuardSimple (Luhn Id)) [1,2,3,0]
+-- >>> pz @(Skip (GuardSimple (Luhn Id))) [1,2,3,0]
 -- Present [1,2,3,0]
 -- PresentT [1,2,3,0]
 --
--- >>> pz @(GuardSimple (Len > 30)) [1,2,3,0]
+-- >>> pz @(Skip (GuardSimple (Len > 30))) [1,2,3,0]
 -- Error 4 > 30
 -- FailT "4 > 30"
 --
@@ -5292,7 +5293,7 @@ instance (Show a
         , P p a
         , PP p a ~ Bool
         ) => P (GuardSimple p) a where
-  type PP (GuardSimple p) a = a
+  type PP (GuardSimple p) a = Bool
   eval _ opts a = do
     let msg0 = "GuardSimple"
     pp <- evalBool (Proxy @p) (if hasNoTree opts then o0 else opts) a -- to not lose the message in oLite mode we use non lite and then fix it up after
@@ -5302,7 +5303,7 @@ instance (Show a
         let msgx = fromMaybe msg0 $ pp ^? tStrings . ix 0
         in mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] [hh pp]
       Right True ->
-        mkNode opts (PresentT a) [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]
+        mkNodeB opts True [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]
 
 
 -- | just run the effect but skip the value
@@ -5312,6 +5313,8 @@ type p |> q = Skip p >> q
 infixr 1 |>
 type p >| q = p >> Skip q
 infixr 1 >|
+type p >|> q = Skip p >> Skip q
+infixr 1 >|>
 
 instance (Show (PP p a), P p a) => P (Skip p) a where
   type PP (Skip p) a = a
@@ -6205,7 +6208,7 @@ instance (PrintfArg (PP p x)
 
 type family GuardsT (ps :: [k]) where
   GuardsT '[] = '[]
-  GuardsT (p ': ps) = Guard "fromGuardsT" p ': GuardsT ps
+  GuardsT (p ': ps) = (Id |> Guard "fromGuardsT" p) ': GuardsT ps
 
 --type Guards' (ps :: [k]) = Para (GuardsT ps)
 

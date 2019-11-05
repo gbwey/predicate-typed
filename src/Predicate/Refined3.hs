@@ -134,20 +134,20 @@ import Data.Char (isSpace)
 -- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 255) @(Printf "%x" Id) oz "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) oz "198.162.3.1.5"
+-- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4)) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) oz "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) oz "198.162.3.1"
+-- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4)) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) oz "198.162.3.1"
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prtEval3 @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) oz (2019,10,13)
+-- >>> prtEval3 @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7)) @(UnMkDay (Fst Id)) oz (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
--- >>> prtEval3 @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) oz (2019,10,12)
+-- >>> prtEval3 @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7)) @(UnMkDay (Fst Id)) oz (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
--- >>> type T4 k = '(MkDay >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
+-- >>> type T4 k = '(MkDay >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7), UnMkDay (Fst Id), k)
 -- >>> prtEval3P (Proxy @(T4 _)) oz (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
@@ -196,7 +196,7 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 -- >>> reads @(Refined3 (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
 -- [(Refined3 {r3In = -1234, r3Out = "-4d2"},"")]
 --
--- >>> reads @(Refined3 (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) (Printfnt 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined3 (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4)) (Printfnt 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
 -- [(Refined3 {r3In = [192,168,0,1], r3Out = "192.168.0.1"},"")]
 --
 instance ( Eq i
@@ -469,7 +469,7 @@ newRefined3T = newRefined3TP (Proxy @'(ip,op,fmt,i))
 
 -- | create a wrapped 'Refined3' type
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(MkDay >> JustFail "asfd" Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) oz (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(MkDay >> JustFail "asfd" Id, GuardSimple (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) oz (2019,11,1)
 -- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
 --
 newRefined3TP :: forall m ip op fmt i proxy

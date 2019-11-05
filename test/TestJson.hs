@@ -66,25 +66,23 @@ instance ToJSON Person1
 instance FromJSON Person1
 
 type ValidName =
-         Guard (Printf "invalid name(%s)" Id)
-        (Re "^[A-Z][a-z']+$" Id) >> 'True
+         Guard (Printf "invalid name(%s)" Id) (Re "^[A-Z][a-z']+$" Id)
 
 type NameR = Refined ValidName String
 
-type NameR1 = Refined (Name1 >> 'True) String
+type NameR1 = Refined Name1 String
 type Name1 =
-          Uncons
-       >> 'Just Id
-       >> Guard (Printf "not upper first(%c)" (Fst Id)) (Fst Id >> '[Id] >> IsUpper)
-       >> Guard (Printf "not lower rest(%s)" (Snd Id)) (Snd Id >> IsLower)
+          Uncons >> 'Just Id |> Guard (Printf "not upper first(%c)" (Fst Id)) (Fst Id >> '[Id] >> IsUpper)
+       |> Guard (Printf "not lower rest(%s)" (Snd Id)) (Snd Id >> IsLower)
 
 type AgeR = Refined (Between 10 60) Int
 
-type Ip4R = MakeR3 '(Ip4ip, Ip4op >> 'True, Ip4fmt, String)
+type Ip4R = MakeR3 '(Ip4ip, Ip4op, Ip4fmt, String)
 
 type Ip4ip = Map (ReadP Int Id) (Resplit "\\." Id)
-type Ip4op = Guard (Printf "expected length 4 found %d" Len) (Len >> Same 4)
-          >> GuardsN (Printf2 "guard(%d): expected between 0 and 255 found %d" Id) 4 (Between 0 255)
+type Ip4op =
+       Id |> Guard (Printf "expected length 4 found %d" Len) (Len == 4)
+          |> GuardsN (Printf2 "guard(%d): expected between 0 and 255 found %d" Id) 4 (Between 0 255)
+
 type Ip4fmt = Printfnt 4 "%03d.%03d.%03d.%03d" Id
 
-type DateTimeNR = MakeR3 DateTimeN

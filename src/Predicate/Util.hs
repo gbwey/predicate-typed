@@ -137,6 +137,10 @@ module Predicate.Util (
   , ConsT
   , type (%%)
   , type (%&)
+  , T_1
+  , T_2
+  , T_3
+  , T_4
 
  -- ** extract values from the type level
   , nat
@@ -1107,6 +1111,42 @@ type family ConsT s where
       'GL.Text "invalid ConsT instance"
       ':$$: 'GL.Text "s = "
       ':<>: 'GL.ShowType s)
+
+type family T_1 x where
+--  T_1 '(a,b) = a
+--  T_1 '(a,b,c) = a
+  T_1 '(a,b,c,d) = a
+  T_1 o = GL.TypeError (
+      'GL.Text "invalid T_1 instance"
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+type family T_2 x where
+--  T_2 '(a,b) = b
+--  T_2 '(a,b,c) = b
+  T_2 '(a,b,c,d) = b
+  T_2 o = GL.TypeError (
+      'GL.Text "invalid T_2 instance"
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+type family T_3 x where
+--  T_3 '(a,b) = GL.TypeError ('GL.Text "invalid T_3 instance for 2-tuple")
+--  T_3 '(a,b,c) = c
+  T_3 '(a,b,c,d) = c
+  T_3 o = GL.TypeError (
+      'GL.Text "invalid T_3 instance"
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+type family T_4 x where
+--  T_4 '(a,b) = GL.TypeError ('GL.Text "invalid T_4 instance for 2-tuple")
+--  T_4 '(a,b,c) = GL.TypeError ('GL.Text "invalid T_4 instance for 3-tuple")
+  T_4 '(a,b,c,d) = d
+  T_4 o = GL.TypeError (
+      'GL.Text "invalid T_4 instance"
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
 
 -- | a typeclass for choosing which monad to run in
 class Monad m => MonadEval m where

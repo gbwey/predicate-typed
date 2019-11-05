@@ -33,6 +33,7 @@ module Predicate.Refined3Helper (
   , DateN
   , datetimen
   , DateTimeN
+  , DateTimeNR
   , DateFmts
   , DateTimeFmts
 
@@ -116,7 +117,7 @@ import Data.Time
 -- FailT "expected 10 digits but found 11"
 --
 type Ccip = Map (ReadP Int Id) (Ones (Remove "-" Id))
-type Ccop (n :: Nat) = Guard (Printf2 "expected %d digits but found %d" '(n,Len)) (Len >> Same n) >> Luhn Id
+type Ccop (n :: Nat) = Skip (Guard (Printf2 "expected %d digits but found %d" '(n,Len)) (Len >> Same n)) >> Luhn Id
 type Ccfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
 
 type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
@@ -160,7 +161,7 @@ type Dtop' =
      >> Guards '[ '(Printf2 "guard %d invalid hours %d" Id, Between 0 23)
                 , '(Printf2 "guard %d invalid minutes %d" Id, Between 0 59)
                 , '(Printf2 "guard %d invalid seconds %d" Id, Between 0 59)
-                ] >> 'True
+                ]
 -}
 type Dtop =
    Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
@@ -168,7 +169,7 @@ type Dtop =
                   '[ '("hours", Between 0 23)
                    , '("minutes",Between 0 59)
                    , '("seconds",Between 0 59)
-                   ] >> 'True
+                   ]
 
 type Dtfmt = FormatTimeP "%F %T" Id
 
@@ -200,13 +201,12 @@ type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd OneP)
 type Ssnop = GuardsQuick (Printf2 "number for group %d invalid: found %d" Id)
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
-                      >> 'True
 {-
 type Ssnop' = GuardsDetail "%s invalid: found %d"
                           '[ '("first", Between 1 899 && Id /= 666)
                            , '("second", Between 1 99)
                            , '("third" , Between 1 9999)
-                           ] >> 'True
+                           ]
 -}
 type Ssnfmt = Printfnt 3 "%03d-%02d-%04d" Id
 
@@ -224,14 +224,17 @@ type Ssnfmt = Printfnt 3 "%03d-%02d-%04d" Id
 hms :: Proxy Hms
 hms = mkProxy3
 
-type Hms = '(Hmsip, Hmsop >> 'True, Hmsfmt, String)
+type Hms = '(Hmsip, Hmsop, Hmsfmt, String)
 
 type Hmsip = Map (ReadP Int Id) (Resplit ":" Id)
 
-type Hmsop = GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]
+type Hmsop = GuardsDetail "%s invalid: found %d"
+              '[ '("hours", Between 0 23)
+              , '("minutes",Between 0 59)
+              ,'("seconds",Between 0 59)]
 {-
 type Hmsop = Guard (Printf "expected len 3 but found %d" Len) (Length Id == 3)
-             >> Guards '[ '(Printf2 "guard(%d) %d hours is out of range" Id, Between 0 23)
+             >|> Guards '[ '(Printf2 "guard(%d) %d hours is out of range" Id, Between 0 23)
                         , '(Printf2 "guard(%d) %d mins is out of range" Id, Between 0 59)
                         , '(Printf2 "guard(%d) %d secs is out of range" Id, Between 0 59)]
 -}
@@ -258,7 +261,7 @@ ip = mkProxy3
 
 type Ipip = Map (ReadP Int Id) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd Id)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
-type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255) >> 'True
+type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255)
 type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d" Id
 
 type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- strict validation should only be done in 'op' not 'ip'
@@ -272,6 +275,8 @@ type DateFmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
 type DateN = '(ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)
 
 type DateTimeFmts = '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]
+
+type DateTimeNR = MakeR3 DateTimeN
 type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
 
 -- | convert a string from a given base \'i\' and store it internally as an base 10 integer
@@ -282,7 +287,7 @@ type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m
 -- >>> prtEval3P (basen' @16 @(Between 100 400)) oz "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> prtEval3P (basen' @16 @(GuardSimple (Id < 400) >> 'True)) oz "f0fe"
+-- >>> prtEval3P (basen' @16 @(GuardSimple (Id < 400))) oz "f0fe"
 -- Left Step 2. Failed Boolean Check(op) | 61694 < 400
 --
 type BaseN (n :: Nat) = BaseN' n 'True
@@ -370,7 +375,7 @@ type LuhnT (n :: Nat) =
    '(Map (ReadP Int Id) (Ones Id)
    , Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id]))
            (Len >> Same n)
-     >> GuardSimple (Luhn Id) >> 'True
+     |> GuardSimple (Luhn Id)
    , ConcatMap (ShowP Id) Id
    , String)
 
@@ -396,7 +401,7 @@ oknot = mkProxy3
 -- >>> prtEval3P (Proxy @(BaseIJ 16 2)) oz "fge"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prtEval3P (Proxy @(BaseIJ' 16 2 (GuardSimple (ReadBase Int 2 Id < 1000) >> 'True))) oz "ffe"
+-- >>> prtEval3P (Proxy @(BaseIJ' 16 2 (GuardSimple (ReadBase Int 2 Id < 1000)))) oz "ffe"
 -- Left Step 2. Failed Boolean Check(op) | 4094 < 1000
 --
 type BaseIJ (i :: Nat) (j :: Nat) = BaseIJ' i j 'True
@@ -420,7 +425,7 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (15 % 1)))) oz "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Guard (Printf "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1)) >> 'True))) oz "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Guard (Printf "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1))))) oz "13 % 3"
 -- Left Step 2. Failed Boolean Check(op) | invalid=4.33
 --
 -- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (11 % 1)))) oz "13 % 3"

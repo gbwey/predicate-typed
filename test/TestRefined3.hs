@@ -127,18 +127,17 @@ unnamedTests = [
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
                   $ eval3
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10 Id) (Snd Id))
-                  @(Guard "expected 3" (Len >> Same 3)
-                 >> Guard "3 digits" (Ix' 0 >> Between 0 999)
-                 >> Guard "2 digits" (Ix' 1 >> Between 0 99)
-                 >> Guard "4 digits" (Ix' 2 >> Between 0 9999)
-                 >> 'True
+                  @(Skip (Guard "expected 3" (Len >> Same 3))
+                 |> Guard "3 digits" (Ix' 0 >> Between 0 999)
+                 |> Guard "2 digits" (Ix' 1 >> Between 0 99)
+                 |> Guard "4 digits" (Ix' 2 >> Between 0 9999)
                    ) @"def"
                    ol "123-45-6789"
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz")
                   $ eval3
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10 Id) (Snd Id))
-                  @(GuardsQuick (Printf2 "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
+                  @(GuardsQuick (Printf2 "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999])
                   @"xyz"
                   ol "123-45-6789"
 
@@ -156,12 +155,12 @@ unnamedTests = [
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
                   $ eval3 @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBaseInt 10 Id) (Snd Id))
-                           @(Ddmmyyyyval >> 'True)
+                           @Ddmmyyyyval
                            @"xyz"
                            ol "31-11-1999"
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ eval3
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10 Id) (Snd Id))
-                  @(GuardsQuick (Printf2 "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
+                  @(GuardsQuick (Printf2 "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999])
                   @"xyz"
                   ol "123-45-6789"
 
@@ -230,18 +229,18 @@ type Ipz3 = '(Ip4A, Ip4B, Id, String)
 type Hmsconv = Do '[Rescan HmsRE Id, Head Id, (Snd Id), Map (ReadBaseInt 10 Id) Id]
 
 type Hmsz1 = '(Hmsconv &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-            , Fst Id >> Hmsop >> 'True
+            , Fst Id >> Hmsop
             , Snd Id
             , String)
 
 -- better error messages cos doesnt do a strict regex match
 type Hmsz2 = '(Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-             , Fst Id >> Hmsop >> 'True
+             , Fst Id >> Hmsop
              , Snd Id
              , String)
 
 type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-type Hmsop2 = Fst Id >> Hmsop >> 'True
+type Hmsop2 = Fst Id >> Hmsop
 
 -- >mkProxy3 @Hmsip2 @Hmsop2 @((Snd Id) >> FormatTimeP "%F %T" Id) @String
 hms2E :: Proxy '(Hmsip2, Hmsop2, (Snd Id) >> FormatTimeP "%T" Id, String)
@@ -398,23 +397,23 @@ type LuhnR' (n :: Nat) = MakeR3 (LuhnX n)
 
 type LuhnX (n :: Nat) =
    '(Map (ReadP Int Id) (Ones Id)
-   , Luhn'' n >> 'True
+   , Luhn'' n
    , ConcatMap (ShowP Id) Id
    , String)
 
 type Luhn'' (n :: Nat) =
-         Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id])) (Len >> Same n)
+         Skip (Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id])) (Len >> Same n))
       >> Do '[
               Reverse
              ,ZipL [1,2] Id
              ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
              ,FoldMap (SG.Sum Int) Id
              ]
-        >> Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)
+        >> Skip (Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0))
 
 type Luhn' (n :: Nat) =
        Msg "Luhn'" (Do
-       '[Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, Id])) (Len >> Same n)
+       '[Skip (Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, Id])) (Len >> Same n))
         ,Do
             '[Ones Id
             ,Map (ReadP Int Id) Id
@@ -423,5 +422,5 @@ type Luhn' (n :: Nat) =
             ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
             ,FoldMap (SG.Sum Int) Id
            ]
-        ,Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)
+        ,Skip (Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0))
         ])
