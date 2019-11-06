@@ -95,13 +95,13 @@ import Data.Binary (Binary)
 -- >>> prtRefinedIO @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) oz "141.213.1"
 -- Left FalseP
 --
--- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4)) oz "141.213.1"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> 'True) oz "141.213.1"
 -- Left (FailP "bad length: found 3")
 --
--- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Skip (Guard (Printf "bad length: found %d" Len) (Len == 4)) >> GuardsN (Printf2 "octet %d out of range %d" Id) 4 (Between 0 255)) oz "141.213.1.444"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) oz "141.213.1.444"
 -- Left (FailP "octet 4 out of range 444")
 --
--- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Skip (Guard (Printf "bad length: found %d" Len) (Len == 4)) >> GuardsN (Printf2 "octet %d out of range %d" Id) 4 (Between 0 255)) oz "141.213.1x34.444"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (Printf "bad length: found %d" Len) (Len == 4) >> GuardsN (Printf2 "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) oz "141.213.1x34.444"
 -- Left (FailP "ReadP Int (1x34) failed")
 --
 -- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) oz "12344"
@@ -168,19 +168,13 @@ instance ToJSON a => ToJSON (Refined p a) where
 --
 -- >>> removeAnsi $ eitherDecode' @(Refined (Between 10 14) Int) "16"
 -- Error in $: Refined:FalseP
--- False True && False
+-- False 16 <= 14
 -- |
--- +- True  16 >= 10
--- |  |
--- |  +- P I
--- |  |
--- |  `- P '10
+-- +- P Id 16
 -- |
--- `- False 16 <= 14
---    |
---    +- P I
---    |
---    `- P '14
+-- +- P '10
+-- |
+-- `- P '14
 -- <BLANKLINE>
 --
 instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
@@ -214,23 +208,17 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 -- |  |
 -- |  `- P Id "2019-04-23"
 -- |
--- `- False False && True
+-- `- False 2019-05-30 <= 2019-04-23
 --    |
---    +- False 2019-04-23 >= 2019-05-30
---    |  |
---    |  +- P I
---    |  |
---    |  `- P ReadP Day (2019-05-30) 2019-05-30 | 2019-05-30
---    |     |
---    |     `- P '2019-05-30
+--    +- P Id 2019-04-23
 --    |
---    `- True  2019-04-23 <= 2019-06-01
+--    +- P ReadP Day (2019-05-30) 2019-05-30 | 2019-05-30
+--    |  |
+--    |  `- P '2019-05-30
+--    |
+--    `- P ReadP Day (2019-06-01) 2019-06-01 | 2019-06-01
 --       |
---       +- P I
---       |
---       `- P ReadP Day (2019-06-01) 2019-06-01 | 2019-06-01
---          |
---          `- P '2019-06-01
+--       `- P '2019-06-01
 -- <BLANKLINE>
 --
 instance (RefinedC p a, Binary a) => Binary (Refined p a) where
@@ -322,8 +310,8 @@ prtRefinedIO opts a = do
   tt <- evalBool (Proxy @p) opts a
   let msg = (_tBool tt ^. boolT2P, prtTreePure opts (fromTT tt))
   case oDebug opts of
-     OZero -> pure ()
-     OLite -> putStrLn (topMessage tt)
+     OZero -> pure ()  -- putStrLn $ showBoolP opts (fst msg) <> " " <> topMessage tt
+     OLite -> putStrLn $ showBoolP opts (fst msg) <> " " <> topMessage tt
      _ -> putStrLn $ snd msg
   pure $ case getValueLR opts "" tt [] of
     Right True -> Right (Refined a)

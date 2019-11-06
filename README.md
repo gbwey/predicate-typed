@@ -135,7 +135,7 @@ PresentT 254
 >pe2 @(Between 0 255) 254
 TrueT
 
->pe2 @(ShowBase 16) 254 = "fe"
+>pe2 @(ShowBase 16 Id) 254 = "fe"
 PresentT "fe"
 ```
 

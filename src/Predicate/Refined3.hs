@@ -134,20 +134,26 @@ import Data.Char (isSpace)
 -- >>> prtEval3 @(ReadBase Int 16 Id) @(Lt 255) @(Printf "%x" Id) oz "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4)) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) oz "198.162.3.1.5"
+-- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) ol "198.162.3.1.5"
+-- Left Step 2. False Boolean Check(op) | {length invalid:5 == 4}
+--
+-- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) oz "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len >> Id == 4)) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) oz "198.162.3.1"
+-- >>> prtEval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (Printf "found length=%d" Len) (Len == 4) >> 'True) @(Printfnt 4 "%03d.%03d.%03d.%03d" Id) oz "198.162.3.1"
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prtEval3 @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7)) @(UnMkDay (Fst Id)) oz (2019,10,13)
+-- >>> prtEval3 @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) oz (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
--- >>> prtEval3 @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7)) @(UnMkDay (Fst Id)) oz (2019,10,12)
+-- >>> prtEval3 @(MkDay >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) ol (2019,10,12)
+-- Left Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}
+--
+-- >>> prtEval3 @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) oz (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
--- >>> type T4 k = '(MkDay >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7), UnMkDay (Fst Id), k)
+-- >>> type T4 k = '(MkDay >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
 -- >>> prtEval3P (Proxy @(T4 _)) oz (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
@@ -196,7 +202,7 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 -- >>> reads @(Refined3 (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
 -- [(Refined3 {r3In = -1234, r3Out = "-4d2"},"")]
 --
--- >>> reads @(Refined3 (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4)) (Printfnt 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined3 (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) (Printfnt 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
 -- [(Refined3 {r3In = [192,168,0,1], r3Out = "192.168.0.1"},"")]
 --
 instance ( Eq i
@@ -247,7 +253,7 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
 -- >>> removeAnsi $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
--- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False}
+-- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | {16663610 > 10} && {16663610 < 256}}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [16663610] ***
 -- <BLANKLINE>
@@ -257,7 +263,7 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 -- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
 -- <BLANKLINE>
--- False True && False
+-- False True && False | {16663610 > 10} && {16663610 < 256}
 -- |
 -- +- True  16663610 > 10
 -- |  |
@@ -326,7 +332,7 @@ arbRefined3With _ f =
 -- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
--- Refined3:Step 2. False Boolean Check(op) | {False && True}
+-- Refined3:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
 -- <BLANKLINE>
@@ -336,23 +342,17 @@ arbRefined3With _ f =
 -- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
 -- <BLANKLINE>
--- False False && True
+-- False 2019-05-30 <= 2019-04-23
 -- |
--- +- False 2019-04-23 >= 2019-05-30
--- |  |
--- |  +- P I
--- |  |
--- |  `- P ReadP Day (2019-05-30) 2019-05-30 | 2019-05-30
--- |     |
--- |     `- P '2019-05-30
+-- +- P Id 2019-04-23
 -- |
--- `- True  2019-04-23 <= 2019-06-01
+-- +- P ReadP Day (2019-05-30) 2019-05-30 | 2019-05-30
+-- |  |
+-- |  `- P '2019-05-30
+-- |
+-- `- P ReadP Day (2019-06-01) 2019-06-01 | 2019-06-01
 --    |
---    +- P I
---    |
---    `- P ReadP Day (2019-06-01) 2019-06-01 | 2019-06-01
---       |
---       `- P '2019-06-01
+--    `- P '2019-06-01
 -- <BLANKLINE>
 --
 instance ( Show (PP fmt (PP ip i))
@@ -410,15 +410,14 @@ withRefined3TIO opts = (>>=) . newRefined3TPIO (Proxy @'(ip,op,fmt,i)) opts
 -- reads a binary string and adds the values together
 --
 -- >>> :set -XPolyKinds
--- >>> type Base n p = '(ReadBase Int n Id, p, ShowBase 16 Id, String)
--- >>> base16 = Proxy @(Base 16 (Between 100 200))
--- >>> base2 = Proxy @(Base 2 'True)
--- >>> prtRefinedTIO $ withRefined3TP base16 oz "a3" $ \x -> withRefined3TP base2 oz "1001110111" $ \y -> pure (r3In x + r3In y)
+-- >>> b16 = Proxy @'(ReadBase Int 16 Id, Between 100 200, ShowBase 16 Id, String)
+-- >>> b2 = Proxy @'(ReadBase Int 2 Id, 'True, ShowBase 2 Id, String)
+-- >>> prtRefinedTIO $ withRefined3TP b16 oz "a3" $ \x -> withRefined3TP b2 oz "1001110111" $ \y -> pure (r3In x + r3In y)
 -- 794
 --
 -- this example fails as the the hex value is out of range
 --
--- >>> prtRefinedTIO $ withRefined3TP base16 o0 "a388" $ \x -> withRefined3TP base2 o0 "1001110111" $ \y -> pure (x,y)
+-- >>> prtRefinedTIO $ withRefined3TP b16 o0 "a388" $ \x -> withRefined3TP b2 o0 "1001110111" $ \y -> pure (x,y)
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [41864] ***
 -- <BLANKLINE>
@@ -428,21 +427,15 @@ withRefined3TIO opts = (>>=) . newRefined3TPIO (Proxy @'(ip,op,fmt,i)) opts
 -- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
 -- <BLANKLINE>
--- False True && False
+-- False 41864 <= 200
 -- |
--- +- True  41864 >= 100
--- |  |
--- |  +- P I
--- |  |
--- |  `- P '100
+-- +- P Id 41864
 -- |
--- `- False 41864 <= 200
---    |
---    +- P I
---    |
---    `- P '200
+-- +- P '100
+-- |
+-- `- P '200
 -- <BLANKLINE>
--- failure msg[Step 2. False Boolean Check(op) | {True && False}]
+-- failure msg[Step 2. False Boolean Check(op) | {41864 <= 200}]
 --
 withRefined3T :: forall ip op fmt i m b
   . (Monad m, Refined3C ip op fmt i, Show (PP ip i), Show i)
@@ -469,8 +462,14 @@ newRefined3T = newRefined3TP (Proxy @'(ip,op,fmt,i))
 
 -- | create a wrapped 'Refined3' type
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(MkDay >> JustFail "asfd" Id, GuardSimple (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) oz (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(MkDay >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) oz (2019,11,1)
 -- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
+--
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(MkDay >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) ol (2019,11,2)
+-- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
+--
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(MkDay >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) ol (2019,11,2)
+-- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
 --
 newRefined3TP :: forall m ip op fmt i proxy
    . (Refined3C ip op fmt i, Monad m, Show (PP ip i), Show i)

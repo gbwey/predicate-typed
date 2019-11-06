@@ -46,10 +46,8 @@ module Predicate.Prelude (
   , All
   , Any
   , AllPositive
-  , AllPositive'
   , Positive
   , AllNegative
-  , AllNegative'
   , Negative
 
   -- ** regex expressions
@@ -309,11 +307,6 @@ module Predicate.Prelude (
   , type (<>)
   , MConcat
   , STimes
-  , Ands'
-  , Ors'
-  , Min'
-  , Max'
-  , Sum'
   , Sapa
   , Sapa'
   , MEmptyT
@@ -564,7 +557,7 @@ import Data.Time.Calendar.WeekDate
 -- | a type level predicate for a monotonic increasing list
 --
 -- >>> pl @Asc "aaacdef"
--- True {Ands | [True,True,True,True,True,True]}
+-- True {All(6)}
 -- TrueT
 --
 -- >>> pz @Asc [1,2,3,4,5,5,7]
@@ -582,13 +575,13 @@ import Data.Time.Calendar.WeekDate
 
 
 -- | a type level predicate for a monotonic increasing list
-type Asc = Ands (Map (Fst Id <= Snd Id) Pairs)
+type Asc = All (Fst Id <= Snd Id) Pairs
 -- | a type level predicate for a strictly increasing list
-type Asc' = Ands (Map (Fst Id < Snd Id) Pairs)
+type Asc' = All (Fst Id < Snd Id) Pairs
 -- | a type level predicate for a monotonic decreasing list
-type Desc = Ands (Map (Fst Id >= Snd Id) Pairs)
+type Desc = All (Fst Id >= Snd Id) Pairs
 -- | a type level predicate for a strictly decreasing list
-type Desc' = Ands (Map (Fst Id > Snd Id) Pairs)
+type Desc' = All (Fst Id > Snd Id) Pairs
 
 --type AscAlt = SortOn Id Id == Id
 --type DescAlt = SortOnDesc Id Id == Id
@@ -615,12 +608,171 @@ type Desc' = Ands (Map (Fst Id > Snd Id) Pairs)
 -- False
 -- FalseT
 --
-type Between p q = Ge p && Le q
-type p <..> q = Ge p && Le q
+data Between' p q r -- reify as it is used a lot! nicer specific messages at the top level!
+type Between p q = Between' p q Id
+type p <..> q = Between p q
 infix 4 <..>
 
--- | This is the same as 'Between' but where \'r\' is 'Id'
-type Between' p q r = r >= p && r <= q
+instance (Ord (PP p x)
+       , Show (PP p x)
+       , PP r x ~ PP p x
+       , PP r x ~ PP q x
+       , P p x
+       , P q x
+       , P r x
+       ) => P (Between' p q r) x where
+  type PP (Between' p q r) x = Bool
+  eval _ opts x = do
+    let msg0 = "Between"
+    rr <- eval (Proxy @r) opts x
+    case getValueLR opts msg0 rr [] of
+      Left e -> pure e
+      Right r -> do
+        lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x [hh rr]
+        pure $ case lr of
+          Left e -> e
+          Right (p,q,pp,qq) ->
+            let hhs = [hh rr, hh pp, hh qq]
+            in if p <= r && r <= q then mkNodeB opts True [show p <> " <= " <> show r <> " <= " <> show q] hhs
+               else if p > r then mkNodeB opts False [show p <> " <= " <> show r] hhs
+               else mkNodeB opts False [show r <> " <= " <> show q] hhs
+
+-- | similar to 'all'
+--
+-- >>> pl @(All Even Id) [1,5,11,5,3]
+-- False {All i=0 {1 == 0} 5 false}
+-- FalseT
+--
+-- >>> pz @(All Odd Id) [1,5,11,5,3]
+-- True
+-- TrueT
+--
+-- >>> pz @(All Odd Id) []
+-- True
+-- TrueT
+--
+-- >>> pe @(All Even Id) [1,5,11,5,3]
+-- False All i=0 {1 == 0} 5 false
+-- |
+-- +- P Id [1,5,11,5,3]
+-- |
+-- +- False i=0:1 == 0
+-- |  |
+-- |  +- P 1 `mod` 2 = 1
+-- |  |  |
+-- |  |  +- P I
+-- |  |  |
+-- |  |  `- P '2
+-- |  |
+-- |  `- P '0
+-- |
+-- +- False i=1:1 == 0
+-- |  |
+-- |  +- P 5 `mod` 2 = 1
+-- |  |  |
+-- |  |  +- P I
+-- |  |  |
+-- |  |  `- P '2
+-- |  |
+-- |  `- P '0
+-- |
+-- +- False i=2:1 == 0
+-- |  |
+-- |  +- P 11 `mod` 2 = 1
+-- |  |  |
+-- |  |  +- P I
+-- |  |  |
+-- |  |  `- P '2
+-- |  |
+-- |  `- P '0
+-- |
+-- +- False i=3:1 == 0
+-- |  |
+-- |  +- P 5 `mod` 2 = 1
+-- |  |  |
+-- |  |  +- P I
+-- |  |  |
+-- |  |  `- P '2
+-- |  |
+-- |  `- P '0
+-- |
+-- `- False i=4:1 == 0
+--    |
+--    +- P 3 `mod` 2 = 1
+--    |  |
+--    |  +- P I
+--    |  |
+--    |  `- P '2
+--    |
+--    `- P '0
+-- FalseT
+--
+data All p q
+
+instance (P p a
+        , PP p a ~ Bool
+        , PP q x ~ f a
+        , P q x
+        , Show a
+        , Foldable f
+        ) => P (All p q) x where
+  type PP (All p q) x = Bool
+  eval _ opts x = do
+    let msg0 = "All"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        ts <- zipWithM (\i a -> ((i, a),) <$> evalBool (Proxy @p) opts a) [0::Int ..] (toList q)
+        pure $ case splitAndAlign opts [msg0] ts of
+             Left e -> e
+             Right (vals, ixtts) ->
+               let hhs = hh qq : map (hh . fixit) ts
+               in case filter (not . snd) (zip [0..] vals) of
+                    [] -> mkNodeB opts True [msg0 ++ "(" ++ show (length q) ++ ")"] hhs
+                    (i,_):fs -> let (_,tt) = ixtts !! i
+                                in mkNodeB opts False [msg0 <> " i=" ++ show i ++ " " <> topMessage tt ++ " " ++ show (length fs+1) ++ " false"] hhs
+
+-- | similar to 'any'
+--
+-- >>> pz @(Any Even Id) [1,5,11,5,3]
+-- False
+-- FalseT
+--
+-- >>> pz @(Any Even Id) [1,5,112,5,3]
+-- True
+-- TrueT
+--
+-- >>> pz @(Any Even Id) []
+-- False
+-- FalseT
+--
+data Any p q
+
+instance (P p a
+        , PP p a ~ Bool
+        , PP q x ~ f a
+        , P q x
+        , Show a
+        , Foldable f
+        ) => P (Any p q) x where
+  type PP (Any p q) x = Bool
+  eval _ opts x = do
+    let msg0 = "Any"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        ts <- zipWithM (\i a -> ((i, a),) <$> evalBool (Proxy @p) opts a) [0::Int ..] (toList q)
+        pure $ case splitAndAlign opts [msg0] ts of
+             Left e -> e
+             Right (vals, ixtts) ->
+               let hhs = hh qq : map (hh . fixit) ts
+               in case filter snd (zip [0..] vals) of
+                    [] -> mkNodeB opts False [msg0 ++ "(" ++ show (length q) ++ ")"] hhs
+                    (i,_):fs -> let (_,tt) = ixtts !! i
+                                in mkNodeB opts True [msg0 <> " i=" ++ show i ++ " " <> topMessage tt ++ " " ++ show (length fs+1) ++ " false"] hhs
+
 
 -- | a type level predicate for all positive elements in a list
 --
@@ -640,45 +792,11 @@ type Between' p q r = r >= p && r <= q
 -- True
 -- TrueT
 --
-type AllPositive = Ands (Map Positive Id)
+type AllPositive = All Positive Id
 -- | a type level predicate for all negative elements in a list
-type AllNegative = Ands (Map Negative Id)
+type AllNegative = All Negative Id
 type Positive = Gt 0
 type Negative = Lt 0
-
-type AllPositive' = FoldMap SG.All (Map Positive Id)
-type AllNegative' = FoldMap SG.All (Map Negative Id)
-
--- | similar to 'all'
---
--- >>> pz @(All Even Id) [1,5,11,5,3]
--- False
--- FalseT
---
--- >>> pz @(All Odd Id) [1,5,11,5,3]
--- True
--- TrueT
---
--- >>> pz @(All Odd Id) []
--- True
--- TrueT
---
-type All x p = Ands (Map x p)
--- | similar to 'any'
---
--- >>> pz @(Any Even Id) [1,5,11,5,3]
--- False
--- FalseT
---
--- >>> pz @(Any Even Id) [1,5,112,5,3]
--- True
--- TrueT
---
--- >>> pz @(Any Even Id) []
--- False
--- FalseT
---
-type Any x p = Ors (Map x p)
 
 -- | 'unzip' equivalent
 --
@@ -708,7 +826,7 @@ instance (GetROpts rs
   eval _ opts x = do
     let msg0 = "Re" <> (if null rs then "' " <> show rs else "")
         rs = getROpts @rs
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -749,7 +867,7 @@ instance (GetROpts rs
   eval _ opts x = do
     let msg0 = "Rescan" <> (if null rs then "' " <> show rs else "")
         rs = getROpts @rs
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -784,7 +902,7 @@ instance (GetROpts rs
   eval _ opts x = do
     let msg0 = "RescanRanges" <> (if null rs then "' " <> show rs else "")
         rs = getROpts @rs
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -822,7 +940,7 @@ instance (GetROpts rs
   eval _ opts x = do
     let msg0 = "Resplit" <> (if null rs then "' " <> show rs else "")
         rs = getROpts @rs
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -949,7 +1067,7 @@ instance (GetBool b
     let msg0 = "Replace" <> (if alle then "All" else "One") <> (if null rs then "' " <> show rs else "")
         rs = getROpts @rs
         alle = getBool @b
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) ->
@@ -1222,7 +1340,7 @@ instance (PP p x ~ String
   type PP (FormatTimeP p q) x = String
   eval _ opts x = do
     let msg0 = "FormatTimeP"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -1256,7 +1374,7 @@ instance (ParseTime (PP t a)
   eval _ opts a = do
     let msg0 = "ParseTimeP " <> t
         t = showT @(PP t a)
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -1291,7 +1409,7 @@ instance (ParseTime (PP t a)
   eval _ opts a = do
     let msg0 = "ParseTimes " <> t
         t = showT @(PP t a)
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -1329,7 +1447,7 @@ instance (P p x
   type PP (MkDay' p q r) x = Maybe (Day, Int, Int)
   eval _ opts x = do
     let msg0 = "MkDay"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
@@ -1500,7 +1618,6 @@ instance (Ord a, Show a) => P Min [a] where
 --
 
 data Max
---type Max' t = FoldMap (SG.Max t) Id
 
 instance (Ord a, Show a) => P Max [a] where
   type PP Max [a] = a
@@ -2286,7 +2403,7 @@ instance (P n a
   eval _ opts a = do
     let msg0 = "Pad" <> (if lft then "L" else "R")
         lft = getBool @left
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a
+    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a []
     case lr of
       Left e -> pure e
       Right (fromIntegral -> n,p,nn,pp) -> do
@@ -2329,7 +2446,7 @@ instance (P ns x
   type PP (SplitAts ns p) x = [PP p x]
   eval _ opts x = do
     let msg0 = "SplitAts"
-    lr <- runPQ msg0 (Proxy @ns) (Proxy @p) opts x
+    lr <- runPQ msg0 (Proxy @ns) (Proxy @p) opts x []
     pure $ case lr of
       Left e -> e
       Right (ns,p,nn,pp) ->
@@ -2369,7 +2486,7 @@ instance (PP p a ~ [b]
   type PP (SplitAt n p) a = (PP p a, PP p a)
   eval _ opts a = do
     let msg0 = "SplitAt"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a
+    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a []
     pure $ case lr of
       Left e -> e -- (Left e, tt')
       Right (fromIntegral -> n,p,pp,qq) ->
@@ -2577,7 +2694,7 @@ instance (GetBinOp op
   type PP (Bin op p q) a = PP p a
   eval _ opts a = do
     let (s,f) = getBinOp @op
-    lr <- runPQ s (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ s (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -2611,7 +2728,7 @@ instance (PP p a ~ PP q a
   type PP (p / q) a = PP p a
   eval _ opts a = do
     let msg0 = "(/)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)
@@ -2698,7 +2815,7 @@ instance (Integral (PP p x)
   type PP (p % q) x = Rational
   eval _ opts x = do
     let msg0 = "MkRatio"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)
@@ -3422,7 +3539,7 @@ instance (GetBool keep
   eval _ opts x = do
     let msg0 = if keep then "Keep" else "Remove"
         keep = getBool @keep
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -3450,7 +3567,7 @@ instance ([PP p a] ~ PP q a
   type PP (Elem p q) a = Bool
   eval _ opts a = do
     let msg0 = "Elem"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -3730,7 +3847,7 @@ instance (P n a
   type PP (STimes n p) a = PP p a
   eval _ opts a = do
     let msg0 = "STimes"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a
+    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a []
     pure $ case lr of
       Left e -> e
       Right (fromIntegral -> (n::Int),p,pp,qq) ->
@@ -3956,7 +4073,7 @@ instance (P p a
   type PP (MkThese p q) a = These (PP p a) (PP q a)
   eval _ opts a = do
     let msg0 = "MkThese"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -3982,12 +4099,49 @@ data MConcat p
 -- Present 1584
 -- PresentT 1584
 --
-
+-- >>> type Ands' p = FoldMap SG.All p
+-- >>> pz @(Ands' Id) [True,False,True,True]
+-- Present False
+-- PresentT False
+--
+-- >>> pz @(Ands' Id) [True,True,True]
+-- Present True
+-- PresentT True
+--
+-- >>> pz @(Ands' Id) []
+-- Present True
+-- PresentT True
+--
+-- >>> type Ors' p = FoldMap SG.Any p
+-- >>> pz @(Ors' Id) [False,False,False]
+-- Present False
+-- PresentT False
+--
+-- >>> pz @(Ors' Id) []
+-- Present False
+-- PresentT False
+--
+-- >>> pz @(Ors' Id) [False,False,False,True]
+-- Present True
+-- PresentT True
+--
+-- >>> type AllPositive' = FoldMap SG.All (Map Positive Id)
+-- >>> pz @AllPositive' [3,1,-5,10,2,3]
+-- Present False
+-- PresentT False
+--
+-- >>> type AllNegative' = FoldMap SG.All (Map Negative Id)
+-- >>> pz @AllNegative' [-1,-5,-10,-2,-3]
+-- Present True
+-- PresentT True
+--
+-- >>> :set -XKindSignatures
+-- >>> type Max' (t :: Type) = FoldMap (SG.Max t) Id -- requires t be Bounded for monoid instance
+-- >>> pz @(Max' Int) [10,4,5,12,3,4]
+-- Present 12
+-- PresentT 12
+--
 type FoldMap (t :: Type) p = Map (Wrap t Id) p >> Unwrap (MConcat Id)
-
-type Sum' (t :: Type) = FoldMap (SG.Sum t) Id
-type Min' (t :: Type) = FoldMap (SG.Min t) Id -- requires t be Bounded for monoid instance
-type Max' (t :: Type) = FoldMap (SG.Max t) Id -- requires t be Bounded for monoid instance
 
 instance (PP p x ~ [a]
         , P p x
@@ -4103,7 +4257,7 @@ instance (P q a
   type PP (IxL p q r) a = IxValue (PP p a)
   eval _ opts a = do
     let msg0 = "IxL"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) ->
@@ -4140,7 +4294,7 @@ instance (P q a
   type PP (Lookup p q) a = Maybe (IxValue (PP p a))
   eval _ opts a = do
     let msg0 = "Lookup"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -4165,7 +4319,6 @@ instance (P q a
 -- TrueT
 --
 data Ands p
-type Ands' p = FoldMap SG.All p
 
 instance (PP p x ~ t a
         , P p x
@@ -4198,7 +4351,6 @@ instance (PP p x ~ t a
 -- FalseT
 --
 data Ors p
-type Ors' p = FoldMap SG.Any p
 
 instance (PP p x ~ t a
         , P p x
@@ -4243,7 +4395,7 @@ instance (P p x
   type PP (p :+ q) x = PP q x
   eval _ opts z = do
     let msg0 = "(:+)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -4276,7 +4428,7 @@ instance (P p x
   type PP (p +: q) x = PP p x
   eval _ opts z = do
     let msg0 = "(+:)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -4420,7 +4572,7 @@ instance (P p x
   type PP (EnumFromTo p q) x = [PP p x]
   eval _ opts z = do
     let msg0 = "EnumFromTo"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) -> mkNode opts (PresentT (enumFromTo p q)) [msg0 <> " [" <> show p <> " .. " <> show q <> "]"] [hh pp, hh qq]
@@ -4513,7 +4665,7 @@ instance (PP p (b,a) ~ b
   type PP (Scanl p q r) x = [PP q x]
   eval _ opts z = do
     let msg0 = "Scanl"
-    lr <- runPQ msg0 (Proxy @q) (Proxy @r) opts z
+    lr <- runPQ msg0 (Proxy @q) (Proxy @r) opts z []
     case lr of
       Left e -> pure e
       Right (q,r,qq,rr) -> do
@@ -4896,7 +5048,7 @@ instance (PP p a ~ PP q a
   type PP (Div p q) a = PP p a
   eval _ opts a = do
     let msg0 = "Div"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -4927,7 +5079,7 @@ instance (PP p a ~ PP q a
   type PP (Mod p q) a = PP p a
   eval _ opts a = do
     let msg0 = "Mod"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -4970,7 +5122,7 @@ instance (PP p a ~ PP q a
   type PP (DivMod p q) a = (PP p a, PP p a)
   eval _ opts a = do
     let msg0 = "DivMod"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -5013,7 +5165,7 @@ instance (PP p a ~ PP q a
   type PP (QuotRem p q) a = (PP p a, PP p a)
   eval _ opts a = do
     let msg0 = "QuotRem"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -5026,8 +5178,8 @@ instance (PP p a ~ PP q a
 type Quot p q = Fst (QuotRem p q)
 type Rem p q = Snd (QuotRem p q)
 
---type OneP = Guard "expected list of length 1" (Len >> Same 1) >> Head Id
-type OneP = (Skip (Guard (Printf "expected list of length 1 but found length=%d" Len) (Len == 1)) >> Head Id)
+--type OneP = Guard "expected list of length 1" (Len == 1) >> Head Id
+type OneP = Guard (Printf "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
 
 strictmsg :: forall strict . GetBool strict => String
 strictmsg = if getBool @strict then "" else "Lax"
@@ -5039,35 +5191,35 @@ strictmsg = if getBool @strict then "" else "Lax"
 -- | Guards contain a type level list of tuples the action to run on failure of the predicate and the predicate itself
 -- Each tuple validating against the corresponding value in a value list
 --
--- >>> pz @(Skip (Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 4)])) [17,4]
+-- >>> pz @(Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 4)]) [17,4]
 -- Present [17,4]
 -- PresentT [17,4]
 --
--- >>> pz @(Skip (Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 5)])) [17,4]
+-- >>> pz @(Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 5)]) [17,4]
 -- Error arg2 failed
 -- FailT "arg2 failed"
 --
--- >>> pz @(Skip (Guards '[ '("arg1 failed",Gt 99), '("arg2 failed", Same 4)])) [17,4]
+-- >>> pz @(Guards '[ '("arg1 failed",Gt 99), '("arg2 failed", Same 4)]) [17,4]
 -- Error arg1 failed
 -- FailT "arg1 failed"
 --
--- >>> pz @(Skip (Guards '[ '(Printf2 "arg %d failed with value %d" Id,Gt 4), '(Printf2 "%d %d" Id, Same 4)])) [17,3]
+-- >>> pz @(Guards '[ '(Printf2 "arg %d failed with value %d" Id,Gt 4), '(Printf2 "%d %d" Id, Same 4)]) [17,3]
 -- Error 2 3
 -- FailT "2 3"
 --
--- >>> pz @(Skip (GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4])) [17,3,5]
+-- >>> pz @(GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5]
 -- Error arg 3 failed with value 5
 -- FailT "arg 3 failed with value 5"
 --
--- >>> pz @(Skip (GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4])) [17,3,5,99]
+-- >>> pz @(GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
 -- Error Guards: data elements(4) /= predicates(3)
 -- FailT "Guards: data elements(4) /= predicates(3)"
 --
 data GuardsImpl (n :: Nat) (strict :: Bool) (os :: [(k,k1)])
-type Guards (os :: [(k,k1)]) = GuardsImplW 'True os >> 'True
-type GuardsLax (os :: [(k,k1)]) = GuardsImplW 'False os >> 'True
-type GuardsQuick (prt :: k) (os :: [k1]) = Guards (ToGuardsT prt os) >> 'True
-type GuardsQuickLax (prt :: k) (os :: [k1]) = GuardsLax (ToGuardsT prt os) >> 'True
+type Guards (os :: [(k,k1)]) = GuardsImplW 'True os
+type GuardsLax (os :: [(k,k1)]) = GuardsImplW 'False os
+type GuardsQuick (prt :: k) (os :: [k1]) = Guards (ToGuardsT prt os)
+type GuardsQuickLax (prt :: k) (os :: [k1]) = GuardsLax (ToGuardsT prt os)
 
 data GuardsImplW (strict :: Bool) (ps :: [(k,k1)])
 instance (GetBool strict, GetLen ps, P (GuardsImpl (LenT ps) strict ps) [a]) => P (GuardsImplW strict ps) [a] where
@@ -5129,21 +5281,21 @@ instance (PP prt (Int, a) ~ String
 
 -- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
 --
--- >>> pz @(Skip (GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)])) [13,59,61]
+-- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [13,59,61]
 -- Error seconds invalid: found 61
 -- FailT "seconds invalid: found 61"
 --
--- >>> pz @(Skip (GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)])) [27,59,12]
+-- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [27,59,12]
 -- Error hours invalid: found 27
 -- FailT "hours invalid: found 27"
 --
--- >>> pz @(Skip (GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)])) [23,59,12]
+-- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [23,59,12]
 -- Present [23,59,12]
 -- PresentT [23,59,12]
 --
 data GuardsImplX (n :: Nat) (strict :: Bool) (os :: [(k,k1)])
 
-type GuardsDetail (prt :: Symbol) (os :: [(k0,k1)]) = GuardsImplXX 'True (ToGuardsDetailT prt os) >> 'True
+type GuardsDetail (prt :: Symbol) (os :: [(k0,k1)]) = GuardsImplXX 'True (ToGuardsDetailT prt os)
 
 type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
   ToGuardsDetailT prt '[ '(s,p) ] = '(Printfn prt '(s,'(Id,'())), p) : '[]
@@ -5210,17 +5362,17 @@ instance (PP prt a ~ String
 
 -- | leverages 'GuardsQuick' for repeating predicates (passthrough method)
 --
--- >>> pz @(Skip (GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255))) [121,33,7,256]
+-- >>> pz @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
 -- Error id=4 must be between 0 and 255, found 256
 -- FailT "id=4 must be between 0 and 255, found 256"
 --
--- >>> pz @(Skip (GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255))) [121,33,7,44]
+-- >>> pz @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
 -- Present [121,33,7,44]
 -- PresentT [121,33,7,44]
 --
 data GuardsNImpl (strict :: Bool) prt (n :: Nat) p
-type GuardsN prt (n :: Nat) p = GuardsNImpl 'True prt n p >> 'True
-type GuardsNLax prt (n :: Nat) p = GuardsNImpl 'False prt n p >> 'True
+type GuardsN prt (n :: Nat) p = GuardsNImpl 'True prt n p
+type GuardsNLax prt (n :: Nat) p = GuardsNImpl 'False prt n p
 
 instance ( GetBool strict
          , GetLen (ToGuardsT prt (RepeatT n p))
@@ -5237,15 +5389,15 @@ instance ( GetBool strict
 
 -- | \'p\' is the predicate and on failure of the predicate runs \'prt\'
 --
--- >>> pz @(Skip (Guard "expected > 3" (Gt 3))) 17
+-- >>> pz @(Guard "expected > 3" (Gt 3)) 17
 -- Present 17
 -- PresentT 17
 --
--- >>> pz @(Skip (Guard "expected > 3" (Gt 3))) 1
+-- >>> pz @(Guard "expected > 3" (Gt 3)) 1
 -- Error expected > 3
 -- FailT "expected > 3"
 --
--- >>> pz @(Skip (Guard (Printf "%d not > 3" Id) (Gt 3))) (-99)
+-- >>> pz @(Guard (Printf "%d not > 3" Id) (Gt 3)) (-99)
 -- Error -99 not > 3
 -- FailT "-99 not > 3"
 --
@@ -5259,7 +5411,7 @@ instance (Show a
         , P p a
         , PP p a ~ Bool
         ) => P (Guard prt p) a where
-  type PP (Guard prt p) a = Bool
+  type PP (Guard prt p) a = a
   eval _ opts a = do
     let msg0 = "Guard"
     pp <- evalBool (Proxy @p) opts a
@@ -5270,22 +5422,28 @@ instance (Show a
         pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
           Right msgx -> mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] [hh pp, hh qq]
-      Right True -> pure $ mkNodeB opts True [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]  -- dont show the guard message if successful
+      Right True -> pure $ mkNode opts (PresentT a) [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]  -- dont show the guard message if successful
 
 
 -- | similar to 'Guard' but uses the root message of the False predicate case as the failure message
 --
--- >>> pz @(GuardSimple (Luhn Id)) [1..4]
--- Error Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]
--- FailT "Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]"
+-- most uses of GuardSimple can be replaced by using 'ol' and a boolean predicate unless you require failure on error
 --
--- >>> pz @(Skip (GuardSimple (Luhn Id))) [1,2,3,0]
+-- >>> pz @(GuardSimple (Luhn Id)) [1..4]
+-- Error {Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]}
+-- FailT "{Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]}"
+--
+-- >>> pl @(Luhn Id) [1..4]
+-- False {Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]}
+-- FalseT
+--
+-- >>> pz @(GuardSimple (Luhn Id)) [1,2,3,0]
 -- Present [1,2,3,0]
 -- PresentT [1,2,3,0]
 --
--- >>> pz @(Skip (GuardSimple (Len > 30))) [1,2,3,0]
--- Error 4 > 30
--- FailT "4 > 30"
+-- >>> pz @(GuardSimple (Len > 30)) [1,2,3,0]
+-- Error {4 > 30}
+-- FailT "{4 > 30}"
 --
 data GuardSimple p
 
@@ -5293,17 +5451,17 @@ instance (Show a
         , P p a
         , PP p a ~ Bool
         ) => P (GuardSimple p) a where
-  type PP (GuardSimple p) a = Bool
+  type PP (GuardSimple p) a = a
   eval _ opts a = do
     let msg0 = "GuardSimple"
     pp <- evalBool (Proxy @p) (if hasNoTree opts then o0 else opts) a -- to not lose the message in oLite mode we use non lite and then fix it up after
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right False ->
-        let msgx = fromMaybe msg0 $ pp ^? tStrings . ix 0
-        in mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] [hh pp]
+        let msgx = topMessage pp
+        in mkNode opts (FailT msgx) [msg0 <> "(failed) " <> msgx <> show0 opts " | " a] [hh pp]
       Right True ->
-        mkNodeB opts True [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]
+        mkNode opts (PresentT a) [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]
 
 
 -- | just run the effect but skip the value
@@ -5383,7 +5541,7 @@ instance (Show (PP p a)
 -- False
 -- FalseT
 --
-data (&&) (p :: k) (q :: k1)
+data p && q
 infixr 3 &&
 
 instance (P p a
@@ -5395,7 +5553,9 @@ instance (P p a
   eval _ opts a = do
     pp <- evalBool (Proxy @p) opts a
     qq <- evalBool (Proxy @q) opts a
-    pure $ evalBinStrict opts "&&" (&&) pp qq
+    let msg0 = "&&"
+    let zz = topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+    pure $ evalBinStrict opts msg0 (&&) pp qq (" | " <> zz)
 
 -- | similar to 'Prelude.||'
 --
@@ -5407,7 +5567,7 @@ instance (P p a
 -- False
 -- FalseT
 --
-data (||) (p :: k) (q :: k1)
+data p || q
 infixr 2 ||
 
 instance (P p a
@@ -5419,7 +5579,9 @@ instance (P p a
   eval _ opts a = do
     pp <- evalBool (Proxy @p) opts a
     qq <- evalBool (Proxy @q) opts a
-    pure $ evalBinStrict opts "||" (||) pp qq
+    let msg0 = "||"
+    let zz = topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+    pure $ evalBinStrict opts msg0 (||) pp qq (" | " <> zz)
 
 -- | implication
 --
@@ -5451,7 +5613,9 @@ instance (P p a
   eval _ opts a = do
     pp <- evalBool (Proxy @p) opts a
     qq <- evalBool (Proxy @q) opts a
-    pure $ evalBinStrict opts "~>" imply pp qq
+    let msg0 = "~>"
+    let zz = topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+    pure $ evalBinStrict opts msg0 imply pp qq (" | " <> zz)
 
 -- | 'not' function
 --
@@ -5477,7 +5641,7 @@ instance (PP p x ~ Bool, P p x) => P (Not p) x where
       Left e -> e
       Right p ->
         let b = not p
-        in mkNodeB opts b [msg0] [hh pp]
+        in mkNodeB opts b [msg0 <> " " <> topMessage pp] [hh pp]
 
 data OrdP p q
 type p ==! q = OrdP p q
@@ -5517,7 +5681,7 @@ instance (Ord (PP p a)
   type PP (OrdP p q) a = Ordering
   eval _ opts a = do
     let msg0 = "OrdP"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -5546,7 +5710,7 @@ instance (PP p a ~ String
   type PP (OrdI p q) a = Ordering
   eval _ opts a = do
     let msg0 = "OrdI"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -5566,7 +5730,7 @@ instance (GetOrd o
   type PP (Cmp o p q) a = Bool
   eval _ opts a = do
     let (sfn, fn) = getOrd @o
-    lr <- runPQ sfn (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ sfn (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -5585,7 +5749,7 @@ instance (PP p a ~ String
   type PP (CmpI o p q) a = Bool
   eval _ opts a = do
     let (sfn, fn) = getOrd @o
-    lr <- runPQ sfn (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ sfn (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -5927,7 +6091,7 @@ instance (PP p a ~ [x]
   type PP (ZipThese p q) a = [These (ExtractAFromList (PP p a)) (ExtractAFromList (PP q a))]
   eval _ opts a = do
     let msg0 = "ZipThese"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -5996,7 +6160,7 @@ instance (FailWhenT (AndT lc rc)
                (True,False) -> "L"
                (False,True) -> "R"
                _ -> ""
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -6017,8 +6181,12 @@ instance (FailWhenT (AndT lc rc)
 -- FalseT
 --
 -- >>> pz @(GuardSimple (Luhn Id)) [15,4,3,1,99]
--- Error Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99]
--- FailT "Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99]"
+-- Error {Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99]}
+-- FailT "{Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99]}"
+--
+-- >>> pl @(Luhn Id) [15,4,3,1,99]
+-- False {Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99]}
+-- FalseT
 --
 data Luhn p
 
@@ -6164,7 +6332,7 @@ instance (PP p x ~ [a]
   type PP (Intercalate p q) x = PP p x
   eval _ opts x = do
     let msg0 = "Intercalate"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -6196,7 +6364,7 @@ instance (PrintfArg (PP p x)
   type PP (Printf s p) x = String
   eval _ opts x = do
     let msg0 = "Printf"
-    lrx <- runPQ msg0 (Proxy @s) (Proxy @p) opts x
+    lrx <- runPQ msg0 (Proxy @s) (Proxy @p) opts x []
     case lrx of
       Left e -> pure e
       Right (s,p,ss,pp) -> do
@@ -6208,7 +6376,7 @@ instance (PrintfArg (PP p x)
 
 type family GuardsT (ps :: [k]) where
   GuardsT '[] = '[]
-  GuardsT (p ': ps) = (Id |> Guard "fromGuardsT" p) ': GuardsT ps
+  GuardsT (p ': ps) = Guard "fromGuardsT" p ': GuardsT ps
 
 --type Guards' (ps :: [k]) = Para (GuardsT ps)
 
@@ -6508,7 +6676,7 @@ instance P p x => P (Hide p) x where
 
 -- | similar to 'readFile'
 --
--- >>> pz @(ReadFile ".ghci" >> 'Just Id >> Len >> Gt 0) ()
+-- >>> pz @(ReadFile ".ghci" >> 'Just Id >> Len > 0) ()
 -- True
 -- TrueT
 --
@@ -6791,7 +6959,7 @@ instance (Semigroup (PP p x)
   type PP (p <> q) x = PP p x
   eval _ opts x = do
     let msg0 = "<>"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -6908,7 +7076,7 @@ instance (KnownNat (TupleLenT as)
   type PP (Printfn s p) x = String
   eval _ opts x = do
     let msg0 = "Printfn"
-    lrx <- runPQ msg0 (Proxy @s) (Proxy @p) opts x
+    lrx <- runPQ msg0 (Proxy @s) (Proxy @p) opts x []
     case lrx of
       Left e -> pure e
       Right (s,(a,as),ss,pp) -> do
@@ -6953,7 +7121,7 @@ instance (P p x
   type PP (p <$ q) x = ApplyConstT (PP q x) (PP p x)
   eval _ opts x = do
     let msg0 = "(<$)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -6983,7 +7151,7 @@ instance (Show (t c)
   type PP (p <* q) x = PP p x
   eval _ opts x = do
     let msg0 = "(<*)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -7017,7 +7185,7 @@ instance (P p x
   type PP (p <|> q) x = PP p x
   eval _ opts x = do
     let msg0 = "(<|>)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -7110,7 +7278,7 @@ instance (P p x
   type PP (p $ q) x = FnT (PP p x)
   eval _ opts x = do
     let msg0 = "($)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)  ->
@@ -7143,7 +7311,7 @@ instance (P p x
   type PP (q & p) x = FnT (PP p x)
   eval _ opts x = do
     let msg0 = "(&)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)  ->
@@ -7261,7 +7429,7 @@ instance (GetBool r
   eval _ opts x = do
     let msg0 = "Strip" ++ (if r then "Right" else "Left")
         r = getBool @r
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,view TL.unpacked -> q,pp,qq) ->

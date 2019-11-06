@@ -97,6 +97,7 @@ module Predicate.Util (
   , noisy
   , ansi
   , unicode
+  , showBoolP
 
 -- ** formatting functions
   , show01
@@ -170,6 +171,7 @@ module Predicate.Util (
   , evalBinStrict
 
  -- ** miscellaneous
+  , Holder
   , hh
   , showT
   , prettyOrd
@@ -696,8 +698,9 @@ evalBinStrict :: POpts
                  -> (Bool -> Bool -> Bool)
                  -> TT Bool
                  -> TT Bool
+                 -> String
                  -> TT Bool
-evalBinStrict opts s fn ll rr =
+evalBinStrict opts s fn ll rr extra =
   case getValueLR opts (s <> " p") ll [Holder rr] of
     Left e -> e
     Right a ->
@@ -705,7 +708,7 @@ evalBinStrict opts s fn ll rr =
         Left e -> e
         Right b ->
           let z = fn a b
-          in mkNodeB opts z [show a <> " " <> s <> " " <> show b] [hh ll, hh rr]
+          in mkNodeB opts z [show a <> " " <> s <> " " <> show b <> extra] [hh ll, hh rr]
 
 -- | type level Between
 type family BetweenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
@@ -920,7 +923,7 @@ prtTT' :: MonadEval m => POpts -> m (TT a) -> IO ()
 prtTT' o y = liftEval y >>= prtTree o . fromTT
 
 prtTree :: POpts -> Tree PE -> IO ()
-prtTree o = prtImpl o . fmap (toNodeString o)
+prtTree o = putStr . prtTreePure o -- prtImpl o . fmap (toNodeString o)
 
 prtImpl :: POpts -> Tree String -> IO ()
 prtImpl = (putStr .) . showImpl
@@ -942,7 +945,7 @@ prtTreePure opts t
   | otherwise = showImpl opts $ fmap (toNodeString opts) t
 
 topMessage :: TT a -> String
-topMessage pp = maybe "" (\x -> " {" <> x <> "}") (pp ^? tStrings . ix 0)
+topMessage pp = maybe "" (\x -> "{" <> x <> "}") (pp ^? tStrings . ix 0)
 
 showImpl :: POpts -> Tree String -> String
 showImpl o =

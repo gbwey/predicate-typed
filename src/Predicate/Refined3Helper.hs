@@ -57,8 +57,11 @@ module Predicate.Refined3Helper (
 
  -- ** base n
   , basen
+  , base2
   , base16
   , basen'
+  , base2'
+  , base16'
   , BaseN
   , BaseN'
   , BaseIJ
@@ -117,7 +120,7 @@ import Data.Time
 -- FailT "expected 10 digits but found 11"
 --
 type Ccip = Map (ReadP Int Id) (Ones (Remove "-" Id))
-type Ccop (n :: Nat) = Skip (Guard (Printf2 "expected %d digits but found %d" '(n,Len)) (Len >> Same n)) >> Luhn Id
+type Ccop (n :: Nat) = Guard (Printf2 "expected %d digits but found %d" '(n,Len)) (Len == n) >> Luhn Id
 type Ccfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
 
 type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
@@ -161,7 +164,7 @@ type Dtop' =
      >> Guards '[ '(Printf2 "guard %d invalid hours %d" Id, Between 0 23)
                 , '(Printf2 "guard %d invalid minutes %d" Id, Between 0 59)
                 , '(Printf2 "guard %d invalid seconds %d" Id, Between 0 59)
-                ]
+                ] >> 'True
 -}
 type Dtop =
    Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
@@ -169,7 +172,7 @@ type Dtop =
                   '[ '("hours", Between 0 23)
                    , '("minutes",Between 0 59)
                    , '("seconds",Between 0 59)
-                   ]
+                   ] >> 'True
 
 type Dtfmt = FormatTimeP "%F %T" Id
 
@@ -201,12 +204,13 @@ type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd OneP)
 type Ssnop = GuardsQuick (Printf2 "number for group %d invalid: found %d" Id)
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
+                      >> 'True
 {-
 type Ssnop' = GuardsDetail "%s invalid: found %d"
                           '[ '("first", Between 1 899 && Id /= 666)
                            , '("second", Between 1 99)
                            , '("third" , Between 1 9999)
-                           ]
+                           ] >> 'True
 -}
 type Ssnfmt = Printfnt 3 "%03d-%02d-%04d" Id
 
@@ -224,7 +228,7 @@ type Ssnfmt = Printfnt 3 "%03d-%02d-%04d" Id
 hms :: Proxy Hms
 hms = mkProxy3
 
-type Hms = '(Hmsip, Hmsop, Hmsfmt, String)
+type Hms = '(Hmsip, Hmsop >> 'True, Hmsfmt, String)
 
 type Hmsip = Map (ReadP Int Id) (Resplit ":" Id)
 
@@ -234,7 +238,7 @@ type Hmsop = GuardsDetail "%s invalid: found %d"
               ,'("seconds",Between 0 59)]
 {-
 type Hmsop = Guard (Printf "expected len 3 but found %d" Len) (Length Id == 3)
-             >|> Guards '[ '(Printf2 "guard(%d) %d hours is out of range" Id, Between 0 23)
+             >> Guards '[ '(Printf2 "guard(%d) %d hours is out of range" Id, Between 0 23)
                         , '(Printf2 "guard(%d) %d mins is out of range" Id, Between 0 59)
                         , '(Printf2 "guard(%d) %d secs is out of range" Id, Between 0 59)]
 -}
@@ -261,7 +265,7 @@ ip = mkProxy3
 
 type Ipip = Map (ReadP Int Id) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd Id)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
-type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255)
+type Ipop = GuardsN (Printf2 "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255) >> 'True
 type Ipfmt = Printfnt 4 "%03d.%03d.%03d.%03d" Id
 
 type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- strict validation should only be done in 'op' not 'ip'
@@ -287,14 +291,26 @@ type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m
 -- >>> prtEval3P (basen' @16 @(Between 100 400)) oz "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> prtEval3P (basen' @16 @(GuardSimple (Id < 400))) oz "f0fe"
--- Left Step 2. Failed Boolean Check(op) | 61694 < 400
+-- >>> prtEval3P (basen' @16 @(GuardSimple (Id < 400) >> 'True)) oz "f0fe"
+-- Left Step 2. Failed Boolean Check(op) | {61694 < 400}
+--
+-- >>> prtEval3P (basen' @16 @(Id < 400)) ol "f0fe"
+-- Left Step 2. False Boolean Check(op) | {61694 < 400}
 --
 type BaseN (n :: Nat) = BaseN' n 'True
 type BaseN' (n :: Nat) p = '(ReadBase Int n Id, p, ShowBase n Id, String)
 
 base16 :: Proxy (BaseN 16)
-base16 = basen @16
+base16 = basen
+
+base16' :: Proxy (BaseN' 16 p)
+base16' = basen'
+
+base2 :: Proxy (BaseN 2)
+base2 = basen
+
+base2' :: Proxy (BaseN' 2 p)
+base2' = basen'
 
 -- replace with BetweenT 2 36 n
 --basen :: forall n . (KnownNat n, (n GN.<=? 36) ~ 'True, (2 GN.<=? n) ~ 'True) => Proxy (BaseN n)
@@ -331,7 +347,7 @@ datetimen = mkProxy3
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
 -- >>> prtEval3P (between @10 @16) o0 17
--- Left Step 2. False Boolean Check(op) | {True && False}
+-- Left Step 2. False Boolean Check(op) | {17 <= 16}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [17] ***
 -- <BLANKLINE>
@@ -339,19 +355,13 @@ datetimen = mkProxy3
 -- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
 -- <BLANKLINE>
--- False True && False
+-- False 17 <= 16
 -- |
--- +- True  17 >= 10
--- |  |
--- |  +- P I
--- |  |
--- |  `- P '10
+-- +- P Id 17
 -- |
--- `- False 17 <= 16
---    |
---    +- P I
---    |
---    `- P '16
+-- +- P '10
+-- |
+-- `- P '16
 -- <BLANKLINE>
 --
 between :: Proxy (BetweenN m n)
@@ -367,15 +377,14 @@ type LuhnR (n :: Nat) = MakeR3 (LuhnT n)
 -- >>> prtEval3P (Proxy @(LuhnT 4)) oz "1230"
 -- Right (Refined3 {r3In = [1,2,3,0], r3Out = "1230"})
 --
--- >>> prtEval3P (Proxy @(LuhnT 4)) oz "1234"
--- Left Step 2. Failed Boolean Check(op) | Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]
-
+-- >>> prtEval3P (Proxy @(LuhnT 4)) ol "1234"
+-- Left Step 2. False Boolean Check(op) | {True && False | {incorrect number of digits:4 == 4} && {Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]}}
+--
 -- | uses builtin 'Luhn'
 type LuhnT (n :: Nat) =
    '(Map (ReadP Int Id) (Ones Id)
-   , Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id]))
-           (Len >> Same n)
-     |> GuardSimple (Luhn Id)
+   , Msg "incorrect number of digits:"
+         (Len == n) && Luhn Id
    , ConcatMap (ShowP Id) Id
    , String)
 
@@ -401,8 +410,8 @@ oknot = mkProxy3
 -- >>> prtEval3P (Proxy @(BaseIJ 16 2)) oz "fge"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prtEval3P (Proxy @(BaseIJ' 16 2 (GuardSimple (ReadBase Int 2 Id < 1000)))) oz "ffe"
--- Left Step 2. Failed Boolean Check(op) | 4094 < 1000
+-- >>> prtEval3P (Proxy @(BaseIJ' 16 2 (ReadBase Int 2 Id < 1000))) ol "ffe"
+-- Left Step 2. False Boolean Check(op) | {4094 < 1000}
 --
 type BaseIJ (i :: Nat) (j :: Nat) = BaseIJ' i j 'True
 type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, ReadBase Int j Id >> ShowBase i Id, String)
@@ -425,7 +434,7 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (15 % 1)))) oz "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Guard (Printf "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1))))) oz "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Guard (Printf "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1)) >> 'True))) oz "13 % 3"
 -- Left Step 2. Failed Boolean Check(op) | invalid=4.33
 --
 -- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (11 % 1)))) oz "13 % 3"

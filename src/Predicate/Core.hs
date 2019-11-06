@@ -43,6 +43,7 @@ module Predicate.Core (
   , runPQ
   , evalBool
   , evalQuick
+  , prtTreeX
   ) where
 import Predicate.Util
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
@@ -208,7 +209,7 @@ instance (P p a, P q a) => P '(p,q) a where
   type PP '(p,q) a = (PP p a, PP q a)
   eval _ opts a = do
     let msg = "'(,)"
-    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
        Left e -> e
        Right (p,q,pp,qq) ->
@@ -227,7 +228,7 @@ instance (P p a
   type PP '(p,q,r) a = (PP p a, PP q a, PP r a)
   eval _ opts a = do
     let msg = "'(,,)"
-    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
@@ -251,11 +252,11 @@ instance (P p a
   type PP '(p,q,r,s) a = (PP p a, PP q a, PP r a, PP s a)
   eval _ opts a = do
     let msg = "'(,,)"
-    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a
+    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
-        lr1 <- runPQ msg (Proxy @r) (Proxy @s) opts a
+        lr1 <- runPQ msg (Proxy @r) (Proxy @s) opts a [hh pp, hh qq]
         pure $ case lr1 of
           Left e -> e
           Right (r,s,rr,ss) ->
@@ -337,7 +338,7 @@ instance (Show (PP p a)
   type PP (p ': p1 ': ps) a = [PP p a]
   eval _ opts a = do
     let msg0 = "'(p':q)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @(p1 ': ps)) opts a
+    lr <- runPQ msg0 (Proxy @p) (Proxy @(p1 ': ps)) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -593,16 +594,21 @@ peWith :: forall p a
 peWith opts a = do
   pp <- eval (Proxy @p) opts a
   let r = pp ^. tBool
-  if hasNoTree opts then
-    let f = colorMe opts (r ^. boolT2P)
-        tm = if oDebug opts == OZero then "" else topMessage pp
-    in putStrLn $ case r of
-         FailT e -> f "Error" <> " " <> e
-         TrueT -> f "True" <> tm
-         FalseT -> f "False" <> tm
-         PresentT x -> f "Present" <> " " <> show x <> tm
-  else prtTree opts (fromTT pp)
+  putStr $ prtTreeX opts pp
   return r
+
+prtTreeX :: Show x => POpts -> TT x -> String
+prtTreeX opts pp =
+  let r = pp ^. tBool
+  in if hasNoTree opts then
+      let f = colorMe opts (r ^. boolT2P)
+          tm = if oDebug opts == OZero then "" else topMessage pp
+      in (<>"\n") $ case r of
+           FailT e -> f "Error" <> " " <> e
+           TrueT -> f "True " <> tm
+           FalseT -> f "False " <> tm
+           PresentT x -> f "Present" <> " " <> show x <> " " <> tm
+    else prtTreePure opts (fromTT pp)
 
 runPQ :: (P p a, P q a, MonadEval m)
    => String
@@ -610,14 +616,15 @@ runPQ :: (P p a, P q a, MonadEval m)
    -> Proxy q
    -> POpts
    -> a
+   -> [Holder]
    -> m (Either (TT x) (PP p a, PP q a, TT (PP p a), TT (PP q a)))
-runPQ msg0 proxyp proxyq opts a = do
+runPQ msg0 proxyp proxyq opts a hhs = do
     pp <- eval proxyp opts a
-    case getValueLR opts msg0 pp [] of
+    case getValueLR opts msg0 pp hhs of
       Left e -> pure $ Left e
       Right p -> do
          qq <- eval proxyq opts a
-         pure $ case getValueLR opts msg0 qq [hh pp] of
+         pure $ case getValueLR opts msg0 qq (hhs <> [hh pp]) of
            Left e -> Left e
            Right q -> Right (p, q, pp, qq)
 
