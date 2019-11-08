@@ -112,7 +112,7 @@ type Ip4B = Guard "expected 4 numbers" (Len == 4)
 type Ip4B' = Msg "expected 4 numbers:" (Len == 4)
           && All (Between 0 255) Id
 
-type Ip4C = Printfnt 4 "%03d.%03d.%03d.%03d" Id
+type Ip4C = PrintL 4 "%03d.%03d.%03d.%03d" Id
 
 -- base n number of length x and then convert to a list of length x of (0 to (n-1))
 -- checks that each digit is between 0 and n-1

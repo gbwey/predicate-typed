@@ -1,3 +1,5 @@
+-- todo: One index not Zero index??? need to decide
+-- todo: add topMessage somehow to >> and Do etc
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -86,7 +88,6 @@ module Predicate.Prelude (
   , Swap
   , Assoc
   , Unassoc
-  , TupleI
   , Pairs
 
  -- ** character expressions
@@ -388,8 +389,6 @@ module Predicate.Prelude (
   , Failp
   , Failt
   , FailS
-  , FailPrt
-  , FailPrt2
   , Catch
   , Catch'
 
@@ -415,6 +414,11 @@ module Predicate.Prelude (
   , GuardsN
   , GuardsNLax
   , GuardsDetail
+
+  , Bools
+  , BoolsLax
+  , BoolsQuick
+  , BoolsQuickLax
 
   -- ** IO expressions
   , ReadFile
@@ -450,13 +454,10 @@ module Predicate.Prelude (
   , FromStringP
   , FromStringP'
 
-  -- ** printf expressions
-  , Printf
-  , Printfn
-  , Printfnt
-  , PrintfntLax
-  , Printf2
-  , Printf3
+  -- ** print expressions
+  , PrintF
+  , PrintL
+  , PrintT
 
   -- ** higher order expressions
   , Pure
@@ -500,6 +501,7 @@ module Predicate.Prelude (
   , type (|>)
   , type (>|)
   , type (>|>)
+  , ApplyT
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -731,8 +733,10 @@ instance (P p a
                in case filter (not . snd) (zip [0..] vals) of
                     [] -> mkNodeB opts True [msg0 ++ "(" ++ show (length q) ++ ")"] hhs
                     (i,_):fs -> let (_,tt) = ixtts !! i
-                                in mkNodeB opts False [msg0 <> " i=" ++ show i ++ " " <> topMessage tt ++ " " ++ show (length fs+1) ++ " false"] hhs
+                                in mkNodeB opts False [msg0 <> " i=" ++ showIndex i ++ " " <> topMessage tt ++ " " ++ show (length fs+1) ++ " false"] hhs
 
+showIndex :: (Show i, Num i) => i -> String
+showIndex i = show (i+0)
 -- | similar to 'any'
 --
 -- >>> pz @(Any Even Id) [1,5,11,5,3]
@@ -771,7 +775,7 @@ instance (P p a
                in case filter snd (zip [0..] vals) of
                     [] -> mkNodeB opts False [msg0 ++ "(" ++ show (length q) ++ ")"] hhs
                     (i,_):fs -> let (_,tt) = ixtts !! i
-                                in mkNodeB opts True [msg0 <> " i=" ++ show i ++ " " <> topMessage tt ++ " " ++ show (length fs+1) ++ " false"] hhs
+                                in mkNodeB opts True [msg0 <> " i=" ++ showIndex i ++ " " <> topMessage tt ++ " " ++ show (length fs+1) ++ " false"] hhs
 
 
 -- | a type level predicate for all positive elements in a list
@@ -1679,7 +1683,7 @@ instance (P p (a,a)
                 [] -> pure $ mkNode opts (PresentT mempty) [msg0 <> " empty"] []
                 [w] -> pure $ mkNode opts (PresentT [w]) [msg0 <> " one element " <> show w] []
                 w:ys@(_:_) -> do
-                  pp <- (if oDebug opts >= ONoisy then
+                  pp <- (if isVerbose opts then
                               eval (Proxy @(SortByHelper p))
                          else eval (Proxy @(Hide (SortByHelper p)))) opts (map (w,) ys)
 --                  pp <- eval (Proxy @(Hide (Partition (p >> Id == 'GT) Id))) opts (map (w,) ys)
@@ -2340,39 +2344,6 @@ instance (Show (PP p a)
           Left e -> e
           Right q -> mkNode opts (PresentT (Right q)) [msg0 <> "(True)" <> show0 opts " Right " q] [hh bb, hh qq]
 
--- | create inductive tuples from a type level list of predicates
---
--- >>> pz @(TupleI '[Id,ShowP Id,Pred Id,W "str", W 999]) 666
--- Present (666,("666",(665,("str",(999,())))))
--- PresentT (666,("666",(665,("str",(999,())))))
---
--- >>> pz @(TupleI '[W 999,W "somestring",W 'True, Id, ShowP (Pred Id)]) 23
--- Present (999,("somestring",(True,(23,("22",())))))
--- PresentT (999,("somestring",(True,(23,("22",())))))
---
-data TupleI (ps :: [k]) -- make it an inductive tuple
-
-instance P (TupleI ('[] :: [k])) a where
-  type PP (TupleI ('[] :: [k])) a = ()
-  eval _ opts _ = pure $ mkNode opts (PresentT ()) ["TupleI(done)"] []
-
-instance (P p a
-        , P (TupleI ps) a
-        , Show a
-        ) => P (TupleI (p ': ps)) a where
-  type PP (TupleI (p ': ps)) a = (PP p a, PP (TupleI ps) a)
-  eval _ opts a = do
-    pp <- eval (Proxy @p) opts a
-    let msg0 = "TupleI" -- "'[](" <> show len <> ")"
-    case getValueLR opts msg0 pp [] of
-         Left e -> pure e
-         Right w -> do
-           qq <- eval (Proxy @(TupleI ps)) opts a
-           pure $ case getValueLR opts msg0 qq [hh pp] of
-                Left e -> e
-                -- only PresentP makes sense here (ie not TrueP/FalseP: ok in base case tho
-                Right ws -> mkNode opts (PresentT (w,ws)) [msg0 <> show0 opts " " a] [hh pp, hh qq]
-
 -- | pad \'q\' with '\n'\ values from '\p'\
 --
 -- >>> pz @(PadL 5 999 Id) [12,13]
@@ -2559,7 +2530,7 @@ instance (Show (PP p a)
         ) => P (p ||| q) (Either a b) where
   type PP (p ||| q) (Either a b) = PP p a
   eval _ opts lr = do
-    let msg0 = "|||"
+    let msg0 = "(|||)"
     case lr of
       Left a -> do
         pp <- eval (Proxy @p) opts a
@@ -2597,7 +2568,7 @@ instance (Show (PP p a)
         ) => P (p +++ q) (Either a b) where
   type PP (p +++ q) (Either a b) = Either (PP p a) (PP q b)
   eval _ opts lr = do
-    let msg0 = "+++"
+    let msg0 = "(+++)"
     case lr of
       Left a -> do
         pp <- eval (Proxy @p) opts a
@@ -2605,14 +2576,14 @@ instance (Show (PP p a)
           Left e -> e
           Right a1 ->
             let msg1 = msg0 ++ " Left"
-            in mkNode opts (PresentT (Left a1)) [msg1 <> show0 opts " Left " a1 <> show1 opts " | " a] [hh pp]
+            in mkNode opts (PresentT (Left a1)) [msg1 <> show0 opts " " a1 <> show1 opts " | " a] [hh pp]
       Right a -> do
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts msg0 qq [] of
           Left e -> e
           Right a1 ->
             let msg1 = msg0 ++ " Right"
-            in mkNode opts (PresentT (Right a1)) [msg1 <> show0 opts " Right" a1 <> show1 opts " | " a] [hh qq]
+            in mkNode opts (PresentT (Right a1)) [msg1 <> show0 opts " " a1 <> show1 opts " | " a] [hh qq]
 
 type Dup = '(Id, Id)
 
@@ -4671,13 +4642,13 @@ instance (PP p (b,a) ~ b
       Right (q,r,qq,rr) -> do
         let msg1 = msg0  -- <> show0 opts " " q <> show0 opts " " r
             ff i b as' rs
-               | i >= _MX = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> show i)) [msg1 <> " i=" <> show i <> " (b,as')=" <> show (b,as')] [])
+               | i >= _MX = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) [msg1 <> " i=" <> showIndex i <> " (b,as')=" <> show (b,as')] [])
                | otherwise =
                    case as' of
                      [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (PresentT q) [msg1 <> "(done)"] [])], Right ())
                      a:as -> do
                         pp :: TT b <- eval (Proxy @p) opts (b,a)
-                        case getValueLR opts (msg1 <> " i=" <> show i <> " a=" <> show a) pp [] of
+                        case getValueLR opts (msg1 <> " i=" <> showIndex i <> " a=" <> show a) pp [] of
                            Left e  -> pure (rs,Left e)
                            Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
         (ts,lrx) :: ([((Int, b), TT b)], Either (TT [b]) ()) <- ff 1 q r []
@@ -4725,10 +4696,10 @@ instance (PP q a ~ s
       Left e -> pure e
       Right q -> do
         let msg1 = msg0 <> show0 opts " " q
-            ff i s rs | i >= _MX = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> show i)) [msg1 <> " i=" <> show i <> " s=" <> show s] [])
+            ff i s rs | i >= _MX = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) [msg1 <> " i=" <> showIndex i <> " s=" <> show s] [])
                       | otherwise = do
                               pp :: TT (PP p s) <- eval (Proxy @p) opts s
-                              case getValueLR opts (msg1 <> " i=" <> show i <> " s=" <> show s) pp [] of
+                              case getValueLR opts (msg1 <> " i=" <> showIndex i <> " s=" <> show s) pp [] of
                                    Left e  -> pure (rs, Left e)
                                    Right Nothing -> pure (rs, Right ())
                                    Right w@(Just (_b,s')) -> ff (i+1) s' (rs ++ [((i,w), pp)])
@@ -4927,11 +4898,11 @@ instance (P p x
 
 -- | Fails the computation with a message
 --
--- >>> pz @(Failt Int (Printf "value=%03d" Id)) 99
+-- >>> pz @(Failt Int (PrintF "value=%03d" Id)) 99
 -- Error value=099
 -- FailT "value=099"
 --
--- >>> pz @(FailS (Printf2 "value=%03d string=%s" Id)) (99,"somedata")
+-- >>> pz @(FailS (PrintT "value=%03d string=%s" Id)) (99,"somedata")
 -- Error value=099 string=somedata
 -- FailT "value=099 string=somedata"
 --
@@ -4939,8 +4910,6 @@ data Fail t prt
 type Failp s = Fail Unproxy s
 type Failt (t :: Type) prt = Fail (Hole t) prt
 type FailS s = Fail I s
-type FailPrt (t :: Type) prt = Fail (Hole t) (Printf prt Id)
-type FailPrt2 (t :: Type) prt = Fail (Hole t) (Printf2 prt Id)
 
 instance (P prt a
         , PP prt a ~ String
@@ -4951,7 +4920,7 @@ instance (P prt a
     pp <- eval (Proxy @prt) opts a
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right s -> mkNode opts (FailT s) [msg0 <> " " <> s] [hh pp]
+      Right s -> mkNode opts (FailT s) [msg0 <> " " <> s] (if isVerbose opts then [hh pp] else [])
 
 data Hole (t :: Type)
 
@@ -4976,15 +4945,15 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 
 -- | catch a failure
 --
--- >>> pz @(Catch (Succ Id) (Fst Id >> Second (ShowP Id) >> Printf2 "%s %s" Id >> 'LT)) GT
+-- >>> pz @(Catch (Succ Id) (Fst Id >> Second (ShowP Id) >> PrintT "%s %s" Id >> 'LT)) GT
 -- Present LT
 -- PresentT LT
 --
--- >>> pz @(Catch' (Succ Id) (Second (ShowP Id) >> Printf2 "%s %s" Id)) GT
+-- >>> pz @(Catch' (Succ Id) (Second (ShowP Id) >> PrintT "%s %s" Id)) GT
 -- Error Succ IO e=Prelude.Enum.Ordering.succ: bad argument GT
 -- FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument GT"
 --
--- >>> pz @(Catch' (Succ Id) (Second (ShowP Id) >> Printf2 "%s %s" Id)) LT
+-- >>> pz @(Catch' (Succ Id) (Second (ShowP Id) >> PrintT "%s %s" Id)) LT
 -- Present EQ
 -- PresentT EQ
 --
@@ -4992,7 +4961,7 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 -- now takes the FailT string and x so you can print more detail if you want
 -- need the proxy so we can fail without having to explicitly specify a type
 data Catch p q -- catch p and if fails runs q only on failt
-type Catch' p s = Catch p (FailCatch s) -- eg set eg s=Printf "%d" Id or Printf "%s" (ShowP Id)
+type Catch' p s = Catch p (FailCatch s) -- eg set eg s=PrintF "%d" Id or PrintF "%s" (ShowP Id)
 type FailCatch s = Fail (Snd Id >> Unproxy) (Fst Id >> s)
 
 instance (P p x
@@ -5179,12 +5148,12 @@ type Quot p q = Fst (QuotRem p q)
 type Rem p q = Snd (QuotRem p q)
 
 --type OneP = Guard "expected list of length 1" (Len == 1) >> Head Id
-type OneP = Guard (Printf "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
+type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
 
 strictmsg :: forall strict . GetBool strict => String
 strictmsg = if getBool @strict then "" else "Lax"
 
--- k or prt has access to (Int,a) where Int is the current guard position: hence need to use Printf2
+-- k or prt has access to (Int,a) where Int is the current guard position: hence need to use PrintT
 -- todo: better explanation of how this works
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out)
 
@@ -5203,15 +5172,15 @@ strictmsg = if getBool @strict then "" else "Lax"
 -- Error arg1 failed
 -- FailT "arg1 failed"
 --
--- >>> pz @(Guards '[ '(Printf2 "arg %d failed with value %d" Id,Gt 4), '(Printf2 "%d %d" Id, Same 4)]) [17,3]
+-- >>> pz @(Guards '[ '(PrintT "arg %d failed with value %d" Id,Gt 4), '(PrintT "%d %d" Id, Same 4)]) [17,3]
 -- Error 2 3
 -- FailT "2 3"
 --
--- >>> pz @(GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5]
+-- >>> pz @(GuardsQuick (PrintT "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5]
 -- Error arg 3 failed with value 5
 -- FailT "arg 3 failed with value 5"
 --
--- >>> pz @(GuardsQuick (Printf2 "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
+-- >>> pz @(GuardsQuick (PrintT "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
 -- Error Guards: data elements(4) /= predicates(3)
 -- FailT "Guards: data elements(4) /= predicates(3)"
 --
@@ -5271,12 +5240,111 @@ instance (PP prt (Int, a) ~ String
                            qq <- eval (Proxy @prt) opts (n-pos,a) -- only run prt when predicate is False
                            pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                               Left e -> e
-                              Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] [hh pp, hh qq]
+                              Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
                          Right True -> do
                            ss <- eval (Proxy @(GuardsImpl n strict ps)) opts as
                            pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
                              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
                              Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
+
+-- | boolean guard which checks a given a list of predicates against the list of values
+--
+-- pulls the top message from the tree if a predicate is false
+--
+-- >>> pl @(BoolsImplW 'True '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,93,14]
+-- False {GuardBool(1) [mm] {93 <= 59}}
+-- FalseT
+--
+-- >>> pl @(BoolsImplW 'True '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,13,94]
+-- False {GuardBool(2) [<<<2 94>>>] {94 <= 59}}
+-- FalseT
+--
+-- >>> pl @(BoolsImplW 'True '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,13,14]
+-- True {GuardBool(0) 12}
+-- TrueT
+--
+-- >>> pl @(BoolsQuick "abc" '[Between 0 23, Between 0 59, Between 0 59]) [12,13,14]
+-- True {GuardBool(0) 12}
+-- TrueT
+--
+-- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,14]
+-- True {GuardBool(0) 12}
+-- TrueT
+--
+-- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,99]
+-- False {GuardBool(2) [id=2 val=99] {99 <= 59}}
+-- FalseT
+--
+data BoolsImplW (strict :: Bool) (ps :: [(k,k1)])
+
+type Bools (os :: [(k,k1)]) = BoolsImplW 'True os
+type BoolsLax (os :: [(k,k1)]) = BoolsImplW 'False os
+type BoolsQuick (prt :: k) (os :: [k1]) = Bools (ToGuardsT prt os)
+type BoolsQuickLax (prt :: k) (os :: [k1]) = BoolsLax (ToGuardsT prt os)
+
+instance (GetBool strict
+        , GetLen ps
+        , P (BoolsImpl (LenT ps) strict ps) [a]
+        , PP (BoolsImpl (LenT ps) strict ps) [a] ~ Bool
+        ) => P (BoolsImplW strict ps) [a] where
+  type PP (BoolsImplW strict ps) [a] = Bool -- PP (BoolsImpl (LenT ps) strict ps) [a]
+  eval _ opts as = do
+    let strict = getBool @strict
+        msgbase0 = "Bools" <> strictmsg @strict
+        n = getLen @ps
+    if strict && n /= length as then
+       let xx = msgbase0 <> ": data elements(" <> show (length as) <> ") /= predicates(" <> show n <> ")"
+       in pure $ mkNode opts (FailT xx) [xx] []
+    else evalBool (Proxy @(BoolsImpl (LenT ps) strict ps)) opts as
+
+data BoolsImpl (n :: Nat) (strict :: Bool) (os :: [(k,k1)])
+
+instance (KnownNat n
+        , GetBool strict
+        , Show a
+        ) => P (BoolsImpl n strict ('[] :: [(k,k1)])) [a] where
+  type PP (BoolsImpl n strict ('[] :: [(k,k1)])) [a] = Bool
+  eval _ opts as =
+    let msg0 = "Bools" <> strictmsg @strict <> "(" <> show n <> ")"
+        n :: Int = nat @n
+    in pure $ mkNodeB opts True [msg0 <> " done!" <> if null as then "" else show1 opts " | leftovers=" as] []
+
+instance (PP prt (Int, a) ~ String
+        , P prt (Int, a)
+        , KnownNat n
+        , GetBool strict
+        , GetLen ps
+        , P p a
+        , PP p a ~ Bool
+        , P (BoolsImpl n strict ps) [a]
+        , PP (BoolsImpl n strict ps) [a] ~ Bool
+        , Show a
+        ) => P (BoolsImpl n strict ('(prt,p) ': ps)) [a] where
+  type PP (BoolsImpl n strict ('(prt,p) ': ps)) [a] = Bool
+  eval _ opts as' = do
+     let cpos = n-pos-1
+         msgbase0 = "Bools" <> strictmsg @strict <> "(" <> showIndex cpos <> ":" <> show n <> ")"
+         msgbase1 = "GuardBool" <> strictmsg @strict <> "(" <> showIndex cpos <> ")"
+         msgbase2 = "Bools" <> strictmsg @strict
+         n :: Int = nat @n
+         pos = getLen @ps
+     case as' of
+         [] -> pure $ mkNodeB opts True [msgbase0 <> " (ran out of data!!)"] []
+         a:as -> do
+                    pp <- evalBool (Proxy @p) opts a
+                    case getValueLR opts (msgbase1 <> " p failed") pp [] of
+                         Left e -> pure e
+                         Right False -> do
+                           qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
+                           pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+                              Left e -> e
+                              Right msgx -> mkNodeB opts False [msgbase1 <> " [" <> msgx <> "] " <> topMessage pp] (hh pp : if isVerbose opts then [hh qq] else [])
+                         Right True -> do
+                           ss <- evalBool (Proxy @(BoolsImpl n strict ps)) opts as
+                           pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
+                             Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
+                             Right True -> mkNodeB opts True [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
+                             Right False -> ss & tForest %~ \x -> fromTT pp : x
 
 
 -- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
@@ -5298,8 +5366,8 @@ data GuardsImplX (n :: Nat) (strict :: Bool) (os :: [(k,k1)])
 type GuardsDetail (prt :: Symbol) (os :: [(k0,k1)]) = GuardsImplXX 'True (ToGuardsDetailT prt os)
 
 type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
-  ToGuardsDetailT prt '[ '(s,p) ] = '(Printfn prt '(s,'(Id,'())), p) : '[]
-  ToGuardsDetailT prt ( '(s,p) ': ps) = '(Printfn prt '(s,'(Id,'())), p) ': ToGuardsDetailT prt ps
+  ToGuardsDetailT prt '[ '(s,p) ] = '(PrintT prt '(s,Id), p) : '[]
+  ToGuardsDetailT prt ( '(s,p) ': ps) = '(PrintT prt '(s,Id), p) ': ToGuardsDetailT prt ps
   ToGuardsDetailT prt '[] = GL.TypeError ('GL.Text "ToGuardsDetailT cannot be empty")
 
 data GuardsImplXX (strict :: Bool) (ps :: [(k,k1)])
@@ -5338,8 +5406,9 @@ instance (PP prt a ~ String
         ) => P (GuardsImplX n strict ('(prt,p) ': ps)) [a] where
   type PP (GuardsImplX n strict ('(prt,p) ': ps)) [a] = [a]
   eval _ opts as' = do
-     let msgbase0 = "Guards" <> strictmsg @strict <> "(" <> show (n-pos) <> ":" <> show n <> ")"
-         msgbase1 = "Guard" <> strictmsg @strict <> "(" <> show (n-pos) <> ")"
+     let cpos = n-pos-1
+         msgbase0 = "Guards" <> strictmsg @strict <> "(" <> showIndex cpos <> ":" <> show n <> ")"
+         msgbase1 = "Guard" <> strictmsg @strict <> "(" <> showIndex cpos <> ")"
          msgbase2 = "Guards" <> strictmsg @strict
          n :: Int = nat @n
          pos = getLen @ps
@@ -5353,7 +5422,7 @@ instance (PP prt a ~ String
                            qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
                            pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                               Left e -> e
-                              Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] [hh pp, hh qq]
+                              Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
                          Right True -> do
                            ss <- eval (Proxy @(GuardsImplX n strict ps)) opts as
                            pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
@@ -5362,11 +5431,11 @@ instance (PP prt a ~ String
 
 -- | leverages 'GuardsQuick' for repeating predicates (passthrough method)
 --
--- >>> pz @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
+-- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
 -- Error id=4 must be between 0 and 255, found 256
 -- FailT "id=4 must be between 0 and 255, found 256"
 --
--- >>> pz @(GuardsN (Printf2 "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
+-- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
 -- Present [121,33,7,44]
 -- PresentT [121,33,7,44]
 --
@@ -5397,7 +5466,7 @@ instance ( GetBool strict
 -- Error expected > 3
 -- FailT "expected > 3"
 --
--- >>> pz @(Guard (Printf "%d not > 3" Id) (Gt 3)) (-99)
+-- >>> pz @(Guard (PrintF "%d not > 3" Id) (Gt 3)) (-99)
 -- Error -99 not > 3
 -- FailT "-99 not > 3"
 --
@@ -5421,7 +5490,7 @@ instance (Show a
         qq <- eval (Proxy @prt) opts a
         pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
-          Right msgx -> mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] [hh pp, hh qq]
+          Right msgx -> mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] (hh pp : if isVerbose opts then [hh qq] else [])
       Right True -> pure $ mkNode opts (PresentT a) [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]  -- dont show the guard message if successful
 
 
@@ -5517,7 +5586,7 @@ instance (Show (PP p a)
         qq <- eval (Proxy @q) opts p
         pure $ case getValueLRHide opts (show p <> " >> rhs failed") qq [hh pp] of
           Left e -> e
-          Right q -> mkNode opts (_tBool qq) [show01 opts msg0 q p] [hh pp, hh qq]
+          Right q -> mkNode opts (_tBool qq) [show01 opts msg0 q p <> " " <> topMessage qq] [hh pp, hh qq]
 
 -- | similar to 'Prelude.&&'
 --
@@ -6339,31 +6408,31 @@ instance (PP p x ~ [a]
         let d = intercalate p (map (:[]) q)
         in mkNode opts (PresentT d) [show01 opts msg0 d p <> show1 opts " | " q] [hh pp, hh qq]
 
--- | uses Printf to format output
+-- | uses PrintF to format output
 --
--- >>> pz @(Printf "value=%03d" Id) 12
+-- >>> pz @(PrintF "value=%03d" Id) 12
 -- Present "value=012"
 -- PresentT "value=012"
 --
--- >>> pz @(Printf "%s" (Fst Id)) ("abc",'x')
+-- >>> pz @(PrintF "%s" (Fst Id)) ("abc",'x')
 -- Present "abc"
 -- PresentT "abc"
 --
--- >>> pz @(Printf "%d" (Fst Id)) ("abc",'x')
--- Error Printf (IO e=printf: bad formatting char 'd')
--- FailT "Printf (IO e=printf: bad formatting char 'd')"
+-- >>> pz @(PrintF "%d" (Fst Id)) ("abc",'x')
+-- Error PrintF (IO e=printf: bad formatting char 'd')
+-- FailT "PrintF (IO e=printf: bad formatting char 'd')"
 --
-data Printf s p
+data PrintF s p
 
 instance (PrintfArg (PP p x)
         , Show (PP p x)
         , PP s x ~ String
         , P s x
         , P p x
-        ) => P (Printf s p) x where
-  type PP (Printf s p) x = String
+        ) => P (PrintF s p) x where
+  type PP (PrintF s p) x = String
   eval _ opts x = do
-    let msg0 = "Printf"
+    let msg0 = "PrintF"
     lrx <- runPQ msg0 (Proxy @s) (Proxy @p) opts x []
     case lrx of
       Left e -> pure e
@@ -6428,7 +6497,7 @@ instance (GetBool strict, GetLen ps, P (ParaImpl (LenT ps) strict ps) [a]) => P 
 instance GL.TypeError ('GL.Text "ParaImpl '[] invalid: requires at least one value in the list")
    => P (ParaImpl n strict ('[] :: [k])) [a] where
   type PP (ParaImpl n strict ('[] :: [k])) [a] = Void
-  eval _ _ _ = error "should not get this far"
+  eval _ _ _ = error "should not be called and yet..."
 
 instance (Show (PP p a)
         , KnownNat n
@@ -6465,8 +6534,9 @@ instance (KnownNat n
      => P (ParaImpl n strict (p ': p1 ': ps)) [a] where
   type PP (ParaImpl n strict (p ': p1 ': ps)) [a] = [PP p a]
   eval _ opts as' = do
-     let msgbase0 = msgbase2 <> "(" <> show (n-pos) <> " of " <> show n <> ")"
-         msgbase1 = msgbase2 <> "(" <> show (n-pos) <> ")"
+     let cpos = n-pos-1
+         msgbase0 = msgbase2 <> "(" <> showIndex cpos <> " of " <> show n <> ")"
+         msgbase1 = msgbase2 <> "(" <> showIndex cpos <> ")"
          msgbase2 = "Para" <> strictmsg @strict
          n = nat @n
          pos = 1 + getLen @ps -- cos p1!
@@ -6518,19 +6588,19 @@ instance ( P (ParaImpl (LenT (RepeatT n p)) strict (RepeatT n p)) [a]
 
 -- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
 --
--- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 50
+-- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 50
 -- Present "50 is same50"
 -- PresentT "50 is same50"
 --
--- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 9
+-- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 9
 -- Present "9 is lt10"
 -- PresentT "9 is lt10"
 --
--- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 3
+-- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 3
 -- Present "3 is lt4"
 -- PresentT "3 is lt4"
 --
--- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[Printf "%d is lt4" Id, Printf "%d is lt10" Id, Printf "%d is same50" Id] Id) 99
+-- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
 -- Error asdf
 -- FailT "asdf"
 --
@@ -6541,7 +6611,7 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- e = otherwise  -- leave til later
 data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 type Case' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd Id >> Failp "Case:no match") ps qs r
-type Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (FailCase s) ps qs r -- eg s= Printf "%s" (ShowP Id)
+type Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (FailCase s) ps qs r -- eg s= PrintF "%s" (ShowP Id)
 
 type FailCase p = Fail (Snd Id >> Unproxy) (Fst Id >> p)
 
@@ -6560,17 +6630,17 @@ instance (FailUnlessT (LenT ps DE.== LenT qs)
 instance (GL.TypeError ('GL.Text "CaseImpl '[] invalid: lhs requires at least one value in the list"))
    => P (CaseImpl n e ('[] :: [k]) (q ': qs) r) x where
   type PP (CaseImpl n e ('[] :: [k]) (q ': qs) r) x = Void
-  eval _ _ _ = error "should not get this far"
+  eval _ _ _ = error "should not be called and yet..."
 
 instance (GL.TypeError ('GL.Text "CaseImpl '[] invalid: rhs requires at least one value in the list"))
    => P (CaseImpl n e (p ': ps) ('[] :: [k1]) r) x where
   type PP (CaseImpl n e (p ': ps) ('[] :: [k1]) r) x = Void
-  eval _ _ _ = error "should not get this far"
+  eval _ _ _ = error "should not be called and yet..."
 
 instance (GL.TypeError ('GL.Text "CaseImpl '[] invalid: lists are both empty"))
    => P (CaseImpl n e ('[] :: [k]) ('[] :: [k1]) r) x where
   type PP (CaseImpl n e ('[] :: [k]) ('[] :: [k1]) r) x = Void
-  eval _ _ _ = error "should not get this far"
+  eval _ _ _ = error "should not be called and yet..."
 
 instance (P r x
         , P q (PP r x)
@@ -6597,7 +6667,7 @@ instance (P r x
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR opts msgbase0 qq [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] [hh rr, hh pp, hh qq]
+              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] (hh rr : hh pp : if isVerbose opts then [hh qq] else [])
           Right False -> do
             ee <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
             pure $ case getValueLR opts (msgbase0 <> "  otherwise failed") ee [hh rr, hh pp] of
@@ -6618,8 +6688,9 @@ instance (KnownNat n
      => P (CaseImpl n e (p ': p1 ': ps) (q ': q1 ': qs) r) x where
   type PP (CaseImpl n e (p ': p1 ': ps) (q ': q1 ': qs) r) x = PP q (PP r x)
   eval _ opts z = do
-    let msgbase0 = msgbase2 <> "(" <> show (n-pos) <> " of " <> show n <> ")"
-        msgbase1 = msgbase2 <> "(" <> show (n-pos) <> ")"
+    let cpos = n-pos-1
+        msgbase0 = msgbase2 <> "(" <> showIndex cpos <> " of " <> show n <> ")"
+        msgbase1 = msgbase2 <> "(" <> showIndex cpos <> ")"
         msgbase2 = "Case"
         n = nat @n
         pos = 1 + getLen @ps -- cos p1!
@@ -6632,9 +6703,9 @@ instance (KnownNat n
           Left e -> pure e
           Right True -> do
             qq <- eval (Proxy @q) opts a
-            pure $ case getValueLR opts msgbase0 qq [hh rr] of
+            pure $ case getValueLR opts msgbase0 qq [hh pp, hh rr] of
               Left e -> e
-              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] [hh rr, hh pp, hh qq]
+              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] (hh rr : hh pp : if isVerbose opts then [hh qq] else [])
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
             pure $ case getValueLR opts (msgbase1 <> " failed rhs") ww [hh rr, hh pp] of
@@ -6945,6 +7016,14 @@ instance (GetBool ignore
 -- Present (Sum {getSum = 22},"def_XYZ")
 -- PresentT (Sum {getSum = 22},"def_XYZ")
 --
+-- >>> pz @(Sapa' (SG.Max )) (10,12)
+-- Present Max {getMax = 12}
+-- PresentT (Max {getMax = 12})
+--
+-- >>> pz @(Sapa' (SG.Sum _)) (10,12)
+-- Present Sum {getSum = 22}
+-- PresentT (Sum {getSum = 22})
+--
 data p <> q
 infixr 6 <>
 type Sapa' (t :: Type) = Wrap t (Fst Id) <> Wrap t (Snd Id)
@@ -6976,117 +7055,86 @@ instance PrintC () where
 instance (PrintfArg a, PrintC rs) => PrintC (a,rs) where
   prtC s (a,rs) = prtC s rs a
 
-data TupleListImpl (strict :: Bool) (n :: Nat)
-type TupleList (n :: Nat) = TupleListImpl 'True n
-type TupleListLax (n :: Nat) = TupleListImpl 'False n
-
-instance (Show a
-        , KnownNat n
-        , GetBool strict
-        , TupleListD (ToN n) a
-        , Show (TupleListT (ToN n) a)
-        ) => P (TupleListImpl strict n) [a] where
-  type PP (TupleListImpl strict n) [a] = TupleListT (ToN n) a
-  eval _ opts as = do
-    let strict = getBool @strict
-        n :: Int
-        n = nat @n
-        msg0 = "TupleList" <> (if strict then "" else "Lax") <> "(" <> show n <> ")"
-    pure $ case tupleListD @(ToN n) @a strict as of
-      Left e -> mkNode opts (FailT (msg0 <> " " <> e)) [msg0 <> " " <> e] []
-      Right ret -> mkNode opts (PresentT ret) [show01 opts msg0 ret as] []
-
--- | reverses inductive tuples
+-- | print for flat n-tuples
 --
--- >>> pz @ReverseTupleN (1,('a',(True,("def",()))))
--- Present ("def",(True,('a',(1,()))))
--- PresentT ("def",(True,('a',(1,()))))
+-- >>> pl @(PrintT "%d %s %s %s" '(Fst Id, Snd Id, Snd Id,Snd Id)) (10,"Asdf")
+-- Present "10 Asdf Asdf Asdf" {PrintT [10 Asdf Asdf Asdf] | s=%d %s %s %s}
+-- PresentT "10 Asdf Asdf Asdf"
 --
--- >>> pz @ReverseTupleN (1,('a',()))
--- Present ('a',(1,()))
--- PresentT ('a',(1,()))
+-- >>> pl @(PrintT "%c %d %s" Id) ('x', 10,"Asdf")
+-- Present "x 10 Asdf" {PrintT [x 10 Asdf] | s=%c %d %s}
+-- PresentT "x 10 Asdf"
 --
--- >>> pz @ReverseTupleN (999,())
--- Present (999,())
--- PresentT (999,())
---
--- >>> pz @(TupleI '[1,2,3,4] >> ReverseTupleN) 4
--- Present (4,(3,(2,(1,()))))
--- PresentT (4,(3,(2,(1,()))))
---
--- >>> pz @(TupleI '[1,2,3,4] >> ReverseTupleN >> ReverseTupleN) 4
--- Present (1,(2,(3,(4,()))))
--- PresentT (1,(2,(3,(4,()))))
---
-data ReverseTupleN
-
-instance (ReverseTupleC tp
-        , Show (ReverseTupleP tp)
-        , Show tp
-        ) => P ReverseTupleN tp where
-  type PP ReverseTupleN tp = ReverseTupleP tp
-  eval _ opts tp =
-    let ret = reverseTupleC tp
-    in pure $ mkNode opts (PresentT ret) ["ReverseTupleN" <> show0 opts " " ret <> show1 opts " | " tp] []
-
--- | Printfn prints an inductive tuple
---
--- >>> pz @(Printfn "%s %s" Id) ("123",("def",()))
--- Present "123 def"
--- PresentT "123 def"
---
--- >>> pz @(Printfn "s=%s d=%03d" Id) ("ab",(123,()))
--- Present "s=ab d=123"
--- PresentT "s=ab d=123"
---
-data Printfn s p
-type Printfnt (n :: Nat) s p =  p >> Printfn s (TupleList n)
-type PrintfntLax (n :: Nat) s p = p >> Printfn s (TupleListLax n)
-
--- | print a 2-tuple
---
--- >>> pz @(Printf2 "fst=%s snd=%03d" Id) ("ab",123)
+-- >>> pz @(PrintT "fst=%s snd=%03d" Id) ("ab",123)
 -- Present "fst=ab snd=123"
 -- PresentT "fst=ab snd=123"
 --
-type Printf2 s p = Printfn s '(Fst p,'(Snd p, '()))
--- | print a 3-tuple
---
--- >>> pz @(Printf3 "fst=%s snd=%03d thd=%s" Id) ("ab",123,"xx")
+-- >>> pz @(PrintT "fst=%s snd=%03d thd=%s" Id) ("ab",123,"xx")
 -- Present "fst=ab snd=123 thd=xx"
 -- PresentT "fst=ab snd=123 thd=xx"
 --
-type Printf3 s p = Printfn s '(Fst p, '(Snd p, '(Thd p, '())))
---type Printf3' s p = Printfn s (TupleI '[Fst p, Snd p, Thd p])
-
-
-instance (KnownNat (TupleLenT as)
-        , PrintC bs
-        , (b,bs) ~ ReverseTupleP (a,as)
-        , ReverseTupleC (a,as)
-        , Show a
-        , Show as
+-- >>> pl @(PrintT "%s %d %c %s" '(W "xyz", Fst Id, Snd Id, Thd Id)) (123,'x',"ab")
+-- Present "xyz 123 x ab" {PrintT [xyz 123 x ab] | s=%s %d %c %s}
+-- PresentT "xyz 123 x ab"
+--
+data PrintT s p
+instance (PrintC bs
+        , (b,bs) ~ InductTupleP y
+        , InductTupleC y
         , PrintfArg b
         , PP s x ~ String
-        , PP p x ~ (a,as)
+        , PP p x ~ y
         , P s x
         , P p x
         , CheckT (PP p x) ~ 'True
-        ) => P (Printfn s p) x where
-  type PP (Printfn s p) x = String
+        ) => P (PrintT s p) x where
+  type PP (PrintT s p) x = String
   eval _ opts x = do
-    let msg0 = "Printfn"
+    let msg0 = "PrintT"
     lrx <- runPQ msg0 (Proxy @s) (Proxy @p) opts x []
     case lrx of
       Left e -> pure e
-      Right (s,(a,as),ss,pp) -> do
-        let len :: Int = 1 + nat @(TupleLenT as)
-            msg1 = msg0 <> "(" <> show len <> ")"
+      Right (s,y,ss,pp) -> do
+        let msg1 = msg0
             hhs = [hh ss, hh pp]
-        lr <- catchitNF @_ @E.SomeException (prtC @bs s (reverseTupleC (a,as)))
+        lr <- catchitNF @_ @E.SomeException (prtC @bs s (inductTupleC y))
         pure $ case lr of
-          Left e -> mkNode opts (FailT (msg1 <> "(" <> e <> ")")) [msg1 <> show0 opts " " a <> " s=" <> s] hhs
-          Right ret -> mkNode opts (PresentT ret) [msg1 <> " [" <> showLit0 opts "" ret <> "]" <> show1 opts " | (a,as)=" (a,as) <> showLit0 opts " | s=" s] hhs
+          Left e -> mkNode opts (FailT (msg1 <> "(" <> e <> ")")) [msg1 <> " s=" <> s] hhs
+          Right ret -> mkNode opts (PresentT ret) [msg1 <> " [" <> showLit0 opts "" ret <> "]" <> showLit0 opts " | s=" s] hhs
+
+-- | print for lists  -- if you can use 'PrintT'
+--
+-- >>> pl @(PrintL 4 "%s %s %s %s" '[W "xyz", ShowP (Fst Id), ShowP (Snd Id), Thd Id]) (123,'x',"ab")
+-- Present "xyz 123 'x' ab" {PrintL(4) [xyz 123 'x' ab] | s=%s %s %s %s}
+-- PresentT "xyz 123 'x' ab"
+--
+data PrintL (n :: Nat) s p
+
+instance (KnownNat n
+        , PrintC bs
+        , (b,bs) ~ InductListP n a
+        , InductListC n a
+        , PrintfArg b
+        , PP s x ~ String
+        , PP p x ~ [a]
+        , P s x
+        , P p x
+        ) => P (PrintL n s p) x where
+  type PP (PrintL n s p) x = String
+  eval _ opts x = do
+    let msg0 = "PrintL(" ++ show n ++ ")"
+        n = nat @n
+    lrx <- runPQ msg0 (Proxy @s) (Proxy @p) opts x []
+    case lrx of
+      Left e -> pure e
+      Right (s,p,ss,pp) -> do
+        let hhs = [hh ss, hh pp]
+        if length p /= n then pure $ mkNode opts (FailT (msg0 <> " bad length " ++ show (length p))) [msg0 <> " wrong length " ++ show (length p)] hhs
+        else do
+          lr <- catchitNF @_ @E.SomeException (prtC @bs s (inductListC @n @a p))
+          pure $ case lr of
+            Left e -> mkNode opts (FailT (msg0 <> "(" <> e <> ")")) [msg0 <> " s=" <> s] hhs
+            Right ret -> mkNode opts (PresentT ret) [msg0 <> " [" <> showLit0 opts "" ret <> "]" <> showLit0 opts " | s=" s] hhs
 
 type family CheckT (tp :: Type) :: Bool where
   CheckT () = GL.TypeError ('GL.Text "Printfn: inductive tuple cannot be empty")
@@ -7542,11 +7590,11 @@ type family MaybeT mb where
 -- Error nope
 -- FailT "nope"
 --
--- >>> pz @(JustFail (Printf "oops=%d" (Snd Id)) (Fst Id)) (Nothing, 123)
+-- >>> pz @(JustFail (PrintF "oops=%d" (Snd Id)) (Fst Id)) (Nothing, 123)
 -- Error oops=123
 -- FailT "oops=123"
 --
--- >>> pz @(JustFail (Printf "oops=%d" (Snd Id)) (Fst Id)) (Just 'x', 123)
+-- >>> pz @(JustFail (PrintF "oops=%d" (Snd Id)) (Fst Id)) (Just 'x', 123)
 -- Present 'x'
 -- PresentT 'x'
 --
@@ -7584,7 +7632,7 @@ instance ( PP p x ~ String
 -- Present 1 % 4
 -- PresentT (1 % 4)
 --
--- >>> pz @(LeftDef (Printf2 "found right=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Right "xy")
+-- >>> pz @(LeftDef (PrintT "found right=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Right "xy")
 -- Present "found right=xy fst=123"
 -- PresentT "found right=xy fst=123"
 --
@@ -7644,7 +7692,7 @@ type family RightT lr where
 -- Present 1 % 4
 -- PresentT (1 % 4)
 --
--- >>> pz @(RightDef (Printf2 "found left=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Left "xy")
+-- >>> pz @(RightDef (PrintT "found left=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Left "xy")
 -- Present "found left=xy fst=123"
 -- PresentT "found left=xy fst=123"
 --
@@ -7691,7 +7739,7 @@ instance ( PP q x ~ Either a b
 -- Error oops
 -- FailT "oops"
 --
--- >>> pz @(LeftFail (Printf2 "found right=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Right "xy")
+-- >>> pz @(LeftFail (PrintT "found right=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Right "xy")
 -- Error found right=xy fst=123
 -- FailT "found right=xy fst=123"
 --
@@ -7734,7 +7782,7 @@ instance ( PP p (b,x) ~ String
 -- Error oops
 -- FailT "oops"
 --
--- >>> pz @(RightFail (Printf2 "found left=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Left "xy")
+-- >>> pz @(RightFail (PrintT "found left=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Left "xy")
 -- Error found left=xy fst=123
 -- FailT "found left=xy fst=123"
 --
@@ -7782,7 +7830,7 @@ instance ( PP p (a,x) ~ String
 -- Present 1 % 4
 -- PresentT (1 % 4)
 --
--- >>> pz @(ThisDef (Printf2 "found %s fst=%d" '(ShowP (Snd Id), Fst Id)) (Snd Id)) (123,That "xy")
+-- >>> pz @(ThisDef (PrintT "found %s fst=%d" '(ShowP (Snd Id), Fst Id)) (Snd Id)) (123,That "xy")
 -- Present "found That \"xy\" fst=123"
 -- PresentT "found That \"xy\" fst=123"
 --
@@ -7854,7 +7902,7 @@ type family TheseT lr where
 -- Present 1 % 4
 -- PresentT (1 % 4)
 --
--- >>> pz @(ThatDef (Printf2 "found %s fst=%d" '(ShowP (Snd Id), Fst Id)) (Snd Id)) (123,This "xy")
+-- >>> pz @(ThatDef (PrintT "found %s fst=%d" '(ShowP (Snd Id), Fst Id)) (Snd Id)) (123,This "xy")
 -- Present "found This \"xy\" fst=123"
 -- PresentT "found This \"xy\" fst=123"
 --
@@ -7904,7 +7952,7 @@ instance ( PP q x ~ These a b
 -- Present (1 % 4,"zz")
 -- PresentT (1 % 4,"zz")
 --
--- >>> pz @(TheseDef '(Printf2 "found %s fst=%d" '(ShowP (Snd Id), Fst Id),999) (Snd Id)) (123,This "xy")
+-- >>> pz @(TheseDef '(PrintT "found %s fst=%d" '(ShowP (Snd Id), Fst Id),999) (Snd Id)) (123,This "xy")
 -- Present ("found This \"xy\" fst=123",999)
 -- PresentT ("found This \"xy\" fst=123",999)
 --
@@ -7951,7 +7999,7 @@ instance ( PP q x ~ These a b
 -- Error oops
 -- FailT "oops"
 --
--- >>> pz @(ThisFail (Printf2 "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,That "xy")
+-- >>> pz @(ThisFail (PrintT "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,That "xy")
 -- Error found That "xy" fst=123
 -- FailT "found That \"xy\" fst=123"
 --
@@ -7994,7 +8042,7 @@ instance ( PP p x ~ String
 -- Error oops
 -- FailT "oops"
 --
--- >>> pz @(ThatFail (Printf2 "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,This "xy")
+-- >>> pz @(ThatFail (PrintT "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,This "xy")
 -- Error found This "xy" fst=123
 -- FailT "found This \"xy\" fst=123"
 --
@@ -8039,7 +8087,7 @@ instance ( PP p x ~ String
 -- Error oops
 -- FailT "oops"
 --
--- >>> pz @(TheseFail (Printf2 "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,That "xy")
+-- >>> pz @(TheseFail (PrintT "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,That "xy")
 -- Error found That "xy" fst=123
 -- FailT "found That \"xy\" fst=123"
 --
@@ -8224,3 +8272,12 @@ instance (Show a
           Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) [msg0 <> " found Nothing"] [hh pp]
           Just d -> mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
+-- | Apply q to each of element of a promoted list (not useful? todo)
+--
+-- >>> pl @(ApplyT '[Fst,Snd] Id) (10,12)
+-- Present [10,12] {'[10,12] | (10,12)}
+-- PresentT [10,12]
+
+type family ApplyT ps q where
+  ApplyT '[] q = '[]
+  ApplyT (p ': ps) q = p q ': ApplyT ps q

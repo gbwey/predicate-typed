@@ -25,6 +25,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {- |
      Utility methods for Predicate / methods for displaying the evaluation tree ...
 -}
@@ -80,6 +81,7 @@ module Predicate.Util (
   , o2n
   , o3
   , ou
+  , ou3
   , oun
   , setw
   , setu
@@ -94,7 +96,8 @@ module Predicate.Util (
   , lite
   , subnormal
   , normal
-  , noisy
+  , verbose
+  , isVerbose
   , ansi
   , unicode
   , showBoolP
@@ -127,10 +130,8 @@ module Predicate.Util (
   , RepeatT
   , IntersperseT
   , LenT
-  , ReverseTupleC(..)
-  , TupleListT
-  , TupleListD(..)
-  , TupleLenT
+  , InductTupleC(..)
+  , InductListC(..)
   , FlipT
   , IfT
   , SumT
@@ -154,7 +155,6 @@ module Predicate.Util (
   , GetThese(..)
   , GetOrdering(..)
   , GetBool(..)
-  , ToN
   , OrderingP(..)
   , GetOrd(..)
 
@@ -375,7 +375,7 @@ data ODebug =
      | OLite
      | OSubNormal
      | ONormal
-     | ONoisy
+     | OVerbose
      deriving (Ord, Show, Eq, Enum, Bounded)
 
 -- | skip colors and just return the summary
@@ -402,25 +402,33 @@ o2 = defOpts
 o2n :: POpts
 o2n = o2 { oWidth = 120 }
 
--- | same as 'o2' for a wider display and more lenient debug mode setting
+-- | same as 'o2' for a wider display and verbose debug mode setting
 o3 :: POpts
-o3 = defOpts { oDebug = ONoisy, oWidth = 400 }
+o3 = defOpts { oDebug = OVerbose, oWidth = 400 }
 
 -- | displays the detailed evaluation tree using unicode and colors. ('o2' works better on Windows)
 ou :: POpts
 ou = defOpts { oDisp = Unicode }
 
+-- | same as 'ou' for a wider display and verbose debug mode setting
+ou3 :: POpts
+ou3 = o3 { oDisp = Unicode }
+
 -- | same as 'ou' but for a narrow display
 oun :: POpts
 oun = ou { oWidth = 120 }
+
+-- | helper method to set the debug level
+isVerbose :: POpts -> Bool
+isVerbose = (OVerbose==) . oDebug
 
 -- | helper method to limit the width of the tree
 setw :: Int -> POpts -> POpts
 setw w o = o { oWidth = w }
 
 -- | helper method to set the debug level
-noisy :: POpts -> POpts
-noisy o = o { oDebug = ONoisy }
+verbose :: POpts -> POpts
+verbose o = o { oDebug = OVerbose }
 
 -- | helper method to set the debug level
 normal :: POpts -> POpts
@@ -514,7 +522,7 @@ show0 :: Show a => POpts -> String -> a -> String
 show0 o s a = showAImpl o OLite s a
 
 show3 :: Show a => POpts -> String -> a -> String
-show3 o s a = showAImpl o ONoisy s a
+show3 o s a = showAImpl o OVerbose s a
 
 show1 :: Show a => POpts -> String -> a -> String
 show1 o s a = showAImpl o OLite s a
@@ -838,31 +846,6 @@ instance GetBool 'True where
 instance GetBool 'False where
   getBool = False
 
-data N = S N | Z
-
--- a shim for TupleListImpl used mainly by Printfn
--- | inductive numbers
-type family ToN (n :: Nat) :: N where
-  ToN 0 = 'Z
-  ToN n = 'S (ToN (n GL.- 1))
-{-
--- | converts an inductive number to Nat
-type family FromN (n :: N) :: Nat where
-  FromN 'Z = 0
-  FromN ('S n) = 1 GL.+ FromN n
-
--- | extract N from the type level to Int
-class GetNatN (n :: N) where
-  getNatN :: Int
-instance GetNatN 'Z where
-  getNatN = 0
-instance GetNatN n => GetNatN ('S n) where
-  getNatN = 1 + getNatN @n
-
-getN :: Typeable t => Proxy (t :: N) -> Int
-getN p = length (show (typeRep p)) `div` 5
--}
-
 data OrderingP = Cgt | Cge | Ceq | Cle | Clt | Cne deriving (Show, Eq, Enum, Bounded)
 
 class GetOrd (k :: OrderingP) where
@@ -887,7 +870,7 @@ hasNoTree opts =
     OLite -> True
     OSubNormal -> False
     ONormal -> False
-    ONoisy -> False
+    OVerbose -> False
 
 nullSpace :: String -> String
 nullSpace s | null s = ""
@@ -1004,76 +987,104 @@ type family LenT (xs :: [k]) :: Nat where
   LenT '[] = 0
   LenT (x ': xs) = 1 GN.+ LenT xs
 
-type family TupleListT (n :: N) a where
-  TupleListT 'Z a = ()
-  TupleListT ('S n) a = (a, TupleListT n a)
+-- todo: add tests
+-- | takes a flat n-tuple and creates a reversed inductive tuple. see 'Predicate.Prelude.PrintT'
+--
+class InductTupleC x where
+  type InductTupleP x
+  inductTupleC :: x -> InductTupleP x
+instance (GL.TypeError ('GL.Text "InductTupleC: inductive tuple cannot be empty")) => InductTupleC () where
+  type InductTupleP () = ()
+  inductTupleC () = ()
+instance InductTupleC (a,b) where
+  type InductTupleP (a,b) = (b,(a,()))
+  inductTupleC (a,b) = (b,(a,()))
+instance InductTupleC (a,b,c) where
+  type InductTupleP (a,b,c) = (c,(b,(a,())))
+  inductTupleC (a,b,c) = (c,(b,(a,())))
+instance InductTupleC (a,b,c,d) where
+  type InductTupleP (a,b,c,d) = (d,(c,(b,(a,()))))
+  inductTupleC (a,b,c,d) = (d,(c,(b,(a,()))))
+instance InductTupleC (a,b,c,d,e) where
+  type InductTupleP (a,b,c,d,e) = (e,(d,(c,(b,(a,())))))
+  inductTupleC (a,b,c,d,e) = (e,(d,(c,(b,(a,())))))
+instance InductTupleC (a,b,c,d,e,f) where
+  type InductTupleP (a,b,c,d,e,f) = (f,(e,(d,(c,(b,(a,()))))))
+  inductTupleC (a,b,c,d,e,f) = (f,(e,(d,(c,(b,(a,()))))))
+instance InductTupleC (a,b,c,d,e,f,g) where
+  type InductTupleP (a,b,c,d,e,f,g) = (g,(f,(e,(d,(c,(b,(a,())))))))
+  inductTupleC (a,b,c,d,e,f,g) = (g,(f,(e,(d,(c,(b,(a,())))))))
+instance InductTupleC (a,b,c,d,e,f,g,h) where
+  type InductTupleP (a,b,c,d,e,f,g,h) = (h,(g,(f,(e,(d,(c,(b,(a,()))))))))
+  inductTupleC (a,b,c,d,e,f,g,h) = (h,(g,(f,(e,(d,(c,(b,(a,()))))))))
+instance InductTupleC (a,b,c,d,e,f,g,h,i) where
+  type InductTupleP (a,b,c,d,e,f,g,h,i) = (i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))
+  inductTupleC (a,b,c,d,e,f,g,h,i) = (i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))
+instance InductTupleC (a,b,c,d,e,f,g,h,i,j) where
+  type InductTupleP (a,b,c,d,e,f,g,h,i,j) = (j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))
+  inductTupleC (a,b,c,d,e,f,g,h,i,j) = (j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))
+instance InductTupleC (a,b,c,d,e,f,g,h,i,j,k) where
+  type InductTupleP (a,b,c,d,e,f,g,h,i,j,k) = (k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))))
+  inductTupleC (a,b,c,d,e,f,g,h,i,j,k) = (k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))))
+instance InductTupleC (a,b,c,d,e,f,g,h,i,j,k,l) where
+  type InductTupleP (a,b,c,d,e,f,g,h,i,j,k,l) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
+  inductTupleC (a,b,c,d,e,f,g,h,i,j,k,l) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
 
-class TupleListD (n :: N) a where
-  tupleListD :: Bool -> [a] -> Either String (TupleListT n a)
+class InductListC (n :: Nat) a where
+  type InductListP n a
+  inductListC :: [a] -> InductListP n a
+instance (GL.TypeError ('GL.Text "InductListC: inductive tuple cannot be empty")) => InductListC 0 a where
+  type InductListP 0 a = ()
+  inductListC _ = error "InductListC 0: shouldnt be called"
+instance (GL.TypeError ('GL.Text "InductListC: inductive tuple cannot have one element")) => InductListC 1 a where
+  type InductListP 1 a = a
+  inductListC _ = error "InductListC 1: shouldnt be called"
+instance InductListC 2 a where
+  type InductListP 2 a = (a,(a,()))
+  inductListC [a,b] = (b,(a,()))
+  inductListC _ = error $ "inductListC: expected 2 values"
+instance InductListC 3 a where
+  type InductListP 3 a = (a,(a,(a,())))
+  inductListC [a,b,c] = (c,(b,(a,())))
+  inductListC _ = error $ "inductListC: expected 3 values"
+instance InductListC 4 a where
+  type InductListP 4 a = (a,(a,(a,(a,()))))
+  inductListC [a,b,c,d] = (d,(c,(b,(a,()))))
+  inductListC _ = error $ "inductListC: expected 4 values"
+instance InductListC 5 a where
+  type InductListP 5 a = (a,(a,(a,(a,(a,())))))
+  inductListC [a,b,c,d,e] = (e,(d,(c,(b,(a,())))))
+  inductListC _ = error $ "inductListC: expected 5 values"
+instance InductListC 6 a where
+  type InductListP 6 a = (a,(a,(a,(a,(a,(a,()))))))
+  inductListC [a,b,c,d,e,f] = (f,(e,(d,(c,(b,(a,()))))))
+  inductListC _ = error $ "inductListC: expected 6 values"
+instance InductListC 7 a where
+  type InductListP 7 a = (a,(a,(a,(a,(a,(a,(a,())))))))
+  inductListC [a,b,c,d,e,f,g] = (g,(f,(e,(d,(c,(b,(a,())))))))
+  inductListC _ = error $ "inductListC: expected 7 values"
+instance InductListC 8 a where
+  type InductListP 8 a = (a,(a,(a,(a,(a,(a,(a,(a,()))))))))
+  inductListC [a,b,c,d,e,f,g,h] = (h,(g,(f,(e,(d,(c,(b,(a,()))))))))
+  inductListC _ = error $ "inductListC: expected 8 values"
+instance InductListC 9 a where
+  type InductListP 9 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,())))))))))
+  inductListC [a,b,c,d,e,f,g,h,i] = (i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))
+  inductListC _ = error $ "inductListC: expected 9 values"
+instance InductListC 10 a where
+  type InductListP 10 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,()))))))))))
+  inductListC [a,b,c,d,e,f,g,h,i,j] = (j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))
+  inductListC _ = error $ "inductListC: expected 10 values"
+instance InductListC 11 a where
+  type InductListP 11 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,())))))))))))
+  inductListC [a,b,c,d,e,f,g,h,i,j,k] = (k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))))
+  inductListC _ = error $ "inductListC: expected 11 values"
+instance InductListC 12 a where
+  type InductListP 12 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,()))))))))))))
+  inductListC [a,b,c,d,e,f,g,h,i,j,k,l] = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
+  inductListC _ = error $ "inductListC: expected 12 values"
 
-instance TupleListD 'Z a where
-  tupleListD isStrict = \case
-     z@(_:_) | isStrict ->
-       let len = length z
-       in Left $ "is strict and has " <> show len <> " extra element" <> (if len == 1 then "" else "s")
-     _ -> Right ()
 
-instance (TupleListD n a) => TupleListD ('S n) a where
-  tupleListD isStrict = \case
-    [] -> Left "no data left" -- nothing i can do here even if not strict
-    a:as -> (a,) <$> tupleListD @n @a isStrict as
-
--- up to 12
-class ReverseTupleC x where
-  type ReverseTupleP x
-  reverseTupleC :: x -> ReverseTupleP x
-instance (GL.TypeError ('GL.Text "ReverseTupleC: inductive tuple cannot be empty")) => ReverseTupleC () where
-  type ReverseTupleP () = ()
-  reverseTupleC () = ()
-instance ReverseTupleC (a,()) where
-  type ReverseTupleP (a,()) = (a,())
-  reverseTupleC (a,()) = (a,())
-instance ReverseTupleC (a,(b,())) where
-  type ReverseTupleP (a,(b,())) = (b,(a,()))
-  reverseTupleC (a,(b,())) = (b,(a,()))
-instance ReverseTupleC (a,(b,(c,()))) where
-  type ReverseTupleP (a,(b,(c,()))) = (c,(b,(a,())))
-  reverseTupleC (a,(b,(c,()))) = (c,(b,(a,())))
-instance ReverseTupleC (a,(b,(c,(d,())))) where
-  type ReverseTupleP (a,(b,(c,(d,())))) = (d,(c,(b,(a,()))))
-  reverseTupleC (a,(b,(c,(d,())))) = (d,(c,(b,(a,()))))
-instance ReverseTupleC (a,(b,(c,(d,(e,()))))) where
-  type ReverseTupleP (a,(b,(c,(d,(e,()))))) = (e,(d,(c,(b,(a,())))))
-  reverseTupleC (a,(b,(c,(d,(e,()))))) = (e,(d,(c,(b,(a,())))))
-instance ReverseTupleC (a,(b,(c,(d,(e,(f,())))))) where
-  type ReverseTupleP (a,(b,(c,(d,(e,(f,())))))) = (f,(e,(d,(c,(b,(a,()))))))
-  reverseTupleC (a,(b,(c,(d,(e,(f,())))))) = (f,(e,(d,(c,(b,(a,()))))))
-instance ReverseTupleC (a,(b,(c,(d,(e,(f,(g,()))))))) where
-  type ReverseTupleP (a,(b,(c,(d,(e,(f,(g,()))))))) = (g,(f,(e,(d,(c,(b,(a,())))))))
-  reverseTupleC (a,(b,(c,(d,(e,(f,(g,()))))))) = (g,(f,(e,(d,(c,(b,(a,())))))))
-instance ReverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,())))))))) where
-  type ReverseTupleP (a,(b,(c,(d,(e,(f,(g,(h,())))))))) = (h,(g,(f,(e,(d,(c,(b,(a,()))))))))
-  reverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,())))))))) = (h,(g,(f,(e,(d,(c,(b,(a,()))))))))
-instance ReverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,()))))))))) where
-  type ReverseTupleP (a,(b,(c,(d,(e,(f,(g,(h,(i,()))))))))) = (i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))
-  reverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,()))))))))) = (i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))
-instance ReverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,())))))))))) where
-  type ReverseTupleP (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,())))))))))) = (j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))
-  reverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,())))))))))) = (j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))
-instance ReverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,()))))))))))) where
-  type ReverseTupleP (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,()))))))))))) = (k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))))
-  reverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,()))))))))))) = (k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))))
-instance ReverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,())))))))))))) where
-  type ReverseTupleP (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,())))))))))))) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
-  reverseTupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,())))))))))))) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
-
-type family TupleLenT (t :: Type) :: Nat where
-  TupleLenT () = 0
-  TupleLenT (_,ts) = 1 GN.+ TupleLenT ts
-  TupleLenT  t = GL.TypeError (
-      'GL.Text "TupleLenT: expected a valid inductive tuple"
-      ':$$: 'GL.Text "t = "
-      ':<>: 'GL.ShowType t)
 
 -- partially apply the 2nd arg to an ADT -- $ and & work with functions only
 -- doesnt apply more than once because we need to eval it

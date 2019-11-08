@@ -55,7 +55,7 @@ namedTests =
   , testCase "datetime utctime" $ (@?=) ($$(refined3TH "2019-01-04 23:00:59") :: MakeR3 (DateTime1 UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
   , testCase "datetime localtime" $ (@?=) ($$(refined3TH "2019-01-04 09:12:30") :: MakeR3 (DateTime1 LocalTime)) (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
   , testCase "hms" $ (@?=) ($$(refined3TH "12:0:59") :: MakeR3 Hms) (unsafeRefined3 [12,0,59] "12:00:59")
-  , testCase "between5and9" $ (@?=) ($$(refined3TH "7") :: Refined3 (ReadP Int Id) (Between 5 9) (Printf "%03d" Id) String) (unsafeRefined3 7 "007")
+  , testCase "between5and9" $ (@?=) ($$(refined3TH "7") :: Refined3 (ReadP Int Id) (Between 5 9) (PrintF "%03d" Id) String) (unsafeRefined3 7 "007")
   , testCase "ssn" $ (@?=) ($$(refined3TH "123-45-6789") :: MakeR3 Ssn) (unsafeRefined3 [123,45,6789] "123-45-6789")
   , testCase "base16" $ (@?=) ($$(refined3TH "12f") :: MakeR3 (BaseN 16)) (unsafeRefined3 303 "12f")
   , testCase "daten1" $ (@?=) ($$(refined3TH "June 25 1900") :: MakeR3 DateN) (unsafeRefined3 (read "1900-06-25") "1900-06-25")
@@ -89,19 +89,19 @@ unnamedTests = [
   , expect3 (Left $ XF "Regex no results")
                   $ eval3 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
                           @((Len == 4) && All (Between 0 255) Id)
-                          @(Printfnt 4 "%03d.%03d.%03d.%03d" Id)
+                          @(PrintL 4 "%03d.%03d.%03d.%03d" Id)
                           ol "1.21.x31.4"
 
   , expect3 (Right $ unsafeRefined3 [1,21,31,4] "001.021.031.004")
                   $ eval3 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
                           @((Len == 4) && All (Between 0 255) Id)
-                          @(Printfnt 4 "%03d.%03d.%03d.%03d" Id)
+                          @(PrintL 4 "%03d.%03d.%03d.%03d" Id)
                           ol "1.21.31.4"
 
   , expect3 (Left $ XTFalse (-6.3))
                   $ eval3 @(ReadP Double Id)
                           @(Cmp 'Cgt (ToRational Id) (7 %- 3))
-                          @(Printf "%5.3f" Id)
+                          @(PrintF "%5.3f" Id)
                           ol "-6.3"
 
   , expect3 (Right $ unsafeRefined3 4.123 "")
@@ -135,7 +135,7 @@ unnamedTests = [
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz")
                   $ eval3
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10 Id) (Snd Id))
-                  @(GuardsQuick (Printf2 "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
+                  @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
                   @"xyz"
                   ol "123-45-6789"
 
@@ -158,7 +158,7 @@ unnamedTests = [
                            ol "31-11-1999"
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ eval3
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBaseInt 10 Id) (Snd Id))
-                  @(GuardsQuick (Printf2 "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
+                  @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
                   @"xyz"
                   ol "123-45-6789"
 
@@ -186,7 +186,7 @@ type HexLtR3 = Refined3 (ReadBase Int 16 Id) (Id < 500) (ShowBase 16 Id) String
 type IntLtR3 = Refined3 (ReadP Int Id) (Id < 10) (ShowP Id) String
 
 -- printf breaks with negative numbers!
-type Tst1 = '(ReadP Int Id, Between 1 7, Printf "someval val=%03d" Id, String)
+type Tst1 = '(ReadP Int Id, Between 1 7, PrintF "someval val=%03d" Id, String)
 
 yy1, yy2, yy3, yy4 :: RefinedT Identity (MakeR3 Tst1)
 
@@ -210,11 +210,11 @@ ip4expands = mkProxy3
 
 -- this works but ParseTimeP is easier
 type DdmmyyyyRE = "^(\\d{2})-(\\d{2})-(\\d{4})$"
-type Ddmmyyyyval' = GuardsQuick (Printf2 "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]
+type Ddmmyyyyval' = GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]
 type Ddmmyyyyval =
-    Guards '[ '(Printf2 "guard(%d) day %d is out of range" Id, Between 1 31)
-            , '(Printf2 "guard(%d) month %d is out of range" Id, Between 1 12)
-            , '(Printf2 "guard(%d) year %d is out of range" Id, Between 1990 2050) ]
+    Guards '[ '(PrintT "guard(%d) day %d is out of range" Id, Between 1 31)
+            , '(PrintT "guard(%d) month %d is out of range" Id, Between 1 12)
+            , '(PrintT "guard(%d) year %d is out of range" Id, Between 1990 2050) ]
 
 cc :: Proxy CC11
 cc = mkProxy3
@@ -244,7 +244,7 @@ hms2E = mkProxy3P
 
 -- better to use Guard for op boolean check cos we get better errormessages
 -- 1. packaged up as a promoted tuple
-type Tst3 = '(Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255) Id, ConcatMap (Printf "%03d" Id) Id, String)
+type Tst3 = '(Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255) Id, ConcatMap (PrintF "%03d" Id) Id, String)
 
 www1, www2 :: String -> Either Msg3 (MakeR3 Tst3)
 www1 = prtEval3P (Proxy :: MkProxy3T Tst3) o2
@@ -256,7 +256,7 @@ www2 = prtEval3P tst3 o2
 tst3 :: Proxy
         '(Map (ReadP Int Id) (Resplit "\\." Id)
         ,(Len == 4) && All (Between 0 255) Id
-        ,ConcatMap (Printf "%03d" Id) Id
+        ,ConcatMap (PrintF "%03d" Id) Id
         ,String)
 tst3 = mkProxy3
 
@@ -265,14 +265,14 @@ tst3 = mkProxy3
 ww3 :: String -> Either Msg3 (Refined3
                                (Map (ReadP Int Id) (Resplit "\\." Id))
                                ((Len == 4) && All (Between 0 255) Id)
-                               (ConcatMap (Printf "%03d" Id) Id)
+                               (ConcatMap (PrintF "%03d" Id) Id)
                                String)
 ww3 = prtEval3 o2
 {-
 ww3 = prtEval3
         @(Map (ReadP Int Id) (Resplit "\\." Id))
         @((Len == 4) && All (Between 0 255))
-        @(ConcatMap (Printf "%03d" Id) Id)
+        @(ConcatMap (PrintF "%03d" Id) Id)
         o2
 -}
 data G4 = G4 { g4Age :: MakeR3 Age
@@ -286,7 +286,7 @@ type Age = '(ReadP Int Id, Gt 4, ShowP Id, String)
 type Ip9 = '(
             Map (ReadP Int Id) (Resplit "\\." Id) -- split String on "." then convert to [Int]
            ,(Len == 4) && All (Between 0 255) Id -- process [Int] and make sure length==4 and each octet is between 0 and 255
-           ,Printfnt 4 "%03d.%03d.%03d.%03d" Id -- printf [Int]
+           ,PrintL 4 "%03d.%03d.%03d.%03d" Id -- printf [Int]
            ,String -- input type is string which is also the output type
            )
 
@@ -397,18 +397,18 @@ type LuhnX (n :: Nat) =
    , String)
 
 type Luhn'' (n :: Nat) =
-         Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, ShowP Id])) (Len == n)
+         Guard (PrintT "incorrect number of digits found %d but expected %d in [%s]" '(Len, n, ShowP Id)) (Len == n)
       >> Do '[
               Reverse
              ,ZipL [1,2] Id
              ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
              ,FoldMap (SG.Sum Int) Id
              ]
-        >> Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)
+        >> Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
 
 type Luhn' (n :: Nat) =
        Msg "Luhn'" (Do
-       '[Guard (Printfn "incorrect number of digits found %d but expected %d in [%s]" (TupleI '[Len, W n, Id])) (Len == n)
+       '[Guard (PrintT "incorrect number of digits found %d but expected %d in [%s]" '(Len, n, Id)) (Len == n)
         ,Do
             '[Ones Id
             ,Map (ReadP Int Id) Id
@@ -417,5 +417,5 @@ type Luhn' (n :: Nat) =
             ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
             ,FoldMap (SG.Sum Int) Id
            ]
-        ,Guard (Printfn "expected %d mod 10 = 0 but found %d" (TupleI '[Id, Id `Mod` 10])) (Mod Id 10 >> Same 0)
+        ,Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
         ])
