@@ -397,10 +397,9 @@ allTests =
   , expectPE (PresentT "hhhhh") $ pl @(Do '["abc", "Def", "ggg", "hhhhh"]) ()
   , expectPE (PresentT GT) $ pl @(Do '[ 'LT, 'EQ, 'GT ]) ()
   , expectPE (PresentT (-3 % 1)) $ pl @(Do '[4 % 4,22 % 1 ,12 %- 4]) ()
-  , expectPE (PresentT [10,2,5,8]) $ pl @(GuardsQuickLax (PrintT "guard(%d) %d is out of range" Id) '[Between 0 11, Between 1 4,Between 3 5]) [10::Int,2,5,8]
+  , expectPE (PresentT [10,2,5]) $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 11, Between 1 4,Between 3 5]) [10::Int,2,5]
   , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ddmmyyyyval) "31-11-1999"
   , expectPE (PresentT [31,11,1999]) $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,1999::Int]
-  , expectPE (PresentT [31,11,1999,123,44]) $ pl @(GuardsQuickLax (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,1999,123,44::Int]
   , expectPE (FailT "Guards: data elements(2) /= predicates(3)") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11::Int]
   , expectPE (FailT "guard(2) 13 is out of range") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,13,1999::Int]
   , expectPE (FailT "guard(1) 0 is out of range") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [0,44,1999::Int]
@@ -412,7 +411,6 @@ allTests =
   , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:59"
   , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:60"
   , expectPE (FailT "Guards: data elements(5) /= predicates(3)") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,2000,1,2::Int]
-  , expectPE (PresentT [31,11,2000,1,2]) $ pl @(GuardsQuickLax (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,2000,1,2::Int]
   , expectPE (PresentT [0,0,0,0,0,0,0,1,2,3]) $ pl @(PadL 10 0 Id) [1..3]
   , expectPE (PresentT (124,["1","2","2"])) $ pl @('Left Id >> (Succ Id &&& (Pred Id >> ShowP Id >> Ones Id))) (Left 123)
   , expectPE (PresentT [1,2,3,4]) $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3,4::Int]
@@ -556,14 +554,10 @@ allTests =
   , expectPE (PresentT (-1,12)) $ pl @(DivMod (9 - Fst Id) (Last (Snd Id))) (10,[12,13])
   , expectPE (PresentT [True,False,False,True]) $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999]
   , expectPE (FailT "Para: data elements(3) /= predicates(4)") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
-  , expectPE (PresentT [True, False, False]) $ pl @(ParaLax '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
   , expectPE (FailT "Para: data elements(7) /= predicates(4)") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999,1,1,2]
   , expectPE (FailT "guard(2) err 002") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999]
   , expectPE (FailT "Guards: data elements(3) /= predicates(4)") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
   , expectPE (FailT "Guards: data elements(7) /= predicates(4)") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999,1,1,2]
-  , expectPE (PresentT [1,22,-99,-999,1,1,2]) $ pl @(GuardsQuickLax (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999,1,1,2]
-  , expectPE (PresentT [1,22]) $ pl @(GuardsQuickLax (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22]
-  , expectPE (PresentT [1,22,-99,-999]) $ pl @(GuardsQuickLax (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999]
   , expectPE TrueT $ pl @(Fst Id /= Snd Id) ("ab","xyzabw")
   , expectPE FalseT $ pl @(Fst Id == Snd Id) ("ab","xyzabw")
   , expectPE (PresentT 157) $ pl @(Fst Id * (Snd Id >> Fst Id) + (Snd Id >> Snd Id) `Div` 2) (12,(13,3))
