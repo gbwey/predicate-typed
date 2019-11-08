@@ -218,7 +218,7 @@ An example of an invalid refined3TH call
 
 ### Json decoding
 
-#### This example is successful as it is a valid hexadecimal and is in the range 10 though 256
+#### This example is successful as it is a valid hexadecimal and is between 10 though 256
 ```haskell
 >eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
 Right (Refined3 {in3 = 254, out3 = "254"})

@@ -104,6 +104,9 @@ type Ip6B' = Guard "count is bad" (Len == 8)
          >> Guard "out of bounds" (All (Between 0 65535) Id)
          >> 'True
 
+type Ip6B'' = Msg "count is bad:" (Len == 8)
+         && Msg "out of bounds:" (All (Between 0 65535) Id)
+
 type Ip4A = Map (ReadBaseInt 10 Id) (Resplit "\\." Id)
 type Ip4B = Guard "expected 4 numbers" (Len == 4)
          >> Guard "each number must be between 0 and 255" (All (Between 0 255) Id)

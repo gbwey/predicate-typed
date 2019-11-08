@@ -184,27 +184,18 @@ ssn = mkProxy3
 -- >>> prtEval3P ssn oz "134-01-2211"
 -- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
 --
--- >>> prtEval3P ssn oz "666-01-2211"
--- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 666
+-- >>> prtEval3P ssn ol "666-01-2211"
+-- Left Step 2. False Boolean Check(op) | {GuardBool(0) [number for group 0 invalid: found 666] {True && False | {666 /= 666}}}
 --
--- >>> prtEval3P ssn oz "666-01-2211"
--- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 666
---
--- >>> prtEval3P ssn oz "667-00-2211"
--- Left Step 2. Failed Boolean Check(op) | number for group 2 invalid: found 0
---
--- >>> prtEval3P ssn oz "666-01-2211"
--- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 666
---
--- >>> prtEval3P ssn oz "991-22-9999"
--- Left Step 2. Failed Boolean Check(op) | number for group 1 invalid: found 991
+-- >>> prtEval3P ssn ol "667-00-2211"
+-- Left Step 2. False Boolean Check(op) | {GuardBool(1) [number for group 1 invalid: found 0] {1 <= 0}}
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
 type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd OneP)
-type Ssnop = GuardsQuick (PrintT "number for group %d invalid: found %d" Id)
+type Ssnop = BoolsQuick (PrintT "number for group %d invalid: found %d" Id)
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
-                      >> 'True
+
 {-
 type Ssnop' = GuardsDetail "%s invalid: found %d"
                           '[ '("first", Between 1 899 && Id /= 666)
@@ -249,14 +240,14 @@ type Hmsfmt = PrintL 3 "%02d:%02d:%02d" Id
 -- >>> prtEval3P ip oz "001.223.14.1"
 -- Right (Refined3 {r3In = [1,223,14,1], r3Out = "001.223.014.001"})
 --
--- >>> prtEval3P ip oz "001.223.14.999"
--- Left Step 2. Failed Boolean Check(op) | guard(4) octet out of range 0-255 found 999
+-- >>> prtEval3P ip ol "001.223.14.999"
+-- Left Step 2. False Boolean Check(op) | {GuardBool(3) [guard(3) octet out of range 0-255 found 999] {999 <= 255}}
 --
 -- >>> prtEval3P ip oz "001.223.14.999.1"
 -- Left Step 1. Initial Conversion(ip) Failed | Regex no results
 --
--- >>> prtEval3P ip oz "001.257.14.1"
--- Left Step 2. Failed Boolean Check(op) | guard(2) octet out of range 0-255 found 257
+-- >>> prtEval3P ip ol "001.257.14.1"
+-- Left Step 2. False Boolean Check(op) | {GuardBool(1) [guard(1) octet out of range 0-255 found 257] {257 <= 255}}
 --
 type Ip = '(Ipip, Ipop, Ipfmt, String)
 
@@ -265,7 +256,7 @@ ip = mkProxy3
 
 type Ipip = Map (ReadP Int Id) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd Id)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
-type Ipop = GuardsN (PrintT "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255) >> 'True
+type Ipop = BoolsN (PrintT "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255)
 type Ipfmt = PrintL 4 "%03d.%03d.%03d.%03d" Id
 
 type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- strict validation should only be done in 'op' not 'ip'
@@ -378,7 +369,7 @@ type LuhnR (n :: Nat) = MakeR3 (LuhnT n)
 -- Right (Refined3 {r3In = [1,2,3,0], r3Out = "1230"})
 --
 -- >>> prtEval3P (Proxy @(LuhnT 4)) ol "1234"
--- Left Step 2. False Boolean Check(op) | {True && False | {incorrect number of digits:4 == 4} && {Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]}}
+-- Left Step 2. False Boolean Check(op) | {True && False | {Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]}}
 --
 -- | uses builtin 'Luhn'
 type LuhnT (n :: Nat) =
@@ -434,8 +425,8 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (15 % 1)))) oz "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Guard (PrintF "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1)) >> 'True))) oz "13 % 3"
--- Left Step 2. Failed Boolean Check(op) | invalid=4.33
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Msg (PrintF "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1))))) ol "13 % 3"
+-- Left Step 2. False Boolean Check(op) | {invalid=4.3313 % 3 > 15 % 1}
 --
 -- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (11 % 1)))) oz "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP

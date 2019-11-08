@@ -414,6 +414,7 @@ module Predicate.Prelude (
 
   , Bools
   , BoolsQuick
+  , BoolsN
 
   -- ** IO expressions
   , ReadFile
@@ -5322,6 +5323,28 @@ instance (PP prt (Int, a) ~ String
                              Right True -> mkNodeB opts True [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
                              Right False -> ss & tForest %~ \x -> fromTT pp : x
 
+-- | leverages 'RepeatT' for repeating predicates (passthrough method)
+--
+-- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
+-- False {GuardBool(3) [id=3 must be between 0 and 255, found 256] {256 <= 255}}
+-- FalseT
+--
+-- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
+-- Present [121,33,7,44]
+-- PresentT [121,33,7,44]
+--
+data BoolsN prt (n :: Nat) p
+
+instance ( GetLen (ToGuardsT prt (RepeatT n p))
+  , PP (BoolsImpl (LenT (ToGuardsT prt (RepeatT n p))) (ToGuardsT prt (RepeatT n p))) [a] ~ Bool
+  , P (BoolsImpl (LenT (ToGuardsT prt (RepeatT n p))) (ToGuardsT prt (RepeatT n p))) [a]
+
+         ) => P (BoolsN prt n p) [a] where
+  type PP (BoolsN prt n p) [a] = PP (Bools (ToGuardsT prt (RepeatT n p))) [a]
+  eval _ opts as =
+    eval (Proxy @(Bools (ToGuardsT prt (RepeatT n p)))) opts as
+
+
 
 -- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
 --
@@ -5404,7 +5427,7 @@ instance (PP prt a ~ String
                              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
                              Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
 
--- | leverages 'GuardsQuick' for repeating predicates (passthrough method)
+-- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
 -- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
 -- Error id=4 must be between 0 and 255, found 256
@@ -5591,11 +5614,17 @@ instance (P p a
         ) => P (p && q) a where
   type PP (p && q) a = Bool
   eval _ opts a = do
-    pp <- evalBool (Proxy @p) opts a
-    qq <- evalBool (Proxy @q) opts a
     let msg0 = "&&"
-    let zz = topMessage pp <> " " <> msg0 <> " " <> topMessage qq
-    pure $ evalBinStrict opts msg0 (&&) pp qq (" | " <> zz)
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let zz = case (p,q) of
+                  (True,True) -> ""
+                  (False,True) -> topMessage pp
+                  (True,False) -> topMessage qq
+                  (False,False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+        in mkNodeB opts (p&&q) [show p <> " " <> msg0 <> " " <> show q <> " | " <> zz] [hh pp, hh qq]
 
 -- | similar to 'Prelude.||'
 --
@@ -5617,11 +5646,15 @@ instance (P p a
         ) => P (p || q) a where
   type PP (p || q) a = Bool
   eval _ opts a = do
-    pp <- evalBool (Proxy @p) opts a
-    qq <- evalBool (Proxy @q) opts a
     let msg0 = "||"
-    let zz = topMessage pp <> " " <> msg0 <> " " <> topMessage qq
-    pure $ evalBinStrict opts msg0 (||) pp qq (" | " <> zz)
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let zz = case (p,q) of
+                  (False,False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+                  _ -> ""
+        in mkNodeB opts (p||q) [show p <> " " <> msg0 <> " " <> show q <> " | " <> zz] [hh pp, hh qq]
 
 -- | implication
 --
@@ -5651,11 +5684,16 @@ instance (P p a
         ) => P (p ~> q) a where
   type PP (p ~> q) a = Bool
   eval _ opts a = do
-    pp <- evalBool (Proxy @p) opts a
-    qq <- evalBool (Proxy @q) opts a
     let msg0 = "~>"
-    let zz = topMessage pp <> " " <> msg0 <> " " <> topMessage qq
-    pure $ evalBinStrict opts msg0 imply pp qq (" | " <> zz)
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let zz = case (p,q) of
+                  (True,False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+                  _ -> ""
+        in mkNodeB opts (p~>q) [show p <> " " <> msg0 <> " " <> show q <> " | " <> zz] [hh pp, hh qq]
+
 
 -- | 'not' function
 --

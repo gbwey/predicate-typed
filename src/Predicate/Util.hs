@@ -167,8 +167,7 @@ module Predicate.Util (
   , prettyRational
 
  -- ** boolean methods
-  , imply
-  , evalBinStrict
+  , (~>)
 
  -- ** miscellaneous
   , Holder
@@ -684,39 +683,20 @@ _TrueT = prism' (const TrueT) $
 
 -- | boolean implication
 --
--- >>> True `imply` False
+-- >>> True ~> False
 -- False
 --
--- >>> True `imply` True
+-- >>> True ~> True
 -- True
 --
--- >>> False `imply` False
+-- >>> False ~> False
 -- True
 --
--- >>> False `imply` True
+-- >>> False ~> True
 -- True
 
-imply :: Bool -> Bool -> Bool
-imply p q = not p || q
-
--- msg is only used for an exception: up to the calling programs to deal with ading msg to good and bad
--- | applies a boolean binary operation against the values from two boolean trees
-evalBinStrict :: POpts
-                 -> String
-                 -> (Bool -> Bool -> Bool)
-                 -> TT Bool
-                 -> TT Bool
-                 -> String
-                 -> TT Bool
-evalBinStrict opts s fn ll rr extra =
-  case getValueLR opts (s <> " p") ll [Holder rr] of
-    Left e -> e
-    Right a ->
-      case getValueLR opts (s <> " q") rr [hh ll] of
-        Left e -> e
-        Right b ->
-          let z = fn a b
-          in mkNodeB opts z [show a <> " " <> s <> " " <> show b <> extra] [hh ll, hh rr]
+(~>) :: Bool -> Bool -> Bool
+p ~> q = not p || q
 
 -- | type level Between
 type family BetweenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
@@ -1127,8 +1107,6 @@ type family ConsT s where
       ':<>: 'GL.ShowType s)
 
 type family T_1 x where
---  T_1 '(a,b) = a
---  T_1 '(a,b,c) = a
   T_1 '(a,b,c,d) = a
   T_1 o = GL.TypeError (
       'GL.Text "invalid T_1 instance"
@@ -1136,8 +1114,6 @@ type family T_1 x where
       ':<>: 'GL.ShowType o)
 
 type family T_2 x where
---  T_2 '(a,b) = b
---  T_2 '(a,b,c) = b
   T_2 '(a,b,c,d) = b
   T_2 o = GL.TypeError (
       'GL.Text "invalid T_2 instance"
@@ -1145,8 +1121,6 @@ type family T_2 x where
       ':<>: 'GL.ShowType o)
 
 type family T_3 x where
---  T_3 '(a,b) = GL.TypeError ('GL.Text "invalid T_3 instance for 2-tuple")
---  T_3 '(a,b,c) = c
   T_3 '(a,b,c,d) = c
   T_3 o = GL.TypeError (
       'GL.Text "invalid T_3 instance"
@@ -1154,8 +1128,6 @@ type family T_3 x where
       ':<>: 'GL.ShowType o)
 
 type family T_4 x where
---  T_4 '(a,b) = GL.TypeError ('GL.Text "invalid T_4 instance for 2-tuple")
---  T_4 '(a,b,c) = GL.TypeError ('GL.Text "invalid T_4 instance for 3-tuple")
   T_4 '(a,b,c,d) = d
   T_4 o = GL.TypeError (
       'GL.Text "invalid T_4 instance"

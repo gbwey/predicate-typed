@@ -143,12 +143,20 @@ unnamedTests = [
                   $ eval3 @Ip6A'' @Ip6B' @"xyz"
                   ol "123:Ffeff:1123:11:1"
 
+  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1])
+                  $ eval3 @Ip6A'' @Ip6B'' @"xyz"
+                  ol "123:Ffeff:1123:11:1"
+
   , expect3 (Right $ unsafeRefined3 [0,0,0,291,65535,4387,17,1] "xyz")
                   $ eval3 @Ip6A'' @Ip6B' @"xyz"
                   ol "123:Ffff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [0,0,291,0,65535,0,0,17] "xyz")
                   $ eval3 @Ip6A'' @Ip6B' @"xyz"
+                  ol "123::Ffff:::11"
+
+  , expect3 (Right $ unsafeRefined3 [0,0,291,0,65535,0,0,17] "xyz")
+                  $ eval3 @Ip6A'' @Ip6B'' @"xyz"
                   ol "123::Ffff:::11"
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")

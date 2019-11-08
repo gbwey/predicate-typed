@@ -253,7 +253,7 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
 -- >>> removeAnsi $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
--- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | {16663610 > 10} && {16663610 < 256}}
+-- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | {16663610 < 256}}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [16663610] ***
 -- <BLANKLINE>
@@ -263,7 +263,7 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 -- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
 -- <BLANKLINE>
--- False True && False | {16663610 > 10} && {16663610 < 256}
+-- False True && False | {16663610 < 256}
 -- |
 -- +- True  16663610 > 10
 -- |  |
