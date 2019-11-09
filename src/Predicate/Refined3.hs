@@ -42,14 +42,14 @@ module Predicate.Refined3 (
   , Results (..)
   , RResults (..)
 
-  -- ** evaluation methods
-  , eval3P
-  , eval3
-
   -- ** proxy methods
   , mkProxy3
   , mkProxy3'
   , MakeR3
+
+  -- ** evaluation methods
+  , eval3P
+  , eval3
 
   -- ** create a wrapped Refined3 value
   , withRefined3TIO

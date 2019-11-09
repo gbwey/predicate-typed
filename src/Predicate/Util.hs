@@ -114,7 +114,7 @@ module Predicate.Util (
   , show3
   , show1
 
-  -- ** Regex
+  -- ** regular expressions
   , ROpt(..)
   , compileRegex
   , GetROpts(..)

@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9961ce22931302992ba8b3575d0e54df9b5f7496b264f0e8467ba27a6f182438
+-- hash: e5d65164036af58b0334ef901a340d7945c6977a38df30c57429cef3eb434369
 
 name:           predicate-typed
-version:        0.2.0.0
+version:        0.3.0.0
 synopsis:       Predicates, Refinement types and Dsl
 description:    Please see the README on GitHub at <https://github.com/gbwey/predicate-typed#readme>
 category:       Data
