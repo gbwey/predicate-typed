@@ -29,26 +29,30 @@ module Predicate.Refined (
   , RefinedC
   , newRefined
   , RefinedT(..)
+
   -- ** print methods
   , prtRefinedIO
   , prtRefinedTIO
   , prtRefinedT
-  -- ** create Refined
+
+  -- ** create methods
   , withRefinedT
   , withRefinedTIO
   , newRefinedT
   , newRefinedTIO
+
   -- ** QuickCheck method
   , arbRefined
+
   -- ** manipulate RefinedT values
   , convertRefinedT
   , unRavelT
   , unRavelTIO
-  , unRavelTI
   , rapply
   , rapply0
   , rapply1
-  -- ** create Refined unsafely
+
+  -- ** unsafe create methods
   , unsafeRefined
   , unsafeRefined'
  ) where
@@ -60,7 +64,7 @@ import Data.Proxy
 import Control.Monad.Except
 import Control.Monad.Writer (WriterT(..), runWriterT, MonadWriter, tell)
 import Control.Monad.Cont
-import Data.Aeson
+import Data.Aeson (ToJSON(..), FromJSON(..))
 import GHC.Generics (Generic)
 import qualified Language.Haskell.TH.Syntax as TH
 import System.Console.Pretty
@@ -163,10 +167,11 @@ instance ToJSON a => ToJSON (Refined p a) where
 -- | 'FromJSON' instance for 'Refined'
 --
 -- >>> :set -XOverloadedStrings
--- >>> eitherDecode' @(Refined (Between 10 14) Int) "13"
+-- >>> import qualified Data.Aeson as A
+-- >>> A.eitherDecode' @(Refined (Between 10 14) Int) "13"
 -- Right (Refined {unRefined = 13})
 --
--- >>> removeAnsi $ eitherDecode' @(Refined (Between 10 14) Int) "16"
+-- >>> removeAnsi $ A.eitherDecode' @(Refined (Between 10 14) Int) "16"
 -- Error in $: Refined:FalseP
 -- False 16 <= 14
 -- |
@@ -202,7 +207,7 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
 -- Refined:FalseP
--- False >> False | 2019-04-23 {2019-05-30 <= 2019-04-23}
+-- False (>>) False | {2019-05-30 <= 2019-04-23}
 -- |
 -- +- P ReadP Day (2019-04-23) 2019-04-23 | 2019-04-23
 -- |  |
@@ -382,9 +387,6 @@ unRavelT = runWriterT . runExceptT . unRefinedT
 
 unRavelTIO :: RefinedT IO a -> IO (Either String a, [String])
 unRavelTIO = runWriterT . runExceptT . unRefinedT
-
-unRavelTI :: RefinedT Identity a -> (Either String a, [String])
-unRavelTI = runIdentity . runWriterT . runExceptT . unRefinedT
 
 prtRefinedTImpl :: forall n m a . (MonadIO n, Show a) => (forall x . m x -> n x) -> RefinedT m a -> n ()
 prtRefinedTImpl f rt = do

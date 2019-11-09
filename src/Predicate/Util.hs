@@ -37,6 +37,7 @@ module Predicate.Util (
   , tForest
   , fixBoolT
   , topMessage
+  , topMessage'
   , hasNoTree
 
  -- ** BoolT
@@ -907,8 +908,14 @@ prtTreePure opts t
   | hasNoTree opts = showBoolP opts (t ^. root . pBool)
   | otherwise = showImpl opts $ fmap (toNodeString opts) t
 
+topMessage' :: TT a -> String
+topMessage' pp = maybe "" innermost (pp ^? tStrings . ix 0)
+
 topMessage :: TT a -> String
-topMessage pp = maybe "" (\x -> "{" <> x <> "}") (pp ^? tStrings . ix 0)
+topMessage pp = maybe "" (\x -> "(" <> x <> ")") (pp ^? tStrings . ix 0)
+
+innermost :: String -> String
+innermost = ('{':) . reverse . ('}':) . takeWhile (/='{') . dropWhile (=='}') . reverse
 
 showImpl :: POpts -> Tree String -> String
 showImpl o =
@@ -967,8 +974,13 @@ type family LenT (xs :: [k]) :: Nat where
   LenT '[] = 0
   LenT (x ': xs) = 1 GN.+ LenT xs
 
--- todo: add tests
 -- | takes a flat n-tuple and creates a reversed inductive tuple. see 'Predicate.Prelude.PrintT'
+--
+-- >>> inductTupleC (123,'x',False,"abc")
+-- ("abc",(False,('x',(123,()))))
+--
+-- >>> inductTupleC (123,'x')
+-- ('x',(123,()))
 --
 class InductTupleC x where
   type InductTupleP x
@@ -1010,6 +1022,14 @@ instance InductTupleC (a,b,c,d,e,f,g,h,i,j,k,l) where
   type InductTupleP (a,b,c,d,e,f,g,h,i,j,k,l) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
   inductTupleC (a,b,c,d,e,f,g,h,i,j,k,l) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
 
+-- | takes a list and converts to a reversed inductive tuple. see 'Predicate.Prelude.PrintL'
+--
+-- >>> inductListC @4 [10,12,13,1]
+-- (1,(13,(12,(10,()))))
+--
+-- >>> inductListC @2 ["ab","cc"]
+-- ("cc",("ab",()))
+--
 class InductListC (n :: Nat) a where
   type InductListP n a
   inductListC :: [a] -> InductListP n a
@@ -1064,8 +1084,6 @@ instance InductListC 12 a where
   inductListC [a,b,c,d,e,f,g,h,i,j,k,l] = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
   inductListC _ = error $ "inductListC: expected 12 values"
 
-
-
 -- partially apply the 2nd arg to an ADT -- $ and & work with functions only
 -- doesnt apply more than once because we need to eval it
 type family (p :: k -> k1) %% (q :: k) :: k1 where
@@ -1106,6 +1124,7 @@ type family ConsT s where
       ':$$: 'GL.Text "s = "
       ':<>: 'GL.ShowType s)
 
+-- | used by "Predicate.Refined3" for extracting \'ip\' from a 4-tuple
 type family T_1 x where
   T_1 '(a,b,c,d) = a
   T_1 o = GL.TypeError (
@@ -1113,6 +1132,7 @@ type family T_1 x where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | used by "Predicate.Refined3" for extracting the boolean predicate \'op\' from a 4-tuple
 type family T_2 x where
   T_2 '(a,b,c,d) = b
   T_2 o = GL.TypeError (
@@ -1120,6 +1140,7 @@ type family T_2 x where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | used by "Predicate.Refined3" for extracting \'fmt\' from a 4-tuple
 type family T_3 x where
   T_3 '(a,b,c,d) = c
   T_3 o = GL.TypeError (
@@ -1127,6 +1148,7 @@ type family T_3 x where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | used by "Predicate.Refined3" for extracting the input type \'i\' from a 4-tuple
 type family T_4 x where
   T_4 '(a,b,c,d) = d
   T_4 o = GL.TypeError (

@@ -61,8 +61,6 @@ unnamedTests = [
   , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @(Between 4 7 || Gt 14) 22))
   , expectJ (Left ["Error in $: Refined:FailP \"someval\""]) (toFrom (unsafeRefined @(Between 4 7 || Gt 14 || Failt _ "someval") 12))
 
-  , (fst $ unRavelTI (tst1 ol 10 200)) @?= Right (10,200)
-  , (fst $ unRavelTI (tst1 ol 11 12)) @?= Left "FalseP"
   , (fst <$> unRavelT (tst2 ol 10 200)) >>= (@?= Right (10,200))
   , (fst <$> unRavelT (tst2 ol 11 12)) >>= (@?= Left "FalseP")
   ]

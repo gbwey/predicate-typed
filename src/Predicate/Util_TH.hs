@@ -44,7 +44,7 @@ import Data.Functor.Identity
 -- >$$(refinedTH 99) :: Refined (Between 100 125) Int
 --
 -- <interactive>:8:4: error:
---     * refinedTH: predicate failed with FalseP
+--     * refinedTH: predicate failed with FalseP (100 <= 99)
 --     * In the Template Haskell splice $$(refinedTH 99)
 --       In the expression:
 --           $$(refinedTH 99) :: Refined (Between 100 125) Int
@@ -79,7 +79,7 @@ refinedTH = refinedTH' ol
 --    |
 --    `- P 'asdf
 --
--- refinedTH: predicate failed with FailP "asdf"
+-- refinedTH: predicate failed with FailP "asdf" ((>>) lhs failed)
 --     * In the Template Haskell splice $$(refinedTH' o0 99)
 --       In the expression:
 --           $$(refinedTH' o2 99) ::
@@ -97,7 +97,7 @@ refinedTH' opts i = do
   case mr of
     Nothing ->
       let msg1 = if hasNoTree opts then "" else "\n" ++ e ++ "\n"
-      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ top
+      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
     Just r -> TH.TExp <$> TH.lift r
 
 -- | creates a 'Refined3.Refined3' refinement type with terse output
@@ -133,21 +133,15 @@ refined3TH = refined3TH' ol
 --
 -- *** Step 2. False Boolean Check(op) ***
 --
--- False False && True
+-- False 100 <= 99
 -- |
--- +- False 99 >= 100
--- |  |
--- |  +- P I
--- |  |
--- |  `- P '100
+-- +- P Id 99
 -- |
--- `- True  99 <= 125
---    |
---    +- P I
---    |
---    `- P '125
+-- +- P '100
+-- |
+-- `- P '125
 --
--- refined3TH: predicate failed with Step 2. False Boolean Check(op) | FalseP
+-- refined3TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
 --     * In the Template Haskell splice $$(refined3TH' o2 99)
 --       In the expression:
 --           $$(refined3TH' o2 99) :: Refined3 Id (Between 100 125) Id Int

@@ -19,10 +19,9 @@
      Dsl for evaluating and displaying type level expressions
 -}
 module Predicate.Core (
-    P(..)
 
  -- ** basic types
-  , I
+    I
   , Id
   , IdT
   , W
@@ -39,11 +38,14 @@ module Predicate.Core (
   , plc
   , pz
 
+  -- ** P class
+  , P(..)
+
   -- ** evaluation methods
   , runPQ
   , evalBool
   , evalQuick
-  , prtTreeX
+--  , prtTreeX
   ) where
 import Predicate.Util
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)

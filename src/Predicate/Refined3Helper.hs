@@ -23,12 +23,10 @@ module Predicate.Refined3Helper (
   -- ** date time checkers
     datetime1
   , DateTime1
-  , hms
-  , Hms
-  , HmsRE
-  , Hmsip
-  , Hmsop
-  , Hmsfmt
+
+  , datetime1'
+  , DateTime1'
+
   , daten
   , DateN
   , datetimen
@@ -37,8 +35,17 @@ module Predicate.Refined3Helper (
   , DateFmts
   , DateTimeFmts
 
+  -- *** time checkers
+  , hms
+  , Hms
+  , Hmsip
+  , Hmsop
+  , Hmsfmt
+  , HmsRE
+
   -- ** credit cards
   , ccn
+  , ccn'
   , Ccn
   , cc11
   , CC11
@@ -93,7 +100,7 @@ import Predicate.Core
 import Predicate.Prelude
 import Predicate.Util
 import Data.Proxy
-import GHC.TypeLits (AppendSymbol,Nat)
+import GHC.TypeLits (KnownNat, AppendSymbol,Nat)
 import Data.Kind (Type)
 import Data.Time
 
@@ -127,57 +134,79 @@ type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
 
 type CC11 = Ccn '[4,4,3]
 
--- not great for the general case: but specific case is easier
 ccn :: Proxy (Ccn ns)
 ccn = mkProxy3
 
+-- works but have to add all the constraints
+ccn' :: (PP ns [Char] ~ [Integer], KnownNat (SumT ns), P ns [Char]) => Proxy (Ccn ns)
+ccn' = mkProxy3'
+
 cc11 :: Proxy (Ccn '[4,4,3])   -- or Proxy CC11
-cc11 = mkProxy3P
+cc11 = mkProxy3'
 
 -- | read in a valid datetime
 --
 -- >>> prtEval3P (datetime1 @LocalTime) oz "2018-09-14 02:57:04"
 -- Right (Refined3 {r3In = 2018-09-14 02:57:04, r3Out = "2018-09-14 02:57:04"})
 --
--- >>> prtEval3P (datetime1 @LocalTime) oz "2018-09-14 99:98:97"
--- Left Step 2. Failed Boolean Check(op) | hours invalid: found 99
+-- >>> prtEval3P (datetime1' @LocalTime) oz "2018-09-14 99:98:97"
+-- Left Step 2. Failed Boolean Check(op) | invalid hours 99
 --
--- >>> prtEval3P (datetime1 @LocalTime) oz "2018-09-14 23:01:97"
--- Left Step 2. Failed Boolean Check(op) | seconds invalid: found 97
+-- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 99:98:97"
+-- Left Step 2. False Boolean Check(op) | {(>>) False | {GuardBool(0) [hours] (99 <= 23)}}
+--
+-- >>> prtEval3P (datetime1' @LocalTime) oz "2018-09-14 23:01:97"
+-- Left Step 2. Failed Boolean Check(op) | invalid seconds 97
+--
+-- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 23:01:97"
+-- Left Step 2. False Boolean Check(op) | {(>>) False | {GuardBool(2) [seconds] (97 <= 59)}}
 --
 -- >>> prtEval3P (Proxy @(DateTime1 UTCTime)) oz "2018-09-14 99:98:97"
 -- Right (Refined3 {r3In = 2018-09-18 04:39:37 UTC, r3Out = "2018-09-18 04:39:37"})
 --
 datetime1 :: Proxy (DateTime1 t)
-datetime1 = mkProxy3P
+datetime1 = mkProxy3
 
 type DateTime1 (t :: Type) = '(Dtip t, Dtop, Dtfmt, String)
 type Dtip t = ParseTimeP t "%F %T" Id
+
+datetime1' :: Proxy (DateTime1' t)
+datetime1' = mkProxy3
+
+type DateTime1' (t :: Type) = '(Dtip t, Dtop', Dtfmt, String)
 
 -- extra check to validate the time as parseTime doesnt validate the time component
 -- ZonedTime LocalTime and TimeOfDay don't do validation and allow invalid stuff through : eg 99:98:97 is valid
 -- UTCTime will do the same but any overages get tacked on to the day and time as necessary: makes the time valid! 99:98:97 becomes 04:39:37
 --    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
-{-
+
 type Dtop' =
+   Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
+     >> GuardsDetail "invalid %s %d"
+               '[ '("hours", Between 0 23)
+                , '("minutes", Between 0 59)
+                , '("seconds", Between 0 59)
+                ] >> 'True
+{-
+type Dtop'' =
    Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
      >> Guards '[ '(PrintT "guard %d invalid hours %d" Id, Between 0 23)
                 , '(PrintT "guard %d invalid minutes %d" Id, Between 0 59)
                 , '(PrintT "guard %d invalid seconds %d" Id, Between 0 59)
                 ] >> 'True
 -}
+
 type Dtop =
    Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
-     >> GuardsDetail "%s invalid: found %d"
-                  '[ '("hours", Between 0 23)
-                   , '("minutes",Between 0 59)
-                   , '("seconds",Between 0 59)
-                   ] >> 'True
+     >> Bools '[ '("hours", Between 0 23)
+               , '("minutes",Between 0 59)
+               , '("seconds",Between 0 59)
+               ]
 
 type Dtfmt = FormatTimeP "%F %T" Id
 
 ssn :: Proxy Ssn
-ssn = mkProxy3
+ssn = mkProxy3'
 
 -- | read in an ssn
 --
@@ -185,10 +214,10 @@ ssn = mkProxy3
 -- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
 --
 -- >>> prtEval3P ssn ol "666-01-2211"
--- Left Step 2. False Boolean Check(op) | {GuardBool(0) [number for group 0 invalid: found 666] {True && False | {666 /= 666}}}
+-- Left Step 2. False Boolean Check(op) | {GuardBool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))}
 --
 -- >>> prtEval3P ssn ol "667-00-2211"
--- Left Step 2. False Boolean Check(op) | {GuardBool(1) [number for group 1 invalid: found 0] {1 <= 0}}
+-- Left Step 2. False Boolean Check(op) | {GuardBool(1) [number for group 1 invalid: found 0] (1 <= 0)}
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
@@ -207,26 +236,31 @@ type Ssnfmt = PrintL 3 "%03d-%02d-%04d" Id
 
 -- | read in a time and validate it
 --
--- >>> prtEval3P hms oz "23:13:59"
+-- >>> prtEval3P hms ol "23:13:59"
 -- Right (Refined3 {r3In = [23,13,59], r3Out = "23:13:59"})
 --
--- >>> prtEval3P hms oz "23:13:60"
--- Left Step 2. Failed Boolean Check(op) | seconds invalid: found 60
+-- >>> prtEval3P hms ol "23:13:60"
+-- Left Step 2. False Boolean Check(op) | {GuardBool(2) [seconds] (60 <= 59)}
 --
--- >>> prtEval3P hms oz "26:13:59"
--- Left Step 2. Failed Boolean Check(op) | hours invalid: found 26
+-- >>> prtEval3P hms ol "26:13:59"
+-- Left Step 2. False Boolean Check(op) | {GuardBool(0) [hours] (26 <= 23)}
 --
 hms :: Proxy Hms
-hms = mkProxy3
+hms = mkProxy3'
 
-type Hms = '(Hmsip, Hmsop >> 'True, Hmsfmt, String)
+type Hms = '(Hmsip, Hmsop, Hmsfmt, String)
 
 type Hmsip = Map (ReadP Int Id) (Resplit ":" Id)
-
-type Hmsop = GuardsDetail "%s invalid: found %d"
-              '[ '("hours", Between 0 23)
+{-
+type Hmsop = BoolsQuick ""
+              '[ Msg "hours:"   (Between 0 23)
+              ,  Msg "minutes:" (Between 0 59)
+              ,  Msg "seconds:" (Between 0 59)]
+-}
+type Hmsop = Bools
+             '[ '("hours", Between 0 23)
               , '("minutes",Between 0 59)
-              ,'("seconds",Between 0 59)]
+               ,'("seconds",Between 0 59)]
 {-
 type Hmsop = Guard (PrintF "expected len 3 but found %d" Len) (Length Id == 3)
              >> Guards '[ '(PrintT "guard(%d) %d hours is out of range" Id, Between 0 23)
@@ -241,18 +275,18 @@ type Hmsfmt = PrintL 3 "%02d:%02d:%02d" Id
 -- Right (Refined3 {r3In = [1,223,14,1], r3Out = "001.223.014.001"})
 --
 -- >>> prtEval3P ip ol "001.223.14.999"
--- Left Step 2. False Boolean Check(op) | {GuardBool(3) [guard(3) octet out of range 0-255 found 999] {999 <= 255}}
+-- Left Step 2. False Boolean Check(op) | {GuardBool(3) [guard(3) octet out of range 0-255 found 999] (999 <= 255)}
 --
 -- >>> prtEval3P ip oz "001.223.14.999.1"
 -- Left Step 1. Initial Conversion(ip) Failed | Regex no results
 --
 -- >>> prtEval3P ip ol "001.257.14.1"
--- Left Step 2. False Boolean Check(op) | {GuardBool(1) [guard(1) octet out of range 0-255 found 257] {257 <= 255}}
+-- Left Step 2. False Boolean Check(op) | {GuardBool(1) [guard(1) octet out of range 0-255 found 257] (257 <= 255)}
 --
 type Ip = '(Ipip, Ipop, Ipfmt, String)
 
 ip :: Proxy Ip
-ip = mkProxy3
+ip = mkProxy3'
 
 type Ipip = Map (ReadP Int Id) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd Id)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
@@ -283,9 +317,9 @@ type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
 -- >>> prtEval3P (basen' @16 @(GuardSimple (Id < 400) >> 'True)) oz "f0fe"
--- Left Step 2. Failed Boolean Check(op) | {61694 < 400}
+-- Left Step 2. Failed Boolean Check(op) | (61694 < 400)
 --
--- >>> prtEval3P (basen' @16 @(Id < 400)) ol "f0fe"
+-- >>> prtEval3P (basen' @16 @(Id < 400)) ol "f0fe" -- todo: why different parens vs braces
 -- Left Step 2. False Boolean Check(op) | {61694 < 400}
 --
 type BaseN (n :: Nat) = BaseN' n 'True
@@ -324,10 +358,10 @@ basen' :: forall n p
 basen' = mkProxy3
 -}
 daten :: Proxy DateN
-daten = mkProxy3
+daten = mkProxy3'
 
 datetimen :: Proxy DateTimeN
-datetimen = mkProxy3
+datetimen = mkProxy3'
 
 -- | ensures that two numbers are in a given range (emulates 'Refined.Refined')
 --
@@ -369,7 +403,7 @@ type LuhnR (n :: Nat) = MakeR3 (LuhnT n)
 -- Right (Refined3 {r3In = [1,2,3,0], r3Out = "1230"})
 --
 -- >>> prtEval3P (Proxy @(LuhnT 4)) ol "1234"
--- Left Step 2. False Boolean Check(op) | {True && False | {Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4]}}
+-- Left Step 2. False Boolean Check(op) | {True && False | (Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}
 --
 -- | uses builtin 'Luhn'
 type LuhnT (n :: Nat) =

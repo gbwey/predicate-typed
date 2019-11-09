@@ -47,7 +47,6 @@ allTests :: [IO ()]
 allTests =
    [expectPE (PresentT LT) $ pl @("aa" ==! Id) "aaaa"
   , expectPE FalseT $ pl @(FromEnum ("aa" ==! Id) >> Same 1) "aaaa"
-  -- todo: output is crap
   , expectPE (PresentT (Right 1)) $ pl @(HeadDef 'False Id +++ Id) (Right @[Bool] 1) -- need @[Bool] cos we said 'False!
   , expectPE (PresentT (Left True)) $ pl @(HeadDef 'False Id +++ Id) (Left @_ @Int [True,False]) -- need @[Bool] cos we said 'False!
   , expectPE (PresentT (Right True)) $ pl @(Not Id +++ Id) (Right True)
@@ -225,7 +224,7 @@ allTests =
   , expectPE (FailT "Regex failed to compile") $ pl @(Re "\\d{4}\\" Id) "ayx"
   , expectPE (PresentT LT) $ pl @(FoldN 0 Id (Succ Id)) LT
   , expectPE (PresentT LT) $ pl @(FoldN 2 Id (Succ Id) >> FoldN 2 Id (Pred Id)) LT
-  , expectPE (PresentT ["2","2"]) $ pl @(Map (Fst Id) (Rescan "." (ShowP Id)) >> FilterBy (Same "2") Id) 12324
+  , expectPE (PresentT ["2","2"]) $ pl @(Map (Fst Id) (Rescan "." (ShowP Id)) >> Filter (Same "2") Id) 12324
   , expectPE (PresentT [LT,LT,LT,GT,EQ,LT]) $ pl @((Ones Id << ShowP Id) >> Map (Fst Id ==! Snd Id) Pairs) 1234223
   , expectPE (PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]) $ pl @(IToList _) ("abcd" :: String)
   , expectPE (PresentT "abcd") $ pl @ToList (M.fromList $ zip [0..] "abcd")
@@ -235,11 +234,14 @@ allTests =
   , expectPE (FailT "err") $ pl @(MaybeIn (Failp "err") Id) (Nothing @Int)
   , expectPE (FailT "err") $ pl @(MaybeIn (Failp "err") Id) (Nothing @())
   , expectPE (PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]) $ pl @(IToList _) (M.fromList $ itoList ("abcd" :: String))
-  , expectPE (PresentT [('a',1),('b',2),('c',3),('d',4),('a',5),('b',6),('c',7)]) $ pl @(ZipL "abcd" Id) [1..7]
-  , expectPE (PresentT [('a',1),('b',2),('c',3),('d',4)]) $ pl @(ZipTrunc "abcd" Id) [1..7]
-  , expectPE (PresentT []) $ pl @(ZipTrunc "" Id) [1..7]
-  , expectPE (PresentT [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(1 % 1,'d')]) $ pl @(ZipL '[1 % 1 , 2 % 1 , 3 % 1 ] Id) "abcd"
-  , expectPE (PresentT []) $ pl @(ZipR (EmptyT _ Id) Id) "abcd"
+  , expectPE (PresentT [(1,'a'),(2,'b'),(3,'c'),(4,'d'),(99,'e'),(99,'f'),(99,'g')]) $ pl @(ZipL 99 Id "abcdefg") [1..4]
+  , expectPE (FailT "Zip(3,7) length mismatch") $ pl @(Zip "abc" Id) [1..7]
+  , expectPE (PresentT [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')]) $ pl @(ZipL (99 % 4) '[1 % 1 , 2 % 1 , 3 % 1 ] Id) "abcde"
+
+  , expectPE (PresentT [("X",'a'),("X",'b'),("X",'c'),("X",'d')]) $ pl @(ZipL "X" (EmptyT _ Id) Id) ("abcd" :: String)
+
+  , expectPE (FailT "ZipR(0,4) rhs would be truncated") $ pl @(ZipR (Char1 "Y") (EmptyT _ Id) Id) "abcd"
+
   , expectPE (PresentT [9,2,7,4]) $ pl @ToList (M.fromList (zip ['a'..] [9,2,7,4]))
   , expectPE (PresentT [(0,9),(1,2),(2,7),(3,4)]) $ pl @(IToList _) [9,2,7,4]
   , expectPE (PresentT [('a',9),('b',2),('c',7),('d',4)]) $ pl @(IToList _) (M.fromList (zip ['a'..] [9,2,7,4]))
@@ -339,14 +341,13 @@ allTests =
   , expectPE (PresentT (Just ([1,2,3,4],5))) $ pl @Unsnoc [1..5]
   , expectPE (PresentT [(0,1),(1,2),(2,3),(3,4),(4,5)]) $ pl @(IToList _) [1..5]
   , expectPE (PresentT [(0,'a'),(1,'b'),(2,'c')]) $ pl @(IToList _) ['a','b','c']
-  , expectPE (PresentT [(1,'a'),(2,'b'),(3,'c'),(4,'d'),(5,'e')]) $ pl @(ZipTrunc (Fst Id) (Snd Id)) ([1..5],['a'..'z'])
   , expectPE (PresentT [1,2,3,8,8]) $ pl @(PadR 5 8 Id) [1..3]
   , expectPE (PresentT [1,2,3,4,5]) $ pl @(PadR 5 0 Id) [1..5]
   , expectPE (PresentT [1,2,3,4,5,6]) $ pl @(PadR 5 0 Id) [1..6]
   , expectPE (PresentT [0,0,1,2,3]) $ pl @(PadL 5 0 Id) [1..3]
   , expectPE (PresentT []) $ pl @(Catch (Resplit "\\d+(" Id) (Snd Id >> MEmptyP)) "123"
   , expectPE (FailT "someval(8)") $ pl @(Map (Guard "someval" (Lt 3) >> 'True) Id) [1::Int ..10]
-  , expectPE (FailT "{3 < 3} | {4 < 3} | {5 < 3} | {6 < 3} | {7 < 3} | {8 < 3} | {9 < 3} | {10 < 3}") $ pl @(Map (GuardSimple (Lt 3) >> 'True) Id) [1::Int .. 10]
+  , expectPE (FailT "(3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3)") $ pl @(Map (GuardSimple (Lt 3) >> 'True) Id) [1::Int .. 10]
   , expectPE FalseT $ pl @(All (Lt 3) Id) [1::Int .. 10]
   , expectPE (PresentT [True,True,True,True,True,True,True,True,True,True]) $ pl @(Map (GuardSimple (Ge 1) >> 'True) Id) [1::Int .. 10]
   , expectPE (PresentT [4,5,6]) $ pl @(ScanN 2 Id (Succ Id)) 4
@@ -499,7 +500,7 @@ allTests =
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ eval3 @Ip4A @Ip4B @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ eval3 @Ip4A @Ip4B @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) ol "1.2.3.4"
   , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (Proxy @'(Ip4A, Ip4B, ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id), _)) ol "1.2.3.4"
-  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (mkProxy3 @Ip4A @Ip4B @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id))) ol "1.2.3.4"
+  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (mkProxy3' @_ @Ip4A @Ip4B @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id))) ol "1.2.3.4"
 
   -- keep the original value
   , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ eval3 @(Id &&& Ip4A) @(Snd Id >> Ip4B) @(Snd Id >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
@@ -525,7 +526,7 @@ allTests =
   , expectPE (PresentT [3,2,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadP Int Id) (Snd Id) >> Ddmmyyyyval) "03-02-1999"
   , expectPE (FailT "guard(2) month 13 is out of range") $ pl @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadP Int Id) (Snd Id) >> Ddmmyyyyval) "12-13-1999"
   , expectPE (PresentT [[1],[2,3,4],[5,6,7,8],[9,10,11,12]]) $ pl @(SplitAts '[1,3,4] Id) [1..12]
-  , expectPE (PresentT [[1,2,3],[4]]) $ pl @(SplitAts '[3,1,1,1] Id >> FilterBy (Not Null) Id) [1..4]
+  , expectPE (PresentT [[1,2,3],[4]]) $ pl @(SplitAts '[3,1,1,1] Id >> Filter (Not Null) Id) [1..4]
   , expectPE (PresentT 1) $ pl @(Msg (PrintF "digits=%d" Len) (Head Id)) [1..4]
   , expectPE (PresentT 10) $ pl @(Luhn' 4) "1230"
   , expectPE (FailT "expected 14 mod 10 = 0 but found 4") $ pl @(Luhn' 4) "1234"
@@ -606,8 +607,8 @@ allTests =
   , expectPE (PresentT "ipaddress 001.002.003.004") $ pl @(PrintT "ipaddress %03d.%03d.%03d.%03d" '(1,2,3,4)) ()
 
   , expectPE (PresentT "001.002.003.004") $ pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4::Int]
-  , expectPE (FailT "PrintL(4) bad length 5") $ pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4,5::Int]
-  , expectPE (FailT "PrintL(4) bad length 3") $ pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3::Int]
+  , expectPE (FailT "PrintL(4) arg count=5") $ pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4,5::Int]
+  , expectPE (FailT "PrintL(4) arg count=3") $ pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3::Int]
 
   , expectPE (PresentT "001.002.003.004") $ pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4::Int]
   , expectPE (FailT "Pairs no data found") $ pl @Pairs ([] @())

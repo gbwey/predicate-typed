@@ -185,7 +185,7 @@ unnamedTests = [
 allProps :: [TestTree]
 allProps =
   [
-    testProperty "base16" $ forAll (arbRefined3 (mkProxy3P @'(ReadBase Int 16 Id, 'True, ShowBase 16 Id, String))) (\r -> evalQuick @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
+    testProperty "base16" $ forAll (arbRefined3 (mkProxy3 @'(ReadBase Int 16 Id, 'True, ShowBase 16 Id, String))) (\r -> evalQuick @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
   , testProperty "readshow" $ forAll (arbRefined3 Proxy :: Gen HexLtR3) (\r -> read @HexLtR3 (show r) === r)
   , testProperty "jsonroundtrip" $ forAll (arbRefined3 Proxy :: Gen HexLtR3) (\r -> testRefined3PJ Proxy ol (r3Out r) === Right r)
   ]
@@ -232,22 +232,22 @@ cc = mkProxy3
 type Hmsconv = Do '[Rescan HmsRE Id, Head Id, (Snd Id), Map (ReadBaseInt 10 Id) Id]
 
 type Hmsz1 = '(Hmsconv &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-            , Fst Id >> Hmsop >> 'True
+            , Fst Id >> Hmsop
             , Snd Id
             , String)
 
 -- better error messages cos doesnt do a strict regex match
 type Hmsz2 = '(Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-             , Fst Id >> Hmsop >> 'True
+             , Fst Id >> Hmsop
              , Snd Id
              , String)
 
 type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-type Hmsop2 = Fst Id >> Hmsop >> 'True
+type Hmsop2 = Fst Id >> Hmsop
 
 -- >mkProxy3 @Hmsip2 @Hmsop2 @((Snd Id) >> FormatTimeP "%F %T" Id) @String
 hms2E :: Proxy '(Hmsip2, Hmsop2, (Snd Id) >> FormatTimeP "%T" Id, String)
-hms2E = mkProxy3P
+hms2E = mkProxy3
 
 
 -- better to use Guard for op boolean check cos we get better errormessages
@@ -255,7 +255,7 @@ hms2E = mkProxy3P
 type Tst3 = '(Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255) Id, ConcatMap (PrintF "%03d" Id) Id, String)
 
 www1, www2 :: String -> Either Msg3 (MakeR3 Tst3)
-www1 = prtEval3P (Proxy :: MkProxy3T Tst3) o2
+www1 = prtEval3P (mkProxy3 @Tst3) o2
 www2 = prtEval3P tst3 o2
 
 -- just pass in an ipaddress as a string: eg 1.2.3.4 or 1.2.3.4.5 (invalid) 1.2.3.400 (invalid)
@@ -408,7 +408,7 @@ type Luhn'' (n :: Nat) =
          Guard (PrintT "incorrect number of digits found %d but expected %d in [%s]" '(Len, n, ShowP Id)) (Len == n)
       >> Do '[
               Reverse
-             ,ZipL [1,2] Id
+             ,Zip (Cycle n [1,2]) Id
              ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
              ,FoldMap (SG.Sum Int) Id
              ]
@@ -421,7 +421,7 @@ type Luhn' (n :: Nat) =
             '[Ones Id
             ,Map (ReadP Int Id) Id
             ,Reverse
-            ,ZipL [1,2] Id
+            ,Zip (Cycle n [1,2]) Id
             ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
             ,FoldMap (SG.Sum Int) Id
            ]

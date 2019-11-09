@@ -30,7 +30,6 @@ module Predicate.Refined3 (
   -- ** Refined3
     Refined3(r3In,r3Out)
   , Refined3C
-  , RefinedEmulate
 
  -- ** display results
   , prtEval3P
@@ -46,19 +45,13 @@ module Predicate.Refined3 (
   -- ** evaluation methods
   , eval3P
   , eval3
-  , eval3M
-  , eval3PX
-  , eval3X
 
   -- ** proxy methods
   , mkProxy3
   , mkProxy3'
-  , mkProxy3P
-  , mkProxy3P'
-  , MkProxy3T
   , MakeR3
 
-  -- ** create or combine Refined3 values
+  -- ** create a wrapped Refined3 value
   , withRefined3TIO
   , withRefined3T
   , withRefined3TP
@@ -76,6 +69,12 @@ module Predicate.Refined3 (
   -- ** unsafe methods for creating Refined3
   , unsafeRefined3
   , unsafeRefined3'
+
+  -- ** emulate Refined3 using Refined
+  , RefinedEmulate
+  , eval3PX
+  , eval3X
+
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -85,7 +84,7 @@ import Data.Tree
 import Data.Proxy
 import Control.Monad.Except
 import Control.Monad.Writer (tell)
-import Data.Aeson
+import Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Language.Haskell.TH.Syntax as TH
 import System.Console.Pretty
 import Test.QuickCheck
@@ -237,10 +236,11 @@ instance ( Eq i
 
 -- | 'ToJSON' instance for 'Refined3'
 --
--- >>> encode (unsafeRefined3 @(ReadBase Int 16 Id) @(Between 0 255) @(ShowBase 16 Id) 254 "fe")
+-- >>> import qualified Data.Aeson as A
+-- >>> A.encode (unsafeRefined3 @(ReadBase Int 16 Id) @(Between 0 255) @(ShowBase 16 Id) 254 "fe")
 -- "\"fe\""
 --
--- >>> encode (unsafeRefined3 @Id @'True @Id 123 123)
+-- >>> A.encode (unsafeRefined3 @Id @'True @Id 123 123)
 -- "123"
 --
 instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
@@ -249,11 +249,12 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 
 -- | 'FromJSON' instance for 'Refined3'
 --
--- >>> eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe\""
+-- >>> import qualified Data.Aeson as A
+-- >>> A.eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe\""
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> removeAnsi $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
--- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | {16663610 < 256}}
+-- >>> removeAnsi $ A.eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
+-- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [16663610] ***
 -- <BLANKLINE>
@@ -263,7 +264,7 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 ip op fmt i) where
 -- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
 -- <BLANKLINE>
--- False True && False | {16663610 < 256}
+-- False True && False | (16663610 < 256)
 -- |
 -- +- True  16663610 > 10
 -- |  |
@@ -368,33 +369,32 @@ instance ( Show (PP fmt (PP ip i))
             Just r -> return r
   put (Refined3 _ r) = B.put @i r
 
--- | wraps the parameters for 'Refined3' in a 4-tuple
+-- | creates a 4-tuple proxy (see 'withRefined3TP' 'newRefined3TP' 'eval3P' 'prtEval3P')
 --
--- useful for methods such as 'withRefined3TP' and 'newRefined3TP'
-mkProxy3 :: forall ip op fmt i . Proxy '(ip,op,fmt,i)
+-- use type application to set the 4-tuple or skip that and set the individual parameters directly
+--
+-- set the 4-tuple directly
+--
+-- >>> eg1 = mkProxy3 @'(ReadP Int Id, Gt 10, ShowP Id, String)
+-- >>> prtEval3P eg1 ol "24"
+-- Right (Refined3 {r3In = 24, r3Out = "24"})
+--
+-- skip the 4-tuple and set each parameter individually using type application
+--
+-- >>> eg2 = mkProxy3 @_ @(ReadP Int Id) @(Gt 10) @(ShowP Id)
+-- >>> prtEval3P eg2 ol "24"
+-- Right (Refined3 {r3In = 24, r3Out = "24"})
+--
+mkProxy3 :: forall z ip op fmt i . z ~ '(ip,op,fmt,i) => Proxy '(ip,op,fmt,i)
 mkProxy3 = Proxy
 
--- | same as 'mkProxy3' but checks to make sure the proxy is consistent with the Refined3C constraint
-mkProxy3' :: forall ip op fmt i . Refined3C ip op fmt i => Proxy '(ip,op,fmt,i)
+-- | same as 'mkProxy3' but checks to make sure the proxy is consistent with the 'Refined3C' constraint
+mkProxy3' :: forall z ip op fmt i . (z ~ '(ip,op,fmt,i), Refined3C ip op fmt i) => Proxy '(ip,op,fmt,i)
 mkProxy3' = Proxy
-
--- | use type application to set the parameters which then will be wrapped into a 4-tuple
---
--- useful for passing into 'eval3P' / 'prtEval3P'
-mkProxy3P :: forall z ip op fmt i . z ~ '(ip,op,fmt,i) => Proxy '(ip,op,fmt,i)
-mkProxy3P = Proxy
-
--- | same as 'mkProxy3P' but checks to make sure the proxy is consistent with the Refined3C constraint
-mkProxy3P' :: forall z ip op fmt i . (z ~ '(ip,op,fmt,i), Refined3C ip op fmt i) => Proxy '(ip,op,fmt,i)
-mkProxy3P' = Proxy
 
 -- | convenience type family for converting from a 4-tuple '(ip,op,fmt,i) to a 'Refined3' signature
 type family MakeR3 p where
   MakeR3 '(ip,op,fmt,i) = Refined3 ip op fmt i
-
--- | convenience type family for converting from a 4-tuple '(ip,op,fmt,i) to a Proxy
-type family MkProxy3T p where
-  MkProxy3T '(ip,op,fmt,i) = Proxy '(ip,op,fmt,i)
 
 withRefined3TIO :: forall ip op fmt i m b
   . (MonadIO m, Refined3C ip op fmt i, Show (PP ip i), Show i)
@@ -559,7 +559,6 @@ rapply3 :: forall m ip op fmt i .
   -> RefinedT m (Refined3 ip op fmt i)
 rapply3 = rapply3P (Proxy @'(ip,op,fmt,i))
 
--- this is the most generic
 -- prtRefinedT $ rapply3P base16 (+) (newRefined3TP Proxy "ff") (newRefined3TP Proxy "22")
 
 -- | same as 'rapply3' but uses a 4-tuple proxy instead
@@ -592,6 +591,7 @@ data Results a b =
      | XTTrueT a b      -- Right a + Right True + Right b
      deriving (Show,Eq)
 
+-- | An ADT that summarises the results of evaluating Refined3 representing all possible states
 data RResults a b =
        RF String (Tree PE)        -- Left e
      | RTF a (Tree PE) String (Tree PE)    -- Right a + Left e
@@ -600,6 +600,7 @@ data RResults a b =
      | RTTrueT a (Tree PE) (Tree PE) b (Tree PE)      -- Right a + Right True + Right b
      deriving Show
 
+-- | same as 'prtEval3P' but runs in IO
 prtEval3PIO :: forall ip op fmt i proxy
   . ( Refined3C ip op fmt i
     , Show (PP ip i)
@@ -612,6 +613,7 @@ prtEval3PIO _ opts i = do
   x <- eval3M opts i
   prt3IO opts x
 
+-- | same as 'prtEval3P' but skips the proxy and allows you to set each parameter individually using type application
 prtEval3 :: forall ip op fmt i
   . ( Refined3C ip op fmt i
     , Show (PP ip i)
@@ -619,10 +621,9 @@ prtEval3 :: forall ip op fmt i
   => POpts
   -> i
   -> Either Msg3 (Refined3 ip op fmt i)
-prtEval3 opts i =
-  let x = eval3 opts i
-  in prt3 opts x
+prtEval3 = prtEval3P Proxy
 
+-- | create a Refined3 using a 4-tuple proxy and aggregate the results on failure
 prtEval3P :: forall ip op fmt i proxy
   . ( Refined3C ip op fmt i
     , Show (PP ip i)
@@ -631,15 +632,12 @@ prtEval3P :: forall ip op fmt i proxy
   -> POpts
   -> i
   -> Either Msg3 (Refined3 ip op fmt i)
-prtEval3P _ opts i =
-  let x = eval3 opts i
-  in prt3 opts x
+prtEval3P _ opts = prt3 opts . eval3 opts
 
-
--- pass in a proxy (use mkProxy to package all the types together as a 4-tuple)
--- ip converts input 'i' to format used for op and fmt
--- op is a boolean predicate [has to be True to continue] (uses P ip i as input)
--- fmt formats the output (can be anything ie not just String) (uses P ip i as input)
+-- | create a Refined3 value using a 4-tuple proxy (see 'mkProxy3')
+--
+-- use 'mkProxy3' to package all the types together as a 4-tuple
+--
 eval3P :: forall ip op fmt i proxy . Refined3C ip op fmt i
   => proxy '(ip,op,fmt,i)
   -> POpts
@@ -647,13 +645,12 @@ eval3P :: forall ip op fmt i proxy . Refined3C ip op fmt i
   -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
 eval3P _ opts = runIdentity . eval3M opts
 
--- same as eval3P but can just pass in ip op fmt separately
--- with eval3P we have to specify 'i' but in eval3 we dont cos gets it from context
+-- | same as 'eval3P' but can pass the parameters individually using type application
 eval3 :: forall ip op fmt i . Refined3C ip op fmt i
   => POpts
   -> i
   -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
-eval3 opts = runIdentity . eval3M opts
+eval3 = eval3P Proxy
 
 eval3M :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
   => POpts
@@ -674,7 +671,7 @@ eval3M opts i = do
               Left e -> pure (RTF a t1 e t2, Nothing)
        Left e -> pure (RF e t1, Nothing)
 
--- skip ip conversion: ie uses internal value
+-- | creates Refined3 value but skips the initial conversion
 eval3MSkip :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
    => POpts
    -> PP ip i
@@ -690,7 +687,7 @@ eval3MSkip opts a = do
         Right False -> pure (RTFalse a mkNodeSkipP t2, Nothing)
         Left e -> pure (RTF a mkNodeSkipP e t2, Nothing)
 
--- calculates from internal value
+-- | calculates from internal value
 eval3MQuickIdentity :: forall ip op fmt i . Refined3C ip op fmt i
    => PP ip i
    -> Maybe (Refined3 ip op fmt i)
@@ -775,27 +772,22 @@ prt3Impl opts v =
               <> fixLite opts b t3
          in mkMsg3 m n r
 
-
--- | emulates 'Refined3' but uses 'Refined.Refined'
--- reuses the mkProxy3 but returns Refined vs Refined3
--- using plain Refined to emulate Refined3 sort of
--- we just output fmt instead of embedding it in Refined3
--- so \'ip\' predicate gets us started: we store that \'PP ip i\' in Refined
--- then we run the boolean predicate \'op\' which is successful if true
--- then we run \'fmt\' against '\PP ip i\' and output both the Refined (PP p i) and the PP fmt (PP (ip i)) ie \'fmt\' run against PP ip i
---       if any of the three steps fails the process stops immediately and dumps out RResults
+-- | similar to 'eval3P' but it emulates 'Refined3' but using 'Refined'
+--
+-- takes a 4-tuple proxy as input but outputs the Refined value and the result separately
+--
+-- * initial conversion using \'ip\' and stores that in 'Refined'
+-- * runs the boolean predicate \'op\' to make sure to validate the converted value from 1.
+-- * runs \'fmt\' against the converted value from 1.
+-- * returns both the 'Refined' and the output from 3.
+-- * if any of the above steps fail the process stops it and dumps out 'RResults'
+--
 eval3PX :: forall ip op fmt i proxy . Refined3C ip op fmt i
   => proxy '(ip,op,fmt,i)
   -> POpts
   -> i
   -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
-eval3PX _ = eval3X @ip @op @fmt
-
-eval3X :: forall ip op fmt i . Refined3C ip op fmt i
-  => POpts
-  -> i
-  -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
-eval3X opts i = runIdentity $ do
+eval3PX _ opts i = runIdentity $ do
   ll@(fromTT -> t1) <- eval (Proxy @ip) opts i
   case getValLR (_tBool ll) of
        Right a -> do
@@ -810,5 +802,12 @@ eval3X opts i = runIdentity $ do
               Left e -> pure (RTF a t1 e t2, Nothing)
        Left e -> pure (RF e t1, Nothing)
 
--- | emulates 'Refined.Refined' using 'Refined3' ie the input conversion and output formatting are noops
+-- | same as 'eval3PX' but allows you to set the parameters individually using type application
+eval3X :: forall ip op fmt i . Refined3C ip op fmt i
+  => POpts
+  -> i
+  -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
+eval3X = eval3PX (Proxy @'(ip,op,fmt,i))
+
+-- | emulates 'Refined' using 'Refined3' by setting the input conversion and output formatting as noops
 type RefinedEmulate p a = Refined3 Id p Id a

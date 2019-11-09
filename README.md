@@ -31,7 +31,7 @@ Right (Refined {unRefined = "123"})
 
 2. tries to read in a number but fails
 ```haskell
->prtRefinedIO @(ReadP Int Id >> Id > 99) ol "1x2y3"
+>prtRefinedIO @(ReadP Int Id > 99) ol "1x2y3"
 Left (FailP "ReadP Int (1x2y3) failed")
 ```
 
@@ -100,29 +100,23 @@ run this to get details in color of each evaluation step:
 ```haskell
 >prtEval3PIO (Proxy @Hex) o2 "0000fe"
 
-***Step 1. Success Initial Conversion(ip) [254] ***
+*** Step 1. Success Initial Conversion(ip) [254] ***
 
-P ReadBase(Int) 16 254 | "0000fe"
+P ReadBase(Int,16) 254 | "0000fe"
 |
 `- P Id "0000fe"
 
-***Step 2. Success Boolean Check(op) ***
+*** Step 2. Success Boolean Check(op) ***
 
-True  True && True
+True  0 <= 254 <= 255
 |
-+- True  254 >= 0
-|  |
-|  +- P I
-|  |
-|  `- P '0
++- P Id 254
 |
-`- True  254 <= 255
-   |
-   +- P I
-   |
-   `- P '255
++- P '0
+|
+`- P '255
 
-***Step 3. Success Output Conversion(fmt) = "fe" ***
+*** Step 3. Success Output Conversion(fmt) ***
 
 P ShowBase 16 fe | 254
 ```
@@ -174,25 +168,19 @@ P ReadBase(Int,16) 65535 | "000ffff"
 
 *** Step 2. False Boolean Check(op) ***
 
-False True && False
+False 65535 <= 255
 |
-+- True  65535 >= 0
-|  |
-|  +- P I
-|  |
-|  `- P '0
++- P Id 65535
 |
-`- False 65535 <= 255
-   |
-   +- P I
-   |
-   `- P '255
++- P '0
+|
+`- P '255
 
-refined3TH: predicate failed with Step 2. False Boolean Check(op) | {True && False}
-    * In the Template Haskell splice $$(refined3TH' o0 "000ffff")
-      In the expression: $$(refined3TH' o0 "000ffff") :: MakeR3 Hex
+refined3TH: predicate failed with Step 2. False Boolean Check(op) | {65535 <= 255}
+    * In the Template Haskell splice $$(refined3TH' o2 "000ffff")
+      In the expression: $$(refined3TH' o2 "000ffff") :: MakeR3 Hex
       In an equation for `it':
-          it = $$(refined3TH' o0 "000ffff") :: MakeR3 Hex
+          it = $$(refined3TH' o2 "000ffff") :: MakeR3 Hex
 ```
 
 ### Any valid Read/Show instance can be used with Refined3
@@ -240,7 +228,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ```haskell
 >either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
-Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False}
+Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | {16663610 < 256}}
 
 ***Step 1. Success Initial Conversion(ip) [16663610] ***
 
@@ -250,7 +238,7 @@ P ReadBase(Int,16) 16663610 | "00fe443a"
 
 ***Step 2. False Boolean Check(op) = FalseP ***
 
-False True && False
+False True && False | {16663610 < 256}
 |
 +- True  16663610 > 10
 |  |
