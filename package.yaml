@@ -40,6 +40,14 @@ library:
   source-dirs: src
   ghc-options:
   - -fomit-interface-pragmas
+  - -Wincomplete-uni-patterns
+  - -Wincomplete-record-updates
+  - -Wcompat
+  - -Widentities
+  - -Wredundant-constraints
+  - -fhide-source-paths
+  - -Wmissing-export-lists
+  - -Wpartial-fields
 
 tests:
   predicate-typed-test:
@@ -62,6 +70,7 @@ tests:
     ghc-options:
     - -threaded
     - -fomit-interface-pragmas
+    - -Wno-missing-export-lists
     source-dirs:
     - .
     - src

@@ -53,7 +53,7 @@ import Data.Functor.Identity
 -- @
 --
 refinedTH :: forall p i
-  . (Show i, TH.Lift i, RefinedC p i)
+  . (TH.Lift i, RefinedC p i)
   => i
   -> TH.Q (TH.TExp (Refined p i))
 refinedTH = refinedTH' ol
@@ -87,7 +87,7 @@ refinedTH = refinedTH' ol
 -- @
 --
 refinedTH' :: forall p i
-  . (Show i, TH.Lift i, RefinedC p i)
+  . (TH.Lift i, RefinedC p i)
   => POpts
   -> i
   -> TH.Q (TH.TExp (Refined p i))

@@ -7,7 +7,7 @@
 {- |
      Mainly contains useful Template Haskell Lift instances for Date Time
 -}
-module Predicate.TH_Orphans where
+module Predicate.TH_Orphans () where
 import qualified Language.Haskell.TH.Syntax as TH
 import qualified Language.Haskell.TH.Lift as TL
 import Data.Time
