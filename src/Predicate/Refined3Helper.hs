@@ -23,9 +23,6 @@ module Predicate.Refined3Helper (
     datetime1
   , DateTime1
 
-  , datetime1'
-  , DateTime1'
-
   , daten
   , DateN
   , datetimen
@@ -145,40 +142,25 @@ cc11 = mkProxy3'
 
 -- | read in a valid datetime
 --
--- >>> prtEval3P (datetime1 @LocalTime) oz "2018-09-14 02:57:04"
+-- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 02:57:04"
 -- Right (Refined3 {r3In = 2018-09-14 02:57:04, r3Out = "2018-09-14 02:57:04"})
 --
--- >>> prtEval3P (datetime1' @LocalTime) oz "2018-09-14 99:98:97"
--- Left Step 2. Failed Boolean Check(op) | invalid hours 99
---
 -- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 99:98:97"
--- Left Step 2. False Boolean Check(op) | {(>>) False | {GuardBool(0) [hours] (99 <= 23)}}
---
--- >>> prtEval3P (datetime1' @LocalTime) oz "2018-09-14 23:01:97"
--- Left Step 2. Failed Boolean Check(op) | invalid seconds 97
---
--- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 23:01:97"
--- Left Step 2. False Boolean Check(op) | {(>>) False | {GuardBool(2) [seconds] (97 <= 59)}}
---
--- >>> prtEval3P (Proxy @(DateTime1 UTCTime)) oz "2018-09-14 99:98:97"
--- Right (Refined3 {r3In = 2018-09-18 04:39:37 UTC, r3Out = "2018-09-18 04:39:37"})
+-- Left Step 1. Initial Conversion(ip) Failed | ParseTimeP LocalTime (%F %T) failed to parse
 --
 datetime1 :: Proxy (DateTime1 t)
 datetime1 = mkProxy3
 
-type DateTime1 (t :: Type) = '(Dtip t, Dtop, Dtfmt, String)
+type DateTime1 (t :: Type) = '(Dtip t, 'True, Dtfmt, String)
 type Dtip t = ParseTimeP t "%F %T" Id
+type Dtfmt = FormatTimeP "%F %T" Id
 
-datetime1' :: Proxy (DateTime1' t)
-datetime1' = mkProxy3
-
-type DateTime1' (t :: Type) = '(Dtip t, Dtop', Dtfmt, String)
-
+-- fixed in time-1.9
 -- extra check to validate the time as parseTime doesnt validate the time component
 -- ZonedTime LocalTime and TimeOfDay don't do validation and allow invalid stuff through : eg 99:98:97 is valid
 -- UTCTime will do the same but any overages get tacked on to the day and time as necessary: makes the time valid! 99:98:97 becomes 04:39:37
 --    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
-
+{-
 type Dtop' =
    Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
      >> GuardsDetail "invalid %s %d"
@@ -186,14 +168,13 @@ type Dtop' =
                 , '("minutes", Between 0 59)
                 , '("seconds", Between 0 59)
                 ] >> 'True
-{-
+
 type Dtop'' =
    Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
      >> Guards '[ '(PrintT "guard %d invalid hours %d" Id, Between 0 23)
                 , '(PrintT "guard %d invalid minutes %d" Id, Between 0 59)
                 , '(PrintT "guard %d invalid seconds %d" Id, Between 0 59)
                 ] >> 'True
--}
 
 type Dtop =
    Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
@@ -201,8 +182,7 @@ type Dtop =
                , '("minutes",Between 0 59)
                , '("seconds",Between 0 59)
                ]
-
-type Dtfmt = FormatTimeP "%F %T" Id
+-}
 
 ssn :: Proxy Ssn
 ssn = mkProxy3'

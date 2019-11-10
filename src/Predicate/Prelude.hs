@@ -549,6 +549,7 @@ import Data.Time.Calendar.WeekDate
 -- >>> :set -XNoOverloadedLists
 -- >>> import qualified Data.Map.Strict as M
 -- >>> import qualified Data.Text as T
+-- >>> import Safe (readNote)
 
 -- | a type level predicate for a monotonic increasing list
 --
@@ -1057,7 +1058,7 @@ instance (PP p x ~ (String -> String)
 -- Requires "Text.Show.Functions"
 --
 -- >>> :m + Text.Show.Functions
--- >>> pz @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (MakeRR3 (Fst Id)) (Snd Id)) (\ys -> intercalate  " | " $ map (show . succ . read @Int) ys, "141.201.1.22")
+-- >>> pz @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (MakeRR3 (Fst Id)) (Snd Id)) (\ys -> intercalate  " | " $ map (show . succ . readNote @Int "invalid int") ys, "141.201.1.22")
 -- Present "142 | 202 | 2 | 23"
 -- PresentT "142 | 202 | 2 | 23"
 --
@@ -1344,11 +1345,11 @@ instance (Show (PP p x), P p x) => P (ShowP p) x where
 -- | type level expression representing a formatted time
 -- similar to 'Data.Time.formatTime' using a type level 'Symbol' to get the formatting string
 --
--- >>> pz @(FormatTimeP "%F %T" Id) (read "2019-05-24 05:19:59" :: LocalTime)
+-- >>> pz @(FormatTimeP "%F %T" Id) (readNote @LocalTime "invalid localtime" "2019-05-24 05:19:59")
 -- Present "2019-05-24 05:19:59"
 -- PresentT "2019-05-24 05:19:59"
 --
--- >>> pz @(FormatTimeP (Fst Id) (Snd Id)) ("the date is %d/%m/%Y", read "2019-05-24" :: Day)
+-- >>> pz @(FormatTimeP (Fst Id) (Snd Id)) ("the date is %d/%m/%Y", readNote @Day "invalid day" "2019-05-24")
 -- Present "the date is 24/05/2019"
 -- PresentT "the date is 24/05/2019"
 --
@@ -1487,7 +1488,7 @@ instance (P p x
 
 -- | uncreate a 'Day' returning year month and day
 --
--- >>> pz @(UnMkDay Id) (read "2019-12-30")
+-- >>> pz @(UnMkDay Id) (readNote "invalid day" "2019-12-30")
 -- Present (2019,12,30)
 -- PresentT (2019,12,30)
 --
@@ -2608,48 +2609,44 @@ type Dup = '(Id, Id)
 
 data BinOp = BMult | BSub | BAdd deriving (Show,Eq)
 
-type Mult p q = Bin 'BMult p q
-type Add p q = Bin 'BAdd p q
-type Sub p q = Bin 'BSub p q
-
-type p + q = Add p q
+type p + q = Bin 'BAdd p q
 infixl 6 +
-type p - q = Sub p q
+type p - q = Bin 'BSub p q
 infixl 6 -
-type p * q = Mult p q
+type p * q = Bin 'BMult p q
 infixl 7 *
 
-type p > q = Cmp 'Cgt p q
+type p > q = Cmp 'CGt p q
 infix 4 >
-type p >= q = Cmp 'Cge p q
+type p >= q = Cmp 'CGe p q
 infix 4 >=
-type p == q = Cmp 'Ceq p q
+type p == q = Cmp 'CEq p q
 infix 4 ==
-type p /= q = Cmp 'Cne p q
+type p /= q = Cmp 'CNe p q
 infix 4 /=
-type p <= q = Cmp 'Cle p q
+type p <= q = Cmp 'CLe p q
 infix 4 <=
-type p < q = Cmp 'Clt p q
+type p < q = Cmp 'CLt p q
 infix 4 <
 
-type Gt n = Cmp 'Cgt I n
-type Ge n = Cmp 'Cge I n
-type Same n = Cmp 'Ceq I n
-type Le n = Cmp 'Cle I n
-type Lt n = Cmp 'Clt I n
-type Ne n = Cmp 'Cne I n
+type Gt n = I > n
+type Ge n = I >= n
+type Same n = I == n
+type Le n = I <= n
+type Lt n = I < n
+type Ne n = I /= n
 
-type p >~ q = CmpI 'Cgt p q
+type p >~ q = CmpI 'CGt p q
 infix 4 >~
-type p >=~ q = CmpI 'Cge p q
+type p >=~ q = CmpI 'CGe p q
 infix 4 >=~
-type p ==~ q = CmpI 'Ceq p q
+type p ==~ q = CmpI 'CEq p q
 infix 4 ==~
-type p /=~ q = CmpI 'Cne p q
+type p /=~ q = CmpI 'CNe p q
 infix 4 /=~
-type p <=~ q = CmpI 'Cle p q
+type p <=~ q = CmpI 'CLe p q
 infix 4 <=~
-type p <~ q = CmpI 'Clt p q
+type p <~ q = CmpI 'CLt p q
 infix 4 <~
 
 class GetBinOp (k :: BinOp) where
@@ -6115,7 +6112,7 @@ instance (PP p x ~ These a b
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let (t,f) = getThese (Proxy @th)
+        let (t,f) = getThese @th
             b = f p
         in mkNodeB opts b [msg0 <> " " <> t <> show1 opts " | " p] []
 

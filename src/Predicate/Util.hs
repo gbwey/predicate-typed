@@ -150,7 +150,6 @@ module Predicate.Util (
   , symb
   , GetNats(..)
   , GetSymbs(..)
-  , getLen
   , GetLen(..)
   , showThese
   , GetThese(..)
@@ -779,35 +778,58 @@ instance GetSymbs '[] where
 instance (KnownSymbol s, GetSymbs ss) => GetSymbs (s ': ss) where
   getSymbs = symb @s : getSymbs @ss
 
--- | get the length of a typelevel list
+-- | get the length of a typelevel container
 --
 -- >>> getLen @'["abc","def","g"]
 -- 3
 --
-getLen :: forall xs . GetLen xs => Int
-getLen = getLenP (Proxy @xs)
-
--- really need a proxy for this to work
--- | gets length of a typelevel list
-class GetLen (xs :: [k]) where  -- defaults to xs :: k (how to make it [k]) cos is not free
-  getLenP :: Proxy (xs :: [k]) -> Int
+-- >>> getLen @'[]
+-- 0
+--
+-- >>> getLen @(9 ':| '[1,2,3])
+-- 4
+--
+-- >>> getLen @('These 9 "Asfs")
+-- 1
+--
+-- >>> getLen @('This 1)
+-- 0
+--
+class GetLen xs where -- (xs :: [k]) will break it! ghc 8.6.5
+  getLen :: Int
 instance GetLen '[] where
-  getLenP _ = 0
+  getLen = 0
 instance GetLen xs => GetLen (x ': xs) where
-  getLenP _ = 1 + getLenP (Proxy @xs)
+  getLen = 1 + getLen @xs
+instance GetLen ('Just a) where
+  getLen = 1
+instance GetLen 'Nothing where
+  getLen = 0
+instance GetLen ('Left a) where
+  getLen = 0
+instance GetLen ('Right a) where
+  getLen = 1
+instance GetLen ('This a) where
+  getLen = 0
+instance GetLen ('That a) where
+  getLen = 1
+instance GetLen ('These a b) where
+  getLen = 1
+instance GetLen xs => GetLen (x ':| xs) where
+  getLen = 1 + getLen @xs
+
 
 showThese :: These a b -> String
 showThese = these (const "This") (const "That") (const (const "These"))
 
--- hard without a Proxy
-class GetThese (th :: These x y) where
-  getThese :: Proxy th -> (String, These w v -> Bool)
+class GetThese th where
+  getThese :: (String, These w v -> Bool)
 instance GetThese ('This x) where
-  getThese _ = ("This", isThis)
+  getThese = ("This", isThis)
 instance GetThese ('That y) where
-  getThese _ = ("That", isThat)
+  getThese = ("That", isThat)
 instance GetThese ('These x y) where
-  getThese _ = ("These", isThese)
+  getThese = ("These", isThese)
 
 -- | get ordering from the typelevel
 class GetOrdering (cmp :: Ordering) where
@@ -827,17 +849,17 @@ instance GetBool 'True where
 instance GetBool 'False where
   getBool = False
 
-data OrderingP = Cgt | Cge | Ceq | Cle | Clt | Cne deriving (Show, Eq, Enum, Bounded)
+data OrderingP = CGt | CGe | CEq | CLe | CLt | CNe deriving (Show, Eq, Enum, Bounded)
 
 class GetOrd (k :: OrderingP) where
   getOrd :: Ord a => (String, a -> a -> Bool)
 
-instance GetOrd 'Cgt where getOrd = (">", (>))
-instance GetOrd 'Cge where getOrd = (">=",(>=))
-instance GetOrd 'Ceq where getOrd = ("==",(==))
-instance GetOrd 'Cle where getOrd = ("<=",(<=))
-instance GetOrd 'Clt where getOrd = ("<", (<))
-instance GetOrd 'Cne where getOrd = ("/=",(/=))
+instance GetOrd 'CGt where getOrd = (">", (>))
+instance GetOrd 'CGe where getOrd = (">=",(>=))
+instance GetOrd 'CEq where getOrd = ("==",(==))
+instance GetOrd 'CLe where getOrd = ("<=",(<=))
+instance GetOrd 'CLt where getOrd = ("<", (<))
+instance GetOrd 'CNe where getOrd = ("/=",(/=))
 
 toNodeString :: POpts -> PE -> String
 toNodeString opts bpe =

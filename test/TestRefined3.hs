@@ -24,6 +24,7 @@ import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
+
 import Predicate
 import TestRefined hiding (namedTests,unnamedTests,allProps)
 import Predicate.Refined
@@ -41,7 +42,6 @@ import Data.Aeson
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree
-import Test.QuickCheck ((===))
 import qualified Data.Semigroup as SG
 import GHC.TypeLits (Nat)
 
@@ -100,12 +100,12 @@ unnamedTests = [
 
   , expect3 (Left $ XTFalse (-6.3))
                   $ eval3 @(ReadP Double Id)
-                          @(Cmp 'Cgt (ToRational Id) (7 %- 3))
+                          @(ToRational Id > 7 %- 3)
                           @(PrintF "%5.3f" Id)
                           ol "-6.3"
 
   , expect3 (Right $ unsafeRefined3 4.123 "")
-                  $ eval3 @(ReadP Double Id) @(Cmp 'Cgt (ToRational Id) (7 %- 3)) @""
+                  $ eval3 @(ReadP Double Id) @(ToRational Id > 7 %- 3) @""
                   ol "4.123"
 
   , expect3 (Right $ unsafeRefined3 4.123 (4123 % 1000))

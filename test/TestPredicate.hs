@@ -16,6 +16,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoStarIsType #-}
 module TestPredicate where
+import Safe
 import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -140,7 +141,7 @@ allTests =
   , expectPE FalseT $ pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head Id >> Gt (20 %- 1 )) [-23]
   , expectPE (PresentT (-1.0)) $ pl @(Negate Id >> Dup >> First (Succ Id) >> Swap >> Fst Id - Snd Id) 4
   , expectPE (PresentT (Right 12)) $ pl @(Not Id +++ Id) (Right @Bool 12)
-  , expectPE (PresentT Cgt) $ pl @(FromEnum ("aa" ==! Id) >> ToEnum OrderingP Id) "aaaa"
+  , expectPE (PresentT CGt) $ pl @(FromEnum ("aa" ==! Id) >> ToEnum OrderingP Id) "aaaa"
   , expectPE (PresentT False) $ pl @(Msg "someval4" (Gt 4 >> Id)) 4
   , expectPE (PresentT ()) $ pl @(Snd Id >> Snd Id >> Snd Id >> Snd Id >> Id) (1,('a',(3,(True,()))))
   , expectPE TrueT $ pl @(Re "\\d{4}-\\d{3}" Id) "1234-123"
@@ -407,7 +408,7 @@ allTests =
   , expectPE (PresentT (fromGregorian 1999 11 30)) $ pl @(ReadP Day Id) "1999-11-30"
   , expectPE (FailT "ReadP Day (1999-02-29) failed") $ pl @(ReadP Day Id) "1999-02-29"
   , expectPE (PresentT (TimeOfDay 14 59 20)) $ pl @(ReadP TimeOfDay Id) "14:59:20"
-  , expectPE (PresentT (TimeOfDay 26 61 61)) $ pl @(ReadP TimeOfDay Id) "26:61:61" -- yep: this is valid! need to do your own validation
+--  , expectPE (PresentT (TimeOfDay 26 61 61)) $ pl @(ReadP TimeOfDay Id) "26:61:61" -- yep: this is valid in <=time-1.8 ! need to do your own validation
   , expectPE (FailT "ParseTimeP TimeOfDay (%H:%M%S) failed to parse") $ pl @(ParseTimeP TimeOfDay "%H:%M%S" Id) "14:04:61"
   , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:59"
   , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:60"
@@ -417,7 +418,7 @@ allTests =
   , expectPE (PresentT [1,2,3,4]) $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3,4::Int]
   , expectPE (FailT "Guards: data elements(5) /= predicates(4)") $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3,4,5::Int]
   , expectPE (FailT "Guards: data elements(3) /= predicates(4)") $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3::Int]
-  , expectPE (PresentT (read "1999-01-01 12:12:12 Utc")) $ pl @(ParseTimeP UTCTime "%F %T" Id) "1999-01-01 12:12:12"
+  , expectPE (PresentT (readNote @UTCTime "failed to read utc" "1999-01-01 12:12:12 UTC")) $ pl @(ParseTimeP UTCTime "%F %T" Id) "1999-01-01 12:12:12"
   , expectPE (PresentT 123) $ pl @(JustDef 0 Id) (Just 123)
   , expectPE (PresentT 0) $ pl @(JustDef 0 Id) Nothing
   , expectPE (PresentT 12) $ pl @(LastDef 0 Id) [1..12]
@@ -617,7 +618,7 @@ allTests =
   , expectPE (PresentT [(1,2),(2,3)]) $ pl @Pairs [1,2,3]
   , expectPE (PresentT [(1,2),(2,3),(3,4)]) $ pl @Pairs [1,2,3,4]
   , expectPE (PresentT "1    2 3 004") $ pl @(PrintL 4 "%d %4d %-d %03d" Id) [1..4::Int]
-  , expectPE (PresentT "2019-08-17") $ pl @(FormatTimeP "%Y-%m-%d" Id) (read "2019-08-17" :: Day)
+  , expectPE (PresentT "2019-08-17") $ pl @(FormatTimeP "%Y-%m-%d" Id) (readNote @Day "invalid day" "2019-08-17")
   , expectPE (PresentT (20,20)) $ pl @(Dup << Fst Id * Snd Id) (4,5)
   , expectPE (PresentT (20,20)) $ pl @(Fst Id * Snd Id >> Dup) (4,5)
   , expectPE (PresentT (These "xxx" 4)) $ pl @(Fst Id <$ Snd Id) (4,These "xxx" 'a')
@@ -811,7 +812,7 @@ allTests =
   , expectPE TrueT $ pl @(Between' (Fst Id >> Fst Id) (Fst Id >> Snd Id) (Snd Id)) ((1,4),3)
   , expectPE FalseT $ pl @(Between' (Fst Id >> Fst Id) (Fst Id >> Snd Id) (Snd Id)) ((1,4),10)
   , expectPE (FailT "no match on [03/29/0x7]") $ pl @(Map (ParseTimes Day '["%Y-%m-%d", "%m/%d/%y", "%b %d %Y"] Id) Id) ["2001-01-01", "Jan 24 2009", "03/29/0x7"]
-  , expectPE (PresentT [read @Day "2001-01-01", read @Day "2009-01-24", read @Day "2007-03-29"]) $ pl @(Map (ParseTimes Day '["%Y-%m-%d", "%m/%d/%y", "%b %d %Y"] Id) Id) ["2001-01-01", "Jan 24 2009", "03/29/07"]
+  , expectPE (PresentT [readNote @Day "invalid day" "2001-01-01", readNote @Day "invalid day" "2009-01-24", readNote @Day "invalid day" "2007-03-29"]) $ pl @(Map (ParseTimes Day '["%Y-%m-%d", "%m/%d/%y", "%b %d %Y"] Id) Id) ["2001-01-01", "Jan 24 2009", "03/29/07"]
 
   , expectPE (PresentT "gt3") $ pl @(Case (Snd Id >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 15
   , expectPE (PresentT "lt2") $ pl @(Case (Snd Id >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 1
