@@ -60,8 +60,8 @@ module Predicate.Util (
   , mkNodeSkipP
 
  -- ** tree manipulation
+  , getValAndPE
   , getValLRFromTT
-  , getValLR
   , fromTT
   , getValueLR
   , getValueLRHide
@@ -163,7 +163,6 @@ module Predicate.Util (
   , prtTTIO
   , prtTT
   , prtTree
-  , prtImpl
   , prtTreePure
   , prettyRational
 
@@ -177,6 +176,7 @@ module Predicate.Util (
   , prettyOrd
   , removeAnsi
   , MonadEval(..)
+  , errorInProgram
     ) where
 import qualified GHC.TypeNats as GN
 import Data.Ratio
@@ -208,9 +208,9 @@ import qualified Control.Exception as E
 import Control.DeepSeq
 import System.IO.Unsafe (unsafePerformIO)
 import Data.Bool
-import Data.Foldable
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as N
+import Data.Either
 --import Data.Maybe
 -- $setup
 -- >>> :set -XDataKinds
@@ -261,6 +261,7 @@ data BoolP =
   | PresentP     -- ^ Any value
   deriving (Show, Eq)
 
+-- | represents the untyped evaluation tree for final display
 data PE = PE { _pBool :: BoolP -- ^ holds the result of running the predicate
              , _pStrings :: [String] -- ^ optional strings to include in the results
              } deriving Show
@@ -286,11 +287,8 @@ mkNodeB opts b = mkNode opts (bool FalseT TrueT b)
 mkNodeSkipP :: Tree PE
 mkNodeSkipP = Node (PE TrueP ["skipped PP ip i = Id"]) []
 
-partitionTTExtended :: (w, TT a) -> ([((w, TT x), String)], [(w, TT a)])
-partitionTTExtended z@(_, t) =
-  case _tBool t of
-    FailT e -> ([(z & _2 . tBool .~ FailT e, e)], [])
-    _ -> ([], [z])
+getValAndPE :: TT a -> (Either String a, Tree PE)
+getValAndPE tt = (getValLRFromTT tt, fromTT tt)
 
 getValLRFromTT :: TT a -> Either String a
 getValLRFromTT = getValLR  . _tBool
@@ -326,6 +324,7 @@ getValueLR = getValueLRImpl True
 getValueLRHide :: POpts -> String -> TT a -> [Holder] -> Either (TT x) a
 getValueLRHide = getValueLRImpl False
 
+-- todo: OVerbose? but only works on error
 -- elide FailT msg in tStrings[0] if showError is False
 -- | a helper method to add extra context on failure to the tree or extract the value at the root of the tree
 getValueLRImpl :: Bool -> POpts -> String -> TT a -> [Holder] -> Either (TT x) a
@@ -617,25 +616,26 @@ splitAndAlign :: Show x =>
                     POpts
                     -> [String]
                     -> [((Int, x), TT a)]
-                    -> Either (TT w)
-                              ([a]
-                              ,[((Int, x), TT a)]
-                              )
+                    -> Either (TT w) [(a, (Int, x), TT a)]
 splitAndAlign opts msgs ts =
-  case mconcat $ map partitionTTExtended ts of
+  case partitionEithers (map partitionTTExtended ts) of
      (excs@(e:_), _) ->
           Left $ mkNode opts
                        (FailT (groupErrors (map snd excs)))
                        (msgs <> ["excs=" <> show (length excs) <> " " <> formatList opts [fst e]])
                        (map (hh . snd) ts)
-     ([], tfs) -> Right (valsFromTTs (map snd ts), tfs)
+     ([], tfs) -> Right tfs
+
+partitionTTExtended :: (w, TT a) -> Either ((w, TT x), String) (a, w, TT a)
+partitionTTExtended (s, t) =
+  case _tBool t of
+    FailT e -> Left ((s, t & tBool .~ FailT e), e)
+    PresentT a -> Right (a,s,t)
+    TrueT -> Right (True,s,t)
+    FalseT -> Right (False,s,t)
 
 formatList :: forall x z . Show x => POpts -> [((Int, x), z)] -> String
 formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts OLite ", a=" a <> ")")
-
--- | extract all root values from a list of trees
-valsFromTTs :: [TT a] -> [a]
-valsFromTTs = concatMap toList
 
 instance Foldable TT where
   foldMap am = foldMap am . _tBool
@@ -715,12 +715,12 @@ type family NullT (x :: Symbol) :: Bool where
   NullT ("" :: Symbol) = 'True
   NullT _ = 'False
 
--- | helper method to fail with an error when True
+-- | helper method to fail with a msg when True
 type family FailWhenT (b :: Bool) (msg :: GL.ErrorMessage) :: Constraint where
   FailWhenT 'False _ = ()
   FailWhenT 'True e = GL.TypeError e
 
--- | helper method to fail with an error when False
+-- | helper method to fail with msg when False
 type family FailUnlessT (b :: Bool) (msg :: GL.ErrorMessage) :: Constraint where
   FailUnlessT 'True _ = ()
   FailUnlessT 'False e = GL.TypeError e
@@ -841,7 +841,7 @@ instance GetOrd 'Cne where getOrd = ("/=",(/=))
 
 toNodeString :: POpts -> PE -> String
 toNodeString opts bpe =
-  if hasNoTree opts then error $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
+  if hasNoTree opts then errorInProgram $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
   else showBoolP opts (_pBool bpe) <> " " <> displayMessages (_pStrings bpe)
 
 hasNoTree :: POpts -> Bool
@@ -887,10 +887,7 @@ prtTT' :: MonadEval m => POpts -> m (TT a) -> IO ()
 prtTT' o y = liftEval y >>= prtTree o . fromTT
 
 prtTree :: POpts -> Tree PE -> IO ()
-prtTree o = putStr . prtTreePure o -- prtImpl o . fmap (toNodeString o)
-
-prtImpl :: POpts -> Tree String -> IO ()
-prtImpl = (putStr .) . showImpl
+prtTree o = putStr . prtTreePure o
 
 fixLite :: forall a . Show a => POpts -> a -> Tree PE -> String
 fixLite opts a t
@@ -1035,54 +1032,54 @@ class InductListC (n :: Nat) a where
   inductListC :: [a] -> InductListP n a
 instance (GL.TypeError ('GL.Text "InductListC: inductive tuple cannot be empty")) => InductListC 0 a where
   type InductListP 0 a = ()
-  inductListC _ = error "InductListC 0: shouldnt be called"
+  inductListC _ = errorInProgram "InductListC 0: shouldnt be called"
 instance (GL.TypeError ('GL.Text "InductListC: inductive tuple cannot have one element")) => InductListC 1 a where
   type InductListP 1 a = a
-  inductListC _ = error "InductListC 1: shouldnt be called"
+  inductListC _ = errorInProgram "InductListC 1: shouldnt be called"
 instance InductListC 2 a where
   type InductListP 2 a = (a,(a,()))
   inductListC [a,b] = (b,(a,()))
-  inductListC _ = error $ "inductListC: expected 2 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 2 values"
 instance InductListC 3 a where
   type InductListP 3 a = (a,(a,(a,())))
   inductListC [a,b,c] = (c,(b,(a,())))
-  inductListC _ = error $ "inductListC: expected 3 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 3 values"
 instance InductListC 4 a where
   type InductListP 4 a = (a,(a,(a,(a,()))))
   inductListC [a,b,c,d] = (d,(c,(b,(a,()))))
-  inductListC _ = error $ "inductListC: expected 4 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 4 values"
 instance InductListC 5 a where
   type InductListP 5 a = (a,(a,(a,(a,(a,())))))
   inductListC [a,b,c,d,e] = (e,(d,(c,(b,(a,())))))
-  inductListC _ = error $ "inductListC: expected 5 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 5 values"
 instance InductListC 6 a where
   type InductListP 6 a = (a,(a,(a,(a,(a,(a,()))))))
   inductListC [a,b,c,d,e,f] = (f,(e,(d,(c,(b,(a,()))))))
-  inductListC _ = error $ "inductListC: expected 6 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 6 values"
 instance InductListC 7 a where
   type InductListP 7 a = (a,(a,(a,(a,(a,(a,(a,())))))))
   inductListC [a,b,c,d,e,f,g] = (g,(f,(e,(d,(c,(b,(a,())))))))
-  inductListC _ = error $ "inductListC: expected 7 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 7 values"
 instance InductListC 8 a where
   type InductListP 8 a = (a,(a,(a,(a,(a,(a,(a,(a,()))))))))
   inductListC [a,b,c,d,e,f,g,h] = (h,(g,(f,(e,(d,(c,(b,(a,()))))))))
-  inductListC _ = error $ "inductListC: expected 8 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 8 values"
 instance InductListC 9 a where
   type InductListP 9 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,())))))))))
   inductListC [a,b,c,d,e,f,g,h,i] = (i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))
-  inductListC _ = error $ "inductListC: expected 9 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 9 values"
 instance InductListC 10 a where
   type InductListP 10 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,()))))))))))
   inductListC [a,b,c,d,e,f,g,h,i,j] = (j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))
-  inductListC _ = error $ "inductListC: expected 10 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 10 values"
 instance InductListC 11 a where
   type InductListP 11 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,())))))))))))
   inductListC [a,b,c,d,e,f,g,h,i,j,k] = (k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))))
-  inductListC _ = error $ "inductListC: expected 11 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 11 values"
 instance InductListC 12 a where
   type InductListP 12 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,()))))))))))))
   inductListC [a,b,c,d,e,f,g,h,i,j,k,l] = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
-  inductListC _ = error $ "inductListC: expected 12 values"
+  inductListC _ = errorInProgram $ "inductListC: expected 12 values"
 
 -- partially apply the 2nd arg to an ADT -- $ and & work with functions only
 -- doesnt apply more than once because we need to eval it
@@ -1175,9 +1172,12 @@ instance MonadEval IO where
   catchitNF v = E.evaluate (Right $!! v) `E.catch` (\(E.SomeException e) -> pure $ Left ("IO e=" <> show e))
   liftEval = id
 
--- | strip ansi characters from a string
+-- | strip ansi characters from a string and print it (for doctests)
 removeAnsi :: Show a => Either String a -> IO ()
-removeAnsi =
+removeAnsi = putStrLn . removeAnsiImpl
+
+removeAnsiImpl :: Show a => Either String a -> String
+removeAnsiImpl =
   \case
      Left e -> let esc = '\x1b'
                    f :: String -> Maybe (String, String)
@@ -1187,6 +1187,8 @@ removeAnsi =
                                                   (_,'m':s) -> Just ("",s)
                                                   _ -> Nothing
                                | otherwise -> Just $ break (==esc) (c:cs)
-               in putStrLn $ concat $ unfoldr f e
-     Right a -> print a
+               in concat $ unfoldr f e
+     Right a -> show a
 
+errorInProgram :: String -> x
+errorInProgram s = error $ "programmer error:" <> s

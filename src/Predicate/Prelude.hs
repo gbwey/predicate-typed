@@ -635,8 +635,8 @@ instance (Ord (PP p x)
 
 -- | similar to 'all'
 --
--- >>> pl @(All Even Id) [1,5,11,5,3]
--- False (All i=0 (1 == 0) 5 false)
+-- >>> pl @(All (Between 1 8) Id) [7,3,4,1,2,9,0,1]
+-- False (All(8) i=5 (9 <= 8))
 -- FalseT
 --
 -- >>> pz @(All Odd Id) [1,5,11,5,3]
@@ -648,7 +648,7 @@ instance (Ord (PP p x)
 -- TrueT
 --
 -- >>> pe @(All Even Id) [1,5,11,5,3]
--- False All i=0 (1 == 0) 5 false
+-- False All(5) i=0 (1 == 0)
 -- |
 -- +- P Id [1,5,11,5,3]
 -- |
@@ -725,12 +725,13 @@ instance (P p a
             ts <- zipWithM (\i a -> ((i, a),) <$> evalBool (Proxy @p) opts a) [0::Int ..] (toList q)
             pure $ case splitAndAlign opts [msg0] ts of
                  Left e -> e
-                 Right (vals, ixtts) ->
+                 Right abcs ->
                    let hhs = hh qq : map (hh . fixit) ts
-                   in case filter (not . snd) (zip [0..] vals) of
-                        [] -> mkNodeB opts True [msg0 ++ "(" ++ show (length q) ++ ")"] hhs
-                        (i,_):fs -> let (_,tt) = ixtts !! i
-                                    in mkNodeB opts False [msg0 <> " i=" ++ showIndex i ++ " " <> topMessage tt ++ " " ++ show (length fs+1) ++ " false"] hhs
+                       msg1 = msg0 ++ "(" ++ show (length q) ++ ")"
+                   in case find (not . view _1) abcs of
+                        Nothing -> mkNodeB opts True [msg1] hhs
+                        Just (_,(i,_),tt) ->
+                          mkNodeB opts False [msg1 <> " i=" ++ showIndex i ++ " " <> topMessage tt] hhs
 
 chkSize :: Foldable t => POpts -> String -> t a -> [Holder] -> Either (TT x) ()
 chkSize opts msg0 xs hhs =
@@ -742,12 +743,12 @@ showIndex :: (Show i, Num i) => i -> String
 showIndex i = show (i+0)
 -- | similar to 'any'
 --
--- >>> pz @(Any Even Id) [1,5,11,5,3]
--- False
+-- >>> pl @(Any Even Id) [1,5,11,5,3]
+-- False (Any(5))
 -- FalseT
 --
--- >>> pz @(Any Even Id) [1,5,112,5,3]
--- True
+-- >>> pl @(Any Even Id) [1,5,112,5,3]
+-- True (Any(5) i=2 (0 == 0))
 -- TrueT
 --
 -- >>> pz @(Any Even Id) []
@@ -776,12 +777,13 @@ instance (P p a
             ts <- zipWithM (\i a -> ((i, a),) <$> evalBool (Proxy @p) opts a) [0::Int ..] (toList q)
             pure $ case splitAndAlign opts [msg0] ts of
                  Left e -> e
-                 Right (vals, ixtts) ->
+                 Right abcs ->
                    let hhs = hh qq : map (hh . fixit) ts
-                   in case filter snd (zip [0..] vals) of
-                        [] -> mkNodeB opts False [msg0 ++ "(" ++ show (length q) ++ ")"] hhs
-                        (i,_):fs -> let (_,tt) = ixtts !! i
-                                    in mkNodeB opts True [msg0 <> " i=" ++ showIndex i ++ " " <> topMessage tt ++ " " ++ show (length fs+1) ++ " false"] hhs
+                       msg1 = msg0 ++ "(" ++ show (length q) ++ ")"
+                   in case find (view _1) abcs of
+                        Nothing -> mkNodeB opts False [msg1] hhs
+                        Just (_,(i,_),tt) ->
+                          mkNodeB opts True [msg1 <> " i=" ++ showIndex i ++ " " <> topMessage tt] hhs
 
 
 -- | a type level predicate for all positive elements in a list
@@ -1306,8 +1308,11 @@ instance ( PP p x ~ [a]
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let d = map (:[]) p
-        in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
+        case chkSize opts msg0 p [hh pp] of
+          Left e -> e
+          Right () ->
+            let d = map (:[]) p
+            in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
 -- | similar to 'show'
 --
@@ -1719,7 +1724,7 @@ instance (P p (a,a)
                                      (hh pp : [hh lhs | length ll > 1] ++ [hh rhs | length rr > 1])
         ret <- ff as
         pure $ case getValueLR opts msg0 ret [hh qq] of
-          Left _e -> ret -- dont rewrap the error
+          Left _e -> ret -- dont rewrap else will double up messages: already handled
           Right xs -> mkNode opts (_tBool ret) [msg0 <> show0 opts " " xs] [hh qq, hh ret]
 
 -- | similar to 'length'
@@ -1905,7 +1910,7 @@ class ExtractL3C tp where
   extractL3C :: tp -> ExtractL3T tp
 instance ExtractL3C (a,b) where
   type ExtractL3T (a,b) = GL.TypeError ('GL.Text "Thd doesn't work for 2-tuples")
-  extractL3C _ = error "Thd doesn't work for 2-tuples"
+  extractL3C _ = errorInProgram "Thd doesn't work for 2-tuples"
 instance ExtractL3C (a,b,c) where
   type ExtractL3T (a,b,c) = c
   extractL3C (_,_,c) = c
@@ -1951,10 +1956,10 @@ class ExtractL4C tp where
   extractL4C :: tp -> ExtractL4T tp
 instance ExtractL4C (a,b) where
   type ExtractL4T (a,b) = GL.TypeError ('GL.Text "L4 doesn't work for 2-tuples")
-  extractL4C _ = error "L4 doesn't work for 2-tuples"
+  extractL4C _ = errorInProgram "L4 doesn't work for 2-tuples"
 instance ExtractL4C (a,b,c) where
   type ExtractL4T (a,b,c) = GL.TypeError ('GL.Text "L4 doesn't work for 3-tuples")
-  extractL4C _ = error "L4 doesn't work for 3-tuples"
+  extractL4C _ = errorInProgram "L4 doesn't work for 3-tuples"
 instance ExtractL4C (a,b,c,d) where
   type ExtractL4T (a,b,c,d) = d
   extractL4C (_,_,_,d) = d
@@ -1993,13 +1998,13 @@ class ExtractL5C tp where
   extractL5C :: tp -> ExtractL5T tp
 instance ExtractL5C (a,b) where
   type ExtractL5T (a,b) = GL.TypeError ('GL.Text "L5 doesn't work for 2-tuples")
-  extractL5C _ = error "L5 doesn't work for 2-tuples"
+  extractL5C _ = errorInProgram "L5 doesn't work for 2-tuples"
 instance ExtractL5C (a,b,c) where
   type ExtractL5T (a,b,c) = GL.TypeError ('GL.Text "L5 doesn't work for 3-tuples")
-  extractL5C _ = error "L5 doesn't work for 3-tuples"
+  extractL5C _ = errorInProgram "L5 doesn't work for 3-tuples"
 instance ExtractL5C (a,b,c,d) where
   type ExtractL5T (a,b,c,d) = GL.TypeError ('GL.Text "L5 doesn't work for 4-tuples")
-  extractL5C _ = error "L5 doesn't work for 4-tuples"
+  extractL5C _ = errorInProgram "L5 doesn't work for 4-tuples"
 instance ExtractL5C (a,b,c,d,e) where
   type ExtractL5T (a,b,c,d,e) = e
   extractL5C (_,_,_,_,e) = e
@@ -2036,16 +2041,16 @@ class ExtractL6C tp where
   extractL6C :: tp -> ExtractL6T tp
 instance ExtractL6C (a,b) where
   type ExtractL6T (a,b) = GL.TypeError ('GL.Text "L6 doesn't work for 2-tuples")
-  extractL6C _ = error "L6 doesn't work for 2-tuples"
+  extractL6C _ = errorInProgram "L6 doesn't work for 2-tuples"
 instance ExtractL6C (a,b,c) where
   type ExtractL6T (a,b,c) = GL.TypeError ('GL.Text "L6 doesn't work for 3-tuples")
-  extractL6C _ = error "L6 doesn't work for 3-tuples"
+  extractL6C _ = errorInProgram "L6 doesn't work for 3-tuples"
 instance ExtractL6C (a,b,c,d) where
   type ExtractL6T (a,b,c,d) = GL.TypeError ('GL.Text "L6 doesn't work for 4-tuples")
-  extractL6C _ = error "L6 doesn't work for 4-tuples"
+  extractL6C _ = errorInProgram "L6 doesn't work for 4-tuples"
 instance ExtractL6C (a,b,c,d,e) where
   type ExtractL6T (a,b,c,d,e) = GL.TypeError ('GL.Text "L6 doesn't work for 5-tuples")
-  extractL6C _ = error "L6 doesn't work for 5-tuples"
+  extractL6C _ = errorInProgram "L6 doesn't work for 5-tuples"
 instance ExtractL6C (a,b,c,d,e,f) where
   type ExtractL6T (a,b,c,d,e,f) = f
   extractL6C (_,_,_,_,_,f) = f
@@ -4690,24 +4695,29 @@ instance (PP p (b,a) ~ b
     case lr of
       Left e -> pure e
       Right (q,r,qq,rr) -> do
-        let msg1 = msg0  -- <> show0 opts " " q <> show0 opts " " r
-            ff i b as' rs
-               | i >= _MX = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) [msg1 <> " i=" <> showIndex i <> " (b,as')=" <> show (b,as')] [])
-               | otherwise =
-                   case as' of
-                     [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (PresentT q) [msg1 <> "(done)"] [])], Right ())
-                     a:as -> do
-                        pp :: TT b <- eval (Proxy @p) opts (b,a)
-                        case getValueLR opts (msg1 <> " i=" <> showIndex i <> " a=" <> show a) pp [] of
-                           Left e  -> pure (rs,Left e)
-                           Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
-        (ts,lrx) :: ([((Int, b), TT b)], Either (TT [b]) ()) <- ff 1 q r []
-        pure $ case splitAndAlign opts [msg1] (((0,q), mkNode opts (PresentT q) [msg1 <> "(initial)"] []) : ts) of
-             Left _e -> error "cant happen!"
-             Right (vals,itts) ->
-               case lrx of
-                 Left e -> mkNode opts (_tBool e) [msg1] (hh qq : hh rr : map (hh . fixit) itts ++ [hh e])
-                 Right () -> mkNode opts (PresentT vals) [show01' opts msg1 vals "b=" q <> show1 opts " | as=" r] (hh qq : hh rr : map (hh . fixit) itts)
+        case chkSize opts msg0 r [hh rr] of
+          Left e -> pure e
+          Right () -> do
+            let msg1 = msg0  -- <> show0 opts " " q <> show0 opts " " r
+                ff i b as' rs
+                   | i >= _MX = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) [msg1 <> " i=" <> showIndex i <> " (b,as')=" <> show (b,as')] [])
+                   | otherwise =
+                       case as' of
+                         [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (PresentT q) [msg1 <> "(done)"] [])], Right ())
+                         a:as -> do
+                            pp :: TT b <- eval (Proxy @p) opts (b,a)
+                            case getValueLR opts (msg1 <> " i=" <> showIndex i <> " a=" <> show a) pp [] of
+                               Left e  -> pure (rs,Left e)
+                               Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
+            (ts,lrx) :: ([((Int, b), TT b)], Either (TT [b]) ()) <- ff 1 q r []
+            pure $ case splitAndAlign opts [msg1] (((0,q), mkNode opts (PresentT q) [msg1 <> "(initial)"] []) : ts) of
+                 Left _e -> errorInProgram "Scanl"
+                 Right abcs ->
+                   let vals = map (view _1) abcs
+                       itts = map (view _2 &&& view _3) abcs
+                   in case lrx of
+                        Left e -> mkNode opts (_tBool e) [msg1] (hh qq : hh rr : map (hh . fixit) itts ++ [hh e])
+                        Right () -> mkNode opts (PresentT vals) [show01' opts msg1 vals "b=" q <> show1 opts " | as=" r] (hh qq : hh rr : map (hh . fixit) itts)
 
 type family UnfoldT mbs where
   UnfoldT (Maybe (b,s)) = b
@@ -4755,13 +4765,15 @@ instance (PP q a ~ s
                                    Right w@(Just (_b,s')) -> ff (i+1) s' (rs ++ [((i,w), pp)])
         (ts,lr) :: ([((Int, PP p s), TT (PP p s))], Either (TT [b]) ()) <- ff 1 q []
         pure $ case splitAndAlign opts [msg1] ts of
-             Left _e -> error "cant happen"
-             Right (vals, itts) ->
-               case lr of
-                 Left e -> mkNode opts (_tBool e) [msg1] (hh qq : map (hh . fixit) itts ++ [hh e])
-                 Right () ->
-                   let ret = fst <$> catMaybes vals
-                   in mkNode opts (PresentT ret) [show01' opts msg1 ret "s=" q ] (hh qq : map (hh . fixit) itts)
+             Left _e -> errorInProgram "Unfoldr"
+             Right abcs ->
+               let vals = map (view _1) abcs
+                   itts = map (view _2 &&& view _3) abcs
+               in case lr of
+                   Left e -> mkNode opts (_tBool e) [msg1] (hh qq : map (hh . fixit) itts ++ [hh e])
+                   Right () ->
+                     let ret = fst <$> catMaybes vals
+                     in mkNode opts (PresentT ret) [show01' opts msg1 ret "s=" q ] (hh qq : map (hh . fixit) itts)
 
 -- | similar to 'map'
 --
@@ -4790,7 +4802,9 @@ instance (Show (PP p a)
         ts <- zipWithM (\i a -> ((i, a),) <$> eval (Proxy @p) opts a) [0::Int ..] (toList q)
         pure $ case splitAndAlign opts [msg0] ts of
              Left e -> e
-             Right (vals, _) -> mkNode opts (PresentT vals) [show01 opts msg0 vals q] (hh qq : map (hh . fixit) ts)
+             Right abcs ->
+               let vals = map (view _1) abcs
+               in mkNode opts (PresentT vals) [show01 opts msg0 vals q] (hh qq : map (hh . fixit) ts)
 
 -- | if p then run q else run r
 --
@@ -4893,10 +4907,11 @@ instance (P p x
              ts <- zipWithM (\i a -> ((i, a),) <$> evalBool (Proxy @p) opts a) [0::Int ..] q
              pure $ case splitAndAlign opts [msg0] ts of
                Left e -> e
-               Right (vals, tfs) ->
-                 let w0 = partition fst $ zip vals tfs
-                     zz1 = (map (snd . fst . snd) *** map (snd . fst . snd)) w0
-                 in mkNode opts (PresentT zz1) [show01' opts msg0 zz1 "s=" q] (hh qq : map (hh . fixit) tfs)
+               Right abcs ->
+                 let itts = map (view _2 &&& view _3) abcs
+                     w0 = partition (view _1) abcs
+                     zz1 = (map (view (_2 . _2)) *** map (view (_2 . _2))) w0
+                 in mkNode opts (PresentT zz1) [show01' opts msg0 zz1 "s=" q] (hh qq : map (hh . fixit) itts)
 
 
 -- | similar to 'break'
@@ -4928,7 +4943,7 @@ instance (P p x
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
-            let ff [] zs = pure (zs, [], Nothing) -- [(ia,qq)] extras | the rest of the data | optional last pivot or error
+            let ff [] zs = pure (zs, [], Nothing) -- [(ia,qq)] extras | the rest of the data | optional last pivot or failure
                 ff ((i,a):ias) zs = do
                    pp <- evalBool (Proxy @p) opts a
                    let v = ((i,a), pp)
@@ -4936,7 +4951,7 @@ instance (P p x
                      Right False -> ff ias (zs Seq.|> v)
                      Right True -> pure (zs,map snd ias,Just v)
                      Left _ -> pure (zs,map snd ias,Just v)
-            (ialls,rhs,mpivot) <- ff (zip [0::Int ..] q) Seq.empty
+            (ialls,rhs,mpivot) <- ff (itoList q) Seq.empty
             pure $ case mpivot of
                  Nothing ->
                    mkNode opts (PresentT (map (snd . fst) (toList ialls), rhs))
@@ -4949,7 +4964,7 @@ instance (P p x
                                ([msg0] <> ["cnt=" <> show (length ialls, 1+length rhs)])
                                (hh qq : hh tt : map (hh . fixit) (toList (ialls Seq.|> iall)))
 
-                     Right False -> error "shouldnt happen"
+                     Right False -> errorInProgram "Break"
                      Left e -> e
 
 -- | Fails the computation with a message
@@ -5261,7 +5276,7 @@ instance (KnownNat n
   eval _ opts as =
     let msg0 = "Guards" <> "(" <> show n <> ")"
         n :: Int = nat @n
-    in if not (null as) then error $ "programmer error: GuardsImpl base case has extra data " ++ show as
+    in if not (null as) then errorInProgram $ "GuardsImpl base case has extra data " ++ show as
        else pure $ mkNode opts (PresentT as) [msg0 <> " done!"] []
 
 instance (PP prt (Int, a) ~ String
@@ -5282,20 +5297,20 @@ instance (PP prt (Int, a) ~ String
          pos = getLen @ps
      case as' of
          a:as -> do
-                    pp <- evalBool (Proxy @p) opts a
-                    case getValueLR opts (msgbase1 <> " p failed") pp [] of
-                         Left e -> pure e
-                         Right False -> do
-                           qq <- eval (Proxy @prt) opts (n-pos,a) -- only run prt when predicate is False
-                           pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
-                              Left e -> e
-                              Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
-                         Right True -> do
-                           ss <- eval (Proxy @(GuardsImpl n ps)) opts as
-                           pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
-                             Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                             Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
-         _ -> error $ "programmer error: GuardsImpl n+1 case has no data"
+            pp <- evalBool (Proxy @p) opts a
+            case getValueLR opts (msgbase1 <> " p failed") pp [] of
+                 Left e -> pure e
+                 Right False -> do
+                   qq <- eval (Proxy @prt) opts (n-pos,a) -- only run prt when predicate is False
+                   pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+                      Left e -> e
+                      Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
+                 Right True -> do
+                   ss <- eval (Proxy @(GuardsImpl n ps)) opts as
+                   pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
+                     Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
+                     Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
+         _ -> errorInProgram $ "GuardsImpl n+1 case has no data"
 
 -- | boolean guard which checks a given a list of predicates against the list of values
 --
@@ -5334,12 +5349,15 @@ instance (GetLen ps
         ) => P (Bools ps) [a] where
   type PP (Bools ps) [a] = Bool
   eval _ opts as = do
-    let msgbase0 = "Bools("++show n++")"
+    let msg0 = "Bools("++show n++")"
         n = getLen @ps
-    if n /= length as then
-       let xx = msgbase0 <> ": data elements(" <> show (length as) <> ") /= predicates(" <> show n <> ")"
-       in pure $ mkNode opts (FailT xx) [xx] []
-    else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts as
+    case chkSize opts msg0 as [] of
+      Left e -> pure e
+      Right () -> do
+        if n /= length as then
+           let msg1 = msg0 <> ": data elements(" <> show (length as) <> ") /= predicates(" <> show n <> ")"
+           in pure $ mkNode opts (FailT msg1) [msg1] []
+        else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts as
 
 data BoolsImpl (n :: Nat) (os :: [(k,k1)])
 
@@ -5350,7 +5368,7 @@ instance (KnownNat n
   eval _ opts as =
     let msg0 = "Bools" <> "(" <> show n <> ")"
         n :: Int = nat @n
-    in if not (null as) then error $ "programmer error: BoolsImpl base case has extra data " ++ show as
+    in if not (null as) then errorInProgram $ "BoolsImpl base case has extra data " ++ show as
        else pure $ mkNodeB opts True [msg0 <> " done!"] []
 
 instance (PP prt (Int, a) ~ String
@@ -5386,7 +5404,7 @@ instance (PP prt (Int, a) ~ String
                              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
                              Right True -> mkNodeB opts True [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
                              Right False -> ss & tForest %~ \x -> fromTT pp : x
-         _ -> error $ "programmer error: BoolsImpl n+1 case has no data"
+         _ -> errorInProgram $ "BoolsImpl n+1 case has no data"
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
@@ -5455,7 +5473,7 @@ instance (KnownNat n
   eval _ opts as =
     let msg0 = "Guards" <> "(" <> show n <> ")"
         n :: Int = nat @n
-    in if not (null as) then error $ "programmer error: GuardsImplX base case has extra data " ++ show as
+    in if not (null as) then errorInProgram $ "GuardsImplX base case has extra data " ++ show as
        else pure $ mkNode opts (PresentT as) [msg0 <> " done!"] []
 
 instance (PP prt a ~ String
@@ -5477,20 +5495,20 @@ instance (PP prt a ~ String
          pos = getLen @ps
      case as' of
          a:as -> do
-                    pp <- evalBool (Proxy @p) opts a
-                    case getValueLR opts (msgbase1 <> " p failed") pp [] of
-                         Left e -> pure e
-                         Right False -> do
-                           qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
-                           pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
-                              Left e -> e
-                              Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
-                         Right True -> do
-                           ss <- eval (Proxy @(GuardsImplX n ps)) opts as
-                           pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
-                             Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                             Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
-         _ -> error $ "programmer error: GuardsImplX n+1 case has no data"
+            pp <- evalBool (Proxy @p) opts a
+            case getValueLR opts (msgbase1 <> " p failed") pp [] of
+                 Left e -> pure e
+                 Right False -> do
+                   qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
+                   pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+                      Left e -> e
+                      Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
+                 Right True -> do
+                   ss <- eval (Proxy @(GuardsImplX n ps)) opts as
+                   pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
+                     Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
+                     Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
+         _ -> errorInProgram $ "GuardsImplX n+1 case has no data"
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
@@ -5555,7 +5573,7 @@ instance (Show a
 
 -- | similar to 'Guard' but uses the root message of the False predicate case as the failure message
 --
--- most uses of GuardSimple can be replaced by using 'ol' and a boolean predicate unless you require failure on error
+-- most uses of GuardSimple can be replaced by using 'ol' and a boolean predicate unless you require failure
 --
 -- >>> pz @(GuardSimple (Luhn Id)) [1..4]
 -- Error (Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])
@@ -5593,7 +5611,7 @@ instance (Show a
 
 
 -- | just run the effect but skip the value
--- for example for use with Stdout so it doesnt interfere with the \'a\' on the rhs unless there is an error
+-- for example for use with Stdout so it doesnt interfere with the \'a\' on the rhs unless there is an failure
 data Skip p
 type p |> q = Skip p >> q
 infixr 1 |>
@@ -6202,8 +6220,9 @@ data Char1 (s :: Symbol)  -- gets the first char from the Symbol [requires that 
 instance (KnownSymbol s, NullT s ~ 'False) => P (Char1 s) a where
   type PP (Char1 s) a = Char
   eval _ opts _ =
-     let c = head $ symb @s
-     in pure $ mkNode opts (PresentT c) ["Char1" <> show0 opts " " c] []
+     case symb @s of
+       [] -> errorInProgram "Char1: found empty Symbol/string"
+       c:_ -> pure $ mkNode opts (PresentT c) ["Char1" <> show0 opts " " c] []
 
 -- | similar to 'Data.Align.align' thats pads with 'Data.These.This' or 'Data.These.That' if one list is shorter than the other
 --
@@ -6245,8 +6264,12 @@ instance (PP p a ~ [x]
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
-        let d = simpleAlign p q
-        in mkNode opts (PresentT d) [show01' opts msg0 d "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
+        let hhs = [hh pp, hh qq]
+        in case chkSize opts msg0 p hhs <* chkSize opts msg0 q hhs of
+          Left e -> e
+          Right () ->
+            let d = simpleAlign p q
+            in mkNode opts (PresentT d) [show01' opts msg0 d "p=" p <> show1 opts " | q=" q] hhs
 
 simpleAlign :: [a] -> [b] -> [These a b]
 simpleAlign as [] = map This as
@@ -6260,7 +6283,7 @@ type family ExtractAFromTA (ta :: Type) :: Type where
       ':$$: 'GL.Text "t a = "
       ':<>: 'GL.ShowType z)
 
--- todo: get ExtractAFromList error to fire if wrong Type
+-- todo: get ExtractAFromList failure to fire if wrong Type
 -- | extract \'a\' from \'[a]\' which I need for type PP
 type family ExtractAFromList (as :: Type) :: Type where
   ExtractAFromList [a] = a
@@ -6572,7 +6595,7 @@ getValidBase :: Int -> String
 getValidBase n =
   let xs = ['0'..'9'] <> ['a'..'z']
       len = length xs
-  in if n > len || n < 2 then error $ "oops invalid base valid is 2 thru " ++ show len ++ " found " ++ show n
+  in if n > len || n < 2 then errorInProgram $ "getValidBase: oops invalid base valid is 2 thru " ++ show len ++ " found " ++ show n
      else take n xs
 
 -- | Display a number at base 2 to 36, similar to 'showIntAtBase' but supports signed numbers
@@ -6645,8 +6668,12 @@ instance (PP p x ~ [a]
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
-        let d = intercalate p (map (:[]) q)
-        in mkNode opts (PresentT d) [show01 opts msg0 d p <> show1 opts " | " q] [hh pp, hh qq]
+        let hhs = [hh pp, hh qq]
+        in case chkSize opts msg0 p hhs <* chkSize opts msg0 q hhs of
+          Left e -> e
+          Right () ->
+            let d = intercalate p (map (:[]) q)
+            in mkNode opts (PresentT d) [show01 opts msg0 d p <> show1 opts " | " q] hhs
 
 -- | uses PrintF to format output
 --
@@ -6725,7 +6752,7 @@ instance (GetLen ps, P (ParaImpl (LenT ps) ps) [a]) => P (Para ps) [a] where
 instance GL.TypeError ('GL.Text "ParaImpl '[] invalid: requires at least one value in the list")
    => P (ParaImpl n ('[] :: [k])) [a] where
   type PP (ParaImpl n ('[] :: [k])) [a] = Void
-  eval _ _ _ = error "should not be called and yet..."
+  eval _ _ _ = errorInProgram "ParaImpl empty list"
 
 instance (Show (PP p a)
         , KnownNat n
@@ -6744,9 +6771,9 @@ instance (Show (PP p a)
         pure $ case getValueLR opts msgbase1 pp [] of
           Left e -> e
           -- show1 opts " " [b]  fails but using 'b' is ok and (b : []) also works!
-          -- GE.List error
+          -- GE.List problem
           Right b -> mkNode opts (PresentT [b]) [msgbase1 <> show0 opts " " (b : []) <> show1 opts " | " a] [hh pp]
-      _ -> error $ "programmer error: ParaImpl base case should have exactly one element but found " ++ show as'
+      _ -> errorInProgram $ "ParaImpl base case should have exactly one element but found " ++ show as'
 
 instance (KnownNat n
         , GetLen ps
@@ -6775,7 +6802,7 @@ instance (KnownNat n
                         pure $ case getValueLRHide opts (msgbase1 <> " rhs failed " <> show b) qq [hh pp] of
                           Left e -> e
                           Right bs -> mkNode opts (PresentT (b:bs)) [msgbase1 <> show0 opts " " (b:bs) <> show1 opts " | " as'] [hh pp, hh qq]
-       _ -> error $ "programmer error: ParaImpl n+1 case has no data left"
+       _ -> errorInProgram $ "ParaImpl n+1 case has no data left"
 
 -- | leverages 'Para' for repeating predicates (passthrough method)
 --
@@ -6844,17 +6871,17 @@ instance (FailUnlessT (LenT ps DE.== LenT qs)
 instance (GL.TypeError ('GL.Text "CaseImpl '[] invalid: lhs requires at least one value in the list"))
    => P (CaseImpl n e ('[] :: [k]) (q ': qs) r) x where
   type PP (CaseImpl n e ('[] :: [k]) (q ': qs) r) x = Void
-  eval _ _ _ = error "should not be called and yet..."
+  eval _ _ _ = errorInProgram "CaseImpl lhs empty"
 
 instance (GL.TypeError ('GL.Text "CaseImpl '[] invalid: rhs requires at least one value in the list"))
    => P (CaseImpl n e (p ': ps) ('[] :: [k1]) r) x where
   type PP (CaseImpl n e (p ': ps) ('[] :: [k1]) r) x = Void
-  eval _ _ _ = error "should not be called and yet..."
+  eval _ _ _ = errorInProgram "CaseImpl rhs empty"
 
 instance (GL.TypeError ('GL.Text "CaseImpl '[] invalid: lists are both empty"))
    => P (CaseImpl n e ('[] :: [k]) ('[] :: [k1]) r) x where
   type PP (CaseImpl n e ('[] :: [k]) ('[] :: [k1]) r) x = Void
-  eval _ _ _ = error "should not be called and yet..."
+  eval _ _ _ = errorInProgram "CaseImpl both lists empty"
 
 instance (P r x
         , P q (PP r x)
@@ -7961,7 +7988,7 @@ instance ( PP q x ~ Either a b
               Right p -> mkNode opts (PresentT p) [msg0 <> " Left"] [hh qq, hh pp]
 
 
--- | extract the Left value from an 'Either' otherwise fail with an error message
+-- | extract the Left value from an 'Either' otherwise fail with a message
 --
 -- if there is no Left value then \p\ is passed the Right value and the whole context
 --
@@ -8004,7 +8031,7 @@ instance ( PP p (b,x) ~ String
               Right p -> mkNode opts (FailT p) [msg0 <> " Right"] [hh qq, hh pp]
 
 
--- | extract the Right value from an 'Either' otherwise fail with an error message
+-- | extract the Right value from an 'Either' otherwise fail with a message
 --
 -- if there is no Right value then \p\ is passed the Left value and the whole context
 --
@@ -8221,7 +8248,7 @@ instance ( PP q x ~ These a b
               Right p -> mkNode opts (PresentT p) [msg0 <> " " <> getTheseType q] [hh qq, hh pp]
 
 
--- | extract the This value from a 'These' otherwise fail with an error message
+-- | extract the This value from a 'These' otherwise fail with a message
 --
 -- if there is no This value then \p\ is passed the whole context only
 --
@@ -8264,7 +8291,7 @@ instance ( PP p x ~ String
               Right p -> mkNode opts (FailT p) [msg0 <> " " <> getTheseType q] [hh qq, hh pp]
 
 
--- | extract the That value from a 'These' otherwise fail with an error message
+-- | extract the That value from a 'These' otherwise fail with a message
 --
 -- if there is no That value then \p\ is passed the whole context only
 --
@@ -8309,7 +8336,7 @@ instance ( PP p x ~ String
 
 
 
--- | extract the These value from a 'These' otherwise fail with an error message
+-- | extract the These value from a 'These' otherwise fail with a message
 --
 -- if there is no These value then \p\ is passed the whole context only
 --

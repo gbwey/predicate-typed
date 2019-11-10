@@ -149,7 +149,7 @@ instance (RefinedC p a, Read a) => Read (Refined p a) where
                              "unRefined"
                              (PCR.reset GR.readPrec)
                GR.expectP (RL.Punc "}")
-               let (_,mr) = runIdentity $ newRefined @p oz fld0 -- since we cant display the error message ...
+               let (_,mr) = runIdentity $ newRefined @p oz fld0 -- since we cant display the failure message ...
                case mr of
                  Nothing -> fail ""
                  Just _r -> pure (Refined fld0)

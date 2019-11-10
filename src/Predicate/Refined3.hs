@@ -229,7 +229,7 @@ instance ( Eq i
                    Nothing -> fail ""
                    Just (Refined3 _r1 r2)
                      | r2 == fld2 -> pure (Refined3 fld1 fld2)
-                     | otherwise -> fail "" -- cant display a decent error message
+                     | otherwise -> fail "" -- cant display a decent failure message
              ))
     readList = GR.readListDefault
     readListPrec = GR.readListPrecDefault
@@ -657,19 +657,19 @@ eval3M :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
   -> i
   -> m (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
 eval3M opts i = do
-  ll@(fromTT -> t1) <- eval (Proxy @ip) opts i
-  case getValLR (_tBool ll) of
-       Right a -> do
-         rr@(fromTT -> t2) <- evalBool (Proxy @op) opts a
-         case getValLR (_tBool rr) of
-              Right True -> do
-                ss@(fromTT -> t3) <- eval (Proxy @fmt) opts a
-                pure $ case getValLR (_tBool ss) of
-                     Right b -> (RTTrueT a t1 t2 b t3, Just (Refined3 a b))
-                     Left e -> (RTTrueF a t1 t2 e t3, Nothing)
-              Right False -> pure (RTFalse a t1 t2, Nothing)
-              Left e -> pure (RTF a t1 e t2, Nothing)
-       Left e -> pure (RF e t1, Nothing)
+  ll <- eval (Proxy @ip) opts i
+  case getValAndPE ll of
+   (Right a, t1) -> do
+     rr <- evalBool (Proxy @op) opts a
+     case getValAndPE rr of
+      (Right True,t2) -> do
+        ss <- eval (Proxy @fmt) opts a
+        pure $ case getValAndPE ss of
+         (Right b,t3) -> (RTTrueT a t1 t2 b t3, Just (Refined3 a b))
+         (Left e,t3) -> (RTTrueF a t1 t2 e t3, Nothing)
+      (Right False,t2) -> pure (RTFalse a t1 t2, Nothing)
+      (Left e,t2) -> pure (RTF a t1 e t2, Nothing)
+   (Left e,t1) -> pure (RF e t1, Nothing)
 
 -- | creates Refined3 value but skips the initial conversion
 eval3MSkip :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
@@ -677,15 +677,15 @@ eval3MSkip :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
    -> PP ip i
    -> m (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
 eval3MSkip opts a = do
-   rr@(fromTT -> t2) <- evalBool (Proxy @op) opts a
-   case getValLR (_tBool rr) of
-        Right True -> do
-          ss@(fromTT -> t3) <- eval (Proxy @fmt) opts a
-          pure $ case getValLR (_tBool ss) of
-               Right b -> (RTTrueT a mkNodeSkipP t2 b t3, Just (Refined3 a b))
-               Left e -> (RTTrueF a mkNodeSkipP t2 e t3, Nothing)
-        Right False -> pure (RTFalse a mkNodeSkipP t2, Nothing)
-        Left e -> pure (RTF a mkNodeSkipP e t2, Nothing)
+   rr <- evalBool (Proxy @op) opts a
+   case getValAndPE rr of
+    (Right True,t2) -> do
+      ss <- eval (Proxy @fmt) opts a
+      pure $ case getValAndPE ss of
+       (Right b,t3) -> (RTTrueT a mkNodeSkipP t2 b t3, Just (Refined3 a b))
+       (Left e,t3) -> (RTTrueF a mkNodeSkipP t2 e t3, Nothing)
+    (Right False,t2) -> pure (RTFalse a mkNodeSkipP t2, Nothing)
+    (Left e,t2) -> pure (RTF a mkNodeSkipP e t2, Nothing)
 
 -- | calculates from internal value
 eval3MQuickIdentity :: forall ip op fmt i . Refined3C ip op fmt i
@@ -700,10 +700,10 @@ eval3MQuick :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
 eval3MQuick a = do
   let opts = oz
   rr <- evalBool (Proxy @op) opts a
-  case getValLR (_tBool rr) of
+  case getValLRFromTT rr of
     Right True -> do
       ss <- eval (Proxy @fmt) opts a
-      pure $ case getValLR (_tBool ss) of
+      pure $ case getValLRFromTT ss of
         Right b -> Just (Refined3 a b)
         _ -> Nothing
     _ -> pure Nothing
@@ -788,19 +788,19 @@ eval3PX :: forall ip op fmt i proxy . Refined3C ip op fmt i
   -> i
   -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
 eval3PX _ opts i = runIdentity $ do
-  ll@(fromTT -> t1) <- eval (Proxy @ip) opts i
-  case getValLR (_tBool ll) of
-       Right a -> do
-         rr@(fromTT -> t2) <- evalBool (Proxy @op) opts a
-         case getValLR (_tBool rr) of
-              Right True -> do
-                ss@(fromTT -> t3) <- eval (Proxy @fmt) opts a
-                pure $ case getValLR (_tBool ss) of
-                     Right b -> (RTTrueT a t1 t2 b t3, Just (unsafeRefined a, b))
-                     Left e -> (RTTrueF a t1 t2 e t3, Nothing)
-              Right False -> pure (RTFalse a t1 t2, Nothing)
-              Left e -> pure (RTF a t1 e t2, Nothing)
-       Left e -> pure (RF e t1, Nothing)
+  ll <- eval (Proxy @ip) opts i
+  case getValAndPE ll of
+    (Right a,t1) -> do
+      rr <- evalBool (Proxy @op) opts a
+      case getValAndPE rr of
+        (Right True,t2) -> do
+          ss <- eval (Proxy @fmt) opts a
+          pure $ case getValAndPE ss of
+            (Right b,t3) -> (RTTrueT a t1 t2 b t3, Just (unsafeRefined a, b))
+            (Left e,t3) -> (RTTrueF a t1 t2 e t3, Nothing)
+        (Right False,t2) -> pure (RTFalse a t1 t2, Nothing)
+        (Left e,t2) -> pure (RTF a t1 e t2, Nothing)
+    (Left e,t1) -> pure (RF e t1, Nothing)
 
 -- | same as 'eval3PX' but allows you to set the parameters individually using type application
 eval3X :: forall ip op fmt i . Refined3C ip op fmt i
