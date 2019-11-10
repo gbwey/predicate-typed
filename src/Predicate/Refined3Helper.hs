@@ -145,7 +145,7 @@ cc11 = mkProxy3'
 -- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 02:57:04"
 -- Right (Refined3 {r3In = 2018-09-14 02:57:04, r3Out = "2018-09-14 02:57:04"})
 --
--- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 99:98:97"
+-- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-99 12:12:12"
 -- Left Step 1. Initial Conversion(ip) Failed | ParseTimeP LocalTime (%F %T) failed to parse
 --
 datetime1 :: Proxy (DateTime1 t)
