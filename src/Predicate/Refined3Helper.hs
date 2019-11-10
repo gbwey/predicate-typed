@@ -15,7 +15,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE TypeApplications #-}
 {- |
      Contains prepackaged 4-tuples to use with 'Refined3'
 -}

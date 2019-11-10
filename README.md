@@ -13,10 +13,13 @@ what this library provides:
 10. database encoders and decoders using odbc(sqlhandler-odbcalt) or hdbc((sqlhandler-odbc)
 11. quickcheck arbitrary methods
 
+To run the examples you will need these settings
+```haskell
 :set -XTypeApplications
 :set -XDataKinds
 :set -XPolyKinds
 :set -XTemplateHaskell
+```
 
 ```haskell
 data Refined p a = Refined a

@@ -19,7 +19,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE DeriveLift #-}
 {- |
