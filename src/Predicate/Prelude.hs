@@ -476,6 +476,9 @@ module Predicate.Prelude (
   , type ($)
   , type (&)
   , Do
+  , type ($$)
+  , Dot
+  , RDot
   , type (>>)
   , type (<<)
   , type (>>>)
@@ -496,6 +499,7 @@ module Predicate.Prelude (
   , type (|>)
   , type (>|)
   , type (>|>)
+  , K
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -5904,6 +5908,23 @@ instance (PP p a ~ String
         in mkNode opts (PresentT d) [msg0 <> " " <> p <> " " <> prettyOrd d <> " " <> q] [hh pp, hh qq]
 
 -- | compare two values using the given ordering \'o\'
+--
+-- >>> pl @(Lt 4) 123
+-- False (123 < 4)
+-- FalseT
+--
+-- >>> pl @(Lt 4) 1
+-- True (1 < 4)
+-- TrueT
+--
+-- >>> pl @(Between (Negate 7) 20) (-4)
+-- True (-7 <= -4 <= 20)
+-- TrueT
+--
+-- >>> pl @(Between (Negate 7) 20) 21
+-- False (21 <= 20)
+-- FalseT
+--
 data Cmp (o :: OrderingP) p q
 
 instance (GetOrd o
@@ -8551,3 +8572,67 @@ instance (Show a
         case p of
           Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) [msg0 <> " found Nothing"] [hh pp]
           Just d -> mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
+
+
+-- | dot
+--
+-- >>>pl @(Dot '[Thd,Snd,Fst] Id) ((1,(2,9,10)),(3,4))
+-- Present 10 (Thd 10 | (2,9,10))
+-- PresentT 10
+--
+data Dot (ps :: [Type -> Type]) (q :: Type)
+instance (P (DotExpandT ps q) a) => P (Dot ps q) a where
+  type PP (Dot ps q) a = PP (DotExpandT ps q) a
+  eval _ = eval (Proxy @(DotExpandT ps q))
+
+type family DotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
+  DotExpandT '[] _ = GL.TypeError ('GL.Text "'[] invalid: requires at least one predicate in the list")
+  DotExpandT '[p] q  = p $$ q
+  DotExpandT (p ': p1 ': ps) q = p $$ DotExpandT (p1 ': ps) q
+
+-- | reversed dot
+--
+-- >>>pl @(RDot '[Fst,Snd,Thd] Id) ((1,(2,9,10)),(3,4))
+-- Present 10 (Thd 10 | (2,9,10))
+-- PresentT 10
+--
+data RDot (ps :: [Type -> Type]) (q :: Type)
+instance (P (RDotExpandT ps q) a) => P (RDot ps q) a where
+  type PP (RDot ps q) a = PP (RDotExpandT ps q) a
+  eval _ = eval (Proxy @(RDotExpandT ps q))
+
+type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
+  RDotExpandT '[] _ = GL.TypeError ('GL.Text "'[] invalid: requires at least one predicate in the list")
+  RDotExpandT '[p] q  = p $$ q
+  RDotExpandT (p ': p1 ': ps) q = RDotExpandT (p1 ': ps) (p $$ q)
+
+-- | like reversed function application for ADTs
+--
+-- >>>pl @(Fst $$ Snd $$ Id) ((1,2),(3,4))
+-- Present 3 (Fst 3 | (3,4))
+-- PresentT 3
+--
+data (p :: Type -> Type) $$ (q :: Type)
+
+instance P (p q) a => P (p $$ q) a where
+  type PP (p $$ q) a = PP (p q) a
+  eval _ opts a = do
+    eval (Proxy @(p q)) opts a
+
+infixr 0 $$
+
+-- | creates a Konstant
+--
+-- >>>pl @(RDot '[Fst,Snd,Thd,K "xxx"] Id) ((1,(2,9,10)),(3,4))
+-- Present "xxx" (K'xxx)
+-- PresentT "xxx"
+--
+-- >>>pl @(RDot '[Fst,Snd,Thd,K '("abc",Id)] Id) ((1,(2,9,10)),(3,4))
+-- Present ("abc",((1,(2,9,10)),(3,4))) (K'(,))
+-- PresentT ("abc",((1,(2,9,10)),(3,4)))
+--
+data K (p :: k) (q :: Type)
+instance P p a => P (K p q) a where
+  type PP (K p q) a = PP p a
+  eval _ = eval (Proxy @(Msg "K" p))
+
