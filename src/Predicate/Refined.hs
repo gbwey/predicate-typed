@@ -20,6 +20,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveLift #-}
+{-# LANGUAGE RoleAnnotations #-}
 {- |
      Simple refinement type with only one type and a predicate
 -}
@@ -129,6 +130,8 @@ import Data.Binary (Binary)
 -- >>> prtRefinedIO @(Snd Id !! Fst Id >> Len <= 5) oz (2,["abc","defghij","xyzxyazsfd"])
 -- Left FalseP
 newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
+
+type role Refined nominal nominal
 
 -- | 'Read' instance for 'Refined'
 --

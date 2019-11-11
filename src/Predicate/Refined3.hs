@@ -21,6 +21,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE DeriveLift #-}
+{-# LANGUAGE RoleAnnotations #-}
 {- |
      Refinement type allowing the external type to differ from the internal type
      see 'Refined3'
@@ -159,6 +160,8 @@ import Data.Char (isSpace)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
 data Refined3 ip op fmt i = Refined3 { r3In :: PP ip i, r3Out :: PP fmt (PP ip i) }
+
+type role Refined3 nominal nominal nominal nominal
 
 -- | directly load values into 'Refined3'. It still checks to see that those values are valid
 unsafeRefined3' :: forall ip op fmt i

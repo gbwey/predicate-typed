@@ -474,15 +474,22 @@ module Predicate.Prelude (
 
   -- ** expression combinators
   , type ($)
-  , type (&)
   , Do
-  , type ($$)
   , Dot
   , RDot
   , type (>>)
   , type (<<)
   , type (>>>)
   , DoN
+  , type ($$)
+  , type ($&)
+  , K
+  , Hide
+  , Hole
+  , Skip
+  , type (|>)
+  , type (>|)
+  , type (>|>)
 
   -- *** parallel expressions
   , Para
@@ -493,13 +500,6 @@ module Predicate.Prelude (
   , Prime
   , Luhn
   , Char1
-  , Hide
-  , Hole
-  , Skip
-  , type (|>)
-  , type (>|)
-  , type (>|>)
-  , K
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -2613,25 +2613,79 @@ type Dup = '(Id, Id)
 
 data BinOp = BMult | BSub | BAdd deriving (Show,Eq)
 
-type p + q = Bin 'BAdd p q
+data p + q
 infixl 6 +
-type p - q = Bin 'BSub p q
+
+instance P (Bin 'BAdd p q) x => P (p + q) x where
+  type PP (p + q) x = PP (Bin 'BAdd p q) x
+  eval _ = eval (Proxy @(Bin 'BAdd p q))
+
+data p - q
 infixl 6 -
-type p * q = Bin 'BMult p q
+
+instance P (Bin 'BSub p q) x => P (p - q) x where
+  type PP (p - q) x = PP (Bin 'BSub p q) x
+  eval _ = eval (Proxy @(Bin 'BSub p q))
+
+data p * q
 infixl 7 *
 
-type p > q = Cmp 'CGt p q
+instance P (Bin 'BMult p q) x => P (p * q) x where
+  type PP (p * q) x = PP (Bin 'BMult p q) x
+  eval _ = eval (Proxy @(Bin 'BMult p q))
+
+data p > q
 infix 4 >
-type p >= q = Cmp 'CGe p q
+
+instance P (Cmp 'CGt p q) x => P (p > q) x where
+  type PP (p > q) x = PP (Cmp 'CGt p q) x
+  eval _ = eval (Proxy @(Cmp 'CGt p q))
+
+data p >= q
 infix 4 >=
-type p == q = Cmp 'CEq p q
+
+instance P (Cmp 'CGe p q) x => P (p >= q) x where
+  type PP (p >= q) x = PP (Cmp 'CGe p q) x
+  eval _ = eval (Proxy @(Cmp 'CGe p q))
+
+data p == q
 infix 4 ==
-type p /= q = Cmp 'CNe p q
-infix 4 /=
-type p <= q = Cmp 'CLe p q
+
+instance P (Cmp 'CEq p q) x => P (p == q) x where
+  type PP (p == q) x = PP (Cmp 'CEq p q) x
+  eval _ = eval (Proxy @(Cmp 'CEq p q))
+
+data p <= q
 infix 4 <=
-type p < q = Cmp 'CLt p q
+
+instance P (Cmp 'CLe p q) x => P (p <= q) x where
+  type PP (p <= q) x = PP (Cmp 'CLe p q) x
+  eval _ = eval (Proxy @(Cmp 'CLe p q))
+
+data p < q
 infix 4 <
+
+instance P (Cmp 'CLt p q) x => P (p < q) x where
+  type PP (p < q) x = PP (Cmp 'CLt p q) x
+  eval _ = eval (Proxy @(Cmp 'CLt p q))
+
+data p /= q
+infix 4 /=
+
+instance P (Cmp 'CNe p q) x => P (p /= q) x where
+  type PP (p /= q) x = PP (Cmp 'CNe p q) x
+  eval _ = eval (Proxy @(Cmp 'CNe p q))
+
+--type p + q = Bin 'BAdd p q
+--type p - q = Bin 'BSub p q
+--type p * q = Bin 'BMult p q
+
+--type p > q = Cmp 'CGt p q
+--type p >= q = Cmp 'CGe p q
+--type p == q = Cmp 'CEq p q
+--type p /= q = Cmp 'CNe p q
+--type p <= q = Cmp 'CLe p q
+--type p < q = Cmp 'CLt p q
 
 type Gt n = I > n
 type Ge n = I >= n
@@ -2640,18 +2694,55 @@ type Le n = I <= n
 type Lt n = I < n
 type Ne n = I /= n
 
-type p >~ q = CmpI 'CGt p q
+--type p >~ q = CmpI 'CGt p q
+--type p >=~ q = CmpI 'CGe p q
+--type p ==~ q = CmpI 'CEq p q
+--type p <=~ q = CmpI 'CLe p q
+--type p <~ q = CmpI 'CLt p q
+--type p /=~ q = CmpI 'CNe p q
+
+data p >~ q
 infix 4 >~
-type p >=~ q = CmpI 'CGe p q
+
+instance P (CmpI 'CGt p q) x => P (p >~ q) x where
+  type PP (p >~ q) x = PP (CmpI 'CGt p q) x
+  eval _ = eval (Proxy @(CmpI 'CGt p q))
+
+data p >=~ q
 infix 4 >=~
-type p ==~ q = CmpI 'CEq p q
+
+instance P (CmpI 'CGe p q) x => P (p >=~ q) x where
+  type PP (p >=~ q) x = PP (CmpI 'CGe p q) x
+  eval _ = eval (Proxy @(CmpI 'CGe p q))
+
+data p ==~ q
 infix 4 ==~
-type p /=~ q = CmpI 'CNe p q
-infix 4 /=~
-type p <=~ q = CmpI 'CLe p q
+
+instance P (CmpI 'CEq p q) x => P (p ==~ q) x where
+  type PP (p ==~ q) x = PP (CmpI 'CEq p q) x
+  eval _ = eval (Proxy @(CmpI 'CEq p q))
+
+data p <=~ q
 infix 4 <=~
-type p <~ q = CmpI 'CLt p q
+
+instance P (CmpI 'CLe p q) x => P (p <=~ q) x where
+  type PP (p <=~ q) x = PP (CmpI 'CLe p q) x
+  eval _ = eval (Proxy @(CmpI 'CLe p q))
+
+data p <~ q
 infix 4 <~
+
+instance P (CmpI 'CLt p q) x => P (p <~ q) x where
+  type PP (p <~ q) x = PP (CmpI 'CLt p q) x
+  eval _ = eval (Proxy @(CmpI 'CLt p q))
+
+data p /=~ q
+infix 4 /=~
+
+instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
+  type PP (p /=~ q) x = PP (CmpI 'CNe p q) x
+  eval _ = eval (Proxy @(CmpI 'CNe p q))
+
 
 class GetBinOp (k :: BinOp) where
   getBinOp :: (Num a, a ~ b) => (String, a -> b -> a)
@@ -4131,7 +4222,20 @@ data MConcat p
 -- Present 12
 -- PresentT 12
 --
-type FoldMap (t :: Type) p = Map (Wrap t Id) p >> Unwrap (MConcat Id)
+data FoldMap (t :: Type) p
+instance (PP p x ~ f (Unwrapped t)
+        , P p x
+        , Show t
+        , Show (Unwrapped t)
+        , Show (f (Unwrapped t))
+        , Foldable f
+        , Monoid t
+        , Wrapped t
+    ) => P (FoldMap t p) x where
+  type PP (FoldMap t p) x = PP (Map (Wrap t Id) p >> Unwrap (MConcat Id)) x
+  eval _ = eval (Proxy @(Map (Wrap t Id) p >> Unwrap (MConcat Id)))
+
+--type FoldMap (t :: Type) p = Map (Wrap t Id) p >> Unwrap (MConcat Id)
 
 instance (PP p x ~ [a]
         , P p x
@@ -4249,21 +4353,16 @@ instance (P def (Proxy a)
 
 -- | similar to 'Data.List.!!' leveraging 'Ixed'
 --
--- >>> import qualified Data.Map.Strict as M
--- >>> pz @(Id !! 2) ["abc","D","eF","","G"]
+-- >>>pz @(IxL Id 2 "notfound") ["abc","D","eF","","G"]
 -- Present "eF"
 -- PresentT "eF"
 --
--- >>> pz @(Id !! 20) ["abc","D","eF","","G"]
--- Error (!!) index not found
--- FailT "(!!) index not found"
---
--- >>> pz @(Id !! "eF") (M.fromList (flip zip [0..] ["abc","D","eF","","G"]))
--- Present 2
--- PresentT 2
+-- >>>pz @(IxL Id 20 "notfound") ["abc","D","eF","","G"]
+-- Present "notfound"
+-- PresentT "notfound"
 --
 data IxL p q def -- p is the big value and q is the index and def is the default
-type p !! q = IxL p q (Failp "(!!) index not found")
+--type p !! q = IxL p q (Failp "(!!) index not found")
 instance (P q a
         , P p a
         , Show (PP p a)
@@ -4290,6 +4389,34 @@ instance (P q a
                   Left e -> e
                   Right _ -> mkNode opts (_tBool rr) [msg1 <> " index not found"] [hh pp, hh qq]
              Just ret -> pure $ mkNode opts (PresentT ret) [show01' opts msg1 ret "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
+
+-- | similar to 'Data.List.!!' leveraging 'Ixed'
+--
+-- >>> pz @(Id !! 2) ["abc","D","eF","","G"]
+-- Present "eF"
+-- PresentT "eF"
+--
+-- >>> pz @(Id !! 20) ["abc","D","eF","","G"]
+-- Error (!!) index not found
+-- FailT "(!!) index not found"
+--
+-- >>> import qualified Data.Map.Strict as M
+-- >>> pz @(Id !! "eF") (M.fromList (flip zip [0..] ["abc","D","eF","","G"]))
+-- Present 2
+-- PresentT 2
+--
+data p !! q
+
+instance ( PP q a ~ Index (PP p a)
+         , P q a
+         , P p a
+         , Ixed (PP p a)
+         , Show (PP p a)
+         , Show (Index (PP p a))
+         , Show (IxValue (PP p a))
+  ) => P (p !! q) a where
+  type PP (p !! q) a = PP (IxL p q (Failp "(!!) index not found")) a
+  eval _ = eval (Proxy @(IxL p q (Failp "(!!) index not found")))
 
 -- | 'lookup' leveraging 'Ixed'
 --
@@ -7605,16 +7732,16 @@ instance (Show (t (t a))
 
 -- | function application for expressions: similar to 'GHC.Base.$'
 --
--- pz @(Fst Id $ Snd Id) ((*16),4)
+-- pz @(Fst Id $$ Snd Id) ((*16),4)
 -- Present 64
 -- PresentT 64
 --
--- pz @(Id $ "def") ("abc"<>)
+-- pz @(Id $$ "def") ("abc"<>)
 -- Present "abcdef"
 -- PresentT "abcdef"
 --
-data p $ q
-infixl 0 $
+data p $$ q
+infixl 0 $$
 
 instance (P p x
         , P q x
@@ -7623,31 +7750,31 @@ instance (P p x
         , PP q x ~ a
         , Show a
         , Show b
-        ) => P (p $ q) x where
-  type PP (p $ q) x = FnT (PP p x)
+        ) => P (p $$ q) x where
+  type PP (p $$ q) x = FnT (PP p x)
   eval _ opts x = do
-    let msg0 = "($)"
+    let msg0 = "($$)"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)  ->
         let d = p q
-        in mkNode opts (PresentT d) ["fn $ " <> show q <> " = " <> show d] [hh pp, hh qq]
+        in mkNode opts (PresentT d) ["fn $$ " <> show q <> " = " <> show d] [hh pp, hh qq]
 
 -- reify this so we can combine (type synonyms dont work as well)
 
 -- | flipped function application for expressions: similar to 'Control.Lens.&'
 --
--- pz @(Snd Id & Fst Id) ((*16),4)
+-- pz @(Snd Id $& Fst Id) ((*16),4)
 -- Present 64
 -- PresentT 64
 --
--- pz @("def" & Id) ("abc"<>)
+-- pz @("def" $& Id) ("abc"<>)
 -- Present "abcdef"
 -- PresentT "abcdef"
 --
-data q & p -- flips the args eg a & b & (,) = (b,a)
-infixr 1 &
+data q $& p -- flips the args eg a & b & (,) = (b,a)
+infixr 1 $&
 
 instance (P p x
         , P q x
@@ -7656,16 +7783,16 @@ instance (P p x
         , PP q x ~ a
         , Show a
         , Show b
-        ) => P (q & p) x where
-  type PP (q & p) x = FnT (PP p x)
+        ) => P (q $& p) x where
+  type PP (q $& p) x = FnT (PP p x)
   eval _ opts x = do
-    let msg0 = "(&)"
+    let msg0 = "($&)"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)  ->
         let d = p q
-        in mkNode opts (PresentT d) ["fn & " <> show q <> " = " <> show d] [hh pp, hh qq]
+        in mkNode opts (PresentT d) ["fn $& " <> show q <> " = " <> show d] [hh pp, hh qq]
 
 type family FnT ab :: Type where
   FnT (a -> b) = b
@@ -8587,8 +8714,8 @@ instance (P (DotExpandT ps q) a) => P (Dot ps q) a where
 
 type family DotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
   DotExpandT '[] _ = GL.TypeError ('GL.Text "'[] invalid: requires at least one predicate in the list")
-  DotExpandT '[p] q  = p $$ q
-  DotExpandT (p ': p1 ': ps) q = p $$ DotExpandT (p1 ': ps) q
+  DotExpandT '[p] q  = p $ q
+  DotExpandT (p ': p1 ': ps) q = p $ DotExpandT (p1 ': ps) q
 
 -- | reversed dot
 --
@@ -8603,25 +8730,29 @@ instance (P (RDotExpandT ps q) a) => P (RDot ps q) a where
 
 type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
   RDotExpandT '[] _ = GL.TypeError ('GL.Text "'[] invalid: requires at least one predicate in the list")
-  RDotExpandT '[p] q  = p $$ q
-  RDotExpandT (p ': p1 ': ps) q = RDotExpandT (p1 ': ps) (p $$ q)
+  RDotExpandT '[p] q  = p $ q
+  RDotExpandT (p ': p1 ': ps) q = RDotExpandT (p1 ': ps) (p $ q)
 
--- | like reversed function application for ADTs
+-- | like 'GHC.Base.$' for expressions
 --
--- >>>pl @(Fst $$ Snd $$ Id) ((1,2),(3,4))
+-- >>>pl @(Fst $ Snd $ Id) ((1,2),(3,4))
 -- Present 3 (Fst 3 | (3,4))
 -- PresentT 3
 --
-data (p :: Type -> Type) $$ (q :: Type)
+-- >>>pl @((<=) 4 $ Fst $ Snd $ Id) ((1,2),(3,4))
+-- False (4 <= 3)
+-- FalseT
+--
+data (p :: Type -> Type) $ (q :: Type)
 
-instance P (p q) a => P (p $$ q) a where
-  type PP (p $$ q) a = PP (p q) a
+instance P (p q) a => P (p $ q) a where
+  type PP (p $ q) a = PP (p q) a
   eval _ opts a = do
     eval (Proxy @(p q)) opts a
 
-infixr 0 $$
+infixr 0 $
 
--- | creates a Konstant
+-- | creates a constant expression ignoring the second arguenent
 --
 -- >>>pl @(RDot '[Fst,Snd,Thd,K "xxx"] Id) ((1,(2,9,10)),(3,4))
 -- Present "xxx" (K'xxx)
@@ -8635,4 +8766,5 @@ data K (p :: k) (q :: Type)
 instance P p a => P (K p q) a where
   type PP (K p q) a = PP p a
   eval _ = eval (Proxy @(Msg "K" p))
+
 

@@ -1,5 +1,7 @@
 # predicate-typed
 
+[![Hackage](https://img.shields.io/hackage/v/predicate-typed.svg?colorB=5e5184&style=flat)](https://hackage.haskell.org/package/predicate-typed)
+
 what this library provides:
 1. a dsl for building refinement types
 2. Refined is simple refinement type that just validates the input against a predicate
