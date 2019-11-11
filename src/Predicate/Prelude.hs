@@ -5240,16 +5240,16 @@ type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (
 -- FailT "arg1 failed"
 --
 -- >>> pz @(Guards '[ '(PrintT "arg %d failed with value %d" Id,Gt 4), '(PrintT "%d %d" Id, Same 4)]) [17,3]
--- Error 2 3
--- FailT "2 3"
+-- Error 1 3
+-- FailT "1 3"
 --
 -- >>> pz @(GuardsQuick (PrintT "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5]
--- Error arg 3 failed with value 5
--- FailT "arg 3 failed with value 5"
+-- Error arg 2 failed with value 5
+-- FailT "arg 2 failed with value 5"
 --
 -- >>> pz @(GuardsQuick (PrintT "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
--- Error Guards: data elements(4) /= predicates(3)
--- FailT "Guards: data elements(4) /= predicates(3)"
+-- Error Guards: predicates(3) /= data elements(4)
+-- FailT "Guards: predicates(3) /= data elements(4)"
 --
 data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 type GuardsQuick (prt :: k) (os :: [k1]) = Guards (ToGuardsT prt os)
@@ -5262,7 +5262,7 @@ instance (GetLen ps, P (GuardsImpl (LenT ps) ps) [a]) => P (Guards ps) [a] where
     let msgbase0 = "Guards"
         n = getLen @ps
     if n /= length as then
-       let xx = msgbase0 <> ": data elements(" <> show (length as) <> ") /= predicates(" <> show n <> ")"
+       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data elements(" <> show (length as) <> ")"
        in pure $ mkNode opts (FailT xx) [xx] []
     else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
 
@@ -5288,7 +5288,8 @@ instance (PP prt (Int, a) ~ String
         ) => P (GuardsImpl n ('(prt,p) ': ps)) [a] where
   type PP (GuardsImpl n ('(prt,p) ': ps)) [a] = [a]
   eval _ opts as' = do
-     let msgbase1 = "Guard" <> "(" <> show (n-pos) <> ")"
+     let cpos = n-pos-1
+         msgbase1 = "Guards" <> "(" <> show cpos <> ")"
          msgbase2 = "Guards"
          n :: Int = nat @n
          pos = getLen @ps
@@ -5298,7 +5299,7 @@ instance (PP prt (Int, a) ~ String
             case getValueLR opts (msgbase1 <> " p failed") pp [] of
                  Left e -> pure e
                  Right False -> do
-                   qq <- eval (Proxy @prt) opts (n-pos,a) -- only run prt when predicate is False
+                   qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
                    pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                       Left e -> e
                       Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
@@ -5306,7 +5307,7 @@ instance (PP prt (Int, a) ~ String
                    ss <- eval (Proxy @(GuardsImpl n ps)) opts as
                    pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
                      Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                     Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
+                     Right zs -> mkNode opts (PresentT (a:zs)) [msgbase2 <> show0 opts " " a] [hh pp, hh ss]
          _ -> errorInProgram $ "GuardsImpl n+1 case has no data"
 
 -- | boolean guard which checks a given a list of predicates against the list of values
@@ -5314,27 +5315,39 @@ instance (PP prt (Int, a) ~ String
 -- pulls the top message from the tree if a predicate is false
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,93,14]
--- False (GuardBool(1) [mm] (93 <= 59))
+-- False (Bools(1) [mm] (93 <= 59))
 -- FalseT
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,13,94]
--- False (GuardBool(2) [<<<2 94>>>] (94 <= 59))
+-- False (Bools(2) [<<<2 94>>>] (94 <= 59))
 -- FalseT
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,13,14]
--- True (GuardBool(0) 12)
+-- True (Bools 12)
 -- TrueT
 --
 -- >>> pl @(BoolsQuick "abc" '[Between 0 23, Between 0 59, Between 0 59]) [12,13,14]
--- True (GuardBool(0) 12)
+-- True (Bools 12)
 -- TrueT
 --
 -- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,14]
--- True (GuardBool(0) 12)
+-- True (Bools 12)
 -- TrueT
 --
 -- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,99]
--- False (GuardBool(2) [id=2 val=99] (99 <= 59))
+-- False (Bools(2) [id=2 val=99] (99 <= 59))
+-- FalseT
+--
+-- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,13,14]
+-- True (Bools 12)
+-- TrueT
+--
+-- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,60,14]
+-- False (Bools(1) [minutes] (60 <= 59))
+-- FalseT
+--
+-- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,60,14,20]
+-- False (Bools(3): predicates(3) /= data elements(4))
 -- FalseT
 --
 data Bools (ps :: [(k,k1)])
@@ -5352,8 +5365,8 @@ instance (GetLen ps
       Left e -> pure e
       Right () -> do
         if n /= length as then
-           let msg1 = msg0 <> ": data elements(" <> show (length as) <> ") /= predicates(" <> show n <> ")"
-           in pure $ mkNode opts (FailT msg1) [msg1] []
+           let msg1 = msg0 <> ": predicates(" <> show n <> ") /= data elements(" <> show (length as) <> ")"
+           in pure $ mkNodeB opts False [msg1] [] -- was FailT but now just FalseT
         else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts as
 
 data BoolsImpl (n :: Nat) (os :: [(k,k1)])
@@ -5381,7 +5394,7 @@ instance (PP prt (Int, a) ~ String
   type PP (BoolsImpl n ('(prt,p) ': ps)) [a] = Bool
   eval _ opts as' = do
      let cpos = n-pos-1
-         msgbase1 = "GuardBool" <> "(" <> showIndex cpos <> ")"
+         msgbase1 = "Bools" <> "(" <> showIndex cpos <> ")"
          msgbase2 = "Bools"
          n :: Int = nat @n
          pos = getLen @ps
@@ -5399,19 +5412,19 @@ instance (PP prt (Int, a) ~ String
                            ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
                            pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
                              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                             Right True -> mkNodeB opts True [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
+                             Right True -> mkNodeB opts True [msgbase2 <> show0 opts " " a] [hh pp, hh ss]
                              Right False -> ss & tForest %~ \x -> fromTT pp : x
          _ -> errorInProgram $ "BoolsImpl n+1 case has no data"
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
 -- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
--- False (GuardBool(3) [id=3 must be between 0 and 255, found 256] (256 <= 255))
+-- False (Bools(3) [id=3 must be between 0 and 255, found 256] (256 <= 255))
 -- FalseT
 --
--- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
--- Present [121,33,7,44]
--- PresentT [121,33,7,44]
+-- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
+-- True (Bools 121)
+-- TrueT
 --
 data BoolsN prt (n :: Nat) p
 
@@ -5459,7 +5472,7 @@ instance (GetLen ps
     let msgbase0 = "Guards"
         n = getLen @ps
     if n /= length as then
-       let xx = msgbase0 <> ": data elements(" <> show (length as) <> ") /= predicates(" <> show n <> ")"
+       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data elements(" <> show (length as) <> ")"
        in pure $ mkNode opts (FailT xx) [xx] []
     else eval (Proxy @(GuardsImplX (LenT ps) ps)) opts as
 
@@ -5510,8 +5523,8 @@ instance (PP prt a ~ String
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
 -- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
--- Error id=4 must be between 0 and 255, found 256
--- FailT "id=4 must be between 0 and 255, found 256"
+-- Error id=3 must be between 0 and 255, found 256
+-- FailT "id=3 must be between 0 and 255, found 256"
 --
 -- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
 -- Present [121,33,7,44]
@@ -6727,8 +6740,8 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 -- PresentT [10,21,120]
 --
 -- >>> pz @(Para '[Id,Id + 1,Id * 4]) [10,20,30,40]
--- Error Para: data elements(4) /= predicates(3)
--- FailT "Para: data elements(4) /= predicates(3)"
+-- Error Para: predicates(3) /= data elements(4)
+-- FailT "Para: predicates(3) /= data elements(4)"
 --
 data ParaImpl (n :: Nat) (os :: [k])
 
@@ -6741,7 +6754,7 @@ instance (GetLen ps, P (ParaImpl (LenT ps) ps) [a]) => P (Para ps) [a] where
     let msgbase0 = "Para"
         n = getLen @ps
     if n /= length as then
-       let xx = msgbase0 <> ": data elements(" <> show (length as) <> ") /= predicates(" <> show n <> ")"
+       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data elements(" <> show (length as) <> ")"
        in pure $ mkNode opts (FailT xx) [xx] []
     else eval (Proxy @(ParaImpl (LenT ps) ps)) opts as
 
@@ -6808,8 +6821,8 @@ instance (KnownNat n
 -- PresentT [2,3,4,5]
 --
 -- >>> pz @(ParaN 4 (Succ Id)) "azwxm"
--- Error Para: data elements(5) /= predicates(4)
--- FailT "Para: data elements(5) /= predicates(4)"
+-- Error Para: predicates(4) /= data elements(5)
+-- FailT "Para: predicates(4) /= data elements(5)"
 --
 -- >>> pz @(ParaN 4 (Succ Id)) "azwx"
 -- Present "b{xy"

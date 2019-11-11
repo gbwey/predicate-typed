@@ -193,10 +193,10 @@ ssn = mkProxy3'
 -- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
 --
 -- >>> prtEval3P ssn ol "666-01-2211"
--- Left Step 2. False Boolean Check(op) | {GuardBool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))}
+-- Left Step 2. False Boolean Check(op) | {Bools(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))}
 --
 -- >>> prtEval3P ssn ol "667-00-2211"
--- Left Step 2. False Boolean Check(op) | {GuardBool(1) [number for group 1 invalid: found 0] (1 <= 0)}
+-- Left Step 2. False Boolean Check(op) | {Bools(1) [number for group 1 invalid: found 0] (1 <= 0)}
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
@@ -219,10 +219,10 @@ type Ssnfmt = PrintL 3 "%03d-%02d-%04d" Id
 -- Right (Refined3 {r3In = [23,13,59], r3Out = "23:13:59"})
 --
 -- >>> prtEval3P hms ol "23:13:60"
--- Left Step 2. False Boolean Check(op) | {GuardBool(2) [seconds] (60 <= 59)}
+-- Left Step 2. False Boolean Check(op) | {Bools(2) [seconds] (60 <= 59)}
 --
 -- >>> prtEval3P hms ol "26:13:59"
--- Left Step 2. False Boolean Check(op) | {GuardBool(0) [hours] (26 <= 23)}
+-- Left Step 2. False Boolean Check(op) | {Bools(0) [hours] (26 <= 23)}
 --
 hms :: Proxy Hms
 hms = mkProxy3'
@@ -254,13 +254,13 @@ type Hmsfmt = PrintL 3 "%02d:%02d:%02d" Id
 -- Right (Refined3 {r3In = [1,223,14,1], r3Out = "001.223.014.001"})
 --
 -- >>> prtEval3P ip ol "001.223.14.999"
--- Left Step 2. False Boolean Check(op) | {GuardBool(3) [guard(3) octet out of range 0-255 found 999] (999 <= 255)}
+-- Left Step 2. False Boolean Check(op) | {Bools(3) [guard(3) octet out of range 0-255 found 999] (999 <= 255)}
 --
 -- >>> prtEval3P ip oz "001.223.14.999.1"
 -- Left Step 1. Initial Conversion(ip) Failed | Regex no results
 --
 -- >>> prtEval3P ip ol "001.257.14.1"
--- Left Step 2. False Boolean Check(op) | {GuardBool(1) [guard(1) octet out of range 0-255 found 257] (257 <= 255)}
+-- Left Step 2. False Boolean Check(op) | {Bools(1) [guard(1) octet out of range 0-255 found 257] (257 <= 255)}
 --
 type Ip = '(Ipip, Ipop, Ipfmt, String)
 

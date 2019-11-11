@@ -103,7 +103,7 @@ import Data.Binary (Binary)
 -- Left (FailP "bad length: found 3")
 --
 -- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) oz "141.213.1.444"
--- Left (FailP "octet 4 out of range 444")
+-- Left (FailP "octet 3 out of range 444")
 --
 -- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) oz "141.213.1x34.444"
 -- Left (FailP "ReadP Int (1x34) failed")
