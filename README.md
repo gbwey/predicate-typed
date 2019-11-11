@@ -15,13 +15,13 @@ what this library provides:
 10. database encoders and decoders using odbc(sqlhandler-odbcalt) or hdbc((sqlhandler-odbc)
 11. quickcheck arbitrary methods
 
-To run the examples you will need these settings (ghc >= 8.6)
+To run the examples you will need these settings ghc>=8.2
 ```haskell
 :set -XTypeApplications
 :set -XDataKinds
 :set -XPolyKinds
 :set -XTemplateHaskell
-:set -XNoStarIsType
+:set -XNoStarIsType -- not valid before ghc 8.6
 ```
 
 ```haskell

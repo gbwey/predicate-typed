@@ -1,5 +1,5 @@
 name:                predicate-typed
-version:             0.3.0.0
+version:             0.4.0.0
 github:              "gbwey/predicate-typed"
 synopsis:            Predicates, Refinement types and Dsl
 category:            Data
@@ -44,7 +44,6 @@ library:
   - -Wincomplete-record-updates
   - -Wcompat
   - -Widentities
-  - -Wredundant-constraints
   - -fhide-source-paths
 
   when:
@@ -53,6 +52,7 @@ library:
       ghc-options:
       - -Wmissing-export-lists
       - -Wpartial-fields
+      - -Wredundant-constraints
 
 tests:
   predicate-typed-test:
