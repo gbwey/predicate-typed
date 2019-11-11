@@ -14,7 +14,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE NoStarIsType #-}
 {- |
      Contains prepackaged 4-tuples to use with 'Refined3'
 -}
@@ -104,7 +103,6 @@ import Data.Time
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
--- >>> :set -XNoStarIsType
 
 -- | credit card with luhn algorithm
 --

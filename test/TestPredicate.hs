@@ -14,7 +14,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoOverloadedLists #-} -- overloaded lists breaks some predicates
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NoStarIsType #-}
 module TestPredicate where
 import Safe
 import TastyExtras
@@ -61,7 +60,7 @@ allTests =
   , expectPE TrueT $ pl @(Fst Id >> (Len <= 6)) ([2..7],True)
   , expectPE FalseT $ pl @(HeadDef 12 (Fst Id) >> Le 6) ([],True)
   , expectPE TrueT $ pl @(HeadDef 1 (Fst Id) >> Le 6) ([],True)
-  , expectPE (FailT "Head(empty)") $ pl @(Head (Fst Id) >> Le 6) ([] @Int, True)
+  , expectPE (FailT "Head(empty)") $ pl @(Head (Fst Id) >> Le 6) ([]::[Int], True)
   , expectPE FalseT $ pl @(HeadDef 10 (Fst Id) >> Le 6) ([],True)
   , expectPE (FailT "zz") $ pl @(HeadFail "zz" (Fst Id) >> Le 6) ([],True)
   , expectPE (FailT "failed1") $ pl @((HeadFail "failed1" (Fst Id) >> Le 6) || 'False) ([],True)
@@ -111,9 +110,9 @@ allTests =
   , expectPE (PresentT (4,4)) $ pl @Dup 4
   , expectPE (PresentT 3) $ pl @(Last Id) [1,2,3]
   , expectPE (PresentT 123) $ pl @(Just Id >> Id) (Just 123)
-  , expectPE (FailT "Asdf") $ pl @(HeadFail "Asdf" Id) ([] @()) -- breaks otherwise
-  , expectPE (FailT "Head(empty)") $ pl @(Head Id) ([] @Int)
-  , expectPE (FailT "Head(empty)") $ pl @(Head Id) ([] @Double)
+  , expectPE (FailT "Asdf") $ pl @(HeadFail "Asdf" Id) ([] :: [()]) -- breaks otherwise
+  , expectPE (FailT "Head(empty)") $ pl @(Head Id) ([] :: [Int])
+  , expectPE (FailT "Head(empty)") $ pl @(Head Id) ([] :: [Double])
   , expectPE (FailT "Succ bounded failed") $ pl @(SuccB' Id) GT
   , expectPE (PresentT LT) $ pl @(SuccB 'LT Id) GT
   , expectPE (PresentT EQ) $ pl @(SuccB 'GT Id) LT
@@ -275,12 +274,12 @@ allTests =
   , expectPE (FailT "err") $ pl @(Guard "err" (Len > 2) >> Map (Succ Id) Id) [12]
   , expectPE (PresentT 12) $ pl @OneP [12]
   , expectPE (FailT "expected list of length 1 but found length=5") $ pl @OneP [1..5]
-  , expectPE (FailT "expected list of length 1 but found length=0") $ pl @OneP ([] @())
+  , expectPE (FailT "expected list of length 1 but found length=0") $ pl @OneP ([] ::[()])
   , expectPE (FailT "err(8)") $ pl @(Map (If (Lt 3) 'True (Failt _ "err")) Id) [1..10]
   , expectPE (FailT "someval(8)") $ pl @(Map (If (Lt 3) 'True (Failt _ "someval")) Id) [1..10]
   , expectPE (PresentT [True,True,False,False,False]) $ pl @(Map (If (Lt 3) 'True 'False) Id) [1..5]
   , expectPE (PresentT ["a","b","c"]) $ pl @(MaybeIn MEmptyP (Ones Id)) (Just @String "abc")
-  , expectPE (FailT "someval") $ pl @(Guard "someval" (Len == 2) >> (ShowP Id &&& Id)) ([] @Int)
+  , expectPE (FailT "someval") $ pl @(Guard "someval" (Len == 2) >> (ShowP Id &&& Id)) ([] :: [Int])
   , expectPE (PresentT ([2,3],"[2,3]")) $ pl @(Guard "someval" (Len == 2) >> (Id &&& ShowP Id)) [2,3]
   , expectPE (FailT "someval") $ pl @(Guard "someval" (Len == 2) >> (ShowP Id &&& Id)) [2,3,4]
   , expectPE (PresentT 55) $ pl @(Map (Wrap (SG.Sum _) Id) Id >> MConcat Id >> Unwrap Id) [1..10]
@@ -612,7 +611,7 @@ allTests =
   , expectPE (FailT "PrintL(4) arg count=3") $ pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3::Int]
 
   , expectPE (PresentT "001.002.003.004") $ pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4::Int]
-  , expectPE (FailT "Pairs no data found") $ pl @Pairs ([] @())
+  , expectPE (FailT "Pairs no data found") $ pl @Pairs ([] :: [()])
   , expectPE (FailT "Pairs only one element found") $ pl @Pairs [1]
   , expectPE (PresentT [(1,2)]) $ pl @Pairs [1,2]
   , expectPE (PresentT [(1,2),(2,3)]) $ pl @Pairs [1,2,3]
@@ -711,9 +710,9 @@ allTests =
                     ) (Fst Id))
                    '( 'True, Head Id) (Tail Id)) [1,4,7,6,16]
   , expectPE (PresentT [1,2,3,4]) $ pl @(Init Id) [1..5]
-  , expectPE (FailT "Init(empty)") $ pl @(Init Id) ([] @())
+  , expectPE (FailT "Init(empty)") $ pl @(Init Id) ([] :: [()])
   , expectPE (PresentT [2,3,4,5]) $ pl @(Tail Id) [1..5]
-  , expectPE (FailT "Tail(empty)") $ pl @(Tail Id) ([] @())
+  , expectPE (FailT "Tail(empty)") $ pl @(Tail Id) ([] :: [()])
   , expectPE (PresentT [10,12,13]) $ pl @(CatMaybes Id) [Just 10, Just 12, Nothing, Just 13]
   , expectPE (PresentT [5,4,3,2,1]) $ pl @(Foldl (Snd Id :+ Fst Id) (MEmptyT [_]) Id) [1..5]
   , expectPE (PresentT (map SG.Min [9,10,11,12,13])) $ pl @(EnumFromTo (Pure SG.Min 9) (Pure _ 13)) ()
@@ -737,11 +736,11 @@ allTests =
   , expectPE (PresentT "a=9 b=rhs") $ pl @(TheseX (PrintF "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (PrintT "a=%d b=%s" (Snd Id)) Id) (These @Int 9 "rhs")
   , expectPE (PresentT "a=10") $ pl @(TheseX (PrintF "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (PrintT "a=%d b=%s" (Snd Id)) Id) (This @Int 9)
   , expectPE (PresentT "b=rhs") $ pl @(TheseX (PrintF "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (PrintT "a=%d b=%s" (Snd Id)) Id) (That @Int "rhs")
-  , expectPE (PresentT ([] @Int)) $ pl @(HeadDef (MEmptyT _) Id) (map (:[]) ([] @Int))
+  , expectPE (PresentT ([] :: [Int])) $ pl @(HeadDef (MEmptyT _) Id) (map (:[]) ([] :: [Int]))
   , expectPE (PresentT ([10] :: [Int])) $ pl @(HeadDef (MEmptyT _) Id) (map (:[]) ([10..14] :: [Int]))
   , expectPE (PresentT 10) $ pl @(HeadDef (Fst Id) (Snd Id)) (99,[10..14])
-  , expectPE (PresentT 99) $ pl @(HeadDef (Fst Id) (Snd Id)) (99,[] @Int)
-  , expectPE (PresentT 43) $ pl @(HeadDef 43 (Snd Id)) (99,[] @Int)
+  , expectPE (PresentT 99) $ pl @(HeadDef (Fst Id) (Snd Id)) (99,[] :: [Int])
+  , expectPE (PresentT 43) $ pl @(HeadDef 43 (Snd Id)) (99,[] :: [Int])
   , expectPE (PresentT (Just 'd')) $ pl @(Lookup "abcdef" 3) ()
   , expectPE (PresentT (Just 5)) $ pl @(Lookup '[1,2,3,4,5,6] 4) ()
   , expectPE (PresentT 5) $ pl @(LookupDef '[1,2,3,4,5,6] 4 Id) 23

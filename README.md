@@ -1,6 +1,6 @@
 # predicate-typed
 
-[![Hackage](https://img.shields.io/hackage/v/predicate-typed.svg?colorB=5e5184&style=flat)](https://hackage.haskell.org/package/predicate-typed)
+[![Hackage](https://img.shields.io/hackage/v/predicate-typed.svg?colorB=5d0ef0&style=flat)](https://hackage.haskell.org/package/predicate-typed)
 
 what this library provides:
 1. a dsl for building refinement types
@@ -15,12 +15,13 @@ what this library provides:
 10. database encoders and decoders using odbc(sqlhandler-odbcalt) or hdbc((sqlhandler-odbc)
 11. quickcheck arbitrary methods
 
-To run the examples you will need these settings
+To run the examples you will need these settings (ghc >= 8.6)
 ```haskell
 :set -XTypeApplications
 :set -XDataKinds
 :set -XPolyKinds
 :set -XTemplateHaskell
+:set -XNoStarIsType
 ```
 
 ```haskell

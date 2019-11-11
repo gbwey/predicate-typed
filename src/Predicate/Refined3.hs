@@ -19,7 +19,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE RoleAnnotations #-}
 {- |
@@ -97,12 +96,12 @@ import Data.Maybe (fromMaybe)
 import Control.Lens ((^?),ix)
 import Data.Tree.Lens (root)
 import Data.Char (isSpace)
+import Data.Semigroup ((<>))
 
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
--- >>> :set -XNoStarIsType
 -- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
 
@@ -219,10 +218,10 @@ instance ( Eq i
              11
              (do GR.expectP (RL.Ident "Refined3")
                  GR.expectP (RL.Punc "{")
-                 fld1 <- GR.readField
+                 fld1 <- readField
                                "r3In" (PCR.reset GR.readPrec)
                  GR.expectP (RL.Punc ",")
-                 fld2 <- GR.readField
+                 fld2 <- readField
                                "r3Out" (PCR.reset GR.readPrec)
                  GR.expectP (RL.Punc "}")
 

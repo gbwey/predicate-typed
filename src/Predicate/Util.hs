@@ -2,7 +2,7 @@
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
-{-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -176,6 +176,7 @@ module Predicate.Util (
   , removeAnsi
   , MonadEval(..)
   , errorInProgram
+  , readField
     ) where
 import qualified GHC.TypeNats as GN
 import Data.Ratio
@@ -201,8 +202,7 @@ import GHC.Word (Word8)
 import Data.Sequence (Seq)
 import Control.Applicative (ZipList)
 import Data.Kind (Type)
-import Data.These
-import Data.These.Combinators
+import Data.These (These(..))
 import qualified Control.Exception as E
 import Control.DeepSeq
 import System.IO.Unsafe (unsafePerformIO)
@@ -210,12 +210,15 @@ import Data.Bool
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as N
 import Data.Either
---import Data.Maybe
+import Data.Semigroup ((<>))
+import qualified Text.Read.Lex as L
+import Text.ParserCombinators.ReadPrec
+import qualified GHC.Read as GR
+
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
--- >>> :set -XNoStarIsType
 
 -- | represents the evaluation tree for predicates
 data TT a = TT { _tBool :: BoolT a  -- ^ the value at this root node
@@ -226,10 +229,10 @@ data TT a = TT { _tBool :: BoolT a  -- ^ the value at this root node
 -- | contains the typed result from evaluating the expression tree
 --
 data BoolT a where
-  FailT :: String -> BoolT a  -- ^ failure with string
-  FalseT :: BoolT Bool        -- ^ false predicate
-  TrueT :: BoolT Bool         -- ^ true predicate
-  PresentT :: a -> BoolT a    -- ^ non predicate value
+  FailT :: String -> BoolT a  -- failure with string
+  FalseT :: BoolT Bool        -- false predicate
+  TrueT :: BoolT Bool         -- true predicate
+  PresentT :: a -> BoolT a    -- non predicate value
 
 deriving instance Show a => Show (BoolT a)
 deriving instance Eq a => Eq (BoolT a)
@@ -820,7 +823,10 @@ instance GetLen xs => GetLen (x ':| xs) where
 
 
 showThese :: These a b -> String
-showThese = these (const "This") (const "That") (const (const "These"))
+showThese = \case
+               This {} -> "This"
+               That {} -> "That"
+               These {} -> "These"
 
 class GetThese th where
   getThese :: (String, These w v -> Bool)
@@ -830,6 +836,18 @@ instance GetThese ('That y) where
   getThese = ("That", isThat)
 instance GetThese ('These x y) where
   getThese = ("These", isThese)
+
+isThis :: These a b -> Bool
+isThis This {} = True
+isThis _ = False
+
+isThat :: These a b -> Bool
+isThat That {} = True
+isThat _ = False
+
+isThese :: These a b -> Bool
+isThese These {} = True
+isThese _ = False
 
 -- | get ordering from the typelevel
 class GetOrdering (cmp :: Ordering) where
@@ -1214,3 +1232,11 @@ removeAnsiImpl =
 
 errorInProgram :: String -> x
 errorInProgram s = error $ "programmer error:" <> s
+
+readField :: String -> ReadPrec a -> ReadPrec a
+readField fieldName readVal = do
+        GR.expectP (L.Ident fieldName)
+        GR.expectP (L.Punc "=")
+        readVal
+
+

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: bdc41c04caa18a98bbd10dee75c147bc03cabef469b0de39b04b8b4ba0136eb4
+-- hash: 87b8cf4f2e5dc34ca240154cf7a03a5aac768d49a3fce446e29a42bd53096232
 
 name:           predicate-typed
 version:        0.3.0.0
@@ -39,11 +39,10 @@ library
       Paths_predicate_typed
   hs-source-dirs:
       src
-  ghc-options: -fomit-interface-pragmas -Wincomplete-uni-patterns -Wincomplete-record-updates -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths -Wmissing-export-lists -Wpartial-fields
+  ghc-options: -fomit-interface-pragmas -Wincomplete-uni-patterns -Wincomplete-record-updates -Wcompat -Widentities -Wredundant-constraints -fhide-source-paths
   build-depends:
       QuickCheck
     , aeson
-    , assoc >=1
     , base >=4.7 && <5
     , binary
     , bytestring
@@ -61,10 +60,13 @@ library
     , safe
     , template-haskell
     , text
-    , th-lift >=0.8.0.1
-    , these >=1.0.0
+    , th-lift
+    , these
     , time
     , tree-view >=0.5
+  if impl(ghc >= 8.6)
+    default-extensions: NoStarIsType
+    ghc-options: -Wmissing-export-lists -Wpartial-fields
   default-language: Haskell2010
 
 test-suite doctests
@@ -73,11 +75,10 @@ test-suite doctests
   hs-source-dirs:
       ./.
       src
-  ghc-options: -threaded -fomit-interface-pragmas -Wno-missing-export-lists
+  ghc-options: -threaded -fomit-interface-pragmas
   build-depends:
       QuickCheck
     , aeson
-    , assoc >=1
     , base >=4.7 && <5
     , binary
     , bytestring
@@ -97,10 +98,13 @@ test-suite doctests
     , safe
     , template-haskell
     , text
-    , th-lift >=0.8.0.1
-    , these >=1.0.0
+    , th-lift
+    , these
     , time
     , tree-view >=0.5
+  if impl(ghc >= 8.6)
+    default-extensions: NoStarIsType
+    ghc-options: -Wno-missing-export-lists
   default-language: Haskell2010
 
 test-suite predicate-typed-test
@@ -119,7 +123,6 @@ test-suite predicate-typed-test
   build-depends:
       QuickCheck
     , aeson
-    , assoc >=1
     , base >=4.7 && <5
     , binary
     , bytestring
@@ -142,8 +145,11 @@ test-suite predicate-typed-test
     , tasty-quickcheck
     , template-haskell
     , text
-    , th-lift >=0.8.0.1
-    , these >=1.0.0
+    , th-lift
+    , these
     , time
     , tree-view >=0.5
+  if impl(ghc >= 8.6)
+    default-extensions: NoStarIsType
+    ghc-options: -Wno-missing-export-lists
   default-language: Haskell2010

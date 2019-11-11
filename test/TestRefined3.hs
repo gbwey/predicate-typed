@@ -15,7 +15,6 @@
 {-# LANGUAGE NoOverloadedLists #-} -- overloaded lists breaks some predicates
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
@@ -44,6 +43,7 @@ import Text.Show.Functions ()
 import Data.Tree
 import qualified Data.Semigroup as SG
 import GHC.TypeLits (Nat)
+import Data.Semigroup (Semigroup(..))
 
 suite :: IO ()
 suite = defaultMain $ testGroup "TestRefined3" (namedTests <> orderTests unnamedTests <> allProps)

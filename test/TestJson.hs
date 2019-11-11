@@ -12,7 +12,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE DeriveGeneric #-}
 module TestJson where
 import TastyExtras
@@ -25,6 +24,7 @@ import Predicate.Refined3Helper
 import GHC.Generics (Generic)
 import Data.Text (Text)
 import Data.Aeson
+import qualified Data.ByteString as BS
 
 suite :: IO ()
 suite = defaultMain $ testGroup "testrefined"
@@ -36,12 +36,12 @@ suite = defaultMain $ testGroup "testrefined"
   ]
 
 testPerson :: IO (Either String [Person])
-testPerson = eitherDecodeFileStrict' "test1.json"
+testPerson = BS.readFile "test1.json" >>= return . eitherDecodeStrict'
 
 testPerson1 :: Int -> IO (Either String [Person1])
 testPerson1 i = do
   let fn = "test" ++ show i ++ ".json"
-  eitherDecodeFileStrict' fn
+  BS.readFile fn >>= return . eitherDecodeStrict'
 
 data Person = Person {
        firstName :: !Text

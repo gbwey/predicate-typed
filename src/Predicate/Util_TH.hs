@@ -25,12 +25,12 @@ import Predicate.Core
 import Predicate.Util
 import qualified Language.Haskell.TH.Syntax as TH
 import Data.Functor.Identity
+import Data.Semigroup ((<>))
 
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
--- >>> :set -XNoStarIsType
 
 -- | creates a 'Refined.Refined' refinement type with terse output
 --

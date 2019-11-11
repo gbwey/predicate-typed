@@ -15,7 +15,6 @@
 {-# LANGUAGE NoOverloadedLists #-} -- overloaded lists breaks some predicates
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
@@ -35,6 +34,7 @@ import Data.Aeson
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import GHC.TypeNats (Nat)
+import Data.Semigroup (Semigroup(..))
 
 suite :: IO ()
 suite = defaultMain $ testGroup "TestRefined" (namedTests <> orderTests unnamedTests <> allProps)

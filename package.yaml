@@ -14,7 +14,6 @@ dependencies:
 - base >= 4.7 && < 5
 - QuickCheck
 - aeson
-- assoc >= 1
 - binary
 - bytestring
 - comonad
@@ -31,13 +30,14 @@ dependencies:
 - safe
 - template-haskell
 - text
-- th-lift >= 0.8.0.1
-- these >= 1.0.0
+- th-lift
+- these
 - time
 - tree-view >= 0.5
 
 library:
   source-dirs: src
+
   ghc-options:
   - -fomit-interface-pragmas
   - -Wincomplete-uni-patterns
@@ -46,13 +46,23 @@ library:
   - -Widentities
   - -Wredundant-constraints
   - -fhide-source-paths
-  - -Wmissing-export-lists
-  - -Wpartial-fields
+
+  when:
+    - condition: impl(ghc >= 8.6)
+      default-extensions: NoStarIsType
+      ghc-options:
+      - -Wmissing-export-lists
+      - -Wpartial-fields
 
 tests:
   predicate-typed-test:
     main:                TestSpec.hs
     source-dirs:         test
+    when:
+      - condition: impl(ghc >= 8.6)
+        default-extensions: NoStarIsType
+        ghc-options:
+        - -Wno-missing-export-lists
     ghc-options:
     - -threaded
     - -rtsopts
@@ -67,10 +77,14 @@ tests:
   doctests:
     main: doctests.hs
     other-modules: []
+    when:
+      - condition: impl(ghc >= 8.6)
+        default-extensions: NoStarIsType
+        ghc-options:
+        - -Wno-missing-export-lists
     ghc-options:
     - -threaded
     - -fomit-interface-pragmas
-    - -Wno-missing-export-lists
     source-dirs:
     - .
     - src

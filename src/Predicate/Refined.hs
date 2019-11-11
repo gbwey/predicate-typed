@@ -16,8 +16,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE RoleAnnotations #-}
@@ -75,11 +73,12 @@ import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
+import Data.Semigroup ((<>))
+
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
--- >>> :set -XNoStarIsType
 -- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
 
@@ -141,6 +140,7 @@ type role Refined nominal nominal
 -- >>> reads @(Refined (Between 0 255) Int) "Refined {unRefined = 300}"
 -- []
 --
+
 instance (RefinedC p a, Read a) => Read (Refined p a) where
   readPrec
     = GR.parens
@@ -148,7 +148,7 @@ instance (RefinedC p a, Read a) => Read (Refined p a) where
            11
            (do GR.expectP (RL.Ident "Refined")
                GR.expectP (RL.Punc "{")
-               fld0 <- GR.readField
+               fld0 <- readField
                              "unRefined"
                              (PCR.reset GR.readPrec)
                GR.expectP (RL.Punc "}")
@@ -374,7 +374,11 @@ newRefinedTIO = newRefinedTImpl liftIO
 
 newtype RefinedT m a = RefinedT { unRefinedT :: ExceptT String (WriterT [String] m) a }
   deriving (Functor, Applicative, Monad, MonadCont, MonadWriter [String], Show, MonadIO)
-  deriving MonadTrans via RefinedT
+
+instance MonadTrans RefinedT where
+  lift ma = RefinedT $ ExceptT $ WriterT $ do
+              a <- ma
+              return (Right a, [])
 
 instance Monad m => MonadError String (RefinedT m) where
   throwError e = RefinedT $ ExceptT $ WriterT $ return (Left e,[])

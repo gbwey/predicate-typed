@@ -55,11 +55,11 @@ import Data.Typeable
 import Data.Kind (Type)
 import Data.These (These(..))
 import Data.Functor.Identity
+import Data.Semigroup ((<>))
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
--- >>> :set -XNoStarIsType
 
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Predicate.Prelude.>>'
 class P p a where

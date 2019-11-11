@@ -2,7 +2,7 @@
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
-{-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -21,7 +21,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {- |
      Dsl for evaluating and displaying type level expressions
@@ -522,12 +521,11 @@ import Data.Foldable
 import Data.Maybe
 import Control.Arrow
 import qualified Data.Semigroup as SG
+import Data.Semigroup (Semigroup(..))
 import Numeric
 import Data.Char
 import Data.Function
-import Data.These (These(..), partitionThese)
-import qualified Data.Bifunctor.Swap as SW (Swap(..))
-import qualified Data.Bifunctor.Assoc as AS (Assoc(..))
+import Data.These (These(..))
 import Data.Ratio
 import Data.Time
 import Data.Coerce
@@ -548,7 +546,6 @@ import Data.Time.Calendar.WeekDate
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
--- >>> :set -XNoStarIsType
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
 -- >>> import qualified Data.Map.Strict as M
@@ -2063,11 +2060,12 @@ instance ExtractL6C (a,b,c,d,e,f) where
 
 -- | 'fromString' function where you need to provide the type \'t\' of the result
 --
+-- >>> :set -XFlexibleContexts
 -- >>> pz @(FromStringP (Identity _) Id) "abc"
 -- Present Identity "abc"
 -- PresentT (Identity "abc")
 --
--- >>> pz @(FromStringP (Seq.Seq _) Id) "abc"
+-- >>> pz @(FromStringP (Seq.Seq Char) Id) "abc"
 -- Present fromList "abc"
 -- PresentT (fromList "abc")
 data FromStringP' t s
@@ -3223,17 +3221,29 @@ instance (Show t, Reversing t) => P ReverseL t where
 --
 data Swap
 
+class SwapC p where
+  swap :: p a b -> p b a
+instance SwapC Either where
+  swap (Left a) = Right a
+  swap (Right a) = Left a
+instance SwapC These where
+  swap (This a) = That a
+  swap (That b) = This b
+  swap (These a b) = These b a
+instance SwapC (,) where
+  swap (a,b) = (b,a)
+
 instance (Show (p a b)
-        , SW.Swap p
+        , SwapC p
         , Show (p b a)
         ) => P Swap (p a b) where
   type PP Swap (p a b) = p b a
   eval _ opts pab =
     let msg0 = "Swap"
-        d = SW.swap pab
+        d = swap pab
     in pure $ mkNode opts (PresentT d) [show01 opts msg0 d pab] []
 
--- | assoc using 'AS.assoc'
+-- | assoc using 'AssocC'
 --
 -- >>> pz @Assoc (This (These 123 'x'))
 -- Present These 123 (This 'x')
@@ -3257,17 +3267,56 @@ instance (Show (p a b)
 --
 data Assoc
 
+class AssocC p where
+  assoc :: p (p a b) c -> p a (p b c)
+  unassoc :: p a (p b c) -> p (p a b) c
+instance AssocC Either where
+  assoc (Left (Left a)) = Left a
+  assoc (Left (Right b)) = Right (Left b)
+  assoc (Right b) = Right (Right b)
+  unassoc (Left a) = Left (Left a)
+  unassoc (Right (Left b)) = Left (Right b)
+  unassoc (Right (Right b)) = Right b
+instance AssocC These where
+  assoc (This (This a)) = This a
+  assoc (This (That b)) = That (This b)
+  assoc (That b) = That (That b)
+  assoc (These (This a) c) = These a (That c)
+  assoc (These (That b) c) = That (These b c)
+  assoc (These (These a b) c) = These a (These b c)
+  assoc (This (These a b)) = These a (This b)
+  unassoc (This a) = This (This a)
+  unassoc (That (This b)) = This (That b)
+  unassoc (That (That b)) = That b
+  unassoc (These a (That c)) = These (This a) c
+  unassoc (That (These b c)) = These (That b) c
+  unassoc (These a (These b c)) = These (These a b) c
+  unassoc (These a (This b)) = This (These a b)
+
+partitionThese :: [These a b] -> ([a], [b], [(a, b)])
+partitionThese []     = ([], [], [])
+partitionThese (t:ts) = case t of
+    This x    -> (x : xs,     ys,         xys)
+    That y    -> (    xs, y : ys,         xys)
+    These x y -> (    xs,     ys, (x,y) : xys)
+  where
+    ~(xs,ys,xys) = partitionThese ts
+
+instance AssocC (,) where
+  assoc ((a,b),c) = (a,(b,c))
+  unassoc (a,(b,c)) = ((a,b),c)
+
 instance (Show (p (p a b) c)
         , Show (p a (p b c))
-        , AS.Assoc p
+        , AssocC p
         ) => P Assoc (p (p a b) c) where
   type PP Assoc (p (p a b) c) = p a (p b c)
   eval _ opts pabc =
     let msg0 = "Assoc"
-        d = AS.assoc pabc
+        d = assoc pabc
     in pure $ mkNode opts (PresentT d) [show01 opts msg0 d pabc] []
 
--- | unassoc using 'AS.unassoc'
+-- | unassoc using 'UnassocC'
 --
 -- >>> pz @Unassoc (These 123 (This 'x'))
 -- Present This (These 123 'x')
@@ -3293,12 +3342,12 @@ data Unassoc
 
 instance (Show (p (p a b) c)
         , Show (p a (p b c))
-        , AS.Assoc p
+        , AssocC p
         ) => P Unassoc (p a (p b c)) where
   type PP Unassoc (p a (p b c)) = p (p a b) c
   eval _ opts pabc =
     let msg0 = "Unassoc"
-        d = AS.unassoc pabc
+        d = unassoc pabc
     in pure $ mkNode opts (PresentT d) [show01 opts msg0 d pabc] []
 
 -- | bounded 'succ' function
@@ -3709,11 +3758,12 @@ instance Functor f => P FMapSnd (f (x,a)) where
 -- Present 'w'
 -- PresentT 'w'
 --
--- >>> pz @(HeadDef (MEmptyT _) Id) ([] @(SG.Sum _))
+-- >>> :set -XFlexibleContexts
+-- >>> pz @(HeadDef (MEmptyT _) Id) ([] :: [SG.Sum Int])
 -- Present Sum {getSum = 0}
 -- PresentT (Sum {getSum = 0})
 --
--- >>> pz @(HeadDef (MEmptyT _) '[ "abc","def","asdfadf" ]) ()
+-- >>> pz @(HeadDef (MEmptyT String) '[ "abc","def","asdfadf" ]) ()
 -- Present "abc"
 -- PresentT "abc"
 --
@@ -4748,7 +4798,7 @@ type CatMaybes q = MapMaybe Id q
 -- Present ("ac",[])
 -- PresentT ("ac",[])
 --
--- >>> pz @PartitionEithers ([] @(Either _ _))
+-- >>> pz @PartitionEithers ([] :: [Either () Int])
 -- Present ([],[])
 -- PresentT ([],[])
 --
