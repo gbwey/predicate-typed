@@ -5274,7 +5274,7 @@ instance (KnownNat n
     let msg0 = "Guards" <> "(" <> show n <> ")"
         n :: Int = nat @n
     in if not (null as) then errorInProgram $ "GuardsImpl base case has extra data " ++ show as
-       else pure $ mkNode opts (PresentT as) [msg0 <> " done!"] []
+       else pure $ mkNode opts (PresentT as) [msg0 <> " empty"] []
 
 instance (PP prt (Int, a) ~ String
         , P prt (Int, a)
@@ -5304,10 +5304,17 @@ instance (PP prt (Int, a) ~ String
                       Left e -> e
                       Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
                  Right True -> do
-                   ss <- eval (Proxy @(GuardsImpl n ps)) opts as
-                   pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
-                     Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                     Right zs -> mkNode opts (PresentT (a:zs)) [msgbase2 <> show0 opts " " a] [hh pp, hh ss]
+                   if pos == 0 then -- we are at the bottom of the tree
+                      pure $ mkNode opts (PresentT [a]) [msgbase2 <> "("++show n++") done!"] [hh pp]
+                   else do
+                     ss <- eval (Proxy @(GuardsImpl n ps)) opts as
+                     pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
+                       Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
+                       Right zs -> (ss & tForest %~ \x -> fromTT pp : x) & tBool .~ PresentT (a:zs)
+--                         let tt = mkNode opts (PresentT (a:zs)) [msgbase1] [hh pp, hh ss]
+--                         in if top then mkNode opts (PresentT (a:zs)) [msgbase2 <> "("++show n++") done!"] [hh tt]
+--                            else tt
+
          _ -> errorInProgram $ "GuardsImpl n+1 case has no data"
 
 -- | boolean guard which checks a given a list of predicates against the list of values
@@ -5323,15 +5330,15 @@ instance (PP prt (Int, a) ~ String
 -- FalseT
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,13,14]
--- True (Bools 12)
+-- True (Bools(3) done!)
 -- TrueT
 --
 -- >>> pl @(BoolsQuick "abc" '[Between 0 23, Between 0 59, Between 0 59]) [12,13,14]
--- True (Bools 12)
+-- True (Bools(3) done!)
 -- TrueT
 --
 -- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,14]
--- True (Bools 12)
+-- True (Bools(3) done!)
 -- TrueT
 --
 -- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,99]
@@ -5339,7 +5346,7 @@ instance (PP prt (Int, a) ~ String
 -- FalseT
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,13,14]
--- True (Bools 12)
+-- True (Bools(3) done!)
 -- TrueT
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,60,14]
@@ -5379,7 +5386,7 @@ instance (KnownNat n
     let msg0 = "Bools" <> "(" <> show n <> ")"
         n :: Int = nat @n
     in if not (null as) then errorInProgram $ "BoolsImpl base case has extra data " ++ show as
-       else pure $ mkNodeB opts True [msg0 <> " done!"] []
+       else pure $ mkNodeB opts True [msg0 <> " empty"] []
 
 instance (PP prt (Int, a) ~ String
         , P prt (Int, a)
@@ -5389,7 +5396,7 @@ instance (PP prt (Int, a) ~ String
         , PP p a ~ Bool
         , P (BoolsImpl n ps) [a]
         , PP (BoolsImpl n ps) [a] ~ Bool
-        , Show a
+--        , Show a
         ) => P (BoolsImpl n ('(prt,p) ': ps)) [a] where
   type PP (BoolsImpl n ('(prt,p) ': ps)) [a] = Bool
   eval _ opts as' = do
@@ -5400,20 +5407,22 @@ instance (PP prt (Int, a) ~ String
          pos = getLen @ps
      case as' of
          a:as -> do
-                    pp <- evalBool (Proxy @p) opts a
-                    case getValueLR opts (msgbase1 <> " p failed") pp [] of
-                         Left e -> pure e
-                         Right False -> do
-                           qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
-                           pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
-                              Left e -> e
-                              Right msgx -> mkNodeB opts False [msgbase1 <> " [" <> msgx <> "] " <> topMessage pp] (hh pp : if isVerbose opts then [hh qq] else [])
-                         Right True -> do
-                           ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
-                           pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
-                             Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                             Right True -> mkNodeB opts True [msgbase2 <> show0 opts " " a] [hh pp, hh ss]
-                             Right False -> ss & tForest %~ \x -> fromTT pp : x
+            pp <- evalBool (Proxy @p) opts a
+            case getValueLR opts (msgbase1 <> " p failed") pp [] of
+                 Left e -> pure e
+                 Right False -> do
+                   qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
+                   pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+                      Left e -> e
+                      Right msgx -> mkNodeB opts False [msgbase1 <> " [" <> msgx <> "] " <> topMessage pp] (hh pp : if isVerbose opts then [hh qq] else [])
+                 Right True -> do
+                   if pos == 0 then -- we are at the bottom of the tree
+                      pure $ mkNodeB opts True [msgbase2 <> "("++show n++") done!"] [hh pp]
+                   else do
+                     ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
+                     pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
+                       Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
+                       Right _ ->  ss & tForest %~ \x -> fromTT pp : x
          _ -> errorInProgram $ "BoolsImpl n+1 case has no data"
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
@@ -5423,7 +5432,7 @@ instance (PP prt (Int, a) ~ String
 -- FalseT
 --
 -- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
--- True (Bools 121)
+-- True (Bools(4) done!)
 -- TrueT
 --
 data BoolsN prt (n :: Nat) p
