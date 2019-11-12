@@ -75,7 +75,7 @@ allProps =
 
 type Ip4RE = "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$"
 
-type Ip4 = Rescan Ip4RE Id >> OneP >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ip4guard
+type Ip4 = Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ip4guard
 
 type Ip4guard = Guard "4octets" (Len == 4) >> Guard "0-255" (All (Between 0 255) Id)
 

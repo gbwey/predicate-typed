@@ -198,7 +198,7 @@ ssn = mkProxy3'
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
-type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd OneP)
+type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd (OneP Id))
 type Ssnop = BoolsQuick (PrintT "number for group %d invalid: found %d" Id)
                      '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
 
@@ -265,7 +265,7 @@ type Ip = '(Ipip, Ipop, Ipfmt, String)
 ip :: Proxy Ip
 ip = mkProxy3'
 
-type Ipip = Map (ReadP Int Id) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> OneP >> Snd Id)
+type Ipip = Map (ReadP Int Id) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> Snd (OneP Id))
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
 type Ipop = BoolsN (PrintT "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255)
 type Ipfmt = PrintL 4 "%03d.%03d.%03d.%03d" Id

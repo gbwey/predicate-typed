@@ -472,6 +472,7 @@ module Predicate.Prelude (
 
   -- ** expression combinators
   , type ($)
+  , type (&)
   , Do
   , Dot
   , RDot
@@ -495,6 +496,7 @@ module Predicate.Prelude (
   , Repeat
 
   -- ** miscellaneous
+  , Both
   , Prime
   , Luhn
   , Char1
@@ -593,8 +595,8 @@ type Desc' = All (Fst Id > Snd Id) Pairs
 -- True
 -- TrueT
 --
--- >>> pz @(Between 5 8) 9
--- False
+-- >>> pl @(Between 5 8) 9
+-- False (9 <= 8)
 -- FalseT
 --
 -- >>> pz @(10 % 4 <..> 40 % 5) 4
@@ -3292,6 +3294,7 @@ instance AssocC These where
   unassoc (These a (These b c)) = These (These a b) c
   unassoc (These a (This b)) = This (These a b)
 
+-- copied from Data.These
 partitionThese :: [These a b] -> ([a], [b], [(a, b)])
 partitionThese []     = ([], [], [])
 partitionThese (t:ts) = case t of
@@ -3315,7 +3318,7 @@ instance (Show (p (p a b) c)
         d = assoc pabc
     in pure $ mkNode opts (PresentT d) [show01 opts msg0 d pabc] []
 
--- | unassoc using 'UnassocC'
+-- | unassoc using 'AssocC'
 --
 -- >>> pz @Unassoc (These 123 (This 'x'))
 -- Present This (These 123 'x')
@@ -4402,11 +4405,11 @@ instance (P def (Proxy a)
 
 -- | similar to 'Data.List.!!' leveraging 'Ixed'
 --
--- >>>pz @(IxL Id 2 "notfound") ["abc","D","eF","","G"]
+-- >>> pz @(IxL Id 2 "notfound") ["abc","D","eF","","G"]
 -- Present "eF"
 -- PresentT "eF"
 --
--- >>>pz @(IxL Id 20 "notfound") ["abc","D","eF","","G"]
+-- >>> pz @(IxL Id 20 "notfound") ["abc","D","eF","","G"]
 -- Present "notfound"
 -- PresentT "notfound"
 --
@@ -5396,7 +5399,7 @@ type Quot p q = Fst (QuotRem p q)
 type Rem p q = Snd (QuotRem p q)
 
 --type OneP = Guard "expected list of length 1" (Len == 1) >> Head Id
-type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
+--type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
 
 -- k or prt has access to (Int,a) where Int is the current guard position: hence need to use PrintT
 -- todo: better explanation of how this works
@@ -6424,7 +6427,18 @@ instance P (EmptyList' t) x where
 -- Present ["hello"]
 -- PresentT ["hello"]
 --
-type Singleton p = p :+ EmptyT [] p
+data Singleton p
+
+instance P p x => P (Singleton p) x where
+  type PP (Singleton p) x = [PP p x]
+  eval _ opts x = do
+    let msg0 = "Singleton"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p -> mkNode opts (PresentT [p]) [msg0] [hh pp]
+
+--type Singleton p = p :+ EmptyT [] p
 
 -- | extracts the first character from a non empty 'Symbol'
 --
@@ -8750,9 +8764,9 @@ instance (Show a
           Just d -> mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
 
--- | dot
+-- | compose simple functions
 --
--- >>>pl @(Dot '[Thd,Snd,Fst] Id) ((1,(2,9,10)),(3,4))
+-- >>> pl @(Dot '[Thd,Snd,Fst] Id) ((1,(2,9,10)),(3,4))
 -- Present 10 (Thd 10 | (2,9,10))
 -- PresentT 10
 --
@@ -8768,9 +8782,13 @@ type family DotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 
 -- | reversed dot
 --
--- >>>pl @(RDot '[Fst,Snd,Thd] Id) ((1,(2,9,10)),(3,4))
+-- >>> pl @(RDot '[Fst,Snd,Thd] Id) ((1,(2,9,10)),(3,4))
 -- Present 10 (Thd 10 | (2,9,10))
 -- PresentT 10
+--
+-- >>> pl @(RDot '[Fst,Snd] Id) (('a',2),(True,"zy"))
+-- Present 2 (Snd 2 | ('a',2))
+-- PresentT 2
 --
 data RDot (ps :: [Type -> Type]) (q :: Type)
 instance (P (RDotExpandT ps q) a) => P (RDot ps q) a where
@@ -8784,11 +8802,11 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 
 -- | like 'GHC.Base.$' for expressions
 --
--- >>>pl @(Fst $ Snd $ Id) ((1,2),(3,4))
+-- >>> pl @(Fst $ Snd $ Id) ((1,2),(3,4))
 -- Present 3 (Fst 3 | (3,4))
 -- PresentT 3
 --
--- >>>pl @((<=) 4 $ Fst $ Snd $ Id) ((1,2),(3,4))
+-- >>> pl @((<=) 4 $ Fst $ Snd $ Id) ((1,2),(3,4))
 -- False (4 <= 3)
 -- FalseT
 --
@@ -8801,13 +8819,29 @@ instance P (p q) a => P (p $ q) a where
 
 infixr 0 $
 
+-- | similar to 'Control.Lens.&'
+--
+-- >>> pl @(Id & Fst & Singleton & Length) (13,"xyzw")
+-- Present 1 (Length 1 | [13])
+-- PresentT 1
+--
+data (q :: Type) & (p :: Type -> Type)
+
+instance P (p q) a => P (q & p) a where
+  type PP (q & p) a = PP (p q) a
+  eval _ opts a = do
+    eval (Proxy @(p q)) opts a
+
+infixl 1 &
+
+
 -- | creates a constant expression ignoring the second arguenent
 --
--- >>>pl @(RDot '[Fst,Snd,Thd,K "xxx"] Id) ((1,(2,9,10)),(3,4))
+-- >>> pl @(RDot '[Fst,Snd,Thd,K "xxx"] Id) ((1,(2,9,10)),(3,4))
 -- Present "xxx" (K'xxx)
 -- PresentT "xxx"
 --
--- >>>pl @(RDot '[Fst,Snd,Thd,K '("abc",Id)] Id) ((1,(2,9,10)),(3,4))
+-- >>> pl @(RDot '[Fst,Snd,Thd,K '("abc",Id)] Id) ((1,(2,9,10)),(3,4))
 -- Present ("abc",((1,(2,9,10)),(3,4))) (K'(,))
 -- PresentT ("abc",((1,(2,9,10)),(3,4)))
 --
@@ -8815,5 +8849,130 @@ data K (p :: k) (q :: Type)
 instance P p a => P (K p q) a where
   type PP (K p q) a = PP p a
   eval _ = eval (Proxy @(Msg "K" p))
+
+type family FstT tp where
+  FstT (a,b) = a
+  FstT (a,b,c) = a
+  FstT (a,b,c,d) = a
+  FstT (a,b,c,d,e) = a
+  FstT (a,b,c,d,e,f) = a
+type family SndT tp where
+  SndT (a,b) = b
+  SndT (a,b,c) = b
+  SndT (a,b,c,d) = b
+  SndT (a,b,c,d,e) = b
+  SndT (a,b,c,d,e,f) = b
+type family ThdT tp where
+  ThdT (a,b) = GL.TypeError ('GL.Text "Thd doesn't work for 2-tuples")
+  ThdT (a,b,c) = c
+  ThdT (a,b,c,d) = c
+  ThdT (a,b,c,d,e) = c
+  ThdT (a,b,c,d,e,f) = c
+
+{-
+data Both p q
+instance ( PP q x ~ (a,a')
+         , P p a'
+         , P q x
+         , P p a
+   ) => P (Both p q) x where
+  type PP (Both p q) x = (PP p (FstT (PP q x)), PP p (SndT (PP q x)))
+  eval _ opts x = do
+    let msg0 = "Both"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right (a,a') -> do
+        pp <- eval (Proxy @p) opts a
+        case getValueLR opts msg0 pp [hh qq] of
+          Left e -> pure e
+          Right b -> do
+            pp' <- eval (Proxy @p) opts a'
+            pure $ case getValueLR opts msg0 pp' [hh qq, hh pp] of
+              Left e -> e
+              Right b' ->
+                mkNode opts (PresentT (b,b')) [msg0] [hh qq, hh pp, hh pp']
+-}
+
+-- | applies \'p\' to the first and second slot of an n-tuple
+--
+-- >>> pl @(Both Len (Fst Id)) (("abc",[10..17],1,2,3),True)
+-- Present (3,8) (Both)
+-- PresentT (3,8)
+--
+-- >>> pl @(Both (Pred Id) $ Fst Id) ((12,'z',[10..17]),True)
+-- Present (11,'y') (Both)
+-- PresentT (11,'y')
+--
+-- >>> pl @(Both (Succ Id) Id) (4,'a')
+-- Present (5,'b') (Both)
+-- PresentT (5,'b')
+--
+-- >>> pl @(Both Len (Fst Id)) (("abc",[10..17]),True)
+-- Present (3,8) (Both)
+-- PresentT (3,8)
+data Both p q
+instance ( ExtractL1C (PP q x)
+         , ExtractL2C (PP q x)
+         , P p (ExtractL1T (PP q x))
+         , P p (ExtractL2T (PP q x))
+         , P q x
+   ) => P (Both p q) x where
+  type PP (Both p q) x = (PP p (ExtractL1T (PP q x)), PP p (ExtractL2T (PP q x)))
+  eval _ opts x = do
+    let msg0 = "Both"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        let (a,a') = (extractL1C q, extractL2C q)
+        pp <- eval (Proxy @p) opts a
+        case getValueLR opts msg0 pp [hh qq] of
+          Left e -> pure e
+          Right b -> do
+            pp' <- eval (Proxy @p) opts a'
+            pure $ case getValueLR opts msg0 pp' [hh qq, hh pp] of
+              Left e -> e
+              Right b' ->
+                mkNode opts (PresentT (b,b')) [msg0] [hh qq, hh pp, hh pp']
+
+-- | gets the singleton value from a foldable
+--
+-- >>> pl @(OneP Id) [10..15]
+-- Error OneP 6 elements
+-- FailT "OneP 6 elements"
+--
+-- >>> pl @(OneP Id) [10]
+-- Present 10 (OneP)
+-- PresentT 10
+--
+-- >>> pl @(OneP Id) []
+-- Error OneP empty
+-- FailT "OneP empty"
+--
+-- >>> pl @(OneP Id) (Just 10)
+-- Present 10 (OneP)
+-- PresentT 10
+--
+-- >>> pl @(OneP Id) Nothing
+-- Error OneP empty
+-- FailT "OneP empty"
+--
+data OneP p
+instance (Foldable t
+        , PP p x ~ t a
+        , P p x
+        ) => P (OneP p) x where
+  type PP (OneP p) x = ExtractAFromTA (PP p x)
+  eval _ opts x = do
+    let msg0 = "OneP"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p -> case toList p of
+                   [] -> mkNode opts (FailT (msg0 <> " empty")) [msg0 <> " expected one element"] [hh pp]
+                   [a] -> mkNode opts (PresentT a) [msg0] [hh pp]
+                   as -> let n = length as
+                         in mkNode opts (FailT (msg0 <> " " <> show n <> " elements")) [msg0 <> " expected one element"] [hh pp]
 
 
