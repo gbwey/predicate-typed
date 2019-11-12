@@ -100,16 +100,16 @@ unnamedTests = [
 
   , expect3 (Left $ XTFalse (-6.3))
                   $ eval3 @(ReadP Double Id)
-                          @(ToRational Id > 7 %- 3)
+                          @(ToRational Id > 7 -% 3)
                           @(PrintF "%5.3f" Id)
                           ol "-6.3"
 
   , expect3 (Right $ unsafeRefined3 4.123 "")
-                  $ eval3 @(ReadP Double Id) @(ToRational Id > 7 %- 3) @""
+                  $ eval3 @(ReadP Double Id) @(ToRational Id > 7 -% 3) @""
                   ol "4.123"
 
   , expect3 (Right $ unsafeRefined3 4.123 (4123 % 1000))
-                  $ eval3 @Id @(Gt (7 %- 3)) @(4123 % 1000) ol 4.123
+                  $ eval3 @Id @(Gt (7 -% 3)) @(4123 % 1000) ol 4.123
 
   , expect3 (Right $ unsafeRefined3 [1,2,3,4] "")
                   $ eval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255) Id && (Len == 4)) @""

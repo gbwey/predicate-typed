@@ -430,7 +430,7 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- >>> prtEval3P (readshow' @Rational @(Between (3 % 1) (5 % 1))) oz "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (11 %- 2) (3 %- 1)))) oz "-13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (11 -% 2) (3 -% 1)))) oz "-13 % 3"
 -- Right (Refined3 {r3In = (-13) % 3, r3Out = "(-13) % 3"})
 --
 -- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (15 % 1)))) oz "13 % 3"

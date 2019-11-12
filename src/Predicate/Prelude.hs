@@ -137,7 +137,6 @@ module Predicate.Prelude (
 
   -- *** rational numbers
   , type (%)
-  , type (%-)
   , type (-%)
   , ToRational
   , FromRational
@@ -373,7 +372,7 @@ module Predicate.Prelude (
   , ScanN
   , ScanNA
   , FoldN
-  , Foldl
+  , FoldL
   , Unfoldr
   , IterateN
   , IterateUntil
@@ -433,12 +432,11 @@ module Predicate.Prelude (
   -- ** string expressions
   , ToLower
   , ToUpper
-  , Trim
-  , TrimStart
-  , TrimEnd
-  , StripLR
-  , StripRight
-  , StripLeft
+  , TrimBoth
+  , TrimL
+  , TrimR
+  , StripR
+  , StripL
   , IsPrefix
   , IsInfix
   , IsSuffix
@@ -574,13 +572,36 @@ import Data.Time.Calendar.WeekDate
 
 
 -- | a type level predicate for a monotonic increasing list
-type Asc = All (Fst Id <= Snd Id) Pairs
+data Asc
+type AscT = All (Fst Id <= Snd Id) Pairs
+
+instance P AscT x => P Asc x where
+  type PP Asc x = PP AscT x
+  eval _ = eval (Proxy @AscT)
+
 -- | a type level predicate for a strictly increasing list
-type Asc' = All (Fst Id < Snd Id) Pairs
+data Asc'
+type AscT' = All (Fst Id < Snd Id) Pairs
+
+instance P AscT' x => P Asc' x where
+  type PP Asc' x = PP AscT' x
+  eval _ = eval (Proxy @AscT')
+
 -- | a type level predicate for a monotonic decreasing list
-type Desc = All (Fst Id >= Snd Id) Pairs
+data Desc
+type DescT = All (Fst Id >= Snd Id) Pairs
+
+instance P DescT x => P Desc x where
+  type PP Desc x = PP DescT x
+  eval _ = eval (Proxy @DescT)
 -- | a type level predicate for a strictly decreasing list
-type Desc' = All (Fst Id > Snd Id) Pairs
+data Desc'
+type DescT' = All (Fst Id > Snd Id) Pairs
+
+instance P DescT' x => P Desc' x where
+  type PP Desc' x = PP DescT' x
+  eval _ = eval (Proxy @DescT')
+
 
 --type AscAlt = SortOn Id Id == Id
 --type DescAlt = SortOnDesc Id Id == Id
@@ -819,7 +840,13 @@ type Negative = Lt 0
 -- Present ([1,2,3,4],"abcd")
 -- PresentT ([1,2,3,4],"abcd")
 --
-type Unzip = '(Map (Fst Id) Id, Map (Snd Id) Id)
+data Unzip
+type UnzipT = '(Map (Fst Id) Id, Map (Snd Id) Id)
+
+instance P UnzipT x => P Unzip x where
+  type PP Unzip x = PP UnzipT x
+  eval _ = eval (Proxy @UnzipT)
+
 
 -- | 'unzip3' equivalent
 --
@@ -827,7 +854,13 @@ type Unzip = '(Map (Fst Id) Id, Map (Snd Id) Id)
 -- Present ([1,2,3,4],"abcd",[True,False,True,False])
 -- PresentT ([1,2,3,4],"abcd",[True,False,True,False])
 --
-type Unzip3 = '(Map (Fst Id) Id, Map (Snd Id) Id, Map (Thd Id) Id)
+data Unzip3
+type Unzip3T = '(Map (Fst Id) Id, Map (Snd Id) Id, Map (Thd Id) Id)
+
+instance P Unzip3T x => P Unzip3 x where
+  type PP Unzip3 x = PP Unzip3T x
+  eval _ = eval (Proxy @Unzip3T)
+
 
 -- | represents a predicate using a 'Symbol' as a regular expression
 -- evaluates 'Re' and returns True if there is a match
@@ -837,7 +870,12 @@ type Unzip3 = '(Map (Fst Id) Id, Map (Snd Id) Id, Map (Thd Id) Id)
 -- TrueT
 --
 data Re' (rs :: [ROpt]) p q
-type Re p q = Re' '[] p q
+data Re p q
+type ReT p q = Re' '[] p q
+
+instance P (ReT p q) x => P (Re p q) x where
+  type PP (Re p q) x = PP (ReT p q) x
+  eval _ = eval (Proxy @(ReT p q))
 
 instance (GetROpts rs
         , PP p x ~ String
@@ -878,7 +916,13 @@ instance (GetROpts rs
 -- PresentT [("13:05:25",["13","05","25"])]
 --
 data Rescan' (rs :: [ROpt]) p q
-type Rescan p q = Rescan' '[] p q
+data Rescan p q
+type RescanT p q = Rescan' '[] p q
+
+instance P (RescanT p q) x => P (Rescan p q) x where
+  type PP (Rescan p q) x = PP (RescanT p q) x
+  eval _ = eval (Proxy @(RescanT p q))
+
 
 instance (GetROpts rs
         , PP p x ~ String
@@ -913,7 +957,14 @@ instance (GetROpts rs
 -- PresentT [((0,8),[(0,2),(3,5),(6,8)])]
 --
 data RescanRanges' (rs :: [ROpt]) p q
-type RescanRanges p q = RescanRanges' '[] p q
+
+data RescanRanges p q
+type RescanRangesT p q = RescanRanges' '[] p q
+
+instance P (RescanRangesT p q) x => P (RescanRanges p q) x where
+  type PP (RescanRanges p q) x = PP (RescanRangesT p q) x
+  eval _ = eval (Proxy @(RescanRangesT p q))
+
 
 instance (GetROpts rs
         , PP p x ~ String
@@ -951,7 +1002,13 @@ instance (GetROpts rs
 -- PresentT ["12","13","1"]
 --
 data Resplit' (rs :: [ROpt]) p q
-type Resplit p q = Resplit' '[] p q
+
+data Resplit p q
+type ResplitT p q = Resplit' '[] p q
+
+instance P (ResplitT p q) x => P (Resplit p q) x where
+  type PP (Resplit p q) x = PP (ResplitT p q) x
+  eval _ = eval (Proxy @(ResplitT p q))
 
 instance (GetROpts rs
         , PP p x ~ String
@@ -994,10 +1051,22 @@ type ReplaceOne' (rs :: [ROpt]) p q r = ReplaceImpl 'False rs p q r
 type ReplaceOne p q r = ReplaceOne' '[] p q r
 
 type ReplaceAllString' (rs :: [ROpt]) p q r = ReplaceAll' rs p (MakeRR q) r
-type ReplaceAllString p q r = ReplaceAllString' '[] p q r
+
+data ReplaceAllString p q r
+type ReplaceAllStringT p q r = ReplaceAllString' '[] p q r
+
+instance P (ReplaceAllStringT p q r) x => P (ReplaceAllString p q r) x where
+  type PP (ReplaceAllString p q r) x = PP (ReplaceAllStringT p q r) x
+  eval _ = eval (Proxy @(ReplaceAllStringT p q r))
 
 type ReplaceOneString' (rs :: [ROpt]) p q r = ReplaceOne' rs p (MakeRR q) r
-type ReplaceOneString p q r = ReplaceOneString' '[] p q r
+data ReplaceOneString p q r
+type ReplaceOneStringT p q r = ReplaceOneString' '[] p q r
+
+instance P (ReplaceOneStringT p q r) x => P (ReplaceOneString p q r) x where
+  type PP (ReplaceOneString p q r) x = PP (ReplaceOneStringT p q r) x
+  eval _ = eval (Proxy @(ReplaceOneStringT p q r))
+
 
 -- | Simple replacement string: see 'ReplaceAllString' and 'ReplaceOneString'
 --
@@ -1186,8 +1255,21 @@ instance GetCharSet 'CLatin1 where
 -- False
 -- FalseT
 --
-type IsLower = IsCharSet 'CLower
-type IsUpper = IsCharSet 'CUpper
+
+data IsLower
+type IsLowerT = IsCharSet 'CLower
+
+instance P IsLowerT x => P IsLower x where
+  type PP IsLower x = PP IsLowerT x
+  eval _ = eval (Proxy @IsLowerT)
+
+data IsUpper
+type IsUpperT = IsCharSet 'CUpper
+
+instance P IsUpperT x => P IsUpper x where
+  type PP IsUpper x = PP IsUpperT x
+  eval _ = eval (Proxy @IsUpperT)
+
 -- | predicate for determining if the string is all digits
 --
 -- >>> pz @IsNumber "213G"
@@ -1198,14 +1280,54 @@ type IsUpper = IsCharSet 'CUpper
 -- True
 -- TrueT
 --
-type IsNumber = IsCharSet 'CNumber
-type IsSpace = IsCharSet 'CSpace
-type IsPunctuation = IsCharSet 'CPunctuation
-type IsControl = IsCharSet 'CControl
-type IsHexDigit = IsCharSet 'CHexDigit
-type IsOctDigit = IsCharSet 'COctDigit
-type IsSeparator = IsCharSet 'CSeparator
-type IsLatin1 = IsCharSet 'CLatin1
+data IsNumber
+type IsNumberT = IsCharSet 'CNumber
+instance P IsNumberT x => P IsNumber x where
+  type PP IsNumber x = PP IsNumberT x
+  eval _ = eval (Proxy @IsNumberT)
+
+data IsSpace
+type IsSpaceT = IsCharSet 'CSpace
+instance P IsSpaceT x => P IsSpace x where
+  type PP IsSpace x = PP IsSpaceT x
+  eval _ = eval (Proxy @IsSpaceT)
+
+data IsPunctuation
+type IsPunctuationT = IsCharSet 'CPunctuation
+instance P IsPunctuationT x => P IsPunctuation x where
+  type PP IsPunctuation x = PP IsPunctuationT x
+  eval _ = eval (Proxy @IsPunctuationT)
+
+data IsControl
+type IsControlT = IsCharSet 'CControl
+instance P IsControlT x => P IsControl x where
+  type PP IsControl x = PP IsControlT x
+  eval _ = eval (Proxy @IsControlT)
+
+data IsHexDigit
+type IsHexDigitT = IsCharSet 'CHexDigit
+instance P IsHexDigitT x => P IsHexDigit x where
+  type PP IsHexDigit x = PP IsHexDigitT x
+  eval _ = eval (Proxy @IsHexDigitT)
+
+data IsOctDigit
+type IsOctDigitT = IsCharSet 'COctDigit
+instance P IsOctDigitT x => P IsOctDigit x where
+  type PP IsOctDigit x = PP IsOctDigitT x
+  eval _ = eval (Proxy @IsOctDigitT)
+
+data IsSeparator
+type IsSeparatorT = IsCharSet 'CSeparator
+instance P IsSeparatorT x => P IsSeparator x where
+  type PP IsSeparator x = PP IsSeparatorT x
+  eval _ = eval (Proxy @IsSeparatorT)
+
+data IsLatin1
+type IsLatin1T = IsCharSet 'CLatin1
+instance P IsLatin1T x => P IsLatin1 x where
+  type PP IsLatin1 x = PP IsLatin1T x
+  eval _ = eval (Proxy @IsLatin1T)
+
 
 instance (GetCharSet cs
         , Show a
@@ -1327,7 +1449,7 @@ instance ( PP p x ~ [a]
 -- Present "'x'"
 -- PresentT "'x'"
 --
--- >>> pz @(ShowP (42 %- 10)) 'x'
+-- >>> pz @(ShowP (42 -% 10)) 'x'
 -- Present "(-21) % 5"
 -- PresentT "(-21) % 5"
 --
@@ -1386,7 +1508,14 @@ instance (PP p x ~ String
 --
 -- keeping \'q\' as we might want to extract from a tuple
 data ParseTimeP' t p q
-type ParseTimeP (t :: Type) p q = ParseTimeP' (Hole t) p q
+type ParseTimePT (t :: Type) p q = ParseTimeP' (Hole t) p q
+
+
+data ParseTimeP (t :: Type) p q
+
+instance P (ParseTimePT t p q) x => P (ParseTimeP t p q) x where
+  type PP (ParseTimeP t p q) x = PP (ParseTimePT t p q) x
+  eval _ = eval (Proxy @(ParseTimePT t p q))
 
 instance (ParseTime (PP t a)
         , Typeable (PP t a)
@@ -1421,7 +1550,12 @@ instance (ParseTime (PP t a)
 -- PresentT 2019-03-11 01:22:33
 --
 data ParseTimes' t p q
-type ParseTimes (t :: Type) p q = ParseTimes' (Hole t) p q
+data ParseTimes (t :: Type) p q
+type ParseTimesT (t :: Type) p q = ParseTimes' (Hole t) p q
+
+instance P (ParseTimesT t p q) x => P (ParseTimes t p q) x where
+  type PP (ParseTimes t p q) x = PP (ParseTimesT t p q) x
+  eval _ = eval (Proxy @(ParseTimesT t p q))
 
 instance (ParseTime (PP t a)
         , Typeable (PP t a)
@@ -1461,7 +1595,12 @@ instance (ParseTime (PP t a)
 -- PresentT (Just (1999-03-13,10,6))
 --
 data MkDay' p q r
-type MkDay = MkDay' (Fst Id) (Snd Id) (Thd Id)
+data MkDay -- = MkDay' (Fst Id) (Snd Id) (Thd Id)
+type MkDayT = MkDay' (Fst Id) (Snd Id) (Thd Id)
+
+instance P MkDayT x => P MkDay x where
+  type PP MkDay x = PP MkDayT x
+  eval _ = eval (Proxy @MkDayT)
 
 instance (P p x
         , P q x
@@ -1523,7 +1662,6 @@ instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
 -- FalseT
 --
 data ReadP' t p
-type ReadP (t :: Type) p = ReadP' (Hole t) p
 
 instance (P p x
         , PP p x ~ String
@@ -1545,6 +1683,14 @@ instance (P p x
            [(b,"")] -> mkNode opts (PresentT b) [lit01 opts msg1 b s] hhs
            o -> mkNode opts (FailT (msg1 <> " failed")) [msg1 <> " failed " <> show o] hhs
 
+data ReadP (t :: Type) p
+type ReadPT (t :: Type) p = ReadP' (Hole t) p
+
+instance P (ReadPT t p) x => P (ReadP t p) x where
+  type PP (ReadP t p) x = PP (ReadPT t p) x
+  eval _ = eval (Proxy @(ReadPT t p))
+
+
 -- [] (a,s) (a,[])
 
 -- | Read but returns the Maybe of the value and any remaining unparsed string
@@ -1562,7 +1708,6 @@ instance (P p x
 -- PresentT Nothing
 --
 data ReadMaybe' t p
-type ReadMaybe (t :: Type) p = ReadMaybe' (Hole t) p
 
 -- | emulates ReadP
 type ReadQ' t p = ReadMaybe' t p >> MaybeIn (Failp "read failed") (Guard "oops" (Snd Id >> Null) >> Fst Id)
@@ -1590,6 +1735,13 @@ instance (P p x
         in case reads @(PP t x) s of
            [(b,rest)] -> mkNode opts (PresentT (Just (b,rest))) [lit01 opts msg1 b s] hhs
            o -> mkNode opts (PresentT Nothing) [msg1 <> " failed " <> show o] hhs
+
+data ReadMaybe (t :: Type) p
+type ReadMaybeT (t :: Type) p = ReadMaybe' (Hole t) p
+
+instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
+  type PP (ReadMaybe t p) x = PP (ReadMaybeT t p) x
+  eval _ = eval (Proxy @(ReadMaybeT t p))
 
 -- | similar to 'sum'
 --
@@ -1682,8 +1834,8 @@ instance (Ord a, Show a) => P Max [a] where
 -- PresentT [(4,"y"),(4,"x"),(4,"a"),(10,"ab"),(20,"bbb")]
 --
 data SortBy p q
-type SortOn p q = SortBy (OrdA p) q
-type SortOnDesc p q = SortBy (Swap >> OrdA p) q
+--type SortOn p q = SortBy (OrdA p) q
+--type SortOnDesc p q = SortBy (Swap >> OrdA p) q
 
 type SortByHelper p = Partition (p == 'GT) Id
 
@@ -1729,6 +1881,22 @@ instance (P p (a,a)
         pure $ case getValueLR opts msg0 ret [hh qq] of
           Left _e -> ret -- dont rewrap else will double up messages: already handled
           Right xs -> mkNode opts (_tBool ret) [msg0 <> show0 opts " " xs] [hh qq, hh ret]
+
+data SortOn p q
+type SortOnT p q = SortBy (OrdA p) q
+
+instance (P (SortOnT p q) x
+        ) => P (SortOn p q) x where
+  type PP (SortOn p q) x = PP (SortOnT p q) x
+  eval _ = eval (Proxy @(SortOnT p q))
+
+data SortOnDesc p q
+type SortOnDescT p q = SortBy (Swap >> OrdA p) q
+
+instance (P (SortOnDescT p q) x
+        ) => P (SortOnDesc p q) x where
+  type PP (SortOnDesc p q) x = PP (SortOnDescT p q) x
+  eval _ = eval (Proxy @(SortOnDescT p q))
 
 -- | similar to 'length'
 --
@@ -2070,7 +2238,14 @@ instance ExtractL6C (a,b,c,d,e,f) where
 -- Present fromList "abc"
 -- PresentT (fromList "abc")
 data FromStringP' t s
-type FromStringP (t :: Type) p = FromStringP' (Hole t) p
+type FromStringPT (t :: Type) p = FromStringP' (Hole t) p
+
+data FromStringP (t :: Type) p
+
+instance (P (FromStringPT t p) x
+        ) => P (FromStringP t p) x where
+  type PP (FromStringP t p) x = PP (FromStringPT t p) x
+  eval _ = eval (Proxy @(FromStringPT t p))
 
 instance (P s a
         , PP s a ~ String
@@ -2103,8 +2278,15 @@ instance (P s a
 -- PresentT (12 % 1)
 --
 data FromInteger' t n
-type FromInteger (t :: Type) p = FromInteger' (Hole t) p
+type FromIntegerT (t :: Type) p = FromInteger' (Hole t) p
 --type FromIntegerP n = FromInteger' Unproxy n
+
+data FromInteger (t :: Type) p
+instance (P (FromIntegerT t p) x
+        ) => P (FromInteger t p) x where
+  type PP (FromInteger t p) x = PP (FromIntegerT t p) x
+  eval _ = eval (Proxy @(FromIntegerT t p))
+
 
 instance (Num (PP t a)
         , Integral (PP n a)
@@ -2127,7 +2309,14 @@ instance (Num (PP t a)
 -- Present Sum {getSum = 23}
 -- PresentT (Sum {getSum = 23})
 data FromIntegral' t n
-type FromIntegral (t :: Type) p = FromIntegral' (Hole t) p
+data FromIntegral (t :: Type) p
+type FromIntegralT (t :: Type) p = FromIntegral' (Hole t) p
+
+instance (P (FromIntegralT t p) x
+        ) => P (FromIntegral t p) x where
+  type PP (FromIntegral t p) x = PP (FromIntegralT t p) x
+  eval _ = eval (Proxy @(FromIntegralT t p))
+
 
 instance (Num (PP t a)
         , Integral (PP n a)
@@ -2174,7 +2363,14 @@ instance (a ~ PP p x
 -- Present 47 % 2
 -- PresentT (47 % 2)
 data FromRational' t r
-type FromRational (t :: Type) p = FromRational' (Hole t) p
+data FromRational (t :: Type) p
+type FromRationalT (t :: Type) p = FromRational' (Hole t) p
+
+instance (P (FromRationalT t p) x
+        ) => P (FromRational t p) x where
+  type PP (FromRational t p) x = PP (FromRationalT t p) x
+  eval _ = eval (Proxy @(FromRationalT t p))
+
 
 instance (P r a
         , PP r a ~ Rational
@@ -2197,7 +2393,14 @@ instance (P r a
 -- Present 4
 -- PresentT 4
 data Truncate' t p
-type Truncate (t :: Type) p = Truncate' (Hole t) p
+data Truncate (t :: Type) p
+type TruncateT (t :: Type) p = Truncate' (Hole t) p
+
+instance (P (TruncateT t p) x
+        ) => P (Truncate t p) x where
+  type PP (Truncate t p) x = PP (TruncateT t p) x
+  eval _ = eval (Proxy @(TruncateT t p))
+
 
 instance (Show (PP p x)
         , P p x
@@ -2221,7 +2424,14 @@ instance (Show (PP p x)
 -- Present 5
 -- PresentT 5
 data Ceiling' t p
-type Ceiling (t :: Type) p = Ceiling' (Hole t) p
+data Ceiling (t :: Type) p
+type CeilingT (t :: Type) p = Ceiling' (Hole t) p
+
+instance (P (CeilingT t p) x
+        ) => P (Ceiling t p) x where
+  type PP (Ceiling t p) x = PP (CeilingT t p) x
+  eval _ = eval (Proxy @(CeilingT t p))
+
 
 instance (Show (PP p x)
         , P p x
@@ -2245,7 +2455,14 @@ instance (Show (PP p x)
 -- Present 4
 -- PresentT 4
 data Floor' t p
-type Floor (t :: Type) p = Floor' (Hole t) p
+data Floor (t :: Type) p
+type FloorT (t :: Type) p = Floor' (Hole t) p
+
+instance (P (FloorT t p) x
+        ) => P (Floor t p) x where
+  type PP (Floor t p) x = PP (FloorT t p) x
+  eval _ = eval (Proxy @(FloorT t p))
+
 
 instance (Show (PP p x)
         , P p x
@@ -2382,8 +2599,20 @@ instance (Show (PP p a)
 -- PresentT [12,13,14]
 --
 data Pad (left :: Bool) n p q
-type PadL n p q = Pad 'True n p q
-type PadR n p q = Pad 'False n p q
+data PadL n p q -- = Pad 'True n p q
+type PadLT n p q = Pad 'True n p q
+data PadR n p q -- = Pad 'False n p q
+type PadRT n p q = Pad 'False n p q
+
+instance (P (PadLT n p q) x
+        ) => P (PadL n p q) x where
+  type PP (PadL n p q) x = PP (PadLT n p q) x
+  eval _ = eval (Proxy @(PadLT n p q))
+
+instance (P (PadRT n p q) x
+        ) => P (PadR n p q) x where
+  type PP (PadR n p q) x = PP (PadRT n p q) x
+  eval _ = eval (Proxy @(PadRT n p q))
 
 instance (P n a
         , GetBool left
@@ -2468,8 +2697,20 @@ instance (P ns x
 -- PresentT ("hell","o world")
 --
 data SplitAt n p
-type Take n p = Fst (SplitAt n p)
-type Drop n p = Snd (SplitAt n p)
+type TakeT n p = Fst (SplitAt n p)
+type DropT n p = Snd (SplitAt n p)
+
+data Take n p
+instance (P (TakeT n p) x
+        ) => P (Take n p) x where
+  type PP (Take n p) x = PP (TakeT n p) x
+  eval _ = eval (Proxy @(TakeT n p))
+
+data Drop n p
+instance (P (DropT n p) x
+        ) => P (Drop n p) x where
+  type PP (Drop n p) x = PP (DropT n p) x
+  eval _ = eval (Proxy @(DropT n p))
 
 instance (PP p a ~ [b]
         , P n a
@@ -2495,8 +2736,14 @@ instance (PP p a ~ [b]
 --type Last = Unsnoc >> 'Just (Snd Id)
 
 -- | similar to 'Control.Arrow.&&&'
-type p &&& q = W '(p, q)
+data p &&& q -- = W '(p, q)
 infixr 3 &&&
+type WAmpT p q = W '(p, q)
+
+instance (P (WAmpT p q) x
+        ) => P (p &&& q) x where
+  type PP (p &&& q) x = PP (WAmpT p q) x
+  eval _ = eval (Proxy @(WAmpT p q))
 
 -- | similar to 'Control.Arrow.***'
 --
@@ -2506,8 +2753,20 @@ infixr 3 &&&
 --
 data p *** q
 infixr 3 ***
-type First p = p *** I
-type Second q = I *** q
+data First p -- = p *** I
+data Second q -- = I *** q
+type FirstT p = p *** I
+type SecondT q = I *** q
+
+instance (P (FirstT p) x
+        ) => P (First p) x where
+  type PP (First p) x = PP (FirstT p) x
+  eval _ = eval (Proxy @(FirstT p))
+
+instance (P (SecondT q) x
+        ) => P (Second q) x where
+  type PP (Second q) x = PP (SecondT q) x
+  eval _ = eval (Proxy @(SecondT q))
 
 instance (Show (PP p a)
         , Show (PP q b)
@@ -2541,8 +2800,20 @@ instance (Show (PP p a)
 data p ||| q
 infixr 2 |||
 type EitherIn p q = p ||| q
-type IsLeft = 'True ||| 'False
-type IsRight = 'False ||| 'True
+
+data IsLeft
+type IsLeftT = 'True ||| 'False
+
+instance P IsLeftT x => P IsLeft x where
+  type PP IsLeft x = PP IsLeftT x
+  eval _ = eval (Proxy @IsLeftT)
+
+data IsRight
+type IsRightT = 'False ||| 'True
+
+instance P IsRightT x => P IsRight x where
+  type PP IsRight x = PP IsRightT x
+  eval _ = eval (Proxy @IsRightT)
 
 instance (Show (PP p a)
         , P p a
@@ -2608,30 +2879,39 @@ instance (Show (PP p a)
             let msg1 = msg0 ++ " Right"
             in mkNode opts (PresentT (Right a1)) [msg1 <> show0 opts " " a1 <> show1 opts " | " a] [hh qq]
 
-type Dup = '(Id, Id)
+data Dup
+type DupT = W '(Id, Id)
+
+instance Show x => P Dup x where
+  type PP Dup x = PP DupT x
+  eval _ = eval (Proxy @DupT)
 
 data BinOp = BMult | BSub | BAdd deriving (Show,Eq)
 
 data p + q
 infixl 6 +
 
-instance P (Bin 'BAdd p q) x => P (p + q) x where
-  type PP (p + q) x = PP (Bin 'BAdd p q) x
-  eval _ = eval (Proxy @(Bin 'BAdd p q))
+type AddT p q = Bin 'BAdd p q
+type MultT p q = Bin 'BMult p q
+type SubT p q = Bin 'BSub p q
+
+instance P (AddT p q) x => P (p + q) x where
+  type PP (p + q) x = PP (AddT p q) x
+  eval _ = eval (Proxy @(AddT p q))
 
 data p - q
 infixl 6 -
 
-instance P (Bin 'BSub p q) x => P (p - q) x where
-  type PP (p - q) x = PP (Bin 'BSub p q) x
-  eval _ = eval (Proxy @(Bin 'BSub p q))
+instance P (SubT p q) x => P (p - q) x where
+  type PP (p - q) x = PP (SubT p q) x
+  eval _ = eval (Proxy @(SubT p q))
 
 data p * q
 infixl 7 *
 
-instance P (Bin 'BMult p q) x => P (p * q) x where
-  type PP (p * q) x = PP (Bin 'BMult p q) x
-  eval _ = eval (Proxy @(Bin 'BMult p q))
+instance P (MultT p q) x => P (p * q) x where
+  type PP (p * q) x = PP (MultT p q) x
+  eval _ = eval (Proxy @(MultT p q))
 
 data p > q
 infix 4 >
@@ -2841,7 +3121,7 @@ instance (PP p a ~ PP q a
 -- Present 43 % 21
 -- PresentT (43 % 21)
 --
--- >>> pz @(4 %- 7 * 5 %- 3) "asfd"
+-- >>> pz @(4 -% 7 * 5 -% 3) "asfd"
 -- Present 20 % 21
 -- PresentT (20 % 21)
 --
@@ -2857,7 +3137,7 @@ instance (PP p a ~ PP q a
 -- Present GT
 -- PresentT GT
 --
--- >>> pz @(14 -% 3 ==! 5 %- 1) "aa"
+-- >>> pz @(14 -% 3 ==! 5 -% 1) "aa"
 -- Present GT
 -- PresentT GT
 --
@@ -2880,10 +3160,13 @@ instance (PP p a ~ PP q a
 data p % q
 infixl 8 %
 
-type p %- q = Negate (p % q)
-infixl 8 %-
-type p -% q = Negate (p % q)
+data p -% q -- = Negate (p % q)
 infixl 8 -%
+
+instance (P (Negate (p % q)) x
+        ) => P (p -% q) x where
+  type PP (p -% q) x = PP (Negate (p % q)) x
+  eval _ = eval (Proxy @(Negate (p % q)))
 
 instance (Integral (PP p x)
         , Integral (PP q x)
@@ -2917,7 +3200,7 @@ instance (Integral (PP p x)
 -- Present -42
 -- PresentT (-42)
 --
--- >>> pz @(Negate (15 %- 4)) "abc"
+-- >>> pz @(Negate (15 -% 4)) "abc"
 -- Present 15 % 4
 -- PresentT (15 % 4)
 --
@@ -3043,7 +3326,13 @@ instance (PP p x ~ s
 -- PresentT ('a' :| "bcd")
 --
 data Wrap' t p
-type Wrap (t :: Type) p = Wrap' (Hole t) p
+type WrapT (t :: Type) p = Wrap' (Hole t) p
+
+data Wrap (t :: Type) p
+instance (P (WrapT t p) x
+        ) => P (Wrap t p) x where
+  type PP (Wrap t p) x = PP (WrapT t p) x
+  eval _ = eval (Proxy @(WrapT t p))
 
 instance (Show (PP p x)
         , P p x
@@ -3531,7 +3820,13 @@ instance (Show a
 -- Present 'x'
 -- PresentT 'x'
 data ToEnum' t p
-type ToEnum (t :: Type) p = ToEnum' (Hole t) p
+data ToEnum (t :: Type) p
+type ToEnumT (t :: Type) p = ToEnum' (Hole t) p
+
+instance (P (ToEnumT t p) x
+        ) => P (ToEnum t p) x where
+  type PP (ToEnum t p) x = PP (ToEnumT t p) x
+  eval _ = eval (Proxy @(ToEnumT t p))
 
 instance (PP p x ~ a
         , P p x
@@ -3657,8 +3952,19 @@ isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . f
 -- PresentT [1,5,5,2,5,2]
 --
 data KeepImpl (keep :: Bool) p q
-type Remove p q = KeepImpl 'False p q
-type Keep p q = KeepImpl 'True p q
+data Remove p q -- = KeepImpl 'False p q
+data Keep p q -- = KeepImpl 'True p q
+
+instance (P (KeepImpl 'True p q) x
+        ) => P (Keep p q) x where
+  type PP (Keep p q) x = PP (KeepImpl 'True p q) x
+  eval _ = eval (Proxy @(KeepImpl 'True p q))
+
+instance (P (KeepImpl 'False p q) x
+        ) => P (Remove p q) x where
+  type PP (Remove p q) x = PP (KeepImpl 'False p q) x
+  eval _ = eval (Proxy @(KeepImpl 'False p q))
+
 
 instance (GetBool keep
         , Eq a
@@ -3777,7 +4083,13 @@ instance Functor f => P FMapSnd (f (x,a)) where
 -- Present ()
 -- PresentT ()
 --
-type HeadDef p q = JustDef p (q >> Uncons >> FMapFst)
+data HeadDef p q
+type HeadDefT p q = JustDef p (q >> Uncons >> FMapFst)
+
+instance P (HeadDefT p q) x => P (HeadDef p q) x where
+  type PP (HeadDef p q) x = PP (HeadDefT p q) x
+  eval _ = eval (Proxy @(HeadDefT p q))
+
 
 -- | takes the head of a list or fail
 --
@@ -3791,29 +4103,126 @@ type HeadDef p q = JustDef p (q >> Uncons >> FMapFst)
 -- Error empty list
 -- FailT "empty list"
 --
-type HeadFail msg q = JustFail msg (q >> Uncons >> FMapFst)
+data HeadFail msg q
+type HeadFailT msg q = JustFail msg (q >> Uncons >> FMapFst)
 
-type TailDef p q = JustDef p (q >> Uncons >> FMapSnd)
-type TailFail msg q = JustFail msg (q >> Uncons >> FMapSnd)
+instance P (HeadFailT msg q) x => P (HeadFail msg q) x where
+  type PP (HeadFail msg q) x = PP (HeadFailT msg q) x
+  eval _ = eval (Proxy @(HeadFailT msg q))
 
-type LastDef p q = JustDef p (q >> Unsnoc >> FMapSnd)
-type LastFail msg q = JustFail msg (q >> Unsnoc >> FMapSnd)
+data TailDef p q
+type TailDefT p q = JustDef p (q >> Uncons >> FMapSnd)
 
-type InitDef p q = JustDef p (q >> Unsnoc >> FMapFst)
-type InitFail msg q = JustFail msg (q >> Unsnoc >> FMapFst)
+instance P (TailDefT p q) x => P (TailDef p q) x where
+  type PP (TailDef p q) x = PP (TailDefT p q) x
+  eval _ = eval (Proxy @(TailDefT p q))
 
-type LookupDef' x y p q = JustDef p (q >> Lookup x y)
-type LookupFail' msg x y q = JustFail msg (q >> Lookup x y)
 
-type LookupDef x y p    = LookupDef' x y p I
-type LookupFail msg x y = LookupFail' msg x y I
+data TailFail msg q
+type TailFailT msg q = JustFail msg (q >> Uncons >> FMapSnd)
+
+instance P (TailFailT msg q) x => P (TailFail msg q) x where
+  type PP (TailFail msg q) x = PP (TailFailT msg q) x
+  eval _ = eval (Proxy @(TailFailT msg q))
+
+
+data LastDef p q
+type LastDefT p q = JustDef p (q >> Unsnoc >> FMapSnd)
+
+instance P (LastDefT p q) x => P (LastDef p q) x where
+  type PP (LastDef p q) x = PP (LastDefT p q) x
+  eval _ = eval (Proxy @(LastDefT p q))
+
+data LastFail msg q
+type LastFailT msg q = JustFail msg (q >> Unsnoc >> FMapSnd)
+
+instance P (LastFailT msg q) x => P (LastFail msg q) x where
+  type PP (LastFail msg q) x = PP (LastFailT msg q) x
+  eval _ = eval (Proxy @(LastFailT msg q))
+
+data InitDef p q
+type InitDefT p q = JustDef p (q >> Unsnoc >> FMapFst)
+
+instance P (InitDefT p q) x => P (InitDef p q) x where
+  type PP (InitDef p q) x = PP (InitDefT p q) x
+  eval _ = eval (Proxy @(InitDefT p q))
+
+data InitFail msg q
+type InitFailT msg q = JustFail msg (q >> Unsnoc >> FMapFst)
+
+instance P (InitFailT msg q) x => P (InitFail msg q) x where
+  type PP (InitFail msg q) x = PP (InitFailT msg q) x
+  eval _ = eval (Proxy @(InitFailT msg q))
+
+data LookupDef' v w p q
+type LookupDefT' v w p q = JustDef p (q >> Lookup v w)
+
+instance P (LookupDefT' v w p q) x => P (LookupDef' v w p q) x where
+  type PP (LookupDef' v w p q) x = PP (LookupDefT' v w p q) x
+  eval _ = eval (Proxy @(LookupDefT' v w p q))
+
+data LookupFail' msg v w q
+type LookupFailT' msg v w q = JustFail msg (q >> Lookup v w)
+
+instance P (LookupFailT' msg v w q) x => P (LookupFail' msg v w q) x where
+  type PP (LookupFail' msg v w q) x = PP (LookupFailT' msg v w q) x
+  eval _ = eval (Proxy @(LookupFailT' msg v w q))
+
+data LookupDef v w p
+type LookupDefT v w p    = LookupDef' v w p I
+
+instance P (LookupDefT v w p) x => P (LookupDef v w p) x where
+  type PP (LookupDef v w p) x = PP (LookupDefT v w p) x
+  eval _ = eval (Proxy @(LookupDefT v w p))
+
+data LookupFail msg v w
+type LookupFailT msg v w = LookupFail' msg v w I
+
+instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
+  type PP (LookupFail msg v w) x = PP (LookupFailT msg v w) x
+  eval _ = eval (Proxy @(LookupFailT msg v w))
 
 --type Just'  p = JustFail  "expected Just" p
-type Left'  p = LeftFail  "expected Left"  p
-type Right' p = RightFail "expected Right" p
-type This'  p = ThisFail  "expected This"  p
-type That'  p = ThatFail  "expected That"  p
-type These' p = TheseFail "expected These" p
+data Left' p
+type LeftT' p = LeftFail "expected Left"  p
+
+instance (P (LeftT' p) x
+        ) => P (Left' p) x where
+  type PP (Left' p) x = PP (LeftT' p) x
+  eval _ = eval (Proxy @(LeftT' p))
+
+data Right' p
+type RightT' p = RightFail "expected Right" p
+
+instance (P (RightT' p) x
+        ) => P (Right' p) x where
+  type PP (Right' p) x = PP (RightT' p) x
+  eval _ = eval (Proxy @(RightT' p))
+
+data This'  p
+type ThisT'  p = ThisFail  "expected This"  p
+
+instance (P (ThisT' p) x
+        ) => P (This' p) x where
+  type PP (This' p) x = PP (ThisT' p) x
+  eval _ = eval (Proxy @(ThisT' p))
+
+data That'  p
+type ThatT'  p = ThatFail  "expected That"  p
+
+instance (P (ThatT' p) x
+        ) => P (That' p) x where
+  type PP (That' p) x = PP (ThatT' p) x
+  eval _ = eval (Proxy @(ThatT' p))
+
+data These' p
+type TheseT' p = TheseFail "expected These" p
+
+instance (P (TheseT' p) x
+        ) => P (These' p) x where
+  type PP (These' p) x = PP (TheseT' p) x
+  eval _ = eval (Proxy @(TheseT' p))
+
 
 -- | similar to 'Control.Arrow.|||' but additionally gives \'p\' and \'q\' the original input
 --
@@ -3933,8 +4342,19 @@ type family TheseXT lr x p where
 -- PresentT "found nothing"
 --
 data MaybeIn p q
-type IsNothing = MaybeIn 'True 'False
-type IsJust = MaybeIn 'False 'True
+data IsNothing
+type IsNothingT = MaybeIn 'True 'False
+
+instance P IsNothingT x => P IsNothing x where
+  type PP IsNothing x = PP IsNothingT x
+  eval _ = eval (Proxy @IsNothingT)
+
+data IsJust
+type IsJustT = MaybeIn 'False 'True
+
+instance P IsJustT x => P IsJust x where
+  type PP IsJust x = PP IsJustT x
+  eval _ = eval (Proxy @IsJustT)
 
 -- tricky: the nothing case is the proxy of PP q a: ie proxy of the final result
 instance (P q a
@@ -4029,8 +4449,19 @@ instance (P p x
 --
 -- no Monoid for Maybe a unless a is also a monoid but can use empty!
 data MEmptyT' t
-type MEmptyT (t :: Type) = MEmptyT' (Hole t)
-type MEmptyP = MEmptyT' Unproxy -- expects a proxy: so only some things work with this: eg Pad MaybeIn etc
+data MEmptyT (t :: Type)
+type MEmptyTT (t :: Type) = MEmptyT' (Hole t)
+data MEmptyP -- = MEmptyT' Unproxy -- expects a proxy: so only some things work with this: eg Pad MaybeIn etc
+
+instance (P (MEmptyTT t) x
+        ) => P (MEmptyT t) x where
+  type PP (MEmptyT t) x = PP (MEmptyTT t) x
+  eval _ = eval (Proxy @(MEmptyTT t))
+
+instance (P (MEmptyT' Unproxy) x
+        ) => P MEmptyP x where
+  type PP MEmptyP x = PP (MEmptyT' Unproxy) x
+  eval _ = eval (Proxy @(MEmptyT' Unproxy))
 
 instance (Show (PP t a), Monoid (PP t a)) => P (MEmptyT' t) a where
   type PP (MEmptyT' t) a = PP t a
@@ -4077,7 +4508,14 @@ instance (P p x
         in mkNode opts (PresentT b) [show01 opts msg0 b p] [hh pp]
 
 data MkNothing' t -- works always! MaybeBool is a good alternative and then dont need the extra 't'
-type MkNothing (t :: Type) = MkNothing' (Hole t)
+data MkNothing (t :: Type)
+type MkNothingT (t :: Type) = MkNothing' (Hole t)
+
+instance (P (MkNothingT t) x
+        ) => P (MkNothing t) x where
+  type PP (MkNothing t) x = PP (MkNothingT t) x
+  eval _ = eval (Proxy @(MkNothingT t))
+
 
 -- for this to be useful has to have 't' else we end up with tons of problems
 instance P (MkNothing' t) a where
@@ -4111,7 +4549,13 @@ instance (PP p x ~ a, P p x, Show a) => P (MkJust p) x where
 -- PresentT (Left 44)
 --
 data MkLeft' t p
-type MkLeft (t :: Type) p = MkLeft' (Hole t) p
+data MkLeft (t :: Type) p
+type MkLeftT (t :: Type) p = MkLeft' (Hole t) p
+
+instance (P (MkLeftT t p) x
+        ) => P (MkLeft t p) x where
+  type PP (MkLeft t p) x = PP (MkLeftT t p) x
+  eval _ = eval (Proxy @(MkLeftT t p))
 
 instance (Show (PP p x), P p x) => P (MkLeft' t p) x where
   type PP (MkLeft' t p) x = Either (PP p x) (PP t x)
@@ -4131,7 +4575,13 @@ instance (Show (PP p x), P p x) => P (MkLeft' t p) x where
 -- PresentT (Right 44)
 --
 data MkRight' t p
-type MkRight (t :: Type) p = MkRight' (Hole t) p
+data MkRight (t :: Type) p -- = MkRight' (Hole t) p
+type MkRightT (t :: Type) p = MkRight' (Hole t) p
+
+instance (P (MkRightT t p) x
+        ) => P (MkRight t p) x where
+  type PP (MkRight t p) x = PP (MkRightT t p) x
+  eval _ = eval (Proxy @(MkRightT t p))
 
 instance (Show (PP p x), P p x) => P (MkRight' t p) x where
   type PP (MkRight' t p) x = Either (PP t x) (PP p x)
@@ -4155,7 +4605,13 @@ instance (Show (PP p x), P p x) => P (MkRight' t p) x where
 -- PresentT (This 10)
 --
 data MkThis' t p
-type MkThis (t :: Type) p = MkThis' (Hole t) p
+data MkThis (t :: Type) p
+type MkThisT (t :: Type) p = MkThis' (Hole t) p
+
+instance (P (MkThisT t p) x
+        ) => P (MkThis t p) x where
+  type PP (MkThis t p) x = PP (MkThisT t p) x
+  eval _ = eval (Proxy @(MkThisT t p))
 
 instance (Show (PP p x), P p x) => P (MkThis' t p) x where
   type PP (MkThis' t p) x = These (PP p x) (PP t x)
@@ -4175,7 +4631,14 @@ instance (Show (PP p x), P p x) => P (MkThis' t p) x where
 -- PresentT (That 44)
 --
 data MkThat' t p
-type MkThat (t :: Type) p = MkThat' (Hole t) p
+data MkThat (t :: Type) p
+type MkThatT (t :: Type) p = MkThat' (Hole t) p
+
+instance (P (MkThatT t p) x
+        ) => P (MkThat t p) x where
+  type PP (MkThat t p) x = PP (MkThatT t p) x
+  eval _ = eval (Proxy @(MkThatT t p))
+
 
 instance (Show (PP p x), P p x) => P (MkThat' t p) x where
   type PP (MkThat' t p) x = These (PP t x) (PP p x)
@@ -4275,19 +4738,13 @@ data MConcat p
 -- PresentT 12
 --
 data FoldMap (t :: Type) p
-instance (PP p x ~ f (Unwrapped t)
-        , P p x
-        , Show t
-        , Show (Unwrapped t)
-        , Show (f (Unwrapped t))
-        , Foldable f
-        , Monoid t
-        , Wrapped t
-    ) => P (FoldMap t p) x where
-  type PP (FoldMap t p) x = PP (Map (Wrap t Id) p >> Unwrap (MConcat Id)) x
-  eval _ = eval (Proxy @(Map (Wrap t Id) p >> Unwrap (MConcat Id)))
 
---type FoldMap (t :: Type) p = Map (Wrap t Id) p >> Unwrap (MConcat Id)
+instance P (FoldMapT t p) x
+     => P (FoldMap t p) x where
+  type PP (FoldMap t p) x = PP (FoldMapT t p) x
+  eval _ = eval (Proxy @(FoldMapT t p))
+
+type FoldMapT (t :: Type) p = Map (Wrap t Id) p >> Unwrap (MConcat Id)
 
 instance (PP p x ~ [a]
         , P p x
@@ -4364,7 +4821,14 @@ instance (Show a
               in mkNode opts (PresentT d) [show01 opts msg1 d p] hhs
 
 data ProxyT' t
-type ProxyT (t :: Type) = ProxyT' (Hole t)
+data ProxyT (t :: Type)
+type ProxyTT (t :: Type) = ProxyT' (Hole t)
+
+instance (P (ProxyTT t) x
+        ) => P (ProxyT t) x where
+  type PP (ProxyT t) x = PP (ProxyTT t) x
+  eval _ = eval (Proxy @(ProxyTT t))
+
 
 instance Typeable t => P (ProxyT' (t :: Type)) a where
   type PP (ProxyT' t) a = Proxy (PP t a)
@@ -4383,7 +4847,14 @@ instance Typeable t => P (ProxyT' (t :: Type)) a where
 -- PresentT "not found"
 --
 data Ix (n :: Nat) def
-type Ix' (n :: Nat) = Ix n (Failp "Ix index not found")
+data Ix' (n :: Nat)
+type IxT' (n :: Nat) = Ix n (Failp "Ix index not found")
+
+instance (P (IxT' n) x
+        ) => P (Ix' n) x where
+  type PP (Ix' n) x = PP (IxT' n) x
+  eval _ = eval (Proxy @(IxT' n))
+
 
 instance (P def (Proxy a)
         , PP def (Proxy a) ~ a
@@ -4458,17 +4929,12 @@ instance (P q a
 -- PresentT 2
 --
 data p !! q
+type IxLT' p q = IxL p q (Failp "(!!) index not found")
 
-instance ( PP q a ~ Index (PP p a)
-         , P q a
-         , P p a
-         , Ixed (PP p a)
-         , Show (PP p a)
-         , Show (Index (PP p a))
-         , Show (IxValue (PP p a))
+instance ( P (IxLT' p q) a
   ) => P (p !! q) a where
-  type PP (p !! q) a = PP (IxL p q (Failp "(!!) index not found")) a
-  eval _ = eval (Proxy @(IxL p q (Failp "(!!) index not found")))
+  type PP (p !! q) a = PP (IxLT' p q) a
+  eval _ = eval (Proxy @(IxLT' p q))
 
 -- | 'lookup' leveraging 'Ixed'
 --
@@ -4783,8 +5249,22 @@ instance (P p x
       Left e -> e
       Right (p,q,pp,qq) -> mkNode opts (PresentT (enumFromTo p q)) [msg0 <> " [" <> show p <> " .. " <> show q <> "]"] [hh pp, hh qq]
 
-type MapMaybe p q = ConcatMap (p >> MaybeIn MEmptyP '[Id]) q
-type CatMaybes q = MapMaybe Id q
+data MapMaybe p q
+data CatMaybes q
+
+type MapMaybeT p q = ConcatMap (p >> MaybeIn MEmptyP '[Id]) q
+type CatMaybesT q = MapMaybe Id q
+
+instance (P (MapMaybeT p q) x
+        ) => P (MapMaybe p q) x where
+  type PP (MapMaybe p q) x = PP (MapMaybeT p q) x
+  eval _ = eval (Proxy @(MapMaybeT p q))
+
+instance (P (CatMaybesT q) x
+        ) => P (CatMaybes q) x where
+  type PP (CatMaybes q) x = PP (CatMaybesT q) x
+  eval _ = eval (Proxy @(CatMaybesT q))
+
 
 -- | similar to 'partitionEithers'
 --
@@ -4827,9 +5307,26 @@ instance (Show a, Show b) => P PartitionThese [These a b] where
         b = partitionThese as
     in pure $ mkNode opts (PresentT b) [show01 opts msg0 b as] []
 
-type Thiss = Fst PartitionThese
-type Thats = Snd PartitionThese
-type Theses = Thd PartitionThese
+data Thiss
+type ThissT = Fst PartitionThese
+
+instance P ThissT x => P Thiss x where
+  type PP Thiss x = PP ThissT x
+  eval _ = eval (Proxy @ThissT)
+
+data Thats
+type ThatsT = Snd PartitionThese
+
+instance P ThatsT x => P Thats x where
+  type PP Thats x = PP ThatsT x
+  eval _ = eval (Proxy @ThatsT)
+
+data Theses
+type ThesesT = Thd PartitionThese
+
+instance P ThesesT x => P Theses x where
+  type PP Theses x = PP ThesesT x
+  eval _ = eval (Proxy @ThesesT)
 
 -- want to pass Proxy b to q but then we have no way to calculate 'b'
 
@@ -4852,11 +5349,37 @@ data Scanl p q r
 -- scanr :: (a -> b -> b) -> b -> [a] -> [b]
 -- result is scanl but signature is flipped ((a,b) -> b) -> b -> [a] -> [b]
 
-type ScanN n p q = Scanl (Fst Id >> q) p (EnumFromTo 1 n) -- n times using q then run p
-type ScanNA q = ScanN (Fst Id) (Snd Id) q
+data ScanN n p q
+type ScanNT n p q = Scanl (Fst Id >> q) p (EnumFromTo 1 n) -- n times using q then run p
 
-type FoldN n p q = Last (ScanN n p q)
-type Foldl p q r = Last (Scanl p q r)
+instance (P (ScanNT n p q) x
+        ) => P (ScanN n p q) x where
+  type PP (ScanN n p q) x = PP (ScanNT n p q) x
+  eval _ = eval (Proxy @(ScanNT n p q))
+
+data ScanNA q
+type ScanNAT q = ScanN (Fst Id) (Snd Id) q
+
+instance (P (ScanNAT q) x
+        ) => P (ScanNA q) x where
+  type PP (ScanNA q) x = PP (ScanNAT q) x
+  eval _ = eval (Proxy @(ScanNAT q))
+
+data FoldN n p q
+type FoldNT n p q = Last (ScanN n p q)
+
+instance (P (FoldNT n p q) x
+        ) => P (FoldN n p q) x where
+  type PP (FoldN n p q) x = PP (FoldNT n p q) x
+  eval _ = eval (Proxy @(FoldNT n p q))
+
+data FoldL p q r
+type FoldLT p q r = Last (Scanl p q r)
+
+instance (P (FoldLT p q r) x
+        ) => P (FoldL p q r) x where
+  type PP (FoldL p q r) x = PP (FoldLT p q r) x
+  eval _ = eval (Proxy @(FoldLT p q r))
 
 instance (PP p (b,a) ~ b
         , PP q x ~ b
@@ -4914,11 +5437,51 @@ type family UnfoldT mbs where
 --
 data Unfoldr p q
 --type IterateN (t :: Type) n f = Unfoldr (If (Fst Id == 0) (MkNothing t) (Snd Id &&& (Pred Id *** f) >> MkJust Id)) '(n, Id)
-type IterateN n f = Unfoldr (MaybeBool (Fst Id > 0) '(Snd Id, Pred Id *** f)) '(n, Id)
-type IterateUntil p f = IterateWhile (Not p) f
-type IterateWhile p f = Unfoldr (MaybeBool p '(Id, f)) Id
-type IterateNWhile n p f = '(n, Id) >> IterateWhile (Fst Id > 0 && (Snd Id >> p)) (Pred Id *** f) >> Map (Snd Id) Id
-type IterateNUntil n p f = IterateNWhile n (Not p) f
+
+
+data IterateN n f
+type IterateNT n f = Unfoldr (MaybeBool (Fst Id > 0) '(Snd Id, Pred Id *** f)) '(n, Id)
+
+instance (P (IterateNT n f) x
+        ) => P (IterateN n f) x where
+  type PP (IterateN n f) x = PP (IterateNT n f) x
+  eval _ = eval (Proxy @(IterateNT n f))
+
+
+data IterateUntil p f
+type IterateUntilT p f = IterateWhile (Not p) f
+
+instance (P (IterateUntilT p f) x
+        ) => P (IterateUntil p f) x where
+  type PP (IterateUntil p f) x = PP (IterateUntilT p f) x
+  eval _ = eval (Proxy @(IterateUntilT p f))
+
+data IterateWhile p f
+type IterateWhileT p f = Unfoldr (MaybeBool p '(Id, f)) Id
+
+instance (P (IterateWhileT p f) x
+        ) => P (IterateWhile p f) x where
+  type PP (IterateWhile p f) x = PP (IterateWhileT p f) x
+  eval _ = eval (Proxy @(IterateWhileT p f))
+
+data IterateNWhile n p f -- = '(n, Id) >> IterateWhile (Fst Id > 0 && (Snd Id >> p)) (Pred Id *** f) >> Map (Snd Id) Id
+
+type IterateNWhileT n p f = '(n, Id) >> IterateWhile (Fst Id > 0 && (Snd Id >> p)) (Pred Id *** f) >> Map (Snd Id) Id
+
+instance (P (IterateNWhileT n p f) x
+        ) => P (IterateNWhile n p f) x where
+  type PP (IterateNWhile n p f) x = PP (IterateNWhileT n p f) x
+  eval _ = eval (Proxy @(IterateNWhileT n p f))
+
+data IterateNUntil n p f
+type IterateNUntilT n p f = IterateNWhile n (Not p) f
+
+instance (P (IterateNUntilT n p f) x
+        ) => P (IterateNUntil n p f) x where
+  type PP (IterateNUntil n p f) x = PP (IterateNUntilT n p f) x
+  eval _ = eval (Proxy @(IterateNUntilT n p f))
+
+
 
 instance (PP q a ~ s
         , PP p s ~ Maybe (b,s)
@@ -4962,7 +5525,13 @@ instance (PP q a ~ s
 -- PresentT [0,1,2,3,4]
 --
 data Map p q
-type ConcatMap p q = Concat (Map p q)
+data ConcatMap p q
+type ConcatMapT p q = Concat (Map p q)
+
+instance (P (ConcatMapT p q) x
+        ) => P (ConcatMap p q) x where
+  type PP (ConcatMap p q) x = PP (ConcatMapT p q) x
+  eval _ = eval (Proxy @(ConcatMapT p q))
 
 instance (Show (PP p a)
         , P p a
@@ -5066,7 +5635,15 @@ instance Show a => P Pairs [a] where
 --
 data Partition p q
 
-type Filter p q = Partition p q >> Fst Id
+type FilterT p q = Fst (Partition p q)
+
+data Filter p q
+
+instance (P (FilterT p q) x
+        ) => P (Filter p q) x where
+  type PP (Filter p q) x = PP (FilterT p q) x
+  eval _ = eval (Proxy @(FilterT p q))
+
 
 instance (P p x
         , Show x
@@ -5105,7 +5682,14 @@ instance (P p x
 -- PresentT ([10,4],[1,7,3,1,3,5])
 --
 data Break p q
-type Span p q = Break (Not p) q
+type SpanT p q = Break (Not p) q
+
+data Span p q
+instance (P (SpanT p q) x
+        ) => P (Span p q) x where
+  type PP (Span p q) x = PP (SpanT p q) x
+  eval _ = eval (Proxy @(SpanT p q))
+
 -- only process up to the pivot! only process while Right False
 -- a predicate can return PresentP not just TrueP
 instance (P p x
@@ -5158,9 +5742,27 @@ instance (P p x
 -- FailT "value=099 string=somedata"
 --
 data Fail t prt
-type Failp s = Fail Unproxy s
-type Failt (t :: Type) prt = Fail (Hole t) prt
-type FailS s = Fail I s
+--type Failp s = Fail Unproxy s
+--type Failt (t :: Type) prt = Fail (Hole t) prt
+--type FailS s = Fail I s
+
+data FailS p
+instance (P (Fail I p) x
+        ) => P (FailS p) x where
+  type PP (FailS p) x = PP (Fail I p) x
+  eval _ = eval (Proxy @(Fail I p))
+
+data Failt (t :: Type) p
+instance (P (Fail (Hole t) p) x
+        ) => P (Failt t p) x where
+  type PP (Failt t p) x = PP (Fail (Hole t) p) x
+  eval _ = eval (Proxy @(Fail (Hole t) p))
+
+data Failp p
+instance (P (Fail Unproxy p) x
+        ) => P (Failp p) x where
+  type PP (Failp p) x = PP (Fail Unproxy p) x
+  eval _ = eval (Proxy @(Fail Unproxy p))
 
 instance (P prt a
         , PP prt a ~ String
@@ -5178,7 +5780,7 @@ data Hole (t :: Type)
 -- | Acts as a proxy in this dsl where you can explicitly set the Type.
 --
 --  It is passed around as an argument to help the type checker when needed.
---  see 'ReadP, 'ParseTimeP', 'ShowP'
+--  see 'ParseTimeP', 'ReadBase'
 --
 instance Typeable t => P (Hole t) a where
   type PP (Hole t) a = t -- can only be Type not Type -> Type (can use Proxy but then we go down the rabbithole)
@@ -5212,8 +5814,14 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 -- now takes the FailT string and x so you can print more detail if you want
 -- need the proxy so we can fail without having to explicitly specify a type
 data Catch p q -- catch p and if fails runs q only on failt
-type Catch' p s = Catch p (FailCatch s) -- eg set eg s=PrintF "%d" Id or PrintF "%s" (ShowP Id)
+
+data Catch' p s
+type CatchT' p s = Catch p (FailCatch s) -- eg set eg s=PrintF "%d" Id or PrintF "%s" (ShowP Id)
 type FailCatch s = Fail (Snd Id >> Unproxy) (Fst Id >> s)
+
+instance P (CatchT' p s) x => P (Catch' p s) x where
+  type PP (Catch' p s) x = PP (CatchT' p s) x
+  eval _ = eval (Proxy @(CatchT' p s))
 
 instance (P p x
         , P q ((String, x)
@@ -5243,8 +5851,21 @@ instance (P p x
 -- Present [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
 -- PresentT [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
 --
-type Even = Mod I 2 == 0
-type Odd = Mod I 2  == 1
+data Even
+type EvenT = Mod I 2 == 0
+
+instance P EvenT x => P Even x where
+  type PP Even x = PP EvenT x
+  eval _ = eval (Proxy @EvenT)
+
+data Odd
+type OddT = Mod I 2  == 1
+
+instance P OddT x => P Odd x where
+  type PP Odd x = PP OddT x
+  eval _ = eval (Proxy @OddT)
+
+
 --type Div' p q = Fst (DivMod p q)
 --type Mod' p q = Snd (DivMod p q)
 
@@ -5395,8 +6016,19 @@ instance (PP p a ~ PP q a
              _ -> let d = p `quotRem` q
                   in mkNode opts (PresentT d) [show p <> " `quotRem` " <> show q <> " = " <> show d] hhs
 
-type Quot p q = Fst (QuotRem p q)
-type Rem p q = Snd (QuotRem p q)
+data Quot p q
+type QuotT p q = Fst (QuotRem p q)
+
+instance P (QuotT p q) x => P (Quot p q) x where
+  type PP (Quot p q) x = PP (QuotT p q) x
+  eval _ = eval (Proxy @(QuotT p q))
+
+data Rem p q
+type RemT p q = Snd (QuotRem p q)
+
+instance P (RemT p q) x => P (Rem p q) x where
+  type PP (Rem p q) x = PP (RemT p q) x
+  eval _ = eval (Proxy @(RemT p q))
 
 --type OneP = Guard "expected list of length 1" (Len == 1) >> Head Id
 --type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
@@ -5435,7 +6067,13 @@ type Rem p q = Snd (QuotRem p q)
 -- FailT "Guards: predicates(3) /= data elements(4)"
 --
 data GuardsImpl (n :: Nat) (os :: [(k,k1)])
-type GuardsQuick (prt :: k) (os :: [k1]) = Guards (ToGuardsT prt os)
+data GuardsQuick (prt :: k) (ps :: [k1])
+type GuardsQuickT (prt :: k) (ps :: [k1]) = Guards (ToGuardsT prt ps)
+
+instance P (GuardsQuickT prt ps) x
+         => P (GuardsQuick prt ps) x where
+  type PP (GuardsQuick prt ps) x = PP (GuardsQuickT prt ps) x
+  eval _ = eval (Proxy @(GuardsQuickT prt ps))
 
 data Guards (ps :: [(k,k1)])
 
@@ -5541,7 +6179,13 @@ instance (PP prt (Int, a) ~ String
 -- FalseT
 --
 data Bools (ps :: [(k,k1)])
-type BoolsQuick (prt :: k) (ps :: [k1]) = Bools (ToGuardsT prt ps)
+data BoolsQuick (prt :: k) (ps :: [k1])
+type BoolsQuickT (prt :: k) (ps :: [k1]) = Bools (ToGuardsT prt ps)
+
+instance (P (BoolsQuickT prt ps) x
+        ) => P (BoolsQuick prt ps) x where
+  type PP (BoolsQuick prt ps) x = PP (BoolsQuickT prt ps) x
+  eval _ = eval (Proxy @(BoolsQuickT prt ps))
 
 instance (GetLen ps
         , P (BoolsImpl (LenT ps) ps) [a]
@@ -5619,7 +6263,14 @@ instance (PP prt (Int, a) ~ String
 -- TrueT
 --
 data BoolsN prt (n :: Nat) p
+type BoolsNT prt (n :: Nat) p = Bools (ToGuardsT prt (RepeatT n p))
 
+instance P (BoolsNT prt n p) [a]
+         => P (BoolsN prt n p) [a] where
+  type PP (BoolsN prt n p) [a] = PP (BoolsNT prt n p) [a]
+  eval _ = eval (Proxy @(BoolsNT prt n p))
+
+{-
 instance ( GetLen (ToGuardsT prt (RepeatT n p))
   , PP (BoolsImpl (LenT (ToGuardsT prt (RepeatT n p))) (ToGuardsT prt (RepeatT n p))) [a] ~ Bool
   , P (BoolsImpl (LenT (ToGuardsT prt (RepeatT n p))) (ToGuardsT prt (RepeatT n p))) [a]
@@ -5628,7 +6279,7 @@ instance ( GetLen (ToGuardsT prt (RepeatT n p))
   type PP (BoolsN prt n p) [a] = PP (Bools (ToGuardsT prt (RepeatT n p))) [a]
   eval _ opts as =
     eval (Proxy @(Bools (ToGuardsT prt (RepeatT n p)))) opts as
-
+-}
 
 
 -- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
@@ -5647,7 +6298,13 @@ instance ( GetLen (ToGuardsT prt (RepeatT n p))
 --
 data GuardsImplX (n :: Nat) (os :: [(k,k1)])
 
-type GuardsDetail (prt :: Symbol) (os :: [(k0,k1)]) = GuardsImplXX (ToGuardsDetailT prt os)
+data GuardsDetail (prt :: Symbol) (ps :: [(k0,k1)]) -- = GuardsImplXX (ToGuardsDetailT prt ps)
+type GuardsDetailT (prt :: Symbol) (ps :: [(k0,k1)]) = GuardsImplXX (ToGuardsDetailT prt ps)
+
+instance (P (GuardsDetailT prt ps) x
+        ) => P (GuardsDetail prt ps) x where
+  type PP (GuardsDetail prt ps) x = PP (GuardsDetailT prt ps) x
+  eval _ = eval (Proxy @(GuardsDetailT prt ps))
 
 type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
   ToGuardsDetailT prt '[ '(s,p) ] = '(PrintT prt '(s,Id), p) : '[]
@@ -5723,17 +6380,12 @@ instance (PP prt a ~ String
 -- PresentT [121,33,7,44]
 --
 data GuardsN prt (n :: Nat) p
+type GuardsNT prt (n :: Nat) p = Guards (ToGuardsT prt (RepeatT n p))
 
-instance ( GetLen (ToGuardsT prt (RepeatT n p))
-         , P (GuardsImpl
-             (LenT (ToGuardsT prt (RepeatT n p)))
-             (ToGuardsT prt (RepeatT n p)))
-             [a]
-         ) => P (GuardsN prt n p) [a] where
-  type PP (GuardsN prt n p) [a] = PP (Guards (ToGuardsT prt (RepeatT n p))) [a]
-  eval _ opts as =
-    eval (Proxy @(Guards (ToGuardsT prt (RepeatT n p)))) opts as
-
+instance P (GuardsNT prt n p) [a]
+         => P (GuardsN prt n p) [a] where
+  type PP (GuardsN prt n p) [a] = PP (GuardsNT prt n p) [a]
+  eval _ = eval (Proxy @(GuardsNT prt n p))
 
 -- | \'p\' is the predicate and on failure of the predicate runs \'prt\'
 --
@@ -5751,7 +6403,13 @@ instance ( GetLen (ToGuardsT prt (RepeatT n p))
 --
 data Guard prt p
 
-type ExitWhen prt p = Guard prt (Not p)
+data ExitWhen prt p -- = Guard prt (Not p)
+type ExitWhenT prt p = Guard prt (Not p)
+
+instance (P (ExitWhenT prt p) x
+        ) => P (ExitWhen prt p) x where
+  type PP (ExitWhen prt p) x = PP (ExitWhenT prt p) x
+  eval _ = eval (Proxy @(ExitWhenT prt p))
 
 instance (Show a
         , P prt a
@@ -6012,8 +6670,9 @@ instance (PP p x ~ Bool, P p x) => P (Not p) x where
         let b = not p
         in mkNodeB opts b [msg0 <> " " <> topMessage pp] [hh pp]
 
-data OrdP p q
-type p ==! q = OrdP p q
+type OrdP p q = p ==! q
+
+data p ==! q
 infix 4 ==!
 
 -- | similar to 'compare'
@@ -6022,7 +6681,7 @@ infix 4 ==!
 -- Present GT
 -- PresentT GT
 --
--- >>> pz @(14 % 3 ==! Fst Id %- Snd Id) (-10,7)
+-- >>> pz @(14 % 3 ==! Fst Id -% Snd Id) (-10,7)
 -- Present GT
 -- PresentT GT
 --
@@ -6038,18 +6697,33 @@ infix 4 ==!
 -- Present EQ
 -- PresentT EQ
 --
-type OrdA' p q = OrdP (Fst Id >> p) (Snd Id >> q)
-type OrdA p = OrdA' p p
+--type OrdA' p q = (Fst Id >> p) ==! (Snd Id >> q)
+--type OrdA p = OrdA' p p
+
+data OrdA' p q
+type OrdAT' p q = (Fst Id >> p) ==! (Snd Id >> q)
+
+instance (P (OrdAT' p q) x
+        ) => P (OrdA' p q) x where
+  type PP (OrdA' p q) x = PP (OrdAT' p q) x
+  eval _ = eval (Proxy @(OrdAT' p q))
+
+data OrdA p
+
+instance (P (OrdA' p p) x
+        ) => P (OrdA p) x where
+  type PP (OrdA p) x = PP (OrdA' p p) x
+  eval _ = eval (Proxy @(OrdA' p p))
 
 instance (Ord (PP p a)
         , PP p a ~ PP q a
         , P p a
         , Show (PP q a)
         , P q a
-        ) => P (OrdP p q) a where
-  type PP (OrdP p q) a = Ordering
+        ) => P (p ==! q) a where
+  type PP (p ==! q) a = Ordering
   eval _ opts a = do
-    let msg0 = "OrdP"
+    let msg0 = "(==!)"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
@@ -6067,18 +6741,18 @@ instance (Ord (PP p a)
 -- Present LT
 -- PresentT LT
 --
-data OrdI p q
-type p ===~ q = OrdI p q
+type OrdI p q = p ===~ q
+data p ===~ q
 infix 4 ===~
 
 instance (PP p a ~ String
         , PP p a ~ PP q a
         , P p a
         , P q a
-        ) => P (OrdI p q) a where
-  type PP (OrdI p q) a = Ordering
+        ) => P (p ===~ q) a where
+  type PP (p ===~ q) a = Ordering
   eval _ opts a = do
-    let msg0 = "OrdI"
+    let msg0 = "(===~)"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
@@ -6145,12 +6819,18 @@ instance (PP p a ~ String
 
 -- | similar to 'Control.Lens.itoList'
 --
--- >>> pz @(IToList _) ("aBc" :: String)
+-- >>> pz @(IToList _ Id) ("aBc" :: String)
 -- Present [(0,'a'),(1,'B'),(2,'c')]
 -- PresentT [(0,'a'),(1,'B'),(2,'c')]
 --
 data IToList' t p
-type IToList (t :: Type) = IToList' (Hole t) Id
+data IToList (t :: Type) p
+type IToListT (t :: Type) p = IToList' (Hole t) p
+
+instance (P (IToListT t p) x
+        ) => P (IToList t p) x where
+  type PP (IToList t p) x = PP (IToListT t p) x
+  eval _ = eval (Proxy @(IToListT t p))
 
 instance (Show x
         , P p x
@@ -6316,9 +6996,26 @@ instance (Show l
 --
 data IsTh (th :: These x y) p -- x y can be anything
 
-type IsThis p = IsTh ('This '()) p
-type IsThat p = IsTh ('That '()) p
-type IsThese p = IsTh ('These '() '()) p
+data IsThis p
+type IsThisT p = IsTh ('This '()) p
+
+instance P (IsThisT p) x => P (IsThis p) x where
+  type PP (IsThis p) x = PP (IsThisT p) x
+  eval _ = eval (Proxy @(IsThisT p))
+
+data IsThat p
+type IsThatT p = IsTh ('That '()) p
+
+instance P (IsThatT p) x => P (IsThat p) x where
+  type PP (IsThat p) x = PP (IsThatT p) x
+  eval _ = eval (Proxy @(IsThatT p))
+
+data IsThese p
+type IsTheseT p = IsTh ('These '() '()) p
+
+instance P (IsTheseT p) x => P (IsThese p) x where
+  type PP (IsThese p) x = PP (IsTheseT p) x
+  eval _ = eval (Proxy @(IsTheseT p))
 
 -- trying to avoid show instance cos of ambiguities
 instance (PP p x ~ These a b
@@ -6365,7 +7062,12 @@ instance (PP p x ~ These a b
 -- PresentT (Left 100)
 --
 data TheseIn p q r
-type TheseId p q = TheseIn '(I, p) '(q, I) I
+data TheseId p q
+type TheseIdT p q = TheseIn '(I, p) '(q, I) I
+
+instance P (TheseIdT p q) x => P (TheseId p q) x where
+  type PP (TheseId p q) x = PP (TheseIdT p q) x
+  eval _ = eval (Proxy @(TheseIdT p q))
 
 instance (Show a
         , Show b
@@ -6406,7 +7108,13 @@ instance (Show a
 -- PresentT [99]
 --
 data EmptyList' t
-type EmptyList (t :: Type) = EmptyList' (Hole t)
+data EmptyList (t :: Type)
+type EmptyListT (t :: Type) = EmptyList' (Hole t)
+
+instance P (EmptyListT t) x => P (EmptyList t) x where
+  type PP (EmptyList t) x = PP (EmptyListT t) x
+  eval _ = eval (Proxy @(EmptyListT t))
+
 
 instance P (EmptyList' t) x where
   type PP (EmptyList' t) x = [PP t x]
@@ -6790,8 +7498,8 @@ instance (PP p x ~ [Int]
 --
 -- supports negative numbers unlike readInt
 data ReadBase' t (n :: Nat) p
-type ReadBase (t :: Type) (n :: Nat) p = ReadBase' (Hole t) n p
-type ReadBaseInt (n :: Nat) p = ReadBase' (Hole Int) n p
+type ReadBaseT (t :: Type) (n :: Nat) p = ReadBase' (Hole t) n p
+type ReadBaseIntT (n :: Nat) p = ReadBase' (Hole Int) n p
 
 instance (Typeable (PP t x)
         , BetweenT 2 36 n
@@ -6820,6 +7528,19 @@ instance (Typeable (PP t x)
             p1 of
              [(b,"")] -> mkNode opts (PresentT (ff b)) [msg0 <> show0 opts " " (ff b) <> show1 opts " | " p] [hh pp]
              o -> mkNode opts (FailT ("invalid base " <> show n)) [msg0 <> " as=" <> p <> " err=" <> show o] [hh pp]
+
+data ReadBase (t :: Type) (n :: Nat) p
+instance (P (ReadBaseT t n p) x
+        ) => P (ReadBase t n p) x where
+  type PP (ReadBase t n p) x = PP (ReadBaseT t n p) x
+  eval _ = eval (Proxy @(ReadBaseT t n p))
+
+data ReadBaseInt (n :: Nat) p
+instance P (ReadBaseIntT n p) x
+         => P (ReadBaseInt n p) x where
+  type PP (ReadBaseInt n p) x = PP (ReadBaseIntT n p) x
+  eval _ = eval (Proxy @(ReadBaseIntT n p))
+
 
 getValidBase :: Int -> String
 getValidBase n =
@@ -7081,10 +7802,23 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- r = the value
 -- e = otherwise  -- leave til later
 data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
-type Case' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd Id >> Failp "Case:no match") ps qs r
-type Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (FailCase s) ps qs r -- eg s= PrintF "%s" (ShowP Id)
+data Case' (ps :: [k]) (qs :: [k1]) (r :: k2)
+data Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2)
+
+type CaseT' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd Id >> Failp "Case:no match") ps qs r
+type CaseT'' s (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (FailCase s) ps qs r -- eg s= PrintF "%s" (ShowP Id)
+
+instance P (CaseT'' s ps qs r) x => P (Case'' s ps qs r) x where
+  type PP (Case'' s ps qs r) x = PP (CaseT'' s ps qs r) x
+  eval _ = eval (Proxy @(CaseT'' s ps qs r))
+
+instance P (CaseT' ps qs r) x => P (Case' ps qs r) x where
+  type PP (Case' ps qs r) x = PP (CaseT' ps qs r) x
+  eval _ = eval (Proxy @(CaseT' ps qs r))
 
 type FailCase p = Fail (Snd Id >> Unproxy) (Fst Id >> p)
+
+type CaseImplT e ps qs r = CaseImpl (LenT ps) e ps qs r
 
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out
 instance (FailUnlessT (LenT ps DE.== LenT qs)
@@ -7092,10 +7826,10 @@ instance (FailUnlessT (LenT ps DE.== LenT qs)
                    ':<>: 'GL.ShowType (LenT ps)
                    ':<>: 'GL.Text " vs "
                    ':<>: 'GL.ShowType (LenT qs))
-        , P (CaseImpl (LenT ps) e ps qs r) x
+        , P (CaseImplT e ps qs r) x
         ) => P (Case e ps qs r) x where
-  type PP (Case e ps qs r) x = PP (CaseImpl (LenT ps) e ps qs r) x
-  eval _ = eval (Proxy @(CaseImpl (LenT ps) e ps qs r))
+  type PP (Case e ps qs r) x = PP (CaseImplT e ps qs r) x
+  eval _ = eval (Proxy @(CaseImplT e ps qs r))
 
 -- only allow non empty lists!
 instance (GL.TypeError ('GL.Text "CaseImpl '[] invalid: lhs requires at least one value in the list"))
@@ -7194,7 +7928,13 @@ instance (KnownNat n
 -- PresentT Nothing
 --
 data Sequence
-type Traverse p q = Map p q >> Sequence
+type TraverseT p q = Map p q >> Sequence
+
+data Traverse p q
+
+instance P (TraverseT p q) x => P (Traverse p q) x where
+  type PP (Traverse p q) x = PP (TraverseT p q) x
+  eval _ = eval (Proxy @(TraverseT p q))
 
 instance (Show (f (t a))
         , Show (t (f a))
@@ -7227,7 +7967,13 @@ instance P p x => P (Hide p) x where
 -- FalseT
 --
 data ReadFile p
-type FileExists p = ReadFile p >> IsJust
+
+data FileExists p
+type FileExistsT p = ReadFile p >> IsJust
+
+instance P (FileExistsT p) x => P (FileExists p) x where
+  type PP (FileExists p) x = PP (FileExistsT p) x
+  eval _ = eval (Proxy @(FileExistsT p))
 
 instance (PP p x ~ String, P p x) => P (ReadFile p) x where
   type PP (ReadFile p) x = Maybe String
@@ -7254,7 +8000,13 @@ instance (PP p x ~ String, P p x) => P (ReadFile p) x where
 -- TrueT
 --
 data ReadDir p
-type DirExists p = ReadDir p >> IsJust
+data DirExists p
+type DirExistsT p = ReadDir p >> IsJust
+
+instance P (DirExistsT p) x => P (DirExists p) x where
+  type PP (DirExists p) x = PP (DirExistsT p) x
+  eval _ = eval (Proxy @(DirExistsT p))
+
 
 instance (PP p x ~ String, P p x) => P (ReadDir p) x where
   type PP (ReadDir p) x = Maybe [FilePath]
@@ -7345,11 +8097,43 @@ instance GetMode 'WFWriteForce where getMode = WFWriteForce
 instance GetMode 'WFWrite where getMode = WFWrite
 
 data WriteFileImpl (hh :: FHandle Symbol) p
-type AppendFile (s :: Symbol) p = WriteFileImpl ('FOther s 'WFAppend) p
-type WriteFile' (s :: Symbol) p = WriteFileImpl ('FOther s 'WFWriteForce) p
-type WriteFile (s :: Symbol) p = WriteFileImpl ('FOther s 'WFWrite) p
-type Stdout p = WriteFileImpl 'FStdout p
-type Stderr p = WriteFileImpl 'FStderr p
+
+data AppendFile (s :: Symbol) p
+type AppendFileT (s :: Symbol) p = WriteFileImpl ('FOther s 'WFAppend) p
+
+instance P (AppendFileT s p) x => P (AppendFile s p) x where
+  type PP (AppendFile s p) x = PP (AppendFileT s p) x
+  eval _ = eval (Proxy @(AppendFileT s p))
+
+
+data WriteFile' (s :: Symbol) p
+type WriteFileT' (s :: Symbol) p = WriteFileImpl ('FOther s 'WFWriteForce) p
+
+instance P (WriteFileT' s p) x => P (WriteFile' s p) x where
+  type PP (WriteFile' s p) x = PP (WriteFileT' s p) x
+  eval _ = eval (Proxy @(WriteFileT' s p))
+
+data WriteFile (s :: Symbol) p
+type WriteFileT (s :: Symbol) p = WriteFileImpl ('FOther s 'WFWrite) p
+
+instance P (WriteFileT s p) x => P (WriteFile s p) x where
+  type PP (WriteFile s p) x = PP (WriteFileT s p) x
+  eval _ = eval (Proxy @(WriteFileT s p))
+
+
+data Stdout p
+type StdoutT p = WriteFileImpl 'FStdout p
+
+instance P (StdoutT p) x => P (Stdout p) x where
+  type PP (Stdout p) x = PP (StdoutT p) x
+  eval _ = eval (Proxy @(StdoutT p))
+
+data Stderr p
+type StderrT p = WriteFileImpl 'FStderr p
+
+instance P (StderrT p) x => P (Stderr p) x where
+  type PP (Stderr p) x = PP (StderrT p) x
+  eval _ = eval (Proxy @(StderrT p))
 
 instance (GetFHandle fh
         , P p a
@@ -7427,13 +8211,48 @@ instance P Stdin a where
 --
 data IsFixImpl (cmp :: Ordering) (ignore :: Bool) p q
 
-type IsPrefix p q = IsFixImpl 'LT 'False p q
-type IsInfix p q = IsFixImpl 'EQ 'False p q
-type IsSuffix p q = IsFixImpl 'GT 'False p q
 
-type IsPrefixI p q = IsFixImpl 'LT 'True p q
-type IsInfixI p q = IsFixImpl 'EQ 'True p q
-type IsSuffixI p q = IsFixImpl 'GT 'True p q
+data IsPrefix p q
+type IsPrefixT p q = IsFixImpl 'LT 'False p q
+
+instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
+  type PP (IsPrefix p q) x = PP (IsPrefixT p q) x
+  eval _ = eval (Proxy @(IsPrefixT p q))
+
+data IsInfix p q
+type IsInfixT p q = IsFixImpl 'EQ 'False p q
+
+instance P (IsInfixT p q) x => P (IsInfix p q) x where
+  type PP (IsInfix p q) x = PP (IsInfixT p q) x
+  eval _ = eval (Proxy @(IsInfixT p q))
+
+data IsSuffix p q
+type IsSuffixT p q = IsFixImpl 'GT 'False p q
+
+instance P (IsSuffixT p q) x => P (IsSuffix p q) x where
+  type PP (IsSuffix p q) x = PP (IsSuffixT p q) x
+  eval _ = eval (Proxy @(IsSuffixT p q))
+
+data IsPrefixI p q
+type IsPrefixIT p q = IsFixImpl 'LT 'True p q
+
+instance P (IsPrefixIT p q) x => P (IsPrefixI p q) x where
+  type PP (IsPrefixI p q) x = PP (IsPrefixIT p q) x
+  eval _ = eval (Proxy @(IsPrefixIT p q))
+
+data IsInfixI p q
+type IsInfixIT p q = IsFixImpl 'EQ 'True p q
+
+instance P (IsInfixIT p q) x => P (IsInfixI p q) x where
+  type PP (IsInfixI p q) x = PP (IsInfixIT p q) x
+  eval _ = eval (Proxy @(IsInfixIT p q))
+
+data IsSuffixI p q
+type IsSuffixIT p q = IsFixImpl 'GT 'True p q
+
+instance P (IsSuffixIT p q) x => P (IsSuffixI p q) x where
+  type PP (IsSuffixI p q) x = PP (IsSuffixIT p q) x
+  eval _ = eval (Proxy @(IsSuffixIT p q))
 
 instance (GetBool ignore
         , P p x
@@ -7497,8 +8316,19 @@ instance (GetBool ignore
 --
 data p <> q
 infixr 6 <>
-type Sapa' (t :: Type) = Wrap t (Fst Id) <> Wrap t (Snd Id)
-type Sapa = Fst Id <> Snd Id
+data Sapa' (t :: Type)
+type SapaT' (t :: Type) = Wrap t (Fst Id) <> Wrap t (Snd Id)
+
+instance P (SapaT' t) x => P (Sapa' t) x where
+  type PP (Sapa' t) x = PP (SapaT' t) x
+  eval _ = eval (Proxy @(SapaT' t))
+
+data Sapa
+type SapaT = Fst Id <> Snd Id
+
+instance P SapaT x => P Sapa x where
+  type PP Sapa x = PP SapaT x
+  eval _ = eval (Proxy @SapaT)
 
 instance (Semigroup (PP p x)
         , PP p x ~ PP q x
@@ -7676,8 +8506,14 @@ infixl 4 <*
 -- Present Just "abc"
 -- PresentT (Just "abc")
 --
-type p *> q = q <* p
+type ArrowRT p q = q <* p
+data p *> q
 infixl 4 *>
+
+instance (P (ArrowRT p q) x
+        ) => P (p *> q) x where
+  type PP (p *> q) x = PP (ArrowRT p q) x
+  eval _ = eval (Proxy @(ArrowRT p q))
 
 instance (Show (t c)
         , P p x
@@ -7866,53 +8702,72 @@ type family FnT ab :: Type where
 
 -- | similar to 'T.strip' 'T.stripStart' 'T.stripEnd'
 --
--- >>> pz @(Trim (Snd Id)) (20," abc   " :: String)
+-- >>> pz @(TrimBoth (Snd Id)) (20," abc   " :: String)
 -- Present "abc"
 -- PresentT "abc"
 --
--- >>> pz @(Trim (Snd Id)) (20,T.pack " abc   ")
+-- >>> pz @(TrimBoth (Snd Id)) (20,T.pack " abc   ")
 -- Present "abc"
 -- PresentT "abc"
 --
--- >>> pz @(TrimStart (Snd Id)) (20," abc   ")
+-- >>> pz @(TrimL (Snd Id)) (20," abc   ")
 -- Present "abc   "
 -- PresentT "abc   "
 --
--- >>> pz @(TrimEnd (Snd Id)) (20," abc   ")
+-- >>> pz @(TrimR (Snd Id)) (20," abc   ")
 -- Present " abc"
 -- PresentT " abc"
 --
--- >>> pz @(TrimEnd "  abc ") ()
+-- >>> pz @(TrimR "  abc ") ()
 -- Present "  abc"
 -- PresentT "  abc"
 --
--- >>> pz @(TrimEnd "") ()
+-- >>> pz @(TrimR "") ()
 -- Present ""
 -- PresentT ""
 --
--- >>> pz @(Trim "         ") ()
+-- >>> pz @(TrimBoth "         ") ()
 -- Present ""
 -- PresentT ""
 --
--- >>> pz @(Trim "") ()
+-- >>> pz @(TrimBoth "") ()
 -- Present ""
 -- PresentT ""
 --
-data Trim' (left :: Bool) (right :: Bool) p
-type Trim p = Trim' 'True 'True p
-type TrimStart p = Trim' 'True 'False p
-type TrimEnd p = Trim' 'False 'True p
+data TrimImpl (left :: Bool) (right :: Bool) p
+data TrimL p
+type TrimLT p = TrimImpl 'True 'False p
+data TrimR p
+type TrimRT p = TrimImpl 'False 'True p
+data TrimBoth p
+type TrimBothT p = TrimImpl 'True 'True p
+
+instance (P (TrimLT p) x
+        ) => P (TrimL p) x where
+  type PP (TrimL p) x = PP (TrimLT p) x
+  eval _ = eval (Proxy @(TrimLT p))
+
+instance (P (TrimRT p) x
+        ) => P (TrimR p) x where
+  type PP (TrimR p) x = PP (TrimRT p) x
+  eval _ = eval (Proxy @(TrimRT p))
+
+instance (P (TrimBothT p) x
+        ) => P (TrimBoth p) x where
+  type PP (TrimBoth p) x = PP (TrimBothT p) x
+  eval _ = eval (Proxy @(TrimBothT p))
+
 
 instance (FailUnlessT (OrT l r)
-           ('GL.Text "Trim': left and right cannot both be False")
+           ('GL.Text "TrimImpl: left and right cannot both be False")
         , GetBool l
         , GetBool r
         , TL.IsText (PP p x)
         , P p x
-        ) => P (Trim' l r p) x where
-  type PP (Trim' l r p) x = PP p x
+        ) => P (TrimImpl l r p) x where
+  type PP (TrimImpl l r p) x = PP p x
   eval _ opts x = do
-    let msg0 = "Trim" ++ (if l && r then "" else if l then "Start" else "End")
+    let msg0 = "Trim" ++ (if l && r then "Both" else if l then "L" else "R")
         l = getBool @l
         r = getBool @r
     pp <- eval (Proxy @p) opts x
@@ -7926,58 +8781,70 @@ instance (FailUnlessT (OrT l r)
 
 -- | similar to 'T.stripLeft' 'T.stripRight'
 --
--- >>> pz @(StripLeft "xyz" Id) ("xyzHello" :: String)
+-- >>> pz @(StripL "xyz" Id) ("xyzHello" :: String)
 -- Present Just "Hello"
 -- PresentT (Just "Hello")
 --
--- >>> pz @(StripLeft "xyz" Id) (T.pack "xyzHello")
+-- >>> pz @(StripL "xyz" Id) (T.pack "xyzHello")
 -- Present Just "Hello"
 -- PresentT (Just "Hello")
 --
--- >>> pz @(StripLeft "xyz" Id) "xywHello"
+-- >>> pz @(StripL "xyz" Id) "xywHello"
 -- Present Nothing
 -- PresentT Nothing
 --
--- >>> pz @(StripRight "xyz" Id) "Hello xyz"
+-- >>> pz @(StripR "xyz" Id) "Hello xyz"
 -- Present Just "Hello "
 -- PresentT (Just "Hello ")
 --
--- >>> pz @(StripRight "xyz" Id) "xyzHelloxyw"
+-- >>> pz @(StripR "xyz" Id) "xyzHelloxyw"
 -- Present Nothing
 -- PresentT Nothing
 --
--- >>> pz @(StripRight "xyz" Id) ""
+-- >>> pz @(StripR "xyz" Id) ""
 -- Present Nothing
 -- PresentT Nothing
 --
--- >>> pz @(StripRight "xyz" "xyz") ()
+-- >>> pz @(StripR "xyz" "xyz") ()
 -- Present Just ""
 -- PresentT (Just "")
 --
-data StripLR (right :: Bool) p q
-type StripRight p q = StripLR 'True p q
-type StripLeft p q = StripLR 'False p q
+data StripImpl(left :: Bool) p q
+data StripL p q
+type StripLT p q = StripImpl 'True p q
+data StripR p q
+type StripRT p q = StripImpl 'False p q
 
-instance (GetBool r
+instance (P (StripLT p q) x
+        ) => P (StripL p q) x where
+  type PP (StripL p q) x = PP (StripLT p q) x
+  eval _ = eval (Proxy @(StripLT p q))
+
+instance (P (StripRT p q) x
+        ) => P (StripR p q) x where
+  type PP (StripR p q) x = PP (StripRT p q) x
+  eval _ = eval (Proxy @(StripRT p q))
+
+instance (GetBool l
         , PP p x ~ String
         , P p x
         , TL.IsText (PP q x)
         , P q x
-        ) => P (StripLR r p q) x where
-  type PP (StripLR r p q) x = Maybe (PP q x)
+        ) => P (StripImpl l p q) x where
+  type PP (StripImpl l p q) x = Maybe (PP q x)
   eval _ opts x = do
-    let msg0 = "Strip" ++ (if r then "Right" else "Left")
-        r = getBool @r
+    let msg0 = "Strip" ++ if l then "L" else "R"
+        l = getBool @l
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,view TL.unpacked -> q,pp,qq) ->
-        let b = if r then
-                  let (before,after) = splitAt (length q - length p) q
-                  in if after == p then Just before else Nothing
-                else
+        let b = if l then
                   let (before,after) = splitAt (length p) q
                   in if before == p then Just after else Nothing
+                else
+                  let (before,after) = splitAt (length q - length p) q
+                  in if after == p then Just before else Nothing
         in mkNode opts (PresentT (fmap (view TL.packed) b)) [msg0 <> show0 opts "" b <> showLit1 opts " | p=" p <> showLit1 opts " | q=" q] [hh pp, hh qq]
 
 -- | creates a promoted list of predicates and then evaluates them into a list. see PP instance for '[k]
@@ -8013,11 +8880,12 @@ instance (P (RepeatT n p) a
 -- PresentT "abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc"
 --
 data DoN (n :: Nat) p
-instance (P (DoExpandT (RepeatT n p)) a
+type DoNT (n :: Nat) p = Do (RepeatT n p)
+instance (P (DoNT n p) a
          ) => P (DoN n p) a where
-  type PP (DoN n p) a = PP (Do (RepeatT n p)) a
+  type PP (DoN n p) a = PP (DoNT n p) a
   eval _ opts a =
-    eval (Proxy @(Do (RepeatT n p))) opts a
+    eval (Proxy @(DoNT n p)) opts a
 
 -- | extract the value from a 'Maybe' otherwise use the default value
 --
@@ -8791,7 +9659,7 @@ type family DotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 -- PresentT 2
 --
 data RDot (ps :: [Type -> Type]) (q :: Type)
-instance (P (RDotExpandT ps q) a) => P (RDot ps q) a where
+instance P (RDotExpandT ps q) a => P (RDot ps q) a where
   type PP (RDot ps q) a = PP (RDotExpandT ps q) a
   eval _ = eval (Proxy @(RDotExpandT ps q))
 
@@ -8974,5 +9842,6 @@ instance (Foldable t
                    [a] -> mkNode opts (PresentT a) [msg0] [hh pp]
                    as -> let n = length as
                          in mkNode opts (FailT (msg0 <> " " <> show n <> " elements")) [msg0 <> " expected one element"] [hh pp]
+
 
 
