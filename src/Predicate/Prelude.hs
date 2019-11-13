@@ -3682,7 +3682,14 @@ instance (Show (p (p a b) c)
 -- FailT "Succ bounded failed"
 --
 data SuccB p q
-type SuccB' q = SuccB (Failp "Succ bounded failed") q
+
+data SuccB' q
+type SuccBT' q = SuccB (Failp "Succ bounded failed") q
+
+instance P (SuccBT' q) x => P (SuccB' q) x where
+  type PP (SuccB' q) x = PP (SuccBT' q) x
+  eval _ = eval (Proxy @(SuccBT' q))
+
 
 instance (PP q x ~ a
         , P q x
@@ -3720,7 +3727,14 @@ instance (PP q x ~ a
 -- FailT "Pred bounded failed"
 --
 data PredB p q
-type PredB' q = PredB (Failp "Pred bounded failed") q
+
+data PredB' q
+type PredBT' q = PredB (Failp "Pred bounded failed") q
+
+instance P (PredBT' q) x => P (PredB' q) x where
+  type PP (PredB' q) x = PP (PredBT' q) x
+  eval _ = eval (Proxy @(PredBT' q))
+
 
 instance (PP q x ~ a
         , P q x
@@ -3884,8 +3898,20 @@ instance (PP p x ~ a
 -- FailT "ToEnum bounded failed"
 --
 data ToEnumBDef' t def
-type ToEnumBDef (t :: Type) def = ToEnumBDef' (Hole t) def
-type ToEnumBFail (t :: Type) = ToEnumBDef' (Hole t) (Failp "ToEnum bounded failed")
+
+data ToEnumBDef (t :: Type) def
+type ToEnumBDefT (t :: Type) def = ToEnumBDef' (Hole t) def
+
+instance P (ToEnumBDefT t def) x => P (ToEnumBDef t def) x where
+  type PP (ToEnumBDef t def) x = PP (ToEnumBDefT t def) x
+  eval _ = eval (Proxy @(ToEnumBDefT t def))
+
+data ToEnumBFail (t :: Type)
+type ToEnumBFailT (t :: Type) = ToEnumBDef' (Hole t) (Failp "ToEnum bounded failed")
+
+instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
+  type PP (ToEnumBFail t) x = PP (ToEnumBFailT t) x
+  eval _ = eval (Proxy @(ToEnumBFailT t))
 
 instance (P def (Proxy (PP t a))
         , PP def (Proxy (PP t a)) ~ (PP t a)
