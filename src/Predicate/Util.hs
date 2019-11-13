@@ -120,7 +120,7 @@ module Predicate.Util (
   , RR(..)
 
   -- ** useful type families
-  , BetweenT
+  , ZwischenT
   , NullT
   , FailWhenT
   , FailUnlessT
@@ -701,10 +701,10 @@ _TrueT = prism' (const TrueT) $
 p ~> q = not p || q
 
 -- | type level Between
-type family BetweenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
-  BetweenT m n v =
+type family ZwischenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
+  ZwischenT m n v =
      FailUnlessT (AndT (m GL.<=? v) (v GL.<=? n))
-            ('GL.Text "BetweenT failure"
+            ('GL.Text "ZwischenT failure"
              ':$$: 'GL.ShowType v
              ':$$: 'GL.Text " is outside of "
              ':$$: 'GL.ShowType m

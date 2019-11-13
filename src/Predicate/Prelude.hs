@@ -629,7 +629,15 @@ instance P DescT' x => P Desc' x where
 -- FalseT
 --
 data Between' p q r -- reify as it is used a lot! nicer specific messages at the top level!
-type Between p q = Between' p q Id
+
+data Between p q
+type BetweenT p q = Between' p q Id
+
+instance P (BetweenT p q) x => P (Between p q) x where
+  type PP (Between p q) x = PP (BetweenT p q) x
+  eval _ = eval (Proxy @(BetweenT p q))
+
+
 type p <..> q = Between p q
 infix 4 <..>
 
@@ -828,10 +836,24 @@ instance (P p a
 -- True
 -- TrueT
 --
-type AllPositive = All Positive Id
+data AllPositive
+type AllPositiveT = All Positive Id
+
+instance P AllPositiveT x => P AllPositive x where
+  type PP AllPositive x = PP AllPositiveT x
+  eval _ = eval (Proxy @AllPositiveT)
+
 -- | a type level predicate for all negative elements in a list
-type AllNegative = All Negative Id
+data AllNegative
+type AllNegativeT = All Negative Id
+
+instance P AllNegativeT x => P AllNegative x where
+  type PP AllNegative x = PP AllNegativeT x
+  eval _ = eval (Proxy @AllNegativeT)
+
+
 type Positive = Gt 0
+
 type Negative = Lt 0
 
 -- | 'unzip' equivalent
@@ -6473,12 +6495,30 @@ instance (Show a
 -- | just run the effect but skip the value
 -- for example for use with Stdout so it doesnt interfere with the \'a\' on the rhs unless there is an failure
 data Skip p
-type p |> q = Skip p >> q
+
+data p |> q
+type SkipLT p q = Skip p >> q
 infixr 1 |>
-type p >| q = p >> Skip q
+
+instance P (SkipLT p q) x => P (p |> q) x where
+  type PP (p |> q) x = PP (SkipLT p q) x
+  eval _ = eval (Proxy @(SkipLT p q))
+
+data p >| q
+type SkipRT p q = p >> Skip q
 infixr 1 >|
-type p >|> q = Skip p >> Skip q
+
+instance P (SkipRT p q) x => P (p >| q) x where
+  type PP (p >| q) x = PP (SkipRT p q) x
+  eval _ = eval (Proxy @(SkipRT p q))
+
+data p >|> q
+type SkipBothT p q = Skip p >> Skip q
 infixr 1 >|>
+
+instance P (SkipBothT p q) x => P (p >|> q) x where
+  type PP (p >|> q) x = PP (SkipBothT p q) x
+  eval _ = eval (Proxy @(SkipBothT p q))
 
 instance (Show (PP p a), P p a) => P (Skip p) a where
   type PP (Skip p) a = a
@@ -6504,8 +6544,13 @@ instance (Show (PP p a), P p a) => P (Skip p) a where
 data p >> q
 infixr 1 >>
 
-type (<<) p q = q >> p
+data p << q
+type LeftArrowsT p q = q >> p
 infixr 1 <<
+
+instance P (LeftArrowsT p q) x => P (p << q) x where
+  type PP (p << q) x = PP (LeftArrowsT p q) x
+  eval _ = eval (Proxy @(LeftArrowsT p q))
 
 type p >>> q = p >> q
 infixl 1 >>>
@@ -7502,7 +7547,7 @@ type ReadBaseT (t :: Type) (n :: Nat) p = ReadBase' (Hole t) n p
 type ReadBaseIntT (n :: Nat) p = ReadBase' (Hole Int) n p
 
 instance (Typeable (PP t x)
-        , BetweenT 2 36 n
+        , ZwischenT 2 36 n
         , Show (PP t x)
         , Num (PP t x)
         , KnownNat n

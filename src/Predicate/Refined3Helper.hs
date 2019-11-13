@@ -314,10 +314,6 @@ base2 = basen
 base2' :: Proxy (BaseN' 2 p)
 base2' = basen'
 
--- replace with BetweenT 2 36 n
---basen :: forall n . (KnownNat n, (n GN.<=? 36) ~ 'True, (2 GN.<=? n) ~ 'True) => Proxy (BaseN n)
---basen = mkProxy3
-
 basen :: Proxy (BaseN n)
 basen = mkProxy3
 
