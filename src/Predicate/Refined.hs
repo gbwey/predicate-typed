@@ -74,6 +74,7 @@ import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
 import Data.Semigroup ((<>))
+import Data.String
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -131,6 +132,13 @@ import Data.Semigroup ((<>))
 newtype Refined p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
 
 type role Refined nominal nominal
+
+instance RefinedC p String => IsString (Refined p String) where
+  fromString s =
+    let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p o2 s
+    in case mr of
+      Nothing -> error $ "Refined(fromString):" ++ show bp ++ "\n" ++ e
+      Just r -> r
 
 -- | 'Read' instance for 'Refined'
 --

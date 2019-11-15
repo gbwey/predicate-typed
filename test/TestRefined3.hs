@@ -25,10 +25,11 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
 import Predicate
-import TestRefined hiding (namedTests,unnamedTests,allProps)
+--import TestRefined hiding (namedTests,unnamedTests,allProps)
 import Predicate.Refined
 import Predicate.Refined3
-import Predicate.Refined3Helper
+import Predicate.Examples.Refined3
+import Predicate.Examples.Common
 import Predicate.Util_TH
 import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 
@@ -41,9 +42,7 @@ import Data.Aeson
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree
-import qualified Data.Semigroup as SG
 import GHC.TypeLits (Nat)
-import Data.Semigroup (Semigroup(..))
 
 suite :: IO ()
 suite = defaultMain $ testGroup "TestRefined3" (namedTests <> orderTests unnamedTests <> allProps)
@@ -116,10 +115,10 @@ unnamedTests = [
                   ol "1.2.3.4"
 
   , expect3 (Left $ XTF [291,1048319,4387,17,1] "out of bounds")
-                  $ eval3 @Ip6A @Ip6B @"" ol "123:Ffeff:1123:11:1"
+                  $ eval3 @Ip6ip @Ip6op @"" ol "123:Ffeff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [12,2,0,255] "abc")
-                  $ eval3 @Ip4A @Ip4B @"abc" ol "12.2.0.255"
+                  $ eval3 @Ip4ip @Ip4op @"abc" ol "12.2.0.255"
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
                   $ eval3
@@ -140,23 +139,23 @@ unnamedTests = [
                   ol "123-45-6789"
 
   , expect3 (Left $ XTF [0,0,0,291,1048319,4387,17,1] "out of bounds")
-                  $ eval3 @Ip6A'' @Ip6B' @"xyz"
+                  $ eval3 @Ip6ip @Ip6op @"xyz"
                   ol "123:Ffeff:1123:11:1"
 
   , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1])
-                  $ eval3 @Ip6A'' @Ip6B'' @"xyz"
+                  $ eval3 @Ip6ip @Ip6op @"xyz"
                   ol "123:Ffeff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [0,0,0,291,65535,4387,17,1] "xyz")
-                  $ eval3 @Ip6A'' @Ip6B' @"xyz"
+                  $ eval3 @Ip6ip @Ip6op @"xyz"
                   ol "123:Ffff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [0,0,291,0,65535,0,0,17] "xyz")
-                  $ eval3 @Ip6A'' @Ip6B' @"xyz"
+                  $ eval3 @Ip6ip @Ip6op @"xyz"
                   ol "123::Ffff:::11"
 
   , expect3 (Right $ unsafeRefined3 [0,0,291,0,65535,0,0,17] "xyz")
-                  $ eval3 @Ip6A'' @Ip6B'' @"xyz"
+                  $ eval3 @Ip6ip @Ip6op @"xyz"
                   ol "123::Ffff:::11"
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
@@ -180,6 +179,15 @@ unnamedTests = [
 --  , expect3 (Right $ unsafeRefined3 True ["T","r","ue","Tr","ue"]) $ eval3P (Proxy @'(Id, Id, Do '[ShowP Id, Dup, Sapa, SplitAts '[1,1,2,2]], Bool)) True
   , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ eval3P hms2E ol "12:13:14"
   , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "guard(2) 99 secs is out of range")) $ eval3P hms2E ol "12:13:99"
+
+  , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ eval3 @Ip4ip @Ip4op @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
+  , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ eval3 @Ip4ip @Ip4op @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) ol "1.2.3.4"
+  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (Proxy @'(Ip4ip, Ip4op, ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id), _)) ol "1.2.3.4"
+  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (mkProxy3' @_ @Ip4ip @Ip4op @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id))) ol "1.2.3.4"
+
+  -- keep the original value
+  , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ eval3 @(Id &&& Ip4ip) @(Snd Id >> Ip4op) @(Snd Id >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
+
   ]
 
 allProps :: [TestTree]
@@ -204,25 +212,14 @@ yy2 = newRefined3TP @Identity (Proxy @Tst1) o2 "3"
 yy3 = rapply3 o2 (*) yy1 yy2 -- fails
 yy4 = rapply3 o2 (+) yy1 yy2 -- pure ()
 
-type Ip4T = '(Ip4A, Ip4B, Ip4C, String) -- guards
-type Ip4T' = '(Ip4A, Ip4B', Ip4C, String) -- boolean predicates
+type Ip4T = '(Ip4ip, Ip4op, Ip4fmt, String) -- guards
+type Ip4T' = '(Ip4ip, Ip4op', Ip4fmt, String) -- boolean predicates
 
 ip4 :: Proxy Ip4T
 ip4 = mkProxy3'
 
 ip4' :: Proxy Ip4T'
 ip4' = mkProxy3'
-
-ip4expands :: Proxy '(Ip4A, Ip4B, Ip4C, String)
-ip4expands = mkProxy3
-
--- this works but ParseTimeP is easier
-type DdmmyyyyRE = "^(\\d{2})-(\\d{2})-(\\d{4})$"
-type Ddmmyyyyval' = GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]
-type Ddmmyyyyval =
-    Guards '[ '(PrintT "guard(%d) day %d is out of range" Id, Between 1 31)
-            , '(PrintT "guard(%d) month %d is out of range" Id, Between 1 12)
-            , '(PrintT "guard(%d) year %d is out of range" Id, Between 1990 2050) ]
 
 cc :: Proxy CC11
 cc = mkProxy3
@@ -231,24 +228,12 @@ cc = mkProxy3
 -- guards checks also that there are exactly 3 entries!
 type Hmsconv = Do '[Rescan HmsRE Id, Head Id, (Snd Id), Map (ReadBaseInt 10 Id) Id]
 
-type Hmsz1 = '(Hmsconv &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-            , Fst Id >> Hmsop
-            , Snd Id
-            , String)
-
--- better error messages cos doesnt do a strict regex match
-type Hmsz2 = '(Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-             , Fst Id >> Hmsop
-             , Snd Id
-             , String)
-
 type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
 type Hmsop2 = Fst Id >> Hmsop
 
 -- >mkProxy3 @Hmsip2 @Hmsop2 @((Snd Id) >> FormatTimeP "%F %T" Id) @String
 hms2E :: Proxy '(Hmsip2, Hmsop2, (Snd Id) >> FormatTimeP "%T" Id, String)
 hms2E = mkProxy3
-
 
 -- better to use Guard for op boolean check cos we get better errormessages
 -- 1. packaged up as a promoted tuple
@@ -403,27 +388,3 @@ type LuhnX (n :: Nat) =
    , Luhn'' n >> 'True
    , ConcatMap (ShowP Id) Id
    , String)
-
-type Luhn'' (n :: Nat) =
-         Guard (PrintT "incorrect number of digits found %d but expected %d in [%s]" '(Len, n, ShowP Id)) (Len == n)
-      >> Do '[
-              Reverse
-             ,Zip (Cycle n [1,2]) Id
-             ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
-             ,FoldMap (SG.Sum Int) Id
-             ]
-        >> Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
-
-type Luhn' (n :: Nat) =
-       Msg "Luhn'" (Do
-       '[Guard (PrintT "incorrect number of digits found %d but expected %d in [%s]" '(Len, n, Id)) (Len == n)
-        ,Do
-            '[Ones Id
-            ,Map (ReadP Int Id) Id
-            ,Reverse
-            ,Zip (Cycle n [1,2]) Id
-            ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
-            ,FoldMap (SG.Sum Int) Id
-           ]
-        ,Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
-        ])

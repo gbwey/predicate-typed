@@ -19,13 +19,8 @@ import Safe
 import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
---import Test.Tasty.QuickCheck
-import TestRefined
-import TestRefined3
 import Predicate
-import Predicate.Refined
-import Predicate.Refined3
-import Predicate.Refined3Helper
+import Predicate.Examples.Common
 import Data.Ratio
 
 import Data.Typeable
@@ -39,6 +34,7 @@ import qualified Data.Text as T
 import qualified Data.Monoid as MM
 import qualified Data.Semigroup as SG
 import Data.These
+import GHC.TypeLits (Nat)
 
 suite :: IO ()
 suite = defaultMain $ testGroup "TestPredicate" (orderTests allTests)
@@ -323,9 +319,9 @@ allTests =
   , expectPE (FailT "(!!) index not found") $ pl @(Snd Id !! Fst Id) (4,[9,8])
   , expectPE (PresentT 'c') $ pl @(2 &&& Id >> Snd Id !! Fst Id) ("abcdef" :: String)
   , expectPE (PresentT 'f') $ pl @((Len >> Pred Id) &&& Id >> Snd Id !! Fst Id) "abcdef"
-  , expectPE (FailT "len is bad") $ pl @Ip6 "FE80::203:Baff:FE77:326FF"
-  , expectPE (FailT "not a hex") $ pl @Ip6 "FE80::203:Baff:GE77:326F"
-  , expectPE (FailT "count is bad") $ pl @Ip6 "FE80::203:Baff:FE77:326F:::::"
+  , expectPE (FailT "len is bad") $ pl @Ip6Test "FE80::203:Baff:FE77:326FF"
+  , expectPE (FailT "not a hex") $ pl @Ip6Test "FE80::203:Baff:GE77:326F"
+  , expectPE (FailT "count is bad") $ pl @Ip6Test "FE80::203:Baff:FE77:326F:::::"
   , expectPE (PresentT 65504) $ pl @(ReadBaseInt 16 Id) "fFe0"
   , expectPE (PresentT "ffe0") $ pl @(ShowBase 16 Id) 65504
   , expectPE (FailT "invalid base 22") $ pl @(ReadBaseInt 22 Id) "zzz"
@@ -352,11 +348,9 @@ allTests =
   , expectPE (PresentT [True,True,True,True,True,True,True,True,True,True]) $ pl @(Map (GuardSimple (Ge 1) >> 'True) Id) [1::Int .. 10]
   , expectPE (PresentT [4,5,6]) $ pl @(ScanN 2 Id (Succ Id)) 4
   , expectPE (PresentT [4,4,4,4,4,4]) $ pl @(ScanN 5 Id Id) 4
-  , expectPE (PresentT [1,2,3,244]) $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ip4guard) "1.2.3.244"
-  , expectPE (FailT "0-255") $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ip4guard) "1.256.3.244"
-  , expectPE (FailT "0-255") $ pl @(Rescan "(\\d+)\\.?" Id >> ConcatMap (Snd Id) Id >> Map (ReadBaseInt 10 Id) Id >> Ip4guard) "1.22.312.66"
-  , expectPE (FailT "4octets") $ pl @(Rescan "(\\d+)\\.?" Id >> ConcatMap (Snd Id) Id >> Map (ReadBaseInt 10 Id) Id >> Ip4guard) "1.22.244.66.77"
-  , expectPE (PresentT [1,23,43,214]) $ pl @(Rescan "(\\d+)\\.?" Id >> ConcatMap (Snd Id) Id >> Map (ReadBaseInt 10 Id) Id >> Ip4guard) "1.23.43.214"
+  , expectPE (PresentT [1,2,3,244]) $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> GuardSimple Ip4op) "1.2.3.244"
+  , expectPE (FailT "(Bools(1) [guard(1) octet out of range 0-255 found 256] (256 <= 255))") $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> GuardSimple Ip4op) "1.256.3.244"
+  , expectPE (FailT "(Bools(4): predicates(4) /= data elements(5))") $ pl @(Rescan "(\\d+)\\.?" Id >> ConcatMap (Snd Id) Id >> Map (ReadBaseInt 10 Id) Id >> GuardSimple Ip4op) "1.22.244.66.77"
   , expectPE (PresentT (SG.Sum 123)) $ pl @(JustDef (MEmptyT _) Id) (Just (SG.Sum 123))
   , expectPE (PresentT (SG.Sum 0)) $ pl @(JustDef (MEmptyT _) Id) (Nothing @(SG.Sum _))
   , expectPE (PresentT (636 % 5)) $ pl @((ToRational 123 &&& Id) >> Fst Id + Snd Id) 4.2
@@ -497,17 +491,10 @@ allTests =
   , expectPE (PresentT [1,2,3,4,12]) $ pl @(ParaN 5 (Guard "0-255" (Between 0 255))) [1,2,3,4,12]
   , expectPE (FailT "0-255") $ pl @(ParaN 5 (Guard "0-255" (Between 0 255))) [1,2,3,400,12]
   , expectPE (PresentT ["141","021","003","000"]) $ pl @(ParaN 4 (PrintF "%03d" Id)) [141,21,3,0::Int]
-  , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ eval3 @Ip4A @Ip4B @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
-  , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ eval3 @Ip4A @Ip4B @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) ol "1.2.3.4"
-  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (Proxy @'(Ip4A, Ip4B, ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id), _)) ol "1.2.3.4"
-  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (mkProxy3' @_ @Ip4A @Ip4B @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id))) ol "1.2.3.4"
-
-  -- keep the original value
-  , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ eval3 @(Id &&& Ip4A) @(Snd Id >> Ip4B) @(Snd Id >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
 
   -- need to fill in the types for both even in ghci
   , expectPE (PresentT (Just (SG.Sum 10))) $ pl @(Coerce2 (SG.Sum Int)) (Just (10 :: Int))
-  , expectPE (PresentT (Just (SG.Sum 0))) $ pl @(MEmptyT2 (SG.Sum _)) (Just ())
+  , expectPE (PresentT (Just (SG.Sum 0))) $ pl @(MEmpty2 (SG.Sum _)) (Just ())
   , expectPE (PresentT 13) $ pl @(FoldMap (SG.Sum _) Id) (Just 13)
   , expectPE (PresentT 55) $ pl @(FoldMap (SG.Sum _) Id) [1..10]
   , expectPE (PresentT [Just 1,Just 2,Just 3,Just 4]) $ pl @Sequence (Just [1..4])
@@ -867,5 +854,15 @@ type Fizzbuzzs1 t t1 = Map (Fizzbuzz >> If (Snd Id >> Null) (MkLeft t (Fst Id)) 
 type Fizzbuzzs2 = Map (Fizzbuzz >> If (Snd Id >> Null) (MkLeft String (Fst Id)) (MkRight Int (Snd Id))) Id
 -- best one cos leverages type info to determine Either a b
 type Fizzbuzzs3 = Map (Fizzbuzz >> If (Snd Id == "") (MkLeft' (Snd Id) (Fst Id)) (MkRight' (Fst Id) (Snd Id))) Id
+
+type Ip6Test = Resplit ":" Id
+        >> Guard "count is bad" (Between' 0 8 Len)
+        >> Guard "not a hex" (All (All (Elem Id "abcdefABCDEF0123456789") Id) Id)
+        >> Guard "len is bad" (All (Len >> Le 4) Id)
+
+-- base n number of length x and then convert to a list of length x of (0 to (n-1))
+-- checks that each digit is between 0 and n-1
+type MM1 (n :: Nat) = Map (ReadBase Int n Id) (Ones Id)
+type MM2 (n :: Nat) = ExitWhen "found empty" IsEmpty >> Guard "0<=x<n" (All (Ge 0 && Lt n) Id)
 
 

@@ -7,7 +7,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE PolyKinds #-}
 {- |
-     Template Haskell methods for creating Refined and Refined3 refinement types
+     Template Haskell methods for creating Refined, Refined2, and Refined3 refinement types
 -}
 module Predicate.Util_TH
   (
@@ -15,14 +15,20 @@ module Predicate.Util_TH
     refinedTH
   , refinedTH'
 
+  -- ** Refined2
+  , refined2TH
+  , refined2TH'
+
   -- ** Refined3
   , refined3TH
   , refined3TH'
  ) where
-import Predicate.Refined3
-import Predicate.Refined
-import Predicate.Core
 import Predicate.Util
+import Predicate.Core
+import Predicate.Refined
+import Predicate.Refined2
+import Predicate.Refined3
+
 import qualified Language.Haskell.TH.Syntax as TH
 import Data.Functor.Identity
 import Data.Semigroup ((<>))
@@ -98,6 +104,70 @@ refinedTH' opts i = do
     Nothing ->
       let msg1 = if hasNoTree opts then "" else "\n" ++ e ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
+    Just r -> TH.TExp <$> TH.lift r
+
+-- | creates a 'Refined2.Refined2' refinement type with terse output
+--
+-- @
+-- >$$(refined2TH 100) :: Refined2 Id (Between 100 125) Id Int
+-- Refined2 {r2In = 100, r2Out = 100}
+-- @
+--
+refined2TH :: forall ip op i
+  . (Show (PP ip i), TH.Lift i, TH.Lift (PP ip i), Refined2C ip op i)
+  => i
+  -> TH.Q (TH.TExp (Refined2 ip op i))
+refined2TH = refined2TH' ol
+
+-- | creates a 'Refined2.Refined2' refinement type
+--
+-- allows you to specify display options (eg 'ou' for unicode / 'o2' for ansi)
+--
+-- @
+-- >$$(refined2TH' o2 100) :: Refined2 Id (Between 100 125) Int
+-- Refined2 {r2In = 100, r2Out = 100}
+-- @
+--
+-- @
+-- >$$(refined2TH' o2 99) :: Refined2 Id (Between 100 125) Int
+--
+-- <interactive>:127:4: error:
+--     *
+-- *** Step 1. Success Initial Conversion(ip) [99] ***
+--
+-- P Id 99
+--
+-- *** Step 2. False Boolean Check(op) ***
+--
+-- False 100 <= 99
+-- |
+-- +- P Id 99
+-- |
+-- +- P '100
+-- |
+-- `- P '125
+--
+-- refined2TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
+--     * In the Template Haskell splice $$(refined2TH' o2 99)
+--       In the expression:
+--           $$(refined2TH' o2 99) :: Refined2 Id (Between 100 125) Id Int
+--       In an equation for \'it\':
+--           it = $$(refined2TH' o2 99) :: Refined2 Id (Between 100 125) Id Int
+-- @
+--
+refined2TH' :: forall ip op i
+  . (Show (PP ip i), TH.Lift i, TH.Lift (PP ip i), Refined2C ip op i)
+  => POpts
+  -> i
+  -> TH.Q (TH.TExp (Refined2 ip op i))
+refined2TH' opts i = do
+  let msg0 = "refined2TH"
+      (ret,mr) = eval2 @ip @op opts i
+      m2 = prt2Impl opts ret
+  case mr of
+    Nothing ->
+      let msg1 = if hasNoTree opts then "" else m2Long m2 ++ "\n"
+      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m2Desc m2 <> " | " <> m2Short m2)
     Just r -> TH.TExp <$> TH.lift r
 
 -- | creates a 'Refined3.Refined3' refinement type with terse output

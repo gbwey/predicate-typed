@@ -97,6 +97,7 @@ import Control.Lens ((^?),ix)
 import Data.Tree.Lens (root)
 import Data.Char (isSpace)
 import Data.Semigroup ((<>))
+import Data.String
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -189,6 +190,13 @@ type Refined3C ip op fmt i =
 deriving instance (Show i, Show (PP ip i), Show (PP fmt (PP ip i))) => Show (Refined3 ip op fmt i)
 deriving instance (Eq i, Eq (PP ip i), Eq (PP fmt (PP ip i))) => Eq (Refined3 ip op fmt i)
 deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Refined3 ip op fmt i)
+
+instance (Refined3C ip op fmt String, Show (PP ip String)) => IsString (Refined3 ip op fmt String) where
+  fromString s =
+    let (ret,mr) = eval3 @ip @op @fmt o2 s
+    in case mr of
+         Nothing -> error $ "Refined3(fromString):" ++ show (prt3Impl o2 ret)
+         Just r -> r
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
@@ -812,3 +820,4 @@ eval3X = eval3PX (Proxy @'(ip,op,fmt,i))
 
 -- | emulates 'Refined' using 'Refined3' by setting the input conversion and output formatting as noops
 type RefinedEmulate p a = Refined3 Id p Id a
+

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 23e1dabfe40eb6dfcb143179b06f919681d58062bc232517452b46889357c319
+-- hash: 47822dab2aaa371975b4d466b6c8357d6cc916402843030d575bf758cfe4199d
 
 name:           predicate-typed
 version:        0.4.0.0
@@ -28,10 +28,13 @@ library
   exposed-modules:
       Predicate
       Predicate.Core
+      Predicate.Examples.Common
+      Predicate.Examples.Refined2
+      Predicate.Examples.Refined3
       Predicate.Prelude
       Predicate.Refined
+      Predicate.Refined2
       Predicate.Refined3
-      Predicate.Refined3Helper
       Predicate.TH_Orphans
       Predicate.Util
       Predicate.Util_TH
@@ -115,6 +118,7 @@ test-suite predicate-typed-test
       TestJson
       TestPredicate
       TestRefined
+      TestRefined2
       TestRefined3
       Paths_predicate_typed
   hs-source-dirs:

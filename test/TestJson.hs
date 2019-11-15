@@ -18,9 +18,8 @@ import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
 import Predicate
-import Predicate.Refined
-import Predicate.Refined3
-import Predicate.Refined3Helper
+import qualified Predicate.Refined as R
+import qualified Predicate.Examples.Refined3 as H3
 import GHC.Generics (Generic)
 import Data.Text (Text)
 import Data.Aeson
@@ -54,43 +53,28 @@ instance ToJSON Person
 instance FromJSON Person
 
 data Person1 = Person1 {
-       firstName1 :: NameR
-     , lastName1 :: NameR
+       firstName1 :: NameR2
+     , lastName1 :: NameR2
      , age1 :: AgeR
      , likesPizza1 :: Bool
-     , date1 :: DateTimeNR
-     , ipaddress1 :: Ip4R'
+     , date1 :: H3.DateTimeNR
+     , ipaddress1 :: H3.IpR
      } deriving (Show,Generic,Eq)
 
 instance ToJSON Person1
 instance FromJSON Person1
 
-type ValidName =
-         Guard (PrintF "invalid name(%s)" Id)
-        (Re "^[A-Z][a-z']+$" Id) >> 'True
+type NameR1 = R.Refined Name1 String
+type Name1 = Msg "invalid name:" (Re "^[A-Z][a-z']+$" Id)
 
-type ValidName' = Msg "invalid name:" (Re "^[A-Z][a-z']+$" Id)
-
-type NameR = Refined ValidName' String
-
-type NameR1 = Refined (Name1 >> 'True) String
-type Name1 =
+-- more specific messages
+type NameR2 = R.Refined (Name2 >> 'True) String
+type Name2 =
           Uncons
        >> 'Just Id
-       >> Guard (PrintF "not upper first(%c)" (Fst Id)) (Fst Id >> '[Id] >> IsUpper)
-       >> Guard (PrintF "not lower rest(%s)" (Snd Id)) (Snd Id >> IsLower)
+       >> Guard (PrintF "not upper first(%c)" Id) ('[Id] >> IsUpper)
+      *** Guard (PrintF "not lower rest(%s)" Id) IsLower
 
-type AgeR = Refined (Between 10 60) Int
+type AgeR = R.Refined (Between 10 60) Int
 
-type Ip4R = MakeR3 '(Ip4ip, Ip4op >> 'True, Ip4fmt, String)
-type Ip4R' = MakeR3 '(Ip4ip, Ip4op', Ip4fmt, String)
-
-type Ip4ip = Map (ReadP Int Id) (Resplit "\\." Id)
-type Ip4op = Guard (PrintF "expected length 4 found %d" Len) (Len == 4)
-          >> GuardsN (PrintT "guard(%d): expected between 0 and 255 found %d" Id) 4 (Between 0 255)
-
-type Ip4op' = Msg "length:" (Len == 4)
-          && BoolsN (PrintT "guard(%d): expected between 0 and 255 found %d" Id) 4 (Between 0 255)
-
-type Ip4fmt = PrintL 4 "%03d.%03d.%03d.%03d" Id
 

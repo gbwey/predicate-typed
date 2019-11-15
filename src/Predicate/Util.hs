@@ -823,9 +823,9 @@ instance GetLen xs => GetLen (x ':| xs) where
 
 showThese :: These a b -> String
 showThese = \case
-               This {} -> "This"
-               That {} -> "That"
-               These {} -> "These"
+  This {} -> "This"
+  That {} -> "That"
+  These {} -> "These"
 
 class GetThese th where
   getThese :: (String, These w v -> Bool)
@@ -1163,34 +1163,18 @@ type family ConsT s where
 -- | used by "Predicate.Refined3" for extracting \'ip\' from a 4-tuple
 type family T_1 x where
   T_1 '(a,b,c,d) = a
-  T_1 o = GL.TypeError (
-      'GL.Text "invalid T_1 instance"
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
 
 -- | used by "Predicate.Refined3" for extracting the boolean predicate \'op\' from a 4-tuple
 type family T_2 x where
   T_2 '(a,b,c,d) = b
-  T_2 o = GL.TypeError (
-      'GL.Text "invalid T_2 instance"
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
 
 -- | used by "Predicate.Refined3" for extracting \'fmt\' from a 4-tuple
 type family T_3 x where
   T_3 '(a,b,c,d) = c
-  T_3 o = GL.TypeError (
-      'GL.Text "invalid T_3 instance"
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
 
 -- | used by "Predicate.Refined3" for extracting the input type \'i\' from a 4-tuple
 type family T_4 x where
   T_4 '(a,b,c,d) = d
-  T_4 o = GL.TypeError (
-      'GL.Text "invalid T_4 instance"
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
 
 -- | a typeclass for choosing which monad to run in
 class Monad m => MonadEval m where

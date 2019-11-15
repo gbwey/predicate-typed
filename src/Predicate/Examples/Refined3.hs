@@ -17,7 +17,7 @@
 {- |
      Contains prepackaged 4-tuples to use with 'Refined3'
 -}
-module Predicate.Refined3Helper (
+module Predicate.Examples.Refined3 (
   -- ** date time checkers
     datetime1
   , DateTime1
@@ -27,16 +27,10 @@ module Predicate.Refined3Helper (
   , datetimen
   , DateTimeN
   , DateTimeNR
-  , DateFmts
-  , DateTimeFmts
 
   -- *** time checkers
   , hms
   , Hms
-  , Hmsip
-  , Hmsop
-  , Hmsfmt
-  , HmsRE
 
   -- ** credit cards
   , ccn
@@ -54,8 +48,7 @@ module Predicate.Refined3Helper (
   -- ** ipv4
   , ip
   , Ip
-  , OctetRE
-  , Ip4StrictRE
+  , IpR
 
  -- ** base n
   , basen
@@ -90,12 +83,13 @@ module Predicate.Refined3Helper (
   , OkNot
   , OkNotR
    ) where
+import Predicate.Examples.Common
 import Predicate.Refined3
 import Predicate.Core
 import Predicate.Prelude
 import Predicate.Util
 import Data.Proxy
-import GHC.TypeLits (KnownNat, AppendSymbol,Nat)
+import GHC.TypeLits (KnownNat, Nat)
 import Data.Kind (Type)
 import Data.Time
 
@@ -120,9 +114,6 @@ import Data.Time
 -- Error expected 10 digits but found 11
 -- FailT "expected 10 digits but found 11"
 --
-type Ccip = Map (ReadP Int Id) (Ones (Remove "-" Id))
-type Ccop (n :: Nat) = Guard (PrintT "expected %d digits but found %d" '(n,Len)) (Len == n) >> Luhn Id
-type Ccfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
 
 type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
 
@@ -149,38 +140,14 @@ cc11 = mkProxy3'
 datetime1 :: Proxy (DateTime1 t)
 datetime1 = mkProxy3
 
+-- now that time is actually validated we dont need Dtop*
 type DateTime1 (t :: Type) = '(Dtip t, 'True, Dtfmt, String)
-type Dtip t = ParseTimeP t "%F %T" Id
-type Dtfmt = FormatTimeP "%F %T" Id
 
 -- fixed in time-1.9
 -- extra check to validate the time as parseTime doesnt validate the time component
 -- ZonedTime LocalTime and TimeOfDay don't do validation and allow invalid stuff through : eg 99:98:97 is valid
 -- UTCTime will do the same but any overages get tacked on to the day and time as necessary: makes the time valid! 99:98:97 becomes 04:39:37
 --    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
-{-
-type Dtop' =
-   Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
-     >> GuardsDetail "invalid %s %d"
-               '[ '("hours", Between 0 23)
-                , '("minutes", Between 0 59)
-                , '("seconds", Between 0 59)
-                ] >> 'True
-
-type Dtop'' =
-   Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
-     >> Guards '[ '(PrintT "guard %d invalid hours %d" Id, Between 0 23)
-                , '(PrintT "guard %d invalid minutes %d" Id, Between 0 59)
-                , '(PrintT "guard %d invalid seconds %d" Id, Between 0 59)
-                ] >> 'True
-
-type Dtop =
-   Map (ReadP Int Id) (FormatTimeP "%H %M %S" Id >> Resplit "\\s+" Id)
-     >> Bools '[ '("hours", Between 0 23)
-               , '("minutes",Between 0 59)
-               , '("seconds",Between 0 59)
-               ]
--}
 
 ssn :: Proxy Ssn
 ssn = mkProxy3'
@@ -198,19 +165,6 @@ ssn = mkProxy3'
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 
-type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd (OneP Id))
-type Ssnop = BoolsQuick (PrintT "number for group %d invalid: found %d" Id)
-                     '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
-
-{-
-type Ssnop' = GuardsDetail "%s invalid: found %d"
-                          '[ '("first", Between 1 899 && Id /= 666)
-                           , '("second", Between 1 99)
-                           , '("third" , Between 1 9999)
-                           ] >> 'True
--}
-type Ssnfmt = PrintL 3 "%03d-%02d-%04d" Id
-
 -- | read in a time and validate it
 --
 -- >>> prtEval3P hms ol "23:13:59"
@@ -227,25 +181,6 @@ hms = mkProxy3'
 
 type Hms = '(Hmsip, Hmsop, Hmsfmt, String)
 
-type Hmsip = Map (ReadP Int Id) (Resplit ":" Id)
-{-
-type Hmsop = BoolsQuick ""
-              '[ Msg "hours:"   (Between 0 23)
-              ,  Msg "minutes:" (Between 0 59)
-              ,  Msg "seconds:" (Between 0 59)]
--}
-type Hmsop = Bools
-             '[ '("hours", Between 0 23)
-              , '("minutes",Between 0 59)
-               ,'("seconds",Between 0 59)]
-{-
-type Hmsop = Guard (PrintF "expected len 3 but found %d" Len) (Length Id == 3)
-             >> Guards '[ '(PrintT "guard(%d) %d hours is out of range" Id, Between 0 23)
-                        , '(PrintT "guard(%d) %d mins is out of range" Id, Between 0 59)
-                        , '(PrintT "guard(%d) %d secs is out of range" Id, Between 0 59)]
--}
-type Hmsfmt = PrintL 3 "%02d:%02d:%02d" Id
-
 -- | read in an ipv4 address and validate it
 --
 -- >>> prtEval3P ip oz "001.223.14.1"
@@ -260,27 +195,15 @@ type Hmsfmt = PrintL 3 "%02d:%02d:%02d" Id
 -- >>> prtEval3P ip ol "001.257.14.1"
 -- Left Step 2. False Boolean Check(op) | {Bools(1) [guard(1) octet out of range 0-255 found 257] (257 <= 255)}
 --
-type Ip = '(Ipip, Ipop, Ipfmt, String)
+type IpR = MakeR3 Ip
+
+type Ip = '(Ip4ip, Ip4op, Ip4fmt, String)
 
 ip :: Proxy Ip
 ip = mkProxy3'
 
-type Ipip = Map (ReadP Int Id) (Rescan "^(\\d{1,3}).(\\d{1,3}).(\\d{1,3}).(\\d{1,3})$" Id >> Snd (OneP Id))
--- RepeatT is a type family so it expands everything! replace RepeatT with a type class
-type Ipop = BoolsN (PrintT "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255)
-type Ipfmt = PrintL 4 "%03d.%03d.%03d.%03d" Id
-
-type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- strict validation should only be done in 'op' not 'ip'
-
-type OctetRE = "(25[0-5]|2[0..4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])" -- no padded numbers allowed
---type Ip4StrictRE = "^" `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "$"
-type Ip4StrictRE = "^" `AppendSymbol` IntersperseT "\\." (RepeatT 4 OctetRE) `AppendSymbol` "$"
-
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
-type DateFmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
 type DateN = '(ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)
-
-type DateTimeFmts = '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]
 
 type DateTimeNR = MakeR3 DateTimeN
 type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
@@ -461,3 +384,4 @@ readshow = mkProxy3
 
 readshow' :: Proxy (ReadShow' t p)
 readshow' = mkProxy3
+
