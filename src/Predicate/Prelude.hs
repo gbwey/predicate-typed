@@ -167,6 +167,8 @@ module Predicate.Prelude (
   , ParseJson'
   , ParseJson
   , EncodeJson
+  , ParseJsonFile'
+  , ParseJsonFile
 
   -- ** arrow expressions
   , type (&&&)
@@ -255,6 +257,7 @@ module Predicate.Prelude (
   , Sum
   , IsEmpty
   , Null
+  , Null'
   , ToList
   , ToList'
   , IToList
@@ -1749,7 +1752,7 @@ instance (P p x
         let hhs = [hh pp]
         in case reads @(PP t x) s of
            [(b,"")] -> mkNode opts (PresentT b) [msg0 <> " " ++ show b] hhs
-           o -> mkNode opts (FailT (msg0 <> " (" ++ s ++ ") failed")) [msg0 <> " failed " <> show o <> " | s=" ++ s] hhs
+           o -> mkNode opts (FailT (msg0 <> " (" ++ s ++ ")")) [msg0 <> " failed " <> show o <> " | s=" ++ s] hhs
 
 data ReadP (t :: Type) p
 type ReadPT (t :: Type) p = ReadP' (Hole t) p
@@ -3746,13 +3749,13 @@ instance (Show (p (p a b) c)
 -- PresentT LT
 --
 -- >>> pz @(SuccB' Id) GT
--- Error Succ bounded failed
--- FailT "Succ bounded failed"
+-- Error Succ bounded
+-- FailT "Succ bounded"
 --
 data SuccB p q
 
 data SuccB' q
-type SuccBT' q = SuccB (Failp "Succ bounded failed") q
+type SuccBT' q = SuccB (Failp "Succ bounded") q
 
 instance P (SuccBT' q) x => P (SuccB' q) x where
   type PP (SuccB' q) x = PP (SuccBT' q) x
@@ -3791,13 +3794,13 @@ instance (PP q x ~ a
 -- PresentT 12
 --
 -- >>> pz @(PredB' Id) LT
--- Error Pred bounded failed
--- FailT "Pred bounded failed"
+-- Error Pred bounded
+-- FailT "Pred bounded"
 --
 data PredB p q
 
 data PredB' q
-type PredBT' q = PredB (Failp "Pred bounded failed") q
+type PredBT' q = PredB (Failp "Pred bounded") q
 
 instance P (PredBT' q) x => P (PredB' q) x where
   type PP (PredB' q) x = PP (PredBT' q) x
@@ -3961,8 +3964,8 @@ instance P (ToEnumT t p) x => P (ToEnum t p) x where
 -- PresentT LT
 --
 -- >>> pz @(ToEnumBFail Ordering) 6
--- Error ToEnum bounded failed
--- FailT "ToEnum bounded failed"
+-- Error ToEnum bounded
+-- FailT "ToEnum bounded"
 --
 data ToEnumBDef' t def
 
@@ -3994,7 +3997,7 @@ instance P (ToEnumBDefT t def) x => P (ToEnumBDef t def) x where
   eval _ = eval (Proxy @(ToEnumBDefT t def))
 
 data ToEnumBFail (t :: Type)
-type ToEnumBFailT (t :: Type) = ToEnumBDef' (Hole t) (Failp "ToEnum bounded failed")
+type ToEnumBFailT (t :: Type) = ToEnumBDef' (Hole t) (Failp "ToEnum bounded")
 
 instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
   type PP (ToEnumBFail t) x = PP (ToEnumBFailT t) x
@@ -5315,6 +5318,23 @@ instance (Show as, AsEmpty as) => P IsEmpty as where
     let b = has _Empty as
     in pure $ mkNodeB opts b ["IsEmpty" <> show1 opts " | " as] []
 
+data Null' p
+
+instance (Show (t a)
+        , Foldable t
+        , t a ~ PP p x
+        , P p x
+        ) => P (Null' p) x where
+  type PP (Null' p) x = Bool
+  eval _ opts x = do
+    let msg0 = "Null"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = null p
+        in mkNodeB opts b ["Null" <> show1 opts " | " p] [hh pp]
+
 -- | similar to 'null' using 'Foldable'
 --
 -- >>> pz @Null [1,2,3,4]
@@ -5330,7 +5350,11 @@ instance (Show as, AsEmpty as) => P IsEmpty as where
 -- TrueT
 --
 data Null
-
+type NullT = Null' Id
+instance P NullT a => P Null a where
+  type PP Null a = PP NullT a
+  eval _ = eval (Proxy @NullT)
+{-
 instance (Show (t a)
         , Foldable t
         , t a ~ as
@@ -5339,7 +5363,7 @@ instance (Show (t a)
   eval _ opts as =
     let b = null as
     in pure $ mkNodeB opts b ["Null" <> show1 opts " | " as] []
-
+-}
 -- | similar to 'enumFromTo'
 --
 -- >>> pz @(EnumFromTo 2 5) ()
@@ -7248,7 +7272,7 @@ instance P p x => P (Singleton p) x where
 -- PresentT 'a'
 --
 data Char1 (s :: Symbol)  -- gets the first char from the Symbol [requires that Symbol is not empty]
-instance (KnownSymbol s, NullT s ~ 'False) => P (Char1 s) a where
+instance (KnownSymbol s, GL.CmpSymbol s "" ~ 'GT) => P (Char1 s) a where
   type PP (Char1 s) a = Char
   eval _ opts _ =
      case symb @s of
@@ -8085,9 +8109,9 @@ instance (PP p x ~ String, P p x) => P (ReadFile p) x where
                 if b then Just <$> readFile p
                 else pure Nothing
         pure $ case mb of
-          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) [msg1 <> " must run in IO"] []
-          Just Nothing -> mkNode opts (PresentT Nothing) [msg1 <> " does not exist"] []
-          Just (Just b) -> mkNode opts (PresentT (Just b)) [msg1 <> " len=" <> show (length b) <> showLit0 opts " Just " b] []
+          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) [msg1 <> " must run in IO"] [hh pp]
+          Just Nothing -> mkNode opts (PresentT Nothing) [msg1 <> " does not exist"] [hh pp]
+          Just (Just b) -> mkNode opts (PresentT (Just b)) [msg1 <> " len=" <> show (length b) <> showLit0 opts " Just " b] [hh pp]
 
 -- | does the directory exists
 --
@@ -9891,11 +9915,9 @@ instance (Foldable t
 -- Present (10,"abc") (ParseJson (Int,[Char]) (10,"abc"))
 -- PresentT (10,"abc")
 --
--- >>> pe @(ParseJson (Int,String) Id) "[10,\"abc\",99]"
--- [Error ParseJson (Int,[Char]) ([10,"abc",99]) failed] ParseJson (Int,[Char]) failed Error in $: cannot unpack array of length 3 into a tuple of length 2 | [10,"abc",99]
--- |
--- `- P Id "[10,\"abc\",99]"
--- FailT "ParseJson (Int,[Char]) ([10,\"abc\",99]) failed"
+-- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\",99]"
+-- Error ParseJson (Int,[Char])([10,"abc",...) Error in $
+-- FailT "ParseJson (Int,[Char])([10,\"abc\",...) Error in $"
 --
 data ParseJson' t p
 
@@ -9914,9 +9936,10 @@ instance (P p x
       Left e -> e
       Right s ->
         let hhs = [hh pp]
+            msg1 = msg0 <> "(" ++ litL 10 s ++ ")"
         in case A.eitherDecodeStrict' (BS8.pack s) of
-           Right b -> mkNode opts (PresentT b) [msg0 <> " " ++ show b] hhs
-           Left e -> mkNode opts (FailT (msg0 <> " (" ++ s ++ ") failed")) [msg0 <> " failed " <> e <> " | " <> s] hhs
+           Right b -> mkNode opts (PresentT b) [msg0 <> " " ++ showL 30 b] hhs
+           Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) [msg0 <> " failed " <> e <> " | " <> litL 100 s] hhs
 
 data ParseJson (t :: Type) p
 type ParseJsonT (t :: Type) p = ParseJson' (Hole t) p
@@ -9943,4 +9966,43 @@ instance (A.ToJSON (PP p x), P p x) => P (EncodeJson p) x where
       Right p ->
         let d = BL8.unpack (A.encode p)
         in mkNode opts (PresentT d) [msg0 <> showLit0 opts " " d] [hh pp]
+
+-- | parse a json file
+data ParseJsonFile' t p
+
+instance (P p x
+        , PP p x ~ String
+        , Typeable (PP t x)
+        , Show (PP t x)
+        , A.FromJSON (PP t x)
+        ) => P (ParseJsonFile' t p) x where
+  type PP (ParseJsonFile' t p) x = PP t x
+  eval _ opts x = do
+    let msg0 = "ParseJsonFile " <> t
+        t = showT @(PP t x)
+    pp <- eval (Proxy @p) opts x
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right p -> do
+        let hhs = [hh pp]
+            msg1 = msg0 <> "(" <> p <> ")"
+        mb <- runIO $ do
+                b <- doesFileExist p
+                if b then Just <$> BS8.readFile p
+                else pure Nothing
+        pure $ case mb of
+          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) [msg1 <> " must run in IO"] hhs
+          Just Nothing -> mkNode opts (FailT (msg1 <> " file doesn't exist")) [msg1 <> " does not exist"] hhs
+          Just (Just bs) ->
+            case A.eitherDecodeStrict' bs of
+               Right b -> mkNode opts (PresentT b) [msg1 <> " " ++ show b] hhs
+               Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) [msg1 <> " failed " <> litL 100 e] hhs
+
+data ParseJsonFile (t :: Type) p
+type ParseJsonFileT (t :: Type) p = ParseJsonFile' (Hole t) p
+
+instance P (ParseJsonFileT t p) x => P (ParseJsonFile t p) x where
+  type PP (ParseJsonFile t p) x = PP (ParseJsonFileT t p) x
+  eval _ = eval (Proxy @(ParseJsonFileT t p))
+
 

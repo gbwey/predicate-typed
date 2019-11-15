@@ -3,7 +3,6 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
--- {-# OPTIONS -Wno-unused-imports #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -216,7 +215,7 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- Right (Refined2 {r2In = 13 % 3, r2Out = "13 % 3"})
 --
 -- >>> prtEval2 @(ReadP Rational Id) @'True oz "13x % 3"
--- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3) failed
+-- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3)
 --
 -- >>> prtEval2 @(ReadP Rational Id) @(Between (3 % 1) (5 % 1)) oz "13 % 3"
 -- Right (Refined2 {r2In = 13 % 3, r2Out = "13 % 3"})

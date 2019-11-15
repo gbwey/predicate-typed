@@ -21,25 +21,32 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE RoleAnnotations #-}
-{- |
-     Refinement type allowing the external type to differ from the internal type
-     see 'Refined3'
--}
+-- |
+-- Refinement type allowing the external type to differ from the internal type
+-- see 'Refined3'
+--
+-- @
+-- similar to 'Predicate.Refined2.Refined2' but also provides:
+-- * quickCheck methods
+-- * ability to combine refinement types
+-- * a canonical output value using the \'fmt\' parameter
+-- @
+--
 module Predicate.Refined3 (
   -- ** Refined3
     Refined3(r3In,r3Out)
   , Refined3C
 
  -- ** display results
+  , prtEval3
   , prtEval3P
   , prtEval3PIO
-  , prtEval3
   , prt3IO
   , prt3
   , prt3Impl
   , Msg3 (..)
-  , Results (..)
-  , RResults (..)
+  , Results3 (..)
+  , RResults3 (..)
 
   -- ** proxy methods
   , mkProxy3
@@ -47,16 +54,16 @@ module Predicate.Refined3 (
   , MakeR3
 
   -- ** evaluation methods
-  , eval3P
   , eval3
+  , eval3P
 
   -- ** create a wrapped Refined3 value
-  , withRefined3TIO
-  , withRefined3T
-  , withRefined3TP
   , newRefined3T
   , newRefined3TP
   , newRefined3TPIO
+  , withRefined3T
+  , withRefined3TIO
+  , withRefined3TP
   , convertRefined3TP
   , rapply3
   , rapply3P
@@ -108,15 +115,15 @@ import Data.String
 
 -- | Refinement type that differentiates the input from output
 --
---   * __i__ is the input type
---   * __ip__ converts @i@ to @PP ip i@ which is the internal type
---   * __op__ validates that internal type using @PP op (PP ip i) ~ Bool@
---   * __fmt__ outputs the internal type @PP fmt (PP ip i) ~ i@
---   * __PP fmt (PP ip i)__ should be valid as input for Refined3
+--   * @i@ is the input type
+--   * @ip@ converts @i@ to @PP ip i@ which is the internal type and stored in 'r3In'
+--   * @op@ validates that internal type using @PP op (PP ip i) ~ Bool@
+--   * @fmt@ outputs the internal type @PP fmt (PP ip i) ~ i@ and stored in 'r3Out'
+--   * @PP fmt (PP ip i)@ should be valid as input for Refined3
 --
--- Setting __ip__ to @Id@ and __fmt__ to @Id@ makes it equivalent to 'Refined.Refined': see 'RefinedEmulate'
+-- Setting @ip@ to @Id@ and @fmt@ to @Id@ makes it equivalent to 'Refined.Refined': see 'RefinedEmulate'
 --
--- Setting the input type __i__ to 'GHC.Base.String' resembles the corresponding Read/Show instances but with an additional predicate on the read value
+-- Setting the input type @i@ to 'GHC.Base.String' resembles the corresponding Read/Show instances but with an additional predicate on the read value
 --
 --   * __read__ a string using /ip/ into an internal type and store in 'r3In'
 --   * __validate__ 'r3In' using the predicate /op/
@@ -194,9 +201,7 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 instance (Refined3C ip op fmt String, Show (PP ip String)) => IsString (Refined3 ip op fmt String) where
   fromString s =
     let (ret,mr) = eval3 @ip @op @fmt o2 s
-    in case mr of
-         Nothing -> error $ "Refined3(fromString):" ++ show (prt3Impl o2 ret)
-         Just r -> r
+    in fromMaybe (error $ "Refined3(fromString):" ++ show (prt3Impl o2 ret)) mr
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
@@ -313,9 +318,9 @@ arbRefined3 :: forall ip op fmt i .
    , Refined3C ip op fmt i
    ) => Proxy '(ip,op,fmt,i)
      -> Gen (Refined3 ip op fmt i)
-arbRefined3 _ = suchThatMap (arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt
+arbRefined3 = flip arbRefined3With id
 
--- help things along a little
+-- | uses arbitrary to generate the internal 'r3In' and then uses \'fmt\' to fill in 'r3Out'
 arbRefined3With ::
     forall ip op fmt i
   . (Arbitrary (PP ip i)
@@ -592,7 +597,7 @@ rapply3P p opts f ma mb = do
   Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) p opts (f x y)
   return (Refined3 a b)
 
-data Results a b =
+data Results3 a b =
        XF String        -- Left e
      | XTF a String     -- Right a + Left e
      | XTFalse a        -- Right a + Right False
@@ -601,7 +606,7 @@ data Results a b =
      deriving (Show,Eq)
 
 -- | An ADT that summarises the results of evaluating Refined3 representing all possible states
-data RResults a b =
+data RResults3 a b =
        RF String (Tree PE)        -- Left e
      | RTF a (Tree PE) String (Tree PE)    -- Right a + Left e
      | RTFalse a (Tree PE) (Tree PE)        -- Right a + Right False
@@ -651,20 +656,20 @@ eval3P :: forall ip op fmt i proxy . Refined3C ip op fmt i
   => proxy '(ip,op,fmt,i)
   -> POpts
   -> i
-  -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
+  -> (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
 eval3P _ opts = runIdentity . eval3M opts
 
 -- | same as 'eval3P' but can pass the parameters individually using type application
 eval3 :: forall ip op fmt i . Refined3C ip op fmt i
   => POpts
   -> i
-  -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
+  -> (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
 eval3 = eval3P Proxy
 
 eval3M :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
   => POpts
   -> i
-  -> m (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
+  -> m (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
 eval3M opts i = do
   ll <- eval (Proxy @ip) opts i
   case getValAndPE ll of
@@ -684,7 +689,7 @@ eval3M opts i = do
 eval3MSkip :: forall m ip op fmt i . (MonadEval m, Refined3C ip op fmt i)
    => POpts
    -> PP ip i
-   -> m (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
+   -> m (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 ip op fmt i))
 eval3MSkip opts a = do
    rr <- evalBool (Proxy @op) opts a
    case getValAndPE rr of
@@ -717,13 +722,13 @@ eval3MQuick a = do
         _ -> Nothing
     _ -> pure Nothing
 
-prt3IO :: (Show a, Show b) => POpts -> (RResults a b, Maybe r) -> IO (Either String r)
+prt3IO :: (Show a, Show b) => POpts -> (RResults3 a b, Maybe r) -> IO (Either String r)
 prt3IO opts (ret,mr) = do
   let m3 = prt3Impl opts ret
   unless (hasNoTree opts) $ putStrLn $ m3Long m3
   return $ maybe (Left (m3Desc m3 <> " | " <> m3Short m3)) Right mr
 
-prt3 :: (Show a, Show b) => POpts -> (RResults a b, Maybe r) -> Either Msg3 r
+prt3 :: (Show a, Show b) => POpts -> (RResults3 a b, Maybe r) -> Either Msg3 r
 prt3 opts (ret,mr) = maybe (Left $ prt3Impl opts ret) Right mr
 
 data Msg3 = Msg3 { m3Desc :: String, m3Short :: String, m3Long :: String } deriving Eq
@@ -732,7 +737,7 @@ instance Show Msg3 where
 
 prt3Impl :: (Show a, Show b)
   => POpts
-  -> RResults a b
+  -> RResults3 a b
   -> Msg3
 prt3Impl opts v =
   let outmsg msg = "\n*** " <> msg <> " ***\n\n"
@@ -789,13 +794,13 @@ prt3Impl opts v =
 -- * runs the boolean predicate \'op\' to make sure to validate the converted value from 1.
 -- * runs \'fmt\' against the converted value from 1.
 -- * returns both the 'Refined' and the output from 3.
--- * if any of the above steps fail the process stops it and dumps out 'RResults'
+-- * if any of the above steps fail the process stops it and dumps out 'RResults3'
 --
 eval3PX :: forall ip op fmt i proxy . Refined3C ip op fmt i
   => proxy '(ip,op,fmt,i)
   -> POpts
   -> i
-  -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
+  -> (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
 eval3PX _ opts i = runIdentity $ do
   ll <- eval (Proxy @ip) opts i
   case getValAndPE ll of
@@ -815,7 +820,7 @@ eval3PX _ opts i = runIdentity $ do
 eval3X :: forall ip op fmt i . Refined3C ip op fmt i
   => POpts
   -> i
-  -> (RResults (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
+  -> (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined op (PP ip i), PP fmt (PP ip i)))
 eval3X = eval3PX (Proxy @'(ip,op,fmt,i))
 
 -- | emulates 'Refined' using 'Refined3' by setting the input conversion and output formatting as noops

@@ -2,8 +2,6 @@
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
-{-# OPTIONS -Wno-type-defaults #-}
-{-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
@@ -13,6 +11,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeApplications #-}
 module TestJson where
 import TastyExtras
 import Test.Tasty
@@ -26,21 +25,24 @@ import Data.Aeson
 import qualified Data.ByteString as BS
 
 suite :: IO ()
-suite = defaultMain $ testGroup "testrefined"
+suite = defaultMain $ testGroup "testjson"
   [ testCase "testperson ok" $ expectIO testPerson (() <$)
   , testCase "testperson1 ok" $ expectIO (testPerson1 2) (() <$)
   , testCase "testperson1 bad ipaddress" $ expectIO (testPerson1 3) (expectLeftWith "expected between 0 and 255 found 260")
   , testCase "testperson1 bad lastname lowercase first letter" $ expectIO (testPerson1 4) (expectLeftWith "invalid name(diaz)")
   , testCase "testperson1 age 99 out of range" $ expectIO (testPerson1 5) (expectLeftWith "Error in $[0].age1")
+  , testCase "parse fail person1" $ expectPE (FailT "ParseJsonFile [Person1](test3.json) Error in $[0].ipaddress1") $ pl @(ParseJsonFile [Person1] "test3.json") ()
+  , testCase "parse ok person1" $ expectPE (PresentT 5) $ pl @(ParseJsonFile [Person1] "test2.json" >> Len) ()
+  , testCase "missing file" $ expectPE (FailT "ParseJsonFile [Person1](test2.jsoxxxn) file doesn't exist") $ pl @(ParseJsonFile [Person1] "test2.jsoxxxn" >> Len) ()
   ]
 
 testPerson :: IO (Either String [Person])
-testPerson = BS.readFile "test1.json" >>= return . eitherDecodeStrict'
+testPerson = eitherDecodeStrict' <$> BS.readFile "test1.json"
 
 testPerson1 :: Int -> IO (Either String [Person1])
 testPerson1 i = do
   let fn = "test" ++ show i ++ ".json"
-  BS.readFile fn >>= return . eitherDecodeStrict'
+  eitherDecodeStrict' <$> BS.readFile fn
 
 data Person = Person {
        firstName :: !Text

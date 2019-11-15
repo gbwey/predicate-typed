@@ -75,6 +75,7 @@ import qualified Data.Binary as B
 import Data.Binary (Binary)
 import Data.Semigroup ((<>))
 import Data.String
+import Data.Maybe
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -107,7 +108,7 @@ import Data.String
 -- Left (FailP "octet 3 out of range 444")
 --
 -- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) oz "141.213.1x34.444"
--- Left (FailP "ReadP Int (1x34) failed")
+-- Left (FailP "ReadP Int (1x34)")
 --
 -- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) oz "12344"
 -- Right (Refined {unRefined = "12344"})
@@ -136,9 +137,7 @@ type role Refined nominal nominal
 instance RefinedC p String => IsString (Refined p String) where
   fromString s =
     let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p o2 s
-    in case mr of
-      Nothing -> error $ "Refined(fromString):" ++ show bp ++ "\n" ++ e
-      Just r -> r
+    in fromMaybe (error $ "Refined(fromString):" ++ show bp ++ "\n" ++ e) mr
 
 -- | 'Read' instance for 'Refined'
 --

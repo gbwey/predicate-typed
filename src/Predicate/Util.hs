@@ -112,6 +112,8 @@ module Predicate.Util (
   , show0
   , show3
   , show1
+  , showL
+  , litL
 
   -- ** regular expressions
   , ROpt(..)
@@ -121,7 +123,6 @@ module Predicate.Util (
 
   -- ** useful type families
   , ZwischenT
-  , NullT
   , FailWhenT
   , FailUnlessT
   , AndT
@@ -514,7 +515,7 @@ showLitImpl :: POpts -> ODebug -> String -> String -> String
 showLitImpl o i s a =
   if oDebug o >= i then
     let f n = let ss = take n a
-              in ss <> (if length ss==n then " ..." else "")
+              in ss <> (if length ss==n then "..." else "")
     in s <> f (oWidth o)
   else ""
 
@@ -529,6 +530,12 @@ show1 o s a = showAImpl o OLite s a
 
 showAImpl :: Show a => POpts -> ODebug -> String -> a -> String
 showAImpl o i s a = showLitImpl o i s (show a)
+
+showL :: Show a => Int -> a -> String
+showL i = litL i . show
+
+litL :: Int -> String -> String
+litL i s = take i s <> if length s > i then "..." else ""
 
 -- | Regex options for Rescan Resplit Re etc
 data ROpt =
@@ -710,11 +717,6 @@ type family ZwischenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
              ':$$: 'GL.ShowType m
              ':<>: 'GL.Text " and "
              ':<>: 'GL.ShowType n)
-
--- | typelevel Null on Symbol
-type family NullT (x :: Symbol) :: Bool where
-  NullT ("" :: Symbol) = 'True
-  NullT _ = 'False
 
 -- | helper method to fail with a msg when True
 type family FailWhenT (b :: Bool) (msg :: GL.ErrorMessage) :: Constraint where

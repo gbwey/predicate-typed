@@ -3,7 +3,6 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
-{-# OPTIONS -Wno-unused-imports #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -128,7 +127,7 @@ ccn :: Proxy (Ccn ns)
 ccn = mkProxy3
 
 -- works but have to add all the constraints
-ccn' :: (PP ns [Char] ~ [Integer], KnownNat (SumT ns), P ns [Char]) => Proxy (Ccn ns)
+ccn' :: (PP ns String ~ [Integer], KnownNat (SumT ns), P ns [Char]) => Proxy (Ccn ns)
 ccn' = mkProxy3'
 
 cc11 :: Proxy (Ccn '[4,4,3])   -- or Proxy CC11
@@ -356,7 +355,7 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
 -- >>> prtEval3P (readshow @Rational) oz "13x % 3"
--- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3) failed
+-- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3)
 --
 -- >>> prtEval3P (readshow' @Rational @(Between (3 % 1) (5 % 1))) oz "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})

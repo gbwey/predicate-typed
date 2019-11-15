@@ -3,7 +3,6 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wno-type-defaults #-}
--- {-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -109,15 +108,15 @@ allTests =
   , expectPE (FailT "Asdf") $ pl @(HeadFail "Asdf" Id) ([] :: [()]) -- breaks otherwise
   , expectPE (FailT "Head(empty)") $ pl @(Head Id) ([] :: [Int])
   , expectPE (FailT "Head(empty)") $ pl @(Head Id) ([] :: [Double])
-  , expectPE (FailT "Succ bounded failed") $ pl @(SuccB' Id) GT
+  , expectPE (FailT "Succ bounded") $ pl @(SuccB' Id) GT
   , expectPE (PresentT LT) $ pl @(SuccB 'LT Id) GT
   , expectPE (PresentT EQ) $ pl @(SuccB 'GT Id) LT
   , expectPE (PresentT EQ) $ pl @(SuccB' Id) LT
-  , expectPE (FailT "Pred bounded failed") $ pl @(PredB' Id) LT
+  , expectPE (FailT "Pred bounded") $ pl @(PredB' Id) LT
   , expectPE (PresentT GT) $ pl @(PredB 'GT Id) LT
   , expectPE (PresentT EQ) $ pl @(PredB 'LT Id) GT
   , expectPE (PresentT EQ) $ pl @(PredB' Id) GT
-  , expectPE (FailT "ToEnum bounded failed") $ pl @(ToEnumBFail Ordering) 44
+  , expectPE (FailT "ToEnum bounded") $ pl @(ToEnumBFail Ordering) 44
   , expectPE (PresentT LT) $ pl @(ToEnumBDef Ordering 'LT) 123
   , expectPE (PresentT EQ) $ pl @(ToEnumBDef Ordering 'GT) 1
   , expectPE (PresentT EQ) $ pl @(ToEnumBFail Ordering) 1
@@ -178,7 +177,7 @@ allTests =
   , expectPE (PresentT "124") $ pl @(ShowP (Succ Id) ||| ShowP Id ) (Left @_ @() 123)
   , expectPE (PresentT "True") $ pl @(ShowP (Succ Id) ||| ShowP Id) (Right @Int True)
   , expectPE (PresentT (123 % 4)) $ pl @(ReadP Rational Id) "123 % 4"
-  , expectPE (FailT "ReadP Ratio Integer (x123 % 4) failed") $ pl @(ReadP Rational Id) "x123 % 4"
+  , expectPE (FailT "ReadP Ratio Integer (x123 % 4)") $ pl @(ReadP Rational Id) "x123 % 4"
   , expectPE (PresentT "") $ pl @('Proxy >> MEmptyP) "abc"
   , expectPE (PresentT ["a","b","c"]) $ pl @(MEmptyT _ ||| Ones Id) (Right @() "abc")
   , expectPE (PresentT []) $ pl @(MEmptyT _ ||| Ones Id) (Left @_ @[String] ["ab"])
@@ -304,7 +303,7 @@ allTests =
   , expectPE (PresentT 'g') $ pl @(Id !! 6) ['a'..'z']
   , expectPE (PresentT ([141,214,125,1,2,3333],(False,False))) $ pl @(Map (ReadP Int Id) (Resplit "\\." Id) >> '(Id, '(Len == 4, All (Between 0 255) Id))) "141.214.125.1.2.3333"
   , expectPE (PresentT ([141,214,125,1,2,6],(False,True))) $ pl @(Map (ReadP Int Id) (Resplit "\\." Id) >> Id &&& ((Len == 4) &&& All (Between 0 255) Id)) "141.214.125.1.2.6"
-  , expectPE (FailT "ReadP Int () failed") $ pl @(Resplit "\\." Id >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (Between 0 255) Id)) "141.214.125."
+  , expectPE (FailT "ReadP Int ()") $ pl @(Resplit "\\." Id >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (Between 0 255) Id)) "141.214.125."
   , expectPE (PresentT 9) $ pl @((Wrap _ Id *** Wrap (SG.Sum _) Id) >> Sapa >> Unwrap Id) (4,5)
   , expectPE (PresentT (SG.Sum 9)) $ pl @((Wrap _ Id *** Wrap _ Id) >> Sapa) (4,5)
   , expectPE (PresentT 9) $ pl @(Sapa' (SG.Sum _) >> Unwrap Id) (4,5)
@@ -399,7 +398,7 @@ allTests =
   , expectPE (FailT "guard(1) 13 is out of range") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,13,1999::Int]
   , expectPE (FailT "guard(0) 0 is out of range") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [0,44,1999::Int]
   , expectPE (PresentT (fromGregorian 1999 11 30)) $ pl @(ReadP Day Id) "1999-11-30"
-  , expectPE (FailT "ReadP Day (1999-02-29) failed") $ pl @(ReadP Day Id) "1999-02-29"
+  , expectPE (FailT "ReadP Day (1999-02-29)") $ pl @(ReadP Day Id) "1999-02-29"
   , expectPE (PresentT (TimeOfDay 14 59 20)) $ pl @(ReadP TimeOfDay Id) "14:59:20"
 --  , expectPE (PresentT (TimeOfDay 26 61 61)) $ pl @(ReadP TimeOfDay Id) "26:61:61" -- yep: this is valid in <=time-1.8 ! need to do your own validation
   , expectPE (FailT "ParseTimeP TimeOfDay (%H:%M%S) failed to parse") $ pl @(ParseTimeP TimeOfDay "%H:%M%S" Id) "14:04:61"
@@ -850,8 +849,8 @@ type Fizzbuzznew = Case (MkLeft String (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 
 
 type Fizzbuzzalt = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")
 type Fizzbuzzs = Map Fizzbuzz Id
-type Fizzbuzzs1 t t1 = Map (Fizzbuzz >> If (Snd Id >> Null) (MkLeft t (Fst Id)) (MkRight t1 (Snd Id))) Id
-type Fizzbuzzs2 = Map (Fizzbuzz >> If (Snd Id >> Null) (MkLeft String (Fst Id)) (MkRight Int (Snd Id))) Id
+type Fizzbuzzs1 t t1 = Map (Fizzbuzz >> If (Null' (Snd Id)) (MkLeft t (Fst Id)) (MkRight t1 (Snd Id))) Id
+type Fizzbuzzs2 = Map (Fizzbuzz >> If (Null' (Snd Id)) (MkLeft String (Fst Id)) (MkRight Int (Snd Id))) Id
 -- best one cos leverages type info to determine Either a b
 type Fizzbuzzs3 = Map (Fizzbuzz >> If (Snd Id == "") (MkLeft' (Snd Id) (Fst Id)) (MkRight' (Fst Id) (Snd Id))) Id
 

@@ -2,7 +2,7 @@
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
-{-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -32,27 +32,26 @@ module Predicate.Refined2 (
   , Refined2C
 
  -- ** display results
-  , prtEval2IO
-  , prtEval2PIO
-  , prtEval2P
   , prtEval2
+  , prtEval2P
+  , prtEval2PIO
   , prt2IO
   , prt2
   , prt2Impl
   , Msg2 (..)
-  , Results (..)
-  , RResults (..)
+  , Results2 (..)
+  , RResults2 (..)
 
   -- ** evaluation methods
   , eval2
   , eval2P
 
   -- ** create a wrapped Refined2 value
-  , withRefined2TIO
-  , withRefined2T
   , newRefined2T
-  , newRefined2TP
   , newRefined2TIO
+  , newRefined2TP
+  , withRefined2T
+  , withRefined2TIO
 
   -- ** unsafe methods for creating Refined2
   , unsafeRefined2
@@ -60,6 +59,8 @@ module Predicate.Refined2 (
 
   -- ** miscellaneous
   , MakeR2
+  , mkProxy2
+  , mkProxy2'
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -90,11 +91,11 @@ import Data.String
 -- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
 
--- | Refinement type that differentiates the input from output
+-- | Refinement type that allows the input and output types to vary.
 --
---   * __i__ is the input type
---   * __ip__ converts @i@ to @PP ip i@ which is the internal type
---   * __op__ validates that internal type using @PP op (PP ip i) ~ Bool@
+--   * @i@ is the input type which is stored in 'r2Out'
+--   * @ip@ converts @i@ to @PP ip i@ which is the internal type in 'r2In'
+--   * @op@ validates that internal type using @PP op (PP ip i) ~ Bool@
 --
 -- Although a common scenario is String as input, you are free to choose any input type you like
 --
@@ -158,10 +159,7 @@ deriving instance (TH.Lift (PP ip i), TH.Lift i) => TH.Lift (Refined2 ip op i)
 instance (Refined2C ip op String, Show (PP ip String)) => IsString (Refined2 ip op String) where
   fromString s =
     let (ret,mr) = eval2 @ip @op o2 s
-    in case mr of
-         Nothing -> error $ "Refined2(fromString):" ++ show (prt2Impl o2 ret)
-         Just r -> r
-
+    in fromMaybe (error $ "Refined2(fromString):" ++ show (prt2Impl o2 ret)) mr
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined2'
@@ -421,7 +419,7 @@ newRefined2TImpl f opts i = do
     Nothing -> throwError $ m2Desc m2 <> " | " <> m2Short m2
     Just r -> return r
 
-data Results a =
+data Results2 a =
        XF String        -- Left e
      | XTF a String     -- Right a + Left e
      | XTFalse a        -- Right a + Right False
@@ -429,23 +427,12 @@ data Results a =
      deriving (Show,Eq)
 
 -- | An ADT that summarises the results of evaluating Refined2 representing all possible states
-data RResults a =
+data RResults2 a =
        RF String (Tree PE)        -- fails initial conversion
      | RTF a (Tree PE) String (Tree PE)    -- op fails
      | RTFalse a (Tree PE) (Tree PE)        -- op false
      | RTTrue a (Tree PE) (Tree PE) -- op true
      deriving Show
-
--- | same as 'prtEval2' but runs in IO
-prtEval2IO :: forall ip op i
-  . ( Refined2C ip op i
-    , Show (PP ip i)
-    ) => POpts
-  -> i
-  -> IO (Either String (Refined2 ip op i))
-prtEval2IO opts i = do
-  x <- eval2M opts i
-  prt2IO opts x
 
 -- | same as 'prtEval2P' but runs in IO
 prtEval2PIO :: forall ip op i proxy
@@ -481,19 +468,19 @@ eval2P :: forall ip op i . Refined2C ip op i
   => Proxy '(ip,op,i)
   -> POpts
   -> i
-  -> (RResults (PP ip i), Maybe (Refined2 ip op i))
+  -> (RResults2 (PP ip i), Maybe (Refined2 ip op i))
 eval2P _ opts = runIdentity . eval2M opts
 
 eval2 :: forall ip op i . Refined2C ip op i
   => POpts
   -> i
-  -> (RResults (PP ip i), Maybe (Refined2 ip op i))
+  -> (RResults2 (PP ip i), Maybe (Refined2 ip op i))
 eval2 opts = runIdentity . eval2M opts
 
 eval2M :: forall m ip op i . (MonadEval m, Refined2C ip op i)
   => POpts
   -> i
-  -> m (RResults (PP ip i), Maybe (Refined2 ip op i))
+  -> m (RResults2 (PP ip i), Maybe (Refined2 ip op i))
 eval2M opts i = do
   ll <- eval (Proxy @ip) opts i
   case getValAndPE ll of
@@ -505,13 +492,13 @@ eval2M opts i = do
       (Left e,t2) -> (RTF a t1 e t2, Nothing)
    (Left e,t1) -> pure (RF e t1, Nothing)
 
-prt2IO :: Show a => POpts -> (RResults a, Maybe r) -> IO (Either String r)
+prt2IO :: Show a => POpts -> (RResults2 a, Maybe r) -> IO (Either String r)
 prt2IO opts (ret,mr) = do
   let m2 = prt2Impl opts ret
   unless (hasNoTree opts) $ putStrLn $ m2Long m2
   return $ maybe (Left (m2Desc m2 <> " | " <> m2Short m2)) Right mr
 
-prt2 :: Show a => POpts -> (RResults a, Maybe r) -> Either Msg2 r
+prt2 :: Show a => POpts -> (RResults2 a, Maybe r) -> Either Msg2 r
 prt2 opts (ret,mr) = maybe (Left $ prt2Impl opts ret) Right mr
 
 data Msg2 = Msg2 { m2Desc :: String, m2Short :: String, m2Long :: String } deriving Eq
@@ -520,7 +507,7 @@ instance Show Msg2 where
 
 prt2Impl :: Show a
   => POpts
-  -> RResults a
+  -> RResults2 a
   -> Msg2
 prt2Impl opts v =
   let outmsg msg = "\n*** " <> msg <> " ***\n\n"
@@ -558,6 +545,12 @@ prt2Impl opts v =
               <> prtTreePure opts t2
          in mkMsg2 m n r
 
+mkProxy2 :: forall z ip op i . z ~ '(ip,op,i) => Proxy '(ip,op,i)
+mkProxy2 = Proxy
+
+-- | same as 'mkProxy2' but checks to make sure the proxy is consistent with the 'Refined2C' constraint
+mkProxy2' :: forall z ip op i . (z ~ '(ip,op,i), Refined2C ip op i) => Proxy '(ip,op,i)
+mkProxy2' = Proxy
 
 type family MakeR2 p where
   MakeR2 '(ip,op,i) = Refined2 ip op i

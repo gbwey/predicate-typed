@@ -2,8 +2,6 @@
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
-{-# OPTIONS -Wno-type-defaults #-}
--- {-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -295,14 +293,14 @@ testRefined2PIO p opts i =
     Right (r,r1) -> return $ Right (r,r1)
     Left (msg, e) -> putStrLn e >> return (Left msg)
 
-getTTs3 :: RResults a -> [Tree PE]
+getTTs3 :: RResults2 a -> [Tree PE]
 getTTs3 = \case
    RF _ t1 -> [t1]
    RTF _ t1 _ t2 -> [t1,t2]
    RTFalse _ t1 t2 -> [t1,t2]
    RTTrue _ t1 t2 -> [t1,t2]
 
-toRResults2 :: RResults a -> Results a
+toRResults2 :: RResults2 a -> Results2 a
 toRResults2 = \case
    RF e _ -> XF e
    RTF a _ e _ -> XTF a e
@@ -310,8 +308,8 @@ toRResults2 = \case
    RTTrue a _ _ -> XTTrue a
 
 expect2 :: (HasCallStack, Show i, Show r, Eq i, Eq r)
-  => Either (Results i) r
-  -> (RResults i, Maybe r)
+  => Either (Results2 i) r
+  -> (RResults2 i, Maybe r)
   -> IO ()
 expect2 lhs (rhs,mr) = do
   (@?=) lhs $ maybe (Left $ toRResults2 rhs) Right mr

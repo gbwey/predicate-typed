@@ -3,7 +3,6 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wno-type-defaults #-}
--- {-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -341,7 +340,7 @@ testRefined3PIO p opts i =
     Right (r,r1) -> return $ Right (r,r1)
     Left (msg, e) -> putStrLn e >> return (Left msg)
 
-getTTs3 :: RResults a b -> [Tree PE]
+getTTs3 :: RResults3 a b -> [Tree PE]
 getTTs3 = \case
    RF _ t1 -> [t1]
    RTF _ t1 _ t2 -> [t1,t2]
@@ -349,7 +348,7 @@ getTTs3 = \case
    RTTrueF _ t1 t2 _ t3 -> [t1,t2,t3]
    RTTrueT _ t1 t2 _ t3 -> [t1,t2,t3]
 
-toRResults3 :: RResults a b -> Results a b
+toRResults3 :: RResults3 a b -> Results3 a b
 toRResults3 = \case
    RF e _ -> XF e
    RTF a _ e _ -> XTF a e
@@ -358,8 +357,8 @@ toRResults3 = \case
    RTTrueT a _ _ b _ -> XTTrueT a b
 
 expect3 :: (HasCallStack, Show i, Show r, Eq i, Eq r, Eq j, Show j)
-  => Either (Results i j) r
-  -> (RResults i j, Maybe r)
+  => Either (Results3 i j) r
+  -> (RResults3 i j, Maybe r)
   -> IO ()
 expect3 lhs (rhs,mr) = do
   (@?=) lhs $ maybe (Left $ toRResults3 rhs) Right mr
