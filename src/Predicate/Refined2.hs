@@ -33,6 +33,7 @@ module Predicate.Refined2 (
 
  -- ** display results
   , prtEval2IO
+  , prtEval2PIO
   , prtEval2P
   , prtEval2
   , prt2IO
@@ -284,7 +285,7 @@ instance (Show i
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
 -- <BLANKLINE>
--- P ReadP Day (2019-04-23) 2019-04-23 | 2019-04-23
+-- P ReadP Day 2019-04-23
 -- |
 -- `- P Id "2019-04-23"
 -- <BLANKLINE>
@@ -294,11 +295,11 @@ instance (Show i
 -- |
 -- +- P Id 2019-04-23
 -- |
--- +- P ReadP Day (2019-05-30) 2019-05-30 | 2019-05-30
+-- +- P ReadP Day 2019-05-30
 -- |  |
 -- |  `- P '2019-05-30
 -- |
--- `- P ReadP Day (2019-06-01) 2019-06-01 | 2019-06-01
+-- `- P ReadP Day 2019-06-01
 --    |
 --    `- P '2019-06-01
 -- <BLANKLINE>
@@ -445,6 +446,19 @@ prtEval2IO :: forall ip op i
 prtEval2IO opts i = do
   x <- eval2M opts i
   prt2IO opts x
+
+-- | same as 'prtEval2P' but runs in IO
+prtEval2PIO :: forall ip op i proxy
+  . ( Refined2C ip op i
+    , Show (PP ip i)
+    ) => proxy '(ip,op,i)
+  -> POpts
+  -> i
+  -> IO (Either String (Refined2 ip op i))
+prtEval2PIO _ opts i = do
+  x <- eval2M opts i
+  prt2IO opts x
+
 
 prtEval2 :: forall ip op i
   . ( Refined2C ip op i

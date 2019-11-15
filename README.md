@@ -99,8 +99,23 @@ if using a unicode-supported OS then _pu_ gives you nicer rendering than _pe2_\
 ```haskell
 >type Hex = '(ReadBase Int 16 Id, Between 0 255, String)
 
->prtEval2PIO (Proxy @Hex) ol "0000fe"
-Refined2 {in3 = 254, out3 = "0000fe"}
+>prtEval2P (Proxy @Hex) ol "0000fe"
+Refined2 {r2In = 254, r2Out = "0000fe"}
+
+>prtEval2P (Proxy @Hex) ol "1ffe"
+Left "Step 2. False Boolean Check(op) | {8190 <= 255}"
+
+>import qualified Data.Aeson as A
+>type Js = '(ParseJson (Int,String) Id, Msg "0-255:" (Between' 0 255 (Fst Id)) && Msg "length:" (Length (Snd Id) == 3), String)
+
+>prtEval2P (Proxy @Js) ol "[10,\"Abc\"]"
+Right (Refined2 {r2In = (10,"Abc"), r2Out = "[10,\"Abc\"]"})
+
+>prtEval2P (Proxy @Js) ol "[10,\"Abcdef\"]"
+Left Step 2. False Boolean Check(op) | {True && False | (length:6 == 3)}
+
+>prtEval2P (Proxy @Js) ol "[-10,\"Abcdef\"]"
+Left Step 2. False Boolean Check(op) | {False && False | (0-255:0 <= -10) && (length:6 == 3)}
 ```
 
 ### An example using Refined3 (for more information see [doctests](src/Predicate/Examples/Refined3.hs))
@@ -109,7 +124,7 @@ Refined2 {in3 = 254, out3 = "0000fe"}
 >type Hex = '(ReadBase Int 16 Id, Between 0 255, ShowBase 16 Id, String)
 
 >prtEval3PIO (Proxy @Hex) ol "0000fe"
-Refined3 {in3 = 254, out3 = "fe"}
+Refined3 {r3In = 254, r3Out = "fe"}
 ```
 1. `ReadBase Int 16 Id`
     reads a hexadecimal string and returns 254
@@ -231,7 +246,7 @@ An example of an invalid refined3TH call
 #### This example is successful as it is a valid hexadecimal and is between 10 though 256
 ```haskell
 >eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
-Right (Refined3 {in3 = 254, out3 = "254"})
+Right (Refined3 {r3In = 254, r3Out = "254"})
 ```
 
 #### This example fails as the value is not a valid hexadecimal string

@@ -220,7 +220,7 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 -- Refined:FalseP
 -- False (>>) False | {2019-05-30 <= 2019-04-23}
 -- |
--- +- P ReadP Day (2019-04-23) 2019-04-23 | 2019-04-23
+-- +- P ReadP Day 2019-04-23
 -- |  |
 -- |  `- P Id "2019-04-23"
 -- |
@@ -228,11 +228,11 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 --    |
 --    +- P Id 2019-04-23
 --    |
---    +- P ReadP Day (2019-05-30) 2019-05-30 | 2019-05-30
+--    +- P ReadP Day 2019-05-30
 --    |  |
 --    |  `- P '2019-05-30
 --    |
---    `- P ReadP Day (2019-06-01) 2019-06-01 | 2019-06-01
+--    `- P ReadP Day 2019-06-01
 --       |
 --       `- P '2019-06-01
 -- <BLANKLINE>

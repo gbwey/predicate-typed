@@ -346,7 +346,7 @@ arbRefined3With _ f =
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
 -- <BLANKLINE>
--- P ReadP Day (2019-04-23) 2019-04-23 | 2019-04-23
+-- P ReadP Day 2019-04-23
 -- |
 -- `- P Id "2019-04-23"
 -- <BLANKLINE>
@@ -356,11 +356,11 @@ arbRefined3With _ f =
 -- |
 -- +- P Id 2019-04-23
 -- |
--- +- P ReadP Day (2019-05-30) 2019-05-30 | 2019-05-30
+-- +- P ReadP Day 2019-05-30
 -- |  |
 -- |  `- P '2019-05-30
 -- |
--- `- P ReadP Day (2019-06-01) 2019-06-01 | 2019-06-01
+-- `- P ReadP Day 2019-06-01
 --    |
 --    `- P '2019-06-01
 -- <BLANKLINE>

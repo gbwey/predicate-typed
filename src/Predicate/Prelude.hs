@@ -163,6 +163,11 @@ module Predicate.Prelude (
   , ReadBaseInt
   , ShowBase
 
+  -- ** aeson expressions
+  , ParseJson'
+  , ParseJson
+  , EncodeJson
+
   -- ** arrow expressions
   , type (&&&)
   , type (***)
@@ -540,6 +545,9 @@ import Data.Bool
 import Data.Either
 import qualified Data.Type.Equality as DE
 import Data.Time.Calendar.WeekDate
+import qualified Data.Aeson as A
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Lazy.Char8 as BL8
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -1738,11 +1746,10 @@ instance (P p x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right s ->
-        let msg1 = msg0 <> " (" <> s <> ")"
-            hhs = [hh pp]
+        let hhs = [hh pp]
         in case reads @(PP t x) s of
-           [(b,"")] -> mkNode opts (PresentT b) [lit01 opts msg1 b s] hhs
-           o -> mkNode opts (FailT (msg1 <> " failed")) [msg1 <> " failed " <> show o] hhs
+           [(b,"")] -> mkNode opts (PresentT b) [msg0 <> " " ++ show b] hhs
+           o -> mkNode opts (FailT (msg0 <> " (" ++ s ++ ") failed")) [msg0 <> " failed " <> show o <> " | s=" ++ s] hhs
 
 data ReadP (t :: Type) p
 type ReadPT (t :: Type) p = ReadP' (Hole t) p
@@ -9877,4 +9884,63 @@ instance (Foldable t
                    [a] -> mkNode opts (PresentT a) [msg0] [hh pp]
                    as -> let n = length as
                          in mkNode opts (FailT (msg0 <> " " <> show n <> " elements")) [msg0 <> " expected one element"] [hh pp]
+
+-- | parse json data
+--
+-- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\"]"
+-- Present (10,"abc") (ParseJson (Int,[Char]) (10,"abc"))
+-- PresentT (10,"abc")
+--
+-- >>> pe @(ParseJson (Int,String) Id) "[10,\"abc\",99]"
+-- [Error ParseJson (Int,[Char]) ([10,"abc",99]) failed] ParseJson (Int,[Char]) failed Error in $: cannot unpack array of length 3 into a tuple of length 2 | [10,"abc",99]
+-- |
+-- `- P Id "[10,\"abc\",99]"
+-- FailT "ParseJson (Int,[Char]) ([10,\"abc\",99]) failed"
+--
+data ParseJson' t p
+
+instance (P p x
+        , PP p x ~ String
+        , Typeable (PP t x)
+        , Show (PP t x)
+        , A.FromJSON (PP t x)
+        ) => P (ParseJson' t p) x where
+  type PP (ParseJson' t p) x = PP t x
+  eval _ opts x = do
+    let msg0 = "ParseJson " <> t
+        t = showT @(PP t x)
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right s ->
+        let hhs = [hh pp]
+        in case A.eitherDecodeStrict' (BS8.pack s) of
+           Right b -> mkNode opts (PresentT b) [msg0 <> " " ++ show b] hhs
+           Left e -> mkNode opts (FailT (msg0 <> " (" ++ s ++ ") failed")) [msg0 <> " failed " <> e <> " | " <> s] hhs
+
+data ParseJson (t :: Type) p
+type ParseJsonT (t :: Type) p = ParseJson' (Hole t) p
+
+instance P (ParseJsonT t p) x => P (ParseJson t p) x where
+  type PP (ParseJson t p) x = PP (ParseJsonT t p) x
+  eval _ = eval (Proxy @(ParseJsonT t p))
+
+-- | encode json
+--
+-- >>> pl @(EncodeJson Id) (10,"def")
+-- Present "[10,\"def\"]" (EncodeJson [10,"def"])
+-- PresentT "[10,\"def\"]"
+--
+data EncodeJson p
+
+instance (A.ToJSON (PP p x), P p x) => P (EncodeJson p) x where
+  type PP (EncodeJson p) x = String
+  eval _ opts x = do
+    let msg0 = "EncodeJson"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let d = BL8.unpack (A.encode p)
+        in mkNode opts (PresentT d) [msg0 <> showLit0 opts " " d] [hh pp]
 
