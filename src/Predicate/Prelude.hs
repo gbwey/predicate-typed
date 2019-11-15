@@ -66,10 +66,10 @@ module Predicate.Prelude (
   , ReplaceAllString'
   , ReplaceOneString
   , ReplaceOneString'
-  , MakeRR
-  , MakeRR1
-  , MakeRR2
-  , MakeRR3
+  , ReplaceFn
+  , ReplaceFn1
+  , ReplaceFn2
+  , ReplaceFn3
 
   -- ** tuple expressions
   , Fst
@@ -641,22 +641,6 @@ instance P DescT' x => P Desc' x where
 --
 data Between' p q r -- reify as it is used a lot! nicer specific messages at the top level!
 
-data Between p q
-type BetweenT p q = Between' p q Id
-
-instance P (BetweenT p q) x => P (Between p q) x where
-  type PP (Between p q) x = PP (BetweenT p q) x
-  eval _ = eval (Proxy @(BetweenT p q))
-
-
-data p <..> q
-type BetweenTT p q = Between p q
-infix 4 <..>
-
-instance P (BetweenTT p q) x => P (p <..> q) x where
-  type PP (p <..> q) x = PP (BetweenTT p q) x
-  eval _ = eval (Proxy @(BetweenTT p q))
-
 instance (Ord (PP p x)
        , Show (PP p x)
        , PP r x ~ PP p x
@@ -680,6 +664,22 @@ instance (Ord (PP p x)
             in if p <= r && r <= q then mkNodeB opts True [show p <> " <= " <> show r <> " <= " <> show q] hhs
                else if p > r then mkNodeB opts False [show p <> " <= " <> show r] hhs
                else mkNodeB opts False [show r <> " <= " <> show q] hhs
+
+data Between p q
+type BetweenT p q = Between' p q Id
+
+instance P (BetweenT p q) x => P (Between p q) x where
+  type PP (Between p q) x = PP (BetweenT p q) x
+  eval _ = eval (Proxy @(BetweenT p q))
+
+data p <..> q
+infix 4 <..>
+
+type BetweenTT p q = Between p q
+
+instance P (BetweenTT p q) x => P (p <..> q) x where
+  type PP (p <..> q) x = PP (BetweenTT p q) x
+  eval _ = eval (Proxy @(BetweenTT p q))
 
 -- | similar to 'all'
 --
@@ -1088,7 +1088,7 @@ data ReplaceImpl (alle :: Bool) (rs :: [ROpt]) p q r
 instance (GetBool b
         , GetROpts rs
         , PP p x ~ String
-        , PP q x ~ RR
+        , PP q x ~ RReplace
         , PP r x ~ String
         , P p x
         , P q x
@@ -1114,10 +1114,10 @@ instance (GetBool b
               Right r ->
                let ret :: String
                    ret = case q of
-                           RR s -> (if alle then RH.gsub else RH.sub) regex s r
-                           RR1 s -> (if alle then RH.gsub else RH.sub) regex s r
-                           RR2 s -> (if alle then RH.gsub else RH.sub) regex s r
-                           RR3 s -> (if alle then RH.gsub else RH.sub) regex s r
+                           RReplace s -> (if alle then RH.gsub else RH.sub) regex s r
+                           RReplace1 s -> (if alle then RH.gsub else RH.sub) regex s r
+                           RReplace2 s -> (if alle then RH.gsub else RH.sub) regex s r
+                           RReplace3 s -> (if alle then RH.gsub else RH.sub) regex s r
                in mkNode opts (PresentT ret) [msg1 <> showLit0 opts " " r <> showLit1 opts " | " ret] (hhs <> [hh rr])
 
 data ReplaceAll' (rs :: [ROpt]) p q r
@@ -1149,7 +1149,7 @@ instance P (ReplaceOneT p q r) x => P (ReplaceOne p q r) x where
   eval _ = eval (Proxy @(ReplaceOneT p q r))
 
 data ReplaceAllString' (rs :: [ROpt]) p q r
-type ReplaceAllStringT' (rs :: [ROpt]) p q r = ReplaceAll' rs p (MakeRR q) r
+type ReplaceAllStringT' (rs :: [ROpt]) p q r = ReplaceAll' rs p (ReplaceFn q) r
 
 instance P (ReplaceAllStringT' rs p q r) x => P (ReplaceAllString' rs p q r) x where
   type PP (ReplaceAllString' rs p q r) x = PP (ReplaceAllStringT' rs p q r) x
@@ -1163,7 +1163,7 @@ instance P (ReplaceAllStringT p q r) x => P (ReplaceAllString p q r) x where
   eval _ = eval (Proxy @(ReplaceAllStringT p q r))
 
 data ReplaceOneString' rs p q r
-type ReplaceOneStringT' (rs :: [ROpt]) p q r = ReplaceOne' rs p (MakeRR q) r
+type ReplaceOneStringT' (rs :: [ROpt]) p q r = ReplaceOne' rs p (ReplaceFn q) r
 
 instance P (ReplaceOneStringT' rs p q r) x => P (ReplaceOneString' rs p q r) x where
   type PP (ReplaceOneString' rs p q r) x = PP (ReplaceOneStringT' rs p q r) x
@@ -1178,18 +1178,18 @@ instance P (ReplaceOneStringT p q r) x => P (ReplaceOneString p q r) x where
 
 -- | Simple replacement string: see 'ReplaceAllString' and 'ReplaceOneString'
 --
-data MakeRR p
+data ReplaceFn p
 
 instance (PP p x ~ String
-        , P p x) => P (MakeRR p) x where
-  type PP (MakeRR p) x = RR
+        , P p x) => P (ReplaceFn p) x where
+  type PP (ReplaceFn p) x = RReplace
   eval _ opts x = do
-    let msg0 = "MakeRR"
+    let msg0 = "ReplaceFn"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let b = RR p
+        let b = RReplace p
         in mkNode opts (PresentT b) [msg0 <> show1 opts " | " p] [hh pp]
 
 -- | A replacement function @(String -> [String] -> String)@ which returns the whole match and the groups
@@ -1197,17 +1197,17 @@ instance (PP p x ~ String
 --
 -- Requires "Text.Show.Functions"
 --
-data MakeRR1 p
+data ReplaceFn1 p
 
 instance (PP p x ~ (String -> [String] -> String)
-        , P p x) => P (MakeRR1 p) x where
-  type PP (MakeRR1 p) x = RR
+        , P p x) => P (ReplaceFn1 p) x where
+  type PP (ReplaceFn1 p) x = RReplace
   eval _ opts x = do
-    let msg0 = "MakeRR1 (String -> [String] -> String)"
+    let msg0 = "ReplaceFn1 (String -> [String] -> String)"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right f -> mkNode opts (PresentT (RR1 f)) [msg0] [hh pp]
+      Right f -> mkNode opts (PresentT (RReplace1 f)) [msg0] [hh pp]
 
 -- | A replacement function @(String -> String)@ that yields the whole match
 -- Used by 'RH.sub' and 'RH.gsub'
@@ -1215,21 +1215,21 @@ instance (PP p x ~ (String -> [String] -> String)
 -- Requires "Text.Show.Functions"
 --
 -- >>> :m + Text.Show.Functions
--- >>> pz @(ReplaceAll "\\." (MakeRR2 (Fst Id)) (Snd Id)) (\x -> x <> ":" <> x, "141.201.1.22")
+-- >>> pz @(ReplaceAll "\\." (ReplaceFn2 (Fst Id)) (Snd Id)) (\x -> x <> ":" <> x, "141.201.1.22")
 -- Present "141.:.201.:.1.:.22"
 -- PresentT "141.:.201.:.1.:.22"
 --
-data MakeRR2 p
+data ReplaceFn2 p
 
 instance (PP p x ~ (String -> String)
-        , P p x) => P (MakeRR2 p) x where
-  type PP (MakeRR2 p) x = RR
+        , P p x) => P (ReplaceFn2 p) x where
+  type PP (ReplaceFn2 p) x = RReplace
   eval _ opts x = do
-    let msg0 = "MakeRR2 (String -> String)"
+    let msg0 = "ReplaceFn2 (String -> String)"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right f -> mkNode opts (PresentT (RR2 f)) [msg0] [hh pp]
+      Right f -> mkNode opts (PresentT (RReplace2 f)) [msg0] [hh pp]
 
 -- | A replacement function @([String] -> String)@ which yields the groups
 -- Used by 'RH.sub' and 'RH.gsub'
@@ -1237,21 +1237,21 @@ instance (PP p x ~ (String -> String)
 -- Requires "Text.Show.Functions"
 --
 -- >>> :m + Text.Show.Functions
--- >>> pz @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (MakeRR3 (Fst Id)) (Snd Id)) (\ys -> intercalate  " | " $ map (show . succ . readNote @Int "invalid int") ys, "141.201.1.22")
+-- >>> pz @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (ReplaceFn3 (Fst Id)) (Snd Id)) (\ys -> intercalate  " | " $ map (show . succ . readNote @Int "invalid int") ys, "141.201.1.22")
 -- Present "142 | 202 | 2 | 23"
 -- PresentT "142 | 202 | 2 | 23"
 --
-data MakeRR3 p
+data ReplaceFn3 p
 
 instance (PP p x ~ ([String] -> String)
-        , P p x) => P (MakeRR3 p) x where
-  type PP (MakeRR3 p) x = RR
+        , P p x) => P (ReplaceFn3 p) x where
+  type PP (ReplaceFn3 p) x = RReplace
   eval _ opts x = do
-    let msg0 = "MakeRR3 ([String] -> String)"
+    let msg0 = "ReplaceFn3 ([String] -> String)"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right f -> mkNode opts (PresentT (RR3 f)) [msg0] [hh pp]
+      Right f -> mkNode opts (PresentT (RReplace3 f)) [msg0] [hh pp]
 
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
@@ -2839,6 +2839,10 @@ instance P (WAmpT p q) x => P (p &&& q) x where
 -- >>> pz @(Pred Id *** ShowP Id) (13, True)
 -- Present (12,"True")
 -- PresentT (12,"True")
+--
+-- >>> pl @(FlipT (***) Len (Id * 12)) (99,"cdef")
+-- Present (1188,4) ((***) (1188,4) | (99,"cdef"))
+-- PresentT (1188,4)
 --
 data p *** q
 infixr 3 ***
@@ -8436,19 +8440,6 @@ instance (GetBool ignore
 --
 data p <> q
 infixr 6 <>
-data Sapa' (t :: Type)
-type SapaT' (t :: Type) = Wrap t (Fst Id) <> Wrap t (Snd Id)
-
-instance P (SapaT' t) x => P (Sapa' t) x where
-  type PP (Sapa' t) x = PP (SapaT' t) x
-  eval _ = eval (Proxy @(SapaT' t))
-
-data Sapa
-type SapaT = Fst Id <> Snd Id
-
-instance P SapaT x => P Sapa x where
-  type PP Sapa x = PP SapaT x
-  eval _ = eval (Proxy @SapaT)
 
 instance (Semigroup (PP p x)
         , PP p x ~ PP q x
@@ -8466,6 +8457,19 @@ instance (Semigroup (PP p x)
         let d = p <> q
         in mkNode opts (PresentT d) [show p <> " <> " <> show q <> " = " <> show d] [hh pp, hh qq]
 
+data Sapa' (t :: Type)
+type SapaT' (t :: Type) = Wrap t (Fst Id) <> Wrap t (Snd Id)
+
+instance P (SapaT' t) x => P (Sapa' t) x where
+  type PP (Sapa' t) x = PP (SapaT' t) x
+  eval _ = eval (Proxy @(SapaT' t))
+
+data Sapa
+type SapaT = Fst Id <> Snd Id
+
+instance P SapaT x => P Sapa x where
+  type PP Sapa x = PP SapaT x
+  eval _ = eval (Proxy @SapaT)
 
 -- | uses inductive tuples to replace variable arguments
 --
@@ -9789,13 +9793,13 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 -- FalseT
 --
 data (p :: Type -> Type) $ (q :: Type)
+infixr 0 $
 
 instance P (p q) a => P (p $ q) a where
   type PP (p $ q) a = PP (p q) a
   eval _ opts a = do
     eval (Proxy @(p q)) opts a
 
-infixr 0 $
 
 -- | similar to 'Control.Lens.&'
 --
@@ -9804,14 +9808,12 @@ infixr 0 $
 -- PresentT 1
 --
 data (q :: Type) & (p :: Type -> Type)
+infixl 1 &
 
 instance P (p q) a => P (q & p) a where
   type PP (q & p) a = PP (p q) a
   eval _ opts a = do
     eval (Proxy @(p q)) opts a
-
-infixl 1 &
-
 
 -- | creates a constant expression ignoring the second arguenent
 --

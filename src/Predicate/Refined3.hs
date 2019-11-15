@@ -33,6 +33,7 @@
 -- @
 --
 module Predicate.Refined3 (
+
   -- ** Refined3
     Refined3(r3In,r3Out)
   , Refined3C
@@ -48,11 +49,6 @@ module Predicate.Refined3 (
   , Results3 (..)
   , RResults3 (..)
 
-  -- ** proxy methods
-  , mkProxy3
-  , mkProxy3'
-  , MakeR3
-
   -- ** evaluation methods
   , eval3
   , eval3P
@@ -64,6 +60,17 @@ module Predicate.Refined3 (
   , withRefined3T
   , withRefined3TIO
   , withRefined3TP
+
+  -- ** proxy methods
+  , mkProxy3
+  , mkProxy3'
+  , MakeR3
+
+  -- ** unsafe methods for creating Refined3
+  , unsafeRefined3
+  , unsafeRefined3'
+
+  -- ** combine Refined3 values
   , convertRefined3TP
   , rapply3
   , rapply3P
@@ -72,14 +79,16 @@ module Predicate.Refined3 (
   , arbRefined3
   , arbRefined3With
 
-  -- ** unsafe methods for creating Refined3
-  , unsafeRefined3
-  , unsafeRefined3'
-
   -- ** emulate Refined3 using Refined
   , RefinedEmulate
   , eval3PX
   , eval3X
+
+  -- ** extract from 4-tuple
+  , T4_1
+  , T4_2
+  , T4_3
+  , T4_4
 
  ) where
 import Predicate.Refined
@@ -320,7 +329,7 @@ arbRefined3 :: forall ip op fmt i .
      -> Gen (Refined3 ip op fmt i)
 arbRefined3 = flip arbRefined3With id
 
--- | uses arbitrary to generate the internal 'r3In' and then uses \'fmt\' to fill in 'r3Out'
+-- | uses arbitrary to generate the internal 'r3In' and then uses \'fmt\' to fill in the 'r3Out' value
 arbRefined3With ::
     forall ip op fmt i
   . (Arbitrary (PP ip i)
@@ -385,7 +394,7 @@ instance ( Show (PP fmt (PP ip i))
 
 -- | creates a 4-tuple proxy (see 'withRefined3TP' 'newRefined3TP' 'eval3P' 'prtEval3P')
 --
--- use type application to set the 4-tuple or skip that and set the individual parameters directly
+-- use type application to set the 4-tuple or set the individual parameters directly
 --
 -- set the 4-tuple directly
 --
@@ -406,7 +415,7 @@ mkProxy3 = Proxy
 mkProxy3' :: forall z ip op fmt i . (z ~ '(ip,op,fmt,i), Refined3C ip op fmt i) => Proxy '(ip,op,fmt,i)
 mkProxy3' = Proxy
 
--- | convenience type family for converting from a 4-tuple '(ip,op,fmt,i) to a 'Refined3' signature
+-- | type family for converting from a 4-tuple '(ip,op,fmt,i) to a 'Refined3' type
 type family MakeR3 p where
   MakeR3 '(ip,op,fmt,i) = Refined3 ip op fmt i
 
@@ -418,7 +427,7 @@ withRefined3TIO :: forall ip op fmt i m b
   -> RefinedT m b
 withRefined3TIO opts = (>>=) . newRefined3TPIO (Proxy @'(ip,op,fmt,i)) opts
 
--- | create a 'Refined3' value and pass it to a continuation to be processed
+-- | create a 'Refined3' value using a continuation
 --
 -- This first example reads a hex string and makes sure it is between 100 and 200 and then
 -- reads a binary string and adds the values together
@@ -825,4 +834,20 @@ eval3X = eval3PX (Proxy @'(ip,op,fmt,i))
 
 -- | emulates 'Refined' using 'Refined3' by setting the input conversion and output formatting as noops
 type RefinedEmulate p a = Refined3 Id p Id a
+
+-- | used by 'Refined3' to extract \'ip\' from a promoted 4-tuple
+type family T4_1 x where
+  T4_1 '(a,b,c,d) = a
+
+-- | used by 'Refined3' for extracting the boolean predicate \'op\' from a promoted 4-tuple
+type family T4_2 x where
+  T4_2 '(a,b,c,d) = b
+
+-- | used by 'Refined3' for extracting \'fmt\' from a promoted 4-tuple
+type family T4_3 x where
+  T4_3 '(a,b,c,d) = c
+
+-- | used by 'Refined3' for extracting the input type \'i\' from a promoted 4-tuple
+type family T4_4 x where
+  T4_4 '(a,b,c,d) = d
 

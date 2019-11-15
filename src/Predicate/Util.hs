@@ -26,7 +26,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {- |
-     Utility methods for Predicate / methods for displaying the evaluation tree ...
+     Utility methods for Predicate / methods for displaying the evaluation tree
 -}
 module Predicate.Util (
   -- ** TT
@@ -119,7 +119,7 @@ module Predicate.Util (
   , ROpt(..)
   , compileRegex
   , GetROpts(..)
-  , RR(..)
+  , RReplace(..)
 
   -- ** useful type families
   , ZwischenT
@@ -140,10 +140,6 @@ module Predicate.Util (
   , ConsT
   , type (%%)
   , type (%&)
-  , T_1
-  , T_2
-  , T_3
-  , T_4
 
  -- ** extract values from the type level
   , nat
@@ -279,7 +275,7 @@ mkNode :: POpts -> BoolT a -> [String] -> [Holder] -> TT a
 mkNode opts bt ss hs =
   case oDebug opts of
     OZero -> TT bt [] []
-    OLite -> TT bt (take 1 ss) [] -- keeps the last one so we can use the root to give more details on failure (especially for Refined and Refined3 types)
+    OLite -> TT bt (take 1 ss) [] -- keeps the last one so we can use the root to give more details on failure (especially for Refined* types)
     _ -> TT bt ss (map fromTTH hs)
 
 -- | creates a Boolean node for a predicate type
@@ -492,41 +488,41 @@ fixBoolT t =
     Just b -> t & tBool .~ _boolT # b
 
 show01 :: (Show a1, Show a2) => POpts -> String -> a1 -> a2 -> String
-show01 opts msg0 ret as = lit01 opts msg0 ret (show as)
+show01 opts msg0 ret = lit01 opts msg0 ret . show
 
 lit01 :: Show a1 => POpts -> String -> a1 -> String -> String
-lit01 opts msg0 ret as = lit01' opts msg0 ret "" as
+lit01 opts msg0 ret = lit01' opts msg0 ret ""
 
 show01' :: (Show a1, Show a2) => POpts -> String -> a1 -> String -> a2 -> String
-show01' opts msg0 ret fmt as = lit01' opts msg0 ret fmt (show as)
+show01' opts msg0 ret fmt = lit01' opts msg0 ret fmt . show
 
 lit01' :: Show a1 => POpts -> String -> a1 -> String -> String -> String
-lit01' opts msg0 ret fmt as = msg0 <> show0 opts " " ret <> showLit1 opts (" | " ++ fmt) as
+lit01' opts msg0 ret fmt as =
+         msg0
+      <> show0 opts " " ret
+      <> showLit1 opts (" | " ++ fmt) as
 
 -- | display all data regardless of debug level
 showLit0 :: POpts -> String -> String -> String
-showLit0 o s a = showLitImpl o OLite s a
+showLit0 o = showLitImpl o OLite
 
 -- | more restrictive: only display data at debug level 1 or less
 showLit1 :: POpts -> String -> String -> String
-showLit1 o s a = showLitImpl o OLite s a
+showLit1 o = showLitImpl o OLite
 
 showLitImpl :: POpts -> ODebug -> String -> String -> String
 showLitImpl o i s a =
-  if oDebug o >= i then
-    let f n = let ss = take n a
-              in ss <> (if length ss==n then "..." else "")
-    in s <> f (oWidth o)
+  if oDebug o >= i then s <> litL (oWidth o) a
   else ""
 
 show0 :: Show a => POpts -> String -> a -> String
-show0 o s a = showAImpl o OLite s a
+show0 o = showAImpl o OLite
 
 show3 :: Show a => POpts -> String -> a -> String
-show3 o s a = showAImpl o OVerbose s a
+show3 o = showAImpl o OVerbose
 
 show1 :: Show a => POpts -> String -> a -> String
-show1 o s a = showAImpl o OLite s a
+show1 o = showAImpl o OLite
 
 showAImpl :: Show a => POpts -> ODebug -> String -> a -> String
 showAImpl o i s a = showLitImpl o i s (show a)
@@ -605,19 +601,19 @@ instance GetROpt 'Utf8 where getROpt = RL.utf8
 instance GetROpt 'No_utf8_check where getROpt = RL.no_utf8_check
 
 -- | used by 'Predicate.ReplaceImpl' and 'RH.sub' and 'RH.gsub' to allow more flexible replacement
---   These parallel the RegexReplacement (not exported) class in "Text.Regex.PCRE.Heavy" but have overlappable instances which is problematic for this code so I use 'RR'
-data RR =
-     RR String
-   | RR1 (String -> [String] -> String)
-   | RR2 (String -> String)
-   | RR3 ([String] -> String)
+--   These parallel the RegexReplacement (not exported) class in "Text.Regex.PCRE.Heavy" but have overlappable instances which is problematic for this code so I use 'RReplace'
+data RReplace =
+     RReplace String
+   | RReplace1 (String -> [String] -> String)
+   | RReplace2 (String -> String)
+   | RReplace3 ([String] -> String)
 
-instance Show RR where
+instance Show RReplace where
   show = \case
-           RR s -> "RR " ++ s
-           RR1 {} -> "RR1 <fn>"
-           RR2 {} -> "RR2 <fn>"
-           RR3 {} -> "RR3 <fn>"
+           RReplace s -> "RReplace " ++ s
+           RReplace1 {} -> "RReplace1 <fn>"
+           RReplace2 {} -> "RReplace2 <fn>"
+           RReplace3 {} -> "RReplace3 <fn>"
 
 -- | extract values from the trees or if there are errors returned a tree with added context
 splitAndAlign :: Show x =>
@@ -1161,22 +1157,6 @@ type family ConsT s where
       'GL.Text "invalid ConsT instance"
       ':$$: 'GL.Text "s = "
       ':<>: 'GL.ShowType s)
-
--- | used by "Predicate.Refined3" for extracting \'ip\' from a 4-tuple
-type family T_1 x where
-  T_1 '(a,b,c,d) = a
-
--- | used by "Predicate.Refined3" for extracting the boolean predicate \'op\' from a 4-tuple
-type family T_2 x where
-  T_2 '(a,b,c,d) = b
-
--- | used by "Predicate.Refined3" for extracting \'fmt\' from a 4-tuple
-type family T_3 x where
-  T_3 '(a,b,c,d) = c
-
--- | used by "Predicate.Refined3" for extracting the input type \'i\' from a 4-tuple
-type family T_4 x where
-  T_4 '(a,b,c,d) = d
 
 -- | a typeclass for choosing which monad to run in
 class Monad m => MonadEval m where

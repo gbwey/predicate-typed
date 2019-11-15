@@ -48,19 +48,26 @@ module Predicate.Refined2 (
 
   -- ** create a wrapped Refined2 value
   , newRefined2T
-  , newRefined2TIO
   , newRefined2TP
+  , newRefined2TIO
   , withRefined2T
+  , withRefined2TP
   , withRefined2TIO
+
+  -- ** proxy methods
+  , MakeR2
+  , mkProxy2
+  , mkProxy2'
 
   -- ** unsafe methods for creating Refined2
   , unsafeRefined2
   , unsafeRefined2'
 
-  -- ** miscellaneous
-  , MakeR2
-  , mkProxy2
-  , mkProxy2'
+  -- ** extract from 3-tuple
+  , T3_1
+  , T3_2
+  , T3_3
+
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -323,7 +330,7 @@ withRefined2TIO :: forall ip op i m b
   -> RefinedT m b
 withRefined2TIO opts = (>>=) . newRefined2TIO @_ @ip @op @i opts
 
--- | create a 'Refined2' value and pass it to a continuation to be processed
+-- | create a 'Refined2' value using a continuation
 --
 -- This first example reads a hex string and makes sure it is between 100 and 200 and then
 -- reads a binary string and adds the values together
@@ -360,7 +367,16 @@ withRefined2T :: forall ip op i m b
   -> i
   -> (Refined2 ip op i -> RefinedT m b)
   -> RefinedT m b
-withRefined2T opts = (>>=) . newRefined2T @_ @ip @op @i opts
+withRefined2T opts = (>>=) . newRefined2TP (Proxy @'(ip,op,i)) opts
+
+withRefined2TP :: forall m ip op i b proxy
+  . (Monad m, Refined2C ip op i, Show (PP ip i), Show i)
+  => proxy '(ip,op,i)
+  -> POpts
+  -> i
+  -> (Refined2 ip op i -> RefinedT m b)
+  -> RefinedT m b
+withRefined2TP p opts = (>>=) . newRefined2TP p opts
 
 -- | create a wrapped 'Refined2' type
 --
@@ -545,6 +561,22 @@ prt2Impl opts v =
               <> prtTreePure opts t2
          in mkMsg2 m n r
 
+-- | creates a 3-tuple proxy (see 'withRefined2TP' 'newRefined2TP' 'eval2P' 'prtEval2P')
+--
+-- use type application to set the 4-tuple or set the individual parameters directly
+--
+-- set the 3-tuple directly
+--
+-- >>> eg1 = mkProxy2 @'(ReadP Int Id, Gt 10, String)
+-- >>> prtEval2P eg1 ol "24"
+-- Right (Refined2 {r2In = 24, r2Out = "24"})
+--
+-- skip the 4-tuple and set each parameter individually using type application
+--
+-- >>> eg2 = mkProxy2 @_ @(ReadP Int Id) @(Gt 10)
+-- >>> prtEval2P eg2 ol "24"
+-- Right (Refined2 {r2In = 24, r2Out = "24"})
+--
 mkProxy2 :: forall z ip op i . z ~ '(ip,op,i) => Proxy '(ip,op,i)
 mkProxy2 = Proxy
 
@@ -552,5 +584,18 @@ mkProxy2 = Proxy
 mkProxy2' :: forall z ip op i . (z ~ '(ip,op,i), Refined2C ip op i) => Proxy '(ip,op,i)
 mkProxy2' = Proxy
 
+-- | type family for converting from a 3-tuple '(ip,op,i) to a 'Refined2' type
 type family MakeR2 p where
   MakeR2 '(ip,op,i) = Refined2 ip op i
+
+-- | used by 'Refined3' to extract \'ip\' from a promoted 3-tuple
+type family T3_1 x where
+  T3_1 '(a,b,c) = a
+
+-- | used by 'Refined3' for extracting the boolean predicate \'op\' from a promoted 3-tuple
+type family T3_2 x where
+  T3_2 '(a,b,c) = b
+
+-- | used by 'Refined3' for extracting the input type \'i\' from a promoted 3-tuple
+type family T3_3 x where
+  T3_3 '(a,b,c) = c
