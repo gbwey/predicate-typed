@@ -26,7 +26,7 @@ import Test.Tasty.HUnit
 
 import Predicate
 --import TestRefined hiding (namedTests,unnamedTests,allProps)
-import Predicate.Refined
+--import Predicate.Refined
 import Predicate.Refined2
 import Predicate.Examples.Refined2
 import Predicate.Examples.Common
@@ -35,14 +35,14 @@ import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 
 import Data.Ratio
 import Data.Typeable
-import Control.Lens
+--import Control.Lens
 import Data.Time
 import GHC.Generics (Generic)
 import Data.Aeson
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree
-import GHC.TypeLits (Nat)
+--import GHC.TypeLits (Nat)
 
 suite :: IO ()
 suite = defaultMain $ testGroup "TestRefined2" (namedTests <> orderTests unnamedTests) --  <> allProps)
@@ -69,7 +69,7 @@ unnamedTests = [
   , (@?=) [] (reads @(Refined2 (ReadBase Int 16 Id) (Between 0 255) String) "Refined2 {r2In = 256, r2Out = \"100\"}")
   , (@?=) [(unsafeRefined2 (-1234) "-4d2", "")] (reads @(Refined2 (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}")
 
-  , (@?=) (unsafeRefined2 [1,2,3,4] "001.002.003.004") ($$(refined2TH "1.2.3.4") :: MakeR2 Ip)
+  , (@?=) (unsafeRefined2 [1,2,3,4] "001.002.003.004") ($$(refined2TH "1.2.3.4") :: Ip4R)
 
   , expectJ (Right (G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "001.002.003.004"))) (toFrom $ G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))
   , expectJ (Left ["Error in $.g4Ip", "False Boolean Check"]) (toFrom $ G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.400"))
@@ -166,37 +166,12 @@ unnamedTests = [
   , expect2 (Left $ XTF [1,2,3,4,5] "expected 4 numbers") $ eval2P ip4 ol "1.2.3.4.5"
   , expect2 (Left $ XTF [1,2,300,4] "each number must be between 0 and 255") $ eval2P ip4 ol "1.2.300.4"
   , expect2 (Left $ XTFalse [1,2,300,4]) $ eval2P ip4' ol "1.2.300.4"
-  , expect2 (Right $ unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval2P cc ol "12345678903"
-  , expect2 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1]) $ eval2P cc ol "12345678901"
---  , expect2 (Right $ unsafeRefined2 True ["T","r","ue","Tr","ue"]) $ eval2P (Proxy @'(Id, Id, Do '[ShowP Id, Dup, Sapa, SplitAts '[1,1,2,2]], Bool)) True
+  , expect2 (Right $ unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval2P cc11 ol "12345678903"
+  , expect2 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1]) $ eval2P cc11 ol "12345678901"
   ]
 
 type HexLtR3 = Refined2 (ReadBase Int 16 Id) (Id < 500) String
 type IntLtR3 = Refined2 (ReadP Int Id) (Id < 10) String
-
--- printf breaks with negative numbers!
-type Tst1 = '(ReadP Int Id, Between 1 7, String)
-
-yy1, yy2 :: RefinedT Identity (MakeR2 Tst1)
-
-yy1 = newRefined2TP @Identity (Proxy @Tst1) o2 "4"
-yy2 = newRefined2TP @Identity (Proxy @Tst1) o2 "3"
-
-type Ip4T = '(Ip4ip, Ip4op, String) -- guards
-type Ip4T' = '(Ip4ip, Ip4op', String) -- boolean predicates
-
-ip4 :: Proxy Ip4T
-ip4 = Proxy
-
-ip4' :: Proxy Ip4T'
-ip4' = Proxy
-
-cc :: Proxy (Ccn 11)
-cc = Proxy
-
--- need to add 'True to make it a predicate
--- guards checks also that there are exactly 3 entries!
-type Hmsconv = Do '[Rescan HmsRE Id, Head Id, (Snd Id), Map (ReadBaseInt 10 Id) Id]
 
 -- better to use Guard for op boolean check cos we get better errormessages
 -- 1. packaged up as a promoted tuple
@@ -238,7 +213,7 @@ type Age = '(ReadP Int Id, Gt 4, String)
 
 type Ip9 = '(
             Map (ReadP Int Id) (Resplit "\\." Id) -- split String on "." then convert to [Int]
-           ,(Len == 4) && All (Between 0 255) Id -- process [Int] and make sure length==4 and each octet is between 0 and 255
+           ,Len == 4 && All (Between 0 255) Id -- process [Int] and make sure length==4 and each octet is between 0 and 255
            ,String -- input type is string which is also the output type
            )
 
@@ -341,10 +316,4 @@ expect2 :: (HasCallStack, Show i, Show r, Eq i, Eq r)
 expect2 lhs (rhs,mr) = do
   (@?=) lhs $ maybe (Left $ toRResults2 rhs) Right mr
 
-type LuhnR' (n :: Nat) = MakeR2 (LuhnX n)
-
-type LuhnX (n :: Nat) =
-   '(Map (ReadP Int Id) (Ones Id)
-   , Luhn'' n >> 'True
-   , String)
 

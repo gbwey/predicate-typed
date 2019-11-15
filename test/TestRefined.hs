@@ -25,7 +25,7 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
 import Predicate
-import Predicate.Refined
+--import Predicate.Refined
 import Predicate.Util_TH
 import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 

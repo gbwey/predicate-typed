@@ -4,24 +4,26 @@
 
 what this library provides:
 1. a dsl for building refinement types
-2. Refined is simple refinement type that just validates the input against a predicate
-3. Refined3 is a more complex refinement type that allows you to change the input
-4. validation against input values
-5. visualisation of each step in the process
-6  template haskell methods for creating the refinement types at compile time
-7. ToJSON and FromJSON instances for Refined and Refined3
-8. Read and Show instance for Refined and Refined3
-9. Binary instances for Refined and Refined3
-10. database encoders and decoders using odbc(sqlhandler-odbcalt) or hdbc((sqlhandler-odbc)
-11. quickcheck arbitrary methods
+2. Refined is a simple refinement type that validates the input against a predicate
+3. Refined2 has an extra parameter to change the input type
+4. Refined3 has an extra parameter for formatting the output
+5. validation against input values
+6. visualisation of each step in the process
+7  template haskell methods for creating the refinement types at compile time
+8. ToJSON and FromJSON instances
+9. Read and Show instance
+10. Binary instances
+11. IsString instances
+12. quickcheck arbitrary methods for Refined3
+13. database encoders and decoders using hdbc(sqlhandler-odbc) or odbc(sqlhandler-odbcalt)
 
-To run the examples you will need these settings ghc>=8.2
+To run the examples you will need these settings (ghc>=8.2)
 ```haskell
 :set -XTypeApplications
 :set -XDataKinds
 :set -XPolyKinds
 :set -XTemplateHaskell
-:set -XNoStarIsType -- not valid before ghc 8.6
+:set -XNoStarIsType -- if ghc 8.6 or greater
 ```
 
 ```haskell
@@ -32,7 +34,7 @@ data Refined p a = Refined a
 
 **_If you want to see an evaluation tree with colors for any of the examples, just replace 'ol' with 'o2' or if on unix use 'ou' (unicode)_**
 
-### Examples of Refined (for more information see [doctests](src/Refined.hs))
+### Examples of Refined (for more information see [doctests](src/Predicate/Refined.hs))
 
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
@@ -92,7 +94,16 @@ if using a unicode-supported OS then _pu_ gives you nicer rendering than _pe2_\
 >pe2 @(Len == 3) [12,1,5]
 ```
 
-### An example using Refined3 (for more information see [doctests](src/Refined3.hs) and [doctests](src/Refined3Helper.hs))
+### An example using Refined2 (for more information see [doctests](src/Predicate/Refined2.hs))
+
+```haskell
+>type Hex = '(ReadBase Int 16 Id, Between 0 255, String)
+
+>prtEval2PIO (Proxy @Hex) ol "0000fe"
+Refined2 {in3 = 254, out3 = "0000fe"}
+```
+
+### An example using Refined3 (for more information see [doctests](src/Predicate/Examples/Refined3.hs))
 
 ```haskell
 >type Hex = '(ReadBase Int 16 Id, Between 0 255, ShowBase 16 Id, String)
@@ -153,7 +164,7 @@ ex1 :: Refined (ReadP Int Id >> Id > 99) String
 ex1 = $$(refinedTH "123")
 ```
 
-### Refined3 is the most useful refined type as you can control the input and output types (see documentation and [doctests](src/Refined3.hs))
+### Refined2 and Refined3 are the most useful refinement types as you can control the input and output types (see documentation and [doctests](src/Predicate/Refined2.hs) and [doctests](src/Predicate/Refined3.hs))
 
 **_Replace '$$(refined3TH ...)' with '$$(refined3TH' o2 ...)' for a colored evaluation tree_**
 

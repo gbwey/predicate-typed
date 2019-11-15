@@ -19,7 +19,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Predicate
 import qualified Predicate.Refined as R
-import qualified Predicate.Examples.Refined3 as H3
+import qualified Predicate.Examples.Refined3 as R3
 import GHC.Generics (Generic)
 import Data.Text (Text)
 import Data.Aeson
@@ -57,8 +57,8 @@ data Person1 = Person1 {
      , lastName1 :: NameR2
      , age1 :: AgeR
      , likesPizza1 :: Bool
-     , date1 :: H3.DateTimeNR
-     , ipaddress1 :: H3.IpR
+     , date1 :: R3.DateTimeNR
+     , ipaddress1 :: R3.Ip4R
      } deriving (Show,Generic,Eq)
 
 instance ToJSON Person1

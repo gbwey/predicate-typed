@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wno-unused-imports #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -44,11 +45,15 @@ module Predicate.Examples.Refined3 (
   -- ** ssn
   , ssn
   , Ssn
+  , SsnR
 
   -- ** ipv4
-  , ip
-  , Ip
-  , IpR
+  , ip4
+  , Ip4
+  , Ip4R
+  , ip4'
+  , Ip4'
+  , Ip4R'
 
  -- ** base n
   , basen
@@ -164,7 +169,7 @@ ssn = mkProxy3'
 -- Left Step 2. False Boolean Check(op) | {Bools(1) [number for group 1 invalid: found 0] (1 <= 0)}
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
-
+type SsnR = MakeR3 Ssn
 -- | read in a time and validate it
 --
 -- >>> prtEval3P hms ol "23:13:59"
@@ -183,24 +188,31 @@ type Hms = '(Hmsip, Hmsop, Hmsfmt, String)
 
 -- | read in an ipv4 address and validate it
 --
--- >>> prtEval3P ip oz "001.223.14.1"
+-- >>> prtEval3P ip4 oz "001.223.14.1"
 -- Right (Refined3 {r3In = [1,223,14,1], r3Out = "001.223.014.001"})
 --
--- >>> prtEval3P ip ol "001.223.14.999"
+-- >>> prtEval3P ip4 ol "001.223.14.999"
 -- Left Step 2. False Boolean Check(op) | {Bools(3) [guard(3) octet out of range 0-255 found 999] (999 <= 255)}
 --
--- >>> prtEval3P ip oz "001.223.14.999.1"
+-- >>> prtEval3P ip4 oz "001.223.14.999.1"
 -- Left Step 1. Initial Conversion(ip) Failed | Regex no results
 --
--- >>> prtEval3P ip ol "001.257.14.1"
+-- >>> prtEval3P ip4 ol "001.257.14.1"
 -- Left Step 2. False Boolean Check(op) | {Bools(1) [guard(1) octet out of range 0-255 found 257] (257 <= 255)}
 --
-type IpR = MakeR3 Ip
+type Ip4R = MakeR3 Ip4
 
-type Ip = '(Ip4ip, Ip4op, Ip4fmt, String)
+type Ip4 = '(Ip4ip, Ip4op, Ip4fmt, String) -- guards
 
-ip :: Proxy Ip
-ip = mkProxy3'
+ip4 :: Proxy Ip4
+ip4 = mkProxy3'
+
+type Ip4R' = MakeR3 Ip4'
+type Ip4' = '(Ip4ip, Ip4op', Ip4fmt, String) -- boolean predicates
+
+ip4' :: Proxy Ip4'
+ip4' = mkProxy3'
+
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
 type DateN = '(ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)

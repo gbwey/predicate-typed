@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+-- {-# OPTIONS -Wno-unused-imports #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -24,15 +25,23 @@ module Predicate.Examples.Refined2 (
 
   -- *** time checkers
   , Hms
+  , HmsR
 
   -- ** credit cards
   , Ccn
+  , cc11
 
   -- ** ssn
   , Ssn
+  , SsnR
 
   -- ** ipv4
-  , Ip
+  , ip4
+  , Ip4
+  , Ip4R
+  , ip4'
+  , Ip4'
+  , Ip4R'
 
  -- ** base n
   , BaseN
@@ -42,13 +51,14 @@ module Predicate.Examples.Refined2 (
   , BaseIJip
    ) where
 import Predicate.Core
---import Predicate.Refined2
+import Predicate.Refined2
 import Predicate.Examples.Common
 import Predicate.Prelude
--- import Predicate.Util
+--import Predicate.Util
 import GHC.TypeLits (Nat)
 import Data.Time
 import Data.Kind
+import Data.Proxy
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -103,6 +113,7 @@ type DateTime1 (t :: Type) = '(Dtip t, 'True, String)
 -- Left Step 2. False Boolean Check(op) | {Bools(1) [number for group 1 invalid: found 0] (1 <= 0)}
 --
 
+type SsnR = MakeR2 Ssn
 type Ssn = '(Ssnip, Ssnop, String)
 
 
@@ -118,6 +129,7 @@ type Ssn = '(Ssnip, Ssnop, String)
 -- Left Step 2. False Boolean Check(op) | {Bools(0) [hours] (26 <= 23)}
 --
 
+type HmsR = MakeR2 Hms
 type Hms = '(Hmsip, Hmsop, String)
 
 -- | read in an ipv4 address and validate it
@@ -134,7 +146,21 @@ type Hms = '(Hmsip, Hmsop, String)
 -- >>> prtEval2 @Ip4ip @Ip4op ol "001.257.14.1"
 -- Left Step 2. False Boolean Check(op) | {Bools(1) [guard(1) octet out of range 0-255 found 257] (257 <= 255)}
 --
-type Ip = '(Ip4ip, Ip4op, String)
+type Ip4R = MakeR2 Ip4
+type Ip4 = '(Ip4ip, Ip4op, String) -- guards
+
+ip4 :: Proxy Ip4
+ip4 = Proxy
+
+type Ip4R' = MakeR2 Ip4
+type Ip4' = '(Ip4ip, Ip4op', String) -- boolean predicates
+
+ip4' :: Proxy Ip4'
+ip4' = Proxy
+
+cc11 :: Proxy (Ccn 11)
+cc11 = Proxy
+
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
 type DateN = '(ParseTimes Day DateFmts Id, 'True, String)
