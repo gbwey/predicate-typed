@@ -20,9 +20,16 @@
 module Predicate.Examples.Refined2 (
   -- ** date time checkers
     DateTime1
+  , datetime1
+
+  , daten
   , DateN
+  , datetimen
+  , DateTimeN
+  , DateTimeNR
 
   -- *** time checkers
+  , hms
   , Hms
   , HmsR
 
@@ -31,6 +38,7 @@ module Predicate.Examples.Refined2 (
   , cc11
 
   -- ** ssn
+  , ssn
   , Ssn
   , SsnR
 
@@ -38,9 +46,16 @@ module Predicate.Examples.Refined2 (
   , ip4
   , Ip4
   , Ip4R
+
   , ip4'
   , Ip4'
+  , Ip4''
   , Ip4R'
+
+  -- ** ipv6
+  , ip6
+  , Ip6
+  , Ip6R
 
  -- ** base n
   , BaseN
@@ -94,6 +109,22 @@ type Ccn (n :: Nat) = '(Ccip, Ccop n, String)
 --
 type DateTime1 (t :: Type) = '(Dtip t, 'True, String)
 
+datetime1 :: Proxy (DateTime1 t)
+datetime1 = mkProxy2
+
+
+datetimen :: Proxy DateTimeN
+datetimen = mkProxy2'
+
+-- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
+type DateN = '(ParseTimes Day DateFmts Id, 'True, String)
+
+daten :: Proxy DateN
+daten = mkProxy2'
+
+type DateTimeNR = MakeR2 DateTimeN
+type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, String)
+
 -- fixed in time-1.9
 -- extra check to validate the time as parseTime doesnt validate the time component
 -- ZonedTime LocalTime and TimeOfDay don't do validation and allow invalid stuff through : eg 99:98:97 is valid
@@ -112,6 +143,9 @@ type DateTime1 (t :: Type) = '(Dtip t, 'True, String)
 -- Left Step 2. False Boolean Check(op) | {Bools(1) [number for group 1 invalid: found 0] (1 <= 0)}
 --
 
+ssn :: Proxy Ssn
+ssn = mkProxy2'
+
 type SsnR = MakeR2 Ssn
 type Ssn = '(Ssnip, Ssnop, String)
 
@@ -127,6 +161,8 @@ type Ssn = '(Ssnip, Ssnop, String)
 -- >>> prtEval2 @Hmsip @Hmsop ol "26:13:59"
 -- Left Step 2. False Boolean Check(op) | {Bools(0) [hours] (26 <= 23)}
 --
+hms :: Proxy Hms
+hms = mkProxy2'
 
 type HmsR = MakeR2 Hms
 type Hms = '(Hmsip, Hmsop, String)
@@ -157,12 +193,19 @@ type Ip4' = '(Ip4ip, Ip4op', String) -- boolean predicates
 ip4' :: Proxy Ip4'
 ip4' = Proxy
 
+type Ip4'' = '(Ip4ip, Ip4op'' >> 'True, String) -- guard predicates
+
+
+
+type Ip6R = MakeR2 Ip6
+type Ip6 = '(Ip6ip, Ip6op, String) -- guards
+
+ip6 :: Proxy Ip6
+ip6 = Proxy
+
+
 cc11 :: Proxy (Ccn 11)
 cc11 = Proxy
-
-
--- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
-type DateN = '(ParseTimes Day DateFmts Id, 'True, String)
 
 -- | convert a string from a given base \'i\' and store it internally as an base 10 integer
 --

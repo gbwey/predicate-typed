@@ -28,11 +28,11 @@ expectIO iolr p = do
     Left e -> assertFailure $ "expectIO: " <> e <> " lr=" <> show lr
     Right () -> pure ()
 
-expectLeftWith :: Show a => String -> Either String a -> Either String ()
+expectLeftWith :: Show a => [String] -> Either String a -> Either String ()
 expectLeftWith _ (Right a) = Left $ "expected fail but was actually successful " ++ show a
-expectLeftWith n (Left s)
-  | n `isInfixOf` s = Right ()
-  | otherwise = Left $ "found fail but infix string did not match: actual[" ++ s ++ "] infix[" ++ n ++ "]"
+expectLeftWith ns (Left s)
+  | all (`isInfixOf` s) ns = Right ()
+  | otherwise = Left $ "found fail but infix string did not match: actual[" ++ s ++ "] infix[" ++ intercalate " | " ns ++ "]"
 
 expectLeft :: Show b => Either a b -> IO ()
 expectLeft = \case

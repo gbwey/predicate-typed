@@ -35,8 +35,8 @@ import Text.Show.Functions ()
 --import GHC.TypeNats (Nat)
 import Data.Semigroup (Semigroup(..))
 
-suite :: IO ()
-suite = defaultMain $ testGroup "TestRefined" (namedTests <> orderTests unnamedTests <> allProps)
+suite :: TestTree
+suite = testGroup "TestRefined" (namedTests <> orderTests unnamedTests <> allProps)
 
 namedTests :: [TestTree]
 namedTests =

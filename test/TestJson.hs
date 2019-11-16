@@ -24,13 +24,13 @@ import Data.Text (Text)
 import Data.Aeson
 import qualified Data.ByteString as BS
 
-suite :: IO ()
-suite = defaultMain $ testGroup "testjson"
+suite :: TestTree
+suite = testGroup "testjson"
   [ testCase "testperson ok" $ expectIO testPerson (() <$)
   , testCase "testperson1 ok" $ expectIO (testPerson1 2) (() <$)
-  , testCase "testperson1 bad ipaddress" $ expectIO (testPerson1 3) (expectLeftWith "expected between 0 and 255 found 260")
-  , testCase "testperson1 bad lastname lowercase first letter" $ expectIO (testPerson1 4) (expectLeftWith "invalid name(diaz)")
-  , testCase "testperson1 age 99 out of range" $ expectIO (testPerson1 5) (expectLeftWith "Error in $[0].age1")
+  , testCase "testperson1 bad ipaddress" $ expectIO (testPerson1 3) (expectLeftWith ["octet out of range 0-255 found 260"])
+  , testCase "testperson1 bad lastname lowercase first letter" $ expectIO (testPerson1 4) (expectLeftWith ["invalid name","diaz"])
+  , testCase "testperson1 age 99 out of range" $ expectIO (testPerson1 5) (expectLeftWith ["Error in $[0].age1"])
   , testCase "parse fail person1" $ expectPE (FailT "ParseJsonFile [Person1](test3.json) Error in $[0].ipaddress1") $ pl @(ParseJsonFile [Person1] "test3.json") ()
   , testCase "parse ok person1" $ expectPE (PresentT 5) $ pl @(ParseJsonFile [Person1] "test2.json" >> Len) ()
   , testCase "missing file" $ expectPE (FailT "ParseJsonFile [Person1](test2.jsoxxxn) file doesn't exist") $ pl @(ParseJsonFile [Person1] "test2.jsoxxxn" >> Len) ()
@@ -55,8 +55,8 @@ instance ToJSON Person
 instance FromJSON Person
 
 data Person1 = Person1 {
-       firstName1 :: NameR2
-     , lastName1 :: NameR2
+       firstName1 :: NameR1
+     , lastName1 :: NameR1
      , age1 :: AgeR
      , likesPizza1 :: Bool
      , date1 :: R3.DateTimeNR

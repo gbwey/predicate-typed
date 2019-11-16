@@ -35,8 +35,8 @@ import qualified Data.Semigroup as SG
 import Data.These
 import GHC.TypeLits (Nat)
 
-suite :: IO ()
-suite = defaultMain $ testGroup "TestPredicate" (orderTests allTests)
+suite :: TestTree
+suite = testGroup "TestPredicate" (orderTests allTests)
 
 allTests :: [IO ()]
 allTests =
@@ -349,7 +349,7 @@ allTests =
   , expectPE (PresentT [4,4,4,4,4,4]) $ pl @(ScanN 5 Id Id) 4
   , expectPE (PresentT [1,2,3,244]) $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> GuardSimple Ip4op) "1.2.3.244"
   , expectPE (FailT "(Bools(1) [guard(1) octet out of range 0-255 found 256] (256 <= 255))") $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> GuardSimple Ip4op) "1.256.3.244"
-  , expectPE (FailT "(Bools(4): predicates(4) /= data elements(5))") $ pl @(Rescan "(\\d+)\\.?" Id >> ConcatMap (Snd Id) Id >> Map (ReadBaseInt 10 Id) Id >> GuardSimple Ip4op) "1.22.244.66.77"
+  , expectPE (FailT "(Bools(4): predicates(4) /= data(5))") $ pl @(Rescan "(\\d+)\\.?" Id >> ConcatMap (Snd Id) Id >> Map (ReadBaseInt 10 Id) Id >> GuardSimple Ip4op) "1.22.244.66.77"
   , expectPE (PresentT (SG.Sum 123)) $ pl @(JustDef (MEmptyT _) Id) (Just (SG.Sum 123))
   , expectPE (PresentT (SG.Sum 0)) $ pl @(JustDef (MEmptyT _) Id) (Nothing @(SG.Sum _))
   , expectPE (PresentT (636 % 5)) $ pl @((ToRational 123 &&& Id) >> Fst Id + Snd Id) 4.2
@@ -394,7 +394,7 @@ allTests =
   , expectPE (PresentT [10,2,5]) $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 11, Between 1 4,Between 3 5]) [10::Int,2,5]
   , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ddmmyyyyval) "31-11-1999"
   , expectPE (PresentT [31,11,1999]) $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,1999::Int]
-  , expectPE (FailT "Guards: predicates(3) /= data elements(2)") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11::Int]
+  , expectPE (FailT "Guards: predicates(3) /= data(2)") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11::Int]
   , expectPE (FailT "guard(1) 13 is out of range") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,13,1999::Int]
   , expectPE (FailT "guard(0) 0 is out of range") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [0,44,1999::Int]
   , expectPE (PresentT (fromGregorian 1999 11 30)) $ pl @(ReadP Day Id) "1999-11-30"
@@ -404,12 +404,12 @@ allTests =
   , expectPE (FailT "ParseTimeP TimeOfDay (%H:%M%S) failed to parse") $ pl @(ParseTimeP TimeOfDay "%H:%M%S" Id) "14:04:61"
   , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:59"
   , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:60"
-  , expectPE (FailT "Guards: predicates(3) /= data elements(5)") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,2000,1,2::Int]
+  , expectPE (FailT "Guards: predicates(3) /= data(5)") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,2000,1,2::Int]
   , expectPE (PresentT [0,0,0,0,0,0,0,1,2,3]) $ pl @(PadL 10 0 Id) [1..3]
   , expectPE (PresentT (124,["1","2","2"])) $ pl @('Left Id >> (Succ Id &&& (Pred Id >> ShowP Id >> Ones Id))) (Left 123)
   , expectPE (PresentT [1,2,3,4]) $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3,4::Int]
-  , expectPE (FailT "Guards: predicates(4) /= data elements(5)") $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3,4,5::Int]
-  , expectPE (FailT "Guards: predicates(4) /= data elements(3)") $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3::Int]
+  , expectPE (FailT "Guards: predicates(4) /= data(5)") $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3,4,5::Int]
+  , expectPE (FailT "Guards: predicates(4) /= data(3)") $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3::Int]
   , expectPE (PresentT (readNote @UTCTime "failed to read utc" "1999-01-01 12:12:12 UTC")) $ pl @(ParseTimeP UTCTime "%F %T" Id) "1999-01-01 12:12:12"
   , expectPE (PresentT 123) $ pl @(JustDef 0 Id) (Just 123)
   , expectPE (PresentT 0) $ pl @(JustDef 0 Id) Nothing
@@ -540,11 +540,11 @@ allTests =
   , expectPE (PresentT 23) $ pl @(Fst Id + Last (Snd Id)) (10,[12,13])
   , expectPE (PresentT (-1,12)) $ pl @(DivMod (9 - Fst Id) (Last (Snd Id))) (10,[12,13])
   , expectPE (PresentT [True,False,False,True]) $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999]
-  , expectPE (FailT "Para: predicates(4) /= data elements(3)") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
-  , expectPE (FailT "Para: predicates(4) /= data elements(7)") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999,1,1,2]
+  , expectPE (FailT "Para: predicates(4) /= data(3)") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
+  , expectPE (FailT "Para: predicates(4) /= data(7)") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999,1,1,2]
   , expectPE (FailT "guard(1) err 002") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999]
-  , expectPE (FailT "Guards: predicates(4) /= data elements(3)") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
-  , expectPE (FailT "Guards: predicates(4) /= data elements(7)") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999,1,1,2]
+  , expectPE (FailT "Guards: predicates(4) /= data(3)") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
+  , expectPE (FailT "Guards: predicates(4) /= data(7)") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999,1,1,2]
   , expectPE TrueT $ pl @(Fst Id /= Snd Id) ("ab","xyzabw")
   , expectPE FalseT $ pl @(Fst Id == Snd Id) ("ab","xyzabw")
   , expectPE (PresentT 157) $ pl @(Fst Id * (Snd Id >> Fst Id) + (Snd Id >> Snd Id) `Div` 2) (12,(13,3))
@@ -811,7 +811,7 @@ allTests =
   , expectPE (PresentT "151515") $ pl @(Case (ShowP (Fst Id) >> Id <> Id <> Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
   , expectPE (FailT "Case:no match") $ pl @(Case' '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
   , expectPE (FailT "no match for -012") $ pl @(Case'' (PrintF "no match for %04d" Id) '[Between 0 5, Same 6, Between 7 10] '[ 'LT, 'EQ, 'GT] Id) (-12)
-  , expectPE (PresentT [Left 1,Left 2,Right "fizz",Left 4,Right "buzz",Right "fizz",Left 7,Left 8,Right "fizz",Right "buzz",Left 11,Right "fizz",Left 13,Left 14,Right "fizzbuzz"]) $ pl @(Map Fizzbuzznew Id) [1..15]
+  , expectPE (PresentT [Left 1,Left 2,Right "fizz",Left 4,Right "buzz",Right "fizz",Left 7,Left 8,Right "fizz",Right "buzz",Left 11,Right "fizz",Left 13,Left 14,Right "fizzbuzz"]) $ pl @(Map Fizzbuzz''' Id) [1..15]
   , expectPE (PresentT (Left 'x')) $ pl @(EitherBool (Fst Id > 10) (Snd Id >> Fst Id) (Snd Id >> Snd Id)) (7,('x',99))
   , expectPE (PresentT (Right 99)) $ pl @(EitherBool (Fst Id > 10) (Snd Id >> Fst Id) (Snd Id >> Snd Id)) (11,('x',99))
   , expectPE (PresentT (Right 99)) $ pl @(EitherBool (Gt 10) "found left" 99) 12
@@ -839,17 +839,12 @@ allTests =
   , expectPE (PresentT [3996,998]) $ pl @'[Id * 4, Pred Id] 999
   ]
 
-type Fizzbuzz = Id &&& If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" ""
-type Fizzbuzz' = Id &&& Case "" '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '["fizzbuzz", "fizz", "buzz"] Id
-type Fizzbuzz'' t t1 = Case (MkLeft t (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '[ MkRight t1 "fizzbuzz", MkRight t1 "fizz", MkRight t1 "buzz"] Id
---type Fizzbuzz''' = Case (MkLeft' (Snd Id >> Proxyfabb >> Unproxy) (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '[ MkRight Int "fizzbuzz", MkRight Int "fizz", MkRight Int "buzz"] Id
-type Fizzbuzz'''' = Case (MkLeft String (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '[ MkRight Int "fizzbuzz", MkRight Int "fizz", MkRight Int "buzz"] Id
--- this is also good: makes use of type family MapT which does the apply on ADTs: so type synonyms dont work
-type Fizzbuzznew = Case (MkLeft String (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] (MapT (MkRight' (Hole Int)) '[ "fizzbuzz", "fizz", "buzz"]) Id
+type Fizzbuzz = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")
+type Fizzbuzz'' = Case (MkLeft String (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '[ MkRight Int "fizzbuzz", MkRight Int "fizz", MkRight Int "buzz"] Id
+-- makes use of type family MapT which does the apply on ADTs: so type synonyms dont work
+type Fizzbuzz''' = Case (MkLeft String (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] (MapT (MkRight' (Hole Int)) '[ "fizzbuzz", "fizz", "buzz"]) Id
 
-type Fizzbuzzalt = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")
 type Fizzbuzzs = Map Fizzbuzz Id
-type Fizzbuzzs1 t t1 = Map (Fizzbuzz >> If (Null' (Snd Id)) (MkLeft t (Fst Id)) (MkRight t1 (Snd Id))) Id
 type Fizzbuzzs2 = Map (Fizzbuzz >> If (Null' (Snd Id)) (MkLeft String (Fst Id)) (MkRight Int (Snd Id))) Id
 -- best one cos leverages type info to determine Either a b
 type Fizzbuzzs3 = Map (Fizzbuzz >> If (Snd Id == "") (MkLeft' (Snd Id) (Fst Id)) (MkRight' (Fst Id) (Snd Id))) Id

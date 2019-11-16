@@ -41,10 +41,12 @@ import Data.Aeson
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree
+import Data.Maybe
+import Data.Tree.Lens
 --import GHC.TypeLits (Nat)
 
-suite :: IO ()
-suite = defaultMain $ testGroup "TestRefined3" (namedTests <> orderTests unnamedTests <> allProps)
+suite :: TestTree
+suite = testGroup "TestRefined3" (namedTests <> orderTests unnamedTests <> allProps)
 
 namedTests :: [TestTree]
 namedTests =
@@ -96,11 +98,11 @@ unnamedTests = [
                           @(PrintL 4 "%03d.%03d.%03d.%03d" Id)
                           ol "1.21.31.4"
 
-  , expect3 (Left $ XTFalse (-6.3))
+  , expect3 (Left $ XTFalse (-6.5) "(-13) % 2 > (-7) % 3")
                   $ eval3 @(ReadP Double Id)
                           @(ToRational Id > 7 -% 3)
                           @(PrintF "%5.3f" Id)
-                          ol "-6.3"
+                          ol "-6.5"
 
   , expect3 (Right $ unsafeRefined3 4.123 "")
                   $ eval3 @(ReadP Double Id) @(ToRational Id > 7 -% 3) @""
@@ -113,7 +115,7 @@ unnamedTests = [
                   $ eval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255) Id && (Len == 4)) @""
                   ol "1.2.3.4"
 
-  , expect3 (Left $ XTF [291,1048319,4387,17,1] "out of bounds")
+  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
                   $ eval3 @Ip6ip @Ip6op @"" ol "123:Ffeff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [12,2,0,255] "abc")
@@ -137,11 +139,7 @@ unnamedTests = [
                   @"xyz"
                   ol "123-45-6789"
 
-  , expect3 (Left $ XTF [0,0,0,291,1048319,4387,17,1] "out of bounds")
-                  $ eval3 @Ip6ip @Ip6op @"xyz"
-                  ol "123:Ffeff:1123:11:1"
-
-  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1])
+  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
                   $ eval3 @Ip6ip @Ip6op @"xyz"
                   ol "123:Ffeff:1123:11:1"
 
@@ -168,16 +166,16 @@ unnamedTests = [
                   @"xyz"
                   ol "123-45-6789"
 
-  , expect3 (Right $ unsafeRefined3 [1,2,3,4] "001.002.003.004") $ eval3P ip4 ol "1.2.3.4"
-  , expect3 (Left $ XF "invalid base 10") $ eval3P ip4 ol "1.2.3x.4"
-  , expect3 (Left $ XTF [1,2,3,4,5] "expected 4 numbers") $ eval3P ip4 ol "1.2.3.4.5"
-  , expect3 (Left $ XTF [1,2,300,4] "each number must be between 0 and 255") $ eval3P ip4 ol "1.2.300.4"
-  , expect3 (Left $ XTFalse [1,2,300,4]) $ eval3P ip4' ol "1.2.300.4"
+  , expect3 (Right $ unsafeRefined3 [1,2,3,4] "001.002.003.004") $ eval3P ip4Alt ol "1.2.3.4"
+  , expect3 (Left $ XF "ReadP Int (3x)") $ eval3P ip4Alt ol "1.2.3x.4"
+  , expect3 (Left $ XTFalse [1,2,3,4,5] "Bools(4): predicates(4) /= data(5)") $ eval3P ip4Alt ol "1.2.3.4.5"
+  , expect3 (Left $ XTFalse [1,2,300,4] "Bools(2) [guard(2) octet out of range 0-255 found 300] (300 <= 255)") $ eval3P ip4Alt ol "1.2.300.4"
+  , expect3 (Left $ XTF [1,2,300,4] "each number must be between 0 and 255") $ eval3P ip4' ol "1.2.300.4"
   , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval3P cc11 ol "12345678903"
-  , expect3 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1]) $ eval3P cc11 ol "12345678901"
+  , expect3 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1] "") $ eval3P cc11 oz "12345678901"
 --  , expect3 (Right $ unsafeRefined3 True ["T","r","ue","Tr","ue"]) $ eval3P (Proxy @'(Id, Id, Do '[ShowP Id, Dup, Sapa, SplitAts '[1,1,2,2]], Bool)) True
   , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ eval3P hms2E ol "12:13:14"
-  , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "guard(2) 99 secs is out of range")) $ eval3P hms2E ol "12:13:99"
+  , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "seconds invalid: found 99")) $ eval3P hms2E ol "12:13:99"
 
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ eval3 @Ip4ip @Ip4op @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ eval3 @Ip4ip @Ip4op @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) ol "1.2.3.4"
@@ -188,6 +186,10 @@ unnamedTests = [
   , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ eval3 @(Id &&& Ip4ip) @(Snd Id >> Ip4op) @(Snd Id >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
 
   ]
+
+
+ip4Alt :: Proxy '(Ip4ip', Ip4op, Ip4fmt, String)
+ip4Alt = Proxy
 
 allProps :: [TestTree]
 allProps =
@@ -214,7 +216,7 @@ hms2E :: Proxy '(Hmsip2, Hmsop2, Hmsfmt2, String)
 hms2E = mkProxy3
 
 type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-type Hmsop2 = Fst Id >> Hmsop
+type Hmsop2 = Fst Id >> Hmsop' >> 'True
 type Hmsfmt2 = Snd Id >> FormatTimeP "%T" Id
 
 -- better to use Guard for op boolean check cos we get better errormessages
@@ -352,7 +354,7 @@ toRResults3 :: RResults3 a b -> Results3 a b
 toRResults3 = \case
    RF e _ -> XF e
    RTF a _ e _ -> XTF a e
-   RTFalse a _ _ -> XTFalse a
+   RTFalse a _ t2 -> XTFalse a (fromMaybe "" (t2 ^? root . pStrings . ix 0))
    RTTrueF a _ _ e _ -> XTTrueF a e
    RTTrueT a _ _ b _ -> XTTrueT a b
 
@@ -361,5 +363,5 @@ expect3 :: (HasCallStack, Show i, Show r, Eq i, Eq r, Eq j, Show j)
   -> (RResults3 i j, Maybe r)
   -> IO ()
 expect3 lhs (rhs,mr) = do
-  (@?=) lhs $ maybe (Left $ toRResults3 rhs) Right mr
+  (@?=) (maybe (Left $ toRResults3 rhs) Right mr) lhs
 

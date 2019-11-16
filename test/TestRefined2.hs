@@ -20,11 +20,8 @@ module TestRefined2 where
 import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
---import Test.Tasty.QuickCheck
 
 import Predicate
---import TestRefined hiding (namedTests,unnamedTests,allProps)
---import Predicate.Refined
 import Predicate.Refined2
 import Predicate.Examples.Refined2
 import Predicate.Examples.Common
@@ -33,32 +30,33 @@ import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 
 import Data.Ratio
 import Data.Typeable
---import Control.Lens
 import Data.Time
 import GHC.Generics (Generic)
 import Data.Aeson
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree
---import GHC.TypeLits (Nat)
+import Data.Tree.Lens
+import Data.Maybe
+import Control.Lens
 
-suite :: IO ()
-suite = defaultMain $ testGroup "TestRefined2" (namedTests <> orderTests unnamedTests) --  <> allProps)
+suite :: TestTree
+suite = testGroup "TestRefined2" (namedTests <> orderTests unnamedTests) --  <> allProps)
 
 namedTests :: [TestTree]
 namedTests =
-  [ testCase "ip9" $ (@?=) ($$(refined2TH "121.0.12.13") :: MakeR2 Ip9) (unsafeRefined2 [121,0,12,13] "121.000.012.013")
-  , testCase "luhn check" $ (@?=) ($$(refined2TH "12345678903") :: MakeR2 (Ccn 11)) (unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
+  [ testCase "ip9" $ (@?=) ($$(refined2TH "121.0.12.13") :: MakeR2 Ip9) (unsafeRefined2 [121,0,12,13] "121.0.12.13")
+  , testCase "luhn check" $ (@?=) ($$(refined2TH "12345678903") :: MakeR2 (Ccn 11)) (unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "12345678903")
   , testCase "datetime utctime" $ (@?=) ($$(refined2TH "2019-01-04 23:00:59") :: MakeR2 (DateTime1 UTCTime)) (unsafeRefined2 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
   , testCase "datetime localtime" $ (@?=) ($$(refined2TH "2019-01-04 09:12:30") :: MakeR2 (DateTime1 LocalTime)) (unsafeRefined2 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
-  , testCase "hms" $ (@?=) ($$(refined2TH "12:0:59") :: MakeR2 Hms) (unsafeRefined2 [12,0,59] "12:00:59")
-  , testCase "between5and9" $ (@?=) ($$(refined2TH "7") :: Refined2 (ReadP Int Id) (Between 5 9) String) (unsafeRefined2 7 "007")
+  , testCase "hms" $ (@?=) ($$(refined2TH "12:0:59") :: MakeR2 Hms) (unsafeRefined2 [12,0,59] "12:0:59")
+  , testCase "between5and9" $ (@?=) ($$(refined2TH "7") :: Refined2 (ReadP Int Id) (Between 5 9) String) (unsafeRefined2 7 "7")
   , testCase "ssn" $ (@?=) ($$(refined2TH "123-45-6789") :: MakeR2 Ssn) (unsafeRefined2 [123,45,6789] "123-45-6789")
   , testCase "base16" $ (@?=) ($$(refined2TH "12f") :: MakeR2 (BaseN 16)) (unsafeRefined2 303 "12f")
-  , testCase "daten1" $ (@?=) ($$(refined2TH "June 25 1900") :: MakeR2 DateN) (unsafeRefined2 (read "1900-06-25") "1900-06-25")
-  , testCase "daten2" $ (@?=) ($$(refined2TH "12/02/99") :: MakeR2 DateN) (unsafeRefined2 (read "1999-12-02") "1999-12-02")
+  , testCase "daten1" $ (@?=) ($$(refined2TH "June 25 1900") :: MakeR2 DateN) (unsafeRefined2 (read "1900-06-25") "June 25 1900")
+  , testCase "daten2" $ (@?=) ($$(refined2TH "12/02/99") :: MakeR2 DateN) (unsafeRefined2 (read "1999-12-02") "12/02/99")
   , testCase "daten3" $ (@?=) ($$(refined2TH "2011-12-02") :: MakeR2 DateN) (unsafeRefined2 (read "2011-12-02") "2011-12-02")
-  , testCase "ccn123" $ (@?=) ($$(refined2TH "123455") :: MakeR2 (Ccn 6)) (unsafeRefined2 [1,2,3,4,5,5] "1-23-455")
+  , testCase "ccn123" $ (@?=) ($$(refined2TH "123455") :: MakeR2 (Ccn 6)) (unsafeRefined2 [1,2,3,4,5,5] "123455")
   ]
 
 unnamedTests :: [IO ()]
@@ -67,9 +65,9 @@ unnamedTests = [
   , (@?=) [] (reads @(Refined2 (ReadBase Int 16 Id) (Between 0 255) String) "Refined2 {r2In = 256, r2Out = \"100\"}")
   , (@?=) [(unsafeRefined2 (-1234) "-4d2", "")] (reads @(Refined2 (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}")
 
-  , (@?=) (unsafeRefined2 [1,2,3,4] "001.002.003.004") ($$(refined2TH "1.2.3.4") :: Ip4R)
+  , (@?=) (unsafeRefined2 [1,2,3,4] "1.2.3.4") ($$(refined2TH "1.2.3.4") :: Ip4R)
 
-  , expectJ (Right (G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "001.002.003.004"))) (toFrom $ G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))
+  , expectJ (Right (G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))) (toFrom $ G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))
   , expectJ (Left ["Error in $.g4Ip", "False Boolean Check"]) (toFrom $ G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.400"))
   , expectJ (Left ["Error in $.g4Ip", "ReadP Int (3x)"]) (toFrom $ G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3x.4"))
   , expectJ (Left ["Error in $.g4Age", "False Boolean Check"]) (toFrom $ G4 (unsafeRefined2 (-2) "-2") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))
@@ -87,33 +85,33 @@ unnamedTests = [
                           @((Len == 4) && All (Between 0 255) Id)
                           ol "1.21.x31.4"
 
-  , expect2 (Right $ unsafeRefined2 [1,21,31,4] "001.021.031.004")
+  , expect2 (Right $ unsafeRefined2 [1,21,31,4] "1.21.31.4")
                   $ eval2 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
                           @((Len == 4) && All (Between 0 255) Id)
                           ol "1.21.31.4"
 
-  , expect2 (Left $ XTFalse (-6.3))
+  , expect2 (Left $ XTFalse (-6.5) "(-13) % 2 > (-7) % 3")
                   $ eval2 @(ReadP Double Id)
                           @(ToRational Id > 7 -% 3)
-                          ol "-6.3"
+                          ol "-6.5"
 
-  , expect2 (Right $ unsafeRefined2 4.123 "")
+  , expect2 (Right $ unsafeRefined2 4.123 "4.123")
                   $ eval2 @(ReadP Double Id) @(ToRational Id > 7 -% 3)
                   ol "4.123"
 
   , expect2 (Right $ unsafeRefined2 4.123 (4123 % 1000))
                   $ eval2 @Id @(Gt (7 -% 3)) ol 4.123
 
-  , expect2 (Right $ unsafeRefined2 [1,2,3,4] "")
+  , expect2 (Right $ unsafeRefined2 [1,2,3,4] "1.2.3.4")
                   $ eval2 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255) Id && (Len == 4))                   ol "1.2.3.4"
 
-  , expect2 (Left $ XTF [291,1048319,4387,17,1] "out of bounds")
+  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
                   $ eval2 @Ip6ip @Ip6op ol "123:Ffeff:1123:11:1"
 
-  , expect2 (Right $ unsafeRefined2 [12,2,0,255] "abc")
+  , expect2 (Right $ unsafeRefined2 [12,2,0,255] "12.2.0.255")
                   $ eval2 @Ip4ip @Ip4op ol "12.2.0.255"
 
-  , expect2 (Right $ unsafeRefined2 [123,45,6789] "def")
+  , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789")
                   $ eval2
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
                   @(Guard "expected 3" (Len == 3)
@@ -124,49 +122,52 @@ unnamedTests = [
                    )
                    ol "123-45-6789"
 
-  , expect2 (Right $ unsafeRefined2 [123,45,6789] "xyz")
+  , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789")
                   $ eval2
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
                   ol "123-45-6789"
 
-  , expect2 (Left $ XTF [0,0,0,291,1048319,4387,17,1] "out of bounds")
+  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
                   $ eval2 @Ip6ip @Ip6op
                   ol "123:Ffeff:1123:11:1"
 
-  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1])
+  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
                   $ eval2 @Ip6ip @Ip6op
                   ol "123:Ffeff:1123:11:1"
 
-  , expect2 (Right $ unsafeRefined2 [0,0,0,291,65535,4387,17,1] "xyz")
+  , expect2 (Right $ unsafeRefined2 [0,0,0,291,65535,4387,17,1] "123:Ffff:1123:11:1")
                   $ eval2 @Ip6ip @Ip6op
                   ol "123:Ffff:1123:11:1"
 
-  , expect2 (Right $ unsafeRefined2 [0,0,291,0,65535,0,0,17] "xyz")
+  , expect2 (Right $ unsafeRefined2 [0,0,291,0,65535,0,0,17] "123::Ffff:::11")
                   $ eval2 @Ip6ip @Ip6op
                   ol "123::Ffff:::11"
 
-  , expect2 (Right $ unsafeRefined2 [0,0,291,0,65535,0,0,17] "xyz")
+  , expect2 (Right $ unsafeRefined2 [0,0,291,0,65535,0,0,17] "123::Ffff:::11")
                   $ eval2 @Ip6ip @Ip6op
                   ol "123::Ffff:::11"
 
-  , expect2 (Right $ unsafeRefined2 [31,11,1999] "xyz")
+  , expect2 (Right $ unsafeRefined2 [31,11,1999] "31-11-1999")
                   $ eval2 @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
                            @(Ddmmyyyyval >> 'True)
                            ol "31-11-1999"
-  , expect2 (Right $ unsafeRefined2 [123,45,6789] "xyz") $ eval2
+  , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789") $ eval2
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
                   ol "123-45-6789"
 
-  , expect2 (Right $ unsafeRefined2 [1,2,3,4] "001.002.003.004") $ eval2P ip4 ol "1.2.3.4"
-  , expect2 (Left $ XF "invalid base 10") $ eval2P ip4 ol "1.2.3x.4"
-  , expect2 (Left $ XTF [1,2,3,4,5] "expected 4 numbers") $ eval2P ip4 ol "1.2.3.4.5"
-  , expect2 (Left $ XTF [1,2,300,4] "each number must be between 0 and 255") $ eval2P ip4 ol "1.2.300.4"
-  , expect2 (Left $ XTFalse [1,2,300,4]) $ eval2P ip4' ol "1.2.300.4"
-  , expect2 (Right $ unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval2P cc11 ol "12345678903"
-  , expect2 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1]) $ eval2P cc11 ol "12345678901"
+  , expect2 (Right $ unsafeRefined2 [1,2,3,4] "1.2.3.4") $ eval2P ip4Alt ol "1.2.3.4"
+  , expect2 (Left $ XF "ReadP Int (3x)") $ eval2P ip4Alt ol "1.2.3x.4"
+  , expect2 (Left $ XTFalse [1,2,3,4,5] "Bools(4): predicates(4) /= data(5)") $ eval2P ip4Alt ol "1.2.3.4.5"
+  , expect2 (Left $ XTFalse [1,2,300,4] "Bools(2) [guard(2) octet out of range 0-255 found 300] (300 <= 255)") $ eval2P ip4 ol "1.2.300.4"
+  , expect2 (Left $ XTF [1,2,300,4] "each number must be between 0 and 255") $ eval2P ip4' ol "1.2.300.4"
+  , expect2 (Right $ unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "12345678903") $ eval2P cc11 ol "12345678903"
+  , expect2 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1] "") $ eval2P cc11 oz "12345678901"
   ]
+
+ip4Alt :: Proxy '(Ip4ip', Ip4op, String)
+ip4Alt = Proxy
 
 type HexLtR3 = Refined2 (ReadBase Int 16 Id) (Id < 500) String
 type IntLtR3 = Refined2 (ReadP Int Id) (Id < 10) String
@@ -304,7 +305,7 @@ toRResults2 :: RResults2 a -> Results2 a
 toRResults2 = \case
    RF e _ -> XF e
    RTF a _ e _ -> XTF a e
-   RTFalse a _ _ -> XTFalse a
+   RTFalse a _ t2 -> XTFalse a (fromMaybe "" (t2 ^? root . pStrings . ix 0))
    RTTrue a _ _ -> XTTrue a
 
 expect2 :: (HasCallStack, Show i, Show r, Eq i, Eq r)
@@ -312,6 +313,6 @@ expect2 :: (HasCallStack, Show i, Show r, Eq i, Eq r)
   -> (RResults2 i, Maybe r)
   -> IO ()
 expect2 lhs (rhs,mr) = do
-  (@?=) lhs $ maybe (Left $ toRResults2 rhs) Right mr
+  (@?=) (maybe (Left $ toRResults2 rhs) Right mr) lhs
 
 

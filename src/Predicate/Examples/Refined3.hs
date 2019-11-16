@@ -31,6 +31,7 @@ module Predicate.Examples.Refined3 (
   -- *** time checkers
   , hms
   , Hms
+  , HmsR
 
   -- ** credit cards
   , ccn
@@ -50,9 +51,16 @@ module Predicate.Examples.Refined3 (
   , ip4
   , Ip4
   , Ip4R
+
   , ip4'
   , Ip4'
+  , Ip4''
   , Ip4R'
+
+  -- ** ipv6
+  , ip6
+  , Ip6
+  , Ip6R
 
  -- ** base n
   , basen
@@ -183,6 +191,8 @@ type SsnR = MakeR3 Ssn
 hms :: Proxy Hms
 hms = mkProxy3'
 
+type HmsR = MakeR3 Hms
+
 type Hms = '(Hmsip, Hmsop, Hmsfmt, String)
 
 -- | read in an ipv4 address and validate it
@@ -212,6 +222,15 @@ type Ip4' = '(Ip4ip, Ip4op', Ip4fmt, String) -- boolean predicates
 ip4' :: Proxy Ip4'
 ip4' = mkProxy3'
 
+type Ip4'' = '(Ip4ip, Ip4op'' >> 'True, Ip4fmt, String) -- guard predicates
+
+
+
+type Ip6R = MakeR3 Ip6
+type Ip6 = '(Ip6ip, Ip6op, Ip6fmt, String) -- guards
+
+ip6 :: Proxy Ip6
+ip6 = Proxy
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
 type DateN = '(ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)

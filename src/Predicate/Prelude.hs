@@ -1039,6 +1039,10 @@ instance (GetROpts rs
 -- Present ["12","13","1"]
 -- PresentT ["12","13","1"]
 --
+-- >>> pl @(Resplit' '[ 'Caseless ] "aBc" Id) "123AbC456abc"
+-- Present ["123","456",""] (Resplit (aBc) ["123","456",""] | 123AbC456abc)
+-- PresentT ["123","456",""]
+--
 data Resplit' (rs :: [ROpt]) p q
 
 instance (GetROpts rs
@@ -1141,6 +1145,12 @@ instance P (ReplaceOneT' rs p q r) x => P (ReplaceOne' rs p q r) x where
   type PP (ReplaceOne' rs p q r) x = PP (ReplaceOneT' rs p q r) x
   eval _ = eval (Proxy @(ReplaceOneT' rs p q r))
 
+-- | replace first occurrence of string \'p\' with '\q'\ in \'r\'
+--
+-- >>> pl @(ReplaceOneString "abc" "def" Id) "123abc456abc"
+-- Present "123def456abc" (ReplaceOne' [] (abc) 123abc456abc | 123def456abc)
+-- PresentT "123def456abc"
+--
 data ReplaceOne p q r
 type ReplaceOneT p q r = ReplaceOne' '[] p q r
 
@@ -1148,6 +1158,20 @@ instance P (ReplaceOneT p q r) x => P (ReplaceOne p q r) x where
   type PP (ReplaceOne p q r) x = PP (ReplaceOneT p q r) x
   eval _ = eval (Proxy @(ReplaceOneT p q r))
 
+-- | replace all occurrences of string \'p\' with '\q'\ in \'r\'
+--
+-- >>> pl @(ReplaceAllString "abc" "def" Id) "123abc456abc"
+-- Present "123def456def" (ReplaceAll' [] (abc) 123abc456abc | 123def456def)
+-- PresentT "123def456def"
+--
+-- >>> pl @(ReplaceAllString' '[] "abc" "def" Id) "123AbC456abc"
+-- Present "123AbC456def" (ReplaceAll' [] (abc) 123AbC456abc | 123AbC456def)
+-- PresentT "123AbC456def"
+--
+-- >>> pl @(ReplaceAllString' '[ 'Caseless ] "abc" "def" Id) "123AbC456abc"
+-- Present "123def456def" (ReplaceAll (abc) 123AbC456abc | 123def456def)
+-- PresentT "123def456def"
+--
 data ReplaceAllString' (rs :: [ROpt]) p q r
 type ReplaceAllStringT' (rs :: [ROpt]) p q r = ReplaceAll' rs p (ReplaceFn q) r
 
@@ -1162,7 +1186,7 @@ instance P (ReplaceAllStringT p q r) x => P (ReplaceAllString p q r) x where
   type PP (ReplaceAllString p q r) x = PP (ReplaceAllStringT p q r) x
   eval _ = eval (Proxy @(ReplaceAllStringT p q r))
 
-data ReplaceOneString' rs p q r
+data ReplaceOneString' (rs :: [ROpt]) p q r
 type ReplaceOneStringT' (rs :: [ROpt]) p q r = ReplaceOne' rs p (ReplaceFn q) r
 
 instance P (ReplaceOneStringT' rs p q r) x => P (ReplaceOneString' rs p q r) x where
@@ -6177,8 +6201,8 @@ instance P (RemT p q) x => P (Rem p q) x where
 -- FailT "arg 2 failed with value 5"
 --
 -- >>> pz @(GuardsQuick (PrintT "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
--- Error Guards: predicates(3) /= data elements(4)
--- FailT "Guards: predicates(3) /= data elements(4)"
+-- Error Guards: predicates(3) /= data(4)
+-- FailT "Guards: predicates(3) /= data(4)"
 --
 data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 
@@ -6190,7 +6214,7 @@ instance (GetLen ps, P (GuardsImpl (LenT ps) ps) [a]) => P (Guards ps) [a] where
     let msgbase0 = "Guards"
         n = getLen @ps
     if n /= length as then
-       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data elements(" <> show (length as) <> ")"
+       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
        in pure $ mkNode opts (FailT xx) [xx] []
     else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
 
@@ -6289,7 +6313,7 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 -- FalseT
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,60,14,20]
--- False (Bools(3): predicates(3) /= data elements(4))
+-- False (Bools(3): predicates(3) /= data(4))
 -- FalseT
 --
 data Bools (ps :: [(k,k1)])
@@ -6306,7 +6330,7 @@ instance (GetLen ps
       Left e -> pure e
       Right () -> do
         if n /= length as then
-           let msg1 = msg0 <> ": predicates(" <> show n <> ") /= data elements(" <> show (length as) <> ")"
+           let msg1 = msg0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
            in pure $ mkNodeB opts False [msg1] [] -- was FailT but now just FalseT
         else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts as
 
@@ -6407,7 +6431,7 @@ instance (GetLen ps
     let msgbase0 = "Guards"
         n = getLen @ps
     if n /= length as then
-       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data elements(" <> show (length as) <> ")"
+       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
        in pure $ mkNode opts (FailT xx) [xx] []
     else eval (Proxy @(GuardsImplX (LenT ps) ps)) opts as
 
@@ -7805,8 +7829,8 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 -- PresentT [10,21,120]
 --
 -- >>> pz @(Para '[Id,Id + 1,Id * 4]) [10,20,30,40]
--- Error Para: predicates(3) /= data elements(4)
--- FailT "Para: predicates(3) /= data elements(4)"
+-- Error Para: predicates(3) /= data(4)
+-- FailT "Para: predicates(3) /= data(4)"
 --
 data ParaImpl (n :: Nat) (os :: [k])
 
@@ -7819,7 +7843,7 @@ instance (GetLen ps, P (ParaImpl (LenT ps) ps) [a]) => P (Para ps) [a] where
     let msgbase0 = "Para"
         n = getLen @ps
     if n /= length as then
-       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data elements(" <> show (length as) <> ")"
+       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
        in pure $ mkNode opts (FailT xx) [xx] []
     else eval (Proxy @(ParaImpl (LenT ps) ps)) opts as
 
@@ -7886,8 +7910,8 @@ instance (KnownNat n
 -- PresentT [2,3,4,5]
 --
 -- >>> pz @(ParaN 4 (Succ Id)) "azwxm"
--- Error Para: predicates(4) /= data elements(5)
--- FailT "Para: predicates(4) /= data elements(5)"
+-- Error Para: predicates(4) /= data(5)
+-- FailT "Para: predicates(4) /= data(5)"
 --
 -- >>> pz @(ParaN 4 (Succ Id)) "azwx"
 -- Present "b{xy"

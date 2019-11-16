@@ -609,7 +609,7 @@ rapply3P p opts f ma mb = do
 data Results3 a b =
        XF String        -- Left e
      | XTF a String     -- Right a + Left e
-     | XTFalse a        -- Right a + Right False
+     | XTFalse a String -- Right a + Right False
      | XTTrueF a String -- Right a + Right True + Left e
      | XTTrueT a b      -- Right a + Right True + Right b
      deriving (Show,Eq)

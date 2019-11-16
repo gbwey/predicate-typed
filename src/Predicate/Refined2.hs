@@ -438,7 +438,7 @@ newRefined2TImpl f opts i = do
 data Results2 a =
        XF String        -- Left e
      | XTF a String     -- Right a + Left e
-     | XTFalse a        -- Right a + Right False
+     | XTFalse a String -- Right a + Right False
      | XTTrue a
      deriving (Show,Eq)
 
