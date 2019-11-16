@@ -119,7 +119,7 @@ unnamedTests = [
                   $ eval3 @Ip6ip @Ip6op @"" ol "123:Ffeff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [12,2,0,255] "abc")
-                  $ eval3 @Ip4ip @Ip4op @"abc" ol "12.2.0.255"
+                  $ eval3 @Ip4ip @Ip4op' @"abc" ol "12.2.0.255"
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
                   $ eval3
@@ -166,30 +166,26 @@ unnamedTests = [
                   @"xyz"
                   ol "123-45-6789"
 
-  , expect3 (Right $ unsafeRefined3 [1,2,3,4] "001.002.003.004") $ eval3P ip4Alt ol "1.2.3.4"
-  , expect3 (Left $ XF "ReadP Int (3x)") $ eval3P ip4Alt ol "1.2.3x.4"
-  , expect3 (Left $ XTFalse [1,2,3,4,5] "Bools(4): predicates(4) /= data(5)") $ eval3P ip4Alt ol "1.2.3.4.5"
-  , expect3 (Left $ XTFalse [1,2,300,4] "Bools(2) [guard(2) octet out of range 0-255 found 300] (300 <= 255)") $ eval3P ip4Alt ol "1.2.300.4"
-  , expect3 (Left $ XTF [1,2,300,4] "each number must be between 0 and 255") $ eval3P ip4' ol "1.2.300.4"
+  , expect3 (Right $ unsafeRefined3 [1,2,3,4] "001.002.003.004") $ eval3P ip4 ol "1.2.3.4"
+  , expect3 (Left $ XF "ReadP Int (3x)") $ eval3P ip4 ol "1.2.3x.4"
+  , expect3 (Left $ XTF [1,2,3,4,5] "Guards: invalid length:expected 4 but found 5") $ eval3P ip4 ol "1.2.3.4.5"
+  , expect3 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ eval3P ip4 ol "1.2.300.4"
+  , expect3 (Left (XTFalse [1,2,300,4] "Bools(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ eval3P ip4' ol "1.2.300.4"
   , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval3P cc11 ol "12345678903"
   , expect3 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1] "") $ eval3P cc11 oz "12345678901"
 --  , expect3 (Right $ unsafeRefined3 True ["T","r","ue","Tr","ue"]) $ eval3P (Proxy @'(Id, Id, Do '[ShowP Id, Dup, Sapa, SplitAts '[1,1,2,2]], Bool)) True
   , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ eval3P hms2E ol "12:13:14"
   , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "seconds invalid: found 99")) $ eval3P hms2E ol "12:13:99"
 
-  , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ eval3 @Ip4ip @Ip4op @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
-  , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ eval3 @Ip4ip @Ip4op @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) ol "1.2.3.4"
-  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (Proxy @'(Ip4ip, Ip4op, ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id), _)) ol "1.2.3.4"
-  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (mkProxy3' @_ @Ip4ip @Ip4op @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id))) ol "1.2.3.4"
+  , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ eval3 @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
+  , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ eval3 @Ip4ip @Ip4op' @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) ol "1.2.3.4"
+  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (Proxy @'(Ip4ip, Ip4op', ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id), _)) ol "1.2.3.4"
+  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (mkProxy3' @_ @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id))) ol "1.2.3.4"
 
   -- keep the original value
-  , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ eval3 @(Id &&& Ip4ip) @(Snd Id >> Ip4op) @(Snd Id >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
+  , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ eval3 @(Id &&& Ip4ip) @(Snd Id >> Ip4op') @(Snd Id >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
 
   ]
-
-
-ip4Alt :: Proxy '(Ip4ip', Ip4op, Ip4fmt, String)
-ip4Alt = Proxy
 
 allProps :: [TestTree]
 allProps =
@@ -212,11 +208,11 @@ yy2 = newRefined3TP @Identity (Proxy @Tst1) o2 "3"
 yy3 = rapply3 o2 (*) yy1 yy2 -- fails
 yy4 = rapply3 o2 (+) yy1 yy2 -- pure ()
 
-hms2E :: Proxy '(Hmsip2, Hmsop2, Hmsfmt2, String)
+hms2E :: Proxy '(Hmsip2, Hmsop2 >> 'True, Hmsfmt2, String)
 hms2E = mkProxy3
 
 type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-type Hmsop2 = Fst Id >> Hmsop' >> 'True
+type Hmsop2 = Fst Id >> Hmsop
 type Hmsfmt2 = Snd Id >> FormatTimeP "%T" Id
 
 -- better to use Guard for op boolean check cos we get better errormessages

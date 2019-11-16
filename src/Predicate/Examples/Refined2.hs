@@ -49,7 +49,6 @@ module Predicate.Examples.Refined2 (
 
   , ip4'
   , Ip4'
-  , Ip4''
   , Ip4R'
 
   -- ** ipv6
@@ -152,37 +151,40 @@ type Ssn = '(Ssnip, Ssnop, String)
 
 -- | read in a time and validate it
 --
--- >>> prtEval2 @Hmsip @Hmsop ol "23:13:59"
+-- >>> prtEval2 @Hmsip @Hmsop' ol "23:13:59"
 -- Right (Refined2 {r2In = [23,13,59], r2Out = "23:13:59"})
 --
--- >>> prtEval2 @Hmsip @Hmsop ol "23:13:60"
+-- >>> prtEval2 @Hmsip @Hmsop' ol "23:13:60"
 -- Left Step 2. False Boolean Check(op) | {Bools(2) [seconds] (60 <= 59)}
 --
--- >>> prtEval2 @Hmsip @Hmsop ol "26:13:59"
+-- >>> prtEval2 @Hmsip @Hmsop' ol "26:13:59"
 -- Left Step 2. False Boolean Check(op) | {Bools(0) [hours] (26 <= 23)}
 --
 hms :: Proxy Hms
 hms = mkProxy2'
 
 type HmsR = MakeR2 Hms
-type Hms = '(Hmsip, Hmsop, String)
+type Hms = '(Hmsip, Hmsop >> 'True, String)
 
 -- | read in an ipv4 address and validate it
 --
--- >>> prtEval2 @Ip4ip @Ip4op oz "001.223.14.1"
+-- >>> prtEval2 @Ip4ip @Ip4op' oz "001.223.14.1"
 -- Right (Refined2 {r2In = [1,223,14,1], r2Out = "001.223.14.1"})
 --
--- >>> prtEval2 @Ip4ip @Ip4op ol "001.223.14.999"
--- Left Step 2. False Boolean Check(op) | {Bools(3) [guard(3) octet out of range 0-255 found 999] (999 <= 255)}
+-- >>> prtEval2 @Ip4ip @Ip4op' ol "001.223.14.999"
+-- Left Step 2. False Boolean Check(op) | {Bools(3) [octet 3 out of range 0-255 found 999] (999 <= 255)}
 --
--- >>> prtEval2 @Ip4ip @Ip4op oz "001.223.14.999.1"
--- Left Step 1. Initial Conversion(ip) Failed | Regex no results
+-- >>> prtEval2P ip4 ol "001.223.14.999"
+-- Left Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 999
 --
--- >>> prtEval2 @Ip4ip @Ip4op ol "001.257.14.1"
--- Left Step 2. False Boolean Check(op) | {Bools(1) [guard(1) octet out of range 0-255 found 257] (257 <= 255)}
+-- >>> prtEval2P ip4 ol "001.223.14.999.1"
+-- Left Step 2. Failed Boolean Check(op) | Guards: invalid length:expected 4 but found 5
+--
+-- >>> prtEval2P ip4 ol "001.257.14.1"
+-- Left Step 2. Failed Boolean Check(op) | octet 1 out of range 0-255 found 257
 --
 type Ip4R = MakeR2 Ip4
-type Ip4 = '(Ip4ip, Ip4op, String) -- guards
+type Ip4 = '(Ip4ip, Ip4op >> 'True, String) -- guards
 
 ip4 :: Proxy Ip4
 ip4 = Proxy
@@ -192,10 +194,6 @@ type Ip4' = '(Ip4ip, Ip4op', String) -- boolean predicates
 
 ip4' :: Proxy Ip4'
 ip4' = Proxy
-
-type Ip4'' = '(Ip4ip, Ip4op'' >> 'True, String) -- guard predicates
-
-
 
 type Ip6R = MakeR2 Ip6
 type Ip6 = '(Ip6ip, Ip6op, String) -- guards

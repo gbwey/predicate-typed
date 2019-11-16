@@ -109,7 +109,7 @@ unnamedTests = [
                   $ eval2 @Ip6ip @Ip6op ol "123:Ffeff:1123:11:1"
 
   , expect2 (Right $ unsafeRefined2 [12,2,0,255] "12.2.0.255")
-                  $ eval2 @Ip4ip @Ip4op ol "12.2.0.255"
+                  $ eval2 @Ip4ip @Ip4op' ol "12.2.0.255"
 
   , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789")
                   $ eval2
@@ -157,17 +157,15 @@ unnamedTests = [
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
                   ol "123-45-6789"
 
-  , expect2 (Right $ unsafeRefined2 [1,2,3,4] "1.2.3.4") $ eval2P ip4Alt ol "1.2.3.4"
-  , expect2 (Left $ XF "ReadP Int (3x)") $ eval2P ip4Alt ol "1.2.3x.4"
-  , expect2 (Left $ XTFalse [1,2,3,4,5] "Bools(4): predicates(4) /= data(5)") $ eval2P ip4Alt ol "1.2.3.4.5"
-  , expect2 (Left $ XTFalse [1,2,300,4] "Bools(2) [guard(2) octet out of range 0-255 found 300] (300 <= 255)") $ eval2P ip4 ol "1.2.300.4"
-  , expect2 (Left $ XTF [1,2,300,4] "each number must be between 0 and 255") $ eval2P ip4' ol "1.2.300.4"
+  , expect2 (Right $ unsafeRefined2 [1,2,3,4] "1.2.3.4") $ eval2P ip4 ol "1.2.3.4"
+  , expect2 (Left $ XF "ReadP Int (3x)") $ eval2P ip4 ol "1.2.3x.4"
+  , expect2 (Left $ XTFalse [1,2,3,4,5] "Bools: invalid length:expected 4 but found 5") $ eval2P ip4' ol "1.2.3.4.5"
+  , expect2 (Left $ XTF [1,2,3,4,5] "Guards: invalid length:expected 4 but found 5") $ eval2P ip4 ol "1.2.3.4.5"
+  , expect2 (Left $ XTFalse [1,2,300,4] "Bools(2) [octet 2 out of range 0-255 found 300] (300 <= 255)") $ eval2P ip4' ol "1.2.300.4"
+  , expect2 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ eval2P ip4 ol "1.2.300.4"
   , expect2 (Right $ unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "12345678903") $ eval2P cc11 ol "12345678903"
   , expect2 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1] "") $ eval2P cc11 oz "12345678901"
   ]
-
-ip4Alt :: Proxy '(Ip4ip', Ip4op, String)
-ip4Alt = Proxy
 
 type HexLtR3 = Refined2 (ReadBase Int 16 Id) (Id < 500) String
 type IntLtR3 = Refined2 (ReadP Int Id) (Id < 10) String

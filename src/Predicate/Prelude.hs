@@ -6201,8 +6201,8 @@ instance P (RemT p q) x => P (Rem p q) x where
 -- FailT "arg 2 failed with value 5"
 --
 -- >>> pz @(GuardsQuick (PrintT "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
--- Error Guards: predicates(3) /= data(4)
--- FailT "Guards: predicates(3) /= data(4)"
+-- Error Guards: invalid length:expected 3 but found 4
+-- FailT "Guards: invalid length:expected 3 but found 4"
 --
 data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 
@@ -6211,11 +6211,12 @@ data Guards (ps :: [(k,k1)])
 instance (GetLen ps, P (GuardsImpl (LenT ps) ps) [a]) => P (Guards ps) [a] where
   type PP (Guards ps) [a] = PP (GuardsImpl (LenT ps) ps) [a]
   eval _ opts as = do
-    let msgbase0 = "Guards"
+    let msg0 = "Guards"
         n = getLen @ps
     if n /= length as then
-       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
-       in pure $ mkNode opts (FailT xx) [xx] []
+       --let msg1 = msg0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
+       let msg1 = msg0 <> ": invalid length:expected " ++ show n ++ " but found " ++ show (length as)
+       in pure $ mkNode opts (FailT msg1) [msg1] []
     else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
 
 instance (KnownNat n
@@ -6257,7 +6258,7 @@ instance (PP prt (Int, a) ~ String
                       Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
                  Right True -> do
                    if pos == 0 then -- we are at the bottom of the tree
-                      pure $ mkNode opts (PresentT [a]) [msgbase2 <> "("++show n++") done!"] [hh pp]
+                      pure $ mkNode opts (PresentT [a]) [msgbase2] [hh pp]
                    else do
                      ss <- eval (Proxy @(GuardsImpl n ps)) opts as
                      pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
@@ -6289,15 +6290,15 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 -- FalseT
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,13,14]
--- True (Bools(3) done!)
+-- True (Bools)
 -- TrueT
 --
 -- >>> pl @(BoolsQuick "abc" '[Between 0 23, Between 0 59, Between 0 59]) [12,13,14]
--- True (Bools(3) done!)
+-- True (Bools)
 -- TrueT
 --
 -- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,14]
--- True (Bools(3) done!)
+-- True (Bools)
 -- TrueT
 --
 -- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,99]
@@ -6305,7 +6306,7 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 -- FalseT
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,13,14]
--- True (Bools(3) done!)
+-- True (Bools)
 -- TrueT
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,60,14]
@@ -6313,7 +6314,7 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 -- FalseT
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,60,14,20]
--- False (Bools(3): predicates(3) /= data(4))
+-- False (Bools: invalid length:expected 3 but found 4)
 -- FalseT
 --
 data Bools (ps :: [(k,k1)])
@@ -6324,14 +6325,16 @@ instance (GetLen ps
         ) => P (Bools ps) [a] where
   type PP (Bools ps) [a] = Bool
   eval _ opts as = do
-    let msg0 = "Bools("++show n++")"
+    let msg0 = "Bools"
+        msg1 = msg0 <> "("++show n++")"
         n = getLen @ps
-    case chkSize opts msg0 as [] of
+    case chkSize opts msg1 as [] of
       Left e -> pure e
       Right () -> do
         if n /= length as then
-           let msg1 = msg0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
-           in pure $ mkNodeB opts False [msg1] [] -- was FailT but now just FalseT
+           let msg2 = msg0 <> ": invalid length:expected " ++ show n ++ " but found " ++ show (length as)
+               -- msg2 = predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
+           in pure $ mkNodeB opts False [msg2] [] -- was FailT but now just FalseT
         else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts as
 
 data BoolsImpl (n :: Nat) (os :: [(k,k1)])
@@ -6341,7 +6344,7 @@ instance (KnownNat n
         ) => P (BoolsImpl n ('[] :: [(k,k1)])) [a] where
   type PP (BoolsImpl n ('[] :: [(k,k1)])) [a] = Bool
   eval _ opts as =
-    let msg0 = "Bools" <> "(" <> show n <> ")"
+    let msg0 = "Bools(" <> show n <> ")"
         n :: Int = nat @n
     in if not (null as) then errorInProgram $ "BoolsImpl base case has extra data " ++ show as
        else pure $ mkNodeB opts True [msg0 <> " empty"] []
@@ -6359,7 +6362,7 @@ instance (PP prt (Int, a) ~ String
   type PP (BoolsImpl n ('(prt,p) ': ps)) [a] = Bool
   eval _ opts as' = do
      let cpos = n-pos-1
-         msgbase1 = "Bools" <> "(" <> showIndex cpos <> ")"
+         msgbase1 = "Bools(" <> showIndex cpos <> ")"
          msgbase2 = "Bools"
          n :: Int = nat @n
          pos = getLen @ps
@@ -6375,7 +6378,7 @@ instance (PP prt (Int, a) ~ String
                       Right msgx -> mkNodeB opts False [msgbase1 <> " [" <> msgx <> "] " <> topMessage pp] (hh pp : if isVerbose opts then [hh qq] else [])
                  Right True -> do
                    if pos == 0 then -- we are at the bottom of the tree
-                      pure $ mkNodeB opts True [msgbase2 <> "("++show n++") done!"] [hh pp]
+                      pure $ mkNodeB opts True [msgbase2] [hh pp]
                    else do
                      ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
                      pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
@@ -6397,7 +6400,7 @@ instance P (BoolsQuickT prt ps) x => P (BoolsQuick prt ps) x where
 -- FalseT
 --
 -- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
--- True (Bools(4) done!)
+-- True (Bools)
 -- TrueT
 --
 data BoolsN prt (n :: Nat) p
@@ -6428,24 +6431,24 @@ instance (GetLen ps
         ) => P (GuardsImplXX ps) [a] where
   type PP (GuardsImplXX ps) [a] = PP (GuardsImplX (LenT ps) ps) [a]
   eval _ opts as = do
-    let msgbase0 = "Guards"
+    let msg0 = "Guards"
         n = getLen @ps
     if n /= length as then
-       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
-       in pure $ mkNode opts (FailT xx) [xx] []
+       let msg1 = msg0 <> ": invalid length:expected " ++ show n ++ " but found " ++ show (length as)
+--       let msg1 = msg0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
+       in pure $ mkNode opts (FailT msg1) [msg1] []
     else eval (Proxy @(GuardsImplX (LenT ps) ps)) opts as
 
 data GuardsImplX (n :: Nat) (os :: [(k,k1)])
 
-instance (KnownNat n
-        , Show a
-        ) => P (GuardsImplX n ('[] :: [(k,k1)])) [a] where
+instance Show a
+        => P (GuardsImplX n ('[] :: [(k,k1)])) [a] where
   type PP (GuardsImplX n ('[] :: [(k,k1)])) [a] = [a]
   eval _ opts as =
-    let msg0 = "Guards" <> "(" <> show n <> ")"
-        n :: Int = nat @n
+    let msg0 = "Guards"
+        -- n :: Int = nat @n
     in if not (null as) then errorInProgram $ "GuardsImplX base case has extra data " ++ show as
-       else pure $ mkNode opts (PresentT as) [msg0 <> " done!"] []
+       else pure $ mkNode opts (PresentT as) [msg0] []
 
 instance (PP prt a ~ String
         , P prt a
@@ -7829,8 +7832,8 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 -- PresentT [10,21,120]
 --
 -- >>> pz @(Para '[Id,Id + 1,Id * 4]) [10,20,30,40]
--- Error Para: predicates(3) /= data(4)
--- FailT "Para: predicates(3) /= data(4)"
+-- Error Para: invalid length:expected 3 but found 4
+-- FailT "Para: invalid length:expected 3 but found 4"
 --
 data ParaImpl (n :: Nat) (os :: [k])
 
@@ -7840,11 +7843,12 @@ data Para (ps :: [k])
 instance (GetLen ps, P (ParaImpl (LenT ps) ps) [a]) => P (Para ps) [a] where
   type PP (Para ps) [a] = PP (ParaImpl (LenT ps) ps) [a]
   eval _ opts as = do
-    let msgbase0 = "Para"
+    let msg0 = "Para"
         n = getLen @ps
     if n /= length as then
-       let xx = msgbase0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
-       in pure $ mkNode opts (FailT xx) [xx] []
+--       let msg1 = msg0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
+       let msg1 = msg0 <> ": invalid length:expected " ++ show n ++ " but found " ++ show (length as)
+       in pure $ mkNode opts (FailT msg1) [msg1] []
     else eval (Proxy @(ParaImpl (LenT ps) ps)) opts as
 
 -- only allow non empty lists
@@ -7910,8 +7914,8 @@ instance (KnownNat n
 -- PresentT [2,3,4,5]
 --
 -- >>> pz @(ParaN 4 (Succ Id)) "azwxm"
--- Error Para: predicates(4) /= data(5)
--- FailT "Para: predicates(4) /= data(5)"
+-- Error Para: invalid length:expected 4 but found 5
+-- FailT "Para: invalid length:expected 4 but found 5"
 --
 -- >>> pz @(ParaN 4 (Succ Id)) "azwx"
 -- Present "b{xy"

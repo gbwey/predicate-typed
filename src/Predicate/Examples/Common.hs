@@ -56,7 +56,6 @@ module Predicate.Examples.Common (
   , Ip4ip'
   , Ip4op
   , Ip4op'
-  , Ip4op''
   , Ip4fmt
   , OctetRE
   , Ip4RE
@@ -102,8 +101,8 @@ type Ssnfmt = PrintL 3 "%03d-%02d-%04d" Id
 
 type Hmsip = Map (ReadP Int Id) (Resplit ":" Id)
 -- type Hmsop' = BoolsQuick "" '[ Msg "hours:"   (Between 0 23), Msg "minutes:" (Between 0 59), Msg "seconds:" (Between 0 59)]
-type Hmsop = Bools '[ '("hours", Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ]
-type Hmsop' = GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]
+type Hmsop' = Bools '[ '("hours", Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ]
+type Hmsop = GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]
 
 type Hmsfmt = PrintL 3 "%02d:%02d:%02d" Id
 
@@ -111,22 +110,18 @@ type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- strict validat
 
 type Ip4RE = "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$"
 
-type Ip4ip' = Map (ReadP Int Id) (Resplit "\\." Id)
+type Ip4ip = Map (ReadP Int Id) (Resplit "\\." Id)
 
-type Ip4ip = Map (ReadP Int Id) (Rescan Ip4RE Id >> Snd (OneP Id))
+type Ip4ip' = Map (ReadP Int Id) (Rescan Ip4RE Id >> Snd (OneP Id))
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
-type Ip4op = BoolsN (PrintT "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255)
-type Ip4op'' = GuardsN (PrintT "guard(%d) octet out of range 0-255 found %d" Id) 4 (Between 0 255)
+type Ip4op' = BoolsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255)
+type Ip4op = GuardsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255)
 
 type Ip4fmt = PrintL 4 "%03d.%03d.%03d.%03d" Id
 
 type OctetRE = "(25[0-5]|2[0..4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])" -- no padded numbers allowed
 --type Ip4StrictRE = "^" `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "\\." `AppendSymbol` OctetRE `AppendSymbol` "$"
 type Ip4StrictRE = "^" `AppendSymbol` IntersperseT "\\." (RepeatT 4 OctetRE) `AppendSymbol` "$"
-
-type Ip4op' = Guard "expected 4 numbers" (Len == 4)
-         >> Guard "each number must be between 0 and 255" (All (Between 0 255) Id)
-         >> 'True
 
 type Ip6ip = Resplit ":" Id
          >> Map (If (Id == "") "0" Id) Id

@@ -347,9 +347,9 @@ allTests =
   , expectPE (PresentT [True,True,True,True,True,True,True,True,True,True]) $ pl @(Map (GuardSimple (Ge 1) >> 'True) Id) [1::Int .. 10]
   , expectPE (PresentT [4,5,6]) $ pl @(ScanN 2 Id (Succ Id)) 4
   , expectPE (PresentT [4,4,4,4,4,4]) $ pl @(ScanN 5 Id Id) 4
-  , expectPE (PresentT [1,2,3,244]) $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> GuardSimple Ip4op) "1.2.3.244"
-  , expectPE (FailT "(Bools(1) [guard(1) octet out of range 0-255 found 256] (256 <= 255))") $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> GuardSimple Ip4op) "1.256.3.244"
-  , expectPE (FailT "(Bools(4): predicates(4) /= data(5))") $ pl @(Rescan "(\\d+)\\.?" Id >> ConcatMap (Snd Id) Id >> Map (ReadBaseInt 10 Id) Id >> GuardSimple Ip4op) "1.22.244.66.77"
+  , expectPE (PresentT [1,2,3,244]) $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ip4op) "1.2.3.244"
+  , expectPE (FailT "octet 1 out of range 0-255 found 256") $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ip4op) "1.256.3.244"
+  , expectPE (FailT "Guards: invalid length:expected 4 but found 5") $ pl @(Rescan "(\\d+)\\.?" Id >> ConcatMap (Snd Id) Id >> Map (ReadBaseInt 10 Id) Id >> Ip4op) "1.22.244.66.77"
   , expectPE (PresentT (SG.Sum 123)) $ pl @(JustDef (MEmptyT _) Id) (Just (SG.Sum 123))
   , expectPE (PresentT (SG.Sum 0)) $ pl @(JustDef (MEmptyT _) Id) (Nothing @(SG.Sum _))
   , expectPE (PresentT (636 % 5)) $ pl @((ToRational 123 &&& Id) >> Fst Id + Snd Id) 4.2
@@ -394,7 +394,7 @@ allTests =
   , expectPE (PresentT [10,2,5]) $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 11, Between 1 4,Between 3 5]) [10::Int,2,5]
   , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ddmmyyyyval) "31-11-1999"
   , expectPE (PresentT [31,11,1999]) $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,1999::Int]
-  , expectPE (FailT "Guards: predicates(3) /= data(2)") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11::Int]
+  , expectPE (FailT "Guards: invalid length:expected 3 but found 2") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11::Int]
   , expectPE (FailT "guard(1) 13 is out of range") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,13,1999::Int]
   , expectPE (FailT "guard(0) 0 is out of range") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [0,44,1999::Int]
   , expectPE (PresentT (fromGregorian 1999 11 30)) $ pl @(ReadP Day Id) "1999-11-30"
@@ -404,12 +404,12 @@ allTests =
   , expectPE (FailT "ParseTimeP TimeOfDay (%H:%M%S) failed to parse") $ pl @(ParseTimeP TimeOfDay "%H:%M%S" Id) "14:04:61"
   , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:59"
   , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:60"
-  , expectPE (FailT "Guards: predicates(3) /= data(5)") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,2000,1,2::Int]
+  , expectPE (FailT "Guards: invalid length:expected 3 but found 5") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,2000,1,2::Int]
   , expectPE (PresentT [0,0,0,0,0,0,0,1,2,3]) $ pl @(PadL 10 0 Id) [1..3]
   , expectPE (PresentT (124,["1","2","2"])) $ pl @('Left Id >> (Succ Id &&& (Pred Id >> ShowP Id >> Ones Id))) (Left 123)
   , expectPE (PresentT [1,2,3,4]) $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3,4::Int]
-  , expectPE (FailT "Guards: predicates(4) /= data(5)") $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3,4,5::Int]
-  , expectPE (FailT "Guards: predicates(4) /= data(3)") $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3::Int]
+  , expectPE (FailT "Guards: invalid length:expected 4 but found 5") $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3,4,5::Int]
+  , expectPE (FailT "Guards: invalid length:expected 4 but found 3") $ pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255)) [1,2,3::Int]
   , expectPE (PresentT (readNote @UTCTime "failed to read utc" "1999-01-01 12:12:12 UTC")) $ pl @(ParseTimeP UTCTime "%F %T" Id) "1999-01-01 12:12:12"
   , expectPE (PresentT 123) $ pl @(JustDef 0 Id) (Just 123)
   , expectPE (PresentT 0) $ pl @(JustDef 0 Id) Nothing
@@ -540,11 +540,11 @@ allTests =
   , expectPE (PresentT 23) $ pl @(Fst Id + Last (Snd Id)) (10,[12,13])
   , expectPE (PresentT (-1,12)) $ pl @(DivMod (9 - Fst Id) (Last (Snd Id))) (10,[12,13])
   , expectPE (PresentT [True,False,False,True]) $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999]
-  , expectPE (FailT "Para: predicates(4) /= data(3)") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
-  , expectPE (FailT "Para: predicates(4) /= data(7)") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999,1,1,2]
+  , expectPE (FailT "Para: invalid length:expected 4 but found 3") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
+  , expectPE (FailT "Para: invalid length:expected 4 but found 7") $ pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999,1,1,2]
   , expectPE (FailT "guard(1) err 002") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999]
-  , expectPE (FailT "Guards: predicates(4) /= data(3)") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
-  , expectPE (FailT "Guards: predicates(4) /= data(7)") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999,1,1,2]
+  , expectPE (FailT "Guards: invalid length:expected 4 but found 3") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
+  , expectPE (FailT "Guards: invalid length:expected 4 but found 7") $ pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999,1,1,2]
   , expectPE TrueT $ pl @(Fst Id /= Snd Id) ("ab","xyzabw")
   , expectPE FalseT $ pl @(Fst Id == Snd Id) ("ab","xyzabw")
   , expectPE (PresentT 157) $ pl @(Fst Id * (Snd Id >> Fst Id) + (Snd Id >> Snd Id) `Div` 2) (12,(13,3))
