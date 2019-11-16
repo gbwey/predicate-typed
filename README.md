@@ -5,16 +5,16 @@
 what this library provides:
 1. a dsl for building refinement types
 2. Refined is a simple refinement type that validates the input against a predicate
-3. Refined2 has an extra parameter to change the input type
-4. Refined3 has an extra parameter for formatting the output
+3. Refined2 has an extra internal type which can be different from the input
+4. Refined3 has an extra parameter to control output formatting
 5. validation against input values
-6. visualisation of each step in the process
+6. visualisation of each step in the evaluation of an expression
 7  template haskell methods for creating the refinement types at compile time
 8. ToJSON and FromJSON instances
-9. Read and Show instance
+9. Read and Show instances
 10. Binary instances
 11. IsString instances
-12. quickcheck arbitrary methods for Refined3
+12. quickcheck arbitrary methods for Refined and Refined3
 13. database encoders and decoders using hdbc(sqlhandler-odbc) or odbc(sqlhandler-odbcalt)
 
 To run the examples you will need these settings (ghc>=8.2)
@@ -133,30 +133,25 @@ Refined3 {r3In = 254, r3Out = "fe"}
 3. `ShowBase 16 Id`
     formats the output as "fe" which is compatible with the input
 
-run this to get details in color of each evaluation step:
+run this to get details in color of each evaluation step on failure:
 ```haskell
->prtEval3PIO (Proxy @Hex) o2 "0000fe"
+>prtEval3PIO (Proxy @Hex) o2 "0000ffe"
 
-*** Step 1. Success Initial Conversion(ip) [254] ***
+*** Step 1. Success Initial Conversion(ip) [4094] ***
 
-P ReadBase(Int,16) 254 | "0000fe"
+P ReadBase(Int,16) 4094 | "0000ffe"
 |
-`- P Id "0000fe"
+`- P Id "0000ffe"
 
-*** Step 2. Success Boolean Check(op) ***
+*** Step 2. False Boolean Check(op) ***
 
-True  0 <= 254 <= 255
+False 4094 <= 255
 |
-+- P Id 254
++- P Id 4094
 |
 +- P '0
 |
-`- P '255
-
-*** Step 3. Success Output Conversion(fmt) ***
-
-P ShowBase 16 fe | 254
-```
+`- P '255```
 
 Read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as output
 ```haskell
@@ -256,7 +251,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ***Step 1. Initial Conversion(ip) Failed ***
 
-[Error invalid base 16] ReadBase(Int) 16 as=00feg err=[(254,"g")]
+[Error invalid base 16] ReadBase(Int,16) as=00feg err=[(254,"g")]
 |
 `- P Id "00feg"
 ```
