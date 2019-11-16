@@ -36,7 +36,9 @@ import Text.Show.Functions ()
 import Data.Semigroup (Semigroup(..))
 
 suite :: TestTree
-suite = testGroup "TestRefined" (namedTests <> orderTests unnamedTests <> allProps)
+suite =
+  let s = "TestRefined"
+  in testGroup s (namedTests <> orderTests s unnamedTests <> allProps)
 
 namedTests :: [TestTree]
 namedTests =

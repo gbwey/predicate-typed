@@ -47,8 +47,8 @@ expectRight = \case
 toFrom :: (FromJSON a1, ToJSON a2, a1 ~ a2) => a2 -> Either String a1
 toFrom = eitherDecode . encode
 
-orderTests :: [Assertion] -> [TestTree]
-orderTests = zipWith (\i t -> testCase (show i) t) [1::Int ..]
+orderTests :: String -> [Assertion] -> [TestTree]
+orderTests s = zipWith (\i t -> testCase (s <> show i) t) [1::Int ..]
 
 expectPE :: (Show a, Eq a, HasCallStack) => BoolT a -> IO (BoolT a) -> IO ()
 expectPE bp m = do

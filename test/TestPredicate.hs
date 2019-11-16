@@ -36,7 +36,9 @@ import Data.These
 import GHC.TypeLits (Nat)
 
 suite :: TestTree
-suite = testGroup "TestPredicate" (orderTests allTests)
+suite =
+  let s = "TestPredicate"
+  in testGroup s (orderTests s allTests)
 
 allTests :: [IO ()]
 allTests =

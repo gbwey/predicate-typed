@@ -46,7 +46,9 @@ import Data.Tree.Lens
 --import GHC.TypeLits (Nat)
 
 suite :: TestTree
-suite = testGroup "TestRefined3" (namedTests <> orderTests unnamedTests <> allProps)
+suite =
+  let s = "TestRefined3"
+  in testGroup s (namedTests <> orderTests s unnamedTests <> allProps)
 
 namedTests :: [TestTree]
 namedTests =

@@ -41,7 +41,9 @@ import Data.Maybe
 import Control.Lens
 
 suite :: TestTree
-suite = testGroup "TestRefined2" (namedTests <> orderTests unnamedTests) --  <> allProps)
+suite =
+  let s = "TestRefined2"
+  in testGroup s (namedTests <> orderTests s unnamedTests)
 
 namedTests :: [TestTree]
 namedTests =

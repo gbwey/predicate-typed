@@ -588,14 +588,14 @@ mkProxy2' = Proxy
 type family MakeR2 p where
   MakeR2 '(ip,op,i) = Refined2 ip op i
 
--- | used by 'Refined3' to extract \'ip\' from a promoted 3-tuple
+-- | used by 'Refined2' to extract \'ip\' from a promoted 3-tuple
 type family T3_1 x where
   T3_1 '(a,b,c) = a
 
--- | used by 'Refined3' for extracting the boolean predicate \'op\' from a promoted 3-tuple
+-- | used by 'Refined2' for extracting the boolean predicate \'op\' from a promoted 3-tuple
 type family T3_2 x where
   T3_2 '(a,b,c) = b
 
--- | used by 'Refined3' for extracting the input type \'i\' from a promoted 3-tuple
+-- | used by 'Refined2' for extracting the input type \'i\' from a promoted 3-tuple
 type family T3_3 x where
   T3_3 '(a,b,c) = c
