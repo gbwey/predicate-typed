@@ -244,7 +244,7 @@ instance ToJSON i => ToJSON (Refined2 ip op i) where
 -- <BLANKLINE>
 -- False True && False | (16663610 < 256)
 -- |
--- +- True  16663610 > 10
+-- +- True 16663610 > 10
 -- |  |
 -- |  +- P Id 16663610
 -- |  |

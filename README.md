@@ -17,7 +17,7 @@ what this library provides:
 12. quickcheck arbitrary methods for Refined and Refined3
 13. database encoders and decoders using hdbc(sqlhandler-odbc) or odbc(sqlhandler-odbcalt)
 
-To run the examples you will need these settings (ghc>=8.2)
+To run all the examples you will need these settings (ghc>=8.2)
 ```haskell
 :set -XTypeApplications
 :set -XDataKinds
@@ -26,19 +26,22 @@ To run the examples you will need these settings (ghc>=8.2)
 :set -XNoStarIsType -- if ghc 8.6 or greater
 ```
 
+### Simplest refinement type
 ```haskell
 data Refined p a = Refined a
 ```
 * **_a_** is the input type
 * **_p_** predicate on **_a_**
 
-**_If you want to see an evaluation tree with colors for any of the examples, just replace 'ol' with 'o2' or if on unix use 'ou' (unicode)_**
+**_ if using unix you can replace 'o2' with 'ou' to get unicode output_**
+**_ 'ol' summarises the output in one line_**
+**_ 'o2' shows the tree of output with colors_**
 
 ### Examples of Refined (for more information see [doctests](src/Predicate/Refined.hs))
 
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
->prtRefinedIO @(ReadP Int Id >> Id > 99) ol "123"
+>prtRefinedIO @(ReadP Int Id > 99) ol "123"
 Right (Refined {unRefined = "123"})
 ```
 
@@ -50,6 +53,7 @@ Left (FailP "ReadP Int (1x2y3) failed")
 
 3. reads in a hexadecimal string and checks to see that it is between 99 and 256
 ```haskell
+--  (>>) acts like the monadic operator (>>=)
 >prtRefinedIO @(ReadBase Int 16 Id >> Between 99 256) ol "000fe"
 Right (Refined {unRefined = "000fe"})
 ```
@@ -272,7 +276,7 @@ P ReadBase(Int,16) 16663610 | "00fe443a"
 
 False True && False | {16663610 < 256}
 |
-+- True  16663610 > 10
++- True 16663610 > 10
 |  |
 |  +- P Id 16663610
 |  |

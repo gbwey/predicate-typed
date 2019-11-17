@@ -185,8 +185,8 @@ allTests =
   , expectPE (PresentT []) $ pl @(MEmptyT _ ||| Ones Id) (Left @_ @[String] ["ab"])
   , expectPE (PresentT ["a","b"]) $ pl @(MaybeIn MEmptyP (Ones Id)) (Just @String "ab")
   , expectPE (PresentT []) $ pl @(MaybeIn MEmptyP (Ones Id)) (Nothing @String)
-  , expectPE (PresentT (True, 13)) $ pl @(Not IsNothing &&& (Just Id >> Id + 12)) (Just 1)
-  , expectPE (FailT "Just(empty)") $ pl @(Not IsNothing &&& (Just Id >> Id + 12)) Nothing
+  , expectPE (PresentT (True, 13)) $ pl @(Not (IsNothing Id) &&& (Just Id >> Id + 12)) (Just 1)
+  , expectPE (FailT "Just(empty)") $ pl @(Not (IsNothing Id) &&& (Just Id >> Id + 12)) Nothing
   , expectPE (PresentT True) $ pl @(Thd Id >> Fst Id) (1,2,(True,4))
   , expectPE (PresentT True) $ pl @(Fst (Thd Id)) (1,2,(True,4))
   , expectPE (PresentT 'd') $ pl @(Id !! 3) ("asfd" :: T.Text)

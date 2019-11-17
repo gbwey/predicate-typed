@@ -332,7 +332,7 @@ getValueLRImpl showError opts msg0 tt hs =
   in left (\e -> mkNode
                    opts
                   (FailT e)
-                   [msg0 <> if showError then (if null msg0 then "" else " ") <> "[" <> e <> "]"
+                   [msg0 <> if showError || isVerbose opts then (if null msg0 then "" else " ") <> "[" <> e <> "]"
                             else ""]
                   tt'
           )
@@ -369,22 +369,22 @@ defOpts = POpts
     }
 
 data ODebug =
-       OZero
-     | OLite
-     | OSubNormal
-     | ONormal
-     | OVerbose
+       OZero -- ^ one line summary used mainly for testing
+     | OLite -- ^ one line summary with additional context from the head of the evaluation tree
+     | OSubNormal -- ^ outputs the evaluation tree but skips noisy subtrees
+     | ONormal  -- ^ outputs the evaluation tree but skips noisy subtrees
+     | OVerbose -- ^ outputs the entire evaluation tree
      deriving (Ord, Show, Eq, Enum, Bounded)
 
--- | skip colors and just return the summary
+-- | minimal data without colors
 oz :: POpts
 oz = defOpts { oColor = color0, oDebug = OZero }
 
--- | skip colors and just return the summary
+-- | returns the summary without colors
 ol :: POpts
 ol = defOpts { oColor = color0, oDebug = OLite }
 
--- | skip the detail and just return the summary but keep the colors
+-- | same as 'ol' but with colors
 olc :: POpts
 olc = ol { oColor = color1 }
 
@@ -900,7 +900,7 @@ showBoolP o =
   \case
     b@(FailP e) -> "[" <> colorMe o b "Error" <> nullSpace e <> "]"
     b@PresentP -> colorMe o b "P"
-    b@TrueP -> colorMe o b "True "
+    b@TrueP -> colorMe o b "True"
     b@FalseP -> colorMe o b "False"
 
 displayMessages :: [String] -> String
