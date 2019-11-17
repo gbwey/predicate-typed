@@ -6279,14 +6279,16 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 
 -- | boolean guard which checks a given a list of predicates against the list of values
 --
+-- prefer 'Bools' as 'BoolsQuick' doesnt give much added value: passes in the index and the value to prt but you already have the index in the message
+--
 -- pulls the top message from the tree if a predicate is false
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,93,14]
--- False (Bools(1) [mm] (93 <= 59))
+-- False (Bool(1) [mm] (93 <= 59))
 -- FalseT
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,13,94]
--- False (Bools(2) [<<<2 94>>>] (94 <= 59))
+-- False (Bool(2) [<<<2 94>>>] (94 <= 59))
 -- FalseT
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,13,14]
@@ -6302,7 +6304,7 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 -- TrueT
 --
 -- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,99]
--- False (Bools(2) [id=2 val=99] (99 <= 59))
+-- False (Bool(2) [id=2 val=99] (99 <= 59))
 -- FalseT
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,13,14]
@@ -6310,7 +6312,7 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 -- TrueT
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,60,14]
--- False (Bools(1) [minutes] (60 <= 59))
+-- False (Bool(1) [minutes] (60 <= 59))
 -- FalseT
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,60,14,20]
@@ -6326,7 +6328,7 @@ instance (GetLen ps
   type PP (Bools ps) [a] = Bool
   eval _ opts as = do
     let msg0 = "Bools"
-        msg1 = msg0 <> "("++show n++")"
+        msg1 = "Bool("++show n++")"
         n = getLen @ps
     case chkSize opts msg1 as [] of
       Left e -> pure e
@@ -6362,7 +6364,7 @@ instance (PP prt (Int, a) ~ String
   type PP (BoolsImpl n ('(prt,p) ': ps)) [a] = Bool
   eval _ opts as' = do
      let cpos = n-pos-1
-         msgbase1 = "Bools(" <> showIndex cpos <> ")"
+         msgbase1 = "Bool(" <> showIndex cpos <> ")"
          msgbase2 = "Bools"
          n :: Int = nat @n
          pos = getLen @ps
@@ -6396,7 +6398,7 @@ instance P (BoolsQuickT prt ps) x => P (BoolsQuick prt ps) x where
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
 -- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
--- False (Bools(3) [id=3 must be between 0 and 255, found 256] (256 <= 255))
+-- False (Bool(3) [id=3 must be between 0 and 255, found 256] (256 <= 255))
 -- FalseT
 --
 -- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
@@ -6435,7 +6437,6 @@ instance (GetLen ps
         n = getLen @ps
     if n /= length as then
        let msg1 = msg0 <> ": invalid length:expected " ++ show n ++ " but found " ++ show (length as)
---       let msg1 = msg0 <> ": predicates(" <> show n <> ") /= data(" <> show (length as) <> ")"
        in pure $ mkNode opts (FailT msg1) [msg1] []
     else eval (Proxy @(GuardsImplX (LenT ps) ps)) opts as
 
@@ -6484,8 +6485,8 @@ instance (PP prt a ~ String
                      Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
          _ -> errorInProgram $ "GuardsImplX n+1 case has no data"
 
-data GuardsDetail (prt :: Symbol) (ps :: [(k0,k1)])
-type GuardsDetailT (prt :: Symbol) (ps :: [(k0,k1)]) = GuardsImplXX (ToGuardsDetailT prt ps)
+data GuardsDetail prt (ps :: [(k0,k1)])
+type GuardsDetailT prt (ps :: [(k0,k1)]) = GuardsImplXX (ToGuardsDetailT prt ps)
 
 instance P (GuardsDetailT prt ps) x => P (GuardsDetail prt ps) x where
   type PP (GuardsDetail prt ps) x = PP (GuardsDetailT prt ps) x
@@ -6708,7 +6709,7 @@ instance (P p a
   type PP (p && q) a = Bool
   eval _ opts a = do
     let msg0 = "&&"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQBool msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -6740,7 +6741,7 @@ instance (P p a
   type PP (p || q) a = Bool
   eval _ opts a = do
     let msg0 = "||"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQBool msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -6778,7 +6779,7 @@ instance (P p a
   type PP (p ~> q) a = Bool
   eval _ opts a = do
     let msg0 = "~>"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQBool msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -6812,7 +6813,7 @@ instance (PP p x ~ Bool, P p x) => P (Not p) x where
   type PP (Not p) x = Bool
   eval _ opts x = do
     let msg0 = "Not"
-    pp <- eval (Proxy @p) opts x
+    pp <- evalBool (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->

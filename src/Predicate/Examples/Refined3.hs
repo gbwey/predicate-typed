@@ -15,7 +15,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {- |
-     Contains prepackaged 4-tuples to use with 'Refined3'
+     Contains prepackaged 4-tuples and proxies to use with 'Refined3'
 -}
 module Predicate.Examples.Refined3 (
   -- ** date time checkers
@@ -169,10 +169,10 @@ ssn = mkProxy3'
 -- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
 --
 -- >>> prtEval3P ssn ol "666-01-2211"
--- Left Step 2. False Boolean Check(op) | {Bools(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))}
+-- Left Step 2. False Boolean Check(op) | {Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))}
 --
 -- >>> prtEval3P ssn ol "667-00-2211"
--- Left Step 2. False Boolean Check(op) | {Bools(1) [number for group 1 invalid: found 0] (1 <= 0)}
+-- Left Step 2. False Boolean Check(op) | {Bool(1) [number for group 1 invalid: found 0] (1 <= 0)}
 --
 type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
 type SsnR = MakeR3 Ssn

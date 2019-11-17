@@ -159,7 +159,7 @@ unnamedTests = [
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
                   $ eval3 @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
-                           @(Ddmmyyyyval >> 'True)
+                           @(Ddmmyyyyop >> 'True)
                            @"xyz"
                            ol "31-11-1999"
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ eval3
@@ -172,7 +172,7 @@ unnamedTests = [
   , expect3 (Left $ XF "ReadP Int (3x)") $ eval3P ip4 ol "1.2.3x.4"
   , expect3 (Left $ XTF [1,2,3,4,5] "Guards: invalid length:expected 4 but found 5") $ eval3P ip4 ol "1.2.3.4.5"
   , expect3 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ eval3P ip4 ol "1.2.300.4"
-  , expect3 (Left (XTFalse [1,2,300,4] "Bools(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ eval3P ip4' ol "1.2.300.4"
+  , expect3 (Left (XTFalse [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ eval3P ip4' ol "1.2.300.4"
   , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval3P cc11 ol "12345678903"
   , expect3 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1] "") $ eval3P cc11 oz "12345678901"
 --  , expect3 (Right $ unsafeRefined3 True ["T","r","ue","Tr","ue"]) $ eval3P (Proxy @'(Id, Id, Do '[ShowP Id, Dup, Sapa, SplitAts '[1,1,2,2]], Bool)) True

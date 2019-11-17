@@ -48,7 +48,7 @@ toFrom :: (FromJSON a1, ToJSON a2, a1 ~ a2) => a2 -> Either String a1
 toFrom = eitherDecode . encode
 
 orderTests :: String -> [Assertion] -> [TestTree]
-orderTests s = zipWith (\i t -> testCase (s <> show i) t) [1::Int ..]
+orderTests s = zipWith (\i -> testCase (s <> "_" <> show i)) [1::Int ..]
 
 expectPE :: (Show a, Eq a, HasCallStack) => BoolT a -> IO (BoolT a) -> IO ()
 expectPE bp m = do

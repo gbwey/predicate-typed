@@ -15,7 +15,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {- |
-     Contains examples to use with "Predicate.Refined2"
+     Contains prepackaged 3-tuples to use with 'Refined2'
 -}
 module Predicate.Examples.Refined2 (
   -- ** date time checkers
@@ -136,10 +136,10 @@ type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, String)
 -- Right (Refined2 {r2In = [134,1,2211], r2Out = "134-01-2211"})
 --
 -- >>> prtEval2 @Ssnip @Ssnop ol "666-01-2211"
--- Left Step 2. False Boolean Check(op) | {Bools(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))}
+-- Left Step 2. False Boolean Check(op) | {Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))}
 --
 -- >>> prtEval2 @Ssnip @Ssnop ol "667-00-2211"
--- Left Step 2. False Boolean Check(op) | {Bools(1) [number for group 1 invalid: found 0] (1 <= 0)}
+-- Left Step 2. False Boolean Check(op) | {Bool(1) [number for group 1 invalid: found 0] (1 <= 0)}
 --
 
 ssn :: Proxy Ssn
@@ -155,10 +155,10 @@ type Ssn = '(Ssnip, Ssnop, String)
 -- Right (Refined2 {r2In = [23,13,59], r2Out = "23:13:59"})
 --
 -- >>> prtEval2 @Hmsip @Hmsop' ol "23:13:60"
--- Left Step 2. False Boolean Check(op) | {Bools(2) [seconds] (60 <= 59)}
+-- Left Step 2. False Boolean Check(op) | {Bool(2) [seconds] (60 <= 59)}
 --
 -- >>> prtEval2 @Hmsip @Hmsop' ol "26:13:59"
--- Left Step 2. False Boolean Check(op) | {Bools(0) [hours] (26 <= 23)}
+-- Left Step 2. False Boolean Check(op) | {Bool(0) [hours] (26 <= 23)}
 --
 hms :: Proxy Hms
 hms = mkProxy2'
@@ -172,7 +172,7 @@ type Hms = '(Hmsip, Hmsop >> 'True, String)
 -- Right (Refined2 {r2In = [1,223,14,1], r2Out = "001.223.14.1"})
 --
 -- >>> prtEval2 @Ip4ip @Ip4op' ol "001.223.14.999"
--- Left Step 2. False Boolean Check(op) | {Bools(3) [octet 3 out of range 0-255 found 999] (999 <= 255)}
+-- Left Step 2. False Boolean Check(op) | {Bool(3) [octet 3 out of range 0-255 found 999] (999 <= 255)}
 --
 -- >>> prtEval2P ip4 ol "001.223.14.999"
 -- Left Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 999

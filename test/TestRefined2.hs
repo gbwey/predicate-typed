@@ -152,7 +152,7 @@ unnamedTests = [
 
   , expect2 (Right $ unsafeRefined2 [31,11,1999] "31-11-1999")
                   $ eval2 @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
-                           @(Ddmmyyyyval >> 'True)
+                           @(Ddmmyyyyop >> 'True)
                            ol "31-11-1999"
   , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789") $ eval2
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
@@ -163,7 +163,7 @@ unnamedTests = [
   , expect2 (Left $ XF "ReadP Int (3x)") $ eval2P ip4 ol "1.2.3x.4"
   , expect2 (Left $ XTFalse [1,2,3,4,5] "Bools: invalid length:expected 4 but found 5") $ eval2P ip4' ol "1.2.3.4.5"
   , expect2 (Left $ XTF [1,2,3,4,5] "Guards: invalid length:expected 4 but found 5") $ eval2P ip4 ol "1.2.3.4.5"
-  , expect2 (Left $ XTFalse [1,2,300,4] "Bools(2) [octet 2 out of range 0-255 found 300] (300 <= 255)") $ eval2P ip4' ol "1.2.300.4"
+  , expect2 (Left $ XTFalse [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)") $ eval2P ip4' ol "1.2.300.4"
   , expect2 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ eval2P ip4 ol "1.2.300.4"
   , expect2 (Right $ unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "12345678903") $ eval2P cc11 ol "12345678903"
   , expect2 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1] "") $ eval2P cc11 oz "12345678901"

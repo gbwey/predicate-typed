@@ -140,6 +140,7 @@ module Predicate.Util (
   , ConsT
   , type (%%)
   , type (%&)
+  , type (<%>)
 
  -- ** extract values from the type level
   , nat
@@ -626,7 +627,7 @@ splitAndAlign opts msgs ts =
      (excs@(e:_), _) ->
           Left $ mkNode opts
                        (FailT (groupErrors (map snd excs)))
-                       (msgs <> ["excs=" <> show (length excs) <> " " <> formatList opts [fst e]])
+                       (msgs <> [formatList opts [fst e] <> " excnt=" <> show (length excs)])
                        (map (hh . snd) ts)
      ([], tfs) -> Right tfs
 
@@ -999,10 +1000,13 @@ type family RepeatT (n :: Nat) (p :: k) :: [k] where
   RepeatT 1 p = p ': '[]
   RepeatT n p = p ': RepeatT (n GN.- 1) p
 
+type s <%> t = GL.AppendSymbol s t
+infixr 6 <%>
+
 type family IntersperseT (s :: Symbol) (xs :: [Symbol]) :: Symbol where
   IntersperseT s '[] = ""
   IntersperseT s '[x] = x
-  IntersperseT s (x ': y ': xs) = x `GL.AppendSymbol` s `GL.AppendSymbol` IntersperseT s (y ': xs)
+  IntersperseT s (x ': y ': xs) = x <%> s <%> IntersperseT s (y ': xs)
 
 type family LenT (xs :: [k]) :: Nat where
   LenT '[] = 0

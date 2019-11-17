@@ -394,7 +394,7 @@ allTests =
   , expectPE (PresentT GT) $ pl @(Do '[ 'LT, 'EQ, 'GT ]) ()
   , expectPE (PresentT (-3 % 1)) $ pl @(Do '[4 % 4,22 % 1 ,12 -% 4]) ()
   , expectPE (PresentT [10,2,5]) $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 11, Between 1 4,Between 3 5]) [10::Int,2,5]
-  , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ddmmyyyyval) "31-11-1999"
+  , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id) >> Ddmmyyyyop) "31-11-1999"
   , expectPE (PresentT [31,11,1999]) $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11,1999::Int]
   , expectPE (FailT "Guards: invalid length:expected 3 but found 2") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,11::Int]
   , expectPE (FailT "guard(1) 13 is out of range") $ pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]) [31,13,1999::Int]
@@ -511,8 +511,8 @@ allTests =
   , expectPE (PresentT "0004d2") $ pl @(PrintF "%06x" Id) (1234 :: Int)
   , expectPE (PresentT (Left 123)) $ pl @(Pure (Either String) Id >> Swap) 123
   , expectPE (PresentT [13,2,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadP Int Id) (Snd Id)) "13-02-1999"
-  , expectPE (PresentT [3,2,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadP Int Id) (Snd Id) >> Ddmmyyyyval) "03-02-1999"
-  , expectPE (FailT "guard(1) month 13 is out of range") $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadP Int Id) (Snd Id) >> Ddmmyyyyval) "12-13-1999"
+  , expectPE (PresentT [3,2,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadP Int Id) (Snd Id) >> Ddmmyyyyop) "03-02-1999"
+  , expectPE (FailT "month 13 is out of range") $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadP Int Id) (Snd Id) >> Ddmmyyyyop) "12-13-1999"
   , expectPE (PresentT [[1],[2,3,4],[5,6,7,8],[9,10,11,12]]) $ pl @(SplitAts '[1,3,4] Id) [1..12]
   , expectPE (PresentT [[1,2,3],[4]]) $ pl @(SplitAts '[3,1,1,1] Id >> Filter (Not Null) Id) [1..4]
   , expectPE (PresentT 1) $ pl @(Msg (PrintF "digits=%d" Len) (Head Id)) [1..4]

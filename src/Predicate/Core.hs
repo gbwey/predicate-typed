@@ -43,6 +43,7 @@ module Predicate.Core (
 
   -- ** evaluation methods
   , runPQ
+  , runPQBool
   , evalBool
   , evalQuick
 --  , prtTreeX
@@ -626,6 +627,24 @@ runPQ msg0 proxyp proxyq opts a hhs = do
       Left e -> pure $ Left e
       Right p -> do
          qq <- eval proxyq opts a
+         pure $ case getValueLR opts msg0 qq (hhs <> [hh pp]) of
+           Left e -> Left e
+           Right q -> Right (p, q, pp, qq)
+
+runPQBool :: (P p a, PP p a ~ Bool, P q a, PP q a ~ Bool, MonadEval m)
+   => String
+   -> Proxy p
+   -> Proxy q
+   -> POpts
+   -> a
+   -> [Holder]
+   -> m (Either (TT x) (PP p a, PP q a, TT (PP p a), TT (PP q a)))
+runPQBool msg0 proxyp proxyq opts a hhs = do
+    pp <- evalBool proxyp opts a
+    case getValueLR opts msg0 pp hhs of
+      Left e -> pure $ Left e
+      Right p -> do
+         qq <- evalBool proxyq opts a
          pure $ case getValueLR opts msg0 qq (hhs <> [hh pp]) of
            Left e -> Left e
            Right q -> Right (p, q, pp, qq)
