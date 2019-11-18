@@ -77,6 +77,6 @@ type Name2 =
        >> Guard (PrintF "not upper first(%c)" Id) ('[Id] >> IsUpper)
       *** Guard (PrintF "not lower rest(%s)" Id) IsLower
 
-type AgeR = R.Refined (Between 10 60) Int
+type AgeR = R.Refined (Between 10 60 Id) Int
 
 

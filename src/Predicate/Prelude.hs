@@ -1,9 +1,10 @@
 -- the mkNode opts (FailT msg) [msg] .. -- repetitive: needs to add value
--- no types referring to types! else lose use of _ as Type
+-- no types referring to types otherwise we lose use of _ as Type
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
+{-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -42,13 +43,16 @@ module Predicate.Prelude (
   , Desc'
   , Between
   , type (<..>)
-  , Between'
   , All
   , Any
   , AllPositive
   , Positive
   , AllNegative
   , Negative
+  , AndA
+  , type (&*)
+  , OrA
+  , type (|+)
 
   -- ** regex expressions
   , Re
@@ -161,7 +165,6 @@ module Predicate.Prelude (
   , ReadMaybe'
   , ReadBase
   , ReadBase'
-  , ReadBaseInt
   , ShowBase
 
   -- ** aeson expressions
@@ -498,6 +501,7 @@ module Predicate.Prelude (
   , type (|>)
   , type (>|)
   , type (>|>)
+  , Uncurry
 
   -- *** parallel expressions
   , Para
@@ -591,7 +595,7 @@ type AscT = All (Fst Id <= Snd Id) Pairs
 
 instance P AscT x => P Asc x where
   type PP Asc x = PP AscT x
-  eval _ = eval (Proxy @AscT)
+  eval _ = evalBool (Proxy @AscT)
 
 -- | a type level predicate for a strictly increasing list
 data Asc'
@@ -599,7 +603,7 @@ type AscT' = All (Fst Id < Snd Id) Pairs
 
 instance P AscT' x => P Asc' x where
   type PP Asc' x = PP AscT' x
-  eval _ = eval (Proxy @AscT')
+  eval _ = evalBool (Proxy @AscT')
 
 -- | a type level predicate for a monotonic decreasing list
 data Desc
@@ -607,14 +611,14 @@ type DescT = All (Fst Id >= Snd Id) Pairs
 
 instance P DescT x => P Desc x where
   type PP Desc x = PP DescT x
-  eval _ = eval (Proxy @DescT)
+  eval _ = evalBool (Proxy @DescT)
 -- | a type level predicate for a strictly decreasing list
 data Desc'
 type DescT' = All (Fst Id > Snd Id) Pairs
 
 instance P DescT' x => P Desc' x where
   type PP Desc' x = PP DescT' x
-  eval _ = eval (Proxy @DescT')
+  eval _ = evalBool (Proxy @DescT')
 
 
 --type AscAlt = SortOn Id Id == Id
@@ -622,15 +626,15 @@ instance P DescT' x => P Desc' x where
 
 -- | A predicate that determines if the value is between \'p\' and \'q\'
 --
--- >>> pz @(Between' 5 8 Len) [1,2,3,4,5,5,7]
+-- >>> pz @(Between 5 8 Len) [1,2,3,4,5,5,7]
 -- True
 -- TrueT
 --
--- >>> pz @(Between 5 8) 6
+-- >>> pz @(5 <..> 8) 6
 -- True
 -- TrueT
 --
--- >>> pl @(Between 5 8) 9
+-- >>> pl @(Between 5 8 Id) 9
 -- False (9 <= 8)
 -- FalseT
 --
@@ -642,7 +646,7 @@ instance P DescT' x => P Desc' x where
 -- False
 -- FalseT
 --
-data Between' p q r -- reify as it is used a lot! nicer specific messages at the top level!
+data Between p q r -- reify as it is used a lot! nicer specific messages at the top level!
 
 instance (Ord (PP p x)
        , Show (PP p x)
@@ -651,8 +655,8 @@ instance (Ord (PP p x)
        , P p x
        , P q x
        , P r x
-       ) => P (Between' p q r) x where
-  type PP (Between' p q r) x = Bool
+       ) => P (Between p q r) x where
+  type PP (Between p q r) x = Bool
   eval _ opts x = do
     let msg0 = "Between"
     rr <- eval (Proxy @r) opts x
@@ -668,25 +672,19 @@ instance (Ord (PP p x)
                else if p > r then mkNodeB opts False [show p <> " <= " <> show r] hhs
                else mkNodeB opts False [show r <> " <= " <> show q] hhs
 
-data Between p q
-type BetweenT p q = Between' p q Id
-
-instance P (BetweenT p q) x => P (Between p q) x where
-  type PP (Between p q) x = PP (BetweenT p q) x
-  eval _ = eval (Proxy @(BetweenT p q))
 
 data p <..> q
 infix 4 <..>
 
-type BetweenTT p q = Between p q
+type BetweenT p q = Between p q Id
 
-instance P (BetweenTT p q) x => P (p <..> q) x where
-  type PP (p <..> q) x = PP (BetweenTT p q) x
-  eval _ = eval (Proxy @(BetweenTT p q))
+instance P (BetweenT p q) x => P (p <..> q) x where
+  type PP (p <..> q) x = PP (BetweenT p q) x
+  eval _ = evalBool (Proxy @(BetweenT p q))
 
 -- | similar to 'all'
 --
--- >>> pl @(All (Between 1 8) Id) [7,3,4,1,2,9,0,1]
+-- >>> pl @(All (Between 1 8 Id) Id) [7,3,4,1,2,9,0,1]
 -- False (All(8) i=5 (9 <= 8))
 -- FalseT
 --
@@ -769,7 +767,7 @@ instance (P p a
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
@@ -821,7 +819,7 @@ instance (P p a
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
@@ -860,7 +858,7 @@ type AllPositiveT = All Positive Id
 
 instance P AllPositiveT x => P AllPositive x where
   type PP AllPositive x = PP AllPositiveT x
-  eval _ = eval (Proxy @AllPositiveT)
+  eval _ = evalBool (Proxy @AllPositiveT)
 
 -- | a type level predicate for all negative elements in a list
 data AllNegative
@@ -868,7 +866,7 @@ type AllNegativeT = All Negative Id
 
 instance P AllNegativeT x => P AllNegative x where
   type PP AllNegative x = PP AllNegativeT x
-  eval _ = eval (Proxy @AllNegativeT)
+  eval _ = evalBool (Proxy @AllNegativeT)
 
 
 type Positive = Gt 0
@@ -912,11 +910,6 @@ instance P Unzip3T x => P Unzip3 x where
 --
 data Re' (rs :: [ROpt]) p q
 data Re p q
-type ReT p q = Re' '[] p q
-
-instance P (ReT p q) x => P (Re p q) x where
-  type PP (Re p q) x = PP (ReT p q) x
-  eval _ = eval (Proxy @(ReT p q))
 
 instance (GetROpts rs
         , PP p x ~ String
@@ -940,6 +933,12 @@ instance (GetROpts rs
                let b = q RH.=~ regex
                in mkNodeB opts b [msg1 <> showLit1 opts " | " q] hhs
 
+type ReT p q = Re' '[] p q
+
+instance P (ReT p q) x => P (Re p q) x where
+  type PP (Re p q) x = PP (ReT p q) x
+  eval _ = evalBool (Proxy @(ReT p q))
+
 -- only way with rescan is to be explicit: no repeats! and useanchors but not (?m)
 -- or just use Re' but then we only get a bool ie doesnt capture groups
 -- rescan returns Right [] as an failure!
@@ -957,13 +956,6 @@ instance (GetROpts rs
 -- PresentT [("13:05:25",["13","05","25"])]
 --
 data Rescan' (rs :: [ROpt]) p q
-data Rescan p q
-type RescanT p q = Rescan' '[] p q
-
-instance P (RescanT p q) x => P (Rescan p q) x where
-  type PP (Rescan p q) x = PP (RescanT p q) x
-  eval _ = eval (Proxy @(RescanT p q))
-
 
 instance (GetROpts rs
         , PP p x ~ String
@@ -990,6 +982,13 @@ instance (GetROpts rs
                          mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> show1 opts " | " q] [hh pp, hh qq]
               (b, _) -> mkNode opts (PresentT b) [lit01 opts msg1 b q] [hh pp, hh qq]
 
+data Rescan p q
+type RescanT p q = Rescan' '[] p q
+
+instance P (RescanT p q) x => P (Rescan p q) x where
+  type PP (Rescan p q) x = PP (RescanT p q) x
+  eval _ = eval (Proxy @(RescanT p q))
+
 
 -- | similar to 'Rescan' but gives the column start and ending positions instead of values
 --
@@ -998,14 +997,6 @@ instance (GetROpts rs
 -- PresentT [((0,8),[(0,2),(3,5),(6,8)])]
 --
 data RescanRanges' (rs :: [ROpt]) p q
-
-data RescanRanges p q
-type RescanRangesT p q = RescanRanges' '[] p q
-
-instance P (RescanRangesT p q) x => P (RescanRanges p q) x where
-  type PP (RescanRanges p q) x = PP (RescanRangesT p q) x
-  eval _ = eval (Proxy @(RescanRangesT p q))
-
 
 instance (GetROpts rs
         , PP p x ~ String
@@ -1031,6 +1022,13 @@ instance (GetROpts rs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
                          mkNode opts (FailT "Regex no results") [msg1 <> " no match" <> show1 opts " | " q] hhs
               (b, _) -> mkNode opts (PresentT b) [lit01 opts msg1 b q] hhs
+
+data RescanRanges p q
+type RescanRangesT p q = RescanRanges' '[] p q
+
+instance P (RescanRangesT p q) x => P (RescanRanges p q) x where
+  type PP (RescanRanges p q) x = PP (RescanRangesT p q) x
+  eval _ = eval (Proxy @(RescanRangesT p q))
 
 -- | splits a string on a regex delimiter
 --
@@ -1320,6 +1318,22 @@ instance (PP p x ~ ([String] -> String)
 -- False
 -- FalseT
 --
+-- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "AbcdE"
+-- False ((>>) False | {True (&*) False | (IsLower | "bcdE")})
+-- FalseT
+--
+-- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "Abcde"
+-- True ((>>) True | {True (&*) True})
+-- TrueT
+--
+-- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "xbcde"
+-- False ((>>) False | {IsUpper | "x"})})
+-- FalseT
+--
+-- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "X"
+-- True ((>>) True | {True (&*) True})
+-- TrueT
+--
 instance (GetCharSet cs
         , Show a
         , TL.IsText a
@@ -1327,7 +1341,7 @@ instance (GetCharSet cs
   type PP (IsCharSet cs) a = Bool
   eval _ opts as =
     let b = allOf TL.text f as
-        msg0 = "IsCharSet " ++ show cs
+        msg0 = "Is" ++ drop 1 (show cs)
         (cs,f) = getCharSet @cs
     in pure $ mkNodeB opts b [msg0 <> show1 opts " | " as] []
 
@@ -1371,14 +1385,14 @@ type IsLowerT = IsCharSet 'CLower
 
 instance P IsLowerT x => P IsLower x where
   type PP IsLower x = PP IsLowerT x
-  eval _ = eval (Proxy @IsLowerT)
+  eval _ = evalBool (Proxy @IsLowerT)
 
 data IsUpper
 type IsUpperT = IsCharSet 'CUpper
 
 instance P IsUpperT x => P IsUpper x where
   type PP IsUpper x = PP IsUpperT x
-  eval _ = eval (Proxy @IsUpperT)
+  eval _ = evalBool (Proxy @IsUpperT)
 
 -- | predicate for determining if the string is all digits
 --
@@ -1394,49 +1408,49 @@ data IsNumber
 type IsNumberT = IsCharSet 'CNumber
 instance P IsNumberT x => P IsNumber x where
   type PP IsNumber x = PP IsNumberT x
-  eval _ = eval (Proxy @IsNumberT)
+  eval _ = evalBool (Proxy @IsNumberT)
 
 data IsSpace
 type IsSpaceT = IsCharSet 'CSpace
 instance P IsSpaceT x => P IsSpace x where
   type PP IsSpace x = PP IsSpaceT x
-  eval _ = eval (Proxy @IsSpaceT)
+  eval _ = evalBool (Proxy @IsSpaceT)
 
 data IsPunctuation
 type IsPunctuationT = IsCharSet 'CPunctuation
 instance P IsPunctuationT x => P IsPunctuation x where
   type PP IsPunctuation x = PP IsPunctuationT x
-  eval _ = eval (Proxy @IsPunctuationT)
+  eval _ = evalBool (Proxy @IsPunctuationT)
 
 data IsControl
 type IsControlT = IsCharSet 'CControl
 instance P IsControlT x => P IsControl x where
   type PP IsControl x = PP IsControlT x
-  eval _ = eval (Proxy @IsControlT)
+  eval _ = evalBool (Proxy @IsControlT)
 
 data IsHexDigit
 type IsHexDigitT = IsCharSet 'CHexDigit
 instance P IsHexDigitT x => P IsHexDigit x where
   type PP IsHexDigit x = PP IsHexDigitT x
-  eval _ = eval (Proxy @IsHexDigitT)
+  eval _ = evalBool (Proxy @IsHexDigitT)
 
 data IsOctDigit
 type IsOctDigitT = IsCharSet 'COctDigit
 instance P IsOctDigitT x => P IsOctDigit x where
   type PP IsOctDigit x = PP IsOctDigitT x
-  eval _ = eval (Proxy @IsOctDigitT)
+  eval _ = evalBool (Proxy @IsOctDigitT)
 
 data IsSeparator
 type IsSeparatorT = IsCharSet 'CSeparator
 instance P IsSeparatorT x => P IsSeparator x where
   type PP IsSeparator x = PP IsSeparatorT x
-  eval _ = eval (Proxy @IsSeparatorT)
+  eval _ = evalBool (Proxy @IsSeparatorT)
 
 data IsLatin1
 type IsLatin1T = IsCharSet 'CLatin1
 instance P IsLatin1T x => P IsLatin1 x where
   type PP IsLatin1 x = PP IsLatin1T x
-  eval _ = eval (Proxy @IsLatin1T)
+  eval _ = evalBool (Proxy @IsLatin1T)
 
 
 -- | converts a string 'Data.Text.Lens.IsText' value to lower case
@@ -1752,11 +1766,11 @@ instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
 -- Present 4 % 5
 -- PresentT (4 % 5)
 --
--- >>> pz @(ReadP Day Id >> Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30")) "2018-10-12"
+-- >>> pz @(Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30") (ReadP Day Id)) "2018-10-12"
 -- True
 -- TrueT
 --
--- >>> pz @(ReadP Day Id >> Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30")) "2016-10-12"
+-- >>> pz @(Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30") (ReadP Day Id)) "2016-10-12"
 -- False
 -- FalseT
 --
@@ -1980,7 +1994,7 @@ instance (P p (a,a)
                           rhs <- ff (map snd rr')
                           case getValueLR opts msg0 rhs [] of
                             Left _ -> pure rhs
-                            Right rr -> do
+                            Right rr ->
                               pure $  mkNode opts (PresentT (ll ++ w : rr))
                                      [msg0 <> show0 opts " lhs=" ll <> " pivot " <> show w <> show0 opts " rhs=" rr]
                                      (hh pp : [hh lhs | length ll > 1] ++ [hh rhs | length rr > 1])
@@ -2474,7 +2488,7 @@ instance (a ~ PP p x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right a ->
-        let r = (toRational a)
+        let r = toRational a
         in mkNode opts (PresentT r) [show01 opts msg0 r a] [hh pp]
 
 -- | 'fromRational' function where you need to provide the type \'t\' of the result
@@ -2742,7 +2756,7 @@ instance (P n a
                 diff = if n<=l then 0 else n-l
                 bs = if lft
                      then (replicate diff p) <> q
-                     else q <> (replicate diff p)
+                     else q <> replicate diff p
             in mkNode opts (PresentT bs) [show01 opts msg1 bs q] (hhs <> [hh qq])
 
 data PadL n p q
@@ -3074,42 +3088,42 @@ infix 4 >
 
 instance P (Cmp 'CGt p q) x => P (p > q) x where
   type PP (p > q) x = PP (Cmp 'CGt p q) x
-  eval _ = eval (Proxy @(Cmp 'CGt p q))
+  eval _ = evalBool (Proxy @(Cmp 'CGt p q))
 
 data p >= q
 infix 4 >=
 
 instance P (Cmp 'CGe p q) x => P (p >= q) x where
   type PP (p >= q) x = PP (Cmp 'CGe p q) x
-  eval _ = eval (Proxy @(Cmp 'CGe p q))
+  eval _ = evalBool (Proxy @(Cmp 'CGe p q))
 
 data p == q
 infix 4 ==
 
 instance P (Cmp 'CEq p q) x => P (p == q) x where
   type PP (p == q) x = PP (Cmp 'CEq p q) x
-  eval _ = eval (Proxy @(Cmp 'CEq p q))
+  eval _ = evalBool (Proxy @(Cmp 'CEq p q))
 
 data p <= q
 infix 4 <=
 
 instance P (Cmp 'CLe p q) x => P (p <= q) x where
   type PP (p <= q) x = PP (Cmp 'CLe p q) x
-  eval _ = eval (Proxy @(Cmp 'CLe p q))
+  eval _ = evalBool (Proxy @(Cmp 'CLe p q))
 
 data p < q
 infix 4 <
 
 instance P (Cmp 'CLt p q) x => P (p < q) x where
   type PP (p < q) x = PP (Cmp 'CLt p q) x
-  eval _ = eval (Proxy @(Cmp 'CLt p q))
+  eval _ = evalBool (Proxy @(Cmp 'CLt p q))
 
 data p /= q
 infix 4 /=
 
 instance P (Cmp 'CNe p q) x => P (p /= q) x where
   type PP (p /= q) x = PP (Cmp 'CNe p q) x
-  eval _ = eval (Proxy @(Cmp 'CNe p q))
+  eval _ = evalBool (Proxy @(Cmp 'CNe p q))
 
 --type p + q = Bin 'BAdd p q
 --type p - q = Bin 'BSub p q
@@ -3141,42 +3155,42 @@ infix 4 >~
 
 instance P (CmpI 'CGt p q) x => P (p >~ q) x where
   type PP (p >~ q) x = PP (CmpI 'CGt p q) x
-  eval _ = eval (Proxy @(CmpI 'CGt p q))
+  eval _ = evalBool (Proxy @(CmpI 'CGt p q))
 
 data p >=~ q
 infix 4 >=~
 
 instance P (CmpI 'CGe p q) x => P (p >=~ q) x where
   type PP (p >=~ q) x = PP (CmpI 'CGe p q) x
-  eval _ = eval (Proxy @(CmpI 'CGe p q))
+  eval _ = evalBool (Proxy @(CmpI 'CGe p q))
 
 data p ==~ q
 infix 4 ==~
 
 instance P (CmpI 'CEq p q) x => P (p ==~ q) x where
   type PP (p ==~ q) x = PP (CmpI 'CEq p q) x
-  eval _ = eval (Proxy @(CmpI 'CEq p q))
+  eval _ = evalBool (Proxy @(CmpI 'CEq p q))
 
 data p <=~ q
 infix 4 <=~
 
 instance P (CmpI 'CLe p q) x => P (p <=~ q) x where
   type PP (p <=~ q) x = PP (CmpI 'CLe p q) x
-  eval _ = eval (Proxy @(CmpI 'CLe p q))
+  eval _ = evalBool (Proxy @(CmpI 'CLe p q))
 
 data p <~ q
 infix 4 <~
 
 instance P (CmpI 'CLt p q) x => P (p <~ q) x where
   type PP (p <~ q) x = PP (CmpI 'CLt p q) x
-  eval _ = eval (Proxy @(CmpI 'CLt p q))
+  eval _ = evalBool (Proxy @(CmpI 'CLt p q))
 
 data p /=~ q
 infix 4 /=~
 
 instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
   type PP (p /=~ q) x = PP (CmpI 'CNe p q) x
-  eval _ = eval (Proxy @(CmpI 'CNe p q))
+  eval _ = evalBool (Proxy @(CmpI 'CNe p q))
 
 
 class GetBinOp (k :: BinOp) where
@@ -3833,7 +3847,7 @@ instance (PP q x ~ a
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case succMay q of
           Nothing -> do
              let msg1 = msg0 <> " out of range"
@@ -3880,7 +3894,7 @@ instance (PP q x ~ a
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case predMay q of
           Nothing -> do
              let msg1 = msg0 <> " out of range"
@@ -4034,7 +4048,7 @@ instance P (ToEnumT t p) x => P (ToEnum t p) x where
 data ToEnumBDef' t def
 
 instance (P def (Proxy (PP t a))
-        , PP def (Proxy (PP t a)) ~ (PP t a)
+        , PP def (Proxy (PP t a)) ~ PP t a
         , Show a
         , Show (PP t a)
         , Bounded (PP t a)
@@ -5002,7 +5016,7 @@ data Concat p
 
 instance (Show a
         , Show (t [a])
-        , PP p x ~ (t [a])
+        , PP p x ~ t [a]
         , P p x
         , Foldable t
         ) => P (Concat p) x where
@@ -5026,7 +5040,7 @@ data Cycle n p
 
 instance (Show a
         , Show (t a)
-        , PP p x ~ (t a)
+        , PP p x ~ t a
         , P p x
         , Integral (PP n x)
         , P n x
@@ -5049,16 +5063,15 @@ instance (Show a
 
 data ProxyT' t
 
-instance Typeable t => P (ProxyT' (t :: Type)) a where
-  type PP (ProxyT' t) a = Proxy (PP t a)
+instance P (ProxyT' t) x where
+  type PP (ProxyT' t) x = Proxy (PP t x)
   eval _ opts _ =
-    let t = showT @t
-    in pure $ mkNode opts (PresentT Proxy) ["ProxyT(" <> show t ++ ")"] []
+    pure $ mkNode opts (PresentT Proxy) ["ProxyT"] []
 
 data ProxyT (t :: Type)
 type ProxyTT (t :: Type) = ProxyT' (Hole t)
 
-instance P (ProxyTT t) x => P (ProxyT t) x where
+instance P (ProxyT t) x where
   type PP (ProxyT t) x = PP (ProxyTT t) x
   eval _ = eval (Proxy @(ProxyTT t))
 
@@ -5449,7 +5462,7 @@ data Null
 type NullT = Null' Id
 instance P NullT a => P Null a where
   type PP Null a = PP NullT a
-  eval _ = eval (Proxy @NullT)
+  eval _ = evalBool (Proxy @NullT)
 
 -- | similar to 'enumFromTo'
 --
@@ -5586,7 +5599,7 @@ instance (PP p (b,a) ~ b
     lr <- runPQ msg0 (Proxy @q) (Proxy @r) opts z []
     case lr of
       Left e -> pure e
-      Right (q,r,qq,rr) -> do
+      Right (q,r,qq,rr) ->
         case chkSize opts msg0 r [hh rr] of
           Left e -> pure e
           Right () -> do
@@ -5603,7 +5616,7 @@ instance (PP p (b,a) ~ b
                                Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
             (ts,lrx) :: ([((Int, b), TT b)], Either (TT [b]) ()) <- ff 1 q r []
             pure $ case splitAndAlign opts [msg1] (((0,q), mkNode opts (PresentT q) [msg1 <> "(initial)"] []) : ts) of
-                 Left _e -> errorInProgram "Scanl"
+                 Left e -> errorInProgram $ "Scanl e=" ++ show (fromTT e)
                  Right abcs ->
                    let vals = map (view _1) abcs
                        itts = map (view _2 &&& view _3) abcs
@@ -5677,7 +5690,7 @@ instance (PP q a ~ s
                                    Right w@(Just (_b,s')) -> ff (i+1) s' (rs ++ [((i,w), pp)])
         (ts,lr) :: ([((Int, PP p s), TT (PP p s))], Either (TT [b]) ()) <- ff 1 q []
         pure $ case splitAndAlign opts [msg1] ts of
-             Left _e -> errorInProgram "Unfoldr"
+             Left e -> errorInProgram $ "Unfoldr e=" ++ show (fromTT e)
              Right abcs ->
                let vals = map (view _1) abcs
                    itts = map (view _2 &&& view _3) abcs
@@ -5854,7 +5867,7 @@ instance (P p x
     qq <- eval (Proxy @q) opts a'
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
@@ -5899,7 +5912,7 @@ instance (P p x
     qq <- eval (Proxy @q) opts a'
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
@@ -5955,7 +5968,7 @@ instance (P prt a
     pp <- eval (Proxy @prt) opts a
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right s -> mkNode opts (FailT s) [msg0 <> " " <> s] (if isVerbose opts then [hh pp] else [])
+      Right s -> mkNode opts (FailT s) [msg0 <> " " <> s] [hh pp | isVerbose opts]
 
 data FailS p
 instance P (Fail I p) x => P (FailS p) x where
@@ -6053,14 +6066,14 @@ type EvenT = Mod I 2 == 0
 
 instance P EvenT x => P Even x where
   type PP Even x = PP EvenT x
-  eval _ = eval (Proxy @EvenT)
+  eval _ = evalBool (Proxy @EvenT)
 
 data Odd
 type OddT = Mod I 2 == 1
 
 instance P OddT x => P Odd x where
   type PP Odd x = PP OddT x
-  eval _ = eval (Proxy @OddT)
+  eval _ = evalBool (Proxy @OddT)
 
 
 --type Div' p q = Fst (DivMod p q)
@@ -6260,8 +6273,8 @@ instance P (RemT p q) x => P (Rem p q) x where
 -- FailT "arg 2 failed with value 5"
 --
 -- >>> pz @(GuardsQuick (PrintT "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
--- Error Guards: invalid length:expected 3 but found 4
--- FailT "Guards: invalid length:expected 3 but found 4"
+-- Error Guards:invalid length(4) expected 3
+-- FailT "Guards:invalid length(4) expected 3"
 --
 data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 
@@ -6273,9 +6286,12 @@ instance (GetLen ps, P (GuardsImpl (LenT ps) ps) [a]) => P (Guards ps) [a] where
     let msg0 = "Guards"
         n = getLen @ps
     if n /= length as then
-       let msg1 = msg0 <> ": invalid length:expected " ++ show n ++ " but found " ++ show (length as)
+       let msg1 = msg0 <> badLength as n
        in pure $ mkNode opts (FailT msg1) [msg1] []
     else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
+
+badLength :: (Foldable t, Show n, Num n) => t a -> n -> String
+badLength as n = ":invalid length(" <> show (length as) <> ") expected " ++ show (n+0)
 
 instance Show a
          => P (GuardsImpl n ('[] :: [(k,k1)])) [a] where
@@ -6311,8 +6327,8 @@ instance (PP prt (Int, a) ~ String
                    qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
                    pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                       Left e -> e
-                      Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
-                 Right True -> do
+                      Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : [hh qq | isVerbose opts])
+                 Right True ->
                    if pos == 0 then -- we are at the bottom of the tree
                       pure $ mkNode opts (PresentT [a]) [msgbase2] [hh pp]
                    else do
@@ -6320,7 +6336,7 @@ instance (PP prt (Int, a) ~ String
                      pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
                        Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
                        Right zs -> (ss & tForest %~ \x -> fromTT pp : x) & tBool .~ PresentT (a:zs)
-         _ -> errorInProgram $ "GuardsImpl n+1 case has no data"
+         _ -> errorInProgram "GuardsImpl n+1 case has no data"
 
 data GuardsQuick (prt :: k) (ps :: [k1])
 type GuardsQuickT (prt :: k) (ps :: [k1]) = Guards (ToGuardsT prt ps)
@@ -6335,40 +6351,40 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 --
 -- pulls the top message from the tree if a predicate is false
 --
--- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,93,14]
+-- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ] ) [12,93,14]
 -- False (Bool(1) [mm] (93 <= 59))
 -- FalseT
 --
--- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,13,94]
+-- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ] ) [12,13,94]
 -- False (Bool(2) [<<<2 94>>>] (94 <= 59))
 -- FalseT
 --
--- >>> pl @(Bools '[ '(W "hh",Between 0 23), '(W "mm",Between 0 59), '(PrintT "<<<%d %d>>>" Id,Between 0 59) ] ) [12,13,14]
+-- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ] ) [12,13,14]
 -- True (Bools)
 -- TrueT
 --
--- >>> pl @(BoolsQuick "abc" '[Between 0 23, Between 0 59, Between 0 59]) [12,13,14]
+-- >>> pl @(BoolsQuick "abc" '[Between 0 23 Id, Between 0 59 Id, Between 0 59 Id]) [12,13,14]
 -- True (Bools)
 -- TrueT
 --
--- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,14]
+-- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23 Id, Between 0 59 Id, Between 0 59 Id]) [12,13,14]
 -- True (Bools)
 -- TrueT
 --
--- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23, Between 0 59, Between 0 59]) [12,13,99]
+-- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23 Id, Between 0 59 Id, Between 0 59 Id]) [12,13,99]
 -- False (Bool(2) [id=2 val=99] (99 <= 59))
 -- FalseT
 --
--- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,13,14]
+-- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id) ] ) [12,13,14]
 -- True (Bools)
 -- TrueT
 --
--- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,60,14]
+-- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id) ] ) [12,60,14]
 -- False (Bool(1) [minutes] (60 <= 59))
 -- FalseT
 --
--- >>> pl @(Bools '[ '("hours",Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ] ) [12,60,14,20]
--- False (Bools: invalid length:expected 3 but found 4)
+-- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id) ] ) [12,60,14,20]
+-- False (Bools:invalid length(4) expected 3)
 -- FalseT
 --
 data Bools (ps :: [(k,k1)])
@@ -6384,9 +6400,9 @@ instance (GetLen ps
         n = getLen @ps
     case chkSize opts msg1 as [] of
       Left e -> pure e
-      Right () -> do
+      Right () ->
         if n /= length as then
-           let msg2 = msg0 <> ": invalid length:expected " ++ show n ++ " but found " ++ show (length as)
+           let msg2 = msg0 <> badLength as n
            in pure $ mkNodeB opts False [msg2] [] -- was FailT but now just FalseT
         else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts as
 
@@ -6428,8 +6444,8 @@ instance (PP prt (Int, a) ~ String
                    qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
                    pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                       Left e -> e
-                      Right msgx -> mkNodeB opts False [msgbase1 <> " [" <> msgx <> "] " <> topMessage pp] (hh pp : if isVerbose opts then [hh qq] else [])
-                 Right True -> do
+                      Right msgx -> mkNodeB opts False [msgbase1 <> " [" <> msgx <> "] " <> topMessage pp] (hh pp : [hh qq | isVerbose opts])
+                 Right True ->
                    if pos == 0 then -- we are at the bottom of the tree
                       pure $ mkNodeB opts True [msgbase2] [hh pp]
                    else do
@@ -6437,43 +6453,46 @@ instance (PP prt (Int, a) ~ String
                      pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
                        Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
                        Right _ ->  ss & tForest %~ \x -> fromTT pp : x
-         _ -> errorInProgram $ "BoolsImpl n+1 case has no data"
+         _ -> errorInProgram "BoolsImpl n+1 case has no data"
 
 data BoolsQuick (prt :: k) (ps :: [k1])
 type BoolsQuickT (prt :: k) (ps :: [k1]) = Bools (ToGuardsT prt ps)
 
-instance P (BoolsQuickT prt ps) x => P (BoolsQuick prt ps) x where
+-- why do we need this? when BoolsN works without
+instance (PP (Bools (ToGuardsT prt ps)) x ~ Bool
+        , P (BoolsQuickT prt ps) x
+          ) => P (BoolsQuick prt ps) x where
   type PP (BoolsQuick prt ps) x = PP (BoolsQuickT prt ps) x
-  eval _ = eval (Proxy @(BoolsQuickT prt ps))
+  eval _ = evalBool (Proxy @(BoolsQuickT prt ps))
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
--- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
+-- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255 Id)) [121,33,7,256]
 -- False (Bool(3) [id=3 must be between 0 and 255, found 256] (256 <= 255))
 -- FalseT
 --
--- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
+-- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255 Id)) [121,33,7,44]
 -- True (Bools)
 -- TrueT
 --
-data BoolsN prt (n :: Nat) p
-type BoolsNT prt (n :: Nat) p = Bools (ToGuardsT prt (RepeatT n p))
+data BoolsN prt (n :: Nat) (p :: k1)
+type BoolsNT prt (n :: Nat) (p :: k1) = Bools (ToGuardsT prt (RepeatT n p))
 
 instance P (BoolsNT prt n p) [a] => P (BoolsN prt n p) [a] where
   type PP (BoolsN prt n p) [a] = PP (BoolsNT prt n p) [a]
-  eval _ = eval (Proxy @(BoolsNT prt n p))
+  eval _ = evalBool (Proxy @(BoolsNT prt n p))
 
 -- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
 --
--- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [13,59,61]
+-- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [13,59,61]
 -- Error seconds invalid: found 61
 -- FailT "seconds invalid: found 61"
 --
--- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [27,59,12]
+-- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [27,59,12]
 -- Error hours invalid: found 27
 -- FailT "hours invalid: found 27"
 --
--- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]) [23,59,12]
+-- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [23,59,12]
 -- Present [23,59,12]
 -- PresentT [23,59,12]
 --
@@ -6487,7 +6506,7 @@ instance (GetLen ps
     let msg0 = "Guards"
         n = getLen @ps
     if n /= length as then
-       let msg1 = msg0 <> ": invalid length:expected " ++ show n ++ " but found " ++ show (length as)
+       let msg1 = msg0 <> badLength as n
        in pure $ mkNode opts (FailT msg1) [msg1] []
     else eval (Proxy @(GuardsImplX (LenT ps) ps)) opts as
 
@@ -6528,13 +6547,13 @@ instance (PP prt a ~ String
                    qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
                    pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                       Left e -> e
-                      Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : if isVerbose opts then [hh qq] else [])
+                      Right msgx -> mkNode opts (FailT msgx) [msgbase1 <> " failed [" <> msgx <> "]" <> show0 opts " " a] (hh pp : [hh qq | isVerbose opts])
                  Right True -> do
                    ss <- eval (Proxy @(GuardsImplX n ps)) opts as
                    pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
                      Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
                      Right zs -> mkNode opts (PresentT (a:zs)) [msgbase1 <> show0 opts " " a] [hh pp, hh ss]
-         _ -> errorInProgram $ "GuardsImplX n+1 case has no data"
+         _ -> errorInProgram "GuardsImplX n+1 case has no data"
 
 data GuardsDetail prt (ps :: [(k0,k1)])
 type GuardsDetailT prt (ps :: [(k0,k1)]) = GuardsDetailImpl (ToGuardsDetailT prt ps)
@@ -6550,11 +6569,11 @@ type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
--- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,256]
+-- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255 Id)) [121,33,7,256]
 -- Error id=3 must be between 0 and 255, found 256
 -- FailT "id=3 must be between 0 and 255, found 256"
 --
--- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255)) [121,33,7,44]
+-- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255 Id)) [121,33,7,44]
 -- Present [121,33,7,44]
 -- PresentT [121,33,7,44]
 --
@@ -6604,7 +6623,7 @@ instance (Show a
         qq <- eval (Proxy @prt) opts a
         pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
-          Right msgx -> mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] (hh pp : if isVerbose opts then [hh qq] else [])
+          Right msgx -> mkNode opts (FailT msgx) [msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a] (hh pp : [hh qq | isVerbose opts])
       Right True -> pure $ mkNode opts (PresentT a) [msg0 <> "(ok)" <> show0 opts " | " a] [hh pp]  -- dont show the guard message if successful
 
 
@@ -6708,7 +6727,7 @@ instance (Show (PP p a)
   eval _ opts a = do
     let msg0 = "(>>)"
     pp <- eval (Proxy @p) opts a
-    case getValueLRHide opts ("(>>) lhs failed") pp [] of
+    case getValueLRHide opts "(>>) lhs failed" pp [] of
       Left e -> pure e
       Right p -> do
         qq <- eval (Proxy @q) opts p
@@ -6765,10 +6784,10 @@ instance (P p a
       Left e -> e
       Right (p,q,pp,qq) ->
         let zz = case (p,q) of
-                  (True,True) -> ""
-                  (False,True) -> topMessage pp
-                  (True,False) -> topMessage qq
-                  (False,False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+                  (True, True) -> ""
+                  (False, True) -> topMessage pp
+                  (True, False) -> topMessage qq
+                  (False, False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
         in mkNodeB opts (p&&q) [show p <> " " <> msg0 <> " " <> show q <> (if null zz then zz else " | " <> zz)] [hh pp, hh qq]
 
 -- | similar to 'Prelude.||'
@@ -6969,11 +6988,11 @@ instance (PP p a ~ String
 -- True (1 < 4)
 -- TrueT
 --
--- >>> pl @(Between (Negate 7) 20) (-4)
+-- >>> pl @(Negate 7 <..> 20) (-4)
 -- True (-7 <= -4 <= 20)
 -- TrueT
 --
--- >>> pl @(Between (Negate 7) 20) 21
+-- >>> pl @(Negate 7 <..> 20) 21
 -- False (21 <= 20)
 -- FalseT
 --
@@ -7193,6 +7212,22 @@ instance (Show l
 -- True
 -- TrueT
 --
+-- >>> pl @(IsThat Id) (This 12)
+-- False (IsThat | This 12)
+-- FalseT
+--
+-- >>> pl @(IsThis Id) (This 12)
+-- True (IsThis | This 12)
+-- TrueT
+--
+-- >>> pl @(IsThese Id) (This 12)
+-- False (IsThese | This 12)
+-- FalseT
+--
+-- >>> pl @(IsThese Id) (These 'x' 12)
+-- True (IsThese | These 'x' 12)
+-- TrueT
+--
 data IsTh (th :: These x y) p -- x y can be anything
 
 
@@ -7205,35 +7240,35 @@ instance (PP p x ~ These a b
         ) => P (IsTh (th :: These x1 x2) p) x where
   type PP (IsTh th p) x = Bool
   eval _ opts x = do
-    let msg0 = "IsTh"
+    let msg0 = "Is"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
         let (t,f) = getThese @th
             b = f p
-        in mkNodeB opts b [msg0 <> " " <> t <> show1 opts " | " p] []
+        in mkNodeB opts b [msg0 <> t <> show1 opts " | " p] []
 
 data IsThis p
 type IsThisT p = IsTh ('This '()) p
 
 instance P (IsThisT p) x => P (IsThis p) x where
   type PP (IsThis p) x = PP (IsThisT p) x
-  eval _ = eval (Proxy @(IsThisT p))
+  eval _ = evalBool (Proxy @(IsThisT p))
 
 data IsThat p
 type IsThatT p = IsTh ('That '()) p
 
 instance P (IsThatT p) x => P (IsThat p) x where
   type PP (IsThat p) x = PP (IsThatT p) x
-  eval _ = eval (Proxy @(IsThatT p))
+  eval _ = evalBool (Proxy @(IsThatT p))
 
 data IsThese p
 type IsTheseT p = IsTh ('These '() '()) p
 
 instance P (IsTheseT p) x => P (IsThese p) x where
   type PP (IsThese p) x = PP (IsTheseT p) x
-  eval _ = eval (Proxy @(IsTheseT p))
+  eval _ = evalBool (Proxy @(IsTheseT p))
 
 -- | similar to 'Data.These.these'
 --
@@ -7274,24 +7309,28 @@ instance (Show a
         , PP q b ~ PP r (a,b)
          )  => P (TheseIn p q r) (These a b) where
   type PP (TheseIn p q r) (These a b) = PP p a
-  eval _ opts =
-     \case
+  eval _ opts th = do
+     let msg0 = "TheseIn"
+     case th of
         This a -> do
-          let msg0 = "This"
+          let msg1 = "This "
+              msg2 = msg0 <> msg1
           pp <- eval (Proxy @p) opts a
-          pure $ case getValueLR opts (msg0 <> " p failed") pp [] of
+          pure $ case getValueLR opts (msg2 <> "p failed") pp [] of
                Left e -> e
-               Right c -> mkNode opts (PresentT c) [show01' opts msg0 c "This " a] [hh pp]
+               Right c -> mkNode opts (PresentT c) [show01' opts msg0 c msg1 a] [hh pp]
         That b -> do
-          let msg0 = "That"
+          let msg1 = "That "
+              msg2 = msg0 <> msg1
           qq <- eval (Proxy @q) opts b
-          pure $ case getValueLR opts (msg0 <> " q failed") qq [] of
+          pure $ case getValueLR opts (msg2 <> "q failed") qq [] of
                Left e -> e
-               Right c -> mkNode opts (PresentT c) [show01' opts msg0 c "That " b] [hh qq]
+               Right c -> mkNode opts (PresentT c) [show01' opts msg0 c msg1 b] [hh qq]
         These a b -> do
-          let msg0 = "TheseIn"
+          let msg1 = "These "
+              msg2 = msg0 <> msg1
           rr <- eval (Proxy @r) opts (a,b)
-          pure $ case getValueLR opts (msg0 <> " r failed") rr [] of
+          pure $ case getValueLR opts (msg2 <> "r failed") rr [] of
                Left e -> e
                Right c -> mkNode opts (PresentT c) [show01 opts msg0 c (These a b)] [hh rr]
 
@@ -7738,13 +7777,6 @@ instance P (ReadBaseT t n p) x => P (ReadBase t n p) x where
   type PP (ReadBase t n p) x = PP (ReadBaseT t n p) x
   eval _ = eval (Proxy @(ReadBaseT t n p))
 
-data ReadBaseInt (n :: Nat) p
-type ReadBaseIntT (n :: Nat) p = ReadBase' (Hole Int) n p
-
-instance P (ReadBaseIntT n p) x => P (ReadBaseInt n p) x where
-  type PP (ReadBaseInt n p) x = PP (ReadBaseIntT n p) x
-  eval _ = eval (Proxy @(ReadBaseIntT n p))
-
 getValidBase :: Int -> String
 getValidBase n =
   let xs = ['0'..'9'] <> ['a'..'z']
@@ -7784,7 +7816,7 @@ instance (PP p x ~ a
   eval _ opts x = do
     let n = nat @n
         xs = getValidBase n
-        msg0 = "ShowBase " <> show n
+        msg0 = "ShowBase(" <> show n <> ")"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
@@ -7884,8 +7916,8 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 -- PresentT [10,21,120]
 --
 -- >>> pz @(Para '[Id,Id + 1,Id * 4]) [10,20,30,40]
--- Error Para: invalid length:expected 3 but found 4
--- FailT "Para: invalid length:expected 3 but found 4"
+-- Error Para:invalid length(4) expected 3
+-- FailT "Para:invalid length(4) expected 3"
 --
 data ParaImpl (n :: Nat) (os :: [k])
 
@@ -7898,7 +7930,7 @@ instance (GetLen ps, P (ParaImpl (LenT ps) ps) [a]) => P (Para ps) [a] where
     let msg0 = "Para"
         n = getLen @ps
     if n /= length as then
-       let msg1 = msg0 <> ": invalid length:expected " ++ show n ++ " but found " ++ show (length as)
+       let msg1 = msg0 <> badLength as n
        in pure $ mkNode opts (FailT msg1) [msg1] []
     else eval (Proxy @(ParaImpl (LenT ps) ps)) opts as
 
@@ -7926,7 +7958,7 @@ instance (Show (PP p a)
           Left e -> e
           -- show1 opts " " [b]  fails but using 'b' is ok and (b : []) also works!
           -- GE.List problem
-          Right b -> mkNode opts (PresentT [b]) [msgbase1 <> show0 opts " " (b : []) <> show1 opts " | " a] [hh pp]
+          Right b -> mkNode opts (PresentT [b]) [msgbase1 <> show0 opts " " [b] <> show1 opts " | " a] [hh pp]
       _ -> errorInProgram $ "ParaImpl base case should have exactly one element but found " ++ show as'
 
 instance (KnownNat n
@@ -7956,7 +7988,7 @@ instance (KnownNat n
                         pure $ case getValueLRHide opts (msgbase1 <> " rhs failed " <> show b) qq [hh pp] of
                           Left e -> e
                           Right bs -> mkNode opts (PresentT (b:bs)) [msgbase1 <> show0 opts " " (b:bs) <> show1 opts " | " as'] [hh pp, hh qq]
-       _ -> errorInProgram $ "ParaImpl n+1 case has no data left"
+       _ -> errorInProgram "ParaImpl n+1 case has no data left"
 
 -- | leverages 'Para' for repeating predicates (passthrough method)
 --
@@ -7965,8 +7997,8 @@ instance (KnownNat n
 -- PresentT [2,3,4,5]
 --
 -- >>> pz @(ParaN 4 (Succ Id)) "azwxm"
--- Error Para: invalid length:expected 4 but found 5
--- FailT "Para: invalid length:expected 4 but found 5"
+-- Error Para:invalid length(5) expected 4
+-- FailT "Para:invalid length(5) expected 4"
 --
 -- >>> pz @(ParaN 4 (Succ Id)) "azwx"
 -- Present "b{xy"
@@ -7978,8 +8010,7 @@ instance ( P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) [a]
          , GetLen (RepeatT n p)
          ) => P (ParaN n p) [a] where
   type PP (ParaN n p) [a] = PP (Para (RepeatT n p)) [a]
-  eval _ opts as =
-    eval (Proxy @(Para (RepeatT n p))) opts as
+  eval _ = eval (Proxy @(Para (RepeatT n p)))
 
 -- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
 --
@@ -8075,7 +8106,7 @@ instance (P r x
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR opts msgbase0 qq [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] (hh rr : hh pp : if isVerbose opts then [hh qq] else [])
+              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] (hh rr : hh pp : [hh qq | isVerbose opts])
           Right False -> do
             ee <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
             pure $ case getValueLR opts (msgbase0 <> "  otherwise failed") ee [hh rr, hh pp] of
@@ -8113,7 +8144,7 @@ instance (KnownNat n
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR opts msgbase0 qq [hh pp, hh rr] of
               Left e -> e
-              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] (hh rr : hh pp : if isVerbose opts then [hh qq] else [])
+              Right b -> mkNode opts (PresentT b) [show01 opts msgbase0 b a] (hh rr : hh pp : [hh qq | isVerbose opts])
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
             pure $ case getValueLR opts (msgbase1 <> " failed rhs") ww [hh rr, hh pp] of
@@ -8131,13 +8162,6 @@ instance (KnownNat n
 -- PresentT Nothing
 --
 data Sequence
-type TraverseT p q = Map p q >> Sequence
-
-data Traverse p q
-
-instance P (TraverseT p q) x => P (Traverse p q) x where
-  type PP (Traverse p q) x = PP (TraverseT p q) x
-  eval _ = eval (Proxy @(TraverseT p q))
 
 instance (Show (f (t a))
         , Show (t (f a))
@@ -8148,6 +8172,13 @@ instance (Show (f (t a))
   eval _ opts tfa =
      let d = sequenceA tfa
      in pure $ mkNode opts (PresentT d) ["Sequence" <> show0 opts " " d <> show1 opts " | " tfa] []
+
+data Traverse p q
+type TraverseT p q = Map p q >> Sequence
+
+instance P (TraverseT p q) x => P (Traverse p q) x where
+  type PP (Traverse p q) x = PP (TraverseT p q) x
+  eval _ = eval (Proxy @(TraverseT p q))
 
 -- | run the expression \'p\' but remove the subtrees
 data Hide p
@@ -8176,7 +8207,7 @@ type FileExistsT p = IsJust (ReadFile p)
 
 instance P (FileExistsT p) x => P (FileExists p) x where
   type PP (FileExists p) x = PP (FileExistsT p) x
-  eval _ = eval (Proxy @(FileExistsT p))
+  eval _ = evalBool (Proxy @(FileExistsT p))
 
 instance (PP p x ~ String, P p x) => P (ReadFile p) x where
   type PP (ReadFile p) x = Maybe String
@@ -8208,7 +8239,7 @@ type DirExistsT p = IsJust (ReadDir p)
 
 instance P (DirExistsT p) x => P (DirExists p) x where
   type PP (DirExists p) x = PP (DirExistsT p) x
-  eval _ = eval (Proxy @(DirExistsT p))
+  eval _ = evalBool (Proxy @(DirExistsT p))
 
 
 instance (PP p x ~ String, P p x) => P (ReadDir p) x where
@@ -8259,7 +8290,7 @@ instance P ReadEnvAll a where
   type PP ReadEnvAll a = [(String,String)]
   eval _ opts _ = do
     let msg0 = "ReadEnvAll"
-    mb <- runIO $ getEnvironment
+    mb <- runIO getEnvironment
     pure $ case mb of
       Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
       Just v -> mkNode opts (PresentT v) [msg0 <> " count=" <> show (length v)] []
@@ -8271,7 +8302,7 @@ instance P TimeUtc a where
   type PP TimeUtc a = UTCTime
   eval _ opts _a = do
     let msg0 = "TimeUtc"
-    mb <- runIO $ getCurrentTime
+    mb <- runIO getCurrentTime
     pure $ case mb of
       Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
       Just v -> mkNode opts (PresentT v) [msg0 <> show0 opts " " v] []
@@ -8283,7 +8314,7 @@ instance P TimeZt a where
   type PP TimeZt a = ZonedTime
   eval _ opts _a = do
     let msg0 = "TimeZt"
-    mb <- runIO $ getZonedTime
+    mb <- runIO getZonedTime
     pure $ case mb of
       Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
       Just v -> mkNode opts (PresentT v) [msg0 <> show0 opts " " v] []
@@ -8363,18 +8394,17 @@ instance (GetFHandle fh
     case getValueLR opts msg0 pp [] of
       Left e -> pure e
       Right ss -> do
-          mb <- runIO $ do
-                          case fh of
-                            FStdout -> fmap (left show) $ E.try @E.SomeException $ hPutStr stdout ss
-                            FStderr -> fmap (left show) $ E.try @E.SomeException $ hPutStr stderr ss
-                            FOther s w -> do
-                               b <- doesFileExist s
-                               if b && w == WFWrite then pure $ Left $ "file [" <> s <> "] already exists"
-                               else do
-                                      let md = case w of
-                                             WFAppend -> AppendMode
-                                             _ -> WriteMode
-                                      fmap (left show) $ E.try @E.SomeException $ withFile s md (flip hPutStr ss)
+          mb <- runIO $ case fh of
+                  FStdout -> fmap (left show) $ E.try @E.SomeException $ hPutStr stdout ss
+                  FStderr -> fmap (left show) $ E.try @E.SomeException $ hPutStr stderr ss
+                  FOther s w -> do
+                     b <- doesFileExist s
+                     if b && w == WFWrite then pure $ Left $ "file [" <> s <> "] already exists"
+                     else do
+                            let md = case w of
+                                   WFAppend -> AppendMode
+                                   _ -> WriteMode
+                            fmap (left show) $ E.try @E.SomeException $ withFile s md (`hPutStr` ss)
           pure $ case mb of
             Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] [hh pp]
             Just (Left e) -> mkNode opts (FailT e) [msg0 <> " " <> e] [hh pp]
@@ -8393,7 +8423,7 @@ instance P Stdin x where
   eval _ opts _x = do
     let msg0 = "Stdin"
     mb <- runIO $ do
-                      lr <- E.try $ getLine
+                      lr <- E.try getLine
                       pure $ case lr of
                         Left (e :: E.SomeException) -> Left $ show e
                         Right ss -> Right ss
@@ -8458,42 +8488,42 @@ type IsPrefixT p q = IsFixImpl 'LT 'False p q
 
 instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
   type PP (IsPrefix p q) x = PP (IsPrefixT p q) x
-  eval _ = eval (Proxy @(IsPrefixT p q))
+  eval _ = evalBool (Proxy @(IsPrefixT p q))
 
 data IsInfix p q
 type IsInfixT p q = IsFixImpl 'EQ 'False p q
 
 instance P (IsInfixT p q) x => P (IsInfix p q) x where
   type PP (IsInfix p q) x = PP (IsInfixT p q) x
-  eval _ = eval (Proxy @(IsInfixT p q))
+  eval _ = evalBool (Proxy @(IsInfixT p q))
 
 data IsSuffix p q
 type IsSuffixT p q = IsFixImpl 'GT 'False p q
 
 instance P (IsSuffixT p q) x => P (IsSuffix p q) x where
   type PP (IsSuffix p q) x = PP (IsSuffixT p q) x
-  eval _ = eval (Proxy @(IsSuffixT p q))
+  eval _ = evalBool (Proxy @(IsSuffixT p q))
 
 data IsPrefixI p q
 type IsPrefixIT p q = IsFixImpl 'LT 'True p q
 
 instance P (IsPrefixIT p q) x => P (IsPrefixI p q) x where
   type PP (IsPrefixI p q) x = PP (IsPrefixIT p q) x
-  eval _ = eval (Proxy @(IsPrefixIT p q))
+  eval _ = evalBool (Proxy @(IsPrefixIT p q))
 
 data IsInfixI p q
 type IsInfixIT p q = IsFixImpl 'EQ 'True p q
 
 instance P (IsInfixIT p q) x => P (IsInfixI p q) x where
   type PP (IsInfixI p q) x = PP (IsInfixIT p q) x
-  eval _ = eval (Proxy @(IsInfixIT p q))
+  eval _ = evalBool (Proxy @(IsInfixIT p q))
 
 data IsSuffixI p q
 type IsSuffixIT p q = IsFixImpl 'GT 'True p q
 
 instance P (IsSuffixIT p q) x => P (IsSuffixI p q) x where
   type PP (IsSuffixI p q) x = PP (IsSuffixIT p q) x
-  eval _ = eval (Proxy @(IsSuffixIT p q))
+  eval _ = evalBool (Proxy @(IsSuffixIT p q))
 
 -- | similar to 'SG.<>'
 --
@@ -8872,7 +8902,7 @@ instance (P p x
       Left e -> e
       Right (p,q,pp,qq)  ->
         let d = p q
-        in mkNode opts (PresentT d) ["fn $$ " <> show q <> " = " <> show d] [hh pp, hh qq]
+        in mkNode opts (PresentT d) [msg0 <> " " <> show q <> " = " <> show d] [hh pp, hh qq]
 
 -- reify this so we can combine (type synonyms dont work as well)
 
@@ -8905,7 +8935,7 @@ instance (P p x
       Left e -> e
       Right (p,q,pp,qq)  ->
         let d = p q
-        in mkNode opts (PresentT d) ["fn $& " <> show q <> " = " <> show d] [hh pp, hh qq]
+        in mkNode opts (PresentT d) [msg0 <> " " <> show q <> " = " <> show d] [hh pp, hh qq]
 
 type family FnT ab :: Type where
   FnT (a -> b) = b
@@ -9073,8 +9103,7 @@ instance P (StripRT p q) x => P (StripR p q) x where
 data Repeat (n :: Nat) p
 instance P (RepeatT n p) a => P (Repeat n p) a where
   type PP (Repeat n p) a = PP (RepeatT n p) a
-  eval _ opts a =
-    eval (Proxy @(RepeatT n p)) opts a
+  eval _ = eval (Proxy @(RepeatT n p))
 
 -- | leverages 'Do' for repeating predicates (passthrough method)
 -- same as @DoN n p == FoldN n p Id@ but more efficient
@@ -9095,8 +9124,7 @@ data DoN (n :: Nat) p
 type DoNT (n :: Nat) p = Do (RepeatT n p)
 instance P (DoNT n p) a => P (DoN n p) a where
   type PP (DoN n p) a = PP (DoNT n p) a
-  eval _ opts a =
-    eval (Proxy @(DoNT n p)) opts a
+  eval _ = eval (Proxy @(DoNT n p))
 
 -- | extract the value from a 'Maybe' otherwise use the default value
 --
@@ -9133,7 +9161,7 @@ instance ( PP p x ~ a
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           Just b -> pure $ mkNode opts (PresentT b) [msg0 <> " Just"] [hh qq]
           Nothing -> do
@@ -9181,7 +9209,7 @@ instance ( PP p x ~ String
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           Just b -> pure $ mkNode opts (PresentT b) [msg0 <> " Just"] [hh qq]
           Nothing -> do
@@ -9227,7 +9255,7 @@ instance ( PP q x ~ Either a b
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           Left a -> pure $ mkNode opts (PresentT a) [msg0 <> " Left"] [hh qq]
           Right b -> do
@@ -9287,7 +9315,7 @@ instance ( PP q x ~ Either a b
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           Right b -> pure $ mkNode opts (PresentT b) [msg0 <> " Right"] [hh qq]
           Left a -> do
@@ -9330,7 +9358,7 @@ instance ( PP p (b,x) ~ String
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           Left a -> pure $ mkNode opts (PresentT a) [msg0 <> " Left"] [hh qq]
           Right b -> do
@@ -9373,7 +9401,7 @@ instance ( PP p (a,x) ~ String
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           Right b -> pure $ mkNode opts (PresentT b) [msg0 <> " Right"] [hh qq]
           Left a -> do
@@ -9425,7 +9453,7 @@ instance ( PP q x ~ These a b
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           This a -> pure $ mkNode opts (PresentT a) [msg0 <> " This"] [hh qq]
           _ -> do
@@ -9497,7 +9525,7 @@ instance ( PP q x ~ These a b
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           That a -> pure $ mkNode opts (PresentT a) [msg0 <> " That"] [hh qq]
           _ -> do
@@ -9547,7 +9575,7 @@ instance ( PP q x ~ These a b
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           These a b -> pure $ mkNode opts (PresentT (a,b)) [msg0 <> " These"] [hh qq]
           _ -> do
@@ -9590,7 +9618,7 @@ instance ( PP p x ~ String
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           This a -> pure $ mkNode opts (PresentT a) [msg0 <> " This"] [hh qq]
           _ -> do
@@ -9633,7 +9661,7 @@ instance ( PP p x ~ String
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           That a -> pure $ mkNode opts (PresentT a) [msg0 <> " That"] [hh qq]
           _ -> do
@@ -9678,7 +9706,7 @@ instance ( PP p x ~ String
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q ->
         case q of
           These a b -> pure $ mkNode opts (PresentT (a,b)) [msg0 <> " These"] [hh qq]
           _ -> do
@@ -9888,9 +9916,7 @@ infixr 0 $
 
 instance P (p q) a => P (p $ q) a where
   type PP (p $ q) a = PP (p q) a
-  eval _ opts a = do
-    eval (Proxy @(p q)) opts a
-
+  eval _  = eval (Proxy @(p q))
 
 -- | similar to 'Control.Lens.&'
 --
@@ -9898,15 +9924,30 @@ instance P (p q) a => P (p $ q) a where
 -- Present 1 (Length 1 | [13])
 -- PresentT 1
 --
+-- >>> pl @(2 & (&&&) "abc") ()
+-- Present ("abc",2) (W'(,))
+-- PresentT ("abc",2)
+--
+-- >>> pl @(2 & '(,) "abc") ()
+-- Present ("abc",2) ('(,))
+-- PresentT ("abc",2)
+--
+-- >>> pl @('(,) 4 $ '(,) 7 $ "aa") ()
+-- Present (4,(7,"aa")) ('(,))
+-- PresentT (4,(7,"aa"))
+--
+-- >>> pl @(Thd $ Snd $ Fst Id) ((1,("W",9,'a')),(3,4))
+-- Present 'a' (Thd 'a' | ("W",9,'a'))
+-- PresentT 'a'
+--
 data (q :: k) & (p :: k -> k1)
 infixl 1 &
 
 instance P (p q) a => P (q & p) a where
   type PP (q & p) a = PP (p q) a
-  eval _ opts a = do
-    eval (Proxy @(p q)) opts a
+  eval _ = eval (Proxy @(p q))
 
--- | creates a constant expression ignoring the second arguenent
+-- | creates a constant expression ignoring the second argument
 --
 -- >>> pl @(RDot '[Fst,Snd,Thd,K "xxx"] Id) ((1,(2,9,10)),(3,4))
 -- Present "xxx" (K'xxx)
@@ -9916,7 +9957,15 @@ instance P (p q) a => P (q & p) a where
 -- Present ("abc",((1,(2,9,10)),(3,4))) (K'(,))
 -- PresentT ("abc",((1,(2,9,10)),(3,4)))
 --
-data K (p :: k) (q :: Type)
+-- >>> pl @(Thd $ Snd $ Fst $ K Id "dud") ((1,("W",9,'a')),(3,4))
+-- Present 'a' (Thd 'a' | ("W",9,'a'))
+-- PresentT 'a'
+--
+-- >>> pl @((Thd $ Snd $ Fst $ K Id "dud") >> Pred Id) ((1,("W",9,'a')),(3,4))
+-- Present '`' ((>>) '`' | {Pred '`' | 'a'})
+-- PresentT '`'
+--
+data K (p :: k) (q :: k1)
 instance P p a => P (K p q) a where
   type PP (K p q) a = PP p a
   eval _ = eval (Proxy @(Msg "K" p))
@@ -9938,6 +9987,12 @@ instance P p a => P (K p q) a where
 -- >>> pl @(Both Len (Fst Id)) (("abc",[10..17]),True)
 -- Present (3,8) (Both)
 -- PresentT (3,8)
+--
+-- >>> pl @(Both (ReadP Day Id) Id) ("1999-01-01","2001-02-12")
+-- Present (1999-01-01,2001-02-12) (Both)
+-- PresentT (1999-01-01,2001-02-12)
+--
+-- todo: add topMessage somehow?
 data Both p q
 instance ( ExtractL1C (PP q x)
          , ExtractL2C (PP q x)
@@ -10098,4 +10153,157 @@ instance P (ParseJsonFileT t p) x => P (ParseJsonFile t p) x where
   type PP (ParseJsonFile t p) x = PP (ParseJsonFileT t p) x
   eval _ = eval (Proxy @(ParseJsonFileT t p))
 
+-- | uncurry experiment
+--
+-- >>> pl @(Uncurry Between (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2019-10-12"
+-- False (Uncurry (2019-10-12 <= 2018-12-30))
+-- FalseT
+--
+-- >>> pl @(Uncurry Between (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2017-10-12"
+-- True (Uncurry (2017-04-11 <= 2017-10-12 <= 2018-12-30))
+-- TrueT
+--
+-- >>> pl @(Uncurry Between (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2016-10-12"
+-- False (Uncurry (2017-04-11 <= 2016-10-12))
+-- FalseT
+--
+data Uncurry (p :: Type -> Type -> Type -> Type) q r
+
+instance (PP q x ~ (a,b)
+        , PP (p a b (PP r x)) x ~ PP (p (Fst Id) (Snd Id) (Thd Id)) (a, b, PP r x)
+        , P q x
+        , P r x
+        , P (p (Fst Id) (Snd Id) (Thd Id)) (a,b,PP r x)
+     ) => P (Uncurry p q r) x where
+  type PP (Uncurry p q r) x = PP (p (ExtractL1T (PP q x)) (ExtractL2T (PP q x)) (PP r x)) x
+  eval _ opts x = do
+    let msg0 = "Uncurry"
+    lr <- runPQ msg0 (Proxy @q) (Proxy @r) opts x []
+    case lr of
+      Left e -> pure e
+      Right ((q1,q2),r,qq,rr) -> do
+        let hhs0 = [hh qq, hh rr]
+        pp <- eval (Proxy @(p (Fst Id) (Snd Id) (Thd Id))) opts (q1,q2,r)
+        pure $ case getValueLR opts msg0 pp hhs0 of
+          Left e -> e
+          Right _ ->
+            let hhs = hhs0 ++ [hh pp]
+            in mkNode opts (_tBool pp) [msg0 <> " " <> topMessage pp] hhs
+
+-- | like 'Predicate.Prelude.&&' but for a tuple
+--
+-- >>> pl @(SplitAt 4 "abcdefg" >> Len > 4 &* Len < 5) ()
+-- False ((>>) False | {False (&*) True | (4 > 4)})
+-- FalseT
+--
+-- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "Cabc"
+-- True ((>>) True | {True (&*) True})
+-- TrueT
+--
+-- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "CabD"
+-- False ((>>) False | {True (&*) False | (IsLower | "abD")})
+-- FalseT
+--
+-- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "2abd"
+-- False ((>>) False | {IsUpper | "2"})})
+-- FalseT
+--
+data AndA p q r
+instance (PP r x ~ (a,b)
+        , PP p a ~ Bool
+        , PP q b ~ Bool
+        , P p a
+        , P q b
+        , P r x
+        ) => P (AndA p q r) x where
+  type PP (AndA p q r) x = Bool
+  eval _ opts x = do
+    let msg0 = "(&*)"
+    rr <- eval (Proxy @r) opts x
+    case getValueLR opts msg0 rr [] of
+      Left e -> pure e
+      Right (r1,r2) -> do
+        pp <- evalBool (Proxy @p) opts r1
+        case getValueLR opts msg0 pp [hh rr] of
+          Left e -> pure e
+          Right p -> do
+            qq <- evalBool (Proxy @q) opts r2
+            pure $ case getValueLR opts msg0 qq [hh rr, hh pp] of
+              Left e -> e
+              Right q ->
+                let zz = case (p,q) of
+                          (True, True) -> ""
+                          (False, True) -> topMessage pp
+                          (True, False) -> topMessage qq
+                          (False, False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+                in mkNodeB opts (p&&q) [show p <> " " <> msg0 <> " " <> show q <> (if null zz then zz else " | " <> zz)] [hh rr, hh pp, hh qq]
+
+data p &* q
+type AndAT p q = AndA p q Id
+infixr 3 &*
+
+instance P (AndAT p q) x => P (p &* q) x where
+  type PP (p &* q) x = PP (AndAT p q) x
+  eval _ = evalBool (Proxy @(AndAT p q))
+
+{-
+data p &&! q
+type AndAT' p q = (Fst Id >> p) && (Snd Id >> q)
+infixr 3 &&!
+
+instance (P (AndAT' p q) x
+        ) => P (p &&! q) x where
+  type PP (p &&! q) x = PP (AndAT' p q) x
+  eval _ = evalBool (Proxy @(AndAT' p q))
+-}
+
+-- | like 'Predicate.Prelude.||' but for a tuple
+--
+-- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,8,14,44],9)
+-- True (True (|+) False)
+-- TrueT
+--
+-- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,14],9)
+-- False (False (|+) False | (32 > 44) (|+) (9 < 2))
+-- FalseT
+--
+-- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,14],1)
+-- True (False (|+) True)
+-- TrueT
+--
+data OrA p q r
+instance (PP r x ~ (a,b)
+        , PP p a ~ Bool
+        , PP q b ~ Bool
+        , P p a
+        , P q b
+        , P r x
+        ) => P (OrA p q r) x where
+  type PP (OrA p q r) x = Bool
+  eval _ opts x = do
+    let msg0 = "(|+)"
+    rr <- eval (Proxy @r) opts x
+    case getValueLR opts msg0 rr [] of
+      Left e -> pure e
+      Right (r1,r2) -> do
+        pp <- evalBool (Proxy @p) opts r1
+        case getValueLR opts msg0 pp [hh rr] of
+          Left e -> pure e
+          Right p -> do
+            qq <- evalBool (Proxy @q) opts r2
+            pure $ case getValueLR opts msg0 qq [hh rr, hh pp] of
+              Left e -> e
+              Right q ->
+                let zz = case (p,q) of
+                          (False,False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+                          _ -> ""
+                in mkNodeB opts (p||q) [show p <> " " <> msg0 <> " " <> show q <> (if null zz then zz else " | " <> zz)] [hh rr, hh pp, hh qq]
+
+data p |+ q
+type OrAT p q = OrA p q Id
+infixr 3 |+
+
+instance P (OrAT p q) x => P (p |+ q) x where
+  type PP (p |+ q) x = PP (OrAT p q) x
+  eval _ = evalBool (Proxy @(OrAT p q))
 

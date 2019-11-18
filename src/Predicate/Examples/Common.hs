@@ -97,13 +97,13 @@ type Dtfmt = FormatTimeP "%F %T" Id
 type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd (OneP Id))
 -- | \'op\' type for validating a ssn
 type Ssnop = BoolsQuick (PrintT "number for group %d invalid: found %d" Id)
-                     '[Between 1 899 && Id /= 666, Between 1 99, Between 1 9999]
+                     '[Between 1 899 Id && Id /= 666, Between 1 99 Id, Between 1 9999 Id]
 
 {-
 type Ssnop' = GuardsDetail "%s invalid: found %d"
-                          '[ '("first", Between 1 899 && Id /= 666)
-                           , '("second", Between 1 99)
-                           , '("third" , Between 1 9999)
+                          '[ '("first", Between 1 899 Id && Id /= 666)
+                           , '("second", Between 1 99 Id)
+                           , '("third" , Between 1 9999 Id)
                            ] >> 'True
 -}
 
@@ -112,12 +112,13 @@ type Ssnfmt = PrintL 3 "%03d-%02d-%04d" Id
 
 -- | \'ip\' type for reading in time
 type Hmsip = Map (ReadP Int Id) (Resplit ":" Id)
--- type Hmsop' = BoolsQuick "" '[ Msg "hours:"   (Between 0 23), Msg "minutes:" (Between 0 59), Msg "seconds:" (Between 0 59)]
+-- type Hmsop' = BoolsQuick "" '[ Msg "hours:"   (Between 0 23 Id), Msg "minutes:" (Between 0 59 Id), Msg "seconds:" (Between 0 59 Id)]
+
+-- | \'op\' type for validating the time using a guard
+type Hmsop = GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]
 
 -- | \'op\' type for validating the time using predicate
-type Hmsop' = Bools '[ '("hours", Between 0 23), '("minutes",Between 0 59), '("seconds",Between 0 59) ]
--- | \'op\' type for validating the time using a guard
-type Hmsop = GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23),'("minutes",Between 0 59),'("seconds",Between 0 59)]
+type Hmsop' = Bools '[ '("hours", Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id) ]
 
 -- | \'fmt\' type for formatting the time
 type Hmsfmt = PrintL 3 "%02d:%02d:%02d" Id
@@ -136,9 +137,9 @@ type Ip4ip' = Map (ReadP Int Id) (Rescan Ip4RE Id >> Snd (OneP Id))
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
 
 -- | \'op\' type for validating an ip4 address using a predicate
-type Ip4op' = BoolsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255)
+type Ip4op' = BoolsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255 Id)
 -- | \'op\' type for validating an ip4 address using a guard
-type Ip4op = GuardsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255)
+type Ip4op = GuardsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255 Id)
 
 -- | \'fmt\' type for formatting an ip4 address
 type Ip4fmt = PrintL 4 "%03d.%03d.%03d.%03d" Id
@@ -153,14 +154,14 @@ type Ip4StrictRE = "^" <%> IntersperseT "\\." (RepeatT 4 OctetRE) <%> "$"
 -- | \'ip\' type for reading in an ip6 address
 type Ip6ip = Resplit ":" Id
          >> Map (If (Id == "") "0" Id) Id
-         >> Map (ReadBaseInt 16 Id) Id
+         >> Map (ReadBase Int 16 Id) Id
          >> PadL 8 0 Id
 
---type Ip6ip' = Map (If (Id == "") 0 (ReadBaseInt 16 Id)) (Resplit ":" Id) >> PadL 8 0 Id
+--type Ip6ip' = Map (If (Id == "") 0 (ReadBase Int 16 Id)) (Resplit ":" Id) >> PadL 8 0 Id
 
 -- | \'op\' type for validating an ip6 address using predicates
 type Ip6op = Msg "count is bad:" (Len == 8)
-          && Msg "out of bounds:" (All (Between 0 65535) Id)
+          && Msg "out of bounds:" (All (Between 0 65535 Id) Id)
 
 -- | \'fmt\' type for formatting an ip6 address
 type Ip6fmt = PrintL 8 "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x" Id
@@ -180,14 +181,14 @@ type DateTimeNip = ParseTimes UTCTime DateTimeFmts Id
 type DdmmyyyyRE = "^(\\d{2})-(\\d{2})-(\\d{4})$"
 {-
 type Ddmmyyyyop =
-    Guards '[ '(PrintT "guard(%d) day %d is out of range" Id, Between 1 31)
-            , '(PrintT "guard(%d) month %d is out of range" Id, Between 1 12)
-            , '(PrintT "guard(%d) year %d is out of range" Id, Between 1990 2050) ]
+    Guards '[ '(PrintT "guard(%d) day %d is out of range" Id, Between 1 31 Id)
+            , '(PrintT "guard(%d) month %d is out of range" Id, Between 1 12 Id)
+            , '(PrintT "guard(%d) year %d is out of range" Id, Between 1990 2050 Id) ]
 -}
---type Ddmmyyyyop' = GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]
-type Ddmmyyyyop = GuardsDetail "%s %d is out of range" '[ '("day", Between 1 31), '("month", Between 1 12), '("year", Between 1990 2050) ]
-type Ddmmyyyyop' = Bools '[ '("day", Between 1 31), '("month", Between 1 12), '("year", Between 1990 2050) ]
---type Ddmmyyyyop'''' = BoolsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31, Between 1 12, Between 1990 2050]
+--type Ddmmyyyyop' = GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]
+type Ddmmyyyyop = GuardsDetail "%s %d is out of range" '[ '("day", Between 1 31 Id), '("month", Between 1 12 Id), '("year", Between 1990 2050 Id) ]
+type Ddmmyyyyop' = Bools '[ '("day", Between 1 31 Id), '("month", Between 1 12 Id), '("year", Between 1990 2050 Id) ]
+--type Ddmmyyyyop'''' = BoolsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]
 
 type Luhnop' (n :: Nat) =
          Guard (PrintT "incorrect number of digits found %d but expected %d in [%s]" '(Len, n, ShowP Id)) (Len == n)

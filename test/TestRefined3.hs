@@ -57,7 +57,7 @@ namedTests =
   , testCase "datetime utctime" $ (@?=) ($$(refined3TH "2019-01-04 23:00:59") :: MakeR3 (DateTime1 UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
   , testCase "datetime localtime" $ (@?=) ($$(refined3TH "2019-01-04 09:12:30") :: MakeR3 (DateTime1 LocalTime)) (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
   , testCase "hms" $ (@?=) ($$(refined3TH "12:0:59") :: MakeR3 Hms) (unsafeRefined3 [12,0,59] "12:00:59")
-  , testCase "between5and9" $ (@?=) ($$(refined3TH "7") :: Refined3 (ReadP Int Id) (Between 5 9) (PrintF "%03d" Id) String) (unsafeRefined3 7 "007")
+  , testCase "between5and9" $ (@?=) ($$(refined3TH "7") :: Refined3 (ReadP Int Id) (Between 5 9 Id) (PrintF "%03d" Id) String) (unsafeRefined3 7 "007")
   , testCase "ssn" $ (@?=) ($$(refined3TH "123-45-6789") :: MakeR3 Ssn) (unsafeRefined3 [123,45,6789] "123-45-6789")
   , testCase "base16" $ (@?=) ($$(refined3TH "12f") :: MakeR3 (BaseN 16)) (unsafeRefined3 303 "12f")
   , testCase "daten1" $ (@?=) ($$(refined3TH "June 25 1900") :: MakeR3 DateN) (unsafeRefined3 (read "1900-06-25") "1900-06-25")
@@ -69,8 +69,8 @@ namedTests =
 
 unnamedTests :: [IO ()]
 unnamedTests = [
-    (@?=) [(unsafeRefined3 255 "ff", "")] (reads @(Refined3 (ReadBase Int 16 Id) (Between 0 255) (ShowBase 16 Id) String) "Refined3 {r3In = 255, r3Out = \"ff\"}") -- escape quotes cos read instance for String
-  , (@?=) [] (reads @(Refined3 (ReadBase Int 16 Id) (Between 0 255) (ShowBase 16 Id) String) "Refined3 {r3In = 256, r3Out = \"100\"}")
+    (@?=) [(unsafeRefined3 255 "ff", "")] (reads @(Refined3 (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 255, r3Out = \"ff\"}") -- escape quotes cos read instance for String
+  , (@?=) [] (reads @(Refined3 (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 256, r3Out = \"100\"}")
   , (@?=) [(unsafeRefined3 (-1234) "-4d2", "")] (reads @(Refined3 (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}")
 
   , (@?=) (unsafeRefined3 [1,2,3,4] "001.002.003.004") ($$(refined3TH "1.2.3.4") :: Ip4R)
@@ -90,13 +90,13 @@ unnamedTests = [
 
   , expect3 (Left $ XF "Regex no results")
                   $ eval3 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
-                          @((Len == 4) && All (Between 0 255) Id)
+                          @((Len == 4) && All (Between 0 255 Id) Id)
                           @(PrintL 4 "%03d.%03d.%03d.%03d" Id)
                           ol "1.21.x31.4"
 
   , expect3 (Right $ unsafeRefined3 [1,21,31,4] "001.021.031.004")
                   $ eval3 @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
-                          @((Len == 4) && All (Between 0 255) Id)
+                          @((Len == 4) && All (Between 0 255 Id) Id)
                           @(PrintL 4 "%03d.%03d.%03d.%03d" Id)
                           ol "1.21.31.4"
 
@@ -114,7 +114,7 @@ unnamedTests = [
                   $ eval3 @Id @(Gt (7 -% 3)) @(4123 % 1000) ol 4.123
 
   , expect3 (Right $ unsafeRefined3 [1,2,3,4] "")
-                  $ eval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255) Id && (Len == 4)) @""
+                  $ eval3 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255 Id) Id && (Len == 4)) @""
                   ol "1.2.3.4"
 
   , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
@@ -125,19 +125,19 @@ unnamedTests = [
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
                   $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
                   @(Guard "expected 3" (Len == 3)
-                 >> Guard "3 digits" (Ix' 0 >> Between 0 999)
-                 >> Guard "2 digits" (Ix' 1 >> Between 0 99)
-                 >> Guard "4 digits" (Ix' 2 >> Between 0 9999)
+                 >> Guard "3 digits" (Ix' 0 >> Between 0 999 Id)
+                 >> Guard "2 digits" (Ix' 1 >> Between 0 99 Id)
+                 >> Guard "4 digits" (Ix' 2 >> Between 0 9999 Id)
                  >> 'True
                    ) @"def"
                    ol "123-45-6789"
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz")
                   $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
-                  @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
+                  @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   @"xyz"
                   ol "123-45-6789"
 
@@ -158,19 +158,19 @@ unnamedTests = [
                   ol "123::Ffff:::11"
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
-                  $ eval3 @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
+                  $ eval3 @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
                            @(Ddmmyyyyop >> 'True)
                            @"xyz"
                            ol "31-11-1999"
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ eval3
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBaseInt 10 Id) (Snd Id))
-                  @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999, Between 0 99, Between 0 9999] >> 'True)
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
+                  @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   @"xyz"
                   ol "123-45-6789"
 
   , expect3 (Right $ unsafeRefined3 [1,2,3,4] "001.002.003.004") $ eval3P ip4 ol "1.2.3.4"
   , expect3 (Left $ XF "ReadP Int (3x)") $ eval3P ip4 ol "1.2.3x.4"
-  , expect3 (Left $ XTF [1,2,3,4,5] "Guards: invalid length:expected 4 but found 5") $ eval3P ip4 ol "1.2.3.4.5"
+  , expect3 (Left $ XTF [1,2,3,4,5] "Guards:invalid length(5) expected 4") $ eval3P ip4 ol "1.2.3.4.5"
   , expect3 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ eval3P ip4 ol "1.2.300.4"
   , expect3 (Left (XTFalse [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ eval3P ip4' ol "1.2.300.4"
   , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval3P cc11 ol "12345678903"
@@ -200,7 +200,7 @@ allProps =
 type HexLtR3 = Refined3 (ReadBase Int 16 Id) (Id < 500) (ShowBase 16 Id) String
 type IntLtR3 = Refined3 (ReadP Int Id) (Id < 10) (ShowP Id) String
 
-type Tst1 = '(ReadP Int Id, Between 1 7, PrintF "someval val=%03d" Id, String)
+type Tst1 = '(ReadP Int Id, Between 1 7 Id, PrintF "someval val=%03d" Id, String)
 
 yy1, yy2, yy3, yy4 :: RefinedT Identity (MakeR3 Tst1)
 
@@ -219,7 +219,7 @@ type Hmsfmt2 = Snd Id >> FormatTimeP "%T" Id
 
 -- better to use Guard for op boolean check cos we get better errormessages
 -- 1. packaged up as a promoted tuple
-type Tst3 = '(Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255) Id, ConcatMap (PrintF "%03d" Id) Id, String)
+type Tst3 = '(Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, ConcatMap (PrintF "%03d" Id) Id, String)
 
 www1, www2 :: String -> Either Msg3 (MakeR3 Tst3)
 www1 = prtEval3P (mkProxy3 @Tst3) o2
@@ -230,7 +230,7 @@ www2 = prtEval3P tst3 o2
 -- 2. packaged as a proxy
 tst3 :: Proxy
         '(Map (ReadP Int Id) (Resplit "\\." Id)
-        ,(Len == 4) && All (Between 0 255) Id
+        ,(Len == 4) && All (Between 0 255 Id) Id
         ,ConcatMap (PrintF "%03d" Id) Id
         ,String)
 tst3 = mkProxy3
@@ -239,14 +239,14 @@ tst3 = mkProxy3
 -- 3. direct
 ww3 :: String -> Either Msg3 (Refined3
                                (Map (ReadP Int Id) (Resplit "\\." Id))
-                               ((Len == 4) && All (Between 0 255) Id)
+                               ((Len == 4) && All (Between 0 255 Id) Id)
                                (ConcatMap (PrintF "%03d" Id) Id)
                                String)
 ww3 = prtEval3 o2
 {-
 ww3 = prtEval3
         @(Map (ReadP Int Id) (Resplit "\\." Id))
-        @((Len == 4) && All (Between 0 255))
+        @((Len == 4) && All (Between 0 255 Id))
         @(ConcatMap (PrintF "%03d" Id) Id)
         o2
 -}
@@ -260,7 +260,7 @@ type Age = '(ReadP Int Id, Gt 4, ShowP Id, String)
 
 type Ip9 = '(
             Map (ReadP Int Id) (Resplit "\\." Id) -- split String on "." then convert to [Int]
-           ,Len == 4 && All (Between 0 255) Id -- process [Int] and make sure length==4 and each octet is between 0 and 255
+           ,Len == 4 && All (Between 0 255 Id) Id -- process [Int] and make sure length==4 and each octet is between 0 and 255
            ,PrintL 4 "%03d.%03d.%03d.%03d" Id -- printf [Int]
            ,String -- input type is string which is also the output type
            )
@@ -276,13 +276,13 @@ prtEval3P (Proxy @(Ccn '[1,2,3])) ol "123455" -- succeeds
 
 -- prtRefinedT tst1a
 tst1a :: Monad m => POpts -> RefinedT m ((Int,String),(Int,String))
-tst1a opts = withRefined3T @(ReadBase Int 16 Id) @(Between 100 200) @(ShowBase 16 Id) @String opts "a3"
+tst1a opts = withRefined3T @(ReadBase Int 16 Id) @(Between 100 200 Id) @(ShowBase 16 Id) @String opts "a3"
   $ \r1 -> withRefined3T @(ReadP Int Id) @'True @(ShowP Id) @String opts "12"
      $ \r2 -> return ((r3In r1, r3Out r1), (r3In r2, r3Out r2))
 
 -- prtRefinedTIO tst2a
 tst2a :: MonadIO m => POpts -> RefinedT m ((Int,String),(Int,String))
-tst2a opts = withRefined3TIO @(ReadBase Int 16 Id) @(Stderr "start" |> Between 100 200 >| Stdout "end") @(ShowBase 16 Id) @String opts "a3"
+tst2a opts = withRefined3TIO @(ReadBase Int 16 Id) @(Stderr "start" |> Between 100 200 Id >| Stdout "end") @(ShowBase 16 Id) @String opts "a3"
   $ \r1 -> withRefined3TIO @(ReadP Int Id) @'True @(ShowP Id) @String opts "12"
      $ \r2 -> return ((r3In r1, r3Out r1), (r3In r2, r3Out r2))
 

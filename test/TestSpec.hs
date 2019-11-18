@@ -6,9 +6,12 @@ import qualified TestRefined2
 import qualified TestRefined3
 import Data.Functor
 import Test.Tasty
+import System.IO
 
 main :: IO ()
-main =
+main = do
+  hSetBuffering stdout LineBuffering
+  hSetBuffering stderr LineBuffering
   defaultMain $ testGroup "alltests"
     [ TestJson.suite
     , TestPredicate.suite

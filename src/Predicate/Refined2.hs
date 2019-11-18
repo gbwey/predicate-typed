@@ -171,10 +171,10 @@ instance (Refined2C ip op String, Show (PP ip String)) => IsString (Refined2 ip 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined2'
 --
--- >>> reads @(Refined2 (ReadBase Int 16 Id) (Between 0 255) String) "Refined2 {r2In = 254, r2Out = \"fe\"}"
+-- >>> reads @(Refined2 (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 254, r2Out = \"fe\"}"
 -- [(Refined2 {r2In = 254, r2Out = "fe"},"")]
 --
--- >>> reads @(Refined2 (ReadBase Int 16 Id) (Between 0 255) String) "Refined2 {r2In = 300, r2Out = \"12c\"}"
+-- >>> reads @(Refined2 (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 300, r2Out = \"12c\"}"
 -- []
 --
 -- >>> reads @(Refined2 (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
@@ -215,7 +215,7 @@ instance ( Eq i
 -- | 'ToJSON' instance for 'Refined2'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined2 @(ReadBase Int 16 Id) @(Between 0 255) 254 "fe")
+-- >>> A.encode (unsafeRefined2 @(ReadBase Int 16 Id) @(Between 0 255 Id) 254 "fe")
 -- "\"fe\""
 --
 -- >>> A.encode (unsafeRefined2 @Id @'True @Int 123 123)
@@ -276,16 +276,12 @@ instance (Show i
 -- >>> import Control.Lens
 -- >>> import Data.Time
 -- >>> type K1 = Refined2 (ReadP Day Id) 'True String
--- >>> type K2 = Refined2 (ReadP Day Id) (Between (ReadP Day "2019-03-30") (ReadP Day "2019-06-01")) String
--- >>> type K3 = Refined2 (ReadP Day Id) (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01")) String
+-- >>> type K2 = Refined2 (ReadP Day Id) (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id) String
 -- >>> r = unsafeRefined2' oz "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined2 {r2In = 2019-04-23, r2Out = "2019-04-23"}
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined2 {r2In = 2019-04-23, r2Out = "2019-04-23"}
---
--- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
 -- Refined2:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
@@ -336,12 +332,12 @@ withRefined2TIO opts = (>>=) . newRefined2TIO @_ @ip @op @i opts
 -- reads a binary string and adds the values together
 --
 -- >>> :set -XPolyKinds
--- >>> prtRefinedTIO $ withRefined2T @(ReadBase Int 16 Id) @(Between 100 200) oz "a3" $ \x -> withRefined2T @(ReadBase Int 2 Id) @'True oz "1001110111" $ \y -> pure (r2In x + r2In y)
+-- >>> prtRefinedTIO $ withRefined2T @(ReadBase Int 16 Id) @(Between 100 200 Id) oz "a3" $ \x -> withRefined2T @(ReadBase Int 2 Id) @'True oz "1001110111" $ \y -> pure (r2In x + r2In y)
 -- 794
 --
 -- this example fails as the the hex value is out of range
 --
--- >>> prtRefinedTIO $ withRefined2T @(ReadBase Int 16 Id) @(Between 100 200) o0 "a388" $ \x -> withRefined2T @(ReadBase Int 2 Id) @'True o0 "1001110111" $ \y -> pure (x,y)
+-- >>> prtRefinedTIO $ withRefined2T @(ReadBase Int 16 Id) @(Between 100 200 Id) o0 "a388" $ \x -> withRefined2T @(ReadBase Int 2 Id) @'True o0 "1001110111" $ \y -> pure (x,y)
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [41864] ***
 -- <BLANKLINE>

@@ -215,10 +215,10 @@ instance (Refined3C ip op fmt String, Show (PP ip String)) => IsString (Refined3
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
 --
--- >>> reads @(Refined3 (ReadBase Int 16 Id) (Between 0 255) (ShowBase 16 Id) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
+-- >>> reads @(Refined3 (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
 -- [(Refined3 {r3In = 254, r3Out = "fe"},"")]
 --
--- >>> reads @(Refined3 (ReadBase Int 16 Id) (Between 0 255) (ShowBase 16 Id) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
+-- >>> reads @(Refined3 (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
 -- []
 --
 -- >>> reads @(Refined3 (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
@@ -260,7 +260,7 @@ instance ( Eq i
 -- | 'ToJSON' instance for 'Refined3'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined3 @(ReadBase Int 16 Id) @(Between 0 255) @(ShowBase 16 Id) 254 "fe")
+-- >>> A.encode (unsafeRefined3 @(ReadBase Int 16 Id) @(Between 0 255 Id) @(ShowBase 16 Id) 254 "fe")
 -- "\"fe\""
 --
 -- >>> A.encode (unsafeRefined3 @Id @'True @Id 123 123)
@@ -346,16 +346,12 @@ arbRefined3With _ f =
 -- >>> import Control.Lens
 -- >>> import Data.Time
 -- >>> type K1 = MakeR3 '(ReadP Day Id, 'True, ShowP Id, String)
--- >>> type K2 = MakeR3 '(ReadP Day Id, Between (ReadP Day "2019-03-30") (ReadP Day "2019-06-01"), ShowP Id, String)
--- >>> type K3 = MakeR3 '(ReadP Day Id, Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01"), ShowP Id, String)
+-- >>> type K2 = MakeR3 '(ReadP Day Id, Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id, ShowP Id, String)
 -- >>> r = unsafeRefined3' oz "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
---
--- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
 -- Refined3:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
@@ -433,7 +429,7 @@ withRefined3TIO opts = (>>=) . newRefined3TPIO (Proxy @'(ip,op,fmt,i)) opts
 -- reads a binary string and adds the values together
 --
 -- >>> :set -XPolyKinds
--- >>> b16 = Proxy @'(ReadBase Int 16 Id, Between 100 200, ShowBase 16 Id, String)
+-- >>> b16 = Proxy @'(ReadBase Int 16 Id, Between 100 200 Id, ShowBase 16 Id, String)
 -- >>> b2 = Proxy @'(ReadBase Int 2 Id, 'True, ShowBase 2 Id, String)
 -- >>> prtRefinedTIO $ withRefined3TP b16 oz "a3" $ \x -> withRefined3TP b2 oz "1001110111" $ \y -> pure (r3In x + r3In y)
 -- 794

@@ -54,19 +54,19 @@ Left (FailP "ReadP Int (1x2y3) failed")
 3. reads in a hexadecimal string and checks to see that it is between 99 and 256
 ```haskell
 --  (>>) acts like the monadic operator (>>=)
->prtRefinedIO @(ReadBase Int 16 Id >> Between 99 256) ol "000fe"
+>prtRefinedIO @(ReadBase Int 16 Id >> Between 99 256 Id) ol "000fe"
 Right (Refined {unRefined = "000fe"})
 ```
 
 4. reads in a hexadecimal string but fails the predicate check
 ```haskell
->prtRefinedIO @(ReadBase Int 16 Id >> Between 99 253) ol "000fe"
+>prtRefinedIO @(ReadBase Int 16 Id >> Between 99 253 Id) ol "000fe"
 Left FalseP
 ```
 
 5. same as 4. above but now we get details of where it went wrong
 ```haskell
->prtRefinedIO @(ReadBase Int 16 Id >> Between 99 253) o2 "000fe"
+>prtRefinedIO @(ReadBase Int 16 Id >> Between 99 253 Id) o2 "000fe"
 ```
 
 6. reads in a string as time and does simple validation
@@ -101,7 +101,7 @@ if using a unicode-supported OS then _pu_ gives you nicer rendering than _pe2_\
 ### An example using Refined2 (for more information see [doctests](src/Predicate/Refined2.hs))
 
 ```haskell
->type Hex = '(ReadBase Int 16 Id, Between 0 255, String)
+>type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, String)
 
 >prtEval2P (Proxy @Hex) ol "0000fe"
 Refined2 {r2In = 254, r2Out = "0000fe"}
@@ -110,7 +110,7 @@ Refined2 {r2In = 254, r2Out = "0000fe"}
 Left "Step 2. False Boolean Check(op) | {8190 <= 255}"
 
 >import qualified Data.Aeson as A
->type Js = '(ParseJson (Int,String) Id, Msg "0-255:" (Between' 0 255 (Fst Id)) && Msg "length:" (Length (Snd Id) == 3), String)
+>type Js = '(ParseJson (Int,String) Id, Msg "0-255:" (Between 0 255 (Fst Id)) && Msg "length:" (Length (Snd Id) == 3), String)
 
 >prtEval2P (Proxy @Js) ol "[10,\"Abc\"]"
 Right (Refined2 {r2In = (10,"Abc"), r2Out = "[10,\"Abc\"]"})
@@ -125,14 +125,14 @@ Left Step 2. False Boolean Check(op) | {False && False | (0-255:0 <= -10) && (le
 ### An example using Refined3 (for more information see [doctests](src/Predicate/Examples/Refined3.hs))
 
 ```haskell
->type Hex = '(ReadBase Int 16 Id, Between 0 255, ShowBase 16 Id, String)
+>type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
 
 >prtEval3PIO (Proxy @Hex) ol "0000fe"
 Refined3 {r3In = 254, r3Out = "fe"}
 ```
 1. `ReadBase Int 16 Id`
     reads a hexadecimal string and returns 254
-2. `Between 0 255`
+2. `Between 0 255 Id`
     checks to make sure the predicate holds ie the number is between 0 and 255
 3. `ShowBase 16 Id`
     formats the output as "fe" which is compatible with the input
@@ -162,7 +162,7 @@ Read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as out
 >pe2 @(ReadBase Int 16 Id) "0000fe"
 PresentT 254
 
->pe2 @(Between 0 255) 254
+>pe2 @(Between 0 255 Id) 254
 TrueT
 
 >pe2 @(ShowBase 16 Id) 254 = "fe"
@@ -183,14 +183,14 @@ ex1 = $$(refinedTH "123")
 **_Replace '$$(refined3TH ...)' with '$$(refined3TH' o2 ...)' for a colored evaluation tree_**
 
 ```haskell
-type Hex = '(ReadBase Int 16 Id, Between 0 255, ShowBase 16 Id, String)
+type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
 
 $$(refined3TH "0000fe") :: MakeR3 Hex
 ```
 
 Here is an example where the predicate fails at compile-time and we choose to show the details using o2.
 ```haskell
->type Hex = '(ReadBase Int 16 Id, Between 0 255, ShowBase 16 Id, String)
+>type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
 
 >$$(refined3TH' o2 "000ffff") :: MakeR3 Hex
 

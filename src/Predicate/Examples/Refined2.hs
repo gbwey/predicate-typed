@@ -33,6 +33,10 @@ module Predicate.Examples.Refined2 (
   , Hms
   , HmsR
 
+  , hms'
+  , Hms'
+  , HmsR'
+
   -- ** credit cards
   , Ccn
   , cc11
@@ -166,6 +170,12 @@ hms = mkProxy2'
 type HmsR = MakeR2 Hms
 type Hms = '(Hmsip, Hmsop >> 'True, String)
 
+hms' :: Proxy Hms'
+hms' = mkProxy2'
+
+type HmsR' = MakeR2 Hms'
+type Hms' = '(Hmsip, Hmsop', String)
+
 -- | read in an ipv4 address and validate it
 --
 -- >>> prtEval2 @Ip4ip @Ip4op' oz "001.223.14.1"
@@ -178,7 +188,7 @@ type Hms = '(Hmsip, Hmsop >> 'True, String)
 -- Left Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 999
 --
 -- >>> prtEval2P ip4 ol "001.223.14.999.1"
--- Left Step 2. Failed Boolean Check(op) | Guards: invalid length:expected 4 but found 5
+-- Left Step 2. Failed Boolean Check(op) | Guards:invalid length(5) expected 4
 --
 -- >>> prtEval2P ip4 ol "001.257.14.1"
 -- Left Step 2. Failed Boolean Check(op) | octet 1 out of range 0-255 found 257
@@ -189,7 +199,7 @@ type Ip4 = '(Ip4ip, Ip4op >> 'True, String) -- guards
 ip4 :: Proxy Ip4
 ip4 = Proxy
 
-type Ip4R' = MakeR2 Ip4
+type Ip4R' = MakeR2 Ip4'
 type Ip4' = '(Ip4ip, Ip4op', String) -- boolean predicates
 
 ip4' :: Proxy Ip4'
@@ -207,16 +217,16 @@ cc11 = Proxy
 
 -- | convert a string from a given base \'i\' and store it internally as an base 10 integer
 --
--- >>> prtEval2 @(ReadBaseInt 16 Id) @'True oz "00fe"
+-- >>> prtEval2 @(ReadBase Int 16 Id) @'True oz "00fe"
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> prtEval2 @(ReadBaseInt 16 Id) @(Between 100 400) oz "00fe"
+-- >>> prtEval2 @(ReadBase Int 16 Id) @(Between 100 400 Id) oz "00fe"
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> prtEval2 @(ReadBaseInt 16 Id) @(GuardSimple (Id < 400) >> 'True) oz "f0fe"
+-- >>> prtEval2 @(ReadBase Int 16 Id) @(GuardSimple (Id < 400) >> 'True) oz "f0fe"
 -- Left Step 2. Failed Boolean Check(op) | (61694 < 400)
 --
--- >>> prtEval2 @(ReadBaseInt 16 Id) @(Id < 400) ol "f0fe" -- todo: why different parens vs braces
+-- >>> prtEval2 @(ReadBase Int 16 Id) @(Id < 400) ol "f0fe" -- todo: why different parens vs braces
 -- Left Step 2. False Boolean Check(op) | {61694 < 400}
 --
 type BaseN (n :: Nat) = BaseN' n 'True
@@ -258,10 +268,10 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- >>> prtEval2 @(ReadP Rational Id) @'True oz "13x % 3"
 -- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3)
 --
--- >>> prtEval2 @(ReadP Rational Id) @(Between (3 % 1) (5 % 1)) oz "13 % 3"
+-- >>> prtEval2 @(ReadP Rational Id) @(3 % 1 <..> 5 % 1) oz "13 % 3"
 -- Right (Refined2 {r2In = 13 % 3, r2Out = "13 % 3"})
 --
--- >>> prtEval2 @(ReadP Rational Id) @(Between (11 -% 2) (3 -% 1)) oz "-13 % 3"
+-- >>> prtEval2 @(ReadP Rational Id) @(11 -% 2 <..> 3 -% 1) oz "-13 % 3"
 -- Right (Refined2 {r2In = (-13) % 3, r2Out = "-13 % 3"})
 --
 -- >>> prtEval2 @(ReadP Rational Id) @(Id > (15 % 1)) oz "13 % 3"

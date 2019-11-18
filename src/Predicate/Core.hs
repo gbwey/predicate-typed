@@ -224,6 +224,16 @@ instance (P p a, P q a) => P '(p,q) a where
 -- Present (4,"hello","goodbye")
 -- PresentT (4,"hello","goodbye")
 --
+-- >>> pe @'( 'True, 'False, 123) True
+-- P '(,,)
+-- |
+-- +- True 'True
+-- |
+-- +- False 'False
+-- |
+-- `- P '123
+-- PresentT (True,False,123)
+--
 instance (P p a
         , P q a
         , P r a
@@ -563,9 +573,6 @@ instance Show a => P 'Proxy a where
     let b = Proxy @a
     in pure $ mkNode opts (PresentT b) ["'Proxy" <> show1 opts " | " a] []
 
--- End non-Type kinds
------------------------
-
 pe, pe2, pe2n, pu, pun, pe3, pl, plc, pz :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
 -- | displays the evaluation tree in plain text without colors
 pe  = peWith @p o0
@@ -608,8 +615,8 @@ prtTreeX opts pp =
           tm = if oDebug opts == OZero then "" else topMessage pp
       in (<>"\n") $ case r of
            FailT e -> f "Error" <> " " <> e
-           TrueT -> f "True " <> tm
-           FalseT -> f "False " <> tm
+           TrueT -> f "True" <> " " <> tm
+           FalseT -> f "False" <> " " <> tm
            PresentT x -> f "Present" <> " " <> show x <> " " <> tm
     else prtTreePure opts (fromTT pp)
 

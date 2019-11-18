@@ -44,7 +44,7 @@ namedTests :: [TestTree]
 namedTests =
   [
     testCase "always true" $ (@?=) ($$(refinedTH 7) :: Refined 'True Int) (unsafeRefined 7)
-  , testCase "between5and9" $ (@?=) ($$(refinedTH 7) :: Refined (Between 5 9) Int) (unsafeRefined 7)
+  , testCase "between5and9" $ (@?=) ($$(refinedTH 7) :: Refined (Between 5 9 Id) Int) (unsafeRefined 7)
   ]
 
 unnamedTests :: [IO ()]
@@ -53,14 +53,14 @@ unnamedTests = [
   , (@?=) (unsafeRefined @((Len == 4) && Luhn Id) [1,2,3,0]) $$(refinedTH [1,2,3,0])
   , (@?=) (unsafeRefined @(Not ((Len == 4) && Luhn Id)) [1,2,3,1]) $$(refinedTH [1,2,3,1])
 
-  , (@?=) [(unsafeRefined 7, "")] (reads @(Refined (Between 2 10) Int) "Refined {unRefined = 7}")
-  , (@?=) [] (reads @(Refined (Between 2 10) Int) "Refined {unRefined = 0}")
+  , (@?=) [(unsafeRefined 7, "")] (reads @(Refined (Between 2 10 Id) Int) "Refined {unRefined = 7}")
+  , (@?=) [] (reads @(Refined (Between 2 10 Id) Int) "Refined {unRefined = 0}")
   , (@?=) [(unsafeRefined "abcaaaabb", "")] (reads @(Refined (Re "^[abc]+$" Id) String) "Refined {unRefined = \"abcaaaabb\"}")
   , (@?=) [] (reads @(Refined (Re "^[abc]+$" Id) String) "Refined {unRefined = \"abcaaaabbx\"}")
 
-  , expectJ (Left ["Error in $: Refined:FalseP"]) (toFrom (unsafeRefined @(Between 4 7 || Gt 14) 12))
-  , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @(Between 4 7 || Gt 14) 22))
-  , expectJ (Left ["Error in $: Refined:FailP \"someval\""]) (toFrom (unsafeRefined @(Between 4 7 || Gt 14 || Failt _ "someval") 12))
+  , expectJ (Left ["Error in $: Refined:FalseP"]) (toFrom (unsafeRefined @(Between 4 7 Id || Gt 14) 12))
+  , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @(Between 4 7 Id || Gt 14) 22))
+  , expectJ (Left ["Error in $: Refined:FailP \"someval\""]) (toFrom (unsafeRefined @(Between 4 7 Id || Gt 14 || Failt _ "someval") 12))
 
   , (fst <$> unRavelT (tst2 ol 10 200)) >>= (@?= Right (10,200))
   , (fst <$> unRavelT (tst2 ol 11 12)) >>= (@?= Left "FalseP")
@@ -72,18 +72,18 @@ unnamedTests = [
 allProps :: [TestTree]
 allProps =
   [
-    testProperty "readshow" $ forAll (arbRefined @(Between 10 45) ol) (\r -> read @(Refined (Between 10 45) Int) (show r) === r)
-  , testProperty "jsonroundtrip" $ forAll (arbRefined @(Between 10 45) ol) (\r -> testRefinedJ @(Between 10 45) ol (unRefined r) === Right r)
+    testProperty "readshow" $ forAll (arbRefined @(Between 10 45 Id) ol) (\r -> read @(Refined (Between 10 45 Id) Int) (show r) === r)
+  , testProperty "jsonroundtrip" $ forAll (arbRefined @(Between 10 45 Id) ol) (\r -> testRefinedJ @(Between 10 45 Id) ol (unRefined r) === Right r)
   ]
 
 tst1 :: Monad m => POpts -> Int -> Int -> RefinedT m (Int,Int)
-tst1 opts i j = withRefinedT @(Between 2 11) opts i
-  $ \x -> withRefinedT @(Between 200 211) opts j
+tst1 opts i j = withRefinedT @(Between 2 11 Id) opts i
+  $ \x -> withRefinedT @(Between 200 211 Id) opts j
      $ \y -> return (unRefined x, unRefined y)
 
 tst2 :: MonadIO m => POpts -> Int -> Int -> RefinedT m (Int,Int)
-tst2 opts i j = withRefinedTIO @(Between 2 11) opts i
-  $ \x -> withRefinedTIO @(Stderr "startio..." |> Between 200 211 >| Stderr "...endio") opts j
+tst2 opts i j = withRefinedTIO @(Between 2 11 Id) opts i
+  $ \x -> withRefinedTIO @(Stderr "startio..." |> Between 200 211 Id >| Stderr "...endio") opts j
      $ \y -> return (unRefined x, unRefined y)
 
 -- roundtrip tojson then fromjson

@@ -33,6 +33,10 @@ module Predicate.Examples.Refined3 (
   , Hms
   , HmsR
 
+  , hms'
+  , Hms'
+  , HmsR'
+
   -- ** credit cards
   , ccn
   , ccn'
@@ -194,6 +198,15 @@ type HmsR = MakeR3 Hms
 
 type Hms = '(Hmsip, Hmsop >> 'True, Hmsfmt, String)
 
+
+hms' :: Proxy Hms'
+hms' = mkProxy3'
+
+type HmsR' = MakeR3 Hms'
+
+type Hms' = '(Hmsip, Hmsop', Hmsfmt, String)
+
+
 -- | read in an ipv4 address and validate it
 --
 -- >>> prtEval3P ip4 oz "001.223.14.1"
@@ -203,7 +216,7 @@ type Hms = '(Hmsip, Hmsop >> 'True, Hmsfmt, String)
 -- Left Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 999
 --
 -- >>> prtEval3P ip4 oz "001.223.14.999.1"
--- Left Step 2. Failed Boolean Check(op) | Guards: invalid length:expected 4 but found 5
+-- Left Step 2. Failed Boolean Check(op) | Guards:invalid length(5) expected 4
 --
 -- >>> prtEval3P ip4 ol "001.257.14.1"
 -- Left Step 2. Failed Boolean Check(op) | octet 1 out of range 0-255 found 257
@@ -238,7 +251,7 @@ type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m
 -- >>> prtEval3P base16 oz "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> prtEval3P (basen' @16 @(Between 100 400)) oz "00fe"
+-- >>> prtEval3P (basen' @16 @(100 <..> 400)) oz "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
 -- >>> prtEval3P (basen' @16 @(GuardSimple (Id < 400) >> 'True)) oz "f0fe"
@@ -313,8 +326,8 @@ datetimen = mkProxy3'
 between :: Proxy (BetweenN m n)
 between = mkProxy3
 
-type BetweenN m n = '(Id, Between m n, Id, Int)
-type BetweenR m n = RefinedEmulate (Between m n) Int
+type BetweenN m n = '(Id, Between m n Id, Id, Int)
+type BetweenR m n = RefinedEmulate (Between m n Id) Int
 
 type LuhnR (n :: Nat) = MakeR3 (LuhnT n)
 
@@ -371,10 +384,10 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- >>> prtEval3P (readshow @Rational) oz "13x % 3"
 -- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3)
 --
--- >>> prtEval3P (readshow' @Rational @(Between (3 % 1) (5 % 1))) oz "13 % 3"
+-- >>> prtEval3P (readshow' @Rational @(3 % 1 <..> 5 % 1)) oz "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Between (11 -% 2) (3 -% 1)))) oz "-13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' Rational (11 -% 2 <..> 3 -% 1))) oz "-13 % 3"
 -- Right (Refined3 {r3In = (-13) % 3, r3Out = "(-13) % 3"})
 --
 -- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (15 % 1)))) oz "13 % 3"

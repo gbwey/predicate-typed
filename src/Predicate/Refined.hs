@@ -86,10 +86,10 @@ import Data.Maybe
 
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
--- >>> prtRefinedIO @(Between 10 14) oz 13
+-- >>> prtRefinedIO @(Between 10 14 Id) oz 13
 -- Right (Refined {unRefined = 13})
 --
--- >>> prtRefinedIO @(Between 10 14) oz 99
+-- >>> prtRefinedIO @(Between 10 14 Id) oz 99
 -- Left FalseP
 --
 -- >>> prtRefinedIO @(Last Id >> Len == 4) oz ["one","two","three","four"]
@@ -104,10 +104,10 @@ import Data.Maybe
 -- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> 'True) oz "141.213.1"
 -- Left (FailP "bad length: found 3")
 --
--- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) oz "141.213.1.444"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id) >> 'True) oz "141.213.1.444"
 -- Left (FailP "octet 3 out of range 444")
 --
--- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255) >> 'True) oz "141.213.1x34.444"
+-- >>> prtRefinedIO @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id) >> 'True) oz "141.213.1x34.444"
 -- Left (FailP "ReadP Int (1x34)")
 --
 -- >>> prtRefinedIO @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) oz "12344"
@@ -141,10 +141,10 @@ instance RefinedC p String => IsString (Refined p String) where
 
 -- | 'Read' instance for 'Refined'
 --
--- >>> reads @(Refined (Between 0 255) Int) "Refined {unRefined = 254}"
+-- >>> reads @(Refined (Between 0 255 Id) Int) "Refined {unRefined = 254}"
 -- [(Refined {unRefined = 254},"")]
 --
--- >>> reads @(Refined (Between 0 255) Int) "Refined {unRefined = 300}"
+-- >>> reads @(Refined (Between 0 255 Id) Int) "Refined {unRefined = 300}"
 -- []
 --
 
@@ -178,10 +178,10 @@ instance ToJSON a => ToJSON (Refined p a) where
 --
 -- >>> :set -XOverloadedStrings
 -- >>> import qualified Data.Aeson as A
--- >>> A.eitherDecode' @(Refined (Between 10 14) Int) "13"
+-- >>> A.eitherDecode' @(Refined (Between 10 14 Id) Int) "13"
 -- Right (Refined {unRefined = 13})
 --
--- >>> removeAnsi $ A.eitherDecode' @(Refined (Between 10 14) Int) "16"
+-- >>> removeAnsi $ A.eitherDecode' @(Refined (Between 10 14 Id) Int) "16"
 -- Error in $: Refined:FalseP
 -- False 16 <= 14
 -- |
@@ -206,34 +206,26 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 -- >>> import Control.Lens
 -- >>> import Control.Arrow ((+++))
 -- >>> type K1 = Refined (ReadP Day Id >> 'True) String
--- >>> type K2 = Refined (ReadP Day Id >> Between (ReadP Day "2019-03-30") (ReadP Day "2019-06-01")) String
--- >>> type K3 = Refined (ReadP Day Id >> Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01")) String
+-- >>> type K2 = Refined (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") (ReadP Day Id)) String
 -- >>> r = unsafeRefined' oz "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined {unRefined = "2019-04-23"}
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined {unRefined = "2019-04-23"}
---
--- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K3 (B.encode r)
 -- Refined:FalseP
--- False (>>) False | {2019-05-30 <= 2019-04-23}
+-- False 2019-05-30 <= 2019-04-23
 -- |
 -- +- P ReadP Day 2019-04-23
 -- |  |
 -- |  `- P Id "2019-04-23"
 -- |
--- `- False 2019-05-30 <= 2019-04-23
+-- +- P ReadP Day 2019-05-30
+-- |  |
+-- |  `- P '2019-05-30
+-- |
+-- `- P ReadP Day 2019-06-01
 --    |
---    +- P Id 2019-04-23
---    |
---    +- P ReadP Day 2019-05-30
---    |  |
---    |  `- P '2019-05-30
---    |
---    `- P ReadP Day 2019-06-01
---       |
---       `- P '2019-06-01
+--    `- P '2019-06-01
 -- <BLANKLINE>
 --
 instance (RefinedC p a, Binary a) => Binary (Refined p a) where
