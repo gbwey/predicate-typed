@@ -114,6 +114,8 @@ import Data.Tree.Lens (root)
 import Data.Char (isSpace)
 import Data.Semigroup ((<>))
 import Data.String
+import Data.Typeable
+import Data.Hashable (Hashable(..))
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -387,6 +389,18 @@ instance ( Show (PP fmt (PP ip i))
             Nothing -> fail $ "Refined3:" ++ show (prt3Impl o2 ret)
             Just r -> return r
   put (Refined3 _ r) = B.put @i r
+
+-- | 'Hashable' instance for 'Refined3'
+instance (Typeable ip
+        , Typeable op
+        , Typeable fmt
+        , Refined3C ip op fmt i
+        , Hashable (PP ip i)
+        , Hashable (PP ip (PP op i))
+        , Hashable i
+        ) => Hashable (Refined3 ip op fmt i) where
+  hashWithSalt s (Refined3 a b) = s + hash a + hash b + hash (typeRep (Proxy @ip)) + hash (typeRep (Proxy @op)) + hash (typeRep (Proxy @fmt))
+
 
 -- | creates a 4-tuple proxy (see 'withRefined3TP' 'newRefined3TP' 'eval3P' 'prtEval3P')
 --

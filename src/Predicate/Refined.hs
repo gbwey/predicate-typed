@@ -76,6 +76,8 @@ import Data.Binary (Binary)
 import Data.Semigroup ((<>))
 import Data.String
 import Data.Maybe
+import Data.Hashable (Hashable(..))
+import Data.Typeable
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -236,6 +238,10 @@ instance (RefinedC p a, Binary a) => Binary (Refined p a) where
             Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
             Just r -> return r
   put (Refined r) = B.put @a r
+
+-- | 'Hashable' instance for 'Refined'
+instance (Typeable p, RefinedC p a, Hashable a) => Hashable (Refined p a) where
+  hashWithSalt s (Refined a) = s + hash a + hash (typeRep (Proxy @p))
 
 -- | 'arbitrary' value for 'Refined'
 arbRefined :: forall p a.

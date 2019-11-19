@@ -90,6 +90,8 @@ import Data.Tree.Lens (root)
 import Data.Char (isSpace)
 import Data.Semigroup ((<>))
 import Data.String
+import Data.Typeable
+import Data.Hashable (Hashable(..))
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -318,6 +320,15 @@ instance ( Show i
             Just r -> return r
   put (Refined2 _ r) = B.put @i r
 
+-- | 'Hashable' instance for 'Refined2'
+instance (Typeable ip
+        , Typeable op
+        , Refined2C ip op i
+        , Hashable (PP ip i)
+        , Hashable i
+        ) => Hashable (Refined2 ip op i) where
+  hashWithSalt s (Refined2 a b) = s + hash a + hash b + hash (typeRep (Proxy @ip)) + hash (typeRep (Proxy @op))
+
 withRefined2TIO :: forall ip op i m b
   . (MonadIO m, Refined2C ip op i, Show (PP ip i))
   => POpts
@@ -366,7 +377,7 @@ withRefined2T :: forall ip op i m b
 withRefined2T opts = (>>=) . newRefined2TP (Proxy @'(ip,op,i)) opts
 
 withRefined2TP :: forall m ip op i b proxy
-  . (Monad m, Refined2C ip op i, Show (PP ip i), Show i)
+  . (Monad m, Refined2C ip op i, Show (PP ip i))
   => proxy '(ip,op,i)
   -> POpts
   -> i

@@ -21,6 +21,7 @@ dependencies:
 - deepseq
 - directory
 - ghc-prim
+- hashable
 - lens
 - mtl
 - pcre-heavy >= 1.0.0.2
