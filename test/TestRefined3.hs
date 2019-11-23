@@ -175,7 +175,7 @@ unnamedTests = [
   , expect3 (Left (XTFalse [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ eval3P ip4' ol "1.2.300.4"
   , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval3P cc11 ol "12345678903"
   , expect3 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1] "") $ eval3P cc11 oz "12345678901"
---  , expect3 (Right $ unsafeRefined3 True ["T","r","ue","Tr","ue"]) $ eval3P (Proxy @'(Id, Id, Do '[ShowP Id, Dup, Sapa, SplitAts '[1,1,2,2]], Bool)) True
+
   , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ eval3P hms2E ol "12:13:14"
   , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "seconds invalid: found 99")) $ eval3P hms2E ol "12:13:99"
 
@@ -347,6 +347,14 @@ getTTs3 = \case
    RTFalse _ t1 t2 -> [t1,t2]
    RTTrueF _ t1 t2 _ t3 -> [t1,t2,t3]
    RTTrueT _ t1 t2 _ t3 -> [t1,t2,t3]
+
+data Results3 a b =
+       XF String        -- Left e
+     | XTF a String     -- Right a + Left e
+     | XTFalse a String -- Right a + Right False
+     | XTTrueF a String -- Right a + Right True + Left e
+     | XTTrueT a b      -- Right a + Right True + Right b
+     deriving (Show,Eq)
 
 toRResults3 :: RResults3 a b -> Results3 a b
 toRResults3 = \case

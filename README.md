@@ -13,9 +13,10 @@ what this library provides:
 8. ToJSON and FromJSON instances
 9. Read and Show instances
 10. Binary instances
-11. IsString instances
-12. quickcheck arbitrary methods for Refined and Refined3
-13. database encoders and decoders using hdbc(sqlhandler-odbc) or odbc(sqlhandler-odbcalt)
+11. Hashable instances
+12. IsString instances
+13. quickcheck arbitrary methods for Refined and Refined3
+14. database encoders and decoders using hdbc(sqlhandler-odbc) or odbc(sqlhandler-odbcalt)
 
 To run all the examples you will need these settings (ghc>=8.2)
 ```haskell

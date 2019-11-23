@@ -46,7 +46,6 @@ module Predicate.Refined3 (
   , prt3
   , prt3Impl
   , Msg3 (..)
-  , Results3 (..)
   , RResults3 (..)
 
   -- ** evaluation methods
@@ -114,7 +113,6 @@ import Data.Tree.Lens (root)
 import Data.Char (isSpace)
 import Data.Semigroup ((<>))
 import Data.String
-import Data.Typeable
 import Data.Hashable (Hashable(..))
 
 -- $setup
@@ -391,16 +389,10 @@ instance ( Show (PP fmt (PP ip i))
   put (Refined3 _ r) = B.put @i r
 
 -- | 'Hashable' instance for 'Refined3'
-instance (Typeable ip
-        , Typeable op
-        , Typeable fmt
-        , Refined3C ip op fmt i
+instance (Refined3C ip op fmt i
         , Hashable (PP ip i)
-        , Hashable (PP ip (PP op i))
-        , Hashable i
         ) => Hashable (Refined3 ip op fmt i) where
-  hashWithSalt s (Refined3 a b) = s + hash a + hash b + hash (typeRep (Proxy @ip)) + hash (typeRep (Proxy @op)) + hash (typeRep (Proxy @fmt))
-
+  hashWithSalt s (Refined3 a _) = s + hash a
 
 -- | creates a 4-tuple proxy (see 'withRefined3TP' 'newRefined3TP' 'eval3P' 'prtEval3P')
 --
@@ -616,14 +608,6 @@ rapply3P p opts f ma mb = do
   Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) p opts (f x y)
   return (Refined3 a b)
 
-data Results3 a b =
-       XF String        -- Left e
-     | XTF a String     -- Right a + Left e
-     | XTFalse a String -- Right a + Right False
-     | XTTrueF a String -- Right a + Right True + Left e
-     | XTTrueT a b      -- Right a + Right True + Right b
-     deriving (Show,Eq)
-
 -- | An ADT that summarises the results of evaluating Refined3 representing all possible states
 data RResults3 a b =
        RF String (Tree PE)        -- Left e
@@ -750,7 +734,11 @@ prt3IO opts (ret,mr) = do
 prt3 :: (Show a, Show b) => POpts -> (RResults3 a b, Maybe r) -> Either Msg3 r
 prt3 opts (ret,mr) = maybe (Left $ prt3Impl opts ret) Right mr
 
-data Msg3 = Msg3 { m3Desc :: String, m3Short :: String, m3Long :: String } deriving Eq
+data Msg3 = Msg3 { m3Desc :: !String
+                 , m3Short :: !String
+                 , m3Long :: !String
+                 } deriving Eq
+
 instance Show Msg3 where
   show (Msg3 a b c) = a <> " | " <> b <> (if null c then "" else "\n" <> c)
 
@@ -846,14 +834,33 @@ eval3X = eval3PX (Proxy @'(ip,op,fmt,i))
 type RefinedEmulate p a = Refined3 Id p Id a
 
 -- | used by 'Refined3' to extract \'ip\' from a promoted 4-tuple
+--
+-- >>> pl @(T4_1 Predicate.Examples.Refined3.Ip4) "1.2.3.4"
+-- Present [1,2,3,4] (Map [1,2,3,4] | ["1","2","3","4"])
+-- PresentT [1,2,3,4]
+--
 type family T4_1 x where
   T4_1 '(a,b,c,d) = a
 
 -- | used by 'Refined3' for extracting the boolean predicate \'op\' from a promoted 4-tuple
+--
+-- >>> pl @(T4_2 Predicate.Examples.Refined3.Ip4) [141,213,308,4]
+-- Error octet 2 out of range 0-255 found 308
+-- FailT "octet 2 out of range 0-255 found 308"
+--
+-- >>> pl @(T4_2 Predicate.Examples.Refined3.Ip4) [141,213,308,4,8]
+-- Error Guards:invalid length(5) expected 4
+-- FailT "Guards:invalid length(5) expected 4"
+--
 type family T4_2 x where
   T4_2 '(a,b,c,d) = b
 
 -- | used by 'Refined3' for extracting \'fmt\' from a promoted 4-tuple
+--
+-- >>> pl @(T4_3 Predicate.Examples.Refined3.Ip4) [141,513,9,4]
+-- Present "141.513.009.004" (PrintL(4) [141.513.009.004] | s=%03d.%03d.%03d.%03d)
+-- PresentT "141.513.009.004"
+--
 type family T4_3 x where
   T4_3 '(a,b,c,d) = c
 

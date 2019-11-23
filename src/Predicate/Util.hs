@@ -114,6 +114,8 @@ module Predicate.Util (
   , show1
   , showL
   , litL
+  , litBL
+  , litBS
 
   -- ** regular expressions
   , ROpt(..)
@@ -148,7 +150,6 @@ module Predicate.Util (
   , GetNats(..)
   , GetSymbs(..)
   , GetLen(..)
-  , showThese
   , GetThese(..)
   , GetOrdering(..)
   , GetBool(..)
@@ -174,6 +175,7 @@ module Predicate.Util (
   , MonadEval(..)
   , errorInProgram
   , readField
+  , showThese
     ) where
 import qualified GHC.TypeNats as GN
 import Data.Ratio
@@ -211,6 +213,8 @@ import Data.Semigroup ((<>))
 import qualified Text.Read.Lex as L
 import Text.ParserCombinators.ReadPrec
 import qualified GHC.Read as GR
+import qualified Data.ByteString.Lazy.Char8 as BL8
+import qualified Data.ByteString.Char8 as BS8
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -218,18 +222,18 @@ import qualified GHC.Read as GR
 -- >>> :set -XTypeOperators
 
 -- | represents the evaluation tree for predicates
-data TT a = TT { _tBool :: BoolT a  -- ^ the value at this root node
-               , _tStrings :: [String]  -- ^ detailed information eg input and output and text
-               , _tForest :: Forest PE } -- ^ the child nodes
-                deriving Show
+data TT a = TT { _tBool :: !(BoolT a)  -- ^ the value at this root node
+               , _tStrings :: ![String]  -- ^ detailed information eg input and output and text
+               , _tForest :: !(Forest PE) -- ^ the child nodes
+               } deriving Show
 
 -- | contains the typed result from evaluating the expression tree
 --
 data BoolT a where
-  FailT :: String -> BoolT a  -- failure with string
+  FailT :: !String -> BoolT a  -- failure with string
   FalseT :: BoolT Bool        -- false predicate
   TrueT :: BoolT Bool         -- true predicate
-  PresentT :: a -> BoolT a    -- non predicate value
+  PresentT :: !a -> BoolT a    -- non predicate value
 
 deriving instance Show a => Show (BoolT a)
 deriving instance Eq a => Eq (BoolT a)
@@ -342,9 +346,9 @@ getValueLRImpl showError opts msg0 tt hs =
 newtype PColor = PColor (BoolP -> String -> String)
 
 -- | customizable options
-data POpts = POpts { oWidth :: Int -- ^ length of data to display for 'showLitImpl'
+data POpts = POpts { oWidth :: !Int -- ^ length of data to display for 'showLitImpl'
                    , oDebug :: !ODebug -- ^ debug level
-                   , oDisp :: Disp -- ^ display the tree using the normal tree or unicode
+                   , oDisp :: !Disp -- ^ display the tree using the normal tree or unicode
                    , oColor :: !(String, PColor) -- ^ color palette used
                    }
 
@@ -402,7 +406,7 @@ o2n = o2 { oWidth = 120 }
 
 -- | same as 'o2' for a wider display and verbose debug mode setting
 o3 :: POpts
-o3 = defOpts { oDebug = OVerbose, oWidth = 400 }
+o3 = o2 { oDebug = OVerbose, oWidth = 400 }
 
 -- | displays the detailed evaluation tree using unicode and colors. ('o2' works better on Windows)
 ou :: POpts
@@ -534,6 +538,12 @@ showL i = litL i . show
 litL :: Int -> String -> String
 litL i s = take i s <> if length s > i then "..." else ""
 
+litBL :: Int -> BL8.ByteString -> String
+litBL i s = litL i (BL8.unpack (BL8.take (fromIntegral i+1) s))
+
+litBS :: Int -> BS8.ByteString -> String
+litBS i s = litL i (BS8.unpack (BS8.take (i+1) s))
+
 -- | Regex options for Rescan Resplit Re etc
 data ROpt =
     Anchored -- ^ Force pattern anchoring
@@ -604,7 +614,7 @@ instance GetROpt 'No_utf8_check where getROpt = RL.no_utf8_check
 -- | used by 'Predicate.ReplaceImpl' and 'RH.sub' and 'RH.gsub' to allow more flexible replacement
 --   These parallel the RegexReplacement (not exported) class in "Text.Regex.PCRE.Heavy" but have overlappable instances which is problematic for this code so I use 'RReplace'
 data RReplace =
-     RReplace String
+     RReplace !String
    | RReplace1 (String -> [String] -> String)
    | RReplace2 (String -> String)
    | RReplace3 ([String] -> String)
@@ -1001,7 +1011,7 @@ type family RepeatT (n :: Nat) (p :: k) :: [k] where
   RepeatT n p = p ': RepeatT (n GN.- 1) p
 
 type s <%> t = GL.AppendSymbol s t
-infixr 6 <%>
+infixr 7 <%>
 
 type family IntersperseT (s :: Symbol) (xs :: [Symbol]) :: Symbol where
   IntersperseT s '[] = ""

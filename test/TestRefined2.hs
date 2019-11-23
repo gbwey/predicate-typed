@@ -301,6 +301,13 @@ getTTs3 = \case
    RTFalse _ t1 t2 -> [t1,t2]
    RTTrue _ t1 t2 -> [t1,t2]
 
+data Results2 a =
+       XF String        -- Left e
+     | XTF a String     -- Right a + Left e
+     | XTFalse a String -- Right a + Right False
+     | XTTrue a
+     deriving (Show,Eq)
+
 toRResults2 :: RResults2 a -> Results2 a
 toRResults2 = \case
    RF e _ -> XF e

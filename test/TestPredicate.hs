@@ -306,9 +306,9 @@ allTests =
   , expectPE (PresentT ([141,214,125,1,2,3333],(False,False))) $ pl @(Map (ReadP Int Id) (Resplit "\\." Id) >> '(Id, '(Len == 4, All (Between 0 255 Id) Id))) "141.214.125.1.2.3333"
   , expectPE (PresentT ([141,214,125,1,2,6],(False,True))) $ pl @(Map (ReadP Int Id) (Resplit "\\." Id) >> Id &&& ((Len == 4) &&& All (Between 0 255 Id) Id)) "141.214.125.1.2.6"
   , expectPE (FailT "ReadP Int ()") $ pl @(Resplit "\\." Id >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (Between 0 255 Id) Id)) "141.214.125."
-  , expectPE (PresentT 9) $ pl @((Wrap _ Id *** Wrap (SG.Sum _) Id) >> Sapa >> Unwrap Id) (4,5)
-  , expectPE (PresentT (SG.Sum 9)) $ pl @((Wrap _ Id *** Wrap _ Id) >> Sapa) (4,5)
-  , expectPE (PresentT 9) $ pl @(Sapa' (SG.Sum _) >> Unwrap Id) (4,5)
+  , expectPE (PresentT 9) $ pl @((Wrap _ Id *** Wrap (SG.Sum _) Id) >> SapA >> Unwrap Id) (4,5)
+  , expectPE (PresentT (SG.Sum 9)) $ pl @((Wrap _ Id *** Wrap _ Id) >> SapA) (4,5)
+  , expectPE (PresentT 9) $ pl @(SapA' (SG.Sum _) >> Unwrap Id) (4,5)
   , expectPE (PresentT "abcde") $ pl @(ScanNA (Succ Id)) (4,'a')
   , expectPE (PresentT ["abcd","bcd","cd","d",""]) $ pl @(ScanNA (Tail Id)) (4,"abcd" :: String)
   , expectPE (PresentT ["abcd","bcd","cd","d",""]) $ pl @(Len &&& Id >> ScanNA (Tail Id)) "abcd"
@@ -428,16 +428,16 @@ allTests =
   , expectPE (PresentT (12, False)) $ pl @('These Id (Not Id)) (These 12 True)
   , expectPE (PresentT (SG.Any True)) $ pl @(Coerce SG.Any) True
   , expectPE (PresentT True) $ pl @(Coerce Bool) (SG.Any True)
-  , expectPE (PresentT (3, SG.Any True)) $ pl @(Id !! FromStringP _ "d" &&& (Map (Snd Id >> Gt 3 >> Coerce SG.Any) (IToList _ Id) >> MConcat Id) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
-  , expectPE (PresentT (3, True)) $ pl @(Id !! FromStringP _ "d" &&& (Map (Snd Id >> Gt 3 >> Wrap SG.Any Id) (IToList _ Id) >> MConcat Id >> Unwrap Id) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
+  , expectPE (PresentT (3, SG.Any True)) $ pl @(Id !! FromString _ "d" &&& (Map (Snd Id >> Gt 3 >> Coerce SG.Any) (IToList _ Id) >> MConcat Id) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
+  , expectPE (PresentT (3, True)) $ pl @(Id !! FromString _ "d" &&& (Map (Snd Id >> Gt 3 >> Wrap SG.Any Id) (IToList _ Id) >> MConcat Id >> Unwrap Id) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
     --- have to wrap with W cos different kinds
 --  , expectPE TrueT $ pl @(Do '[ W ('PresentT I), W 'FalseT, Not Id]) False
 --  , expectPE FalseT $ pl @(Do '[ W ('PresentT Id), W 'FalseT ]) True -- have to wrap them cos BoolT a vs BoolT Bool ie different types
 --  , expectPE TrueT $ pl @('PresentT I >> Not 'FalseT) False
   -- IxL "d" doesnt work cos is Text not String
-  , expectPE (PresentT 3) $ pl @(Id !! FromStringP _ "d") (M.fromList $ zip (map T.singleton "abcd") [0 ..])
+  , expectPE (PresentT 3) $ pl @(Id !! FromString _ "d") (M.fromList $ zip (map T.singleton "abcd") [0 ..])
   -- use Fromstring
-  , expectPE (PresentT 3) $ pl @(Id !! FromStringP _ "d") (M.fromList $ zip (map T.singleton "abcd") [0 ..])
+  , expectPE (PresentT 3) $ pl @(Id !! FromString _ "d") (M.fromList $ zip (map T.singleton "abcd") [0 ..])
   , expectPE (PresentT [7,9,9,2,7,3,9,8,7,1,3]) $ pl @(Map (ReadP Int Id) (Ones Id) >> Guard "checkdigit fail" (Luhn Id)) "79927398713"
   , expectPE (FailT "checkdigit fail") $ pl @(Map (ReadP Int Id) (Ones Id) >> Guard "checkdigit fail" (Luhn Id)) "79927398714"
   , expectPE (PresentT [10,14,15,9]) $ pl @(MM1 16 >> MM2 16) "aef9"
@@ -472,9 +472,9 @@ allTests =
   , (@?=) (Just 'x') ((_PresentT # 'x') ^? _PresentT)
   , expectPE (PresentT (111,'b')) $ pl @('(123,Char1 "c") >> (Id - 12 *** Pred Id)) ()
   , expectPE (PresentT (SG.Min 19)) $ pl @((FromInteger _ 12 &&& Id) >> Fst Id + Snd Id) (SG.Min 7)
-  , expectPE (PresentT (SG.Product 84)) $ pl @((FromInteger _ 12 &&& Id) >> Sapa) (SG.Product 7)
+  , expectPE (PresentT (SG.Product 84)) $ pl @((FromInteger _ 12 &&& Id) >> SapA) (SG.Product 7)
   , expectPE (PresentT "xyxyxyxy") $ pl @(STimes (Fst Id) (Snd Id)) (4,['x','y'])
-  , expectPE (PresentT (concat (replicate 16 "abc"))) $ pl @(FoldN 4 Id ((Id &&& Id) >> Sapa)) "abc"
+  , expectPE (PresentT (concat (replicate 16 "abc"))) $ pl @(FoldN 4 Id ((Id &&& Id) >> SapA)) "abc"
   , expectPE (PresentT (concat (replicate 4 "abc"))) $ pl @(STimes (Fst Id) (Snd Id)) (4,"abc")
   , expectPE (PresentT (concat (replicate 4 "abc"))) $ pl @(STimes 4 Id) "abc"
   , expectPE (PresentT "abcd") $ pl @(Map (FromEnum Id) Id >> Map (ToEnum Char Id) Id) ("abcd" :: String)
@@ -482,7 +482,7 @@ allTests =
   , expectPE (PresentT ([2,3,5,7,11,13], [1,4,6,8,9,10,12,14,15])) $ pl @(Partition (Prime Id) Id) [1..15]
   , expectPE (FailT "'Nothing found Just") $ pl @'Nothing (Just 12)
   , expectPE (PresentT (Just 10,((),()))) $ pl @(Id &&& '() &&& ()) (Just 10)
-  , expectPE (PresentT [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 -% 1 ) >> Wrap (MM.First _) Id)) Id >> Map Sapa Id >> Map (Just (Unwrap Id)) Id) [Nothing,Just 10,Just 20,Nothing,Just 30]
+  , expectPE (PresentT [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 -% 1 ) >> Wrap (MM.First _) Id)) Id >> Map SapA Id >> Map (Just (Unwrap Id)) Id) [Nothing,Just 10,Just 20,Nothing,Just 30]
   , expectPE (PresentT 12) $ pl @(MaybeIn 99 Id) (Just 12)
   , expectPE (PresentT 12) $ pl @(JustDef 99 Id) (Just 12)
   , expectPE (PresentT 99) $ pl @(MaybeIn 99 Id) Nothing

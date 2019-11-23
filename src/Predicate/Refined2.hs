@@ -39,7 +39,6 @@ module Predicate.Refined2 (
   , prt2
   , prt2Impl
   , Msg2 (..)
-  , Results2 (..)
   , RResults2 (..)
 
   -- ** evaluation methods
@@ -90,7 +89,6 @@ import Data.Tree.Lens (root)
 import Data.Char (isSpace)
 import Data.Semigroup ((<>))
 import Data.String
-import Data.Typeable
 import Data.Hashable (Hashable(..))
 
 -- $setup
@@ -321,13 +319,10 @@ instance ( Show i
   put (Refined2 _ r) = B.put @i r
 
 -- | 'Hashable' instance for 'Refined2'
-instance (Typeable ip
-        , Typeable op
-        , Refined2C ip op i
-        , Hashable (PP ip i)
+instance (Refined2C ip op i
         , Hashable i
         ) => Hashable (Refined2 ip op i) where
-  hashWithSalt s (Refined2 a b) = s + hash a + hash b + hash (typeRep (Proxy @ip)) + hash (typeRep (Proxy @op))
+  hashWithSalt s (Refined2 _ b) = s + hash b
 
 withRefined2TIO :: forall ip op i m b
   . (MonadIO m, Refined2C ip op i, Show (PP ip i))
@@ -442,13 +437,6 @@ newRefined2TImpl f opts i = do
     Nothing -> throwError $ m2Desc m2 <> " | " <> m2Short m2
     Just r -> return r
 
-data Results2 a =
-       XF String        -- Left e
-     | XTF a String     -- Right a + Left e
-     | XTFalse a String -- Right a + Right False
-     | XTTrue a
-     deriving (Show,Eq)
-
 -- | An ADT that summarises the results of evaluating Refined2 representing all possible states
 data RResults2 a =
        RF String (Tree PE)        -- fails initial conversion
@@ -524,7 +512,11 @@ prt2IO opts (ret,mr) = do
 prt2 :: Show a => POpts -> (RResults2 a, Maybe r) -> Either Msg2 r
 prt2 opts (ret,mr) = maybe (Left $ prt2Impl opts ret) Right mr
 
-data Msg2 = Msg2 { m2Desc :: String, m2Short :: String, m2Long :: String } deriving Eq
+data Msg2 = Msg2 { m2Desc :: !String
+                 , m2Short :: !String
+                 , m2Long :: !String
+                 } deriving Eq
+
 instance Show Msg2 where
   show (Msg2 a b c) = a <> " | " <> b <> (if null c then "" else "\n" <> c)
 

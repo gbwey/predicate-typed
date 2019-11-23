@@ -1,3 +1,4 @@
+-- add Writer to MonadEval so we dont need to specify [hh pp ...]
 -- the mkNode opts (FailT msg) [msg] .. -- repetitive: needs to add value
 -- no types referring to types otherwise we lose use of _ as Type
 {-# OPTIONS -Wall #-}
@@ -42,6 +43,7 @@ module Predicate.Prelude (
   , Desc
   , Desc'
   , Between
+  , BetweenA
   , type (<..>)
   , All
   , Any
@@ -171,6 +173,7 @@ module Predicate.Prelude (
   , ParseJson'
   , ParseJson
   , EncodeJson
+  , EncodeJsonFile
   , ParseJsonFile'
   , ParseJsonFile
 
@@ -201,8 +204,8 @@ module Predicate.Prelude (
   , Le
   , Lt
   , Ne
-  , OrdP
   , type (==!)
+  , OrdP
   , OrdA'
   , OrdA
   , OrdI
@@ -254,11 +257,14 @@ module Predicate.Prelude (
   , Cycle
   , SplitAts
   , SplitAt
+  , ChunksOf
+  , Rotate
   , Take
   , Drop
   , Min
   , Max
   , Sum
+  , Product
   , IsEmpty
   , Null
   , Null'
@@ -316,8 +322,8 @@ module Predicate.Prelude (
   , type (<>)
   , MConcat
   , STimes
-  , Sapa
-  , Sapa'
+  , SapA
+  , SapA'
   , MEmptyT
   , MEmptyT'
   , MEmptyP
@@ -457,8 +463,9 @@ module Predicate.Prelude (
   , IsPrefixI
   , IsInfixI
   , IsSuffixI
-  , FromStringP
-  , FromStringP'
+  , ToString
+  , FromString
+  , FromString'
 
   -- ** print expressions
   , PrintF
@@ -558,6 +565,8 @@ import Data.Time.Calendar.WeekDate
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy.Char8 as BL8
+import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -681,6 +690,61 @@ type BetweenT p q = Between p q Id
 instance P (BetweenT p q) x => P (p <..> q) x where
   type PP (p <..> q) x = PP (BetweenT p q) x
   eval _ = evalBool (Proxy @(BetweenT p q))
+
+-- | between for tuples
+--
+-- >>> pl @(BetweenA (Fst Id) (Snd Id)) ((1,4),8)
+-- False (8 <= 4)
+-- FalseT
+--
+-- >>> pl @(BetweenA (Fst Id) (Snd Id)) ((1,4),0)
+-- False (1 <= 0)
+-- FalseT
+--
+-- >>> pl @(BetweenA (Fst Id) (Snd Id)) ((1,4),3)
+-- True (1 <= 3 <= 4)
+-- TrueT
+--
+-- >>> pl @(BetweenA (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2018-10-12"
+-- True (2017-04-11 <= 2018-10-12 <= 2018-12-30)
+-- TrueT
+--
+-- >>> pl @(BetweenA (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2019-10-12"
+-- False (2019-10-12 <= 2018-12-30)
+-- FalseT
+--
+-- >>> pl @(BetweenA (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2016-10-12"
+-- False (2017-04-11 <= 2016-10-12)
+-- FalseT
+--
+
+{- too much data mitigated somewhat by Hide
+type BetweenAT p q = '(p,q) >> Between (Fst (Fst Id)) (Snd (Fst Id)) (Snd Id)
+
+instance P (BetweenAT p q) x => P (BetweenA p q) x where
+  type PP (BetweenA p q) x = PP (BetweenAT p q) x
+  eval _ = evalBool (Proxy @(BetweenAT p q))
+-}
+data BetweenA p q
+
+instance (PP p x ~ (a,a')
+       , P q x
+       , PP q x ~ a
+       , Ord a
+       , a ~ a'
+       , Show a
+       , P p x
+       ) => P (BetweenA p q) x where
+  type PP (BetweenA p q) x = Bool
+  eval _ opts x = do
+    let msg0 = "BetweenA"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right ((p1,p2),q,pp,qq) ->
+        [hh pp, hh qq] & if p1 <= q && q <= p2 then mkNodeB opts True [show p1 <> " <= " <> show q <> " <= " <> show p2]
+        else if p1 > q then mkNodeB opts False [show p1 <> " <= " <> show q]
+        else mkNodeB opts False [show q <> " <= " <> show p2]
 
 -- | similar to 'all'
 --
@@ -1407,49 +1471,49 @@ instance P IsUpperT x => P IsUpper x where
 data IsNumber
 type IsNumberT = IsCharSet 'CNumber
 instance P IsNumberT x => P IsNumber x where
-  type PP IsNumber x = PP IsNumberT x
+  type PP IsNumber x = Bool
   eval _ = evalBool (Proxy @IsNumberT)
 
 data IsSpace
 type IsSpaceT = IsCharSet 'CSpace
 instance P IsSpaceT x => P IsSpace x where
-  type PP IsSpace x = PP IsSpaceT x
+  type PP IsSpace x = Bool
   eval _ = evalBool (Proxy @IsSpaceT)
 
 data IsPunctuation
 type IsPunctuationT = IsCharSet 'CPunctuation
 instance P IsPunctuationT x => P IsPunctuation x where
-  type PP IsPunctuation x = PP IsPunctuationT x
+  type PP IsPunctuation x = Bool
   eval _ = evalBool (Proxy @IsPunctuationT)
 
 data IsControl
 type IsControlT = IsCharSet 'CControl
 instance P IsControlT x => P IsControl x where
-  type PP IsControl x = PP IsControlT x
+  type PP IsControl x = Bool
   eval _ = evalBool (Proxy @IsControlT)
 
 data IsHexDigit
 type IsHexDigitT = IsCharSet 'CHexDigit
 instance P IsHexDigitT x => P IsHexDigit x where
-  type PP IsHexDigit x = PP IsHexDigitT x
+  type PP IsHexDigit x = Bool
   eval _ = evalBool (Proxy @IsHexDigitT)
 
 data IsOctDigit
 type IsOctDigitT = IsCharSet 'COctDigit
 instance P IsOctDigitT x => P IsOctDigit x where
-  type PP IsOctDigit x = PP IsOctDigitT x
+  type PP IsOctDigit x = Bool
   eval _ = evalBool (Proxy @IsOctDigitT)
 
 data IsSeparator
 type IsSeparatorT = IsCharSet 'CSeparator
 instance P IsSeparatorT x => P IsSeparator x where
-  type PP IsSeparator x = PP IsSeparatorT x
+  type PP IsSeparator x = Bool
   eval _ = evalBool (Proxy @IsSeparatorT)
 
 data IsLatin1
 type IsLatin1T = IsCharSet 'CLatin1
 instance P IsLatin1T x => P IsLatin1 x where
-  type PP IsLatin1 x = PP IsLatin1T x
+  type PP IsLatin1 x = Bool
   eval _ = evalBool (Proxy @IsLatin1T)
 
 
@@ -1883,6 +1947,25 @@ instance (Num a, Show a) => P Sum [a] where
   eval _ opts as =
     let msg0 = "Sum"
         v = sum as
+    in pure $ mkNode opts (PresentT v) [show01 opts msg0 v as] []
+
+-- | similar to 'product'
+--
+-- >>> pz @Product [10,4,5,12,3,4]
+-- Present 28800
+-- PresentT 28800
+--
+-- >>> pz @Product []
+-- Present 1
+-- PresentT 1
+--
+data Product
+
+instance (Num a, Show a) => P Product [a] where
+  type PP Product [a] = a
+  eval _ opts as =
+    let msg0 = "Product"
+        v = product as
     in pure $ mkNode opts (PresentT v) [show01 opts msg0 v as] []
 
 -- | similar to 'minimum'
@@ -2367,23 +2450,23 @@ instance ExtractL6C (a,b,c,d,e,f) where
 -- | 'fromString' function where you need to provide the type \'t\' of the result
 --
 -- >>> :set -XFlexibleContexts
--- >>> pz @(FromStringP (Identity _) Id) "abc"
+-- >>> pz @(FromString (Identity _) Id) "abc"
 -- Present Identity "abc"
 -- PresentT (Identity "abc")
 --
--- >>> pz @(FromStringP (Seq.Seq Char) Id) "abc"
+-- >>> pz @(FromString (Seq.Seq Char) Id) "abc"
 -- Present fromList "abc"
 -- PresentT (fromList "abc")
-data FromStringP' t s
+data FromString' t s
 
 instance (P s a
         , PP s a ~ String
         , Show (PP t a)
         , IsString (PP t a)
-        ) => P (FromStringP' t s) a where
-  type PP (FromStringP' t s) a = PP t a
+        ) => P (FromString' t s) a where
+  type PP (FromString' t s) a = PP t a
   eval _ opts a = do
-    let msg0 = "FromStringP"
+    let msg0 = "FromString"
     ss <- eval (Proxy @s) opts a
     pure $ case getValueLR opts msg0 ss [] of
       Left e -> e
@@ -2391,11 +2474,11 @@ instance (P s a
         let b = fromString @(PP t a) s
         in mkNode opts (PresentT b) [msg0 <> show0 opts " " b] [hh ss]
 
-data FromStringP (t :: Type) p
-type FromStringPT (t :: Type) p = FromStringP' (Hole t) p
+data FromString (t :: Type) p
+type FromStringPT (t :: Type) p = FromString' (Hole t) p
 
-instance P (FromStringPT t p) x => P (FromStringP t p) x where
-  type PP (FromStringP t p) x = PP (FromStringPT t p) x
+instance P (FromStringPT t p) x => P (FromString t p) x where
+  type PP (FromString t p) x = PP (FromStringPT t p) x
   eval _ = eval (Proxy @(FromStringPT t p))
 
 
@@ -2804,7 +2887,7 @@ instance (P ns x
     pure $ case lr of
       Left e -> e
       Right (ns,p,nn,pp) ->
-        let zs = foldr (\n k s -> let (a,b) = splitAt (fromIntegral n) s
+        let zs = foldr (\n k s -> let (a,b) = splitAtNeg (fromIntegral n) s
                               in a:k b
                    ) (\as -> if null as then [] else [as]) ns p
         in mkNode opts (PresentT zs) [show01' opts msg0 zs "ns=" ns <> show1 opts " | " p] [hh nn, hh pp]
@@ -2827,6 +2910,10 @@ instance (P ns x
 -- Present ("hell","o world")
 -- PresentT ("hell","o world")
 --
+-- >>> pz @(SplitAt (Negate 2) Id) "hello world"
+-- Present ("hello wor","ld")
+-- PresentT ("hello wor","ld")
+--
 data SplitAt n p
 
 instance (PP p a ~ [b]
@@ -2843,9 +2930,12 @@ instance (PP p a ~ [b]
       Left e -> e -- (Left e, tt')
       Right (fromIntegral -> n,p,pp,qq) ->
         let msg1 = msg0 <> show0 opts " " n <> show0 opts " " p
-            (x,y) = splitAt n p
-            ret = (x,y)
+            ret = splitAtNeg n p
        in mkNode opts (PresentT ret) [show01' opts msg1 ret "n=" n <> show1 opts " | " p] [hh pp, hh qq]
+
+splitAtNeg :: Int -> [a] -> ([a],[a])
+splitAtNeg n as = splitAt (if n<0 then (length as + n) else n) as
+
 
 data Take n p
 type TakeT n p = Fst (SplitAt n p)
@@ -3087,42 +3177,42 @@ data p > q
 infix 4 >
 
 instance P (Cmp 'CGt p q) x => P (p > q) x where
-  type PP (p > q) x = PP (Cmp 'CGt p q) x
+  type PP (p > q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CGt p q))
 
 data p >= q
 infix 4 >=
 
 instance P (Cmp 'CGe p q) x => P (p >= q) x where
-  type PP (p >= q) x = PP (Cmp 'CGe p q) x
+  type PP (p >= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CGe p q))
 
 data p == q
 infix 4 ==
 
 instance P (Cmp 'CEq p q) x => P (p == q) x where
-  type PP (p == q) x = PP (Cmp 'CEq p q) x
+  type PP (p == q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CEq p q))
 
 data p <= q
 infix 4 <=
 
 instance P (Cmp 'CLe p q) x => P (p <= q) x where
-  type PP (p <= q) x = PP (Cmp 'CLe p q) x
+  type PP (p <= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CLe p q))
 
 data p < q
 infix 4 <
 
 instance P (Cmp 'CLt p q) x => P (p < q) x where
-  type PP (p < q) x = PP (Cmp 'CLt p q) x
+  type PP (p < q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CLt p q))
 
 data p /= q
 infix 4 /=
 
 instance P (Cmp 'CNe p q) x => P (p /= q) x where
-  type PP (p /= q) x = PP (Cmp 'CNe p q) x
+  type PP (p /= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CNe p q))
 
 --type p + q = Bin 'BAdd p q
@@ -3154,42 +3244,42 @@ data p >~ q
 infix 4 >~
 
 instance P (CmpI 'CGt p q) x => P (p >~ q) x where
-  type PP (p >~ q) x = PP (CmpI 'CGt p q) x
+  type PP (p >~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CGt p q))
 
 data p >=~ q
 infix 4 >=~
 
 instance P (CmpI 'CGe p q) x => P (p >=~ q) x where
-  type PP (p >=~ q) x = PP (CmpI 'CGe p q) x
+  type PP (p >=~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CGe p q))
 
 data p ==~ q
 infix 4 ==~
 
 instance P (CmpI 'CEq p q) x => P (p ==~ q) x where
-  type PP (p ==~ q) x = PP (CmpI 'CEq p q) x
+  type PP (p ==~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CEq p q))
 
 data p <=~ q
 infix 4 <=~
 
 instance P (CmpI 'CLe p q) x => P (p <=~ q) x where
-  type PP (p <=~ q) x = PP (CmpI 'CLe p q) x
+  type PP (p <=~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CLe p q))
 
 data p <~ q
 infix 4 <~
 
 instance P (CmpI 'CLt p q) x => P (p <~ q) x where
-  type PP (p <~ q) x = PP (CmpI 'CLt p q) x
+  type PP (p <~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CLt p q))
 
 data p /=~ q
 infix 4 /=~
 
 instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
-  type PP (p /=~ q) x = PP (CmpI 'CNe p q) x
+  type PP (p /=~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CNe p q))
 
 
@@ -5461,7 +5551,7 @@ instance (Show (t a)
 data Null
 type NullT = Null' Id
 instance P NullT a => P Null a where
-  type PP Null a = PP NullT a
+  type PP Null a = Bool
   eval _ = evalBool (Proxy @NullT)
 
 -- | similar to 'enumFromTo'
@@ -5578,7 +5668,10 @@ instance P ThesesT x => P Theses x where
 -- Present 'g'
 -- PresentT 'g'
 --
-
+-- >>> pz @(Dup >> ScanN 4 Id (Pred Id *** Succ Id)) 'g'
+-- Present [('g','g'),('f','h'),('e','i'),('d','j'),('c','k')]
+-- PresentT [('g','g'),('f','h'),('e','i'),('d','j'),('c','k')]
+--
 data Scanl p q r
 -- scanr :: (a -> b -> b) -> b -> [a] -> [b]
 -- result is scanl but signature is flipped ((a,b) -> b) -> b -> [a] -> [b]
@@ -6065,14 +6158,14 @@ data Even
 type EvenT = Mod I 2 == 0
 
 instance P EvenT x => P Even x where
-  type PP Even x = PP EvenT x
+  type PP Even x = Bool
   eval _ = evalBool (Proxy @EvenT)
 
 data Odd
 type OddT = Mod I 2 == 1
 
 instance P OddT x => P Odd x where
-  type PP Odd x = PP OddT x
+  type PP Odd x = Bool
   eval _ = evalBool (Proxy @OddT)
 
 
@@ -6890,11 +6983,6 @@ instance (PP p x ~ Bool, P p x) => P (Not p) x where
         let b = not p
         in mkNodeB opts b [msg0 <> " " <> topMessage pp] [hh pp]
 
-type OrdP p q = p ==! q
-
-data p ==! q
-infix 4 ==!
-
 -- | similar to 'compare'
 --
 -- >>> pz @(Fst Id ==! Snd Id) (10,9)
@@ -6917,14 +7005,11 @@ infix 4 ==!
 -- Present EQ
 -- PresentT EQ
 --
---type OrdA' p q = (Fst Id >> p) ==! (Snd Id >> q)
---type OrdA p = OrdA' p p
 
-data OrdA p
+data p ==! q
+infix 4 ==!
 
-instance P (OrdA' p p) x => P (OrdA p) x where
-  type PP (OrdA p) x = PP (OrdA' p p) x
-  eval _ = eval (Proxy @(OrdA' p p))
+type OrdP p q = p ==! q
 
 instance (Ord (PP p a)
         , PP p a ~ PP q a
@@ -6941,6 +7026,12 @@ instance (Ord (PP p a)
       Right (p,q,pp,qq) ->
         let d = compare p q
         in mkNode opts (PresentT d) [msg0 <> " " <> show p <> " " <> prettyOrd d <> show0 opts " " q] [hh pp, hh qq]
+
+data OrdA p
+
+instance P (OrdA' p p) x => P (OrdA p) x where
+  type PP (OrdA p) x = PP (OrdA' p p) x
+  eval _ = eval (Proxy @(OrdA' p p))
 
 data OrdA' p q
 type OrdAT' p q = (Fst Id >> p) ==! (Snd Id >> q)
@@ -8551,11 +8642,11 @@ instance P (IsSuffixIT p q) x => P (IsSuffixI p q) x where
 -- Present (Sum {getSum = 22},"def_XYZ")
 -- PresentT (Sum {getSum = 22},"def_XYZ")
 --
--- >>> pz @(Sapa' (SG.Max _)) (10,12)
+-- >>> pz @(SapA' (SG.Max _)) (10,12)
 -- Present Max {getMax = 12}
 -- PresentT (Max {getMax = 12})
 --
--- >>> pz @(Sapa' (SG.Sum _)) (10,12)
+-- >>> pz @(SapA' (SG.Sum _)) (10,12)
 -- Present Sum {getSum = 22}
 -- PresentT (Sum {getSum = 22})
 --
@@ -8578,19 +8669,19 @@ instance (Semigroup (PP p x)
         let d = p <> q
         in mkNode opts (PresentT d) [show p <> " <> " <> show q <> " = " <> show d] [hh pp, hh qq]
 
-data Sapa' (t :: Type)
-type SapaT' (t :: Type) = Wrap t (Fst Id) <> Wrap t (Snd Id)
+data SapA' (t :: Type)
+type SapAT' (t :: Type) = Wrap t (Fst Id) <> Wrap t (Snd Id)
 
-instance P (SapaT' t) x => P (Sapa' t) x where
-  type PP (Sapa' t) x = PP (SapaT' t) x
-  eval _ = eval (Proxy @(SapaT' t))
+instance P (SapAT' t) x => P (SapA' t) x where
+  type PP (SapA' t) x = PP (SapAT' t) x
+  eval _ = eval (Proxy @(SapAT' t))
 
-data Sapa
-type SapaT = Fst Id <> Snd Id
+data SapA
+type SapAT = Fst Id <> Snd Id
 
-instance P SapaT x => P Sapa x where
-  type PP Sapa x = PP SapaT x
-  eval _ = eval (Proxy @SapaT)
+instance P SapAT x => P SapA x where
+  type PP SapA x = PP SapAT x
+  eval _ = eval (Proxy @SapAT)
 
 -- | uses inductive tuples to replace variable arguments
 --
@@ -10067,10 +10158,22 @@ instance (Foldable t
 -- Error ParseJson (Int,[Char])([10,"abc",...) Error in $
 -- FailT "ParseJson (Int,[Char])([10,\"abc\",...) Error in $"
 --
+-- >>> pl @(ParseJson (Int,Bool) (FromString _ Id)) ("[1,true]" :: String)
+-- Present (1,True) (ParseJson (Int,Bool) (1,True))
+-- PresentT (1,True)
+--
+-- >>> pl @(ParseJson (Int,Bool) Id) (A.encode (1,True))
+-- Present (1,True) (ParseJson (Int,Bool) (1,True))
+-- PresentT (1,True)
+--
+-- >>> pl @(ParseJson () Id) "[1,true]"
+-- Error ParseJson ()([1,true]) Error in $
+-- FailT "ParseJson ()([1,true]) Error in $"
+--
 data ParseJson' t p
 
 instance (P p x
-        , PP p x ~ String
+        , PP p x ~ BL8.ByteString
         , Typeable (PP t x)
         , Show (PP t x)
         , A.FromJSON (PP t x)
@@ -10084,10 +10187,10 @@ instance (P p x
       Left e -> e
       Right s ->
         let hhs = [hh pp]
-            msg1 = msg0 <> "(" ++ litL 10 s ++ ")"
-        in case A.eitherDecodeStrict' (BS8.pack s) of
+            msg1 = msg0 <> "(" ++ litBL 10 s ++ ")"
+        in case A.eitherDecode' s of
            Right b -> mkNode opts (PresentT b) [msg0 <> " " ++ showL 30 b] hhs
-           Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) [msg0 <> " failed " <> e <> " | " <> litL 100 s] hhs
+           Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e) ) [msg0 <> " failed " <> e <> " | " <> litBL 100 s] hhs
 
 data ParseJson (t :: Type) p
 type ParseJsonT (t :: Type) p = ParseJson' (Hole t) p
@@ -10095,25 +10198,6 @@ type ParseJsonT (t :: Type) p = ParseJson' (Hole t) p
 instance P (ParseJsonT t p) x => P (ParseJson t p) x where
   type PP (ParseJson t p) x = PP (ParseJsonT t p) x
   eval _ = eval (Proxy @(ParseJsonT t p))
-
--- | encode json
---
--- >>> pl @(EncodeJson Id) (10,"def")
--- Present "[10,\"def\"]" (EncodeJson [10,"def"])
--- PresentT "[10,\"def\"]"
---
-data EncodeJson p
-
-instance (A.ToJSON (PP p x), P p x) => P (EncodeJson p) x where
-  type PP (EncodeJson p) x = String
-  eval _ opts x = do
-    let msg0 = "EncodeJson"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let d = BL8.unpack (A.encode p)
-        in mkNode opts (PresentT d) [msg0 <> showLit0 opts " " d] [hh pp]
 
 -- | parse a json file
 data ParseJsonFile' t p
@@ -10141,10 +10225,11 @@ instance (P p x
         pure $ case mb of
           Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) [msg1 <> " must run in IO"] hhs
           Just Nothing -> mkNode opts (FailT (msg1 <> " file doesn't exist")) [msg1 <> " does not exist"] hhs
-          Just (Just bs) ->
-            case A.eitherDecodeStrict' bs of
-               Right b -> mkNode opts (PresentT b) [msg1 <> " " ++ show b] hhs
-               Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) [msg1 <> " failed " <> litL 100 e] hhs
+          Just (Just s) ->
+            case A.eitherDecodeStrict' s of
+               Right b -> mkNode opts (PresentT b) [msg1 <> " " ++ showL 30 b] hhs
+--                Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) [msg1 <> " failed " <> litL 100 e] hhs
+               Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) [msg0 <> " failed " <> e <> " | " <> litBS 100 s] hhs
 
 data ParseJsonFile (t :: Type) p
 type ParseJsonFileT (t :: Type) p = ParseJsonFile' (Hole t) p
@@ -10152,6 +10237,55 @@ type ParseJsonFileT (t :: Type) p = ParseJsonFile' (Hole t) p
 instance P (ParseJsonFileT t p) x => P (ParseJsonFile t p) x where
   type PP (ParseJsonFile t p) x = PP (ParseJsonFileT t p) x
   eval _ = eval (Proxy @(ParseJsonFileT t p))
+
+-- | encode json
+--
+-- >>> pl @(EncodeJson Id) (10,"def")
+-- Present "[10,\"def\"]" (EncodeJson [10,"def"])
+-- PresentT "[10,\"def\"]"
+--
+-- >>> pl @(EncodeJson Id >> ParseJson (Int,Bool) Id) (1,True)
+-- Present (1,True) ((>>) (1,True) | {ParseJson (Int,Bool) (1,True)})
+-- PresentT (1,True)
+--
+-- >>> pl @(ParseJson ([String], These Int ()) (EncodeJson Id)) (["abc","def"],This 110)
+-- Present (["abc","def"],This 110) (ParseJson ([[Char]],(These Int ())) (["abc","def"],This 110))
+-- PresentT (["abc","def"],This 110)
+--
+data EncodeJson p
+
+instance (A.ToJSON (PP p x), P p x) => P (EncodeJson p) x where
+  type PP (EncodeJson p) x = BL8.ByteString
+  eval _ opts x = do
+    let msg0 = "EncodeJson"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let d = A.encode p
+        in mkNode opts (PresentT d) [msg0 <> showLit0 opts " " (litBL 50 d)] [hh pp]
+
+-- | encode a json file
+data EncodeJsonFile p q
+
+instance (PP p x ~ String
+        , P p x
+        , A.ToJSON (PP q x)
+        , P q x
+        ) => P (EncodeJsonFile p q) x where
+  type PP (EncodeJsonFile p q) x = ()
+  eval _ opts x = do
+    let msg0 = "EncodeJsonFile"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    case lr of
+      Left e -> pure e
+      Right (p,q,pp,qq) -> do
+        let d = A.encode q
+            hhs = [hh pp, hh qq]
+        mb <- runIO $ BL8.writeFile p d
+        pure $ case mb of
+          Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] hhs
+          Just () -> mkNode opts (PresentT ()) [msg0 <> showLit0 opts " " (litBL 50 d)] hhs
 
 -- | uncurry experiment
 --
@@ -10307,3 +10441,74 @@ instance P (OrAT p q) x => P (p |+ q) x where
   type PP (p |+ q) x = PP (OrAT p q) x
   eval _ = evalBool (Proxy @(OrAT p q))
 
+-- | very simple conversion to a string
+data ToString p
+instance (ToStringC (PP p x), P p x) => P (ToString p) x where
+  type PP (ToString p) x = String
+  eval _ opts x = do
+    let msg0 = "ToString"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let d = toStringC p
+        in mkNode opts (PresentT d) [msg0] [hh pp]
+
+class ToStringC a where
+  toStringC :: a -> String
+instance ToStringC String where
+  toStringC = id
+instance ToStringC T.Text where
+  toStringC = T.unpack
+instance ToStringC TL.Text where
+  toStringC = TL.unpack
+instance ToStringC BL8.ByteString where
+  toStringC = BL8.unpack
+instance ToStringC BS8.ByteString where
+  toStringC = BS8.unpack
+
+-- | splits a list pointed to by \'p\' into lists of size \'n\'
+--
+-- >>> pz @(ChunksOf 2 Id) "abcdef"
+-- Present ["ab","cd","ef"]
+-- PresentT ["ab","cd","ef"]
+--
+-- >>> pz @(ChunksOf 2 Id) "abcdefg"
+-- Present ["ab","cd","ef","g"]
+-- PresentT ["ab","cd","ef","g"]
+--
+-- >>> pz @(ChunksOf 2 Id) ""
+-- Present []
+-- PresentT []
+--
+-- >>> pz @(ChunksOf 2 Id) "a"
+-- Present ["a"]
+-- PresentT ["a"]
+--
+data ChunksOf n p
+
+instance (PP p a ~ [b]
+        , P n a
+        , P p a
+        , Show b
+        , Integral (PP n a)
+        ) => P (ChunksOf n p) a where
+  type PP (ChunksOf n p) a = [PP p a]
+  eval _ opts a = do
+    let msg0 = "ChunksOf"
+    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a []
+    pure $ case lr of
+      Left e -> e
+      Right (fromIntegral -> n,p,pp,qq) ->
+        let hhs = [hh pp, hh qq]
+            msg1 = msg0 <> show0 opts " " n <> show0 opts " " p
+        in if n <= 0 then mkNode opts (FailT (msg0 <> " n<1")) [msg1] hhs
+           else let ret = unfoldr (\s -> if null s then Nothing else Just $ splitAt n s) p
+                in mkNode opts (PresentT ret) [show01' opts msg1 ret "n=" n <> show1 opts " | " p] hhs
+
+data Rotate n p
+type RotateT n p = SplitAt n p >> Swap >> First Reverse >> SapA
+
+instance P (RotateT n p) x => P (Rotate n p) x where
+  type PP (Rotate n p) x = PP (RotateT n p) x
+  eval _ = eval (Proxy @(RotateT n p))
