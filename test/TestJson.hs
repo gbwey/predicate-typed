@@ -29,7 +29,8 @@ suite = testGroup "testjson"
   [ testCase "testperson ok" $ expectIO testPerson (() <$)
   , testCase "testperson1 ok" $ expectIO (testPerson1 2) (() <$)
   , testCase "testperson1 bad ipaddress" $ expectIO (testPerson1 3) (expectLeftWith ["octet 3 out of range 0-255 found 260"])
-  , testCase "testperson1 bad lastname lowercase first letter" $ expectIO (testPerson1 4) (expectLeftWith ["invalid name","diaz"])
+  , testCase "testperson1 bad lastname lowercase first letter" $ expectIO (testPerson1 4) (expectLeftWith ["lastName1", "invalid name", "diaz"])
+  , testCase "testperson1 bad first name lowercase first letter" $ expectIO (testPerson1 6) (expectLeftWith ["firstName1", "not upper first(d)"])
   , testCase "testperson1 age 99 out of range" $ expectIO (testPerson1 5) (expectLeftWith ["Error in $[0].age1"])
   , testCase "parse fail person1" $ expectPE (FailT "ParseJsonFile [Person1](test3.json) Error in $[0].ipaddress1") $ pl @(ParseJsonFile [Person1] "test3.json") ()
   , testCase "parse ok person1" $ expectPE (PresentT 5) $ pl @(ParseJsonFile [Person1] "test2.json" >> Len) ()
@@ -55,7 +56,7 @@ instance ToJSON Person
 instance FromJSON Person
 
 data Person1 = Person1 {
-       firstName1 :: NameR1
+       firstName1 :: NameR2
      , lastName1 :: NameR1
      , age1 :: AgeR
      , likesPizza1 :: Bool
@@ -74,8 +75,8 @@ type NameR2 = R.Refined (Name2 >> 'True) String
 type Name2 =
           Uncons
        >> 'Just Id
-       >> Guard (PrintF "not upper first(%c)" Id) ('[Id] >> IsUpper)
-      *** Guard (PrintF "not lower rest(%s)" Id) IsLower
+       >> Guard (PrintF "not upper first(%c)" Id) IsUpper
+      *** Guard (PrintF "not lower rest(%s)" Id) IsLowerAll
 
 type AgeR = R.Refined (Between 10 60 Id) Int
 

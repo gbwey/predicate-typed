@@ -107,6 +107,17 @@ module Predicate.Prelude (
   , IsSeparator
   , IsLatin1
 
+  , IsLowerAll
+  , IsUpperAll
+  , IsNumberAll
+  , IsSpaceAll
+  , IsPunctuationAll
+  , IsControlAll
+  , IsHexDigitAll
+  , IsOctDigitAll
+  , IsSeparatorAll
+  , IsLatin1All
+
   -- ** datetime expressions
   , FormatTimeP
   , ParseTimeP
@@ -1342,107 +1353,56 @@ instance (PP p x ~ ([String] -> String)
       Left e -> e
       Right f -> mkNode opts (PresentT (RReplace3 f)) [msg0] [hh pp]
 
+
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
--- >>> pz @IsLower "abc"
+-- >>> pz @IsSpace '\t'
 -- True
 -- TrueT
 --
--- >>> pz @IsLower "abcX"
--- False
--- FalseT
---
--- >>> pz @IsLower (T.pack "abcX")
--- False
--- FalseT
---
--- >>> pz @IsHexDigit "01efA"
+-- >>> pz @IsSpace ' '
 -- True
 -- TrueT
 --
--- >>> pz @IsHexDigit "01egfA"
+-- >>> pz @IsSpace 'x'
+-- False
+-- FalseT
+--
+-- >>> pz @IsLower 'a'
+-- True
+-- TrueT
+--
+-- >>> pz @IsLower 'X'
+-- False
+-- FalseT
+--
+-- >>> pz @IsHexDigit 'A'
+-- True
+-- TrueT
+--
+-- >>> pz @IsHexDigit 'g'
 -- False
 -- FalseT
 --
 -- | predicate for determining if a string is all lowercase
 --
--- >>> pz @IsLower "abcdef213"
+-- >>> pz @IsLower '1'
 -- False
 -- FalseT
 --
--- >>> pz @IsLower "abcdef"
+-- >>> pz @IsLower 'a'
 -- True
 -- TrueT
 --
--- >>> pz @IsLower ""
--- True
--- TrueT
---
--- >>> pz @IsLower "abcdefG"
--- False
--- FalseT
---
--- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "AbcdE"
--- False ((>>) False | {True (&*) False | (IsLower | "bcdE")})
--- FalseT
---
--- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "Abcde"
--- True ((>>) True | {True (&*) True})
--- TrueT
---
--- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "xbcde"
--- False ((>>) False | {IsUpper | "x"})})
--- FalseT
---
--- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "X"
--- True ((>>) True | {True (&*) True})
--- TrueT
---
-instance (GetCharSet cs
-        , Show a
-        , TL.IsText a
-        ) => P (IsCharSet cs) a where
-  type PP (IsCharSet cs) a = Bool
-  eval _ opts as =
-    let b = allOf TL.text f as
-        msg0 = "Is" ++ drop 1 (show cs)
-        (cs,f) = getCharSet @cs
-    in pure $ mkNodeB opts b [msg0 <> show1 opts " | " as] []
-
 data IsCharSet (cs :: CharSet)
 
-data CharSet = CLower
-             | CUpper
-             | CNumber
-             | CSpace
-             | CPunctuation
-             | CControl
-             | CHexDigit
-             | COctDigit
-             | CSeparator
-             | CLatin1
-             deriving Show
-
-class GetCharSet (cs :: CharSet) where
-  getCharSet :: (CharSet, Char -> Bool)
-instance GetCharSet 'CLower where
-  getCharSet = (CLower, isLower)
-instance GetCharSet 'CUpper where
-  getCharSet = (CUpper, isUpper)
-instance GetCharSet 'CNumber where
-  getCharSet = (CNumber, isNumber)
-instance GetCharSet 'CPunctuation where
-  getCharSet = (CPunctuation, isPunctuation)
-instance GetCharSet 'CControl where
-  getCharSet = (CControl, isControl)
-instance GetCharSet 'CHexDigit where
-  getCharSet = (CHexDigit, isHexDigit)
-instance GetCharSet 'COctDigit where
-  getCharSet = (COctDigit, isOctDigit)
-instance GetCharSet 'CSeparator where
-  getCharSet = (CSeparator, isSeparator)
-instance GetCharSet 'CLatin1 where
-  getCharSet = (CLatin1, isLatin1)
+instance (x ~ Char, GetCharSet cs) => P (IsCharSet cs) x where
+  type PP (IsCharSet cs) x = Bool
+  eval _ opts c =
+    let msg0 = "Is" ++ drop 1 (show cs)
+        (cs,f) = getCharSet @cs
+        b = f c
+    in pure $ mkNodeB opts b [msg0 <> show1 opts " | " [c]] []
 
 data IsLower
 type IsLowerT = IsCharSet 'CLower
@@ -1460,11 +1420,11 @@ instance P IsUpperT x => P IsUpper x where
 
 -- | predicate for determining if the string is all digits
 --
--- >>> pz @IsNumber "213G"
+-- >>> pz @IsNumber 'g'
 -- False
 -- FalseT
 --
--- >>> pz @IsNumber "929"
+-- >>> pz @IsNumber '9'
 -- True
 -- TrueT
 --
@@ -1517,6 +1477,198 @@ instance P IsLatin1T x => P IsLatin1 x where
   eval _ = evalBool (Proxy @IsLatin1T)
 
 
+
+-- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
+--
+-- >>> pz @IsLowerAll "abc"
+-- True
+-- TrueT
+--
+-- >>> pz @IsLowerAll "abcX"
+-- False
+-- FalseT
+--
+-- >>> pz @IsLowerAll (T.pack "abcX")
+-- False
+-- FalseT
+--
+-- >>> pz @IsHexDigitAll "01efA"
+-- True
+-- TrueT
+--
+-- >>> pz @IsHexDigitAll "01egfA"
+-- False
+-- FalseT
+--
+-- | predicate for determining if a string is all lowercase
+--
+-- >>> pz @IsLowerAll "abcdef213"
+-- False
+-- FalseT
+--
+-- >>> pz @IsLowerAll "abcdef"
+-- True
+-- TrueT
+--
+-- >>> pz @IsLowerAll ""
+-- True
+-- TrueT
+--
+-- >>> pz @IsLowerAll "abcdefG"
+-- False
+-- FalseT
+--
+-- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "AbcdE"
+-- False ((>>) False | {True (&*) False | (IsLowerAll | "bcdE")})
+-- FalseT
+--
+-- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "Abcde"
+-- True ((>>) True | {True (&*) True})
+-- TrueT
+--
+-- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "xbcde"
+-- False ((>>) False | {False (&*) True | (IsUpper | "x")})
+-- FalseT
+--
+-- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "X"
+-- True ((>>) True | {True (&*) True})
+-- TrueT
+--
+data IsCharSetAll (cs :: CharSet)
+
+instance (GetCharSet cs
+        , Show a
+        , TL.IsText a
+        ) => P (IsCharSetAll cs) a where
+  type PP (IsCharSetAll cs) a = Bool
+  eval _ opts as =
+    let b = allOf TL.text f as
+        msg0 = "Is" ++ drop 1 (show cs) ++ "All"
+        (cs,f) = getCharSet @cs
+    in pure $ mkNodeB opts b [msg0 <> show1 opts " | " as] []
+
+data CharSet = CLower
+             | CUpper
+             | CNumber
+             | CSpace
+             | CPunctuation
+             | CControl
+             | CHexDigit
+             | COctDigit
+             | CSeparator
+             | CLatin1
+             deriving Show
+
+class GetCharSet (cs :: CharSet) where
+  getCharSet :: (CharSet, Char -> Bool)
+instance GetCharSet 'CLower where
+  getCharSet = (CLower, isLower)
+instance GetCharSet 'CUpper where
+  getCharSet = (CUpper, isUpper)
+instance GetCharSet 'CNumber where
+  getCharSet = (CNumber, isNumber)
+instance GetCharSet 'CSpace where
+  getCharSet = (CSpace, isSpace)
+instance GetCharSet 'CPunctuation where
+  getCharSet = (CPunctuation, isPunctuation)
+instance GetCharSet 'CControl where
+  getCharSet = (CControl, isControl)
+instance GetCharSet 'CHexDigit where
+  getCharSet = (CHexDigit, isHexDigit)
+instance GetCharSet 'COctDigit where
+  getCharSet = (COctDigit, isOctDigit)
+instance GetCharSet 'CSeparator where
+  getCharSet = (CSeparator, isSeparator)
+instance GetCharSet 'CLatin1 where
+  getCharSet = (CLatin1, isLatin1)
+
+data IsLowerAll
+type IsLowerAllT = IsCharSetAll 'CLower
+
+instance P IsLowerAllT x => P IsLowerAll x where
+  type PP IsLowerAll x = PP IsLowerAllT x
+  eval _ = evalBool (Proxy @IsLowerAllT)
+
+data IsUpperAll
+type IsUpperAllT = IsCharSetAll 'CUpper
+
+instance P IsUpperAllT x => P IsUpperAll x where
+  type PP IsUpperAll x = PP IsUpperAllT x
+  eval _ = evalBool (Proxy @IsUpperAllT)
+
+-- | predicate for determining if the string is all digits
+--
+-- >>> pz @IsNumberAll "213G"
+-- False
+-- FalseT
+--
+-- >>> pz @IsNumberAll "929"
+-- True
+-- TrueT
+--
+data IsNumberAll
+type IsNumberAllT = IsCharSetAll 'CNumber
+instance P IsNumberAllT x => P IsNumberAll x where
+  type PP IsNumberAll x = Bool
+  eval _ = evalBool (Proxy @IsNumberAllT)
+
+-- | predicate for determining if the string is all spaces
+--
+-- >>> pz @IsSpaceAll "213G"
+-- False
+-- FalseT
+--
+-- >>> pz @IsSpaceAll "    "
+-- True
+-- TrueT
+--
+-- >>> pz @IsSpaceAll ""
+-- True
+-- TrueT
+--
+data IsSpaceAll
+type IsSpaceAllT = IsCharSetAll 'CSpace
+instance P IsSpaceAllT x => P IsSpaceAll x where
+  type PP IsSpaceAll x = Bool
+  eval _ = evalBool (Proxy @IsSpaceAllT)
+
+data IsPunctuationAll
+type IsPunctuationAllT = IsCharSetAll 'CPunctuation
+instance P IsPunctuationAllT x => P IsPunctuationAll x where
+  type PP IsPunctuationAll x = Bool
+  eval _ = evalBool (Proxy @IsPunctuationAllT)
+
+data IsControlAll
+type IsControlAllT = IsCharSetAll 'CControl
+instance P IsControlAllT x => P IsControlAll x where
+  type PP IsControlAll x = Bool
+  eval _ = evalBool (Proxy @IsControlAllT)
+
+data IsHexDigitAll
+type IsHexDigitAllT = IsCharSetAll 'CHexDigit
+instance P IsHexDigitAllT x => P IsHexDigitAll x where
+  type PP IsHexDigitAll x = Bool
+  eval _ = evalBool (Proxy @IsHexDigitAllT)
+
+data IsOctDigitAll
+type IsOctDigitAllT = IsCharSetAll 'COctDigit
+instance P IsOctDigitAllT x => P IsOctDigitAll x where
+  type PP IsOctDigitAll x = Bool
+  eval _ = evalBool (Proxy @IsOctDigitAllT)
+
+data IsSeparatorAll
+type IsSeparatorAllT = IsCharSetAll 'CSeparator
+instance P IsSeparatorAllT x => P IsSeparatorAll x where
+  type PP IsSeparatorAll x = Bool
+  eval _ = evalBool (Proxy @IsSeparatorAllT)
+
+data IsLatin1All
+type IsLatin1AllT = IsCharSetAll 'CLatin1
+instance P IsLatin1AllT x => P IsLatin1All x where
+  type PP IsLatin1All x = Bool
+  eval _ = evalBool (Proxy @IsLatin1AllT)
+
+
 -- | converts a string 'Data.Text.Lens.IsText' value to lower case
 --
 -- >>> pz @ToLower "HeLlO wOrld!"
@@ -1560,8 +1712,8 @@ instance (Show a, TL.IsText a) => P ToUpper a where
 --
 data Inits
 
-instance Show a => P Inits [a] where
-  type PP Inits [a] = [[a]]
+instance ([a] ~ x, Show a) => P Inits x where
+  type PP Inits x = [x]
   eval _ opts as =
     let msg0 = "Inits"
         xs = inits as
@@ -1579,8 +1731,8 @@ instance Show a => P Inits [a] where
 --
 data Tails
 
-instance Show a => P Tails [a] where
-  type PP Tails [a] = [[a]]
+instance ([a] ~ x, Show a) => P Tails x where
+  type PP Tails x = [x]
   eval _ opts as =
     let msg0 = "Tails"
         xs = tails as
@@ -2933,7 +3085,7 @@ instance (PP p a ~ [b]
             ret = splitAtNeg n p
        in mkNode opts (PresentT ret) [show01' opts msg1 ret "n=" n <> show1 opts " | " p] [hh pp, hh qq]
 
-splitAtNeg :: Int -> [a] -> ([a],[a])
+splitAtNeg :: Int -> [a] -> ([a], [a])
 splitAtNeg n as = splitAt (if n<0 then (length as + n) else n) as
 
 
@@ -6373,8 +6525,8 @@ data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 
 data Guards (ps :: [(k,k1)])
 
-instance (GetLen ps, P (GuardsImpl (LenT ps) ps) [a]) => P (Guards ps) [a] where
-  type PP (Guards ps) [a] = PP (GuardsImpl (LenT ps) ps) [a]
+instance ([a] ~ x, GetLen ps, P (GuardsImpl (LenT ps) ps) x) => P (Guards ps) x where
+  type PP (Guards ps) x = PP (GuardsImpl (LenT ps) ps) x
   eval _ opts as = do
     let msg0 = "Guards"
         n = getLen @ps
@@ -6386,9 +6538,9 @@ instance (GetLen ps, P (GuardsImpl (LenT ps) ps) [a]) => P (Guards ps) [a] where
 badLength :: (Foldable t, Show n, Num n) => t a -> n -> String
 badLength as n = ":invalid length(" <> show (length as) <> ") expected " ++ show (n+0)
 
-instance Show a
-         => P (GuardsImpl n ('[] :: [(k,k1)])) [a] where
-  type PP (GuardsImpl n ('[] :: [(k,k1)])) [a] = [a]
+instance ([a] ~ x, Show a)
+         => P (GuardsImpl n ('[] :: [(k,k1)])) x where
+  type PP (GuardsImpl n ('[] :: [(k,k1)])) x = x
   eval _ opts as =
     let msg0 = "Guards"
     in if not (null as) then errorInProgram $ "GuardsImpl base case has extra data " ++ show as
@@ -6403,8 +6555,9 @@ instance (PP prt (Int, a) ~ String
         , P (GuardsImpl n ps) [a]
         , PP (GuardsImpl n ps) [a] ~ [a]
         , Show a
-        ) => P (GuardsImpl n ('(prt,p) ': ps)) [a] where
-  type PP (GuardsImpl n ('(prt,p) ': ps)) [a] = [a]
+        , [a] ~ x
+        ) => P (GuardsImpl n ('(prt,p) ': ps)) x where
+  type PP (GuardsImpl n ('(prt,p) ': ps)) x = x
   eval _ opts as' = do
      let cpos = n-pos-1
          msgbase1 = "Guard(" <> show cpos <> ")"
@@ -6482,11 +6635,12 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 --
 data Bools (ps :: [(k,k1)])
 
-instance (GetLen ps
-        , P (BoolsImpl (LenT ps) ps) [a]
-        , PP (BoolsImpl (LenT ps) ps) [a] ~ Bool
-        ) => P (Bools ps) [a] where
-  type PP (Bools ps) [a] = Bool
+instance ([a] ~ x
+        , GetLen ps
+        , P (BoolsImpl (LenT ps) ps) x
+        , PP (BoolsImpl (LenT ps) ps) x ~ Bool
+        ) => P (Bools ps) x where
+  type PP (Bools ps) x = Bool
   eval _ opts as = do
     let msg0 = "Bools"
         msg1 = "Bool("++show n++")"
@@ -6503,8 +6657,9 @@ data BoolsImpl (n :: Nat) (os :: [(k,k1)])
 
 instance (KnownNat n
         , Show a
-        ) => P (BoolsImpl n ('[] :: [(k,k1)])) [a] where
-  type PP (BoolsImpl n ('[] :: [(k,k1)])) [a] = Bool
+        , [a] ~ x
+        ) => P (BoolsImpl n ('[] :: [(k,k1)])) x where
+  type PP (BoolsImpl n ('[] :: [(k,k1)])) x = Bool
   eval _ opts as =
     let msg0 = "Bool(" <> show n <> ")"
         n :: Int = nat @n
@@ -6517,11 +6672,12 @@ instance (PP prt (Int, a) ~ String
         , GetLen ps
         , P p a
         , PP p a ~ Bool
-        , P (BoolsImpl n ps) [a]
+        , P (BoolsImpl n ps) x
         , PP (BoolsImpl n ps) [a] ~ Bool
 --        , Show a
-        ) => P (BoolsImpl n ('(prt,p) ': ps)) [a] where
-  type PP (BoolsImpl n ('(prt,p) ': ps)) [a] = Bool
+        , [a] ~ x
+        ) => P (BoolsImpl n ('(prt,p) ': ps)) x where
+  type PP (BoolsImpl n ('(prt,p) ': ps)) x = Bool
   eval _ opts as' = do
      let cpos = n-pos-1
          msgbase1 = "Bool(" <> showIndex cpos <> ")"
@@ -6551,7 +6707,7 @@ instance (PP prt (Int, a) ~ String
 data BoolsQuick (prt :: k) (ps :: [k1])
 type BoolsQuickT (prt :: k) (ps :: [k1]) = Bools (ToGuardsT prt ps)
 
--- why do we need this? when BoolsN works without
+-- why do we need this? when BoolsN works without [use the x ~ [a] trick in BoolsN]
 instance (PP (Bools (ToGuardsT prt ps)) x ~ Bool
         , P (BoolsQuickT prt ps) x
           ) => P (BoolsQuick prt ps) x where
@@ -6571,8 +6727,8 @@ instance (PP (Bools (ToGuardsT prt ps)) x ~ Bool
 data BoolsN prt (n :: Nat) (p :: k1)
 type BoolsNT prt (n :: Nat) (p :: k1) = Bools (ToGuardsT prt (RepeatT n p))
 
-instance P (BoolsNT prt n p) [a] => P (BoolsN prt n p) [a] where
-  type PP (BoolsN prt n p) [a] = PP (BoolsNT prt n p) [a]
+instance (x ~ [a], P (BoolsNT prt n p) x) => P (BoolsN prt n p) x where
+  type PP (BoolsN prt n p) x = PP (BoolsNT prt n p) x
   eval _ = evalBool (Proxy @(BoolsNT prt n p))
 
 -- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
@@ -6591,10 +6747,11 @@ instance P (BoolsNT prt n p) [a] => P (BoolsN prt n p) [a] where
 --
 data GuardsDetailImpl (ps :: [(k,k1)])
 
-instance (GetLen ps
-        , P (GuardsImplX (LenT ps) ps) [a]
-        ) => P (GuardsDetailImpl ps) [a] where
-  type PP (GuardsDetailImpl ps) [a] = PP (GuardsImplX (LenT ps) ps) [a]
+instance ([a] ~ x
+        , GetLen ps
+        , P (GuardsImplX (LenT ps) ps) x
+        ) => P (GuardsDetailImpl ps) x where
+  type PP (GuardsDetailImpl ps) x = PP (GuardsImplX (LenT ps) ps) x
   eval _ opts as = do
     let msg0 = "Guards"
         n = getLen @ps
@@ -6605,9 +6762,9 @@ instance (GetLen ps
 
 data GuardsImplX (n :: Nat) (os :: [(k,k1)])
 
-instance Show a
-        => P (GuardsImplX n ('[] :: [(k,k1)])) [a] where
-  type PP (GuardsImplX n ('[] :: [(k,k1)])) [a] = [a]
+instance ([a] ~ x, Show a)
+        => P (GuardsImplX n ('[] :: [(k,k1)])) x where
+  type PP (GuardsImplX n ('[] :: [(k,k1)])) x = x
   eval _ opts as =
     let msg0 = "Guards"
         -- n :: Int = nat @n
@@ -6623,8 +6780,9 @@ instance (PP prt a ~ String
         , P (GuardsImplX n ps) [a]
         , PP (GuardsImplX n ps) [a] ~ [a]
         , Show a
-        ) => P (GuardsImplX n ('(prt,p) ': ps)) [a] where
-  type PP (GuardsImplX n ('(prt,p) ': ps)) [a] = [a]
+        , [a] ~ x
+        ) => P (GuardsImplX n ('(prt,p) ': ps)) x where
+  type PP (GuardsImplX n ('(prt,p) ': ps)) x = x
   eval _ opts as' = do
      let cpos = n-pos-1
          msgbase1 = "Guard(" <> showIndex cpos <> ")"
@@ -6673,8 +6831,8 @@ type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
 data GuardsN prt (n :: Nat) p
 type GuardsNT prt (n :: Nat) p = Guards (ToGuardsT prt (RepeatT n p))
 
-instance P (GuardsNT prt n p) [a] => P (GuardsN prt n p) [a] where
-  type PP (GuardsN prt n p) [a] = PP (GuardsNT prt n p) [a]
+instance (x ~ [a], P (GuardsNT prt n p) x) => P (GuardsN prt n p) x where
+  type PP (GuardsN prt n p) x = PP (GuardsNT prt n p) x
   eval _ = eval (Proxy @(GuardsNT prt n p))
 
 -- | \'p\' is the predicate and on failure of the predicate runs \'prt\'
@@ -7261,8 +7419,9 @@ data FromList (t :: Type) -- doesnt work with OverloadedLists unless you cast to
 instance (a ~ GE.Item t
         , Show t
         , GE.IsList t
-        ) => P (FromList t) [a] where
-  type PP (FromList t) [a] = t
+        , [a] ~ x
+        ) => P (FromList t) x where
+  type PP (FromList t) x = t
   eval _ opts as =
     let msg0 = "FromList"
         z = GE.fromList (as :: [GE.Item t]) :: t
@@ -8015,8 +8174,11 @@ data ParaImpl (n :: Nat) (os :: [k])
 data Para (ps :: [k])
 
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out
-instance (GetLen ps, P (ParaImpl (LenT ps) ps) [a]) => P (Para ps) [a] where
-  type PP (Para ps) [a] = PP (ParaImpl (LenT ps) ps) [a]
+instance ([a] ~ x
+        , GetLen ps
+        , P (ParaImpl (LenT ps) ps) x
+        ) => P (Para ps) x where
+  type PP (Para ps) x = PP (ParaImpl (LenT ps) ps) x
   eval _ opts as = do
     let msg0 = "Para"
         n = getLen @ps
@@ -8025,10 +8187,10 @@ instance (GetLen ps, P (ParaImpl (LenT ps) ps) [a]) => P (Para ps) [a] where
        in pure $ mkNode opts (FailT msg1) [msg1] []
     else eval (Proxy @(ParaImpl (LenT ps) ps)) opts as
 
--- only allow non empty lists
+-- only allow non empty lists -- might need [a] ~ x but it seems fine
 instance GL.TypeError ('GL.Text "ParaImpl '[] invalid: requires at least one value in the list")
-   => P (ParaImpl n ('[] :: [k])) [a] where
-  type PP (ParaImpl n ('[] :: [k])) [a] = Void
+   => P (ParaImpl n ('[] :: [k])) x where
+  type PP (ParaImpl n ('[] :: [k])) x = Void
   eval _ _ _ = errorInProgram "ParaImpl empty list"
 
 instance (Show (PP p a)
@@ -8097,10 +8259,11 @@ instance (KnownNat n
 --
 data ParaN (n :: Nat) p
 
-instance ( P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) [a]
+instance ( P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) x
          , GetLen (RepeatT n p)
-         ) => P (ParaN n p) [a] where
-  type PP (ParaN n p) [a] = PP (Para (RepeatT n p)) [a]
+         , x ~ [a]
+         ) => P (ParaN n p) x where
+  type PP (ParaN n p) x = PP (Para (RepeatT n p)) x
   eval _ = eval (Proxy @(Para (RepeatT n p)))
 
 -- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
@@ -10328,18 +10491,6 @@ instance (PP q x ~ (a,b)
 --
 -- >>> pl @(SplitAt 4 "abcdefg" >> Len > 4 &* Len < 5) ()
 -- False ((>>) False | {False (&*) True | (4 > 4)})
--- FalseT
---
--- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "Cabc"
--- True ((>>) True | {True (&*) True})
--- TrueT
---
--- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "CabD"
--- False ((>>) False | {True (&*) False | (IsLower | "abD")})
--- FalseT
---
--- >>> pl @(Just Uncons >> ('[Id] >> IsUpper) &* IsLower) "2abd"
--- False ((>>) False | {IsUpper | "2"})})
 -- FalseT
 --
 data AndA p q r
