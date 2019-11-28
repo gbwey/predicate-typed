@@ -245,11 +245,13 @@ instance (P p a
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
-         let hhs = [hh pp, hh qq]
+         let hhs0 = [hh pp, hh qq]
          rr <- eval (Proxy @r) opts a
-         pure $ case getValueLR opts msg rr hhs of
+         pure $ case getValueLR opts msg rr hhs0 of
            Left e -> e
-           Right r -> mkNode opts (PresentT (p,q,r)) [msg] (hhs <> [hh rr])
+           Right r ->
+             let hhs1 = hhs0 <> [hh rr]
+             in mkNode opts (PresentT (p,q,r)) [msg] hhs1
 
 -- | run the predicates in a promoted 4-tuple
 --
@@ -264,16 +266,163 @@ instance (P p a
         ) => P '(p,q,r,s) a where
   type PP '(p,q,r,s) a = (PP p a, PP q a, PP r a, PP s a)
   eval _ opts a = do
-    let msg = "'(,,)"
+    let msg = "'(,,,)"
     lr <- runPQ msg (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
-        lr1 <- runPQ msg (Proxy @r) (Proxy @s) opts a [hh pp, hh qq]
+        let hhs0 = [hh pp, hh qq]
+        lr1 <- runPQ msg (Proxy @r) (Proxy @s) opts a hhs0
         pure $ case lr1 of
           Left e -> e
           Right (r,s,rr,ss) ->
-            mkNode opts (PresentT (p,q,r,s)) [msg] [hh pp, hh qq, hh rr, hh ss]
+            let hhs1 = hhs0 ++ [hh rr, hh ss]
+            in mkNode opts (PresentT (p,q,r,s)) [msg] hhs1
+
+-- | run the predicates in a promoted 5-tuple
+--
+-- >>> pz @'(4, Id, "inj", 999, 'LT) "hello"
+-- Present (4,"hello","inj",999,LT)
+-- PresentT (4,"hello","inj",999,LT)
+--
+instance (P p a
+        , P q a
+        , P r a
+        , P s a
+        , P t a
+        ) => P '(p,q,r,s,t) a where
+  type PP '(p,q,r,s,t) a = (PP p a, PP q a, PP r a, PP s a, PP t a)
+  eval _ opts a = do
+    let msg = "'(,,,,)"
+    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a []
+    case lr of
+      Left e -> pure e
+      Right (p,q,pp,qq) -> do
+        let hhs0 = [hh pp, hh qq]
+        lr1 <- runPQ msg (Proxy @r) (Proxy @s) opts a hhs0
+        case lr1 of
+          Left e -> pure e
+          Right (r,s,rr,ss) -> do
+            let hhs1 = hhs0 ++ [hh rr, hh ss]
+            tt <- eval (Proxy @t) opts a
+            pure $ case getValueLR opts msg tt hhs1 of
+              Left e -> e
+              Right t ->
+                let hhs2 = hhs1 <> [hh tt]
+                in mkNode opts (PresentT (p,q,r,s,t)) [msg] hhs2
+
+-- | run the predicates in a promoted 6-tuple
+--
+-- >>> pz @'(4, Id, "inj", 999, 'LT, 1) "hello"
+-- Present (4,"hello","inj",999,LT,1)
+-- PresentT (4,"hello","inj",999,LT,1)
+--
+instance (P p a
+        , P q a
+        , P r a
+        , P s a
+        , P t a
+        , P u a
+        ) => P '(p,q,r,s,t,u) a where
+  type PP '(p,q,r,s,t,u) a = (PP p a, PP q a, PP r a, PP s a, PP t a, PP u a)
+  eval _ opts a = do
+    let msg = "'(,,,,,)"
+    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a []
+    case lr of
+      Left e -> pure e
+      Right (p,q,pp,qq) -> do
+        let hhs0 = [hh pp, hh qq]
+        lr1 <- runPQ msg (Proxy @r) (Proxy @s) opts a hhs0
+        case lr1 of
+          Left e -> pure e
+          Right (r,s,rr,ss) -> do
+            let hhs1 = hhs0 ++ [hh rr, hh ss]
+            lr2 <- runPQ msg (Proxy @t) (Proxy @u) opts a hhs1
+            pure $ case lr2 of
+              Left e -> e
+              Right (t,u,tt,uu) ->
+                let hhs2 = hhs1 ++ [hh tt, hh uu]
+                in mkNode opts (PresentT (p,q,r,s,t,u)) [msg] hhs2
+
+-- | run the predicates in a promoted 7-tuple
+--
+-- >>> pz @'(4, Id, "inj", 999, 'LT, 1, 2) "hello"
+-- Present (4,"hello","inj",999,LT,1,2)
+-- PresentT (4,"hello","inj",999,LT,1,2)
+--
+instance (P p a
+        , P q a
+        , P r a
+        , P s a
+        , P t a
+        , P u a
+        , P v a
+        ) => P '(p,q,r,s,t,u,v) a where
+  type PP '(p,q,r,s,t,u,v) a = (PP p a, PP q a, PP r a, PP s a, PP t a, PP u a, PP v a)
+  eval _ opts a = do
+    let msg = "'(,,,,,,)"
+    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a []
+    case lr of
+      Left e -> pure e
+      Right (p,q,pp,qq) -> do
+        let hhs0 = [hh pp, hh qq]
+        lr1 <- runPQ msg (Proxy @r) (Proxy @s) opts a hhs0
+        case lr1 of
+          Left e -> pure e
+          Right (r,s,rr,ss) -> do
+            let hhs1 = hhs0 ++ [hh rr, hh ss]
+            lr2 <- runPQ msg (Proxy @t) (Proxy @u) opts a hhs1
+            case lr2 of
+              Left e -> pure e
+              Right (t,u,tt,uu) -> do
+                vv <- eval (Proxy @v) opts a
+                let hhs2 = hhs1 ++ [hh tt, hh uu]
+                pure $ case getValueLR opts msg vv hhs2 of
+                  Left e -> e
+                  Right v ->
+                    let hhs3 = hhs2 ++ [hh vv]
+                    in mkNode opts (PresentT (p,q,r,s,t,u,v)) [msg] hhs3
+
+-- | run the predicates in a promoted 8-tuple
+--
+-- >>> pz @'(4, Id, "inj", 999, 'LT, 1, 2, 3) "hello"
+-- Present (4,"hello","inj",999,LT,1,2,3)
+-- PresentT (4,"hello","inj",999,LT,1,2,3)
+--
+instance (P p a
+        , P q a
+        , P r a
+        , P s a
+        , P t a
+        , P u a
+        , P v a
+        , P w a
+        ) => P '(p,q,r,s,t,u,v,w) a where
+  type PP '(p,q,r,s,t,u,v,w) a = (PP p a, PP q a, PP r a, PP s a, PP t a, PP u a, PP v a, PP w a)
+  eval _ opts a = do
+    let msg = "'(,,,,,,,)"
+    lr <- runPQ msg (Proxy @p) (Proxy @q) opts a []
+    case lr of
+      Left e -> pure e
+      Right (p,q,pp,qq) -> do
+        let hhs0 = [hh pp, hh qq]
+        lr1 <- runPQ msg (Proxy @r) (Proxy @s) opts a hhs0
+        case lr1 of
+          Left e -> pure e
+          Right (r,s,rr,ss) -> do
+            let hhs1 = hhs0 ++ [hh rr, hh ss]
+            lr2 <- runPQ msg (Proxy @t) (Proxy @u) opts a hhs1
+            case lr2 of
+              Left e -> pure e
+              Right (t,u,tt,uu) -> do
+                let hhs2 = hhs1 ++ [hh tt, hh uu]
+                lr3 <- runPQ msg (Proxy @v) (Proxy @w) opts a hhs2
+                pure $ case lr3 of
+                  Left e -> e
+                  Right (v,w,vv,ww) ->
+                     let hhs3 = hhs2 ++ [hh vv, hh ww]
+                     in mkNode opts (PresentT (p,q,r,s,t,u,v,w)) [msg] hhs3
+
 
 -- | extracts the value level representation of the promoted 'Ordering'
 --

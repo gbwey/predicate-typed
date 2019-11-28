@@ -1384,16 +1384,6 @@ instance (PP p x ~ ([String] -> String)
 -- False
 -- FalseT
 --
--- | predicate for determining if a string is all lowercase
---
--- >>> pz @IsLower '1'
--- False
--- FalseT
---
--- >>> pz @IsLower 'a'
--- True
--- TrueT
---
 data IsCharSet (cs :: CharSet)
 
 instance (x ~ Char, GetCharSet cs) => P (IsCharSet cs) x where
@@ -1404,6 +1394,20 @@ instance (x ~ Char, GetCharSet cs) => P (IsCharSet cs) x where
         b = f c
     in pure $ mkNodeB opts b [msg0 <> show1 opts " | " [c]] []
 
+-- | predicate for determining if a character is lowercase
+--
+-- >>> pz @IsLower '1'
+-- False
+-- FalseT
+--
+-- >>> pz @IsLower 'a'
+-- True
+-- TrueT
+--
+-- >>> pz @(Map '(IsControl, IsLatin1, IsHexDigit, IsOctDigit, IsNumber, IsPunctuation, IsSeparator, IsSpace) Id) "abc134"
+-- Present [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
+-- PresentT [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
+--
 data IsLower
 type IsLowerT = IsCharSet 'CLower
 
@@ -1418,7 +1422,7 @@ instance P IsUpperT x => P IsUpper x where
   type PP IsUpper x = PP IsUpperT x
   eval _ = evalBool (Proxy @IsUpperT)
 
--- | predicate for determining if the string is all digits
+-- | predicate for determining if the character is a digit
 --
 -- >>> pz @IsNumber 'g'
 -- False
@@ -1533,6 +1537,26 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "X"
 -- True ((>>) True | {True (&*) True})
 -- TrueT
+--
+-- >>> pz @( '(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsNumberAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll ) ) "abc134"
+-- Present (False,True,True,False,False,False,False,False)
+-- PresentT (False,True,True,False,False,False,False,False)
+--
+-- >>> pl @(SplitAts [1,2,10] Id >> Para '[IsLowerAll, IsNumberAll, IsUpperAll ]) "abdefghi"
+-- Present [True,False,False] ((>>) [True,False,False] | {Para(0) [True,False,False] | ["a","bd","efghi"]})
+-- PresentT [True,False,False]
+--
+-- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsNumberAll, IsUpperAll ]) "a98efghi"
+-- False ((>>) False | {Bool(2) [] (IsUpperAll | "efghi")})
+-- FalseT
+--
+-- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsNumberAll, IsUpperAll || IsLowerAll ]) "a98efghi"
+-- True ((>>) True | {Bools})
+-- TrueT
+--
+-- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsNumberAll, IsUpperAll || IsLowerAll ]) "a98efgHi"
+-- False ((>>) False | {Bool(2) [] (False || False | (IsUpperAll | "efgHi") || (IsLowerAll | "efgHi"))})
+-- FalseT
 --
 data IsCharSetAll (cs :: CharSet)
 
