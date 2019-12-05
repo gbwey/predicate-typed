@@ -34,11 +34,11 @@ data Refined p a = Refined a
 * **_a_** is the input type
 * **_p_** predicate on **_a_**
 
-**_ if using unix you can replace 'o2' with 'ou' to get unicode output_**
-**_ 'ol' summarises the output in one line_**
-**_ 'o2' shows the tree of output with colors_**
-
 ### Examples of Refined (for more information see [doctests](src/Predicate/Refined.hs))
+
+* if using unix you can replace 'o2' with 'ou' to get unicode output
+* 'ol' summarises the output in one line
+* 'o2' shows the tree of output with colors
 
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
@@ -82,12 +82,10 @@ Right (Refined {unRefined = "12:01:05"})
   * `Len == 3`
      Check to see that the length of the list of Ints is 3
 
-
 ### Testing out predicates
 When using _Refined_ the expression in _p_ must result in a True/False\
 _pe2_ does not have that restriction so you can run the whole thing or the individual pieces\
 for less detail use _pl_\
-if using a unicode-supported OS then _pu_ gives you nicer rendering than _pe2_\
 
 ```haskell
 >pe2 @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
@@ -179,7 +177,7 @@ ex1 :: Refined (ReadP Int Id >> Id > 99) String
 ex1 = $$(refinedTH "123")
 ```
 
-### Refined2 and Refined3 are the most useful refinement types as you can control the input and output types (see documentation and [doctests](src/Predicate/Refined2.hs) and [doctests](src/Predicate/Refined3.hs))
+Refined2 and Refined3 are the most useful refinement types as you can control the input and output types (see documentation and [doctests](src/Predicate/Refined2.hs) and [doctests](src/Predicate/Refined3.hs))
 
 **_Replace '$$(refined3TH ...)' with '$$(refined3TH' o2 ...)' for a colored evaluation tree_**
 

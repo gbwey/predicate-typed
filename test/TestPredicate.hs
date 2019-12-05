@@ -839,6 +839,8 @@ allTests =
   , expectPE (PresentT (4,"helo","oleh")) $ pl @'(Len, Id, Reverse) "helo"
   , expectPE (PresentT [1,2,3,1000,998]) $ pl @'[W 1, W 2, W 3, Succ Id, Pred Id] 999
   , expectPE (PresentT [3996,998]) $ pl @'[Id * 4, Pred Id] 999
+
+  , expectPE (PresentT (These [1,2,3,4] "Abcdef")) $ pz @(MkThat _ "Abc" <> MkThis _ '[1,2] <> MkThese [3,4] "def") ()
   ]
 
 type Fizzbuzz = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")
