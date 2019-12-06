@@ -521,7 +521,6 @@ allTests =
   , expectPE (PresentT "lhs = 123 rhs = asdf") $ pl @(PrintT "lhs = %d rhs = %s" Id) (123::Int,"asdf"::String)
   , expectPE TrueT $ pl @(DirExists ".") ()
   , expectPE FalseT $ pl @(DirExists "xxy") ()
-  , expectPE TrueT $ pl @(FileExists ".ghci") ()
   , expectPE FalseT $ pl @(FileExists "xxy") ()
   , expectPE TrueT $ pl @(IsInfix "ab" Id) "xyzabw"
   , expectPE FalseT $ pl @(IsInfix "aB" Id) "xyzAbw"

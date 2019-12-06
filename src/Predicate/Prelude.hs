@@ -8470,7 +8470,7 @@ instance P p x => P (Hide p) x where
 
 -- | similar to 'readFile'
 --
--- >>> pz @(ReadFile ".ghci" >> 'Just Id >> Len > 0) ()
+-- >>> pz @(ReadFile "LICENSE" >> 'Just Id >> Len > 0) ()
 -- True
 -- TrueT
 --
