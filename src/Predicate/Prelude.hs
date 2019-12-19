@@ -98,7 +98,7 @@ module Predicate.Prelude (
  -- ** character expressions
   , IsLower
   , IsUpper
-  , IsNumber
+  , IsDigit
   , IsSpace
   , IsPunctuation
   , IsControl
@@ -109,7 +109,7 @@ module Predicate.Prelude (
 
   , IsLowerAll
   , IsUpperAll
-  , IsNumberAll
+  , IsDigitAll
   , IsSpaceAll
   , IsPunctuationAll
   , IsControlAll
@@ -1404,7 +1404,7 @@ instance (x ~ Char, GetCharSet cs) => P (IsCharSet cs) x where
 -- True
 -- TrueT
 --
--- >>> pz @(Map '(IsControl, IsLatin1, IsHexDigit, IsOctDigit, IsNumber, IsPunctuation, IsSeparator, IsSpace) Id) "abc134"
+-- >>> pz @(Map '(IsControl, IsLatin1, IsHexDigit, IsOctDigit, IsDigit, IsPunctuation, IsSeparator, IsSpace) Id) "abc134"
 -- Present [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
 -- PresentT [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
 --
@@ -1424,19 +1424,19 @@ instance P IsUpperT x => P IsUpper x where
 
 -- | predicate for determining if the character is a digit
 --
--- >>> pz @IsNumber 'g'
+-- >>> pz @IsDigit 'g'
 -- False
 -- FalseT
 --
--- >>> pz @IsNumber '9'
+-- >>> pz @IsDigit '9'
 -- True
 -- TrueT
 --
-data IsNumber
-type IsNumberT = IsCharSet 'CNumber
-instance P IsNumberT x => P IsNumber x where
-  type PP IsNumber x = Bool
-  eval _ = evalBool (Proxy @IsNumberT)
+data IsDigit
+type IsDigitT = IsCharSet 'CNumber
+instance P IsDigitT x => P IsDigit x where
+  type PP IsDigit x = Bool
+  eval _ = evalBool (Proxy @IsDigitT)
 
 data IsSpace
 type IsSpaceT = IsCharSet 'CSpace
@@ -1538,23 +1538,23 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- True ((>>) True | {True (&*) True})
 -- TrueT
 --
--- >>> pz @( '(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsNumberAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll ) ) "abc134"
+-- >>> pz @( '(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsDigitAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll ) ) "abc134"
 -- Present (False,True,True,False,False,False,False,False)
 -- PresentT (False,True,True,False,False,False,False,False)
 --
--- >>> pl @(SplitAts [1,2,10] Id >> Para '[IsLowerAll, IsNumberAll, IsUpperAll ]) "abdefghi"
+-- >>> pl @(SplitAts [1,2,10] Id >> Para '[IsLowerAll, IsDigitAll, IsUpperAll ]) "abdefghi"
 -- Present [True,False,False] ((>>) [True,False,False] | {Para(0) [True,False,False] | ["a","bd","efghi"]})
 -- PresentT [True,False,False]
 --
--- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsNumberAll, IsUpperAll ]) "a98efghi"
+-- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll ]) "a98efghi"
 -- False ((>>) False | {Bool(2) [] (IsUpperAll | "efghi")})
 -- FalseT
 --
--- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsNumberAll, IsUpperAll || IsLowerAll ]) "a98efghi"
+-- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll ]) "a98efghi"
 -- True ((>>) True | {Bools})
 -- TrueT
 --
--- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsNumberAll, IsUpperAll || IsLowerAll ]) "a98efgHi"
+-- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll ]) "a98efgHi"
 -- False ((>>) False | {Bool(2) [] (False || False | (IsUpperAll | "efgHi") || (IsLowerAll | "efgHi"))})
 -- FalseT
 --
@@ -1622,19 +1622,19 @@ instance P IsUpperAllT x => P IsUpperAll x where
 
 -- | predicate for determining if the string is all digits
 --
--- >>> pz @IsNumberAll "213G"
+-- >>> pz @IsDigitAll "213G"
 -- False
 -- FalseT
 --
--- >>> pz @IsNumberAll "929"
+-- >>> pz @IsDigitAll "929"
 -- True
 -- TrueT
 --
-data IsNumberAll
-type IsNumberAllT = IsCharSetAll 'CNumber
-instance P IsNumberAllT x => P IsNumberAll x where
-  type PP IsNumberAll x = Bool
-  eval _ = evalBool (Proxy @IsNumberAllT)
+data IsDigitAll
+type IsDigitAllT = IsCharSetAll 'CNumber
+instance P IsDigitAllT x => P IsDigitAll x where
+  type PP IsDigitAll x = Bool
+  eval _ = evalBool (Proxy @IsDigitAllT)
 
 -- | predicate for determining if the string is all spaces
 --
