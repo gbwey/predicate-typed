@@ -327,7 +327,6 @@ getValueLR = getValueLRImpl True
 getValueLRHide :: POpts -> String -> TT a -> [Holder] -> Either (TT x) a
 getValueLRHide = getValueLRImpl False
 
--- todo: OVerbose? but only works on error
 -- elide FailT msg in tStrings[0] if showError is False
 -- | a helper method to add extra context on failure to the tree or extract the value at the root of the tree
 getValueLRImpl :: Bool -> POpts -> String -> TT a -> [Holder] -> Either (TT x) a
@@ -572,11 +571,13 @@ data ROpt =
 -- | compile a regex using the type level symbol
 compileRegex :: forall rs a . GetROpts rs
   => POpts -> String -> String -> [Holder] -> Either (TT a) RH.Regex
-compileRegex opts nm s hhs =
-    let rs = getROpts @rs
-        mm = nm <> " " <> show rs
-    in flip left (RH.compileM (B8.pack s) rs)
-          $ \e -> mkNode opts (FailT "Regex failed to compile") [mm <> " compile failed with regex msg[" <> e <> "]"] hhs
+compileRegex opts nm s hhs
+  | null s = Left (mkNode opts (FailT "Regex cannot be empty") [nm] hhs)
+  | otherwise =
+      let rs = getROpts @rs
+          mm = nm <> " " <> show rs
+      in flip left (RH.compileM (B8.pack s) rs)
+            $ \e -> mkNode opts (FailT "Regex failed to compile") [mm <> " compile failed with regex msg[" <> e <> "]"] hhs
 
 -- | extract the regex options from the type level list
 class GetROpts (os :: [ROpt]) where
@@ -1148,6 +1149,7 @@ type family FlipT (d :: k1 -> k -> k2) (p :: k) (q :: k1) :: k2 where
   FlipT d p q = d q p
 
 type family IfT (b :: Bool) (t :: k) (f :: k) :: k where
+  -- IfT b x x = x -- todo: benefit? now it needs to eval both sides
   IfT 'True t f = t
   IfT 'False t f = f
 

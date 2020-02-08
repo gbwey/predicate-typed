@@ -42,7 +42,9 @@ suite =
 
 allTests :: [IO ()]
 allTests =
-   [expectPE (PresentT LT) $ pl @("aa" ==! Id) "aaaa"
+  [ expectPE (PresentT [False,True,True,False]) $ pl @'[Gt 5, Lt 9, Same 4, W 'False] 4
+  , expectPE (PresentT [21,19,20,40,60,2]) $ pl @'[Succ Id, Pred Id, Id, Id + Id, Id * 3, Id `Mod` 3] 20
+  , expectPE (PresentT LT) $ pl @("aa" ==! Id) "aaaa"
   , expectPE FalseT $ pl @(FromEnum ("aa" ==! Id) >> Same 1) "aaaa"
   , expectPE (PresentT (Right 1)) $ pl @(HeadDef 'False Id +++ Id) (Right @[Bool] 1) -- need @[Bool] cos we said 'False!
   , expectPE (PresentT (Left True)) $ pl @(HeadDef 'False Id +++ Id) (Left @_ @Int [True,False]) -- need @[Bool] cos we said 'False!

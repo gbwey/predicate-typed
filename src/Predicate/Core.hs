@@ -460,7 +460,7 @@ instance P '() a where
   type PP '() a = ()
   eval _ opts _ = pure $ mkNode opts (PresentT ()) ["'()"] []
 
--- todo: the type has to be [a] so we still need type PP '[p] a = [PP p a] to keep the types in line
+-- the type has to be [a] so we still need type PP '[p] a = [PP p a] to keep the types in line
 
 -- | extracts the value level representation of the type level '[]
 --

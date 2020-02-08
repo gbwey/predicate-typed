@@ -346,6 +346,7 @@ module Predicate.Prelude (
   , Ix'
   , IxL
   , type (!!)
+  , type (!!?)
   , Lookup
   , LookupDef
   , LookupDef'
@@ -355,6 +356,7 @@ module Predicate.Prelude (
  -- cons / uncons expressions
   , type (:+)
   , type (+:)
+  , type (++)
   , Uncons
   , Unsnoc
   , Head
@@ -5449,6 +5451,14 @@ instance P (BangBangT p q) a => P (p !! q) a where
 -- Present Nothing
 -- PresentT Nothing
 --
+-- >>> pl @((Id !!? Char1 "d") > MkJust 99 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
+-- False (False || False | (Just 4 > Just 99) || (4 <= 3))
+-- FalseT
+--
+-- >>> pz @((Id !!? Char1 "d") > MkJust 2 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
+-- True
+-- TrueT
+--
 data Lookup p q
 
 instance (P q a
@@ -5472,6 +5482,14 @@ instance (P q a
         in case p ^? ix q of
              Nothing -> mkNode opts (PresentT Nothing) [msg1 <> " not found"] hhs
              Just ret -> mkNode opts (PresentT (Just ret)) [show01' opts msg1 ret "p=" p <> show1 opts " | q=" q] hhs
+
+data p !!? q
+type BangBangQT p q = Lookup p q
+
+instance P (BangBangQT p q) a => P (p !!? q) a where
+  type PP (p !!? q) a = PP (BangBangQT p q) a
+  eval _ = eval (Proxy @(BangBangQT p q))
+
 
 -- | 'Data.List.ands'
 --
@@ -5542,6 +5560,46 @@ instance (PP p x ~ t a
                   Nothing -> ""
                   Just i -> " i="++show i
         in mkNodeB opts (or p) [msg1 <> w <> show1 opts " | " p] [hh pp]
+
+
+-- | similar to (++)
+--
+-- >>> pz @(Fst Id ++ Snd Id) ([9,10,11],[1,2,3,4])
+-- Present [9,10,11,1,2,3,4]
+-- PresentT [9,10,11,1,2,3,4]
+--
+-- >>> pz @(Snd Id ++ Fst Id) ([],[5])
+-- Present [5]
+-- PresentT [5]
+--
+-- >>> pz @(Char1 "xyz" :+ W "ab" ++ W "cdefg") ()
+-- Present "xabcdefg"
+-- PresentT "xabcdefg"
+--
+-- >>> pz @([1,2,3] ++ EmptyList _) "somestuff"
+-- Present [1,2,3]
+-- PresentT [1,2,3]
+--
+data p ++ q
+infixr 5 ++
+
+instance (P p x
+        , P q x
+        , Show (PP p x)
+        , PP p x ~ [a]
+        , PP q x ~ [a]
+        ) => P (p ++ q) x where
+  type PP (p ++ q) x = PP q x
+  eval _ opts z = do
+    let msg0 = "(++)"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let b = p ++ q
+        in mkNode opts (PresentT b) [show01' opts msg0 b "p=" p <> show1 opts " | q=" q] [hh pp, hh qq]
+
+
 
 -- cant directly create a singleton type using '[] since the type of '[] is unknown. instead use 'Singleton' or 'EmptyT'
 
@@ -6513,7 +6571,6 @@ instance P (RemT p q) x => P (Rem p q) x where
 --type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
 
 -- k or prt has access to (Int,a) where Int is the current guard position: hence need to use PrintT
--- todo: better explanation of how this works
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out)
 
 -- | Guards contain a type level list of tuples the action to run on failure of the predicate and the predicate itself
@@ -10270,7 +10327,6 @@ instance P p a => P (K p q) a where
 -- Present (1999-01-01,2001-02-12) (Both)
 -- PresentT (1999-01-01,2001-02-12)
 --
--- todo: add topMessage somehow?
 data Both p q
 instance ( ExtractL1C (PP q x)
          , ExtractL2C (PP q x)
