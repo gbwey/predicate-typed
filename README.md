@@ -287,3 +287,147 @@ False True && False | {16663610 < 256}
    |
    `- P '256
 ```
+
+#### some more examples
+```
+>$$(refinedTH' @(Lt 3 || Gt 55) o2 44)
+
+<interactive>:21:4: error:
+    *
+False False || False | (44 < 3) || (44 > 55)
+|
++- False 44 < 3
+|  |
+|  +- P I
+|  |
+|  `- P '3
+|
+`- False 44 > 55
+   |
+   +- P I
+   |
+   `- P '55
+
+refinedTH: predicate failed with FalseP (False || False | (44 < 3) || (44 > 55))
+    * In the Template Haskell splice
+        $$(refinedTH' @(Lt 3 || Gt 55) o2 44)
+      In the expression: $$(refinedTH' @(Lt 3 || Gt 55) o2 44)
+      In an equation for `it': it = $$(refinedTH' @(Lt 3 || Gt 55) o2 44)
+```
+
+```
+>$$(refinedTH' @(Len > 7 || Elem 3 Id) o2 [1..5])
+Refined {unRefined = [1,2,3,4,5]}
+it :: Refined ((Len > 7) || Elem 3 Id) [Int]
+```
+
+```
+>$$(refinedTH' @(Len > 7 || Elem 7 Id) o2 [1..5])
+
+<interactive>:26:4: error:
+    *
+False False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
+|
++- False 5 > 7
+|  |
+|  +- P Len 5 | [1,2,3,4,5]
+|  |
+|  `- P '7
+|
+`- False 7 `elem` [1,2,3,4,5]
+   |
+   +- P '7
+   |
+   `- P Id [1,2,3,4,5]
+
+refinedTH: predicate failed with FalseP (False || False | (5 > 7) || (7 `elem` [1,2,3,4,5]))
+    * In the Template Haskell splice
+        $$(refinedTH' @(Len > 7 || Elem 7 Id) o2 [1 .. 5])
+      In the expression:
+        $$(refinedTH' @(Len > 7 || Elem 7 Id) o2 [1 .. 5])
+      In an equation for `it':
+          it = $$(refinedTH' @(Len > 7 || Elem 7 Id) o2 [1 .. 5])
+```
+
+```
+>$$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) o2 "smith")
+
+<interactive>:30:4: error:
+    *
+False Re' [] (^[A-Z][a-z]+$) | smith
+|
++- P '^[A-Z][a-z]+$
+|
+`- P Id "smith"
+
+refinedTH: predicate failed with FalseP (Re' [] (^[A-Z][a-z]+$) | smith)
+    * In the Template Haskell splice
+        $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) o2 "smith")
+      In the expression:
+        $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) o2 "smith")
+      In an equation for `it':
+          it = $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) o2 "smith")
+```
+
+```
+>$$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) o2 "Smith")
+Refined {unRefined = "Smith"}
+```
+
+```
+>$$(refinedTH' @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) o2 "smith")
+
+<interactive>:36:4: error:
+    *
+False expected title case:Re' [] (^[A-Z][a-z]+$) | smith
+|
++- P '^[A-Z][a-z]+$
+|
+`- P Id "smith"
+
+refinedTH: predicate failed with FalseP (expected title case:Re' [] (^[A-Z][a-z]+$) | smith)
+    * In the Template Haskell splice
+        $$(refinedTH'
+             @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) o2 "smith")
+      In the expression:
+        $$(refinedTH'
+             @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) o2 "smith")
+      In an equation for `it':
+          it
+            = $$(refinedTH'
+                   @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) o2 "smith")
+```
+
+```
+>$$(refinedTH' @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True) o2 "smith")
+
+<interactive>:52:4: error:
+    *
+[Error expected title case:] (>>) lhs failed
+|
+`- [Error expected title case:] Guard(failed) [expected title case:] | "smith"
+   |
+   `- False Re' [] (^[A-Z][a-z]+$) | smith
+      |
+      +- P '^[A-Z][a-z]+$
+      |
+      `- P Id "smith"
+
+refinedTH: predicate failed with FailP "expected title case:" ((>>) lhs failed)
+    * In the Template Haskell splice
+        $$(refinedTH'
+             @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True)
+             o2
+             "smith")
+      In the expression:
+        $$(refinedTH'
+             @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True)
+             o2
+             "smith")
+      In an equation for `it':
+          it
+            = $$(refinedTH'
+                   @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True)
+                   o2
+                   "smith")
+```

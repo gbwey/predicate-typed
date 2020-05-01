@@ -114,6 +114,7 @@ import Data.Char (isSpace)
 import Data.Semigroup ((<>))
 import Data.String
 import Data.Hashable (Hashable(..))
+import GHC.Stack
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -175,13 +176,13 @@ import Data.Hashable (Hashable(..))
 -- >>> prtEval3P (Proxy @(T4 _)) oz (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
-data Refined3 ip op fmt i = Refined3 { r3In :: PP ip i, r3Out :: PP fmt (PP ip i) }
+data Refined3 ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: PP fmt (PP ip i) }
 
 type role Refined3 nominal nominal nominal nominal
 
 -- | directly load values into 'Refined3'. It still checks to see that those values are valid
 unsafeRefined3' :: forall ip op fmt i
-                . (Show i, Show (PP ip i), Refined3C ip op fmt i)
+                . (HasCallStack, Show i, Show (PP ip i), Refined3C ip op fmt i)
                 => POpts
                 -> i
                 -> Refined3 ip op fmt i

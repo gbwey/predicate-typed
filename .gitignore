@@ -1,2 +1,8 @@
+.ghc.environment.*
+dist-newstyle/
+dist/
 .stack-work/
+*~
+*dump-hi
+.vscode/
 stack.yaml.lock

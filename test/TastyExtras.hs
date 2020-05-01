@@ -56,6 +56,12 @@ expectPE bp m = do
   print (x,bp)
   x @?= bp
 
+expectEQR :: (Show a, Eq a, HasCallStack) => a -> IO a -> IO ()
+expectEQR bp m = do
+  x <- m
+  print (x,bp)
+  x @?= bp
+
 expectJ :: (HasCallStack, Show a, Eq a)
   => Either [String] a
   -> Either String a

@@ -145,7 +145,7 @@ type Ip4op = GuardsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Betwe
 type Ip4fmt = PrintL 4 "%03d.%03d.%03d.%03d" Id
 
 -- | regular expression for an octet
-type OctetRE = "(25[0-5]|2[0..4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])" -- no padded numbers allowed
+type OctetRE = "(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[0-9])" -- no padded numbers allowed
 --type Ip4StrictRE = "^" <%> OctetRE <%> "\\." <%> OctetRE <%> "\\." <%> OctetRE <%> "\\." <%> OctetRE <%> "$"
 -- | regular expression for an ip4 address
 type Ip4StrictRE = "^" <%> IntersperseT "\\." (RepeatT 4 OctetRE) <%> "$"

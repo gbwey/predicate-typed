@@ -90,6 +90,7 @@ import Data.Char (isSpace)
 import Data.Semigroup ((<>))
 import Data.String
 import Data.Hashable (Hashable(..))
+import GHC.Stack
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -134,13 +135,13 @@ import Data.Hashable (Hashable(..))
 -- >>> prtEval2 @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) oz (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
-data Refined2 ip op i = Refined2 { r2In :: PP ip i, r2Out :: i }
+data Refined2 ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: i }
 
 type role Refined2 nominal nominal nominal
 
 -- | directly load values into 'Refined2'. It still checks to see that those values are valid
 unsafeRefined2' :: forall ip op i
-                . (Show (PP ip i), Refined2C ip op i)
+                . (Show (PP ip i), Refined2C ip op i, HasCallStack)
                 => POpts
                 -> i
                 -> Refined2 ip op i

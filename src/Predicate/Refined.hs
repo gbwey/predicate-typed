@@ -49,7 +49,7 @@ module Predicate.Refined (
   , unRavelTIO
   , rapply
   , rapply0
-  , rapply1
+  , rapplyLift
 
   -- ** unsafe create methods
   , unsafeRefined
@@ -77,6 +77,7 @@ import Data.Semigroup ((<>))
 import Data.String
 import Data.Maybe
 import Data.Hashable (Hashable(..))
+import GHC.Stack
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -276,13 +277,13 @@ rapply0 :: forall p a m . (RefinedC p a, Monad m)
 rapply0 opts f a b = rapply opts f (newRefinedT opts a) (newRefinedT opts b)
 
 -- | same as 'rapply' except we already have valid 'Refined' values as input
-rapply1 :: forall m p a . (RefinedC p a, Monad m)
+rapplyLift :: forall m p a . (RefinedC p a, Monad m)
   => POpts
   -> (a -> a -> a)
   -> Refined p a
   -> Refined p a
   -> RefinedT m (Refined p a)
-rapply1 opts f (Refined a) (Refined b) = newRefinedT opts (f a b)
+rapplyLift opts f (Refined a) (Refined b) = newRefinedT opts (f a b)
 
 -- | attempts to lift a refinement type to another refinement type by way of transformation function
 --   you can control both the predicate and the type
@@ -421,7 +422,7 @@ unsafeRefined :: forall p a . a -> Refined p a
 unsafeRefined = Refined
 
 -- | a way to unsafely create a 'Refined' value but run the predicate
-unsafeRefined' :: forall p a . RefinedC p a => POpts -> a -> Refined p a
+unsafeRefined' :: forall p a . (RefinedC p a, HasCallStack) => POpts -> a -> Refined p a
 unsafeRefined' opts a =
   let tt = runIdentity $ evalBool (Proxy @p) opts a
   in case getValueLR opts "" tt [] of

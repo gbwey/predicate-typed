@@ -215,7 +215,7 @@ import Text.ParserCombinators.ReadPrec
 import qualified GHC.Read as GR
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.ByteString.Char8 as BS8
-
+import GHC.Stack
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -234,6 +234,24 @@ data BoolT a where
   FalseT :: BoolT Bool        -- false predicate
   TrueT :: BoolT Bool         -- true predicate
   PresentT :: !a -> BoolT a    -- non predicate value
+{- too restrictive
+instance Semigroup a => Semigroup (BoolT a) where
+   PresentT a <> PresentT a1 = PresentT (a <> a1)
+-}
+
+-- | semigroup instance for 'BoolT'
+--
+instance Semigroup (BoolT a) where
+   FailT s <> FailT s1 = FailT (s <> s1)
+   FailT s <> _ = FailT s
+   _ <> FailT s = FailT s
+   FalseT <> _ = FalseT
+   _ <> FalseT = FalseT
+   TrueT <> TrueT = TrueT
+   TrueT <> PresentT a = PresentT a
+   PresentT a <> TrueT = PresentT a
+   PresentT a <> PresentT _ = PresentT a
+
 
 deriving instance Show a => Show (BoolT a)
 deriving instance Eq a => Eq (BoolT a)
@@ -1211,7 +1229,7 @@ removeAnsiImpl =
                in concat $ unfoldr f e
      Right a -> show a
 
-errorInProgram :: String -> x
+errorInProgram :: HasCallStack => String -> x
 errorInProgram s = error $ "programmer error:" <> s
 
 readField :: String -> ReadPrec a -> ReadPrec a

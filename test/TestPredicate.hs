@@ -842,6 +842,10 @@ allTests =
   , expectPE (PresentT [3996,998]) $ pl @'[Id * 4, Pred Id] 999
 
   , expectPE (PresentT (These [1,2,3,4] "Abcdef")) $ pz @(MkThat _ "Abc" <> MkThis _ '[1,2] <> MkThese [3,4] "def") ()
+
+  -- test semigroup interaction
+  , expectEQR (These (PresentT 6) (FailT "xyzhello")) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(FailS "xyz") 5) <> fmap That (pz @(FailS "hello") 1)
+  , expectEQR (These (PresentT 6) (PresentT ("5",6))) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(ShowP Id &&& Succ Id) 5)
   ]
 
 type Fizzbuzz = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")
