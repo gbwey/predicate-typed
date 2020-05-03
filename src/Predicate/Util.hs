@@ -21,10 +21,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE MultiWayIf #-}
-{-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {- |
      Utility methods for Predicate / methods for displaying the evaluation tree
 -}
@@ -1109,47 +1106,47 @@ instance (GL.TypeError ('GL.Text "InductListC: inductive tuple cannot have one e
 instance InductListC 2 a where
   type InductListP 2 a = (a,(a,()))
   inductListC [a,b] = (b,(a,()))
-  inductListC _ = errorInProgram $ "inductListC: expected 2 values"
+  inductListC _ = errorInProgram "inductListC: expected 2 values"
 instance InductListC 3 a where
   type InductListP 3 a = (a,(a,(a,())))
   inductListC [a,b,c] = (c,(b,(a,())))
-  inductListC _ = errorInProgram $ "inductListC: expected 3 values"
+  inductListC _ = errorInProgram "inductListC: expected 3 values"
 instance InductListC 4 a where
   type InductListP 4 a = (a,(a,(a,(a,()))))
   inductListC [a,b,c,d] = (d,(c,(b,(a,()))))
-  inductListC _ = errorInProgram $ "inductListC: expected 4 values"
+  inductListC _ = errorInProgram "inductListC: expected 4 values"
 instance InductListC 5 a where
   type InductListP 5 a = (a,(a,(a,(a,(a,())))))
   inductListC [a,b,c,d,e] = (e,(d,(c,(b,(a,())))))
-  inductListC _ = errorInProgram $ "inductListC: expected 5 values"
+  inductListC _ = errorInProgram "inductListC: expected 5 values"
 instance InductListC 6 a where
   type InductListP 6 a = (a,(a,(a,(a,(a,(a,()))))))
   inductListC [a,b,c,d,e,f] = (f,(e,(d,(c,(b,(a,()))))))
-  inductListC _ = errorInProgram $ "inductListC: expected 6 values"
+  inductListC _ = errorInProgram "inductListC: expected 6 values"
 instance InductListC 7 a where
   type InductListP 7 a = (a,(a,(a,(a,(a,(a,(a,())))))))
   inductListC [a,b,c,d,e,f,g] = (g,(f,(e,(d,(c,(b,(a,())))))))
-  inductListC _ = errorInProgram $ "inductListC: expected 7 values"
+  inductListC _ = errorInProgram "inductListC: expected 7 values"
 instance InductListC 8 a where
   type InductListP 8 a = (a,(a,(a,(a,(a,(a,(a,(a,()))))))))
   inductListC [a,b,c,d,e,f,g,h] = (h,(g,(f,(e,(d,(c,(b,(a,()))))))))
-  inductListC _ = errorInProgram $ "inductListC: expected 8 values"
+  inductListC _ = errorInProgram "inductListC: expected 8 values"
 instance InductListC 9 a where
   type InductListP 9 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,())))))))))
   inductListC [a,b,c,d,e,f,g,h,i] = (i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))
-  inductListC _ = errorInProgram $ "inductListC: expected 9 values"
+  inductListC _ = errorInProgram "inductListC: expected 9 values"
 instance InductListC 10 a where
   type InductListP 10 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,()))))))))))
   inductListC [a,b,c,d,e,f,g,h,i,j] = (j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))
-  inductListC _ = errorInProgram $ "inductListC: expected 10 values"
+  inductListC _ = errorInProgram "inductListC: expected 10 values"
 instance InductListC 11 a where
   type InductListP 11 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,())))))))))))
   inductListC [a,b,c,d,e,f,g,h,i,j,k] = (k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))))
-  inductListC _ = errorInProgram $ "inductListC: expected 11 values"
+  inductListC _ = errorInProgram "inductListC: expected 11 values"
 instance InductListC 12 a where
   type InductListP 12 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,()))))))))))))
   inductListC [a,b,c,d,e,f,g,h,i,j,k,l] = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
-  inductListC _ = errorInProgram $ "inductListC: expected 12 values"
+  inductListC _ = errorInProgram "inductListC: expected 12 values"
 
 -- partially apply the 2nd arg to an ADT -- $ and & work with functions only
 -- doesnt apply more than once because we need to eval it

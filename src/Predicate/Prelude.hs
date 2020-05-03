@@ -3016,7 +3016,7 @@ instance (P n a
             let l = length q
                 diff = if n<=l then 0 else n-l
                 bs = if lft
-                     then (replicate diff p) <> q
+                     then replicate diff p <> q
                      else q <> replicate diff p
             in mkNode opts (PresentT bs) [show01 opts msg1 bs q] (hhs <> [hh qq])
 
@@ -3112,7 +3112,7 @@ instance (PP p a ~ [b]
        in mkNode opts (PresentT ret) [show01' opts msg1 ret "n=" n <> show1 opts " | " p] [hh pp, hh qq]
 
 splitAtNeg :: Int -> [a] -> ([a], [a])
-splitAtNeg n as = splitAt (if n<0 then (length as + n) else n) as
+splitAtNeg n as = splitAt (if n<0 then length as + n else n) as
 
 
 data Take n p
@@ -8730,8 +8730,8 @@ instance (GetFHandle fh
       Left e -> pure e
       Right ss -> do
           mb <- runIO $ case fh of
-                  FStdout -> fmap (left show) $ E.try @E.SomeException $ hPutStr stdout ss
-                  FStderr -> fmap (left show) $ E.try @E.SomeException $ hPutStr stderr ss
+                  FStdout -> fmap (left show) $ E.try @E.SomeException $ putStr ss
+                  FStderr -> fmap (left show) $ E.try @E.SomeException $ putStr ss
                   FOther s w -> do
                      b <- doesFileExist s
                      if b && w == WFWrite then pure $ Left $ "file [" <> s <> "] already exists"

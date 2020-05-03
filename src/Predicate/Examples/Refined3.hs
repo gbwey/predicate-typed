@@ -138,7 +138,7 @@ ccn :: Proxy (Ccn ns)
 ccn = mkProxy3
 
 -- works but have to add all the constraints
-ccn' :: (PP ns String ~ [Integer], KnownNat (SumT ns), P ns [Char]) => Proxy (Ccn ns)
+ccn' :: (PP ns String ~ [Integer], KnownNat (SumT ns), P ns String) => Proxy (Ccn ns)
 ccn' = mkProxy3'
 
 cc11 :: Proxy (Ccn '[4,4,3])   -- or Proxy CC11

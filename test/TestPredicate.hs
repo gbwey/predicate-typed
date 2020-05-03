@@ -252,7 +252,7 @@ allTests =
   , expectPE (PresentT (True,3.4)) $ pl @(Fst (Snd (Thd Id))) (1,'a',('x',((True,3.4),999)))
   , expectPE (PresentT 7) $ pl @(Fst Id) (7,999.12)
   , expectPE (PresentT (M.fromList [(1,'a')])) $ pl @(MaybeIn MEmptyP Id) (Just (M.fromList [(1,'a')]))
-  , expectPE (PresentT (M.fromList [])) $ pl @(MaybeIn MEmptyP Id) (Nothing @(M.Map () ()))
+  , expectPE (PresentT M.empty) $ pl @(MaybeIn MEmptyP Id) (Nothing @(M.Map () ()))
   , expectPE (PresentT [("1",["1"]),("2",["2"]),("3",["3"]),("4",["4"])]) $ pl @(Rescan "(\\d)+?" Id) "1234"
   , expectPE (PresentT [("1234",["4"])]) $ pl @(Rescan "(\\d)+" Id) "1234"
   , expectPE (PresentT [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])]) $ pl @(Rescan "(\\d{1,3})(\\.(\\d{1,3}))+?" Id) "1.2.3.4" -- overcapturing
@@ -628,7 +628,7 @@ allTests =
   , expectPE (PresentT [True,True,True,True]) $ pl @('True <$ Id) [1..4]
   , expectPE (PresentT (Compose (Just "aaaa"))) $ pl @(Char1 "ab" <$ Id) (Compose $ Just [1..4])
   , expectPE (PresentT (4,("aa",'x'))) $ pl @'(4,'(Fst Id,Snd Id)) ("aa",'x')
-  , expectPE (PresentT (4,"aa",'x')) $ pl @'(4,(Fst Id),Snd Id) ("aa",'x')
+  , expectPE (PresentT (4,"aa",'x')) $ pl @'(4,Fst Id,Snd Id) ("aa",'x')
   , expectPE (PresentT (Just [10])) $ pl @(Pure2 []) (Just 10)
   , expectPE (PresentT "hello") $ pl @Extract (10,"hello")
   , expectPE (PresentT (M.fromList [(4,"x"),(5,"dd")])) $ pl @(FromList (M.Map _ _)) [(4,"x"),(5,"dd")]

@@ -368,6 +368,6 @@ expect3 :: (HasCallStack, Show i, Show r, Eq i, Eq r, Eq j, Show j)
   => Either (Results3 i j) r
   -> (RResults3 i j, Maybe r)
   -> IO ()
-expect3 lhs (rhs,mr) = do
+expect3 lhs (rhs,mr) =
   (@?=) (maybe (Left $ toRResults3 rhs) Right mr) lhs
 
