@@ -176,7 +176,7 @@ import GHC.Stack
 -- >>> prtEval3P (Proxy @(T4 _)) oz (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
-data Refined3 ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: PP fmt (PP ip i) }
+data Refined3 ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: !(PP fmt (PP ip i)) }
 
 type role Refined3 nominal nominal nominal nominal
 
@@ -611,11 +611,11 @@ rapply3P p opts f ma mb = do
 
 -- | An ADT that summarises the results of evaluating Refined3 representing all possible states
 data RResults3 a b =
-       RF String (Tree PE)        -- Left e
-     | RTF a (Tree PE) String (Tree PE)    -- Right a + Left e
-     | RTFalse a (Tree PE) (Tree PE)        -- Right a + Right False
-     | RTTrueF a (Tree PE) (Tree PE) String (Tree PE) -- Right a + Right True + Left e
-     | RTTrueT a (Tree PE) (Tree PE) b (Tree PE)      -- Right a + Right True + Right b
+       RF !String !(Tree PE)        -- Left e
+     | RTF !a !(Tree PE) !String !(Tree PE)    -- Right a + Left e
+     | RTFalse !a !(Tree PE) !(Tree PE)        -- Right a + Right False
+     | RTTrueF !a !(Tree PE) !(Tree PE) !String !(Tree PE) -- Right a + Right True + Left e
+     | RTTrueT !a !(Tree PE) !(Tree PE) !b !(Tree PE)      -- Right a + Right True + Right b
      deriving Show
 
 -- | same as 'prtEval3P' but runs in IO

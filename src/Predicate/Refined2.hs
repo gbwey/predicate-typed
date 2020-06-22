@@ -135,7 +135,7 @@ import GHC.Stack
 -- >>> prtEval2 @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) oz (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
-data Refined2 ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: i }
+data Refined2 ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: !i }
 
 type role Refined2 nominal nominal nominal
 
@@ -440,10 +440,10 @@ newRefined2TImpl f opts i = do
 
 -- | An ADT that summarises the results of evaluating Refined2 representing all possible states
 data RResults2 a =
-       RF String (Tree PE)        -- fails initial conversion
-     | RTF a (Tree PE) String (Tree PE)    -- op fails
-     | RTFalse a (Tree PE) (Tree PE)        -- op false
-     | RTTrue a (Tree PE) (Tree PE) -- op true
+       RF !String !(Tree PE)        -- fails initial conversion
+     | RTF !a !(Tree PE) !String !(Tree PE)    -- op fails
+     | RTFalse !a !(Tree PE) !(Tree PE)        -- op false
+     | RTTrue !a !(Tree PE) !(Tree PE) -- op true
      deriving Show
 
 -- | same as 'prtEval2P' but runs in IO

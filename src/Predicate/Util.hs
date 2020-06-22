@@ -194,9 +194,8 @@ import System.Console.Pretty
 import GHC.Exts (Constraint)
 import qualified Text.Regex.PCRE.Heavy as RH
 import qualified Text.Regex.PCRE.Light as RL
-import qualified Data.ByteString.Char8 as B8
 import qualified Data.Text as T
-import Data.ByteString (ByteString)
+import qualified Data.Text.Encoding as TE
 import GHC.Word (Word8)
 import Data.Sequence (Seq)
 import Control.Applicative (ZipList)
@@ -212,6 +211,7 @@ import Data.Either
 import qualified Text.Read.Lex as L
 import Text.ParserCombinators.ReadPrec
 import qualified GHC.Read as GR
+import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.ByteString.Char8 as BS8
 import GHC.Stack
@@ -275,15 +275,15 @@ boolT2P afb = \case
 
 -- | contains the untyped result from evaluating the expression tree
 data BoolP =
-    FailP String -- ^ fails the entire evaluation
+    FailP !String -- ^ fails the entire evaluation
   | FalseP       -- ^ False predicate
   | TrueP        -- ^ True predicate
   | PresentP     -- ^ Any value
   deriving (Show, Eq)
 
 -- | represents the untyped evaluation tree for final display
-data PE = PE { _pBool :: BoolP -- ^ holds the result of running the predicate
-             , _pStrings :: [String] -- ^ optional strings to include in the results
+data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
+             , _pStrings :: ![String] -- ^ optional strings to include in the results
              } deriving Show
 
 pBool :: Lens' PE BoolP
@@ -326,7 +326,7 @@ fromTT :: TT a -> Tree PE
 fromTT (TT bt ss tt) = Node (PE (bt ^. boolT2P) ss) tt
 
 -- | a monomorphic container of trees
-data Holder = forall w . Holder (TT w)
+data Holder = forall w . Holder !(TT w)
 
 -- | converts a typed tree into an untyped one
 fromTTH :: Holder -> Tree PE
@@ -600,7 +600,7 @@ compileRegex opts nm s hhs
   | otherwise =
       let rs = getROpts @rs
           mm = nm <> " " <> show rs
-      in flip left (RH.compileM (B8.pack s) rs)
+      in flip left (RH.compileM (TE.encodeUtf8 (T.pack s)) rs)
             $ \e -> mkNode opts (FailT "Regex failed to compile") [mm <> " compile failed with regex msg[" <> e <> "]"] hhs
 
 -- | extract the regex options from the type level list
@@ -640,9 +640,9 @@ instance GetROpt 'No_utf8_check where getROpt = RL.no_utf8_check
 --   These parallel the RegexReplacement (not exported) class in "Text.Regex.PCRE.Heavy" but have overlappable instances which is problematic for this code so I use 'RReplace'
 data RReplace =
      RReplace !String
-   | RReplace1 (String -> [String] -> String)
-   | RReplace2 (String -> String)
-   | RReplace3 ([String] -> String)
+   | RReplace1 !(String -> [String] -> String)
+   | RReplace2 !(String -> String)
+   | RReplace3 !([String] -> String)
 
 instance Show RReplace where
   show = \case
@@ -738,6 +738,7 @@ _TrueT = prism' (const TrueT) $
 
 (~>) :: Bool -> Bool -> Bool
 p ~> q = not p || q
+infixr 1 ~>
 
 -- | type level Between
 type family ZwischenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where

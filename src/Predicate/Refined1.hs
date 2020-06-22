@@ -619,11 +619,11 @@ rapply1P p opts f ma mb = do
 
 -- | An ADT that summarises the results of evaluating Refined1 representing all possible states
 data RResults1 a b =
-       RF String (Tree PE)        -- Left e
-     | RTF a (Tree PE) String (Tree PE)    -- Right a + Left e
-     | RTFalse a (Tree PE) (Tree PE)        -- Right a + Right False
-     | RTTrueF a (Tree PE) (Tree PE) String (Tree PE) -- Right a + Right True + Left e
-     | RTTrueT a (Tree PE) (Tree PE) b (Tree PE)      -- Right a + Right True + Right b
+       RF !String !(Tree PE)        -- Left e
+     | RTF !a !(Tree PE) !String !(Tree PE)    -- Right a + Left e
+     | RTFalse !a (Tree PE) !(Tree PE)        -- Right a + Right False
+     | RTTrueF !a (Tree PE) !(Tree PE) !String !(Tree PE) -- Right a + Right True + Left e
+     | RTTrueT !a (Tree PE) !(Tree PE) !b !(Tree PE)      -- Right a + Right True + Right b
      deriving Show
 
 -- | same as 'prtEval1P' but runs in IO

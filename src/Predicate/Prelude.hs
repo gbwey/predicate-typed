@@ -8654,7 +8654,7 @@ instance P TimeZt a where
       Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) [msg0 <> " must run in IO"] []
       Just v -> mkNode opts (PresentT v) [msg0 <> show0 opts " " v] []
 
-data FHandle s = FStdout | FStderr | FOther s WFMode deriving Show
+data FHandle s = FStdout | FStderr | FOther !s !WFMode deriving Show
 
 class GetFHandle (x :: FHandle Symbol) where getFHandle :: FHandle String
 instance GetFHandle 'FStdout where getFHandle = FStdout
