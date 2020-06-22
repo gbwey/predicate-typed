@@ -16,6 +16,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NoStarIsType #-}
 module TestRefined2 where
 import TastyExtras
 import Test.Tasty
@@ -323,3 +324,19 @@ expect2 lhs (rhs,mr) =
   (@?=) (maybe (Left $ toRResults2 rhs) Right mr) lhs
 
 
+{-
+
+test\TestRefined2.hs:77:33: error:
+    • Cannot apply expression of type ‘Proxy _0’
+      to a visible type argument ‘(Ccn 11)’
+    • In the first argument of ‘testRefined2P’, namely
+        ‘(Proxy @_ @(Ccn 11))’
+      In the first argument of ‘expectRight’, namely
+        ‘(testRefined2P (Proxy @_ @(Ccn 11)) ol "123-45-6---789-03-")’
+      In the expression:
+        expectRight
+          (testRefined2P (Proxy @_ @(Ccn 11)) ol "123-45-6---789-03-")
+   |
+77 |   , expectRight (testRefined2P (Proxy @(Ccn 11)) ol "123-45-6---789-03-")
+   |                                 ^^^^^^^^^^^^^^^^^^
+-}

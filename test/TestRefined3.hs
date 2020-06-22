@@ -17,6 +17,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NoStarIsType #-}
 module TestRefined3 where
 import TastyExtras
 import Test.Tasty
@@ -43,7 +44,6 @@ import Text.Show.Functions ()
 import Data.Tree
 import Data.Maybe
 import Data.Tree.Lens
---import GHC.TypeLits (Nat)
 
 suite :: TestTree
 suite =
@@ -177,7 +177,7 @@ unnamedTests = [
   , expect3 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1] "") $ eval3P cc11 oz "12345678901"
 
   , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ eval3P hms2E ol "12:13:14"
-  , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "seconds invalid: found 99")) $ eval3P hms2E ol "12:13:99"
+--  , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "seconds invalid: found 99")) $ eval3P hms2E ol "12:13:99"
 
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ eval3 @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) ol "1.2.3.4"
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ eval3 @Ip4ip @Ip4op' @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) ol "1.2.3.4"
@@ -194,7 +194,8 @@ allProps =
   [
     testProperty "base16" $ forAll (arbRefined3 (mkProxy3 @'(ReadBase Int 16 Id, 'True, ShowBase 16 Id, String))) (\r -> evalQuick @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
   , testProperty "readshow" $ forAll (arbRefined3 Proxy :: Gen HexLtR3) (\r -> read @HexLtR3 (show r) === r)
-  , testProperty "jsonroundtrip" $ forAll (arbRefined3 Proxy :: Gen HexLtR3) (\r -> testRefined3PJ Proxy ol (r3Out r) === Right r)
+  , testProperty "jsonroundtrip1" $ forAll (arbRefined3 Proxy :: Gen HexLtR3)
+      (\r -> testRefined3PJ Proxy ol (r3Out r) === Right r)
   ]
 
 type HexLtR3 = Refined3 (ReadBase Int 16 Id) (Id < 500) (ShowBase 16 Id) String

@@ -21,8 +21,10 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE NoStarIsType #-}
 -- |
 -- Refinement type allowing the external type to differ from the internal type
+-- doesnt store the output value but runs on demand but has calculate each time and could fail later
 -- see 'Refined1'
 --
 -- @
@@ -111,7 +113,6 @@ import Data.Maybe (fromMaybe)
 import Control.Lens ((^?),ix)
 import Data.Tree.Lens (root)
 import Data.Char (isSpace)
-import Data.Semigroup ((<>))
 import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
@@ -123,7 +124,7 @@ import GHC.Stack
 -- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
 
--- | Refinement type that differentiates the input from output: similar to 'Refined3' but only creates the output value as needed.
+-- | Refinement type that differentiates the input from output: similar to 'Predicate.Refined3.Refined3' but only creates the output value as needed.
 --
 --   * @i@ is the input type
 --   * @ip@ converts @i@ to @PP ip i@ which is the internal type and stored in 'unRefined1'
@@ -137,7 +138,7 @@ import GHC.Stack
 --
 --   * __read__ a string using /ip/ into an internal type and store in 'unRefined1'
 --   * __validate__ 'unRefined1' using the predicate /op/
---   * __show__ 'unRefined1' using /fmt/ and store that formatted result in 'r3Out'
+--   * __show__ 'unRefined1' using /fmt/ (does not store the formatted result unlike 'Predicate.Refined3.Refined3')
 --
 -- Although a common scenario is String as input, you are free to choose any input type you like
 --
@@ -332,7 +333,7 @@ arbRefined1 :: forall ip op fmt i .
      -> Gen (Refined1 ip op fmt i)
 arbRefined1 = flip arbRefined1With id
 
--- | uses arbitrary to generate the internal 'unRefined1' and then uses \'fmt\' to fill in the 'r3Out' value
+-- | uses arbitrary to generate the internal 'unRefined1' and then uses \'fmt\' to fill create output value
 arbRefined1With ::
     forall ip op fmt i
   . (Arbitrary (PP ip i)
@@ -536,10 +537,10 @@ newRefined1TPImpl :: forall n m ip op fmt i proxy
    -> RefinedT m (Refined1 ip op fmt i)
 newRefined1TPImpl f _ opts i = do
   (ret,mr) <- f $ eval1M opts i
-  let m3 = prt1Impl opts ret
-  tell [m3Long m3]
+  let m1 = prt1Impl opts ret
+  tell [m1Long m1]
   case mr of
-    Nothing -> throwError $ m3Desc m3 <> " | " <> m3Short m3
+    Nothing -> throwError $ m1Desc m1 <> " | " <> m1Short m1
     Just r -> return r
 
 newRefined1TPSkipIPImpl :: forall n m ip op fmt i proxy
@@ -555,10 +556,10 @@ newRefined1TPSkipIPImpl :: forall n m ip op fmt i proxy
    -> RefinedT m (Refined1 ip op fmt i)
 newRefined1TPSkipIPImpl f _ opts a = do
   (ret,mr) <- f $ eval1MSkip opts a
-  let m3 = prt1Impl opts ret
-  tell [m3Long m3]
+  let m1 = prt1Impl opts ret
+  tell [m1Long m1]
   case mr of
-    Nothing -> throwError $ m3Desc m3 <> " | " <> m3Short m3
+    Nothing -> throwError $ m1Desc m1 <> " | " <> m1Short m1
     Just r -> return r
 
 -- | attempts to cast a wrapped 'Refined1' to another 'Refined1' with different predicates
@@ -735,16 +736,16 @@ eval1MQuick a = do
 
 prt1IO :: (Show a, Show b) => POpts -> (RResults1 a b, Maybe r) -> IO (Either String r)
 prt1IO opts (ret,mr) = do
-  let m3 = prt1Impl opts ret
-  unless (hasNoTree opts) $ putStrLn $ m3Long m3
-  return $ maybe (Left (m3Desc m3 <> " | " <> m3Short m3)) Right mr
+  let m1 = prt1Impl opts ret
+  unless (hasNoTree opts) $ putStrLn $ m1Long m1
+  return $ maybe (Left (m1Desc m1 <> " | " <> m1Short m1)) Right mr
 
 prt1 :: (Show a, Show b) => POpts -> (RResults1 a b, Maybe r) -> Either Msg1 r
 prt1 opts (ret,mr) = maybe (Left $ prt1Impl opts ret) Right mr
 
-data Msg1 = Msg1 { m3Desc :: !String
-                 , m3Short :: !String
-                 , m3Long :: !String
+data Msg1 = Msg1 { m1Desc :: !String
+                 , m1Short :: !String
+                 , m1Long :: !String
                  } deriving Eq
 
 instance Show Msg1 where

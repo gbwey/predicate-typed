@@ -17,6 +17,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NoStarIsType #-}
 module TestRefined where
 import TastyExtras
 import Test.Tasty
@@ -32,8 +33,6 @@ import Control.Lens
 import Data.Aeson
 import Control.Monad.Cont
 import Text.Show.Functions ()
---import GHC.TypeNats (Nat)
-import Data.Semigroup (Semigroup(..))
 
 suite :: TestTree
 suite =

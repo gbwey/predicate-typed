@@ -21,6 +21,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE NoStarIsType #-}
 -- |
 -- Refinement type allowing the external type to differ from the internal type
 -- see 'Refined3'
@@ -111,7 +112,6 @@ import Data.Maybe (fromMaybe)
 import Control.Lens ((^?),ix)
 import Data.Tree.Lens (root)
 import Data.Char (isSpace)
-import Data.Semigroup ((<>))
 import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack

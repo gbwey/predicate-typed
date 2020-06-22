@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# OPTIONS -Wcompat #-}
+{-# OPTIONS -Wno-compat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# LANGUAGE TypeOperators #-}
@@ -12,6 +12,7 @@
 {-# LANGUAGE NoOverloadedLists #-} -- overloaded lists breaks some predicates
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NoStarIsType #-}
 module TastyExtras where
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -19,7 +20,6 @@ import Predicate.Util
 import Data.Aeson
 import Data.List
 import Text.Show.Functions ()
-import Data.Semigroup (Semigroup(..))
 
 expectIO :: (HasCallStack, Show a) => IO (Either String a) -> (Either String a -> Either String ()) -> IO ()
 expectIO iolr p = do

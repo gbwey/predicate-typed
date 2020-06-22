@@ -1,3 +1,4 @@
+-- stack exec -- ghc-pkg unregister ghc-lib-parser-8.8.0.20190424 --force
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE NoStarIsType #-}
 {- |
      Template Haskell methods for creating Refined, Refined2, and Refined3 refinement types
 -}
@@ -14,6 +16,10 @@ module Predicate.Util_TH
   -- ** Refined
     refinedTH
   , refinedTH'
+
+  -- ** Refined1
+  , refined1TH
+  , refined1TH'
 
   -- ** Refined2
   , refined2TH
@@ -26,25 +32,24 @@ module Predicate.Util_TH
 import Predicate.Util
 import Predicate.Core
 import Predicate.Refined
+import Predicate.Refined1
 import Predicate.Refined2
 import Predicate.Refined3
 
 import qualified Language.Haskell.TH.Syntax as TH
 import Data.Functor.Identity
-import Data.Semigroup ((<>))
 
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
+-- >>> :set -XTemplateHaskell
+-- >>> :m + Predicate.Prelude
 
 -- | creates a 'Refined.Refined' refinement type with terse output
 --
--- @
--- >$$(refinedTH 123) :: Refined (Between 100 125 Id) Int
+-- >>> $$(refinedTH 123) :: Refined (Between 100 125 Id) Int
 -- Refined {unRefined = 123}
--- it :: Refined (Between 100 125 Id) Int
--- @
 --
 -- @
 -- >$$(refinedTH 99) :: Refined (Between 100 125 Id) Int
@@ -68,11 +73,8 @@ refinedTH = refinedTH' ol
 --
 -- allows you to specify display options (eg 'ou' for unicode / 'o2' for ansi)
 --
--- @
--- >$$(refinedTH' o2 123) :: Refined (Between 100 125 Id) Int
+-- >>> $$(refinedTH' o2 123) :: Refined (Between 100 125 Id) Int
 -- Refined {unRefined = 123}
--- it :: Refined (Between 100 125 Id) Int
--- @
 --
 -- @
 -- >$$(refinedTH' o2 99) :: Refined (FailS "asdf" >> Between 100 125 Id) Int
@@ -106,12 +108,74 @@ refinedTH' opts i = do
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
     Just r -> TH.TExp <$> TH.lift r
 
--- | creates a 'Refined2.Refined2' refinement type with terse output
+-- | creates a 'Refined1.Refined1' refinement type with terse output
+--
+-- >>> $$(refined1TH 100) :: Refined1 Id (Between 100 125 Id) Id Int
+-- Refined1 {unRefined1 = 100}
+--
+-- >>> $$(refined1TH 100) :: Refined1 Id (Between 100 125 Id) Id Int
+-- Refined1 {unRefined1 = 100}
+--
+refined1TH :: forall ip op fmt i
+  . (Show i, Show (PP ip i), TH.Lift i, TH.Lift (PP ip i), Refined1C ip op fmt i)
+  => i
+  -> TH.Q (TH.TExp (Refined1 ip op fmt i))
+refined1TH = refined1TH' ol
+
+-- | creates a 'Refined1.Refined1' refinement type
+--
+-- allows you to specify display options (eg 'ou' for unicode / 'o2' for ansi)
+--
+-- >>> $$(refined1TH' o2 100) :: Refined1 Id (Between 100 125 Id) Id Int
+-- Refined1 {unRefined1 = 100}
 --
 -- @
--- >$$(refined2TH 100) :: Refined2 Id (Between 100 125 Id) Id Int
--- Refined2 {r2In = 100, r2Out = 100}
+-- >$$(refined1TH' o2 99) :: Refined1 Id (Between 100 125 Id) Id Int
+--
+-- <interactive>:127:4: error:
+--     *
+-- *** Step 1. Success Initial Conversion(ip) [99] ***
+--
+-- P Id 99
+--
+-- *** Step 2. False Boolean Check(op) ***
+--
+-- False 100 <= 99
+-- |
+-- +- P Id 99
+-- |
+-- +- P '100
+-- |
+-- `- P '125
+--
+-- refined1TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
+--     * In the Template Haskell splice $$(refined1TH' o2 99)
+--       In the expression:
+--           $$(refined1TH' o2 99) :: Refined1 Id (Between 100 125 Id) Id Int
+--       In an equation for \'it\':
+--           it = $$(refined1TH' o2 99) :: Refined1 Id (Between 100 125 Id) Id Int
 -- @
+--
+refined1TH' :: forall ip op fmt i
+  . (Show i, Show (PP ip i), TH.Lift i, TH.Lift (PP ip i), Refined1C ip op fmt i)
+  => POpts
+  -> i
+  -> TH.Q (TH.TExp (Refined1 ip op fmt i))
+refined1TH' opts i = do
+  let msg0 = "refined1TH"
+      (ret,mr) = eval1 @ip @op @fmt opts i
+      m1 = prt1Impl opts ret
+  case mr of
+    Nothing ->
+      let msg1 = if hasNoTree opts then "" else m1Long m1 ++ "\n"
+      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m1Desc m1 <> " | " <> m1Short m1)
+    Just r -> TH.TExp <$> TH.lift r
+
+
+-- | creates a 'Refined2.Refined2' refinement type with terse output
+--
+-- >>> $$(refined2TH 100) :: Refined2 Id (Between 100 125 Id) Int
+-- Refined2 {r2In = 100, r2Out = 100}
 --
 refined2TH :: forall ip op i
   . (Show (PP ip i), TH.Lift i, TH.Lift (PP ip i), Refined2C ip op i)
@@ -123,10 +187,8 @@ refined2TH = refined2TH' ol
 --
 -- allows you to specify display options (eg 'ou' for unicode / 'o2' for ansi)
 --
--- @
--- >$$(refined2TH' o2 100) :: Refined2 Id (Between 100 125 Id) Int
+-- >>> $$(refined2TH' o2 100) :: Refined2 Id (Between 100 125 Id) Int
 -- Refined2 {r2In = 100, r2Out = 100}
--- @
 --
 -- @
 -- >$$(refined2TH' o2 99) :: Refined2 Id (Between 100 125 Id) Int
@@ -172,10 +234,8 @@ refined2TH' opts i = do
 
 -- | creates a 'Refined3.Refined3' refinement type with terse output
 --
--- @
--- >$$(refined3TH 100) :: Refined3 Id (Between 100 125 Id) Id Int
+-- >>> $$(refined3TH 100) :: Refined3 Id (Between 100 125 Id) Id Int
 -- Refined3 {r3In = 100, r3Out = 100}
--- @
 --
 refined3TH :: forall ip op fmt i
   . (Show i, Show (PP ip i), TH.Lift i, TH.Lift (PP ip i), Refined3C ip op fmt i)
@@ -187,10 +247,8 @@ refined3TH = refined3TH' ol
 --
 -- allows you to specify display options (eg 'ou' for unicode / 'o2' for ansi)
 --
--- @
--- >$$(refined3TH' o2 100) :: Refined3 Id (Between 100 125 Id) Id Int
+-- >>> $$(refined3TH' o2 100) :: Refined3 Id (Between 100 125 Id) Id Int
 -- Refined3 {r3In = 100, r3Out = 100}
--- @
 --
 -- @
 -- >$$(refined3TH' o2 99) :: Refined3 Id (Between 100 125 Id) Id Int

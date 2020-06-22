@@ -2,7 +2,7 @@
 -- the mkNode opts (FailT msg) [msg] .. -- repetitive: needs to add value
 -- no types referring to types otherwise we lose use of _ as Type
 {-# OPTIONS -Wall #-}
-{-# OPTIONS -Wcompat #-}
+{-# OPTIONS -Wno-compat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
@@ -25,6 +25,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
+{-# LANGUAGE NoStarIsType #-}
 {- |
      Dsl for evaluating and displaying type level expressions
 
@@ -555,7 +556,6 @@ import Data.Foldable
 import Data.Maybe
 import Control.Arrow
 import qualified Data.Semigroup as SG
-import Data.Semigroup (Semigroup(..))
 import Numeric
 import Data.Char
 import Data.Function
@@ -1790,7 +1790,7 @@ instance ( PP p x ~ [a]
         case chkSize opts msg0 p [hh pp] of
           Left e -> e
           Right () ->
-            let d = map (:[]) p
+            let d = map pure p
             in mkNode opts (PresentT d) [show01 opts msg0 d p] [hh pp]
 
 -- | similar to 'show'
@@ -8189,7 +8189,7 @@ instance (PP p x ~ [a]
         in case chkSize opts msg0 p hhs <* chkSize opts msg0 q hhs of
           Left e -> e
           Right () ->
-            let d = intercalate p (map (:[]) q)
+            let d = intercalate p (map pure q)
             in mkNode opts (PresentT d) [show01 opts msg0 d p <> show1 opts " | " q] hhs
 
 -- | uses PrintF to format output

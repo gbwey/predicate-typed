@@ -3,7 +3,7 @@
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE PackageImports #-}
+{-# LANGUAGE NoStarIsType #-}
 {- |
      Mainly contains useful Template Haskell Lift instances for Date Time
 -}

@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# OPTIONS -Wcompat #-}
+{-# OPTIONS -Wno-compat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# LANGUAGE TypeOperators #-}
@@ -22,6 +22,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE NoStarIsType #-}
 {- |
      Utility methods for Predicate / methods for displaying the evaluation tree
 -}
@@ -69,6 +70,7 @@ module Predicate.Util (
  -- ** display options
   , POpts(..)
   , ODebug(..)
+  , Disp(..)
   , defOpts
   , oz
   , ol
@@ -88,6 +90,7 @@ module Predicate.Util (
   , color2
   , color3
   , color4
+  , color5
   , colorMe
   , zero
   , lite
@@ -206,7 +209,6 @@ import Data.Bool
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as N
 import Data.Either
-import Data.Semigroup ((<>))
 import qualified Text.Read.Lex as L
 import Text.ParserCombinators.ReadPrec
 import qualified GHC.Read as GR
@@ -383,7 +385,7 @@ defOpts = POpts
     { oWidth = 200
     , oDebug = ONormal
     , oDisp = Ansi
-    , oColor = color1
+    , oColor = color5
     }
 
 data ODebug =
@@ -404,7 +406,7 @@ ol = defOpts { oColor = color0, oDebug = OLite }
 
 -- | same as 'ol' but with colors
 olc :: POpts
-olc = ol { oColor = color1 }
+olc = ol { oColor = color5 }
 
 -- | displays the detailed evaluation tree without colors.
 o0 :: POpts
@@ -465,7 +467,7 @@ setc pc o = o { oColor = pc }
 -- | color palettes
 --
 -- italics dont work but underline does
-color0, color1, color2, color3, color4 :: (String, PColor)
+color0, color1, color2, color3, color4, color5 :: (String, PColor)
 
 -- | no colors are displayed
 color0 = ("color0", PColor $ flip const)
@@ -473,31 +475,38 @@ color0 = ("color0", PColor $ flip const)
 -- | default color palette
 color1 =
   ("color1",) $ PColor $ \case
-    FailP {} -> bgColor Magenta
+    FailP {} -> bgColor Blue
     FalseP -> bgColor Red
-    TrueP -> bgColor Green
-    PresentP -> bgColor Yellow
+    TrueP -> colorize Foreground Black . bgColor Cyan
+    PresentP -> colorize Foreground Black . bgColor Yellow
 
 color2 =
   ("color2",) $ PColor $ \case
     FailP {} -> bgColor Magenta
     FalseP -> bgColor Red
-    TrueP -> bgColor White
-    PresentP -> bgColor Yellow
+    TrueP -> colorize Foreground Black . bgColor White
+    PresentP -> colorize Foreground Black . bgColor Yellow
 
 color3 =
   ("color3",) $ PColor $ \case
     FailP {} -> bgColor Blue
     FalseP -> color Red
     TrueP -> color White
-    PresentP -> bgColor Yellow
+    PresentP -> colorize Foreground Black . bgColor Yellow
 
 color4 =
   ("color4",) $ PColor $ \case
-    FailP {} -> bgColor Cyan
+    FailP {} -> bgColor Red
     FalseP -> color Red
     TrueP -> color Green
-    PresentP -> bgColor Yellow
+    PresentP -> colorize Foreground Black . bgColor Yellow
+
+color5 =
+  ("color5",) $ PColor $ \case
+    FailP {} -> color Blue
+    FalseP -> color Red
+    TrueP -> color Cyan
+    PresentP -> color Yellow
 
 -- | fix PresentT Bool to TrueT or FalseT
 fixBoolT :: TT Bool -> TT Bool

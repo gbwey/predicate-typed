@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoOverloadedLists #-} -- overloaded lists breaks some predicates
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NoStarIsType #-}
 module TestPredicate where
 import Safe
 import TastyExtras

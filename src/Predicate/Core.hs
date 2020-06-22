@@ -15,6 +15,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NoStarIsType #-}
 {- |
      Dsl for evaluating and displaying type level expressions
 -}
@@ -30,13 +31,16 @@ module Predicate.Core (
   -- ** display evaluation tree
   , pe
   , pe2
+  , pe2a
   , pe2n
   , pu
+  , pua
   , pun
   , pe3
   , pl
   , plc
   , pz
+  , peWith
 
   -- ** P class
   , P(..)
@@ -56,7 +60,6 @@ import Data.Typeable
 import Data.Kind (Type)
 import Data.These (These(..))
 import Data.Functor.Identity
-import Data.Semigroup ((<>))
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -722,11 +725,13 @@ instance Show a => P 'Proxy a where
     let b = Proxy @a
     in pure $ mkNode opts (PresentT b) ["'Proxy" <> show1 opts " | " a] []
 
-pe, pe2, pe2n, pu, pun, pe3, pl, plc, pz :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
+pe, pe2, pe2a, pe2n, pu, pua, pun, pe3, pl, plc, pz :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
 -- | displays the evaluation tree in plain text without colors
 pe  = peWith @p o0
--- | displays the evaluation tree using colors
+-- | displays the evaluation tree using colors without background colors
 pe2 = peWith @p o2
+-- | displays the evaluation tree using colors with background colors
+pe2a = peWith @p o2 { oColor = color1 }
 -- | same as 'pe2' but truncates the display tree width: see 'o2n'
 pe2n = peWith @p o2n
 -- | same as 'pe2' but allows for wider data
@@ -742,6 +747,8 @@ plc = peWith @p olc
 --   pu @'(Id, "abc", 123) [1..4]
 -- @
 pu = peWith @p ou
+-- | displays the evaluation tree using unicode and colors with background colors
+pua = peWith @p ou { oColor = color1 }
 -- | same as 'pu' but truncates the display tree width: see 'ou'
 pun = peWith @p oun
 

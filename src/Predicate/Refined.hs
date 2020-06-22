@@ -19,6 +19,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE RoleAnnotations #-}
+{-# LANGUAGE NoStarIsType #-}
 {- |
      Simple refinement type with only one type and a predicate
 -}
@@ -73,7 +74,6 @@ import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
-import Data.Semigroup ((<>))
 import Data.String
 import Data.Maybe
 import Data.Hashable (Hashable(..))
