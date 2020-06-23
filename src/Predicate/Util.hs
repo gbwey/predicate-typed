@@ -68,39 +68,32 @@ module Predicate.Util (
   , splitAndAlign
 
  -- ** display options
-  , POpts(..)
+  , POptsL
+  , POpts
   , ODebug(..)
   , Disp(..)
   , defOpts
   , oz
   , ol
-  , olc
   , o0
   , o2
-  , o2n
-  , o3
   , ou
-  , ou3
-  , oun
-  , setw
-  , setu
-  , setc
-  , color0
+  , nocolor
   , color1
   , color2
   , color3
   , color4
   , color5
   , colorMe
-  , zero
-  , lite
-  , subnormal
-  , normal
-  , verbose
   , isVerbose
-  , ansi
-  , unicode
   , showBoolP
+  , reifyOpts
+  , setWidth
+  , setUnicode
+  , setAnsi
+  , setColor
+  , setDebug
+  , HOpts (oDebug)
 
 -- ** formatting functions
   , show01
@@ -215,6 +208,9 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.ByteString.Char8 as BS8
 import GHC.Stack
+import Data.Monoid (Last (..))
+import Data.Maybe
+
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -360,28 +356,82 @@ getValueLRImpl showError opts msg0 tt hs =
 
 -- | the color palette for displaying the expression tree
 newtype PColor = PColor (BoolP -> String -> String)
+instance Show PColor where
+  show PColor {} = "PColor <fn>"
+
+type family HKD f a where
+  HKD Identity a = a
+  HKD f a = f a
+
+type POpts = HOpts Identity
 
 -- | customizable options
-data POpts = POpts { oWidth :: !Int -- ^ length of data to display for 'showLitImpl'
-                   , oDebug :: !ODebug -- ^ debug level
-                   , oDisp :: !Disp -- ^ display the tree using the normal tree or unicode
-                   , oColor :: !(String, PColor) -- ^ color palette used
-                   }
+data HOpts f =
+  HOpts { oWidth :: !(HKD f Int) -- ^ length of data to display for 'showLitImpl'
+        , oDebug :: !(HKD f ODebug) -- ^ debug level
+        , oDisp :: !(HKD f Disp) -- ^ display the tree using the normal tree or unicode
+        , oColor :: !(HKD f (String, PColor)) -- ^ color palette used
+        }
+
+deriving instance
+  ( Show (HKD f Int)
+  , Show (HKD f ODebug)
+  , Show (HKD f Disp)
+  , Show (HKD f (String, PColor))
+  ) => Show (HOpts f)
+
+reifyOpts :: HOpts Last -> HOpts Identity
+reifyOpts h =
+  HOpts (fromMaybe (oWidth defOpts) (getLast (oWidth h)))
+           (fromMaybe (oDebug defOpts) (getLast (oDebug h)))
+           (fromMaybe (oDisp defOpts) (getLast (oDisp h)))
+           (fromMaybe (oColor defOpts) (getLast (oColor h)))
+
+setWidth :: Int -> HOpts Last
+setWidth i = mempty { oWidth = pure i }
+
+setDebug :: Int -> HOpts Last
+setDebug i =
+  let (mn,mx) = (fromEnum (minBound :: ODebug), fromEnum (maxBound :: ODebug))
+      ret = toEnum (min (max i mn) mx)
+  in mempty { oDebug = pure ret }
+
+setAnsi :: HOpts Last
+setAnsi = mempty { oDisp = pure Ansi }
+
+setUnicode :: HOpts Last
+setUnicode = mempty { oDisp = pure Unicode }
+
+setColor :: Int -> HOpts Last
+setColor i =
+  let ret=
+       if | i == 0 -> nocolor
+          | i == 1 -> color1
+          | i == 2 -> color2
+          | i == 3 -> color3
+          | i == 4 -> color4
+          | i == 5 -> color5
+          | otherwise -> error "dude: invalid color"
+  in mempty { oColor = pure ret }
+
+type POptsL = HOpts Last
+
+instance Monoid (HOpts Last) where
+  mempty = HOpts mempty mempty mempty mempty
+
+instance Semigroup (HOpts Last) where
+  HOpts a b c d <> HOpts a' b' c' d' = HOpts (a <> a') (b <> b') (c <> c') (d <> d')
+
+--seqPOptsM :: HOpts Last -> Maybe (HOpts Identity)
+--seqPOptsM h = coerce (HOpts <$> oWidth h <*> oDebug h <*> oDisp h <*> oColor h)
 
 -- | display format for the tree
 data Disp = Ansi -- ^ draw normal tree
           | Unicode  -- ^ use unicode
           deriving (Show, Eq)
 
-instance Show POpts where
-  show opts =
-    "POpts: showA=" <> show (oWidth opts)
-    <> " debug=" <> show (oDebug opts)
-    <> " disp=" <> show (oDisp opts)
-    <> " color=" <> show (fst (oColor opts))
-
 defOpts :: POpts
-defOpts = POpts
+defOpts = HOpts
     { oWidth = 200
     , oDebug = ONormal
     , oDisp = Ansi
@@ -398,79 +448,35 @@ data ODebug =
 
 -- | minimal data without colors
 oz :: POpts
-oz = defOpts { oColor = color0, oDebug = OZero }
+oz = defOpts { oColor = nocolor, oDebug = OZero }
 
 -- | returns the summary without colors
 ol :: POpts
-ol = defOpts { oColor = color0, oDebug = OLite }
-
--- | same as 'ol' but with colors
-olc :: POpts
-olc = ol { oColor = color5 }
+ol = defOpts { oColor = nocolor, oDebug = OLite }
 
 -- | displays the detailed evaluation tree without colors.
 o0 :: POpts
-o0 = defOpts { oColor = color0 }
+o0 = defOpts { oColor = nocolor }
 
 -- | displays the detailed evaluation tree using colors.
 o2 :: POpts
 o2 = defOpts
 
--- | same as 'o2' but for a narrow display
-o2n :: POpts
-o2n = o2 { oWidth = 120 }
-
--- | same as 'o2' for a wider display and verbose debug mode setting
-o3 :: POpts
-o3 = o2 { oDebug = OVerbose, oWidth = 400 }
-
 -- | displays the detailed evaluation tree using unicode and colors. ('o2' works better on Windows)
 ou :: POpts
 ou = defOpts { oDisp = Unicode }
-
--- | same as 'ou' for a wider display and verbose debug mode setting
-ou3 :: POpts
-ou3 = o3 { oDisp = Unicode }
-
--- | same as 'ou' but for a narrow display
-oun :: POpts
-oun = ou { oWidth = 120 }
 
 -- | helper method to set the debug level
 isVerbose :: POpts -> Bool
 isVerbose = (OVerbose==) . oDebug
 
--- | helper method to limit the width of the tree
-setw :: Int -> POpts -> POpts
-setw w o = o { oWidth = w }
-
--- | helper method to set the debug level
-verbose :: POpts -> POpts
-verbose o = o { oDebug = OVerbose }
-
--- | helper method to set the debug level
-normal :: POpts -> POpts
-normal o = o { oDebug = ONormal }
-
--- | helper method to set the debug level
-subnormal :: POpts -> POpts
-subnormal o = o { oDebug = OSubNormal }
-
--- | set display to unicode and colors
-setu :: POpts -> POpts
-setu o = o { oDisp = Unicode }
-
--- | set a color palette
-setc :: (String, PColor) -> POpts -> POpts
-setc pc o = o { oColor = pc }
-
 -- | color palettes
 --
 -- italics dont work but underline does
-color0, color1, color2, color3, color4, color5 :: (String, PColor)
+nocolor, color1, color2, color3, color4, color5 :: (String, PColor)
 
 -- | no colors are displayed
-color0 = ("color0", PColor $ flip const)
+nocolor = ("nocolor", PColor $ flip const)
 
 -- | default color palette
 color1 =
@@ -993,21 +999,6 @@ showImpl o =
   case oDisp o of
     Unicode -> TV.showTree
     Ansi -> drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
-
--- | skip displaying the tree and just output the result
-lite :: POpts -> POpts
-lite o = o { oDebug = OLite }
-
-zero :: POpts -> POpts
-zero o = o { oDebug = OZero }
-
--- | display in unicode (non-Windows)
-unicode :: POpts -> POpts
-unicode o = o { oDisp = Unicode }
-
--- | normal display
-ansi :: POpts -> POpts
-ansi o = o { oDisp = Ansi }
 
 prettyRational :: Rational -> String
 prettyRational (numerator &&& denominator -> (n,d)) =

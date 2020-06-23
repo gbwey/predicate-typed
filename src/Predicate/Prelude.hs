@@ -773,7 +773,7 @@ instance (PP p x ~ (a,a')
 -- True
 -- TrueT
 --
--- >>> pe @(All Even Id) [1,5,11,5,3]
+-- >>> pan @(All Even Id) [1,5,11,5,3]
 -- False All(5) i=0 (1 == 0)
 -- |
 -- +- P Id [1,5,11,5,3]
@@ -7462,7 +7462,7 @@ instance (PP p x ~ t a
         , Foldable t
         , Show a
         ) => P (ToList' p) x where
-  type PP (ToList' p) x = [ExtractAFromTA (PP p x)] -- extra layer of indirection means pe (ToList' Id) "abc" won't work without setting the type of "abc" unlike ToList
+  type PP (ToList' p) x = [ExtractAFromTA (PP p x)] -- extra layer of indirection means pan (ToList' Id) "abc" won't work without setting the type of "abc" unlike ToList
   eval _ opts x = do
     let msg0 = "ToList'"
     pp <- eval (Proxy @p) opts x
@@ -8748,7 +8748,7 @@ instance (GetFHandle fh
 -- | read in a value of a given type from stdin with a prompt: similar to 'System.IO.readIO'
 type ReadIO (t :: Type) = ReadIO' t "Enter value"
 type ReadIO' (t :: Type) s = Stdout (s <> ":") >> Stdin >> ReadP t Id
--- eg pe2 @(ReadIO Int + ReadIO Int) ()
+-- eg pa @(ReadIO Int + ReadIO Int) ()
 
 -- | read a value from stdin
 data Stdin

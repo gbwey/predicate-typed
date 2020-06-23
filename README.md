@@ -88,13 +88,13 @@ _pe2_ does not have that restriction so you can run the whole thing or the indiv
 for less detail use _pl_\
 
 ```haskell
->pe2 @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
+>pa @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
 
->pe2 @(Resplit ":" Id) "12:01:05"
+>pa @(Resplit ":" Id) "12:01:05"
 
->pe2 @(Map (ReadP Int Id) Id) ["12","01","05"]
+>pa @(Map (ReadP Int Id) Id) ["12","01","05"]
 
->pe2 @(Len == 3) [12,1,5]
+>pa @(Len == 3) [12,1,5]
 ```
 
 ### An example using Refined2 (for more information see [doctests](src/Predicate/Refined2.hs))
@@ -158,13 +158,13 @@ False 4094 <= 255
 
 Read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as output
 ```haskell
->pe2 @(ReadBase Int 16 Id) "0000fe"
+>pa @(ReadBase Int 16 Id) "0000fe"
 PresentT 254
 
->pe2 @(Between 0 255 Id) 254
+>pa @(Between 0 255 Id) 254
 TrueT
 
->pe2 @(ShowBase 16 Id) 254 = "fe"
+>pa @(ShowBase 16 Id) 254 = "fe"
 PresentT "fe"
 ```
 

@@ -29,20 +29,13 @@ module Predicate.Core (
   , Msg
 
   -- ** display evaluation tree
-  , pe
-  , pe2
-  , pe2a
-  , pe2n
+  , pan
+  , pa
   , pu
-  , pua
-  , pun
-  , pe3
   , pl
-  , plc
   , pz
-  , peWith
+  , with
 
-  -- ** P class
   , P(..)
 
   -- ** evaluation methods
@@ -50,7 +43,6 @@ module Predicate.Core (
   , runPQBool
   , evalBool
   , evalQuick
---  , prtTreeX
   ) where
 import Predicate.Util
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
@@ -137,11 +129,11 @@ instance P p a => P (W p) a where
 
 -- | add a message to give more context to the evaluation tree
 --
--- >>> pe @(Msg "[somemessage] " Id) 999
+-- >>> pan @(Msg "[somemessage] " Id) 999
 -- P [somemessage] Id 999
 -- PresentT 999
 --
--- >>> pe @(Msg Id 999) "info message:"
+-- >>> pan @(Msg Id 999) "info message:"
 -- P info message:'999
 -- PresentT 999
 --
@@ -227,7 +219,7 @@ instance (P p a, P q a) => P '(p,q) a where
 -- Present (4,"hello","goodbye")
 -- PresentT (4,"hello","goodbye")
 --
--- >>> pe @'( 'True, 'False, 123) True
+-- >>> pan @'( 'True, 'False, 123) True
 -- P '(,,)
 -- |
 -- +- True 'True
@@ -725,32 +717,30 @@ instance Show a => P 'Proxy a where
     let b = Proxy @a
     in pure $ mkNode opts (PresentT b) ["'Proxy" <> show1 opts " | " a] []
 
-pe, pe2, pe2a, pe2n, pu, pua, pun, pe3, pl, plc, pz :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
+-- with @('True || 'False || Failt _ "asdf") (setAnsi <> setWidth 100 <> setDebug 5 <> setColor 1) 123
+-- | set display options
+with :: forall p a . (Show (PP p a), P p a)
+  => POptsL
+  -> a
+  -> IO (BoolT (PP p a))
+with h = peWith @p (reifyOpts h)
+
+pan, pa, pu, pl, pz :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
 -- | displays the evaluation tree in plain text without colors
-pe  = peWith @p o0
+pan  = peWith @p o0
 -- | displays the evaluation tree using colors without background colors
-pe2 = peWith @p o2
--- | displays the evaluation tree using colors with background colors
-pe2a = peWith @p o2 { oColor = color1 }
--- | same as 'pe2' but truncates the display tree width: see 'o2n'
-pe2n = peWith @p o2n
--- | same as 'pe2' but allows for wider data
-pe3 = peWith @p o3
+pa = peWith @p o2
 -- | skips the evaluation tree and just displays the end result
 pz = peWith @p oz
 -- | same as 'pz' but adds context to the end result
 pl = peWith @p ol
--- | same as 'pz' but with colors
-plc = peWith @p olc
+
 -- | display the evaluation tree using unicode and colors
 -- @
 --   pu @'(Id, "abc", 123) [1..4]
 -- @
 pu = peWith @p ou
 -- | displays the evaluation tree using unicode and colors with background colors
-pua = peWith @p ou { oColor = color1 }
--- | same as 'pu' but truncates the display tree width: see 'ou'
-pun = peWith @p oun
 
 peWith :: forall p a
         . (Show (PP p a), P p a)
