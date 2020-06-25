@@ -30,7 +30,7 @@ module Predicate.Util (
   -- ** TT
     TT(..)
   , tBool
-  , tStrings
+  , tString
   , tForest
   , fixBoolT
   , topMessage
@@ -48,7 +48,7 @@ module Predicate.Util (
   , boolT2P
   , BoolP
   , PE(PE)
-  , pStrings
+  , pString
   , pBool
 
  -- ** create tree functions
@@ -181,7 +181,7 @@ import qualified Data.Tree.View as TV
 import Data.Tree
 import Data.Tree.Lens
 import Data.Proxy
-import Data.Char
+--import Data.Char
 import Data.Data
 import System.Console.Pretty
 import GHC.Exts (Constraint)
@@ -218,7 +218,7 @@ import Data.Maybe
 
 -- | represents the evaluation tree for predicates
 data TT a = TT { _tBool :: !(BoolT a)  -- ^ the value at this root node
-               , _tStrings :: ![String]  -- ^ detailed information eg input and output and text
+               , _tString :: !String  -- ^ detailed information eg input and output and text
                , _tForest :: !(Forest PE) -- ^ the child nodes
                } deriving Show
 
@@ -255,8 +255,8 @@ deriving instance Eq a => Eq (BoolT a)
 tBool :: Lens (TT a) (TT b) (BoolT a) (BoolT b)
 tBool afb s = (\b -> s { _tBool = b }) <$> afb (_tBool s)
 
-tStrings :: Lens' (TT a) [String]
-tStrings afb s = (\b -> s { _tStrings = b }) <$> afb (_tStrings s)
+tString :: Lens' (TT a) String
+tString afb s = (\b -> s { _tString = b }) <$> afb (_tString s)
 
 tForest :: Lens' (TT a) (Forest PE)
 tForest afb s = (\b -> s { _tForest = b }) <$> afb (_tForest s)
@@ -279,29 +279,29 @@ data BoolP =
 
 -- | represents the untyped evaluation tree for final display
 data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
-             , _pStrings :: ![String] -- ^ optional strings to include in the results
+             , _pString :: !String -- ^ optional strings to include in the results
              } deriving Show
 
 pBool :: Lens' PE BoolP
 pBool afb (PE x y) = flip PE y <$> afb x
 
-pStrings :: Lens' PE [String]
-pStrings afb s = (\b -> s { _pStrings = b }) <$> afb (_pStrings s)
+pString :: Lens' PE String
+pString afb s = (\b -> s { _pString = b }) <$> afb (_pString s)
 
 -- | creates a Node for the evaluation tree
-mkNode :: POpts -> BoolT a -> [String] -> [Holder] -> TT a
+mkNode :: POpts -> BoolT a -> String -> [Holder] -> TT a
 mkNode opts bt ss hs =
   case oDebug opts of
     OZero -> TT bt [] []
-    OLite -> TT bt (take 1 ss) [] -- keeps the last one so we can use the root to give more details on failure (especially for Refined* types)
+    OLite -> TT bt ss [] -- keeps the last one so we can use the root to give more details on failure (especially for Refined* types)
     _ -> TT bt ss (map fromTTH hs)
 
 -- | creates a Boolean node for a predicate type
-mkNodeB :: POpts -> Bool -> [String] -> [Holder] -> TT Bool
+mkNodeB :: POpts -> Bool -> String -> [Holder] -> TT Bool
 mkNodeB opts b = mkNode opts (bool FalseT TrueT b)
 
 mkNodeSkipP :: Tree PE
-mkNodeSkipP = Node (PE TrueP ["skipped PP ip i = Id"]) []
+mkNodeSkipP = Node (PE TrueP ("skipped PP ip i = Id")) []
 
 getValAndPE :: TT a -> (Either String a, Tree PE)
 getValAndPE tt = (getValLRFromTT tt, fromTT tt)
@@ -340,7 +340,7 @@ getValueLR = getValueLRImpl True
 getValueLRHide :: POpts -> String -> TT a -> [Holder] -> Either (TT x) a
 getValueLRHide = getValueLRImpl False
 
--- elide FailT msg in tStrings[0] if showError is False
+-- elide FailT msg in tString[0] if showError is False
 -- | a helper method to add extra context on failure to the tree or extract the value at the root of the tree
 getValueLRImpl :: Bool -> POpts -> String -> TT a -> [Holder] -> Either (TT x) a
 getValueLRImpl showError opts msg0 tt hs =
@@ -348,8 +348,8 @@ getValueLRImpl showError opts msg0 tt hs =
   in left (\e -> mkNode
                    opts
                   (FailT e)
-                   [msg0 <> if showError || isVerbose opts then (if null msg0 then "" else " ") <> "[" <> e <> "]"
-                            else ""]
+                   (msg0 <> if showError || isVerbose opts then (if null msg0 then "" else " ") <> "[" <> e <> "]"
+                            else "")
                   tt'
           )
           (getValLRFromTT tt)
@@ -602,12 +602,12 @@ data ROpt =
 compileRegex :: forall rs a . GetROpts rs
   => POpts -> String -> String -> [Holder] -> Either (TT a) RH.Regex
 compileRegex opts nm s hhs
-  | null s = Left (mkNode opts (FailT "Regex cannot be empty") [nm] hhs)
+  | null s = Left (mkNode opts (FailT "Regex cannot be empty") nm hhs)
   | otherwise =
       let rs = getROpts @rs
           mm = nm <> " " <> show rs
       in flip left (RH.compileM (TE.encodeUtf8 (T.pack s)) rs)
-            $ \e -> mkNode opts (FailT "Regex failed to compile") [mm <> " compile failed with regex msg[" <> e <> "]"] hhs
+            $ \e -> mkNode opts (FailT "Regex failed to compile") (mm <> " compile failed with regex msg[" <> e <> "]") hhs
 
 -- | extract the regex options from the type level list
 class GetROpts (os :: [ROpt]) where
@@ -660,7 +660,7 @@ instance Show RReplace where
 -- | extract values from the trees or if there are errors returned a tree with added context
 splitAndAlign :: Show x =>
                     POpts
-                    -> [String]
+                    -> String
                     -> [((Int, x), TT a)]
                     -> Either (TT w) [(a, (Int, x), TT a)]
 splitAndAlign opts msgs ts =
@@ -668,7 +668,7 @@ splitAndAlign opts msgs ts =
      (excs@(e:_), _) ->
           Left $ mkNode opts
                        (FailT (groupErrors (map snd excs)))
-                       (msgs <> [formatList opts [fst e] <> " excnt=" <> show (length excs)])
+                       (msgs <> (formatList opts [fst e] <> " excnt=" <> show (length excs)))
                        (map (hh . snd) ts)
      ([], tfs) -> Right tfs
 
@@ -922,7 +922,7 @@ instance GetOrd 'CNe where getOrd = ("/=",(/=))
 toNodeString :: POpts -> PE -> String
 toNodeString opts bpe =
   if hasNoTree opts then errorInProgram $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
-  else showBoolP opts (_pBool bpe) <> " " <> displayMessages (_pStrings bpe)
+  else showBoolP opts (_pBool bpe) <> " " <> _pString bpe
 
 hasNoTree :: POpts -> Bool
 hasNoTree opts =
@@ -944,13 +944,13 @@ showBoolP o =
     b@PresentP -> colorMe o b "P"
     b@TrueP -> colorMe o b "True"
     b@FalseP -> colorMe o b "False"
-
+{-
 displayMessages :: [String] -> String
 displayMessages es =
   case filter (not . all isSpace) es of
     [] -> ""
     z -> intercalate " | " z
-
+-}
 -- | colors the result of the predicate based on the current color palette
 colorMe :: POpts -> BoolP -> String -> String
 colorMe o b s =
@@ -986,10 +986,10 @@ prtTreePure opts t
   | otherwise = showImpl opts $ fmap (toNodeString opts) t
 
 topMessage' :: TT a -> String
-topMessage' pp = maybe "" innermost (pp ^? tStrings . ix 0)
+topMessage' pp = innermost (pp ^. tString)
 
 topMessage :: TT a -> String
-topMessage pp = maybe "" (\x -> "(" <> x <> ")") (pp ^? tStrings . ix 0)
+topMessage pp =  "(" <> (pp ^. tString) <> ")"
 
 innermost :: String -> String
 innermost = ('{':) . reverse . ('}':) . takeWhile (/='{') . dropWhile (=='}') . reverse
@@ -1011,7 +1011,7 @@ fixit ((i, _), t) = prefixMsg ("i=" <> show i <> ":") t
 
 prefixMsg :: String -> TT a -> TT a
 prefixMsg msg t =
-   t & tStrings . ix 0 %~ (msg <>)
+   t & tString %~ (msg <>)
 
 showT :: forall (t :: Type) . Typeable t => String
 showT = show (typeRep (Proxy @t))

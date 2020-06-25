@@ -38,7 +38,7 @@ import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree
 import Data.Tree.Lens
-import Data.Maybe
+--import Data.Maybe
 import Control.Lens
 
 suite :: TestTree
@@ -313,7 +313,7 @@ toRResults2 :: RResults2 a -> Results2 a
 toRResults2 = \case
    RF e _ -> XF e
    RTF a _ e _ -> XTF a e
-   RTFalse a _ t2 -> XTFalse a (fromMaybe "" (t2 ^? root . pStrings . ix 0))
+   RTFalse a _ t2 -> XTFalse a (t2 ^. root . pString)
    RTTrue a _ _ -> XTTrue a
 
 expect2 :: (HasCallStack, Show i, Show r, Eq i, Eq r)

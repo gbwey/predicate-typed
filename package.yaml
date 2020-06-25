@@ -49,12 +49,17 @@ library:
   - -Wmissing-export-lists
   - -Wpartial-fields
   - -Wredundant-constraints
+  when:
+     condition: impl(ghc >= 8.8)
+     ghc-options:
+     - -fwrite-ide-info
+     - -hiedir=.hie
 
 tests:
   predicate-typed-test:
     main:                TestSpec.hs
     source-dirs:
-    - src
+#    - src
     - test
     ghc-options:
     - -threaded
@@ -62,6 +67,11 @@ tests:
     - -with-rtsopts=-N
 #    - -fomit-interface-pragmas
 #    - -Wno-missing-export-lists
+    when:
+       condition: impl(ghc >= 8.8)
+       ghc-options:
+       - -fwrite-ide-info
+       - -hiedir=.hie
     dependencies:
     - base
     - predicate-typed
@@ -79,6 +89,12 @@ tests:
     - -threaded
 #    - -fomit-interface-pragmas
 #    - -Wno-missing-export-lists
+    when:
+       condition: impl(ghc >= 8.8)
+       ghc-options:
+       - -fwrite-ide-info
+       - -hiedir=.hie
+
     dependencies:
     - base
     - predicate-typed

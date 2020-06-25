@@ -1,0 +1,13 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:predicate-typed"
+
+    - path: "src"
+      component: "predicate-typed:test:doctests"
+
+    - path: "doctest"
+      component: "predicate-typed:test:doctests"
+
+    - path: "test"
+      component: "predicate-typed:test:predicate-typed-test"

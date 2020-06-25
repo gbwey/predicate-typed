@@ -85,7 +85,7 @@ import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
 import Data.Maybe (fromMaybe)
-import Control.Lens ((^?),ix)
+import Control.Lens ((^.))
 import Data.Tree.Lens (root)
 import Data.Char (isSpace)
 import Data.String
@@ -545,9 +545,8 @@ prt2Impl opts v =
          in mkMsg2 m n r
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", z)
-             z = case t2 ^? root . pStrings . ix 0 of
-                   Just w -> if null (dropWhile isSpace w) then "FalseP" else "{" <> w <> "}"
-                   Nothing -> "FalseP"
+             z = let w = t2 ^. root . pString
+                 in if null (dropWhile isSpace w) then "FalseP" else "{" <> w <> "}"
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg m

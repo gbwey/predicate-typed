@@ -42,7 +42,7 @@ import Data.Aeson
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree
-import Data.Maybe
+--import Data.Maybe
 import Data.Tree.Lens
 
 suite :: TestTree
@@ -361,7 +361,7 @@ toRResults3 :: RResults3 a b -> Results3 a b
 toRResults3 = \case
    RF e _ -> XF e
    RTF a _ e _ -> XTF a e
-   RTFalse a _ t2 -> XTFalse a (fromMaybe "" (t2 ^? root . pStrings . ix 0))
+   RTFalse a _ t2 -> XTFalse a (t2 ^. root . pString)
    RTTrueF a _ _ e _ -> XTTrueF a e
    RTTrueT a _ _ b _ -> XTTrueT a b
 
