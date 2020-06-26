@@ -76,8 +76,10 @@ module Predicate.Util (
   , oz
   , ol
   , o0
-  , o2
+  , oa
+  , oab
   , ou
+  , oub
   , nocolor
   , color1
   , color2
@@ -93,7 +95,7 @@ module Predicate.Util (
   , setAnsi
   , setColor
   , setDebug
-  , HOpts (oDebug)
+  , HOpts (..)
 
 -- ** formatting functions
   , show01
@@ -459,12 +461,20 @@ o0 :: POpts
 o0 = defOpts { oColor = nocolor }
 
 -- | displays the detailed evaluation tree using colors.
-o2 :: POpts
-o2 = defOpts
+oa :: POpts
+oa = defOpts
 
--- | displays the detailed evaluation tree using unicode and colors. ('o2' works better on Windows)
+-- | displays the detailed evaluation tree using ansi and background colors.
+oab :: POpts
+oab = oa { oColor = color1 }
+
+-- | displays the detailed evaluation tree using unicode and colors. (on windows use chcp 65001)
 ou :: POpts
 ou = defOpts { oDisp = Unicode }
+
+-- | displays the detailed evaluation tree using unicode and background colors. (on windows use chcp 65001)
+oub :: POpts
+oub = ou { oColor = color1 }
 
 -- | helper method to set the debug level
 isVerbose :: POpts -> Bool

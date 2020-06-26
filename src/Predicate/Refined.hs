@@ -138,7 +138,7 @@ type role Refined nominal nominal
 
 instance RefinedC p String => IsString (Refined p String) where
   fromString s =
-    let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p o2 s
+    let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p oa s
     in fromMaybe (error $ "Refined(fromString):" ++ show bp ++ "\n" ++ e) mr
 
 -- | 'Read' instance for 'Refined'
@@ -197,7 +197,7 @@ instance ToJSON a => ToJSON (Refined p a) where
 instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
   parseJSON z = do
                   a <- parseJSON z
-                  let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p o2 a
+                  let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p oa a
                   case mr of
                     Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
                     Just r -> return r
@@ -233,7 +233,7 @@ instance (RefinedC p a, FromJSON a) => FromJSON (Refined p a) where
 instance (RefinedC p a, Binary a) => Binary (Refined p a) where
   get = do
           fld0 <- B.get @a
-          let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p o2 fld0
+          let ((bp,(e,_top)),mr) = runIdentity $ newRefined @p oa fld0
           case mr of
             Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
             Just r -> return r

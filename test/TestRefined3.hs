@@ -205,11 +205,11 @@ type Tst1 = '(ReadP Int Id, Between 1 7 Id, PrintF "someval val=%03d" Id, String
 
 yy1, yy2, yy3, yy4 :: RefinedT Identity (MakeR3 Tst1)
 
-yy1 = newRefined3TP @Identity (Proxy @Tst1) o2 "4"
-yy2 = newRefined3TP @Identity (Proxy @Tst1) o2 "3"
+yy1 = newRefined3TP @Identity (Proxy @Tst1) oa "4"
+yy2 = newRefined3TP @Identity (Proxy @Tst1) oa "3"
 
-yy3 = rapply3 o2 (*) yy1 yy2 -- fails
-yy4 = rapply3 o2 (+) yy1 yy2 -- pure ()
+yy3 = rapply3 oa (*) yy1 yy2 -- fails
+yy4 = rapply3 oa (+) yy1 yy2 -- pure ()
 
 hms2E :: Proxy '(Hmsip2, Hmsop2 >> 'True, Hmsfmt2, String)
 hms2E = mkProxy3
@@ -223,8 +223,8 @@ type Hmsfmt2 = Snd Id >> FormatTimeP "%T" Id
 type Tst3 = '(Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, ConcatMap (PrintF "%03d" Id) Id, String)
 
 www1, www2 :: String -> Either Msg3 (MakeR3 Tst3)
-www1 = prtEval3P (mkProxy3 @Tst3) o2
-www2 = prtEval3P tst3 o2
+www1 = prtEval3P (mkProxy3 @Tst3) oa
+www2 = prtEval3P tst3 oa
 
 -- just pass in an ipaddress as a string: eg 1.2.3.4 or 1.2.3.4.5 (invalid) 1.2.3.400 (invalid)
 
@@ -243,13 +243,13 @@ ww3 :: String -> Either Msg3 (Refined3
                                ((Len == 4) && All (Between 0 255 Id) Id)
                                (ConcatMap (PrintF "%03d" Id) Id)
                                String)
-ww3 = prtEval3 o2
+ww3 = prtEval3 oa
 {-
 ww3 = prtEval3
         @(Map (ReadP Int Id) (Resplit "\\." Id))
         @((Len == 4) && All (Between 0 255 Id))
         @(ConcatMap (PrintF "%03d" Id) Id)
-        o2
+        oa
 -}
 data G4 = G4 { g4Age :: MakeR3 Age
              , g4Ip :: MakeR3 Ip9
@@ -268,9 +268,9 @@ type Ip9 = '(
 
 instance FromJSON G4
 instance ToJSON G4
-{- ol= summary vs o2 = detail
+{- ol= summary vs oa = detail
 prtEval3P daten ol "June 25 1900"
-prtEval3P daten o2 "12/02/19"
+prtEval3P daten oa "12/02/19"
 prtEval3P (Proxy @(Ccn '[1,1,1,1])) ol "1230"
 prtEval3P (Proxy @(Ccn '[1,2,3])) ol "123455" -- succeeds
 -}

@@ -32,6 +32,8 @@ module Predicate.Core (
   , pan
   , pa
   , pu
+  , pab
+  , pub
   , pl
   , pz
   , with
@@ -725,11 +727,15 @@ with :: forall p a . (Show (PP p a), P p a)
   -> IO (BoolT (PP p a))
 with h = peWith @p (reifyOpts h)
 
-pan, pa, pu, pl, pz :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
+pan, pa, pu, pl, pz, pab, pub :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
 -- | displays the evaluation tree in plain text without colors
 pan  = peWith @p o0
 -- | displays the evaluation tree using colors without background colors
-pa = peWith @p o2
+pa = peWith @p oa
+-- | displays the evaluation tree using background colors
+pab = peWith @p oab
+-- | displays the evaluation tree using background colors
+pub = peWith @p oub
 -- | skips the evaluation tree and just displays the end result
 pz = peWith @p oz
 -- | same as 'pz' but adds context to the end result

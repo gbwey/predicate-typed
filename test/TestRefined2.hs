@@ -178,8 +178,8 @@ type IntLtR3 = Refined2 (ReadP Int Id) (Id < 10) String
 type Tst3 = '(Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, String)
 
 www1, www2 :: String -> Either Msg2 (MakeR2 Tst3)
-www1 = prtEval2P (Proxy @Tst3) o2
-www2 = prtEval2P tst3 o2
+www1 = prtEval2P (Proxy @Tst3) oa
+www2 = prtEval2P tst3 oa
 
 -- just pass in an ipaddress as a string: eg 1.2.3.4 or 1.2.3.4.5 (invalid) 1.2.3.400 (invalid)
 
@@ -196,12 +196,12 @@ ww3 :: String -> Either Msg2 (Refined2
                                (Map (ReadP Int Id) (Resplit "\\." Id))
                                ((Len == 4) && All (Between 0 255 Id) Id)
                                String)
-ww3 = prtEval2 o2
+ww3 = prtEval2 oa
 {-
 ww3 = prtEval2
         @(Map (ReadP Int Id) (Resplit "\\." Id))
         @((Len == 4) && All (Between 0 255 Id))
-        o2
+        oa
 -}
 data G4 = G4 { g4Age :: MakeR2 Age
              , g4Ip :: MakeR2 Ip9
@@ -219,9 +219,9 @@ type Ip9 = '(
 
 instance FromJSON G4
 instance ToJSON G4
-{- ol= summary vs o2 = detail
+{- ol= summary vs oa = detail
 prtEval2 daten ol "June 25 1900"
-prtEval2 daten o2 "12/02/19"
+prtEval2 daten oa "12/02/19"
 prtEval2 (Proxy @(Ccn '[1,1,1,1])) ol "1230"
 prtEval2 (Proxy @(Ccn '[1,2,3])) ol "123455" -- succeeds
 -}

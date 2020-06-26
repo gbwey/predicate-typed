@@ -211,8 +211,8 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 
 instance (Refined1C ip op fmt String, Show (PP ip String)) => IsString (Refined1 ip op fmt String) where
   fromString s =
-    let (ret,mr) = eval1 @ip @op @fmt o2 s
-    in fromMaybe (error $ "Refined1(fromString):" ++ show (prt1Impl o2 ret)) mr
+    let (ret,mr) = eval1 @ip @op @fmt oa s
+    in fromMaybe (error $ "Refined1(fromString):" ++ show (prt1Impl oa ret)) mr
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined1'
@@ -268,7 +268,7 @@ instance ( Eq i
 --
 instance (Show (PP fmt (PP ip i)), ToJSON (PP fmt (PP ip i)), P fmt (PP ip i)) => ToJSON (Refined1 ip op fmt i) where
   toJSON (Refined1 x) =
-      let ss = runIdentity $ eval (Proxy @fmt) o2 x
+      let ss = runIdentity $ eval (Proxy @fmt) oa x
       in case getValAndPE ss of
            (Right b,_) -> toJSON b
            (Left e,t3) -> error $ "oops tojson failed " ++ show e ++ " t3=" ++ show t3
@@ -313,9 +313,9 @@ instance (Show ( PP fmt (PP ip i))
         ) => FromJSON (Refined1 ip op fmt i) where
   parseJSON z = do
                   i <- parseJSON @i z
-                  let (ret,mr) = eval1 @ip @op @fmt o2 i
+                  let (ret,mr) = eval1 @ip @op @fmt oa i
                   case mr of
-                    Nothing -> fail $ "Refined1:" ++ show (prt1Impl o2 ret)
+                    Nothing -> fail $ "Refined1:" ++ show (prt1Impl oa ret)
                     Just r -> return r
 
 {-
@@ -387,12 +387,12 @@ instance ( Show (PP fmt (PP ip i))
          ) => Binary (Refined1 ip op fmt i) where
   get = do
           i <- B.get @i
-          let (ret,mr) = eval1 @ip @op @fmt o2 i
+          let (ret,mr) = eval1 @ip @op @fmt oa i
           case mr of
-            Nothing -> fail $ "Refined1:" ++ show (prt1Impl o2 ret)
+            Nothing -> fail $ "Refined1:" ++ show (prt1Impl oa ret)
             Just r -> return r
   put (Refined1 x) =
-      let ss = runIdentity $ eval (Proxy @fmt) o2 x
+      let ss = runIdentity $ eval (Proxy @fmt) oa x
       in case getValAndPE ss of
            (Right b,_) -> B.put @i b
            (Left e,t3) -> error $ "oops tojson failed " ++ show e ++ " t3=" ++ show t3
@@ -776,7 +776,7 @@ prt1Impl opts v =
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", z)
              z = let w = t2 ^. root . pString
-                 in if null (dropWhile isSpace w) then "FalseP" else "{" <> w <> "}"
+                 in if all isSpace w then "FalseP" else "{" <> w <> "}"
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg m

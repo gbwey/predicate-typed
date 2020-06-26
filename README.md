@@ -36,9 +36,9 @@ data Refined p a = Refined a
 
 ### Examples of Refined (for more information see [doctests](src/Predicate/Refined.hs))
 
-* if using unix you can replace 'o2' with 'ou' to get unicode output
+* if using unix you can replace 'oa' with 'ou' to get unicode output
 * 'ol' summarises the output in one line
-* 'o2' shows the tree of output with colors
+* 'oa' shows the tree of output with colors
 
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
@@ -67,7 +67,7 @@ Left FalseP
 
 5. same as 4. above but now we get details of where it went wrong
 ```haskell
->prtRefinedIO @(ReadBase Int 16 Id >> Between 99 253 Id) o2 "000fe"
+>prtRefinedIO @(ReadBase Int 16 Id >> Between 99 253 Id) oa "000fe"
 ```
 
 6. reads in a string as time and does simple validation
@@ -138,7 +138,7 @@ Refined3 {r3In = 254, r3Out = "fe"}
 
 run this to get details in color of each evaluation step on failure:
 ```haskell
->prtEval3PIO (Proxy @Hex) o2 "0000ffe"
+>prtEval3PIO (Proxy @Hex) oa "0000ffe"
 
 *** Step 1. Success Initial Conversion(ip) [4094] ***
 
@@ -168,7 +168,7 @@ TrueT
 PresentT "fe"
 ```
 
-**_Replace '$$(refinedTH ...)' '$$(refinedTH' o2 ...)' for an evaluation tree_**
+**_Replace '$$(refinedTH ...)' '$$(refinedTH' oa ...)' for an evaluation tree_**
 
 ### Template Haskell versions
 
@@ -179,7 +179,7 @@ ex1 = $$(refinedTH "123")
 
 Refined2 and Refined3 are the most useful refinement types as you can control the input and output types (see documentation and [doctests](src/Predicate/Refined2.hs) and [doctests](src/Predicate/Refined3.hs))
 
-**_Replace '$$(refined3TH ...)' with '$$(refined3TH' o2 ...)' for a colored evaluation tree_**
+**_Replace '$$(refined3TH ...)' with '$$(refined3TH' oa ...)' for a colored evaluation tree_**
 
 ```haskell
 type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
@@ -187,11 +187,11 @@ type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
 $$(refined3TH "0000fe") :: MakeR3 Hex
 ```
 
-Here is an example where the predicate fails at compile-time and we choose to show the details using o2.
+Here is an example where the predicate fails at compile-time and we choose to show the details using oa.
 ```haskell
 >type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
 
->$$(refined3TH' o2 "000ffff") :: MakeR3 Hex
+>$$(refined3TH' oa "000ffff") :: MakeR3 Hex
 
 <interactive>:18:4: error:
     *
@@ -212,10 +212,10 @@ False 65535 <= 255
 `- P '255
 
 refined3TH: predicate failed with Step 2. False Boolean Check(op) | {65535 <= 255}
-    * In the Template Haskell splice $$(refined3TH' o2 "000ffff")
-      In the expression: $$(refined3TH' o2 "000ffff") :: MakeR3 Hex
+    * In the Template Haskell splice $$(refined3TH' oa "000ffff")
+      In the expression: $$(refined3TH' oa "000ffff") :: MakeR3 Hex
       In an equation for `it':
-          it = $$(refined3TH' o2 "000ffff") :: MakeR3 Hex
+          it = $$(refined3TH' oa "000ffff") :: MakeR3 Hex
 ```
 
 ### Any valid Read/Show instance can be used with Refined3
@@ -290,7 +290,7 @@ False True && False | {16663610 < 256}
 
 #### some more examples
 ```
->$$(refinedTH' @(Lt 3 || Gt 55) o2 44)
+>$$(refinedTH' @(Lt 3 || Gt 55) oa 44)
 
 <interactive>:21:4: error:
     *
@@ -310,19 +310,19 @@ False False || False | (44 < 3) || (44 > 55)
 
 refinedTH: predicate failed with FalseP (False || False | (44 < 3) || (44 > 55))
     * In the Template Haskell splice
-        $$(refinedTH' @(Lt 3 || Gt 55) o2 44)
-      In the expression: $$(refinedTH' @(Lt 3 || Gt 55) o2 44)
-      In an equation for `it': it = $$(refinedTH' @(Lt 3 || Gt 55) o2 44)
+        $$(refinedTH' @(Lt 3 || Gt 55) oa 44)
+      In the expression: $$(refinedTH' @(Lt 3 || Gt 55) oa 44)
+      In an equation for `it': it = $$(refinedTH' @(Lt 3 || Gt 55) oa 44)
 ```
 
 ```
->$$(refinedTH' @(Len > 7 || Elem 3 Id) o2 [1..5])
+>$$(refinedTH' @(Len > 7 || Elem 3 Id) oa [1..5])
 Refined {unRefined = [1,2,3,4,5]}
 it :: Refined ((Len > 7) || Elem 3 Id) [Int]
 ```
 
 ```
->$$(refinedTH' @(Len > 7 || Elem 7 Id) o2 [1..5])
+>$$(refinedTH' @(Len > 7 || Elem 7 Id) oa [1..5])
 
 <interactive>:26:4: error:
     *
@@ -342,15 +342,15 @@ False False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
 
 refinedTH: predicate failed with FalseP (False || False | (5 > 7) || (7 `elem` [1,2,3,4,5]))
     * In the Template Haskell splice
-        $$(refinedTH' @(Len > 7 || Elem 7 Id) o2 [1 .. 5])
+        $$(refinedTH' @(Len > 7 || Elem 7 Id) oa [1 .. 5])
       In the expression:
-        $$(refinedTH' @(Len > 7 || Elem 7 Id) o2 [1 .. 5])
+        $$(refinedTH' @(Len > 7 || Elem 7 Id) oa [1 .. 5])
       In an equation for `it':
-          it = $$(refinedTH' @(Len > 7 || Elem 7 Id) o2 [1 .. 5])
+          it = $$(refinedTH' @(Len > 7 || Elem 7 Id) oa [1 .. 5])
 ```
 
 ```
->$$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) o2 "smith")
+>$$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) oa "smith")
 
 <interactive>:30:4: error:
     *
@@ -362,20 +362,20 @@ False Re' [] (^[A-Z][a-z]+$) | smith
 
 refinedTH: predicate failed with FalseP (Re' [] (^[A-Z][a-z]+$) | smith)
     * In the Template Haskell splice
-        $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) o2 "smith")
+        $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) oa "smith")
       In the expression:
-        $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) o2 "smith")
+        $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) oa "smith")
       In an equation for `it':
-          it = $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) o2 "smith")
+          it = $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) oa "smith")
 ```
 
 ```
->$$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) o2 "Smith")
+>$$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) oa "Smith")
 Refined {unRefined = "Smith"}
 ```
 
 ```
->$$(refinedTH' @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) o2 "smith")
+>$$(refinedTH' @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) oa "smith")
 
 <interactive>:36:4: error:
     *
@@ -388,18 +388,18 @@ False expected title case:Re' [] (^[A-Z][a-z]+$) | smith
 refinedTH: predicate failed with FalseP (expected title case:Re' [] (^[A-Z][a-z]+$) | smith)
     * In the Template Haskell splice
         $$(refinedTH'
-             @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) o2 "smith")
+             @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) oa "smith")
       In the expression:
         $$(refinedTH'
-             @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) o2 "smith")
+             @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) oa "smith")
       In an equation for `it':
           it
             = $$(refinedTH'
-                   @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) o2 "smith")
+                   @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) oa "smith")
 ```
 
 ```
->$$(refinedTH' @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True) o2 "smith")
+>$$(refinedTH' @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True) oa "smith")
 
 <interactive>:52:4: error:
     *
@@ -417,17 +417,17 @@ refinedTH: predicate failed with FailP "expected title case:" ((>>) lhs failed)
     * In the Template Haskell splice
         $$(refinedTH'
              @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True)
-             o2
+             oa
              "smith")
       In the expression:
         $$(refinedTH'
              @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True)
-             o2
+             oa
              "smith")
       In an equation for `it':
           it
             = $$(refinedTH'
                    @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True)
-                   o2
+                   oa
                    "smith")
 ```

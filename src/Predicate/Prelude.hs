@@ -3969,10 +3969,10 @@ instance (Show (p a b)
         , Show (p b a)
         ) => P Swap (p a b) where
   type PP Swap (p a b) = p b a
-  eval _ opts pab =
+  eval _ opts pabx =
     let msg0 = "Swap"
-        d = swapC pab
-    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d pab) []
+        d = swapC pabx
+    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d pabx) []
 
 -- | assoc using 'AssocC'
 --

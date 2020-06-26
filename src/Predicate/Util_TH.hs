@@ -71,13 +71,13 @@ refinedTH = refinedTH' ol
 
 -- | creates a 'Refined.Refined' refinement type
 --
--- allows you to specify display options (eg 'ou' for unicode / 'o2' for ansi)
+-- allows you to specify display options (eg 'ou' for unicode / 'oa' for ansi)
 --
--- >>> $$(refinedTH' o2 123) :: Refined (Between 100 125 Id) Int
+-- >>> $$(refinedTH' oa 123) :: Refined (Between 100 125 Id) Int
 -- Refined {unRefined = 123}
 --
 -- @
--- >$$(refinedTH' o2 99) :: Refined (FailS "asdf" >> Between 100 125 Id) Int
+-- >$$(refinedTH' oa 99) :: Refined (FailS "asdf" >> Between 100 125 Id) Int
 --
 -- <interactive>:116:4: error:
 --     *
@@ -90,7 +90,7 @@ refinedTH = refinedTH' ol
 -- refinedTH: predicate failed with FailP "asdf" ((>>) lhs failed)
 --     * In the Template Haskell splice $$(refinedTH' o0 99)
 --       In the expression:
---           $$(refinedTH' o2 99) ::
+--           $$(refinedTH' oa 99) ::
 --             Refined (FailS "asdf" >> Between 100 125 Id) Int
 -- @
 --
@@ -124,13 +124,13 @@ refined1TH = refined1TH' ol
 
 -- | creates a 'Refined1.Refined1' refinement type
 --
--- allows you to specify display options (eg 'ou' for unicode / 'o2' for ansi)
+-- allows you to specify display options (eg 'ou' for unicode / 'oa' for ansi)
 --
--- >>> $$(refined1TH' o2 100) :: Refined1 Id (Between 100 125 Id) Id Int
+-- >>> $$(refined1TH' oa 100) :: Refined1 Id (Between 100 125 Id) Id Int
 -- Refined1 {unRefined1 = 100}
 --
 -- @
--- >$$(refined1TH' o2 99) :: Refined1 Id (Between 100 125 Id) Id Int
+-- >$$(refined1TH' oa 99) :: Refined1 Id (Between 100 125 Id) Id Int
 --
 -- <interactive>:127:4: error:
 --     *
@@ -149,11 +149,11 @@ refined1TH = refined1TH' ol
 -- `- P '125
 --
 -- refined1TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
---     * In the Template Haskell splice $$(refined1TH' o2 99)
+--     * In the Template Haskell splice $$(refined1TH' oa 99)
 --       In the expression:
---           $$(refined1TH' o2 99) :: Refined1 Id (Between 100 125 Id) Id Int
+--           $$(refined1TH' oa 99) :: Refined1 Id (Between 100 125 Id) Id Int
 --       In an equation for \'it\':
---           it = $$(refined1TH' o2 99) :: Refined1 Id (Between 100 125 Id) Id Int
+--           it = $$(refined1TH' oa 99) :: Refined1 Id (Between 100 125 Id) Id Int
 -- @
 --
 refined1TH' :: forall ip op fmt i
@@ -185,13 +185,13 @@ refined2TH = refined2TH' ol
 
 -- | creates a 'Refined2.Refined2' refinement type
 --
--- allows you to specify display options (eg 'ou' for unicode / 'o2' for ansi)
+-- allows you to specify display options (eg 'ou' for unicode / 'oa' for ansi)
 --
--- >>> $$(refined2TH' o2 100) :: Refined2 Id (Between 100 125 Id) Int
+-- >>> $$(refined2TH' oa 100) :: Refined2 Id (Between 100 125 Id) Int
 -- Refined2 {r2In = 100, r2Out = 100}
 --
 -- @
--- >$$(refined2TH' o2 99) :: Refined2 Id (Between 100 125 Id) Int
+-- >$$(refined2TH' oa 99) :: Refined2 Id (Between 100 125 Id) Int
 --
 -- <interactive>:127:4: error:
 --     *
@@ -210,11 +210,11 @@ refined2TH = refined2TH' ol
 -- `- P '125
 --
 -- refined2TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
---     * In the Template Haskell splice $$(refined2TH' o2 99)
+--     * In the Template Haskell splice $$(refined2TH' oa 99)
 --       In the expression:
---           $$(refined2TH' o2 99) :: Refined2 Id (Between 100 125 Id) Id Int
+--           $$(refined2TH' oa 99) :: Refined2 Id (Between 100 125 Id) Id Int
 --       In an equation for \'it\':
---           it = $$(refined2TH' o2 99) :: Refined2 Id (Between 100 125 Id) Id Int
+--           it = $$(refined2TH' oa 99) :: Refined2 Id (Between 100 125 Id) Id Int
 -- @
 --
 refined2TH' :: forall ip op i
@@ -245,13 +245,13 @@ refined3TH = refined3TH' ol
 
 -- | creates a 'Refined3.Refined3' refinement type
 --
--- allows you to specify display options (eg 'ou' for unicode / 'o2' for ansi)
+-- allows you to specify display options (eg 'ou' for unicode / 'oa' for ansi)
 --
--- >>> $$(refined3TH' o2 100) :: Refined3 Id (Between 100 125 Id) Id Int
+-- >>> $$(refined3TH' oa 100) :: Refined3 Id (Between 100 125 Id) Id Int
 -- Refined3 {r3In = 100, r3Out = 100}
 --
 -- @
--- >$$(refined3TH' o2 99) :: Refined3 Id (Between 100 125 Id) Id Int
+-- >$$(refined3TH' oa 99) :: Refined3 Id (Between 100 125 Id) Id Int
 --
 -- <interactive>:127:4: error:
 --     *
@@ -270,11 +270,11 @@ refined3TH = refined3TH' ol
 -- `- P '125
 --
 -- refined3TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
---     * In the Template Haskell splice $$(refined3TH' o2 99)
+--     * In the Template Haskell splice $$(refined3TH' oa 99)
 --       In the expression:
---           $$(refined3TH' o2 99) :: Refined3 Id (Between 100 125 Id) Id Int
+--           $$(refined3TH' oa 99) :: Refined3 Id (Between 100 125 Id) Id Int
 --       In an equation for \'it\':
---           it = $$(refined3TH' o2 99) :: Refined3 Id (Between 100 125 Id) Id Int
+--           it = $$(refined3TH' oa 99) :: Refined3 Id (Between 100 125 Id) Id Int
 -- @
 --
 refined3TH' :: forall ip op fmt i

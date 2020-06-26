@@ -210,8 +210,8 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 
 instance (Refined3C ip op fmt String, Show (PP ip String)) => IsString (Refined3 ip op fmt String) where
   fromString s =
-    let (ret,mr) = eval3 @ip @op @fmt o2 s
-    in fromMaybe (error $ "Refined3(fromString):" ++ show (prt3Impl o2 ret)) mr
+    let (ret,mr) = eval3 @ip @op @fmt oa s
+    in fromMaybe (error $ "Refined3(fromString):" ++ show (prt3Impl oa ret)) mr
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
@@ -310,9 +310,9 @@ instance (Show ( PP fmt (PP ip i))
         ) => FromJSON (Refined3 ip op fmt i) where
   parseJSON z = do
                   i <- parseJSON @i z
-                  let (ret,mr) = eval3 @ip @op @fmt o2 i
+                  let (ret,mr) = eval3 @ip @op @fmt oa i
                   case mr of
-                    Nothing -> fail $ "Refined3:" ++ show (prt3Impl o2 ret)
+                    Nothing -> fail $ "Refined3:" ++ show (prt3Impl oa ret)
                     Just r -> return r
 
 {-
@@ -383,9 +383,9 @@ instance ( Show (PP fmt (PP ip i))
          ) => Binary (Refined3 ip op fmt i) where
   get = do
           i <- B.get @i
-          let (ret,mr) = eval3 @ip @op @fmt o2 i
+          let (ret,mr) = eval3 @ip @op @fmt oa i
           case mr of
-            Nothing -> fail $ "Refined3:" ++ show (prt3Impl o2 ret)
+            Nothing -> fail $ "Refined3:" ++ show (prt3Impl oa ret)
             Just r -> return r
   put (Refined3 _ r) = B.put @i r
 
@@ -768,7 +768,7 @@ prt3Impl opts v =
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", z)
              z = let w = t2 ^. root . pString
-                 in if null (dropWhile isSpace w) then "FalseP" else "{" <> w <> "}"
+                 in if all isSpace w then "FalseP" else "{" <> w <> "}"
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg m
