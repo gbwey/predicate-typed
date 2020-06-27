@@ -303,7 +303,7 @@ mkNodeB :: POpts -> Bool -> String -> [Holder] -> TT Bool
 mkNodeB opts b = mkNode opts (bool FalseT TrueT b)
 
 mkNodeSkipP :: Tree PE
-mkNodeSkipP = Node (PE TrueP ("skipped PP ip i = Id")) []
+mkNodeSkipP = Node (PE TrueP "skipped PP ip i = Id") []
 
 getValAndPE :: TT a -> (Either String a, Tree PE)
 getValAndPE tt = (getValLRFromTT tt, fromTT tt)

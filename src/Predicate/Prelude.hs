@@ -4495,7 +4495,7 @@ data FMapFst
 
 instance Functor f => P FMapFst (f (a,x)) where
   type PP FMapFst (f (a,x)) = f a
-  eval _ opts mb = pure $ mkNode opts (PresentT (fst <$> mb)) ("FMapFst") []
+  eval _ opts mb = pure $ mkNode opts (PresentT (fst <$> mb)) "FMapFst" []
 
 -- | similar to fmap snd
 --
@@ -4507,7 +4507,7 @@ data FMapSnd
 
 instance Functor f => P FMapSnd (f (x,a)) where
   type PP FMapSnd (f (x,a)) = f a
-  eval _ opts mb = pure $ mkNode opts (PresentT (snd <$> mb)) ("FMapSnd") []
+  eval _ opts mb = pure $ mkNode opts (PresentT (snd <$> mb)) "FMapSnd" []
 
 -- | takes the head or default of a list-like object
 --
@@ -5334,7 +5334,7 @@ data ProxyT' t
 instance P (ProxyT' t) x where
   type PP (ProxyT' t) x = Proxy (PP t x)
   eval _ opts _ =
-    pure $ mkNode opts (PresentT Proxy) ("ProxyT") []
+    pure $ mkNode opts (PresentT Proxy) "ProxyT" []
 
 data ProxyT (t :: Type)
 type ProxyTT (t :: Type) = ProxyT' (Hole t)
@@ -6158,7 +6158,7 @@ instance Show a => P Pairs [a] where
                [_] -> Left (msg0 <> " only one element found")
                _:bs@(_:_) -> Right (zip as bs)
     in pure $ case lr of
-         Left e -> mkNode opts (FailT e) (e) []
+         Left e -> mkNode opts (FailT e) e []
          Right zs -> mkNode opts (PresentT zs) (show01 opts msg0 zs as ) []
 
 
@@ -6777,7 +6777,7 @@ instance (PP prt (Int, a) ~ String
                       Right msgx -> mkNodeB opts False (msgbase1 <> " [" <> msgx <> "] " <> topMessage pp) (hh pp : [hh qq | isVerbose opts])
                  Right True ->
                    if pos == 0 then -- we are at the bottom of the tree
-                      pure $ mkNodeB opts True (msgbase2) [hh pp]
+                      pure $ mkNodeB opts True msgbase2 [hh pp]
                    else do
                      ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
                      pure $ case getValueLRHide opts (msgbase1 <> " ok | rhs failed") ss [hh pp] of
