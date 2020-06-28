@@ -34,7 +34,6 @@ module Predicate.Util (
   , tForest
   , fixBoolT
   , topMessage
-  , topMessage'
   , hasNoTree
 
  -- ** BoolT
@@ -995,14 +994,8 @@ prtTreePure opts t
   | hasNoTree opts = showBoolP opts (t ^. root . pBool)
   | otherwise = showImpl opts $ fmap (toNodeString opts) t
 
-topMessage' :: TT a -> String
-topMessage' pp = innermost (pp ^. tString)
-
 topMessage :: TT a -> String
 topMessage pp =  "(" <> (pp ^. tString) <> ")"
-
-innermost :: String -> String
-innermost = ('{':) . reverse . ('}':) . takeWhile (/='{') . dropWhile (=='}') . reverse
 
 showImpl :: POpts -> Tree String -> String
 showImpl o =

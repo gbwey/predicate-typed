@@ -6785,7 +6785,12 @@ instance (Show (PP p a)
         qq <- eval (Proxy @q) opts p
         pure $ case getValueLRHide opts (show p <> " (>>) rhs failed") qq [hh pp] of
           Left e -> e
-          Right q -> mkNode opts (_tBool qq) (lit01 opts msg0 q (topMessage' qq)) [hh pp, hh qq]
+          Right q -> mkNode opts (_tBool qq) (lit01 opts msg0 q (topMessageEgregious qq)) [hh pp, hh qq]
+
+-- bearbeiten! only used by >>
+topMessageEgregious :: TT a -> String
+topMessageEgregious pp = innermost (pp ^. tString)
+  where innermost = ('{':) . reverse . ('}':) . takeWhile (/='{') . dropWhile (=='}') . reverse
 
 data p << q
 type LeftArrowsT p q = q >> p
