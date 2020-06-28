@@ -344,7 +344,7 @@ withRefined2TIO opts = (>>=) . newRefined2TIO @_ @ip @op @i opts
 --
 -- this example fails as the the hex value is out of range
 --
--- >>> prtRefinedTIO $ withRefined2T @(ReadBase Int 16 Id) @(Between 100 200 Id) o0 "a388" $ \x -> withRefined2T @(ReadBase Int 2 Id) @'True o0 "1001110111" $ \y -> pure (x,y)
+-- >>> prtRefinedTIO $ withRefined2T @(ReadBase Int 16 Id) @(Between 100 200 Id) oan "a388" $ \x -> withRefined2T @(ReadBase Int 2 Id) @'True oan "1001110111" $ \y -> pure (x,y)
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [41864] ***
 -- <BLANKLINE>

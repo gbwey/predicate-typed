@@ -75,7 +75,7 @@ module Predicate.Util (
   , defOpts
   , oz
   , ol
-  , o0
+  , oan
   , oa
   , oab
   , ou
@@ -448,17 +448,17 @@ data ODebug =
      | OVerbose -- ^ outputs the entire evaluation tree
      deriving (Ord, Show, Eq, Enum, Bounded)
 
--- | minimal data without colors
+-- | no data ie zero
 oz :: POpts
 oz = defOpts { oColor = nocolor, oDebug = OZero }
 
--- | returns the summary without colors
+-- | returns the summary without colors ie lite
 ol :: POpts
 ol = defOpts { oColor = nocolor, oDebug = OLite }
 
 -- | displays the detailed evaluation tree without colors.
-o0 :: POpts
-o0 = defOpts { oColor = nocolor }
+oan :: POpts
+oan = defOpts { oColor = nocolor }
 
 -- | displays the detailed evaluation tree using colors.
 oa :: POpts

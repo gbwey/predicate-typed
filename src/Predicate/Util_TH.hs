@@ -88,7 +88,7 @@ refinedTH = refinedTH' ol
 --    `- P 'asdf
 --
 -- refinedTH: predicate failed with FailP "asdf" ((>>) lhs failed)
---     * In the Template Haskell splice $$(refinedTH' o0 99)
+--     * In the Template Haskell splice $$(refinedTH' oan 99)
 --       In the expression:
 --           $$(refinedTH' oa 99) ::
 --             Refined (FailS "asdf" >> Between 100 125 Id) Int

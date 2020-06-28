@@ -123,11 +123,9 @@ import Data.Time
 -- Right (Refined3 {r3In = [1,2,3,4,5,6,7,8,9,0,3], r3Out = "1234-5678-903"})
 --
 -- >>> pz @(Ccip >> Ccop 11) "79927398713"
--- True
 -- TrueT
 --
 -- >>> pz @(Ccip >> Ccop 10) "79927398713"
--- Error expected 10 digits but found 11
 -- FailT "expected 10 digits but found 11"
 --
 
@@ -306,7 +304,7 @@ datetimen = mkProxy3'
 -- >>> prtEval3P (between @10 @16) oz 17
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P (between @10 @16) o0 17
+-- >>> prtEval3P (between @10 @16) oan 17
 -- Left Step 2. False Boolean Check(op) | {17 <= 16}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [17] ***

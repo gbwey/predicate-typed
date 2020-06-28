@@ -94,11 +94,9 @@ import Data.Proxy
 -- Right (Refined2 {r2In = [1,2,3,4,5,6,7,8,9,0,3], r2Out = "1234-5678-903"})
 --
 -- >>> pz @(Ccip >> Ccop 11) "79927398713"
--- True
 -- TrueT
 --
 -- >>> pz @(Ccip >> Ccop 10) "79927398713"
--- Error expected 10 digits but found 11
 -- FailT "expected 10 digits but found 11"
 --
 type Ccn (n :: Nat) = '(Ccip, Ccop n, String)

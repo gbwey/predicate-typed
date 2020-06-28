@@ -16,6 +16,7 @@ dependencies:
 - aeson
 - binary
 - bytestring
+- chimera >= 0.3.1.0
 - comonad
 - containers
 - deepseq

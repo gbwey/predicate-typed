@@ -75,7 +75,6 @@ evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) ol i))
 -- | identity function
 --
 -- >>> pz @I 23
--- Present 23
 -- PresentT 23
 data I
 instance P I a where
@@ -90,7 +89,6 @@ instance P I a where
 -- even more constraints than 'I' so we might need to add explicit type signatures
 --
 -- >>> pz @Id 23
--- Present 23
 -- PresentT 23
 data Id
 instance Show a => P Id a where
@@ -104,7 +102,6 @@ instance Show a => P Id a where
 -- | identity function that also displays the type information for debugging
 --
 -- >>> pz @IdT 23
--- Present 23
 -- PresentT 23
 data IdT
 instance (Typeable a, Show a) => P IdT a where
@@ -117,11 +114,9 @@ instance (Typeable a, Show a) => P IdT a where
 -- | transparent predicate wrapper to make k of kind 'Type' so it can be in a promoted list (cant mix kinds) see 'Predicate.Core.Do'
 --
 -- >>> pz @'[W 123, Id] 99
--- Present [123,99]
 -- PresentT [123,99]
 --
 -- >>> pz @'[W "abc", W "def", Id, Id] "ghi"
--- Present ["abc","def","ghi","ghi"]
 -- PresentT ["abc","def","ghi","ghi"]
 --
 data W (p :: k)
@@ -155,7 +150,6 @@ instance (P prt a
 -- | 'const' () function
 --
 -- >>> pz @() "Asf"
--- Present ()
 -- PresentT ()
 --
 instance P () a where
@@ -176,11 +170,9 @@ instance P (Proxy t) a where
 -- | pulls the type level 'Bool' to the value level
 --
 -- >>> pz @'True "not used"
--- True
 -- TrueT
 --
 -- >>> pz @'False ()
--- False
 -- FalseT
 instance GetBool b => P (b :: Bool) a where
   type PP b a = Bool
@@ -191,7 +183,6 @@ instance GetBool b => P (b :: Bool) a where
 -- | pulls the type level 'Symbol' to the value level as a 'GHC.Base.String'
 --
 -- >>> pz @"hello world" ()
--- Present "hello world"
 -- PresentT "hello world"
 instance KnownSymbol s => P (s :: Symbol) a where
   type PP s a = String
@@ -202,7 +193,6 @@ instance KnownSymbol s => P (s :: Symbol) a where
 -- | run the predicates in a promoted 2-tuple; similar to 'Control.Arrow.&&&'
 --
 -- >>> pz @'(Id, 4) "hello"
--- Present ("hello",4)
 -- PresentT ("hello",4)
 --
 instance (P p a, P q a) => P '(p,q) a where
@@ -218,7 +208,6 @@ instance (P p a, P q a) => P '(p,q) a where
 -- | run the predicates in a promoted 3-tuple
 --
 -- >>> pz @'(4, Id, "goodbye") "hello"
--- Present (4,"hello","goodbye")
 -- PresentT (4,"hello","goodbye")
 --
 -- >>> pan @'( 'True, 'False, 123) True
@@ -253,7 +242,6 @@ instance (P p a
 -- | run the predicates in a promoted 4-tuple
 --
 -- >>> pz @'(4, Id, "inj", 999) "hello"
--- Present (4,"hello","inj",999)
 -- PresentT (4,"hello","inj",999)
 --
 instance (P p a
@@ -279,7 +267,6 @@ instance (P p a
 -- | run the predicates in a promoted 5-tuple
 --
 -- >>> pz @'(4, Id, "inj", 999, 'LT) "hello"
--- Present (4,"hello","inj",999,LT)
 -- PresentT (4,"hello","inj",999,LT)
 --
 instance (P p a
@@ -311,7 +298,6 @@ instance (P p a
 -- | run the predicates in a promoted 6-tuple
 --
 -- >>> pz @'(4, Id, "inj", 999, 'LT, 1) "hello"
--- Present (4,"hello","inj",999,LT,1)
 -- PresentT (4,"hello","inj",999,LT,1)
 --
 instance (P p a
@@ -344,7 +330,6 @@ instance (P p a
 -- | run the predicates in a promoted 7-tuple
 --
 -- >>> pz @'(4, Id, "inj", 999, 'LT, 1, 2) "hello"
--- Present (4,"hello","inj",999,LT,1,2)
 -- PresentT (4,"hello","inj",999,LT,1,2)
 --
 instance (P p a
@@ -383,7 +368,6 @@ instance (P p a
 -- | run the predicates in a promoted 8-tuple
 --
 -- >>> pz @'(4, Id, "inj", 999, 'LT, 1, 2, 3) "hello"
--- Present (4,"hello","inj",999,LT,1,2,3)
 -- PresentT (4,"hello","inj",999,LT,1,2,3)
 --
 instance (P p a
@@ -424,11 +408,9 @@ instance (P p a
 -- | extracts the value level representation of the promoted 'Ordering'
 --
 -- >>> pz @'LT "not used"
--- Present LT
 -- PresentT LT
 --
 -- >>> pz @'EQ ()
--- Present EQ
 -- PresentT EQ
 instance GetOrdering cmp => P (cmp :: Ordering) a where
   type PP cmp a = Ordering
@@ -440,7 +422,6 @@ instance GetOrdering cmp => P (cmp :: Ordering) a where
 -- | extracts the value level representation of the type level 'Nat'
 --
 -- >>> pz @123 ()
--- Present 123
 -- PresentT 123
 instance KnownNat n => P (n :: Nat) a where
   type PP n a = Int
@@ -451,7 +432,6 @@ instance KnownNat n => P (n :: Nat) a where
 -- | extracts the value level representation of the type level '()
 --
 -- >>> pz @'() ()
--- Present ()
 -- PresentT ()
 instance P '() a where
   type PP '() a = ()
@@ -462,7 +442,6 @@ instance P '() a where
 -- | extracts the value level representation of the type level '[]
 --
 -- >>> pz @'[] False
--- Present []
 -- PresentT []
 instance P ('[] :: [k]) a where
   type PP ('[] :: [k]) a = [a]
@@ -471,11 +450,9 @@ instance P ('[] :: [k]) a where
 -- | runs each predicate in turn from the promoted list
 --
 -- >>> pz @'[1, 2, 3] 999
--- Present [1,2,3]
 -- PresentT [1,2,3]
 --
 -- >>> pz @'[W 1, W 2, W 3, Id] 999
--- Present [1,2,3,999]
 -- PresentT [1,2,3,999]
 --
 instance (Show (PP p a), Show a, P p a) => P '[p] a where
@@ -508,15 +485,12 @@ instance (Show (PP p a)
 -- | extracts the \'a\' from type level \'Maybe a\' if the value exists
 --
 -- >>> pz @('Just Id) (Just 123)
--- Present 123
 -- PresentT 123
 --
 -- >>> pz @('Just Id) (Just True)
--- Present True
 -- PresentT True
 --
 -- >>> pz @('Just Id) Nothing
--- Error 'Just found Nothing
 -- FailT "'Just found Nothing"
 --
 instance (Show (PP p a)
@@ -538,11 +512,9 @@ instance (Show (PP p a)
 -- if the value is Nothing then it returns \'Proxy a\' as this provides more information than '()'
 --
 -- >>> pz @'Nothing Nothing
--- Present Proxy
 -- PresentT Proxy
 --
 -- >>> pz @'Nothing (Just True)
--- Error 'Nothing found Just
 -- FailT "'Nothing found Just"
 --
 instance P 'Nothing (Maybe a) where
@@ -557,11 +529,9 @@ instance P 'Nothing (Maybe a) where
 -- | extracts the \'a\' from type level \'Either a b\' if the value exists
 --
 -- >>> pz @('Left Id) (Left 123)
--- Present 123
 -- PresentT 123
 --
 -- >>> pz @('Left Id) (Right "aaa")
--- Error 'Left found Right
 -- FailT "'Left found Right"
 --
 instance (Show a
@@ -582,11 +552,9 @@ instance (Show a
 -- | extracts the \'b\' from type level \'Either a b\' if the value exists
 --
 -- >>> pz @('Right Id) (Right 123)
--- Present 123
 -- PresentT 123
 --
 -- >>> pz @('Right Id) (Left "aaa")
--- Error 'Right found Left
 -- FailT "'Right found Left"
 --
 instance (Show a
@@ -609,15 +577,12 @@ instance (Show a
 -- | extracts the \'a\' from type level \'These a b\' if the value exists
 --
 -- >>> pz @('This Id) (This 123)
--- Present 123
 -- PresentT 123
 --
 -- >>> pz @('This Id) (That "aaa")
--- Error 'This found That
 -- FailT "'This found That"
 --
 -- >>> pz @('This Id) (These 999 "aaa")
--- Error 'This found These
 -- FailT "'This found These"
 --
 instance (Show a
@@ -638,15 +603,12 @@ instance (Show a
 -- | extracts the \'b\' from type level \'These a b\' if the value exists
 --
 -- >>> pz @('That Id) (That 123)
--- Present 123
 -- PresentT 123
 --
 -- >>> pz @('That Id) (This "aaa")
--- Error 'That found This
 -- FailT "'That found This"
 --
 -- >>> pz @('That Id) (These 44 "aaa")
--- Error 'That found These
 -- FailT "'That found These"
 --
 instance (Show a
@@ -668,19 +630,15 @@ instance (Show a
 -- | extracts the (a,b) from type level 'These a b' if the value exists
 --
 -- >>> pz @('These Id Id) (These 123 "abc")
--- Present (123,"abc")
 -- PresentT (123,"abc")
 --
 -- >>> pz @('These Id 5) (These 123 "abcde")
--- Present (123,5)
 -- PresentT (123,5)
 --
 -- >>> pz @('These Id Id) (This "aaa")
--- Error 'These found This
 -- FailT "'These found This"
 --
 -- >>> pz @('These Id Id) (That "aaa")
--- Error 'These found That
 -- FailT "'These found That"
 --
 instance (Show a
@@ -710,7 +668,6 @@ instance (Show a
 -- | converts the value to the corresponding 'Proxy'
 --
 -- >>> pz @'Proxy 'x'
--- Present Proxy
 -- PresentT Proxy
 --
 instance Show a => P 'Proxy a where
@@ -729,7 +686,7 @@ with h = peWith @p (reifyOpts h)
 
 pan, pa, pu, pl, pz, pab, pub :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
 -- | displays the evaluation tree in plain text without colors
-pan  = peWith @p o0
+pan  = peWith @p oan
 -- | displays the evaluation tree using colors without background colors
 pa = peWith @p oa
 -- | displays the evaluation tree using background colors
@@ -762,15 +719,17 @@ peWith opts a = do
 prtTreeX :: Show x => POpts -> TT x -> String
 prtTreeX opts pp =
   let r = pp ^. tBool
-  in if hasNoTree opts then
-      let f = colorMe opts (r ^. boolT2P)
-          tm = if oDebug opts == OZero then "" else topMessage pp
-      in (<>"\n") $ case r of
-           FailT e -> f "Error" <> " " <> e
-           TrueT -> f "True" <> " " <> tm
-           FalseT -> f "False" <> " " <> tm
-           PresentT x -> f "Present" <> " " <> show x <> " " <> tm
-    else prtTreePure opts (fromTT pp)
+  in case (hasNoTree opts, oDebug opts) of
+       (True,OZero) -> ""
+       (True,_) ->
+          let f = colorMe opts (r ^. boolT2P)
+              tm = if oDebug opts == OZero then "" else topMessage pp
+          in (<>"\n") $ case r of
+               FailT e -> f "Error" <> " " <> e
+               TrueT -> f "True" <> " " <> tm
+               FalseT -> f "False" <> " " <> tm
+               PresentT x -> f "Present" <> " " <> show x <> " " <> tm
+       (False,_) -> prtTreePure opts (fromTT pp)
 
 runPQ :: (P p a, P q a, MonadEval m)
    => String

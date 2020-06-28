@@ -155,6 +155,9 @@ module Predicate.Prelude (
   , QuotRem
   , Quot
   , Rem
+  , LogBase
+  , type (^)
+  , type (**)
 
   -- *** rational numbers
   , type (%)
@@ -532,6 +535,7 @@ module Predicate.Prelude (
   -- ** miscellaneous
   , Both
   , Prime
+  , PrimeNext
   , Luhn
   , Char1
  ) where
@@ -580,6 +584,7 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
+import qualified Data.Chimera as Chimera
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -598,15 +603,12 @@ import qualified Data.Text.Lazy as TL
 -- TrueT
 --
 -- >>> pz @Asc [1,2,3,4,5,5,7]
--- True
 -- TrueT
 --
 -- >>> pz @Asc' [1,2,3,4,5,5,7]
--- False
 -- FalseT
 --
 -- >>> pz @Asc "axacdef"
--- False
 -- FalseT
 --
 
@@ -649,11 +651,9 @@ instance P DescT' x => P Desc' x where
 -- | A predicate that determines if the value is between \'p\' and \'q\'
 --
 -- >>> pz @(Between 5 8 Len) [1,2,3,4,5,5,7]
--- True
 -- TrueT
 --
 -- >>> pz @(5 <..> 8) 6
--- True
 -- TrueT
 --
 -- >>> pl @(Between 5 8 Id) 9
@@ -661,11 +661,9 @@ instance P DescT' x => P Desc' x where
 -- FalseT
 --
 -- >>> pz @(10 % 4 <..> 40 % 5) 4
--- True
 -- TrueT
 --
 -- >>> pz @(10 % 4 <..> 40 % 5) 33
--- False
 -- FalseT
 --
 data Between p q r -- reify as it is used a lot! nicer specific messages at the top level!
@@ -766,11 +764,9 @@ instance (PP p x ~ (a,a')
 -- FalseT
 --
 -- >>> pz @(All Odd Id) [1,5,11,5,3]
--- True
 -- TrueT
 --
 -- >>> pz @(All Odd Id) []
--- True
 -- TrueT
 --
 -- >>> pan @(All Even Id) [1,5,11,5,3]
@@ -878,7 +874,6 @@ showIndex i = show (i+0)
 -- TrueT
 --
 -- >>> pz @(Any Even Id) []
--- False
 -- FalseT
 --
 data Any p q
@@ -915,19 +910,15 @@ instance (P p a
 -- | a type level predicate for all positive elements in a list
 --
 -- >>> pz @AllPositive [1,5,10,2,3]
--- True
 -- TrueT
 --
 -- >>> pz @AllPositive [0,1,5,10,2,3]
--- False
 -- FalseT
 --
 -- >>> pz @AllPositive [3,1,-5,10,2,3]
--- False
 -- FalseT
 --
 -- >>> pz @AllNegative [-1,-5,-10,-2,-3]
--- True
 -- TrueT
 --
 data AllPositive
@@ -953,7 +944,6 @@ type Negative = Lt 0
 -- | 'unzip' equivalent
 --
 -- >>> pz @Unzip (zip [1..5] "abcd")
--- Present ([1,2,3,4],"abcd")
 -- PresentT ([1,2,3,4],"abcd")
 --
 data Unzip
@@ -967,7 +957,6 @@ instance P UnzipT x => P Unzip x where
 -- | 'unzip3' equivalent
 --
 -- >>> pz @Unzip3 (zip3 [1..5] "abcd" (cycle [True,False]))
--- Present ([1,2,3,4],"abcd",[True,False,True,False])
 -- PresentT ([1,2,3,4],"abcd",[True,False,True,False])
 --
 data Unzip3
@@ -982,7 +971,6 @@ instance P Unzip3T x => P Unzip3 x where
 -- evaluates 'Re' and returns True if there is a match
 --
 -- >>> pz @(Re "^\\d{2}:\\d{2}:\\d{2}$" Id) "13:05:25"
--- True
 -- TrueT
 --
 data Re' (rs :: [ROpt]) p q
@@ -1025,11 +1013,9 @@ instance P (ReT p q) x => P (Re p q) x where
 -- | runs a regex matcher returning the original values and optionally any groups
 --
 -- >>> pz @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
--- Present [("13:05:25",["13","05","25"])]
 -- PresentT [("13:05:25",["13","05","25"])]
 --
 -- >>> pz @(Rescan (Snd Id) "13:05:25") ('a',"^(\\d{2}):(\\d{2}):(\\d{2})$")
--- Present [("13:05:25",["13","05","25"])]
 -- PresentT [("13:05:25",["13","05","25"])]
 --
 data Rescan' (rs :: [ROpt]) p q
@@ -1070,7 +1056,6 @@ instance P (RescanT p q) x => P (Rescan p q) x where
 -- | similar to 'Rescan' but gives the column start and ending positions instead of values
 --
 -- >>> pz @(RescanRanges "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
--- Present [((0,8),[(0,2),(3,5),(6,8)])]
 -- PresentT [((0,8),[(0,2),(3,5),(6,8)])]
 --
 data RescanRanges' (rs :: [ROpt]) p q
@@ -1110,11 +1095,9 @@ instance P (RescanRangesT p q) x => P (RescanRanges p q) x where
 -- | splits a string on a regex delimiter
 --
 -- >>> pz @(Resplit "\\." Id) "141.201.1.22"
--- Present ["141","201","1","22"]
 -- PresentT ["141","201","1","22"]
 --
 -- >>> pz @(Resplit (Singleton (Fst Id)) (Snd Id)) (':', "12:13:1")
--- Present ["12","13","1"]
 -- PresentT ["12","13","1"]
 --
 -- >>> pl @(Resplit' '[ 'Caseless ] "aBc" Id) "123AbC456abc"
@@ -1162,7 +1145,6 @@ _MX = 100
 -- | replaces regex \'s\' with a string \'s1\' inside the value
 --
 -- >>> pz @(ReplaceAllString "\\." ":" Id) "141.201.1.22"
--- Present "141:201:1:22"
 -- PresentT "141:201:1:22"
 --
 data ReplaceImpl (alle :: Bool) (rs :: [ROpt]) p q r
@@ -1318,7 +1300,6 @@ instance (PP p x ~ (String -> [String] -> String)
 --
 -- >>> :m + Text.Show.Functions
 -- >>> pz @(ReplaceAll "\\." (ReplaceFn2 (Fst Id)) (Snd Id)) (\x -> x <> ":" <> x, "141.201.1.22")
--- Present "141.:.201.:.1.:.22"
 -- PresentT "141.:.201.:.1.:.22"
 --
 data ReplaceFn2 p
@@ -1340,7 +1321,6 @@ instance (PP p x ~ (String -> String)
 --
 -- >>> :m + Text.Show.Functions
 -- >>> pz @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (ReplaceFn3 (Fst Id)) (Snd Id)) (\ys -> intercalate  " | " $ map (show . succ . readNote @Int "invalid int") ys, "141.201.1.22")
--- Present "142 | 202 | 2 | 23"
 -- PresentT "142 | 202 | 2 | 23"
 --
 data ReplaceFn3 p
@@ -1359,31 +1339,24 @@ instance (PP p x ~ ([String] -> String)
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
 -- >>> pz @IsSpace '\t'
--- True
 -- TrueT
 --
 -- >>> pz @IsSpace ' '
--- True
 -- TrueT
 --
 -- >>> pz @IsSpace 'x'
--- False
 -- FalseT
 --
 -- >>> pz @IsLower 'a'
--- True
 -- TrueT
 --
 -- >>> pz @IsLower 'X'
--- False
 -- FalseT
 --
 -- >>> pz @IsHexDigit 'A'
--- True
 -- TrueT
 --
 -- >>> pz @IsHexDigit 'g'
--- False
 -- FalseT
 --
 data IsCharSet (cs :: CharSet)
@@ -1399,15 +1372,12 @@ instance (x ~ Char, GetCharSet cs) => P (IsCharSet cs) x where
 -- | predicate for determining if a character is lowercase
 --
 -- >>> pz @IsLower '1'
--- False
 -- FalseT
 --
 -- >>> pz @IsLower 'a'
--- True
 -- TrueT
 --
 -- >>> pz @(Map '(IsControl, IsLatin1, IsHexDigit, IsOctDigit, IsDigit, IsPunctuation, IsSeparator, IsSpace) Id) "abc134"
--- Present [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
 -- PresentT [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
 --
 data IsLower
@@ -1427,11 +1397,9 @@ instance P IsUpperT x => P IsUpper x where
 -- | predicate for determining if the character is a digit
 --
 -- >>> pz @IsDigit 'g'
--- False
 -- FalseT
 --
 -- >>> pz @IsDigit '9'
--- True
 -- TrueT
 --
 data IsDigit
@@ -1487,41 +1455,32 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
 -- >>> pz @IsLowerAll "abc"
--- True
 -- TrueT
 --
 -- >>> pz @IsLowerAll "abcX"
--- False
 -- FalseT
 --
 -- >>> pz @IsLowerAll (T.pack "abcX")
--- False
 -- FalseT
 --
 -- >>> pz @IsHexDigitAll "01efA"
--- True
 -- TrueT
 --
 -- >>> pz @IsHexDigitAll "01egfA"
--- False
 -- FalseT
 --
 -- | predicate for determining if a string is all lowercase
 --
 -- >>> pz @IsLowerAll "abcdef213"
--- False
 -- FalseT
 --
 -- >>> pz @IsLowerAll "abcdef"
--- True
 -- TrueT
 --
 -- >>> pz @IsLowerAll ""
--- True
 -- TrueT
 --
 -- >>> pz @IsLowerAll "abcdefG"
--- False
 -- FalseT
 --
 -- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "AbcdE"
@@ -1541,7 +1500,6 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- TrueT
 --
 -- >>> pz @( '(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsDigitAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll ) ) "abc134"
--- Present (False,True,True,False,False,False,False,False)
 -- PresentT (False,True,True,False,False,False,False,False)
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> Para '[IsLowerAll, IsDigitAll, IsUpperAll ]) "abdefghi"
@@ -1625,11 +1583,9 @@ instance P IsUpperAllT x => P IsUpperAll x where
 -- | predicate for determining if the string is all digits
 --
 -- >>> pz @IsDigitAll "213G"
--- False
 -- FalseT
 --
 -- >>> pz @IsDigitAll "929"
--- True
 -- TrueT
 --
 data IsDigitAll
@@ -1641,15 +1597,12 @@ instance P IsDigitAllT x => P IsDigitAll x where
 -- | predicate for determining if the string is all spaces
 --
 -- >>> pz @IsSpaceAll "213G"
--- False
 -- FalseT
 --
 -- >>> pz @IsSpaceAll "    "
--- True
 -- TrueT
 --
 -- >>> pz @IsSpaceAll ""
--- True
 -- TrueT
 --
 data IsSpaceAll
@@ -1698,7 +1651,6 @@ instance P IsLatin1AllT x => P IsLatin1All x where
 -- | converts a string 'Data.Text.Lens.IsText' value to lower case
 --
 -- >>> pz @ToLower "HeLlO wOrld!"
--- Present "hello world!"
 -- PresentT "hello world!"
 --
 data ToLower
@@ -1713,7 +1665,6 @@ instance (Show a, TL.IsText a) => P ToLower a where
 -- | converts a string 'Data.Text.Lens.IsText' value to upper case
 --
 -- >>> pz @ToUpper "HeLlO wOrld!"
--- Present "HELLO WORLD!"
 -- PresentT "HELLO WORLD!"
 --
 data ToUpper
@@ -1729,11 +1680,9 @@ instance (Show a, TL.IsText a) => P ToUpper a where
 -- | similar to 'Data.List.inits'
 --
 -- >>> pz @Inits [4,8,3,9]
--- Present [[],[4],[4,8],[4,8,3],[4,8,3,9]]
 -- PresentT [[],[4],[4,8],[4,8,3],[4,8,3,9]]
 --
 -- >>> pz @Inits []
--- Present [[]]
 -- PresentT [[]]
 --
 data Inits
@@ -1748,11 +1697,9 @@ instance ([a] ~ x, Show a) => P Inits x where
 -- | similar to 'Data.List.tails'
 --
 -- >>> pz @Tails [4,8,3,9]
--- Present [[4,8,3,9],[8,3,9],[3,9],[9],[]]
 -- PresentT [[4,8,3,9],[8,3,9],[3,9],[9],[]]
 --
 -- >>> pz @Tails []
--- Present [[]]
 -- PresentT [[]]
 --
 data Tails
@@ -1767,11 +1714,9 @@ instance ([a] ~ x, Show a) => P Tails x where
 -- | split a list into single values
 --
 -- >>> pz @(Ones Id) [4,8,3,9]
--- Present [[4],[8],[3],[9]]
 -- PresentT [[4],[8],[3],[9]]
 --
 -- >>> pz @(Ones Id) []
--- Present []
 -- PresentT []
 --
 data Ones p
@@ -1796,15 +1741,12 @@ instance ( PP p x ~ [a]
 -- | similar to 'show'
 --
 -- >>> pz @(ShowP Id) [4,8,3,9]
--- Present "[4,8,3,9]"
 -- PresentT "[4,8,3,9]"
 --
 -- >>> pz @(ShowP Id) 'x'
--- Present "'x'"
 -- PresentT "'x'"
 --
 -- >>> pz @(ShowP (42 -% 10)) 'x'
--- Present "(-21) % 5"
 -- PresentT "(-21) % 5"
 --
 data ShowP p
@@ -1824,11 +1766,9 @@ instance (Show (PP p x), P p x) => P (ShowP p) x where
 -- similar to 'Data.Time.formatTime' using a type level 'Symbol' to get the formatting string
 --
 -- >>> pz @(FormatTimeP "%F %T" Id) (readNote @LocalTime "invalid localtime" "2019-05-24 05:19:59")
--- Present "2019-05-24 05:19:59"
 -- PresentT "2019-05-24 05:19:59"
 --
 -- >>> pz @(FormatTimeP (Fst Id) (Snd Id)) ("the date is %d/%m/%Y", readNote @Day "invalid day" "2019-05-24")
--- Present "the date is 24/05/2019"
 -- PresentT "the date is 24/05/2019"
 --
 data FormatTimeP p q
@@ -1853,11 +1793,9 @@ instance (PP p x ~ String
 -- | similar to 'Data.Time.parseTimeM' where \'t\' is the 'Data.Time.ParseTime' type, \'p\' is the datetime format and \'q\' points to the content to parse
 --
 -- >>> pz @(ParseTimeP LocalTime "%F %T" Id) "2019-05-24 05:19:59"
--- Present 2019-05-24 05:19:59
 -- PresentT 2019-05-24 05:19:59
 --
 -- >>> pz @(ParseTimeP LocalTime "%F %T" "2019-05-24 05:19:59") (Right "never used")
--- Present 2019-05-24 05:19:59
 -- PresentT 2019-05-24 05:19:59
 --
 -- keeping \'q\' as we might want to extract from a tuple
@@ -1895,11 +1833,9 @@ instance P (ParseTimePT t p q) x => P (ParseTimeP t p q) x where
 -- | A convenience method to match against many different datetime formats to find a match
 --
 -- >>> pz @(ParseTimes LocalTime '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"] "03/11/19 01:22:33") ()
--- Present 2019-03-11 01:22:33
 -- PresentT 2019-03-11 01:22:33
 --
 -- >>> pz @(ParseTimes LocalTime (Fst Id) (Snd Id)) (["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"], "03/11/19 01:22:33")
--- Present 2019-03-11 01:22:33
 -- PresentT 2019-03-11 01:22:33
 --
 data ParseTimes' t p q
@@ -1937,15 +1873,12 @@ instance P (ParseTimesT t p q) x => P (ParseTimes t p q) x where
 -- | create a 'Day' from three int values passed in as year month and day
 --
 -- >>> pz @MkDay (2019,12,30)
--- Present Just (2019-12-30,1,1)
 -- PresentT (Just (2019-12-30,1,1))
 --
 -- >>> pz @(MkDay' (Fst Id) (Snd Id) (Thd Id)) (2019,99,99999)
--- Present Nothing
 -- PresentT Nothing
 --
 -- >>> pz @MkDay (1999,3,13)
--- Present Just (1999-03-13,10,6)
 -- PresentT (Just (1999-03-13,10,6))
 --
 data MkDay' p q r
@@ -1985,7 +1918,6 @@ instance P MkDayT x => P MkDay x where
 -- | uncreate a 'Day' returning year month and day
 --
 -- >>> pz @(UnMkDay Id) (readNote "invalid day" "2019-12-30")
--- Present (2019,12,30)
 -- PresentT (2019,12,30)
 --
 data UnMkDay p
@@ -2000,20 +1932,17 @@ instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
       Right p ->
         let (fromIntegral -> y, m, d) = toGregorian p
             b = (y, m, d)
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) []
+        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
 -- | uses the 'Read' of the given type \'t\' and \'p\' which points to the content to read
 --
 -- >>> pz @(ReadP Rational Id) "4 % 5"
--- Present 4 % 5
 -- PresentT (4 % 5)
 --
 -- >>> pz @(Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30") (ReadP Day Id)) "2018-10-12"
--- True
 -- TrueT
 --
 -- >>> pz @(Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30") (ReadP Day Id)) "2016-10-12"
--- False
 -- FalseT
 --
 data ReadP' t p
@@ -2050,15 +1979,12 @@ instance P (ReadPT t p) x => P (ReadP t p) x where
 -- | Read but returns the Maybe of the value and any remaining unparsed string
 --
 -- >>> pz @(ReadMaybe Int Id) "123x"
--- Present Just (123,"x")
 -- PresentT (Just (123,"x"))
 --
 -- >>> pz @(ReadMaybe Int Id) "123"
--- Present Just (123,"")
 -- PresentT (Just (123,""))
 --
 -- >>> pz @(ReadMaybe Int Id) "x123"
--- Present Nothing
 -- PresentT Nothing
 --
 data ReadMaybe' t p
@@ -2111,11 +2037,9 @@ instance P (ReadQT t p) x => P (ReadQ t p) x where
 -- | similar to 'sum'
 --
 -- >>> pz @Sum [10,4,5,12,3,4]
--- Present 38
 -- PresentT 38
 --
 -- >>> pz @Sum []
--- Present 0
 -- PresentT 0
 --
 data Sum
@@ -2130,11 +2054,9 @@ instance (Num a, Show a) => P Sum [a] where
 -- | similar to 'product'
 --
 -- >>> pz @Product [10,4,5,12,3,4]
--- Present 28800
 -- PresentT 28800
 --
 -- >>> pz @Product []
--- Present 1
 -- PresentT 1
 --
 data Product
@@ -2149,11 +2071,9 @@ instance (Num a, Show a) => P Product [a] where
 -- | similar to 'minimum'
 --
 -- >>> pz @Min [10,4,5,12,3,4]
--- Present 3
 -- PresentT 3
 --
 -- >>> pz @Min []
--- Error empty list
 -- FailT "empty list"
 --
 data Min
@@ -2171,11 +2091,9 @@ instance (Ord a, Show a) => P Min [a] where
 -- | similar to 'maximum'
 --
 -- >>> pz @Max [10,4,5,12,3,4]
--- Present 12
 -- PresentT 12
 --
 -- >>> pz @Max []
--- Error empty list
 -- FailT "empty list"
 --
 
@@ -2194,27 +2112,21 @@ instance (Ord a, Show a) => P Max [a] where
 -- | sort a list
 --
 -- >>> pz @(SortOn (Fst Id) Id) [(10,"abc"), (3,"def"), (4,"gg"), (10,"xyz"), (1,"z")]
--- Present [(1,"z"),(3,"def"),(4,"gg"),(10,"abc"),(10,"xyz")]
 -- PresentT [(1,"z"),(3,"def"),(4,"gg"),(10,"abc"),(10,"xyz")]
 --
 -- >>> pz @(SortBy (OrdP (Snd Id) (Fst Id)) Id) [(10,"ab"),(4,"x"),(20,"bbb")]
--- Present [(20,"bbb"),(10,"ab"),(4,"x")]
 -- PresentT [(20,"bbb"),(10,"ab"),(4,"x")]
 --
 -- >>> pz @(SortBy 'LT Id) [1,5,2,4,7,0]
--- Present [1,5,2,4,7,0]
 -- PresentT [1,5,2,4,7,0]
 --
 -- >>> pz @(SortBy 'GT Id) [1,5,2,4,7,0]
--- Present [0,7,4,2,5,1]
 -- PresentT [0,7,4,2,5,1]
 --
 -- >>> pz @(SortBy ((Fst (Fst Id) ==! Fst (Snd Id)) <> (Snd (Fst Id) ==! Snd (Snd Id))) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
--- Present [(4,"a"),(4,"x"),(4,"y"),(10,"ab"),(20,"bbb")]
 -- PresentT [(4,"a"),(4,"x"),(4,"y"),(10,"ab"),(20,"bbb")]
 --
 -- >>> pz @(SortBy ((Fst (Fst Id) ==! Fst (Snd Id)) <> (Snd (Snd Id) ==! Snd (Fst Id))) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
--- Present [(4,"y"),(4,"x"),(4,"a"),(10,"ab"),(20,"bbb")]
 -- PresentT [(4,"y"),(4,"x"),(4,"a"),(10,"ab"),(20,"bbb")]
 --
 data SortBy p q
@@ -2236,8 +2148,8 @@ instance (P p (a,a)
       Right as -> do
         let ff :: MonadEval m => [a] -> m (TT [a])
             ff = \case
-                [] -> pure $ mkNode opts (PresentT mempty) (msg0 <> " empty") []
-                [w] -> pure $ mkNode opts (PresentT [w]) (msg0 <> " one element " <> show w) []
+                [] -> pure $ mkNode opts (PresentT mempty) (msg0 <> " empty") [hh qq]
+                [w] -> pure $ mkNode opts (PresentT [w]) (msg0 <> " one element " <> show w) [hh qq]
                 w:ys@(_:_) -> do
                   pp <- (if isVerbose opts then
                               eval (Proxy @(SortByHelperT p))
@@ -2245,15 +2157,15 @@ instance (P p (a,a)
 --                  pp <- eval (Proxy @(Hide (Partition (p >> Id == 'GT) Id))) opts (map (w,) ys)
 -- too much output: dont need (Map (Snd Id) *** Map (Snd Id)) -- just do map snd in code
 --                  pp <- eval (Proxy @(Partition (p >> (Id == 'GT)) Id >> (Map (Snd Id) *** Map (Snd Id)))) opts (map (w,) ys)
-                  case getValueLR opts msg0 pp [] of
+                  case getValueLR opts msg0 pp [hh qq] of
                     Left e -> pure e
                     Right (ll', rr') -> do
                       lhs <- ff (map snd ll')
-                      case getValueLR opts msg0 lhs [] of
+                      case getValueLR opts msg0 lhs [hh qq, hh pp] of
                         Left _ -> pure lhs -- dont rewrap
                         Right ll -> do
                           rhs <- ff (map snd rr')
-                          case getValueLR opts msg0 rhs [] of
+                          case getValueLR opts msg0 rhs [hh qq, hh pp, hh lhs] of
                             Left _ -> pure rhs
                             Right rr ->
                               pure $  mkNode opts (PresentT (ll ++ w : rr))
@@ -2281,11 +2193,9 @@ instance P (SortOnDescT p q) x => P (SortOnDesc p q) x where
 -- | similar to 'length'
 --
 -- >>> pz @Len [10,4,5,12,3,4]
--- Present 6
 -- PresentT 6
 --
 -- >>> pz @Len []
--- Present 0
 -- PresentT 0
 --
 data Len
@@ -2299,19 +2209,15 @@ instance (Show a, as ~ [a]) => P Len as where
 -- | similar to 'length' for 'Foldable' instances
 --
 -- >>> pz @(Length Id) (Left "aa")
--- Present 0
 -- PresentT 0
 --
 -- >>> pz @(Length Id) (Right "aa")
--- Present 1
 -- PresentT 1
 --
 -- >>> pz @(Length (Right' Id)) (Right "abcd")
--- Present 4
 -- PresentT 4
 --
 -- >>> pz @(Length (Thd (Snd Id))) (True,(23,'x',[10,9,1,3,4,2]))
--- Present 6
 -- PresentT 6
 --
 data Length p
@@ -2328,20 +2234,17 @@ instance (PP p x ~ t a
       Left e -> e
       Right p ->
             let n = length p
-            in mkNode opts (PresentT n) (show01 opts msg0 n p) []
+            in mkNode opts (PresentT n) (show01 opts msg0 n p) [hh pp]
 
 -- | similar to 'fst'
 --
 -- >>> pz @(Fst Id) (10,"Abc")
--- Present 10
 -- PresentT 10
 --
 -- >>> pz @(Fst Id) (10,"Abc",'x')
--- Present 10
 -- PresentT 10
 --
 -- >>> pz @(Fst Id) (10,"Abc",'x',False)
--- Present 10
 -- PresentT 10
 --
 data Fst p
@@ -2390,11 +2293,9 @@ instance ExtractL1C (a,b,c,d,e,f) where
 -- | similar to 'snd'
 --
 -- >>> pz @(Snd Id) (10,"Abc")
--- Present "Abc"
 -- PresentT "Abc"
 --
 -- >>> pz @(Snd Id) (10,"Abc",True)
--- Present "Abc"
 -- PresentT "Abc"
 --
 data Snd p
@@ -2443,11 +2344,9 @@ instance ExtractL2C (a,b,c,d,e,f) where
 -- | similar to 3rd element in a n-tuple
 --
 -- >>> pz @(Thd Id) (10,"Abc",133)
--- Present 133
 -- PresentT 133
 --
 -- >>> pz @(Thd Id) (10,"Abc",133,True)
--- Present 133
 -- PresentT 133
 --
 data Thd p
@@ -2496,11 +2395,9 @@ instance ExtractL3C (a,b,c,d,e,f) where
 -- | similar to 4th element in a n-tuple
 --
 -- >>> pz @(L4 Id) (10,"Abc",'x',True)
--- Present True
 -- PresentT True
 --
 -- >>> pz @(L4 (Fst (Snd Id))) ('x',((10,"Abc",'x',999),"aa",1),9)
--- Present 999
 -- PresentT 999
 --
 data L4 p
@@ -2542,7 +2439,6 @@ instance ExtractL4C (a,b,c,d,e,f) where
 -- | similar to 5th element in a n-tuple
 --
 -- >>> pz @(L5 Id) (10,"Abc",'x',True,1)
--- Present 1
 -- PresentT 1
 --
 data L5 p
@@ -2585,7 +2481,6 @@ instance ExtractL5C (a,b,c,d,e,f) where
 -- | similar to 6th element in a n-tuple
 --
 -- >>> pz @(L6 Id) (10,"Abc",'x',True,1,99)
--- Present 99
 -- PresentT 99
 --
 data L6 p
@@ -2629,11 +2524,9 @@ instance ExtractL6C (a,b,c,d,e,f) where
 --
 -- >>> :set -XFlexibleContexts
 -- >>> pz @(FromString (Identity _) Id) "abc"
--- Present Identity "abc"
 -- PresentT (Identity "abc")
 --
 -- >>> pz @(FromString (Seq.Seq Char) Id) "abc"
--- Present fromList "abc"
 -- PresentT (fromList "abc")
 data FromString' t s
 
@@ -2663,15 +2556,12 @@ instance P (FromStringPT t p) x => P (FromString t p) x where
 -- | 'fromInteger' function where you need to provide the type \'t\' of the result
 --
 -- >>> pz @(FromInteger (SG.Sum _) Id) 23
--- Present Sum {getSum = 23}
 -- PresentT (Sum {getSum = 23})
 --
 -- >>> pz @(FromInteger Rational 44) 12
--- Present 44 % 1
 -- PresentT (44 % 1)
 --
 -- >>> pz @(FromInteger Rational Id) 12
--- Present 12 % 1
 -- PresentT (12 % 1)
 --
 data FromInteger' t n
@@ -2702,7 +2592,6 @@ instance P (FromIntegerT t p) x => P (FromInteger t p) x where
 -- | 'fromIntegral' function where you need to provide the type \'t\' of the result
 --
 -- >>> pz @(FromIntegral (SG.Sum _) Id) 23
--- Present Sum {getSum = 23}
 -- PresentT (Sum {getSum = 23})
 data FromIntegral' t n
 
@@ -2732,7 +2621,6 @@ instance P (FromIntegralT t p) x => P (FromIntegral t p) x where
 -- | 'toRational' function
 --
 -- >>> pz @(ToRational Id) 23.5
--- Present 47 % 2
 -- PresentT (47 % 2)
 
 data ToRational p
@@ -2755,7 +2643,6 @@ instance (a ~ PP p x
 -- | 'fromRational' function where you need to provide the type \'t\' of the result
 --
 -- >>> pz @(FromRational Rational Id) 23.5
--- Present 47 % 2
 -- PresentT (47 % 2)
 data FromRational' t r
 
@@ -2784,7 +2671,6 @@ instance P (FromRationalT t p) x => P (FromRational t p) x where
 -- | 'truncate' function where you need to provide the type \'t\' of the result
 --
 -- >>> pz @(Truncate Int Id) (23 % 5)
--- Present 4
 -- PresentT 4
 data Truncate' t p
 
@@ -2814,7 +2700,6 @@ instance P (TruncateT t p) x => P (Truncate t p) x where
 -- | 'ceiling' function where you need to provide the type \'t\' of the result
 --
 -- >>> pz @(Ceiling Int Id) (23 % 5)
--- Present 5
 -- PresentT 5
 data Ceiling' t p
 
@@ -2844,7 +2729,6 @@ instance P (CeilingT t p) x => P (Ceiling t p) x where
 -- | 'floor' function where you need to provide the type \'t\' of the result
 --
 -- >>> pz @(Floor Int Id) (23 % 5)
--- Present 4
 -- PresentT 4
 data Floor' t p
 
@@ -2873,7 +2757,6 @@ instance P (FloorT t p) x => P (Floor t p) x where
 -- | converts a value to a 'Proxy': the same as '\'Proxy'
 --
 -- >>> pz @MkProxy 'x'
--- Present Proxy
 -- PresentT Proxy
 --
 data MkProxy
@@ -2888,11 +2771,9 @@ instance Show a => P MkProxy a where
 -- | processes a type level list predicates running each in sequence: see 'Predicate.>>'
 --
 -- >>> pz @(Do [Pred Id, ShowP Id, Id &&& Len]) 9876543
--- Present ("9876542",7)
 -- PresentT ("9876542",7)
 --
 -- >>> pz @(Do '[W 123, W "xyz", Len &&& Id, Pred Id *** Id<>Id]) ()
--- Present (2,"xyzxyz")
 -- PresentT (2,"xyzxyz")
 --
 data Do (ps :: [k])
@@ -2911,11 +2792,9 @@ type family DoExpandT (ps :: [k]) :: Type where
 -- if '\b\' then Just \'p'\ else Nothing
 --
 -- >>> pz @(MaybeBool (Id > 4) Id) 24
--- Present Just 24
 -- PresentT (Just 24)
 --
 -- >>> pz @(MaybeBool (Id > 4) Id) (-5)
--- Present Nothing
 -- PresentT Nothing
 --
 data MaybeBool b p
@@ -2942,11 +2821,9 @@ instance (Show (PP p a)
 -- if \'b\' then Right \'p\' else Left '\q\'
 --
 -- >>> pz @(EitherBool (Fst Id > 4) (Snd Id >> Fst Id) (Snd Id >> Snd Id)) (24,(-1,999))
--- Present Right 999
 -- PresentT (Right 999)
 --
 -- >>> pz @(EitherBool (Fst Id > 4) (Fst (Snd Id)) (Snd (Snd Id))) (1,(-1,999))
--- Present Left (-1)
 -- PresentT (Left (-1))
 --
 data EitherBool b p q
@@ -2978,15 +2855,12 @@ instance (Show (PP p a)
 -- | pad \'q\' with '\n'\ values from '\p'\
 --
 -- >>> pz @(PadL 5 999 Id) [12,13]
--- Present [999,999,999,12,13]
 -- PresentT [999,999,999,12,13]
 --
 -- >>> pz @(PadR 5 (Fst Id) '[12,13]) (999,'x')
--- Present [12,13,999,999,999]
 -- PresentT [12,13,999,999,999]
 --
 -- >>> pz @(PadR 2 (Fst Id) '[12,13,14]) (999,'x')
--- Present [12,13,14]
 -- PresentT [12,13,14]
 --
 data PadImpl (left :: Bool) n p q
@@ -3037,15 +2911,12 @@ instance P (PadRT n p q) x => P (PadR n p q) x where
 -- | split a list \'p\' into parts using the lengths in the type level list \'ns\'
 --
 -- >>> pz @(SplitAts '[2,3,1,1] Id) "hello world"
--- Present ["he","llo"," ","w","orld"]
 -- PresentT ["he","llo"," ","w","orld"]
 --
 -- >>> pz @(SplitAts '[2] Id) "hello world"
--- Present ["he","llo world"]
 -- PresentT ["he","llo world"]
 --
 -- >>> pz @(SplitAts '[10,1,1,5] Id) "hello world"
--- Present ["hello worl","d","",""]
 -- PresentT ["hello worl","d","",""]
 --
 data SplitAts ns p
@@ -3073,23 +2944,18 @@ instance (P ns x
 -- | similar to 'splitAt'
 --
 -- >>> pz @(SplitAt 4 Id) "hello world"
--- Present ("hell","o world")
 -- PresentT ("hell","o world")
 --
 -- >>> pz @(SplitAt 20 Id) "hello world"
--- Present ("hello world","")
 -- PresentT ("hello world","")
 --
 -- >>> pz @(SplitAt 0 Id) "hello world"
--- Present ("","hello world")
 -- PresentT ("","hello world")
 --
 -- >>> pz @(SplitAt (Snd Id) (Fst Id)) ("hello world",4)
--- Present ("hell","o world")
 -- PresentT ("hell","o world")
 --
 -- >>> pz @(SplitAt (Negate 2) Id) "hello world"
--- Present ("hello wor","ld")
 -- PresentT ("hello wor","ld")
 --
 data SplitAt n p
@@ -3146,7 +3012,6 @@ instance P (WAmpT p q) x => P (p &&& q) x where
 -- | similar to 'Control.Arrow.***'
 --
 -- >>> pz @(Pred Id *** ShowP Id) (13, True)
--- Present (12,"True")
 -- PresentT (12,"True")
 --
 -- >>> pl @(FlipT (***) Len (Id * 12)) (99,"cdef")
@@ -3192,11 +3057,9 @@ instance P (SecondT q) x => P (Second q) x where
 -- | similar 'Control.Arrow.|||'
 --
 -- >>> pz @(Pred Id ||| Id) (Left 13)
--- Present 12
 -- PresentT 12
 --
 -- >>> pz @(ShowP Id ||| Id) (Right "hello")
--- Present "hello"
 -- PresentT "hello"
 --
 data p ||| q
@@ -3231,11 +3094,9 @@ instance (Show (PP p a)
 -- | similar to 'isLeft'
 --
 -- >>> pz @(IsLeft Id) (Right 123)
--- False
 -- FalseT
 --
 -- >>> pz @(IsLeft Id) (Left 'a')
--- True
 -- TrueT
 --
 data IsLeft p
@@ -3254,11 +3115,9 @@ instance (P p x, PP p x ~ Either a b) => P (IsLeft p) x where
 -- | similar to 'isRight'
 --
 -- >>> pz @(IsRight Id) (Right 123)
--- True
 -- TrueT
 --
 -- >>> pz @(IsRight Id) (Left "aa")
--- False
 -- FalseT
 --
 
@@ -3279,11 +3138,9 @@ instance (P p x, PP p x ~ Either a b) => P (IsRight p) x where
 -- | similar 'Control.Arrow.+++'
 --
 -- >>> pz @(Pred Id +++ Id) (Left 13)
--- Present Left 12
 -- PresentT (Left 12)
 --
 -- >>> pz @(ShowP Id +++ Reverse) (Right "hello")
--- Present Right "olleh"
 -- PresentT (Right "olleh")
 --
 data p +++ q
@@ -3350,6 +3207,90 @@ type MultT p q = Bin 'BMult p q
 instance P (MultT p q) x => P (p * q) x where
   type PP (p * q) x = PP (MultT p q) x
   eval _ = eval (Proxy @(MultT p q))
+
+-- | similar to '(^)'
+--
+-- >>> pz @(Fst Id ^ Snd Id) (10,4)
+-- PresentT 10000
+--
+data p ^ q
+infixr 8 ^
+
+instance (P p a
+        , P q a
+        , Show (PP p a)
+        , Show (PP q a)
+        , Num (PP p a)
+        , Integral (PP q a)
+        ) => P (p ^ q) a where
+  type PP (p ^ q) a = PP p a
+  eval _ opts a = do
+    let msg0 = "Pow"
+    pp <- eval (Proxy @p) opts a
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right p -> do
+        qq <- eval (Proxy @q) opts a
+        pure $ case getValueLR opts msg0 qq [hh pp] of
+          Left e -> e
+          Right q ->
+                let hhs = [hh pp, hh qq]
+                in if q < 0 then mkNode opts (FailT (msg0 <> " negative exponent")) (msg0 <> " negative exponent") hhs
+                   else let d = p ^ q
+                        in mkNode opts (PresentT d) (show p <> " ^ " <> show q <> " = " <> show d) hhs
+
+-- | similar to '(**)'
+--
+-- >>> pz @(Fst Id ** Snd Id) (10,4)
+-- PresentT 10000.0
+--
+data p ** q
+infixr 8 **
+
+instance (PP p a ~ PP q a
+        , P p a
+        , P q a
+        , Show (PP p a)
+        , Floating (PP p a)
+        , Ord (PP q a)
+        ) => P (p ** q) a where
+  type PP (p ** q) a = PP p a
+  eval _ opts a = do
+    let msg0 = "Exp"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+         let hhs = [hh pp, hh qq]
+         in if q < 0 then mkNode opts (FailT (msg0 <> " negative exponent")) (msg0 <> " negative exponent") hhs
+            else if p == 0 && q == 0 then mkNode opts (FailT (msg0 <> " zero/zero")) (msg0 <> " zero/zero") hhs
+            else let d = p ** q
+                in mkNode opts (PresentT d) (show p <> " ** " <> show q <> " = " <> show d) hhs
+
+-- | similar to 'logBase'
+--
+-- >>> pz @(Fst Id `LogBase` Snd Id >> Truncate Int Id) (10,12345)
+-- PresentT 4
+--
+data LogBase p q
+instance (PP p a ~ PP q a
+        , P p a
+        , P q a
+        , Show (PP q a)
+        , Floating (PP q a)
+        , Ord (PP p a)
+        ) => P (LogBase p q) a where
+  type PP (LogBase p q) a = PP p a
+  eval _ opts a = do
+    let msg0 = "LogBase"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+         let hhs = [hh pp, hh qq]
+         in if p <= 0 then mkNode opts (FailT (msg0 <> " non-positive base")) (msg0 <> " non-positive base") hhs
+            else let d = logBase p q
+                 in mkNode opts (PresentT d) (msg0 <> " " <> show p <> " " <> show q <> " = " <> show d) hhs
 
 data p > q
 infix 4 >
@@ -3474,11 +3415,9 @@ instance GetBinOp 'BAdd where
 -- | addition, multiplication and subtraction
 --
 -- >>> pz @(Fst Id * Snd Id) (13,5)
--- Present 65
 -- PresentT 65
 --
 -- >>> pz @(Fst Id + 4 * Length (Snd Id) - 4) (3,"hello")
--- Present 19
 -- PresentT 19
 --
 data Bin (op :: BinOp) p q
@@ -3503,15 +3442,12 @@ instance (GetBinOp op
 -- | fractional division
 --
 -- >>> pz @(Fst Id / Snd Id) (13,2)
--- Present 6.5
 -- PresentT 6.5
 --
 -- >>> pz @(ToRational 13 / Id) 0
--- Error (/) zero denominator
 -- FailT "(/) zero denominator"
 --
 -- >>> pz @(12 % 7 / 14 % 5 + Id) 12.4
--- Present 3188 % 245
 -- PresentT (3188 % 245)
 --
 data p / q
@@ -3540,59 +3476,45 @@ instance (PP p a ~ PP q a
 -- | creates a 'Rational' value
 --
 -- >>> pz @(Id < 21 % 5) (-3.1)
--- True
 -- TrueT
 --
 -- >>> pz @(Id < 21 % 5) 4.5
--- False
 -- FalseT
 --
 -- >>> pz @(Fst Id % Snd Id) (13,2)
--- Present 13 % 2
 -- PresentT (13 % 2)
 --
 -- >>> pz @(13 % Id) 0
--- Error (%) zero denominator
 -- FailT "(%) zero denominator"
 --
 -- >>> pz @(4 % 3 + 5 % 7) "asfd"
--- Present 43 % 21
 -- PresentT (43 % 21)
 --
 -- >>> pz @(4 -% 7 * 5 -% 3) "asfd"
--- Present 20 % 21
 -- PresentT (20 % 21)
 --
 -- >>> pz @(Negate (14 % 3)) ()
--- Present (-14) % 3
 -- PresentT ((-14) % 3)
 --
 -- >>> pz @(14 % 3) ()
--- Present 14 % 3
 -- PresentT (14 % 3)
 --
 -- >>> pz @(Negate (14 % 3) ==! FromIntegral _ (Negate 5)) ()
--- Present GT
 -- PresentT GT
 --
 -- >>> pz @(14 -% 3 ==! 5 -% 1) "aa"
--- Present GT
 -- PresentT GT
 --
 -- >>> pz @(Negate (14 % 3) ==! Negate 5 % 2) ()
--- Present LT
 -- PresentT LT
 --
 -- >>> pz @(14 -% 3 * 5 -% 1) ()
--- Present 70 % 3
 -- PresentT (70 % 3)
 --
 -- >>> pz @(14 % 3 ==! 5 % 1) ()
--- Present LT
 -- PresentT LT
 --
 -- >>> pz @(15 % 3 / 4 % 2) ()
--- Present 5 % 2
 -- PresentT (5 % 2)
 --
 data p % q
@@ -3631,23 +3553,18 @@ instance P (NegateRatioT p q) x => P (p -% q) x where
 -- | similar to 'negate'
 --
 -- >>> pz @(Negate Id) 14
--- Present -14
 -- PresentT (-14)
 --
 -- >>> pz @(Negate (Fst Id * Snd Id)) (14,3)
--- Present -42
 -- PresentT (-42)
 --
 -- >>> pz @(Negate (15 -% 4)) "abc"
--- Present 15 % 4
 -- PresentT (15 % 4)
 --
 -- >>> pz @(Negate (15 % 3)) ()
--- Present (-5) % 1
 -- PresentT ((-5) % 1)
 --
 -- >>> pz @(Negate (Fst Id % Snd Id)) (14,3)
--- Present (-14) % 3
 -- PresentT ((-14) % 3)
 --
 data Negate p
@@ -3667,19 +3584,15 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Negate p) x where
 -- | similar to 'abs'
 --
 -- >>> pz @(Abs Id) (-14)
--- Present 14
 -- PresentT 14
 --
 -- >>> pz @(Abs (Snd Id)) ("xx",14)
--- Present 14
 -- PresentT 14
 --
 -- >>> pz @(Abs Id) 0
--- Present 0
 -- PresentT 0
 --
 -- >>> pz @(Abs (Negate 44)) "aaa"
--- Present 44
 -- PresentT 44
 --
 data Abs p
@@ -3700,15 +3613,12 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Abs p) x where
 -- | similar to 'signum'
 --
 -- >>> pz @(Signum Id) (-14)
--- Present -1
 -- PresentT (-1)
 --
 -- >>> pz @(Signum Id) 14
--- Present 1
 -- PresentT 1
 --
 -- >>> pz @(Signum Id) 0
--- Present 0
 -- PresentT 0
 --
 data Signum p
@@ -3727,7 +3637,6 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Signum p) x where
 -- | unwraps a value (see '_Wrapped'')
 --
 -- >>> pz @(Unwrap Id) (SG.Sum (-13))
--- Present -13
 -- PresentT (-13)
 --
 data Unwrap p
@@ -3752,15 +3661,12 @@ instance (PP p x ~ s
 --
 -- >>> :m + Data.List.NonEmpty
 -- >>> pz @(Wrap (SG.Sum _) Id) (-13)
--- Present Sum {getSum = -13}
 -- PresentT (Sum {getSum = -13})
 --
 -- >>> pz @(Wrap SG.Any (Ge 4)) 13
--- Present Any {getAny = True}
 -- PresentT (Any {getAny = True})
 --
 -- >>> pz @(Wrap (NonEmpty _) (Uncons >> 'Just Id)) "abcd"
--- Present 'a' :| "bcd"
 -- PresentT ('a' :| "bcd")
 --
 data Wrap' t p
@@ -3790,7 +3696,6 @@ instance P (WrapT t p) x => P (Wrap t p) x where
 -- | similar to 'coerce'
 --
 -- >>> pz @(Coerce (SG.Sum Integer)) (Identity (-13))
--- Present Sum {getSum = -13}
 -- PresentT (Sum {getSum = -13})
 --
 data Coerce (t :: k)
@@ -3810,15 +3715,12 @@ instance (Show a
 -- | see 'Coerce': coerce over a functor
 --
 -- >>> pz @(Coerce2 (SG.Sum Integer)) [Identity (-13), Identity 4, Identity 99]
--- Present [Sum {getSum = -13},Sum {getSum = 4},Sum {getSum = 99}]
 -- PresentT [Sum {getSum = -13},Sum {getSum = 4},Sum {getSum = 99}]
 --
 -- >>> pz @(Coerce2 (SG.Sum Integer)) (Just (Identity (-13)))
--- Present Just (Sum {getSum = -13})
 -- PresentT (Just (Sum {getSum = -13}))
 --
 -- >>> pz @(Coerce2 (SG.Sum Int)) (Nothing @(Identity Int))
--- Present Nothing
 -- PresentT Nothing
 --
 data Coerce2 (t :: k)
@@ -3836,7 +3738,6 @@ instance (Show (f a)
 -- | lift mempty over a Functor
 --
 -- >>> pz @(MEmpty2 (SG.Product Int)) [Identity (-13), Identity 4, Identity 99]
--- Present [Product {getProduct = 1},Product {getProduct = 1},Product {getProduct = 1}]
 -- PresentT [Product {getProduct = 1},Product {getProduct = 1},Product {getProduct = 1}]
 --
 data MEmpty2' t
@@ -3862,7 +3763,6 @@ instance P (MEmpty2T t) x => P (MEmpty2 t) x where
 -- | lift pure over a Functor
 --
 -- >>> pz @(Pure2 (Either String)) [1,2,4]
--- Present [Right 1,Right 2,Right 4]
 -- PresentT [Right 1,Right 2,Right 4]
 --
 data Pure2 (t :: Type -> Type)
@@ -3881,11 +3781,9 @@ instance (Show (f (t a))
 -- | similar to 'reverse'
 --
 -- >>> pz @Reverse [1,2,4]
--- Present [4,2,1]
 -- PresentT [4,2,1]
 --
 -- >>> pz @Reverse "AbcDeF"
--- Present "FeDcbA"
 -- PresentT "FeDcbA"
 --
 data Reverse
@@ -3900,11 +3798,9 @@ instance (Show a, as ~ [a]) => P Reverse as where
 -- | reverses using 'reversing'
 --
 -- >>> pz @ReverseL (T.pack "AbcDeF")
--- Present "FeDcbA"
 -- PresentT "FeDcbA"
 --
 -- >>> pz @ReverseL ("AbcDeF" :: String)
--- Present "FeDcbA"
 -- PresentT "FeDcbA"
 --
 data ReverseL
@@ -3919,35 +3815,27 @@ instance (Show t, Reversing t) => P ReverseL t where
 -- | swaps using 'SwapC'
 --
 -- >>> pz @Swap (Left 123)
--- Present Right 123
 -- PresentT (Right 123)
 --
 -- >>> pz @Swap (Right 123)
--- Present Left 123
 -- PresentT (Left 123)
 --
 -- >>> pz @Swap (These 'x' 123)
--- Present These 123 'x'
 -- PresentT (These 123 'x')
 --
 -- >>> pz @Swap (This 'x')
--- Present That 'x'
 -- PresentT (That 'x')
 --
 -- >>> pz @Swap (That 123)
--- Present This 123
 -- PresentT (This 123)
 --
 -- >>> pz @Swap (123,'x')
--- Present ('x',123)
 -- PresentT ('x',123)
 --
 -- >>> pz @Swap (Left "abc")
--- Present Right "abc"
 -- PresentT (Right "abc")
 --
 -- >>> pz @Swap (Right 123)
--- Present Left 123
 -- PresentT (Left 123)
 --
 data Swap
@@ -3977,23 +3865,18 @@ instance (Show (p a b)
 -- | assoc using 'AssocC'
 --
 -- >>> pz @Assoc (This (These 123 'x'))
--- Present These 123 (This 'x')
 -- PresentT (These 123 (This 'x'))
 --
 -- >>> pz @Assoc ((99,'a'),True)
--- Present (99,('a',True))
 -- PresentT (99,('a',True))
 --
 -- >>> pz @Assoc ((99,'a'),True)
--- Present (99,('a',True))
 -- PresentT (99,('a',True))
 --
 -- >>> pz @Assoc (Right "Abc" :: Either (Either () ()) String)
--- Present Right (Right "Abc")
 -- PresentT (Right (Right "Abc"))
 --
 -- >>> pz @Assoc (Left (Left 'x'))
--- Present Left 'x'
 -- PresentT (Left 'x')
 --
 data Assoc
@@ -4051,23 +3934,18 @@ instance (Show (p (p a b) c)
 -- | unassoc using 'AssocC'
 --
 -- >>> pz @Unassoc (These 123 (This 'x'))
--- Present This (These 123 'x')
 -- PresentT (This (These 123 'x'))
 --
 -- >>> pz @Unassoc (99,('a',True))
--- Present ((99,'a'),True)
 -- PresentT ((99,'a'),True)
 --
 -- >>> pz @Unassoc (This 10 :: These Int (These Bool ()))
--- Present This (This 10)
 -- PresentT (This (This 10))
 --
 -- >>> pz @Unassoc (Right (Right 123))
--- Present Right 123
 -- PresentT (Right 123)
 --
 -- >>> pz @Unassoc (Left 'x' :: Either Char (Either Bool Double))
--- Present Left (Left 'x')
 -- PresentT (Left (Left 'x'))
 --
 data Unassoc
@@ -4085,19 +3963,15 @@ instance (Show (p (p a b) c)
 -- | bounded 'succ' function
 --
 -- >>> pz @(SuccB' Id) (13 :: Int)
--- Present 14
 -- PresentT 14
 --
 -- >>> pz @(SuccB' Id) LT
--- Present EQ
 -- PresentT EQ
 --
 -- >>> pz @(SuccB 'LT Id) GT
--- Present LT
 -- PresentT LT
 --
 -- >>> pz @(SuccB' Id) GT
--- Error Succ bounded
 -- FailT "Succ bounded"
 --
 instance (PP q x ~ a
@@ -4137,11 +4011,9 @@ instance P (SuccBT' q) x => P (SuccB' q) x where
 -- | bounded 'pred' function
 --
 -- >>> pz @(PredB' Id) (13 :: Int)
--- Present 12
 -- PresentT 12
 --
 -- >>> pz @(PredB' Id) LT
--- Error Pred bounded
 -- FailT "Pred bounded"
 --
 data PredB' q
@@ -4176,15 +4048,12 @@ instance (PP q x ~ a
 -- | unbounded 'succ' function
 --
 -- >>> pz @(Succ Id) 13
--- Present 14
 -- PresentT 14
 --
 -- >>> pz @(Succ Id) LT
--- Present EQ
 -- PresentT EQ
 --
 -- >>> pz @(Succ Id) GT
--- Error Succ IO e=Prelude.Enum.Ordering.succ: bad argument
 -- FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument"
 --
 data Succ p
@@ -4210,11 +4079,9 @@ instance (Show a
 -- | unbounded 'pred' function
 --
 -- >>> pz @(Pred Id) 13
--- Present 12
 -- PresentT 12
 --
 -- >>> pz @(Pred Id) LT
--- Error Pred IO e=Prelude.Enum.Ordering.pred: bad argument
 -- FailT "Pred IO e=Prelude.Enum.Ordering.pred: bad argument"
 --
 
@@ -4247,7 +4114,6 @@ instance P (PredBT' q) x => P (PredB' q) x where
 -- | 'fromEnum' function
 --
 -- >>> pz @(FromEnum Id) 'x'
--- Present 120
 -- PresentT 120
 --
 data FromEnum p
@@ -4270,7 +4136,6 @@ instance (Show a
 -- | unsafe 'toEnum' function
 --
 -- >>> pz @(ToEnum Char Id) 120
--- Present 'x'
 -- PresentT 'x'
 data ToEnum' t p
 
@@ -4302,15 +4167,12 @@ instance P (ToEnumT t p) x => P (ToEnum t p) x where
 -- | bounded 'toEnum' function
 --
 -- >>> pz @(ToEnumBDef Ordering LT) 2
--- Present GT
 -- PresentT GT
 --
 -- >>> pz @(ToEnumBDef Ordering LT) 6
--- Present LT
 -- PresentT LT
 --
 -- >>> pz @(ToEnumBFail Ordering) 6
--- Error ToEnum bounded
 -- FailT "ToEnum bounded"
 --
 data ToEnumBDef' t def
@@ -4352,11 +4214,9 @@ instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
 -- | a predicate on prime numbers
 --
 -- >>> pz @(Prime Id) 2
--- True
 -- TrueT
 --
 -- >>> pz @(Map '(Id,Prime Id) Id) [0..12]
--- Present [(0,False),(1,False),(2,True),(3,True),(4,False),(5,True),(6,False),(7,True),(8,False),(9,False),(10,False),(11,True),(12,False)]
 -- PresentT [(0,False),(1,False),(2,True),(3,True),(4,False),(5,True),(6,False),(7,True),(8,False),(9,False),(10,False),(11,True),(12,False)]
 --
 data Prime p
@@ -4373,46 +4233,70 @@ instance (PP p x ~ a
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let b = isPrime $ fromIntegral p
-        in mkNodeB opts b (msg0 <> show1 opts " | " p) []
+        let b = if p < 1 then False else isPrime $ fromIntegral p
+        in mkNodeB opts b (msg0 <> show1 opts " | " p) [hh pp]
 
-isPrime :: Integer -> Bool
-isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
+isPrimeF :: (Word -> Bool) -> Word -> Bool
+isPrimeF f n = n > 1 && and [ n `rem` d /= 0 | d <- [2 .. floor (sqrt @Double (fromIntegral n))], f d]
+
+-- segfaults if Word<0
+isPrime :: Word -> Bool
+isPrime = Chimera.memoizeFix isPrimeF
+
+--isPrime :: Integer -> Bool
+--isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
+
+-- | get the next prime number
+--
+-- >>> pz @(PrimeNext Id) 6
+-- PresentT 7
+--
+-- >>> pz @(IterateN 4 (PrimeNext Id)) 3
+-- PresentT [3,5,7,11]
+--
+data PrimeNext p
+
+instance (PP p x ~ a
+        , P p x
+        , Show a
+        , Integral a
+        ) => P (PrimeNext p) x where
+  type PP (PrimeNext p) x = Word
+  eval _ opts x = do
+    let msg0 = "PrimeNext"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let ret = head $ dropWhile (not . isPrime) [max 0 (fromIntegral p + 1) ..]
+        in mkNode opts (PresentT ret) (msg0 <> show1 opts " | " p) [hh pp]
 
 -- empty lists at the type level wont work here
 
 -- | filters a list \'q\' keeping or removing those elements in \'p\'
 --
 -- >>> pz @(Keep '[5] '[1,5,5,2,5,2]) ()
--- Present [5,5,5]
 -- PresentT [5,5,5]
 --
 -- >>> pz @(Keep '[0,1,1,5] '[1,5,5,2,5,2]) ()
--- Present [1,5,5,5]
 -- PresentT [1,5,5,5]
 --
 -- >>> pz @(Remove '[5] '[1,5,5,2,5,2]) ()
--- Present [1,2,2]
 -- PresentT [1,2,2]
 --
 -- >>> pz @(Remove '[0,1,1,5] '[1,5,5,2,5,2]) ()
--- Present [2,2]
 -- PresentT [2,2]
 --
 -- >>> pz @(Remove '[99] '[1,5,5,2,5,2]) ()
--- Present [1,5,5,2,5,2]
 -- PresentT [1,5,5,2,5,2]
 --
 -- >>> pz @(Remove '[99,91] '[1,5,5,2,5,2]) ()
--- Present [1,5,5,2,5,2]
 -- PresentT [1,5,5,2,5,2]
 --
 -- >>> pz @(Remove Id '[1,5,5,2,5,2]) []
--- Present [1,5,5,2,5,2]
 -- PresentT [1,5,5,2,5,2]
 --
 -- >>> pz @(Remove '[] '[1,5,5,2,5,2]) 44 -- works if you make this a number!
--- Present [1,5,5,2,5,2]
 -- PresentT [1,5,5,2,5,2]
 --
 data KeepImpl (keep :: Bool) p q
@@ -4453,11 +4337,9 @@ instance P (RemoveT p q) x => P (Remove p q) x where
 -- | 'elem' function
 --
 -- >>> pz @(Elem (Fst Id) (Snd Id)) ('x',"abcdxy")
--- True
 -- TrueT
 --
 -- >>> pz @(Elem (Fst Id) (Snd Id)) ('z',"abcdxy")
--- False
 -- FalseT
 --
 data Elem p q
@@ -4486,7 +4368,6 @@ instance ([PP p a] ~ PP q a
 -- | similar to fmap fst
 --
 -- >>> pz @FMapFst (Just (13,"Asf"))
--- Present Just 13
 -- PresentT (Just 13)
 --
 -- to make this work we grab the fst or snd out of the Maybe so it is a head or not/ is a tail or not etc!
@@ -4500,7 +4381,6 @@ instance Functor f => P FMapFst (f (a,x)) where
 -- | similar to fmap snd
 --
 -- >>> pz @FMapSnd (Just ("asf",13))
--- Present Just 13
 -- PresentT (Just 13)
 --
 data FMapSnd
@@ -4514,40 +4394,31 @@ instance Functor f => P FMapSnd (f (x,a)) where
 -- see 'ConsT' for other supported types eg 'Seq.Seq'
 --
 -- >>> pz @(HeadDef 444 Id) []
--- Present 444
 -- PresentT 444
 --
 -- >>> pz @(HeadDef 444 Id) [1..5]
--- Present 1
 -- PresentT 1
 --
 -- >>> pz @(HeadDef 444 Id) [1..5]
--- Present 1
 -- PresentT 1
 --
 -- >>> pz @(HeadDef (Char1 "w") Id) (Seq.fromList "abcdef")
--- Present 'a'
 -- PresentT 'a'
 --
 -- >>> pz @(HeadDef (Char1 "w") Id) Seq.empty
--- Present 'w'
 -- PresentT 'w'
 --
 -- >>> :set -XFlexibleContexts
 -- >>> pz @(HeadDef (MEmptyT _) Id) ([] :: [SG.Sum Int])
--- Present Sum {getSum = 0}
 -- PresentT (Sum {getSum = 0})
 --
 -- >>> pz @(HeadDef (MEmptyT String) '[ "abc","def","asdfadf" ]) ()
--- Present "abc"
 -- PresentT "abc"
 --
 -- >>> pz @(HeadDef (MEmptyT _) (Snd Id)) (123,[ "abc","def","asdfadf" ])
--- Present "abc"
 -- PresentT "abc"
 --
 -- >>> pz @(HeadDef (MEmptyT _) (Snd Id)) (123,[])
--- Present ()
 -- PresentT ()
 --
 data HeadDef p q
@@ -4563,11 +4434,9 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 -- see 'ConsT' for other supported types eg 'Seq.Seq'
 --
 -- >>> pz @(HeadFail "dude" Id) [ "abc","def","asdfadf" ]
--- Present "abc"
 -- PresentT "abc"
 --
 -- >>> pz @(HeadFail "empty list" Id) []
--- Error empty list
 -- FailT "empty list"
 --
 data HeadFail msg q
@@ -4689,15 +4558,12 @@ instance P (TheseT' p) x => P (These' p) x where
 -- | similar to 'Control.Arrow.|||' but additionally gives \'p\' and \'q\' the original input
 --
 -- >>> pz @(EitherX (ShowP (Fst (Fst Id) + Snd Id)) (ShowP Id) (Snd Id)) (9,Left 123)
--- Present "132"
 -- PresentT "132"
 --
 -- >>> pz @(EitherX (ShowP (Fst (Fst Id) + Snd Id)) (ShowP Id) (Snd Id)) (9,Right 'x')
--- Present "((9,Right 'x'),'x')"
 -- PresentT "((9,Right 'x'),'x')"
 --
 -- >>> pz @(EitherX (ShowP Id) (ShowP (Second (Succ Id))) (Snd Id)) (9,Right 'x')
--- Present "((9,Right 'x'),'y')"
 -- PresentT "((9,Right 'x'),'y')"
 --
 data EitherX p q r
@@ -4737,19 +4603,15 @@ type family EitherXT lr x p where
 -- | similar to 'Data.These.mergeTheseWith' but additionally provides \'p\', '\q'\ and \'r\' the original input as the first element in the tuple
 --
 -- >>> pz @(TheseX ((Fst (Fst Id) + Snd Id) >> ShowP Id) (ShowP Id) (Snd (Snd Id)) (Snd Id)) (9,This 123)
--- Present "132"
 -- PresentT "132"
 --
 -- >>> pz @(TheseX '(Snd Id,"fromthis") '(Negate 99,Snd Id) (Snd Id) Id) (This 123)
--- Present (123,"fromthis")
 -- PresentT (123,"fromthis")
 --
 -- >>> pz @(TheseX '(Snd Id,"fromthis") '(Negate 99,Snd Id) (Snd Id) Id) (That "fromthat")
--- Present (-99,"fromthat")
 -- PresentT (-99,"fromthat")
 --
 -- >>> pz @(TheseX '(Snd Id,"fromthis") '(Negate 99,Snd Id) (Snd Id) Id) (These 123 "fromthese")
--- Present (123,"fromthese")
 -- PresentT (123,"fromthese")
 --
 data TheseX p q r s
@@ -4796,11 +4658,9 @@ type family TheseXT lr x p where
 -- provides a Proxy to the result of \'q\' but does not provide the surrounding context
 --
 -- >>> pz @(MaybeIn "foundnothing" (ShowP (Pred Id))) (Just 20)
--- Present "19"
 -- PresentT "19"
 --
 -- >>> pz @(MaybeIn "found nothing" (ShowP (Pred Id))) Nothing
--- Present "found nothing"
 -- PresentT "found nothing"
 --
 data MaybeIn p q
@@ -4832,11 +4692,9 @@ instance (P q a
 -- | similar to 'isJust'
 --
 -- >>> pz @(IsJust Id) Nothing
--- False
 -- FalseT
 --
 -- >>> pz @(IsJust Id) (Just 'a')
--- True
 -- TrueT
 --
 data IsJust p
@@ -4855,11 +4713,9 @@ instance (P p x, PP p x ~ Maybe a) => P (IsJust p) x where
 -- | similar to 'isNothing'
 --
 -- >>> pz @(IsNothing Id) (Just 123)
--- False
 -- FalseT
 --
 -- >>> pz @(IsNothing Id) Nothing
--- True
 -- TrueT
 --
 data IsNothing p
@@ -4898,11 +4754,9 @@ instance P (CatMaybesT q) x => P (CatMaybes q) x where
 -- | similar to 'SG.stimes'
 --
 -- >>> pz @(STimes 4 Id) (SG.Sum 3)
--- Present Sum {getSum = 12}
 -- PresentT (Sum {getSum = 12})
 --
 -- >>> pz @(STimes 4 Id) "ab"
--- Present "abababab"
 -- PresentT "abababab"
 --
 data STimes n p
@@ -4927,15 +4781,12 @@ instance (P n a
 -- | similar to 'pure'
 --
 -- >>> pz @(Pure Maybe Id) 4
--- Present Just 4
 -- PresentT (Just 4)
 --
 -- >>> pz @(Pure [] Id) 4
--- Present [4]
 -- PresentT [4]
 --
 -- >>> pz @(Pure (Either String) (Fst Id)) (13,True)
--- Present Right 13
 -- PresentT (Right 13)
 --
 data Pure (t :: Type -> Type) p
@@ -4959,7 +4810,6 @@ instance (P p x
 -- | similar to 'mempty'
 --
 -- >>> pz @(MEmptyT (SG.Sum Int)) ()
--- Present Sum {getSum = 0}
 -- PresentT (Sum {getSum = 0})
 --
 -- no Monoid for Maybe a unless a is also a monoid but can use empty!
@@ -4988,19 +4838,15 @@ instance P MEmptyPT x => P MEmptyP x where
 -- | similar to 'empty'
 --
 -- >>> pz @(EmptyT Maybe Id) ()
--- Present Nothing
 -- PresentT Nothing
 --
 -- >>> pz @(EmptyT [] Id) ()
--- Present []
 -- PresentT []
 --
 -- >>> pz @(EmptyT [] (Char1 "x")) (13,True)
--- Present ""
 -- PresentT ""
 --
 -- >>> pz @(EmptyT (Either String) (Fst Id)) (13,True)
--- Present Left ""
 -- PresentT (Left "")
 --
 data EmptyT (t :: Type -> Type) p
@@ -5040,7 +4886,6 @@ instance P (MkNothing t) x where
 -- | 'GHC.Maybe.Just' constructor
 --
 -- >>> pz @(MkJust Id) 44
--- Present Just 44
 -- PresentT (Just 44)
 --
 data MkJust p
@@ -5058,7 +4903,6 @@ instance (PP p x ~ a, P p x, Show a) => P (MkJust p) x where
 -- | 'Data.Either.Left' constructor
 --
 -- >>> pz @(MkLeft _ Id) 44
--- Present Left 44
 -- PresentT (Left 44)
 --
 data MkLeft' t p
@@ -5084,7 +4928,6 @@ instance P (MkLeftT t p) x => P (MkLeft t p) x where
 -- | 'Data.Either.Right' constructor
 --
 -- >>> pz @(MkRight _ Id) 44
--- Present Right 44
 -- PresentT (Right 44)
 --
 data MkRight' t p
@@ -5110,11 +4953,9 @@ instance P (MkRightT t p) x => P (MkRight t p) x where
 -- | 'Data.These.This' constructor
 --
 -- >>> pz @(MkThis _ Id) 44
--- Present This 44
 -- PresentT (This 44)
 --
 -- >>> pz @(Proxy Int >> MkThis' Unproxy 10) []
--- Present This 10
 -- PresentT (This 10)
 --
 data MkThis' t p
@@ -5140,7 +4981,6 @@ instance P (MkThisT t p) x => P (MkThis t p) x where
 -- | 'Data.These.That' constructor
 --
 -- >>> pz @(MkThat _ Id) 44
--- Present That 44
 -- PresentT (That 44)
 --
 data MkThat' t p
@@ -5169,7 +5009,6 @@ instance P (MkThatT t p) x => P (MkThat t p) x where
 -- | 'Data.These.These' constructor
 --
 -- >>> pz @(MkThese (Fst Id) (Snd Id)) (44,'x')
--- Present These 44 'x'
 -- PresentT (These 44 'x')
 --
 data MkThese p q
@@ -5191,7 +5030,6 @@ instance (P p a
 -- | similar to 'mconcat'
 --
 -- >>> pz @(MConcat Id) [SG.Sum 44, SG.Sum 12, SG.Sum 3]
--- Present Sum {getSum = 59}
 -- PresentT (Sum {getSum = 59})
 --
 data MConcat p
@@ -5214,53 +5052,42 @@ instance (PP p x ~ [a]
 -- | similar to a limited form of 'foldMap'
 --
 -- >>> pz @(FoldMap (SG.Sum _) Id) [44, 12, 3]
--- Present 59
 -- PresentT 59
 --
 -- >>> pz @(FoldMap (SG.Product _) Id) [44, 12, 3]
--- Present 1584
 -- PresentT 1584
 --
 -- >>> type Ands' p = FoldMap SG.All p
 -- >>> pz @(Ands' Id) [True,False,True,True]
--- Present False
 -- PresentT False
 --
 -- >>> pz @(Ands' Id) [True,True,True]
--- Present True
 -- PresentT True
 --
 -- >>> pz @(Ands' Id) []
--- Present True
 -- PresentT True
 --
 -- >>> type Ors' p = FoldMap SG.Any p
 -- >>> pz @(Ors' Id) [False,False,False]
--- Present False
 -- PresentT False
 --
 -- >>> pz @(Ors' Id) []
--- Present False
 -- PresentT False
 --
 -- >>> pz @(Ors' Id) [False,False,False,True]
--- Present True
 -- PresentT True
 --
 -- >>> type AllPositive' = FoldMap SG.All (Map Positive Id)
 -- >>> pz @AllPositive' [3,1,-5,10,2,3]
--- Present False
 -- PresentT False
 --
 -- >>> type AllNegative' = FoldMap SG.All (Map Negative Id)
 -- >>> pz @AllNegative' [-1,-5,-10,-2,-3]
--- Present True
 -- PresentT True
 --
 -- >>> :set -XKindSignatures
 -- >>> type Max' (t :: Type) = FoldMap (SG.Max t) Id -- requires t be Bounded for monoid instance
 -- >>> pz @(Max' Int) [10,4,5,12,3,4]
--- Present 12
 -- PresentT 12
 --
 data FoldMap (t :: Type) p
@@ -5273,11 +5100,9 @@ instance P (FoldMapT t p) x => P (FoldMap t p) x where
 -- | similar to 'concat'
 --
 -- >>> pz @(Concat Id) ["abc","D","eF","","G"]
--- Present "abcDeFG"
 -- PresentT "abcDeFG"
 --
 -- >>> pz @(Concat (Snd Id)) ('x',["abc","D","eF","","G"])
--- Present "abcDeFG"
 -- PresentT "abcDeFG"
 --
 data Concat p
@@ -5301,7 +5126,6 @@ instance (Show a
 -- | similar to 'cycle' but for a fixed number \'n\'
 --
 -- >>> pz @(Cycle 5 Id) [1,2]
--- Present [1,2,1,2,1]
 -- PresentT [1,2,1,2,1]
 --
 data Cycle n p
@@ -5346,11 +5170,9 @@ instance P (ProxyT t) x where
 -- | similar to 'Data.List.!!'
 --
 -- >>> pz @(Ix 4 "not found") ["abc","D","eF","","G"]
--- Present "G"
 -- PresentT "G"
 --
 -- >>> pz @(Ix 40 "not found") ["abc","D","eF","","G"]
--- Present "not found"
 -- PresentT "not found"
 --
 data Ix (n :: Nat) def
@@ -5383,11 +5205,9 @@ instance P (IxT' n) x => P (Ix' n) x where
 -- | similar to 'Data.List.!!' leveraging 'Ixed'
 --
 -- >>> pz @(IxL Id 2 "notfound") ["abc","D","eF","","G"]
--- Present "eF"
 -- PresentT "eF"
 --
 -- >>> pz @(IxL Id 20 "notfound") ["abc","D","eF","","G"]
--- Present "notfound"
 -- PresentT "notfound"
 --
 data IxL p q def -- p is the big value and q is the index and def is the default
@@ -5422,16 +5242,13 @@ instance (P q a
 -- | similar to 'Data.List.!!' leveraging 'Ixed'
 --
 -- >>> pz @(Id !! 2) ["abc","D","eF","","G"]
--- Present "eF"
 -- PresentT "eF"
 --
 -- >>> pz @(Id !! 20) ["abc","D","eF","","G"]
--- Error (!!) index not found
 -- FailT "(!!) index not found"
 --
 -- >>> import qualified Data.Map.Strict as M
 -- >>> pz @(Id !! "eF") (M.fromList (flip zip [0..] ["abc","D","eF","","G"]))
--- Present 2
 -- PresentT 2
 --
 data p !! q
@@ -5444,11 +5261,9 @@ instance P (BangBangT p q) a => P (p !! q) a where
 -- | 'lookup' leveraging 'Ixed'
 --
 -- >>> pz @(Lookup Id 2) ["abc","D","eF","","G"]
--- Present Just "eF"
 -- PresentT (Just "eF")
 --
 -- >>> pz @(Lookup Id 20) ["abc","D","eF","","G"]
--- Present Nothing
 -- PresentT Nothing
 --
 -- >>> pl @((Id !!? Char1 "d") > MkJust 99 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
@@ -5456,7 +5271,6 @@ instance P (BangBangT p q) a => P (p !! q) a where
 -- FalseT
 --
 -- >>> pz @((Id !!? Char1 "d") > MkJust 2 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
--- True
 -- TrueT
 --
 data Lookup p q
@@ -5494,7 +5308,6 @@ instance P (BangBangQT p q) a => P (p !!? q) a where
 -- | 'Data.List.ands'
 --
 -- >>> pz @(Ands Id) [True,True,True]
--- True
 -- TrueT
 --
 -- >>> pl @(Ands Id) [True,True,True,False]
@@ -5502,7 +5315,6 @@ instance P (BangBangQT p q) a => P (p !!? q) a where
 -- FalseT
 --
 -- >>> pz @(Ands Id) []
--- True
 -- TrueT
 --
 data Ands p
@@ -5529,7 +5341,6 @@ instance (PP p x ~ t a
 -- | 'Data.List.ors'
 --
 -- >>> pz @(Ors Id) [False,False,False]
--- False
 -- FalseT
 --
 -- >>> pl @(Ors Id) [True,True,True,False]
@@ -5565,19 +5376,15 @@ instance (PP p x ~ t a
 -- | similar to (++)
 --
 -- >>> pz @(Fst Id ++ Snd Id) ([9,10,11],[1,2,3,4])
--- Present [9,10,11,1,2,3,4]
 -- PresentT [9,10,11,1,2,3,4]
 --
 -- >>> pz @(Snd Id ++ Fst Id) ([],[5])
--- Present [5]
 -- PresentT [5]
 --
 -- >>> pz @(Char1 "xyz" :+ W "ab" ++ W "cdefg") ()
--- Present "xabcdefg"
 -- PresentT "xabcdefg"
 --
 -- >>> pz @([1,2,3] ++ EmptyList _) "somestuff"
--- Present [1,2,3]
 -- PresentT [1,2,3]
 --
 data p ++ q
@@ -5606,15 +5413,12 @@ instance (P p x
 -- | similar to cons
 --
 -- >>> pz @(Fst Id :+ Snd Id) (99,[1,2,3,4])
--- Present [99,1,2,3,4]
 -- PresentT [99,1,2,3,4]
 --
 -- >>> pz @(Snd Id :+ Fst Id) ([],5)
--- Present [5]
 -- PresentT [5]
 --
 -- >>> pz @(123 :+ EmptyList _) "somestuff"
--- Present [123]
 -- PresentT [123]
 --
 data p :+ q
@@ -5639,15 +5443,12 @@ instance (P p x
 -- | similar to snoc
 --
 -- >>> pz @(Snd Id +: Fst Id) (99,[1,2,3,4])
--- Present [1,2,3,4,99]
 -- PresentT [1,2,3,4,99]
 --
 -- >>> pz @(Fst Id +: Snd Id) ([],5)
--- Present [5]
 -- PresentT [5]
 --
 -- >>> pz @(EmptyT [] Id +: 5) 5
--- Present [5]
 -- PresentT [5]
 --
 data p +: q
@@ -5672,19 +5473,15 @@ instance (P p x
 -- | 'Control.Lens.uncons'
 --
 -- >>> pz @Uncons [1,2,3,4]
--- Present Just (1,[2,3,4])
 -- PresentT (Just (1,[2,3,4]))
 --
 -- >>> pz @Uncons []
--- Present Nothing
 -- PresentT Nothing
 --
 -- >>> pz @Uncons (Seq.fromList "abc")
--- Present Just ('a',fromList "bc")
 -- PresentT (Just ('a',fromList "bc"))
 --
 -- >>> pz @Uncons ("xyz" :: T.Text)
--- Present Just ('x',"yz")
 -- PresentT (Just ('x',"yz"))
 --
 data Uncons
@@ -5702,15 +5499,12 @@ instance (Show (ConsT s)
 -- | 'Control.Lens.unsnoc'
 --
 -- >>> pz @Unsnoc [1,2,3,4]
--- Present Just ([1,2,3],4)
 -- PresentT (Just ([1,2,3],4))
 --
 -- >>> pz @Unsnoc []
--- Present Nothing
 -- PresentT Nothing
 --
 -- >>> pz @Unsnoc ("xyz" :: T.Text)
--- Present Just ("xy",'z')
 -- PresentT (Just ("xy",'z'))
 --
 data Unsnoc
@@ -5728,19 +5522,15 @@ instance (Show (ConsT s)
 -- | similar to 'null' using 'AsEmpty'
 --
 -- >>> pz @IsEmpty [1,2,3,4]
--- False
 -- FalseT
 --
 -- >>> pz @IsEmpty []
--- True
 -- TrueT
 --
 -- >>> pz @IsEmpty LT
--- False
 -- FalseT
 --
 -- >>> pz @IsEmpty EQ
--- True
 -- TrueT
 --
 data IsEmpty
@@ -5771,15 +5561,12 @@ instance (Show (t a)
 -- | similar to 'null' using 'Foldable'
 --
 -- >>> pz @Null [1,2,3,4]
--- False
 -- FalseT
 --
 -- >>> pz @Null []
--- True
 -- TrueT
 --
 -- >>> pz @Null Nothing
--- True
 -- TrueT
 --
 data Null
@@ -5791,19 +5578,15 @@ instance P NullT a => P Null a where
 -- | similar to 'enumFromTo'
 --
 -- >>> pz @(EnumFromTo 2 5) ()
--- Present [2,3,4,5]
 -- PresentT [2,3,4,5]
 --
 -- >>> pz @(EnumFromTo 'LT 'GT) ()
--- Present [LT,EQ,GT]
 -- PresentT [LT,EQ,GT]
 --
 -- >>> pz @(EnumFromTo 'GT 'LT) ()
--- Present []
 -- PresentT []
 --
 -- >>> pz @(EnumFromTo (Pred Id) (Succ Id)) (SG.Max 10)
--- Present [Max {getMax = 9},Max {getMax = 10},Max {getMax = 11}]
 -- PresentT [Max {getMax = 9},Max {getMax = 10},Max {getMax = 11}]
 --
 data EnumFromTo p q
@@ -5826,19 +5609,15 @@ instance (P p x
 -- | similar to 'partitionEithers'
 --
 -- >>> pz @PartitionEithers [Left 'a',Right 2,Left 'c',Right 4,Right 99]
--- Present ("ac",[2,4,99])
 -- PresentT ("ac",[2,4,99])
 --
 -- >>> pz @PartitionEithers [Right 2,Right 4,Right 99]
--- Present ([],[2,4,99])
 -- PresentT ([],[2,4,99])
 --
 -- >>> pz @PartitionEithers [Left 'a',Left 'c']
--- Present ("ac",[])
 -- PresentT ("ac",[])
 --
 -- >>> pz @PartitionEithers ([] :: [Either () Int])
--- Present ([],[])
 -- PresentT ([],[])
 --
 data PartitionEithers
@@ -5853,7 +5632,6 @@ instance (Show a, Show b) => P PartitionEithers [Either a b] where
 -- | similar to 'partitionThese'. returns a 3-tuple with the results so use 'Fst' 'Snd' 'Thd' to extract
 --
 -- >>> pz @PartitionThese [This 'a', That 2, This 'c', These 'z' 1, That 4, These 'a' 2, That 99]
--- Present ("ac",[2,4,99],[('z',1),('a',2)])
 -- PresentT ("ac",[2,4,99],[('z',1),('a',2)])
 --
 data PartitionThese
@@ -5891,19 +5669,15 @@ instance P ThesesT x => P Theses x where
 -- | similar to 'scanl'
 --
 -- >>> pz @(Scanl (Snd Id :+ Fst Id) (Fst Id) (Snd Id)) ([99],[1..5])
--- Present [[99],[1,99],[2,1,99],[3,2,1,99],[4,3,2,1,99],[5,4,3,2,1,99]]
 -- PresentT [[99],[1,99],[2,1,99],[3,2,1,99],[4,3,2,1,99],[5,4,3,2,1,99]]
 --
 -- >>> pz @(ScanN 4 Id (Succ Id)) 'c'
--- Present "cdefg"
 -- PresentT "cdefg"
 --
 -- >>> pz @(FoldN 4 Id (Succ Id)) 'c'
--- Present 'g'
 -- PresentT 'g'
 --
 -- >>> pz @(Dup >> ScanN 4 Id (Pred Id *** Succ Id)) 'g'
--- Present [('g','g'),('f','h'),('e','i'),('d','j'),('c','k')]
 -- PresentT [('g','g'),('f','h'),('e','i'),('d','j'),('c','k')]
 --
 data Scanl p q r
@@ -5982,11 +5756,9 @@ instance P (FoldLT p q r) x => P (FoldL p q r) x where
 -- | similar to 'unfoldr'
 --
 -- >>> pz @(Unfoldr (MaybeBool (Not Null) (SplitAt 2 Id)) Id) [1..5]
--- Present [[1,2],[3,4],[5]]
 -- PresentT [[1,2],[3,4],[5]]
 --
 -- >>> pz @(IterateN 4 (Succ Id)) 4
--- Present [4,5,6,7]
 -- PresentT [4,5,6,7]
 --
 data Unfoldr p q
@@ -6068,7 +5840,6 @@ instance P (IterateNUntilT n p f) x => P (IterateNUntil n p f) x where
 -- | similar to 'map'
 --
 -- >>> pz @(Map (Pred Id) Id) [1..5]
--- Present [0,1,2,3,4]
 -- PresentT [0,1,2,3,4]
 --
 data Map p q
@@ -6105,11 +5876,9 @@ instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
 -- | if p then run q else run r
 --
 -- >>> pz @(If (Gt 4) "greater than 4" "less than or equal to 4" ) 10
--- Present "greater than 4"
 -- PresentT "greater than 4"
 --
 -- >>> pz @(If (Gt 4) "greater than 4" "less than or equal to 4") 0
--- Present "less than or equal to 4"
 -- PresentT "less than or equal to 4"
 data If p q r
 
@@ -6137,15 +5906,12 @@ instance (Show (PP r a)
 -- | creates a list of overlapping pairs of elements. requires two or more elements
 --
 -- >>> pz @Pairs [1,2,3,4]
--- Present [(1,2),(2,3),(3,4)]
 -- PresentT [(1,2),(2,3),(3,4)]
 --
 -- >>> pz @Pairs []
--- Error Pairs no data found
 -- FailT "Pairs no data found"
 --
 -- >>> pz @Pairs [1]
--- Error Pairs only one element found
 -- FailT "Pairs only one element found"
 --
 data Pairs
@@ -6165,19 +5931,15 @@ instance Show a => P Pairs [a] where
 -- | similar to 'partition'
 --
 -- >>> pz @(Partition (Ge 3) Id) [10,4,1,7,3,1,3,5]
--- Present ([10,4,7,3,3,5],[1,1])
 -- PresentT ([10,4,7,3,3,5],[1,1])
 --
 -- >>> pz @(Partition (Prime Id) Id) [10,4,1,7,3,1,3,5]
--- Present ([7,3,3,5],[10,4,1,1])
 -- PresentT ([7,3,3,5],[10,4,1,1])
 --
 -- >>> pz @(Partition (Ge 300) Id) [10,4,1,7,3,1,3,5]
--- Present ([],[10,4,1,7,3,1,3,5])
 -- PresentT ([],[10,4,1,7,3,1,3,5])
 --
 -- >>> pz @(Partition (Id < 300) Id) [10,4,1,7,3,1,3,5]
--- Present ([10,4,1,7,3,1,3,5],[])
 -- PresentT ([10,4,1,7,3,1,3,5],[])
 --
 data Partition p q
@@ -6217,11 +5979,9 @@ instance P (FilterT p q) x => P (Filter p q) x where
 -- | similar to 'break'
 --
 -- >>> pz @(Break (Ge 3) Id) [10,4,1,7,3,1,3,5]
--- Present ([],[10,4,1,7,3,1,3,5])
 -- PresentT ([],[10,4,1,7,3,1,3,5])
 --
 -- >>> pz @(Break (Lt 3) Id) [10,4,1,7,3,1,3,5]
--- Present ([10,4],[1,7,3,1,3,5])
 -- PresentT ([10,4],[1,7,3,1,3,5])
 --
 data Break p q
@@ -6277,11 +6037,9 @@ instance P (SpanT p q) x => P (Span p q) x where
 -- | Fails the computation with a message
 --
 -- >>> pz @(Failt Int (PrintF "value=%03d" Id)) 99
--- Error value=099
 -- FailT "value=099"
 --
 -- >>> pz @(FailS (PrintT "value=%03d string=%s" Id)) (99,"somedata")
--- Error value=099 string=somedata
 -- FailT "value=099 string=somedata"
 --
 data Fail t prt
@@ -6336,15 +6094,12 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 -- | catch a failure
 --
 -- >>> pz @(Catch (Succ Id) (Fst Id >> Second (ShowP Id) >> PrintT "%s %s" Id >> 'LT)) GT
--- Present LT
 -- PresentT LT
 --
 -- >>> pz @(Catch' (Succ Id) (Second (ShowP Id) >> PrintT "%s %s" Id)) GT
--- Error Succ IO e=Prelude.Enum.Ordering.succ: bad argument GT
 -- FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument GT"
 --
 -- >>> pz @(Catch' (Succ Id) (Second (ShowP Id) >> PrintT "%s %s" Id)) LT
--- Present EQ
 -- PresentT EQ
 --
 -- more flexible: takes a (String,x) and a proxy so we can still call 'False 'True
@@ -6381,11 +6136,9 @@ instance (P p x
 -- | similar to 'even'
 --
 -- >>> pz @(Map Even Id) [9,-4,12,1,2,3]
--- Present [False,True,True,False,True,False]
 -- PresentT [False,True,True,False,True,False]
 --
 -- >>> pz @(Map '(Even,Odd) Id) [9,-4,12,1,2,3]
--- Present [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
 -- PresentT [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
 --
 data Even
@@ -6409,11 +6162,9 @@ instance P OddT x => P Odd x where
 -- | similar to 'div'
 --
 -- >>> pz @(Div (Fst Id) (Snd Id)) (10,4)
--- Present 2
 -- PresentT 2
 --
 -- >>> pz @(Div (Fst Id) (Snd Id)) (10,0)
--- Error Div zero denominator
 -- FailT "Div zero denominator"
 --
 data Div p q
@@ -6440,11 +6191,9 @@ instance (PP p a ~ PP q a
 -- | similar to 'mod'
 --
 -- >>> pz @(Mod (Fst Id) (Snd Id)) (10,3)
--- Present 1
 -- PresentT 1
 --
 -- >>> pz @(Mod (Fst Id) (Snd Id)) (10,0)
--- Error Mod zero denominator
 -- FailT "Mod zero denominator"
 --
 data Mod p q
@@ -6470,23 +6219,18 @@ instance (PP p a ~ PP q a
 -- | similar to 'divMod'
 --
 -- >>> pz @(DivMod (Fst Id) (Snd Id)) (10,3)
--- Present (3,1)
 -- PresentT (3,1)
 --
 -- >>> pz @(DivMod (Fst Id) (Snd Id)) (10,-3)
--- Present (-4,-2)
 -- PresentT (-4,-2)
 --
 -- >>> pz @(DivMod (Fst Id) (Snd Id)) (-10,3)
--- Present (-4,2)
 -- PresentT (-4,2)
 --
 -- >>> pz @(DivMod (Fst Id) (Snd Id)) (-10,-3)
--- Present (3,-1)
 -- PresentT (3,-1)
 --
 -- >>> pz @(DivMod (Fst Id) (Snd Id)) (10,0)
--- Error DivMod zero denominator
 -- FailT "DivMod zero denominator"
 --
 data DivMod p q
@@ -6513,23 +6257,18 @@ instance (PP p a ~ PP q a
 -- | similar to 'quotRem'
 --
 -- >>> pz @(QuotRem (Fst Id) (Snd Id)) (10,3)
--- Present (3,1)
 -- PresentT (3,1)
 --
 -- >>> pz @(QuotRem (Fst Id) (Snd Id)) (10,-3)
--- Present (-3,1)
 -- PresentT (-3,1)
 --
 -- >>> pz @(QuotRem (Fst Id) (Snd Id)) (-10,-3)
--- Present (3,-1)
 -- PresentT (3,-1)
 --
 -- >>> pz @(QuotRem (Fst Id) (Snd Id)) (-10,3)
--- Present (-3,-1)
 -- PresentT (-3,-1)
 --
 -- >>> pz @(QuotRem (Fst Id) (Snd Id)) (10,0)
--- Error QuotRem zero denominator
 -- FailT "QuotRem zero denominator"
 --
 data QuotRem p q
@@ -6579,27 +6318,21 @@ instance P (RemT p q) x => P (Rem p q) x where
 -- \'prt\' receives (Int,a) as input which is the position and value if there is a failure
 --
 -- >>> pz @(Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 4)]) [17,4]
--- Present [17,4]
 -- PresentT [17,4]
 --
 -- >>> pz @(Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 5)]) [17,4]
--- Error arg2 failed
 -- FailT "arg2 failed"
 --
 -- >>> pz @(Guards '[ '("arg1 failed",Gt 99), '("arg2 failed", Same 4)]) [17,4]
--- Error arg1 failed
 -- FailT "arg1 failed"
 --
 -- >>> pz @(Guards '[ '(PrintT "arg %d failed with value %d" Id,Gt 4), '(PrintT "%d %d" Id, Same 4)]) [17,3]
--- Error 1 3
 -- FailT "1 3"
 --
 -- >>> pz @(GuardsQuick (PrintT "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5]
--- Error arg 2 failed with value 5
 -- FailT "arg 2 failed with value 5"
 --
 -- >>> pz @(GuardsQuick (PrintT "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
--- Error Guards:invalid length(4) expected 3
 -- FailT "Guards:invalid length(4) expected 3"
 --
 data GuardsImpl (n :: Nat) (os :: [(k,k1)])
@@ -6815,15 +6548,12 @@ instance (x ~ [a], P (BoolsNT prt n p) x) => P (BoolsN prt n p) x where
 -- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
 --
 -- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [13,59,61]
--- Error seconds invalid: found 61
 -- FailT "seconds invalid: found 61"
 --
 -- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [27,59,12]
--- Error hours invalid: found 27
 -- FailT "hours invalid: found 27"
 --
 -- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [23,59,12]
--- Present [23,59,12]
 -- PresentT [23,59,12]
 --
 data GuardsDetailImpl (ps :: [(k,k1)])
@@ -6902,11 +6632,9 @@ type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
 -- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255 Id)) [121,33,7,256]
--- Error id=3 must be between 0 and 255, found 256
 -- FailT "id=3 must be between 0 and 255, found 256"
 --
 -- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255 Id)) [121,33,7,44]
--- Present [121,33,7,44]
 -- PresentT [121,33,7,44]
 --
 data GuardsN prt (n :: Nat) p
@@ -6919,15 +6647,12 @@ instance (x ~ [a], P (GuardsNT prt n p) x) => P (GuardsN prt n p) x where
 -- | \'p\' is the predicate and on failure of the predicate runs \'prt\'
 --
 -- >>> pz @(Guard "expected > 3" (Gt 3)) 17
--- Present 17
 -- PresentT 17
 --
 -- >>> pz @(Guard "expected > 3" (Gt 3)) 1
--- Error expected > 3
 -- FailT "expected > 3"
 --
 -- >>> pz @(Guard (PrintF "%d not > 3" Id) (Gt 3)) (-99)
--- Error -99 not > 3
 -- FailT "-99 not > 3"
 --
 data Guard prt p
@@ -6964,7 +6689,6 @@ instance (Show a
 -- most uses of GuardSimple can be replaced by using 'ol' and a boolean predicate unless you require failure
 --
 -- >>> pz @(GuardSimple (Luhn Id)) [1..4]
--- Error (Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])
 -- FailT "(Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])"
 --
 -- >>> pl @(Luhn Id) [1..4]
@@ -6972,11 +6696,9 @@ instance (Show a
 -- FalseT
 --
 -- >>> pz @(GuardSimple (Luhn Id)) [1,2,3,0]
--- Present [1,2,3,0]
 -- PresentT [1,2,3,0]
 --
 -- >>> pz @(GuardSimple (Len > 30)) [1,2,3,0]
--- Error (4 > 30)
 -- FailT "(4 > 30)"
 --
 data GuardSimple p
@@ -6988,7 +6710,7 @@ instance (Show a
   type PP (GuardSimple p) a = a
   eval _ opts a = do
     let msg0 = "GuardSimple"
-    pp <- evalBool (Proxy @p) (if hasNoTree opts then o0 else opts) a -- to not lose the message in oLite mode we use non lite and then fix it up after
+    pp <- evalBool (Proxy @p) (if hasNoTree opts then oan else opts) a -- to not lose the message in oLite mode we use non lite and then fix it up after
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right False ->
@@ -7040,11 +6762,9 @@ instance P (SkipBothT p q) x => P (p >|> q) x where
 -- | This is composition for predicates
 --
 -- >>> pz @(Fst Id >> Succ (Id !! 0)) ([11,12],'x')
--- Present 12
 -- PresentT 12
 --
 -- >>> pz @(Len *** Succ Id >> ShowP (First (Pred Id))) ([11,12],'x')
--- Present "(1,'y')"
 -- PresentT "(1,'y')"
 --
 data p >> q
@@ -7081,23 +6801,18 @@ infixl 1 >>>
 -- | similar to 'Prelude.&&'
 --
 -- >>> pz @(Fst Id && Snd Id) (True, True)
--- True
 -- TrueT
 --
 -- >>> pz @(Id > 15 && Id < 17) 16
--- True
 -- TrueT
 --
 -- >>> pz @(Id > 15 && Id < 17) 30
--- False
 -- FalseT
 --
 -- >>> pz @(Fst Id && (Length (Snd Id) >= 4)) (True,[11,12,13,14])
--- True
 -- TrueT
 --
 -- >>> pz @(Fst Id && (Length (Snd Id) == 4)) (True,[12,11,12,13,14])
--- False
 -- FalseT
 --
 data p && q
@@ -7125,11 +6840,9 @@ instance (P p a
 -- | similar to 'Prelude.||'
 --
 -- >>> pz @(Fst Id || (Length (Snd Id) >= 4)) (False,[11,12,13,14])
--- True
 -- TrueT
 --
 -- >>> pz @(Not (Fst Id) || (Length (Snd Id) == 4)) (True,[12,11,12,13,14])
--- False
 -- FalseT
 --
 data p || q
@@ -7155,19 +6868,15 @@ instance (P p a
 -- | implication
 --
 -- >>> pz @(Fst Id ~> (Length (Snd Id) >= 4)) (True,[11,12,13,14])
--- True
 -- TrueT
 --
 -- >>> pz @(Fst Id ~> (Length (Snd Id) == 4)) (True,[12,11,12,13,14])
--- False
 -- FalseT
 --
 -- >>> pz @(Fst Id ~> (Length (Snd Id) == 4)) (False,[12,11,12,13,14])
--- True
 -- TrueT
 --
 -- >>> pz @(Fst Id ~> (Length (Snd Id) >= 4)) (False,[11,12,13,14])
--- True
 -- TrueT
 --
 data p ~> q
@@ -7194,15 +6903,12 @@ instance (P p a
 -- | 'not' function
 --
 -- >>> pz @(Not Id) False
--- True
 -- TrueT
 --
 -- >>> pz @(Not Id) True
--- False
 -- FalseT
 --
 -- >>> pz @(Not (Fst Id)) (True,22)
--- False
 -- FalseT
 --
 -- >>> pl @(Not (Lt 3)) 13
@@ -7225,23 +6931,18 @@ instance (PP p x ~ Bool, P p x) => P (Not p) x where
 -- | similar to 'compare'
 --
 -- >>> pz @(Fst Id ==! Snd Id) (10,9)
--- Present GT
 -- PresentT GT
 --
 -- >>> pz @(14 % 3 ==! Fst Id -% Snd Id) (-10,7)
--- Present GT
 -- PresentT GT
 --
 -- >>> pz @(Fst Id ==! Snd Id) (10,11)
--- Present LT
 -- PresentT LT
 --
 -- >>> pz @(Snd Id ==! (Fst Id >> Snd Id >> Head Id)) (('x',[10,12,13]),10)
--- Present EQ
 -- PresentT EQ
 --
 -- >>> pz @(Snd Id ==! Head (Snd (Fst Id))) (('x',[10,12,13]),10)
--- Present EQ
 -- PresentT EQ
 --
 
@@ -7282,11 +6983,9 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 -- | compare two strings ignoring case
 --
 -- >>> pz @(Fst Id ===~ Snd Id) ("abC","aBc")
--- Present EQ
 -- PresentT EQ
 --
 -- >>> pz @(Fst Id ===~ Snd Id) ("abC","DaBc")
--- Present LT
 -- PresentT LT
 --
 type OrdI p q = p ===~ q
@@ -7368,7 +7067,6 @@ instance (PP p a ~ String
 -- | similar to 'Control.Lens.itoList'
 --
 -- >>> pz @(IToList _ Id) ("aBc" :: String)
--- Present [(0,'a'),(1,'B'),(2,'c')]
 -- PresentT [(0,'a'),(1,'B'),(2,'c')]
 --
 data IToList' t p
@@ -7402,23 +7100,18 @@ instance P (IToListT t p) x => P (IToList t p) x where
 -- | similar to 'toList'
 --
 -- >>> pz @ToList ("aBc" :: String)
--- Present "aBc"
 -- PresentT "aBc"
 --
 -- >>> pz @ToList (Just 14)
--- Present [14]
 -- PresentT [14]
 --
 -- >>> pz @ToList Nothing
--- Present []
 -- PresentT []
 --
 -- >>> pz @ToList (Left "xx")
--- Present []
 -- PresentT []
 --
 -- >>> pz @ToList (These 12 "xx")
--- Present ["xx"]
 -- PresentT ["xx"]
 --
 data ToList
@@ -7435,23 +7128,18 @@ instance (Show (t a)
 -- | similar to 'toList'
 --
 -- >>> pz @(ToList' Id) ("aBc" :: String)
--- Present "aBc"
 -- PresentT "aBc"
 --
 -- >>> pz @(ToList' Id) (Just 14)
--- Present [14]
 -- PresentT [14]
 --
 -- >>> pz @(ToList' Id) Nothing
--- Present []
 -- PresentT []
 --
 -- >>> pz @(ToList' Id) (Left "xx")
--- Present []
 -- PresentT []
 --
 -- >>> pz @(ToList' Id) (These 12 "xx")
--- Present ["xx"]
 -- PresentT ["xx"]
 --
 data ToList' p
@@ -7476,11 +7164,9 @@ instance (PP p x ~ t a
 -- | invokes 'GE.toList'
 --
 -- >>> pz @ToListExt (M.fromList [(1,'x'),(4,'y')])
--- Present [(1,'x'),(4,'y')]
 -- PresentT [(1,'x'),(4,'y')]
 --
 -- >>> pz @ToListExt (T.pack "abc")
--- Present "abc"
 -- PresentT "abc"
 --
 data ToListExt
@@ -7514,7 +7200,6 @@ instance (a ~ GE.Item t
 --
 -- >>> :set -XOverloadedLists
 -- >>> pz @(FromListExt (M.Map _ _)) [(4,"x"),(5,"dd")]
--- Present fromList [(4,"x"),(5,"dd")]
 -- PresentT (fromList [(4,"x"),(5,"dd")])
 --
 data FromListExt (t :: Type)
@@ -7532,15 +7217,12 @@ instance (Show l
 -- | predicate on 'These'
 --
 -- >>> pz @(IsThis Id) (This "aBc")
--- True
 -- TrueT
 --
 -- >>> pz @(IsThis Id) (These 1 'a')
--- False
 -- FalseT
 --
 -- >>> pz @(IsThese Id) (These 1 'a')
--- True
 -- TrueT
 --
 -- >>> pl @(IsThat Id) (This 12)
@@ -7561,7 +7243,6 @@ instance (Show l
 --
 data IsTh (th :: These x y) p -- x y can be anything
 
-
 -- trying to avoid show instance cos of ambiguities
 instance (PP p x ~ These a b
         , P p x
@@ -7578,7 +7259,7 @@ instance (PP p x ~ These a b
       Right p ->
         let (t,f) = getThese @th
             b = f p
-        in mkNodeB opts b (msg0 <> t <> show1 opts " | " p) []
+        in mkNodeB opts b (msg0 <> t <> show1 opts " | " p) [hh pp]
 
 data IsThis p
 type IsThisT p = IsTh ('This '()) p
@@ -7604,27 +7285,21 @@ instance P (IsTheseT p) x => P (IsThese p) x where
 -- | similar to 'Data.These.these'
 --
 -- >>> pz @(TheseIn Id Len (Fst Id + Length (Snd Id))) (This 13)
--- Present 13
 -- PresentT 13
 --
 -- >>> pz @(TheseIn Id Len (Fst Id + Length (Snd Id))) (That "this is a long string")
--- Present 21
 -- PresentT 21
 --
 -- >>> pz @(TheseIn Id Len (Fst Id + Length (Snd Id))) (These 20 "somedata")
--- Present 28
 -- PresentT 28
 --
 -- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (That "this is a long string")
--- Present Right "this is a long string"
 -- PresentT (Right "this is a long string")
 --
 -- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 1 "this is a long string")
--- Present Right "this is a long string"
 -- PresentT (Right "this is a long string")
 --
 -- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 100 "this is a long string")
--- Present Left 100
 -- PresentT (Left 100)
 --
 data TheseIn p q r
@@ -7674,7 +7349,6 @@ instance P (TheseIdT p q) x => P (TheseId p q) x where
 -- | creates an empty list of the given type
 --
 -- >>> pz @(Id :+ EmptyList _) 99
--- Present [99]
 -- PresentT [99]
 --
 data EmptyList' t
@@ -7694,15 +7368,12 @@ instance P (EmptyList t) x where
 -- | creates a singleton from a value
 --
 -- >>> pz @(Singleton (Char1 "aBc")) ()
--- Present "a"
 -- PresentT "a"
 --
 -- >>> pz @(Singleton Id) False
--- Present [False]
 -- PresentT [False]
 --
 -- >>> pz @(Singleton (Snd Id)) (False,"hello")
--- Present ["hello"]
 -- PresentT ["hello"]
 --
 data Singleton p
@@ -7721,7 +7392,6 @@ instance P p x => P (Singleton p) x where
 -- | extracts the first character from a non empty 'Symbol'
 --
 -- >>> pz @(Char1 "aBc") ()
--- Present 'a'
 -- PresentT 'a'
 --
 data Char1 (s :: Symbol)  -- gets the first char from the Symbol [requires that Symbol is not empty]
@@ -7737,27 +7407,21 @@ instance (KnownSymbol s, GL.CmpSymbol s "" ~ 'GT) => P (Char1 s) a where
 -- the key is that all information about both lists are preserved
 --
 -- >>> pz @(ZipThese (Fst Id) (Snd Id)) ("aBc", [1..5])
--- Present [These 'a' 1,These 'B' 2,These 'c' 3,That 4,That 5]
 -- PresentT [These 'a' 1,These 'B' 2,These 'c' 3,That 4,That 5]
 --
 -- >>> pz @(ZipThese (Fst Id) (Snd Id)) ("aBcDeF", [1..3])
--- Present [These 'a' 1,These 'B' 2,These 'c' 3,This 'D',This 'e',This 'F']
 -- PresentT [These 'a' 1,These 'B' 2,These 'c' 3,This 'D',This 'e',This 'F']
 --
 -- >>> pz @(ZipThese Id Reverse) "aBcDeF"
--- Present [These 'a' 'F',These 'B' 'e',These 'c' 'D',These 'D' 'c',These 'e' 'B',These 'F' 'a']
 -- PresentT [These 'a' 'F',These 'B' 'e',These 'c' 'D',These 'D' 'c',These 'e' 'B',These 'F' 'a']
 --
 -- >>> pz @(ZipThese Id '[]) "aBcDeF"
--- Present [This 'a',This 'B',This 'c',This 'D',This 'e',This 'F']
 -- PresentT [This 'a',This 'B',This 'c',This 'D',This 'e',This 'F']
 --
 -- >>> pz @(ZipThese '[] Id) "aBcDeF"
--- Present [That 'a',That 'B',That 'c',That 'D',That 'e',That 'F']
 -- PresentT [That 'a',That 'B',That 'c',That 'D',That 'e',That 'F']
 --
 -- >>> pz @(ZipThese '[] '[]) "aBcDeF"
--- Present []
 -- PresentT []
 --
 data ZipThese p q
@@ -7808,23 +7472,18 @@ type family ExtractAFromList (as :: Type) :: Type where
 -- | Zip two lists to their maximum length using padding if needed
 --
 -- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("abc", [1..5])
--- Present [('a',1),('b',2),('c',3),('Z',4),('Z',5)]
 -- PresentT [('a',1),('b',2),('c',3),('Z',4),('Z',5)]
 --
 -- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("abcdefg", [1..5])
--- Present [('a',1),('b',2),('c',3),('d',4),('e',5),('f',99),('g',99)]
 -- PresentT [('a',1),('b',2),('c',3),('d',4),('e',5),('f',99),('g',99)]
 --
 -- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("abcde", [1..5])
--- Present [('a',1),('b',2),('c',3),('d',4),('e',5)]
 -- PresentT [('a',1),('b',2),('c',3),('d',4),('e',5)]
 --
 -- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("", [1..5])
--- Present [('Z',1),('Z',2),('Z',3),('Z',4),('Z',5)]
 -- PresentT [('Z',1),('Z',2),('Z',3),('Z',4),('Z',5)]
 --
 -- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("abcde", [])
--- Present [('a',99),('b',99),('c',99),('d',99),('e',99)]
 -- PresentT [('a',99),('b',99),('c',99),('d',99),('e',99)]
 --
 data ZipPad l r p q
@@ -8017,15 +7676,12 @@ instance (PP p a ~ [x]
 -- | Luhn predicate check on last digit
 --
 -- >>> pz @(Luhn Id) [1,2,3,0]
--- True
 -- TrueT
 --
 -- >>> pz @(Luhn Id) [1,2,3,4]
--- False
 -- FalseT
 --
 -- >>> pz @(GuardSimple (Luhn Id)) [15,4,3,1,99]
--- Error (Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])
 -- FailT "(Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])"
 --
 -- >>> pl @(Luhn Id) [15,4,3,1,99]
@@ -8055,19 +7711,15 @@ instance (PP p x ~ [Int]
 -- | Read a number using base 2 through a maximum of 36
 --
 -- >>> pz @(ReadBase Int 16 Id) "00feD"
--- Present 4077
 -- PresentT 4077
 --
 -- >>> pz @(ReadBase Int 16 Id) "-ff"
--- Present -255
 -- PresentT (-255)
 --
 -- >>> pz @(ReadBase Int 2 Id) "10010011"
--- Present 147
 -- PresentT 147
 --
 -- >>> pz @(ReadBase Int 8 Id) "Abff"
--- Error invalid base 8
 -- FailT "invalid base 8"
 --
 -- supports negative numbers unlike readInt
@@ -8118,19 +7770,15 @@ getValidBase n =
 -- | Display a number at base 2 to 36, similar to 'showIntAtBase' but supports signed numbers
 --
 -- >>> pz @(ShowBase 16 Id) 4077
--- Present "fed"
 -- PresentT "fed"
 --
 -- >>> pz @(ShowBase 16 Id) (-255)
--- Present "-ff"
 -- PresentT "-ff"
 --
 -- >>> pz @(ShowBase 2 Id) 147
--- Present "10010011"
 -- PresentT "10010011"
 --
 -- >>> pz @(ShowBase 2 (Negate 147)) "whatever"
--- Present "-10010011"
 -- PresentT "-10010011"
 --
 data ShowBase (n :: Nat) p
@@ -8154,20 +7802,17 @@ instance (PP p x ~ a
       Right p ->
         let (ff,a') = if p < 0 then (('-':), abs p) else (id,p)
             b = showIntAtBase (fromIntegral n) (xs !!) a' ""
-        in mkNode opts (PresentT (ff b)) (msg0 <> showLit0 opts " " (ff b) <> show1 opts " | " p) []
+        in mkNode opts (PresentT (ff b)) (msg0 <> showLit0 opts " " (ff b) <> show1 opts " | " p) [hh pp]
 
 -- | intercalate two lists
 --
 -- >>> pz @(Intercalate '["aB"] '["xxxx","yz","z","www","xyz"]) ()
--- Present ["xxxx","aB","yz","aB","z","aB","www","aB","xyz"]
 -- PresentT ["xxxx","aB","yz","aB","z","aB","www","aB","xyz"]
 --
 -- >>> pz @(Intercalate '[W 99,Negate 98] Id) [1..5]
--- Present [1,99,-98,2,99,-98,3,99,-98,4,99,-98,5]
 -- PresentT [1,99,-98,2,99,-98,3,99,-98,4,99,-98,5]
 --
 -- >>> pz @(Intercalate '[99,100] Id) [1..5]
--- Present [1,99,100,2,99,100,3,99,100,4,99,100,5]
 --PresentT [1,99,100,2,99,100,3,99,100,4,99,100,5]
 --
 data Intercalate p q
@@ -8195,15 +7840,12 @@ instance (PP p x ~ [a]
 -- | uses PrintF to format output
 --
 -- >>> pz @(PrintF "value=%03d" Id) 12
--- Present "value=012"
 -- PresentT "value=012"
 --
 -- >>> pz @(PrintF "%s" (Fst Id)) ("abc",'x')
--- Present "abc"
 -- PresentT "abc"
 --
 -- >>> pz @(PrintF "%d" (Fst Id)) ("abc",'x')
--- Error PrintF (IO e=printf: bad formatting char 'd')
 -- FailT "PrintF (IO e=printf: bad formatting char 'd')"
 --
 data PrintF s p
@@ -8243,11 +7885,9 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 -- | runs values in parallel unlike 'Do' which is serial
 --
 -- >>> pz @(Para '[Id,Id + 1,Id * 4]) [10,20,30]
--- Present [10,21,120]
 -- PresentT [10,21,120]
 --
 -- >>> pz @(Para '[Id,Id + 1,Id * 4]) [10,20,30,40]
--- Error Para:invalid length(4) expected 3
 -- FailT "Para:invalid length(4) expected 3"
 --
 data ParaImpl (n :: Nat) (os :: [k])
@@ -8327,15 +7967,12 @@ instance (KnownNat n
 -- | leverages 'Para' for repeating predicates (passthrough method)
 --
 -- >>> pz @(ParaN 4 (Succ Id)) [1..4]
--- Present [2,3,4,5]
 -- PresentT [2,3,4,5]
 --
 -- >>> pz @(ParaN 4 (Succ Id)) "azwxm"
--- Error Para:invalid length(5) expected 4
 -- FailT "Para:invalid length(5) expected 4"
 --
 -- >>> pz @(ParaN 4 (Succ Id)) "azwx"
--- Present "b{xy"
 -- PresentT "b{xy"
 --
 data ParaN (n :: Nat) p
@@ -8350,19 +7987,15 @@ instance ( P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) x
 -- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
 --
 -- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 50
--- Present "50 is same50"
 -- PresentT "50 is same50"
 --
 -- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 9
--- Present "9 is lt10"
 -- PresentT "9 is lt10"
 --
 -- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 3
--- Present "3 is lt4"
 -- PresentT "3 is lt4"
 --
 -- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
--- Error asdf
 -- FailT "asdf"
 --
 data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
@@ -8489,11 +8122,9 @@ instance (KnownNat n
 -- | similar to 'sequenceA'
 --
 -- >>> pz @Sequence [Just 10, Just 20, Just 30]
--- Present Just [10,20,30]
 -- PresentT (Just [10,20,30])
 --
 -- >>> pz @Sequence [Just 10, Just 20, Just 30, Nothing, Just 40]
--- Present Nothing
 -- PresentT Nothing
 --
 data Sequence
@@ -8528,11 +8159,9 @@ instance P p x => P (Hide p) x where
 -- | similar to 'readFile'
 --
 -- >>> pz @(ReadFile "LICENSE" >> 'Just Id >> Len > 0) ()
--- True
 -- TrueT
 --
 -- >>> pz @(FileExists "xyzzy") ()
--- False
 -- FalseT
 --
 data ReadFile p
@@ -8565,7 +8194,6 @@ instance (PP p x ~ String, P p x) => P (ReadFile p) x where
 -- | does the directory exists
 --
 -- >>> pz @(DirExists ".") ()
--- True
 -- TrueT
 --
 data ReadDir p
@@ -8591,14 +8219,13 @@ instance (PP p x ~ String, P p x) => P (ReadDir p) x where
                 if b then Just <$> listDirectory p
                 else pure Nothing
         pure $ case mb of
-          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) (msg1 <> " must run in IO") []
-          Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") []
-          Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (length b) <> show0 opts " Just " b) []
+          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) (msg1 <> " must run in IO") [hh pp]
+          Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
+          Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (length b) <> show0 opts " Just " b) [hh pp]
 
 -- | read an environment variable
 --
 -- >>> pz @(ReadEnv "PATH" >> 'Just Id >> 'True) ()
--- True
 -- TrueT
 --
 data ReadEnv p
@@ -8614,9 +8241,9 @@ instance (PP p x ~ String, P p x) => P (ReadEnv p) x where
         let msg1 = msg0 <> "[" <> p <> "]"
         mb <- runIO $ lookupEnv p
         pure $ case mb of
-          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) (msg1 <> " must run in IO") []
-          Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") []
-          Just (Just v) -> mkNode opts (PresentT (Just v)) (msg1 <> showLit0 opts " " v) []
+          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) (msg1 <> " must run in IO") [hh pp]
+          Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
+          Just (Just v) -> mkNode opts (PresentT (Just v)) (msg1 <> showLit0 opts " " v) [hh pp]
 
 -- | read all the environment variables as key value pairs
 data ReadEnvAll
@@ -8775,19 +8402,15 @@ instance P Stdin x where
 -- The \'I\' suffixed versions work are case insensitive.
 --
 -- >>> pz @(IsInfixI "abc" "axAbCd") ()
--- True
 -- TrueT
 --
 -- >>> pz @(IsPrefixI "abc" "aBcbCd") ()
--- True
 -- TrueT
 --
 -- >>> pz @(IsPrefix "abc" "aBcbCd") ()
--- False
 -- FalseT
 --
 -- >>> pz @(IsSuffix "bCd" "aBcbCd") ()
--- True
 -- TrueT
 --
 data IsFixImpl (cmp :: Ordering) (ignore :: Bool) p q
@@ -8863,35 +8486,27 @@ instance P (IsSuffixIT p q) x => P (IsSuffixI p q) x where
 -- | similar to 'SG.<>'
 --
 -- >>> pz @(Fst Id <> Snd Id) ("abc","def")
--- Present "abcdef"
 -- PresentT "abcdef"
 --
 -- >>> pz @("abcd" <> "ef" <> Id) "ghi"
--- Present "abcdefghi"
 -- PresentT "abcdefghi"
 --
 -- >>> pz @("abcd" <> "ef" <> Id) "ghi"
--- Present "abcdefghi"
 -- PresentT "abcdefghi"
 --
 -- >>> pz @(Wrap (SG.Sum _) Id <> FromInteger _ 10) 13
--- Present Sum {getSum = 23}
 -- PresentT (Sum {getSum = 23})
 --
 -- >>> pz @(Wrap (SG.Product _) Id <> FromInteger _ 10) 13
--- Present Product {getProduct = 130}
 -- PresentT (Product {getProduct = 130})
 --
 -- >>> pz @('(FromInteger _ 10,"def") <> Id) (SG.Sum 12, "_XYZ")
--- Present (Sum {getSum = 22},"def_XYZ")
 -- PresentT (Sum {getSum = 22},"def_XYZ")
 --
 -- >>> pz @(SapA' (SG.Max _)) (10,12)
--- Present Max {getMax = 12}
 -- PresentT (Max {getMax = 12})
 --
 -- >>> pz @(SapA' (SG.Sum _)) (10,12)
--- Present Sum {getSum = 22}
 -- PresentT (Sum {getSum = 22})
 --
 data p <> q
@@ -8947,11 +8562,9 @@ instance (PrintfArg a, PrintC rs) => PrintC (a,rs) where
 -- PresentT "x 10 Asdf"
 --
 -- >>> pz @(PrintT "fst=%s snd=%03d" Id) ("ab",123)
--- Present "fst=ab snd=123"
 -- PresentT "fst=ab snd=123"
 --
 -- >>> pz @(PrintT "fst=%s snd=%03d thd=%s" Id) ("ab",123,"xx")
--- Present "fst=ab snd=123 thd=xx"
 -- PresentT "fst=ab snd=123 thd=xx"
 --
 -- >>> pl @(PrintT "%s %d %c %s" '(W "xyz", Fst Id, Snd Id, Thd Id)) (123,'x',"ab")
@@ -9054,7 +8667,6 @@ type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
 -- | similar to 'Control.Applicative.<$'
 --
 -- >>> pz @(Fst Id <$ Snd Id) ("abc",Just 20)
--- Present Just "abc"
 -- PresentT (Just "abc")
 --
 data p <$ q
@@ -9083,7 +8695,6 @@ infixl 4 <*
 -- | similar to 'Control.Applicative.<*'
 --
 -- >>> pz @(Fst Id <* Snd Id) (Just "abc",Just 20)
--- Present Just "abc"
 -- PresentT (Just "abc")
 --
 type ArrowRT p q = q <* p
@@ -9115,15 +8726,12 @@ instance (Show (t c)
 -- | similar to 'Control.Applicative.<|>'
 --
 -- >>> pz @(Fst Id <|> Snd Id) (Nothing,Just 20)
--- Present Just 20
 -- PresentT (Just 20)
 --
 -- >>> pz @(Fst Id <|> Snd Id) (Just 10,Just 20)
--- Present Just 10
 -- PresentT (Just 10)
 --
 -- >>> pz @(Fst Id <|> Snd Id) (Nothing,Nothing)
--- Present Nothing
 -- PresentT Nothing
 --
 data p <|> q
@@ -9150,11 +8758,9 @@ instance (P p x
 -- | similar to 'Control.Comonad.extract'
 --
 -- >>> pz @Extract (Nothing,Just 20)
--- Present Just 20
 -- PresentT (Just 20)
 --
 -- >>> pz @Extract (Identity 20)
--- Present 20
 -- PresentT 20
 --
 data Extract
@@ -9171,7 +8777,6 @@ instance (Show (t a)
 -- | similar to 'Control.Comonad.duplicate'
 --
 -- >>> pz @Duplicate (20,"abc")
--- Present (20,(20,"abc"))
 -- PresentT (20,(20,"abc"))
 --
 data Duplicate
@@ -9189,11 +8794,9 @@ instance (Show (t a)
 -- | similar to 'Control.Monad.join'
 --
 -- >>> pz @Join  (Just (Just 20))
--- Present Just 20
 -- PresentT (Just 20)
 --
 -- >>> pz @Join  ["ab","cd","","ef"]
--- Present "abcdef"
 -- PresentT "abcdef"
 --
 data Join
@@ -9211,11 +8814,9 @@ instance (Show (t (t a))
 -- | function application for expressions: similar to 'GHC.Base.$'
 --
 -- pz @(Fst Id $$ Snd Id) ((*16),4)
--- Present 64
 -- PresentT 64
 --
 -- pz @(Id $$ "def") ("abc"<>)
--- Present "abcdef"
 -- PresentT "abcdef"
 --
 data p $$ q
@@ -9244,11 +8845,9 @@ instance (P p x
 -- | flipped function application for expressions: similar to 'Control.Lens.&'
 --
 -- pz @(Snd Id $& Fst Id) ((*16),4)
--- Present 64
 -- PresentT 64
 --
 -- pz @("def" $& Id) ("abc"<>)
--- Present "abcdef"
 -- PresentT "abcdef"
 --
 data q $& p -- flips the args eg a & b & (,) = (b,a)
@@ -9282,35 +8881,27 @@ type family FnT ab :: Type where
 -- | similar to 'T.strip' 'T.stripStart' 'T.stripEnd'
 --
 -- >>> pz @(TrimBoth (Snd Id)) (20," abc   " :: String)
--- Present "abc"
 -- PresentT "abc"
 --
 -- >>> pz @(TrimBoth (Snd Id)) (20,T.pack " abc   ")
--- Present "abc"
 -- PresentT "abc"
 --
 -- >>> pz @(TrimL (Snd Id)) (20," abc   ")
--- Present "abc   "
 -- PresentT "abc   "
 --
 -- >>> pz @(TrimR (Snd Id)) (20," abc   ")
--- Present " abc"
 -- PresentT " abc"
 --
 -- >>> pz @(TrimR "  abc ") ()
--- Present "  abc"
 -- PresentT "  abc"
 --
 -- >>> pz @(TrimR "") ()
--- Present ""
 -- PresentT ""
 --
 -- >>> pz @(TrimBoth "         ") ()
--- Present ""
 -- PresentT ""
 --
 -- >>> pz @(TrimBoth "") ()
--- Present ""
 -- PresentT ""
 --
 data TrimImpl (left :: Bool) (right :: Bool) p
@@ -9360,31 +8951,24 @@ instance P (TrimBothT p) x => P (TrimBoth p) x where
 -- | similar to 'T.stripLeft' 'T.stripRight'
 --
 -- >>> pz @(StripL "xyz" Id) ("xyzHello" :: String)
--- Present Just "Hello"
 -- PresentT (Just "Hello")
 --
 -- >>> pz @(StripL "xyz" Id) (T.pack "xyzHello")
--- Present Just "Hello"
 -- PresentT (Just "Hello")
 --
 -- >>> pz @(StripL "xyz" Id) "xywHello"
--- Present Nothing
 -- PresentT Nothing
 --
 -- >>> pz @(StripR "xyz" Id) "Hello xyz"
--- Present Just "Hello "
 -- PresentT (Just "Hello ")
 --
 -- >>> pz @(StripR "xyz" Id) "xyzHelloxyw"
--- Present Nothing
 -- PresentT Nothing
 --
 -- >>> pz @(StripR "xyz" Id) ""
--- Present Nothing
 -- PresentT Nothing
 --
 -- >>> pz @(StripR "xyz" "xyz") ()
--- Present Just ""
 -- PresentT (Just "")
 --
 data StripImpl(left :: Bool) p q
@@ -9428,11 +9012,9 @@ instance P (StripRT p q) x => P (StripR p q) x where
 -- | creates a promoted list of predicates and then evaluates them into a list. see PP instance for '[k]
 --
 -- >>> pz @(Repeat 4 (Succ Id)) 'c'
--- Present "dddd"
 -- PresentT "dddd"
 --
 -- >>> pz @(Repeat 4 "abc") ()
--- Present ["abc","abc","abc","abc"]
 -- PresentT ["abc","abc","abc","abc"]
 --
 data Repeat (n :: Nat) p
@@ -9444,15 +9026,12 @@ instance P (RepeatT n p) a => P (Repeat n p) a where
 -- same as @DoN n p == FoldN n p Id@ but more efficient
 --
 -- >>> pz @(DoN 4 (Succ Id)) 'c'
--- Present 'g'
 -- PresentT 'g'
 --
 -- >>> pz @(DoN 4 (Id <> " | ")) "abc"
--- Present "abc |  |  |  | "
 -- PresentT "abc |  |  |  | "
 --
 -- >>> pz @(DoN 4 (Id <> "|" <> Id)) "abc"
--- Present "abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc"
 -- PresentT "abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc|abc"
 --
 data DoN (n :: Nat) p
@@ -9464,23 +9043,18 @@ instance P (DoNT n p) a => P (DoN n p) a where
 -- | extract the value from a 'Maybe' otherwise use the default value
 --
 -- >>> pz @(JustDef (1 % 4) Id) (Just 20.4)
--- Present 102 % 5
 -- PresentT (102 % 5)
 --
 -- >>> pz @(JustDef (1 % 4) Id) Nothing
--- Present 1 % 4
 -- PresentT (1 % 4)
 --
 -- >>> pz @(JustDef (MEmptyT _) Id) (Just "xy")
--- Present "xy"
 -- PresentT "xy"
 --
 -- >>> pz @(JustDef (MEmptyT _) Id) Nothing
--- Present ()
 -- PresentT ()
 --
 -- >>> pz @(JustDef (MEmptyT (SG.Sum _)) Id) Nothing
--- Present Sum {getSum = 0}
 -- PresentT (Sum {getSum = 0})
 --
 data JustDef p q
@@ -9516,19 +9090,15 @@ type family MaybeT mb where
 -- | extract the value from a 'Maybe' or fail
 --
 -- >>> pz @(JustFail "nope" Id) (Just 99)
--- Present 99
 -- PresentT 99
 --
 -- >>> pz @(JustFail "nope" Id) Nothing
--- Error nope
 -- FailT "nope"
 --
 -- >>> pz @(JustFail (PrintF "oops=%d" (Snd Id)) (Fst Id)) (Nothing, 123)
--- Error oops=123
 -- FailT "oops=123"
 --
 -- >>> pz @(JustFail (PrintF "oops=%d" (Snd Id)) (Fst Id)) (Just 'x', 123)
--- Present 'x'
 -- PresentT 'x'
 --
 data JustFail p q
@@ -9558,23 +9128,18 @@ instance ( PP p x ~ String
 -- if there is no Left value then \p\ is passed the Right value and the whole context
 --
 -- >>> pz @(LeftDef (1 % 4) Id) (Left 20.4)
--- Present 102 % 5
 -- PresentT (102 % 5)
 --
 -- >>> pz @(LeftDef (1 % 4) Id) (Right "aa")
--- Present 1 % 4
 -- PresentT (1 % 4)
 --
 -- >>> pz @(LeftDef (PrintT "found right=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Right "xy")
--- Present "found right=xy fst=123"
 -- PresentT "found right=xy fst=123"
 --
 -- >>> pz @(LeftDef (MEmptyT _) Id) (Right 222)
--- Present ()
 -- PresentT ()
 --
 -- >>> pz @(LeftDef (MEmptyT (SG.Sum _)) Id) (Right 222)
--- Present Sum {getSum = 0}
 -- PresentT (Sum {getSum = 0})
 --
 data LeftDef p q
@@ -9618,23 +9183,18 @@ type family RightT lr where
 -- if there is no Right value then \p\ is passed the Left value and the whole context
 --
 -- >>> pz @(RightDef (1 % 4) Id) (Right 20.4)
--- Present 102 % 5
 -- PresentT (102 % 5)
 --
 -- >>> pz @(RightDef (1 % 4) Id) (Left "aa")
--- Present 1 % 4
 -- PresentT (1 % 4)
 --
 -- >>> pz @(RightDef (PrintT "found left=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Left "xy")
--- Present "found left=xy fst=123"
 -- PresentT "found left=xy fst=123"
 --
 -- >>> pz @(RightDef (MEmptyT _) Id) (Left 222)
--- Present ()
 -- PresentT ()
 --
 -- >>> pz @(RightDef (MEmptyT (SG.Sum _)) Id) (Left 222)
--- Present Sum {getSum = 0}
 -- PresentT (Sum {getSum = 0})
 --
 data RightDef p q
@@ -9665,19 +9225,15 @@ instance ( PP q x ~ Either a b
 -- if there is no Left value then \p\ is passed the Right value and the whole context
 --
 -- >>> pz @(LeftFail "oops" Id) (Left 20.4)
--- Present 20.4
 -- PresentT 20.4
 --
 -- >>> pz @(LeftFail "oops" Id) (Right "aa")
--- Error oops
 -- FailT "oops"
 --
 -- >>> pz @(LeftFail (PrintT "found right=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Right "xy")
--- Error found right=xy fst=123
 -- FailT "found right=xy fst=123"
 --
 -- >>> pz @(LeftFail (MEmptyT _) Id) (Right 222)
--- Error
 -- FailT ""
 --
 data LeftFail p q
@@ -9708,19 +9264,15 @@ instance ( PP p (b,x) ~ String
 -- if there is no Right value then \p\ is passed the Left value and the whole context
 --
 -- >>> pz @(RightFail "oops" Id) (Right 20.4)
--- Present 20.4
 -- PresentT 20.4
 --
 -- >>> pz @(RightFail "oops" Id) (Left "aa")
--- Error oops
 -- FailT "oops"
 --
 -- >>> pz @(RightFail (PrintT "found left=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Left "xy")
--- Error found left=xy fst=123
 -- FailT "found left=xy fst=123"
 --
 -- >>> pz @(RightFail (MEmptyT _) Id) (Left 222)
--- Error
 -- FailT ""
 --
 data RightFail p q
@@ -9752,27 +9304,21 @@ instance ( PP p (a,x) ~ String
 -- if there is no This value then \p\ is passed the whole context only
 --
 -- >>> pz @(ThisDef (1 % 4) Id) (This 20.4)
--- Present 102 % 5
 -- PresentT (102 % 5)
 --
 -- >>> pz @(ThisDef (1 % 4) Id) (That "aa")
--- Present 1 % 4
 -- PresentT (1 % 4)
 --
 -- >>> pz @(ThisDef (1 % 4) Id) (These 2.3 "aa")
--- Present 1 % 4
 -- PresentT (1 % 4)
 --
 -- >>> pz @(ThisDef (PrintT "found %s fst=%d" '(ShowP (Snd Id), Fst Id)) (Snd Id)) (123,That "xy")
--- Present "found That \"xy\" fst=123"
 -- PresentT "found That \"xy\" fst=123"
 --
 -- >>> pz @(ThisDef (MEmptyT _) Id) (That 222)
--- Present ()
 -- PresentT ()
 --
 -- >>> pz @(ThisDef (MEmptyT (SG.Sum _)) Id) (These 222 'x')
--- Present Sum {getSum = 0}
 -- PresentT (Sum {getSum = 0})
 --
 data ThisDef p q
@@ -9824,27 +9370,21 @@ type family TheseT lr where
 -- if there is no That value then \p\ is passed the whole context only
 --
 -- >>> pz @(ThatDef (1 % 4) Id) (That 20.4)
--- Present 102 % 5
 -- PresentT (102 % 5)
 --
 -- >>> pz @(ThatDef (1 % 4) Id) (This "aa")
--- Present 1 % 4
 -- PresentT (1 % 4)
 --
 -- >>> pz @(ThatDef (1 % 4) Id) (These "aa" 2.3)
--- Present 1 % 4
 -- PresentT (1 % 4)
 --
 -- >>> pz @(ThatDef (PrintT "found %s fst=%d" '(ShowP (Snd Id), Fst Id)) (Snd Id)) (123,This "xy")
--- Present "found This \"xy\" fst=123"
 -- PresentT "found This \"xy\" fst=123"
 --
 -- >>> pz @(ThatDef (MEmptyT _) Id) (This 222)
--- Present ()
 -- PresentT ()
 --
 -- >>> pz @(ThatDef (MEmptyT (SG.Sum _)) Id) (These 'x' 1120)
--- Present Sum {getSum = 0}
 -- PresentT (Sum {getSum = 0})
 --
 data ThatDef p q
@@ -9874,27 +9414,21 @@ instance ( PP q x ~ These a b
 -- if there is no These value then \p\ is passed the whole context only
 --
 -- >>> pz @(TheseDef '(1 % 4,"zz") Id) (These 20.4 "x")
--- Present (102 % 5,"x")
 -- PresentT (102 % 5,"x")
 --
 -- >>> pz @(TheseDef '(1 % 4,"zz") Id) (This 20.4)
--- Present (1 % 4,"zz")
 -- PresentT (1 % 4,"zz")
 --
 -- >>> pz @(TheseDef '(1 % 4,"zz") Id) (That "x")
--- Present (1 % 4,"zz")
 -- PresentT (1 % 4,"zz")
 --
 -- >>> pz @(TheseDef '(PrintT "found %s fst=%d" '(ShowP (Snd Id), Fst Id),999) (Snd Id)) (123,This "xy")
--- Present ("found This \"xy\" fst=123",999)
 -- PresentT ("found This \"xy\" fst=123",999)
 --
 -- >>> pz @(TheseDef (MEmptyT (SG.Sum _, String)) Id) (This 222)
--- Present (Sum {getSum = 0},"")
 -- PresentT (Sum {getSum = 0},"")
 --
 -- >>> pz @(TheseDef (MEmptyT _) Id) (These (222 :: SG.Sum Int) "aa")
--- Present (Sum {getSum = 222},"aa")
 -- PresentT (Sum {getSum = 222},"aa")
 --
 data TheseDef p q
@@ -9925,19 +9459,15 @@ instance ( PP q x ~ These a b
 -- if there is no This value then \p\ is passed the whole context only
 --
 -- >>> pz @(ThisFail "oops" Id) (This 20.4)
--- Present 20.4
 -- PresentT 20.4
 --
 -- >>> pz @(ThisFail "oops" Id) (That "aa")
--- Error oops
 -- FailT "oops"
 --
 -- >>> pz @(ThisFail (PrintT "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,That "xy")
--- Error found That "xy" fst=123
 -- FailT "found That \"xy\" fst=123"
 --
 -- >>> pz @(ThisFail (MEmptyT _) Id) (That 222)
--- Error
 -- FailT ""
 --
 data ThisFail p q
@@ -9968,19 +9498,15 @@ instance ( PP p x ~ String
 -- if there is no That value then \p\ is passed the whole context only
 --
 -- >>> pz @(ThatFail "oops" Id) (That 20.4)
--- Present 20.4
 -- PresentT 20.4
 --
 -- >>> pz @(ThatFail "oops" Id) (This "aa")
--- Error oops
 -- FailT "oops"
 --
 -- >>> pz @(ThatFail (PrintT "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,This "xy")
--- Error found This "xy" fst=123
 -- FailT "found This \"xy\" fst=123"
 --
 -- >>> pz @(ThatFail (MEmptyT _) Id) (This 222)
--- Error
 -- FailT ""
 --
 data ThatFail p q
@@ -10013,19 +9539,15 @@ instance ( PP p x ~ String
 -- if there is no These value then \p\ is passed the whole context only
 --
 -- >>> pz @(TheseFail "oops" Id) (These "abc" 20.4)
--- Present ("abc",20.4)
 -- PresentT ("abc",20.4)
 --
 -- >>> pz @(TheseFail "oops" Id) (That "aa")
--- Error oops
 -- FailT "oops"
 --
 -- >>> pz @(TheseFail (PrintT "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,That "xy")
--- Error found That "xy" fst=123
 -- FailT "found That \"xy\" fst=123"
 --
 -- >>> pz @(TheseFail (MEmptyT _) Id) (That 222)
--- Error
 -- FailT ""
 --
 data TheseFail p q
@@ -10053,11 +9575,9 @@ instance ( PP p x ~ String
 -- | takes the head of a list like container
 --
 -- >>> pz @(Head Id) "abcd"
--- Present 'a'
 -- PresentT 'a'
 --
 -- >>> pz @(Head Id) []
--- Error Head(empty)
 -- FailT "Head(empty)"
 --
 data Head p
@@ -10082,11 +9602,9 @@ instance (Show (ConsT s)
 -- | takes the tail of a list like container
 --
 -- >>> pz @(Tail Id) "abcd"
--- Present "bcd"
 -- PresentT "bcd"
 --
 -- >>> pz @(Tail Id) []
--- Error Tail(empty)
 -- FailT "Tail(empty)"
 --
 data Tail p
@@ -10111,11 +9629,9 @@ instance (Show s
 -- | takes the last of a list like container
 --
 -- >>> pz @(Last Id) "abcd"
--- Present 'd'
 -- PresentT 'd'
 --
 -- >>> pz @(Last Id) []
--- Error Last(empty)
 -- FailT "Last(empty)"
 --
 
@@ -10141,15 +9657,12 @@ instance (Show (ConsT s)
 -- | takes the init of a list like container
 --
 -- >>> pz @(Init Id) "abcd"
--- Present "abc"
 -- PresentT "abc"
 --
 -- >>> pz @(Init Id) (T.pack "abcd")
--- Present "abc"
 -- PresentT "abc"
 --
 -- >>> pz @(Init Id) []
--- Error Init(empty)
 -- FailT "Init(empty)"
 --
 
@@ -10175,11 +9688,9 @@ instance (Show s
 -- | tries to extract @a@ from @Maybe a@ otherwise it fails
 --
 -- >>> pz @(Just Id) (Just "abc")
--- Present "abc"
 -- PresentT "abc"
 --
 -- >>> pz @(Just Id) Nothing
--- Error Just(empty)
 -- FailT "Just(empty)"
 --
 data Just p
@@ -10701,19 +10212,15 @@ instance ToStringC BS8.ByteString where
 -- | splits a list pointed to by \'p\' into lists of size \'n\'
 --
 -- >>> pz @(ChunksOf 2 Id) "abcdef"
--- Present ["ab","cd","ef"]
 -- PresentT ["ab","cd","ef"]
 --
 -- >>> pz @(ChunksOf 2 Id) "abcdefg"
--- Present ["ab","cd","ef","g"]
 -- PresentT ["ab","cd","ef","g"]
 --
 -- >>> pz @(ChunksOf 2 Id) ""
--- Present []
 -- PresentT []
 --
 -- >>> pz @(ChunksOf 2 Id) "a"
--- Present ["a"]
 -- PresentT ["a"]
 --
 data ChunksOf n p

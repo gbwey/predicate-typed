@@ -451,7 +451,7 @@ withRefined1TIO opts = (>>=) . newRefined1TPIO (Proxy @'(ip,op,fmt,i)) opts
 --
 -- this example fails as the the hex value is out of range
 --
--- >>> prtRefinedTIO $ withRefined1TP b16 o0 "a388" $ \x -> withRefined1TP b2 o0 "1001110111" $ \y -> pure (x,y)
+-- >>> prtRefinedTIO $ withRefined1TP b16 oan "a388" $ \x -> withRefined1TP b2 oan "1001110111" $ \y -> pure (x,y)
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [41864] ***
 -- <BLANKLINE>
