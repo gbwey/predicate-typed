@@ -1147,7 +1147,7 @@ _MX = 100
 
 -- | replaces regex \'s\' with a string \'s1\' inside the value
 --
--- >>> pz @(ReplaceAllString "\\." ":" Id) "141.201.1.22"
+-- >>> pz @(ReplaceAllString 'ROverWrite "\\." ":" Id) "141.201.1.22"
 -- PresentT "141:201:1:22"
 --
 data ReplaceImpl (alle :: Bool) (rs :: [ROpt]) p q r
@@ -1181,7 +1181,12 @@ instance (GetBool b
               Right r ->
                let ret :: String
                    ret = case q of
-                           RReplace s -> (if alle then RH.gsub else RH.sub) regex s r
+                           RReplace o s ->
+                             let g fn = (if alle then RH.gsub else RH.sub) regex fn r
+                             in g (case o of
+                                  RPrepend -> (s <>)
+                                  ROverWrite -> const s
+                                  RAppend -> (<> s))
                            RReplace1 s -> (if alle then RH.gsub else RH.sub) regex s r
                            RReplace2 s -> (if alle then RH.gsub else RH.sub) regex s r
                            RReplace3 s -> (if alle then RH.gsub else RH.sub) regex s r
@@ -1210,10 +1215,14 @@ instance P (ReplaceOneT' rs p q r) x => P (ReplaceOne' rs p q r) x where
 
 -- | replace first occurrence of string \'p\' with '\q'\ in \'r\'
 --
--- >>> pl @(ReplaceOneString "abc" "def" Id) "123abc456abc"
+-- >>> pl @(ReplaceOneString 'ROverWrite "abc" "def" Id) "123abc456abc"
 -- Present "123def456abc" (ReplaceOne' [] (abc) 123abc456abc | 123def456abc)
 -- PresentT "123def456abc"
 --
+-- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1530144000123+0530)"
+-- PresentT 2018-06-28 05:30:00.123 +0530
+--
+
 data ReplaceOne p q r
 type ReplaceOneT p q r = ReplaceOne' '[] p q r
 
@@ -1223,60 +1232,73 @@ instance P (ReplaceOneT p q r) x => P (ReplaceOne p q r) x where
 
 -- | replace all occurrences of string \'p\' with '\q'\ in \'r\'
 --
--- >>> pl @(ReplaceAllString "abc" "def" Id) "123abc456abc"
+-- >>> pl @(ReplaceAllString 'ROverWrite "abc" "def" Id) "123abc456abc"
 -- Present "123def456def" (ReplaceAll' [] (abc) 123abc456abc | 123def456def)
 -- PresentT "123def456def"
 --
--- >>> pl @(ReplaceAllString' '[] "abc" "def" Id) "123AbC456abc"
+-- >>> pl @(ReplaceAllString' '[] 'ROverWrite "abc" "def" Id) "123AbC456abc"
 -- Present "123AbC456def" (ReplaceAll' [] (abc) 123AbC456abc | 123AbC456def)
 -- PresentT "123AbC456def"
 --
--- >>> pl @(ReplaceAllString' '[ 'Caseless ] "abc" "def" Id) "123AbC456abc"
+-- >>> pl @(ReplaceAllString' '[ 'Caseless ] 'ROverWrite "abc" "def" Id) "123AbC456abc"
 -- Present "123def456def" (ReplaceAll (abc) 123AbC456abc | 123def456def)
 -- PresentT "123def456def"
 --
-data ReplaceAllString' (rs :: [ROpt]) p q r
-type ReplaceAllStringT' (rs :: [ROpt]) p q r = ReplaceAll' rs p (ReplaceFn q) r
+-- >>> pl @(ReplaceAllString 'RPrepend "abc" "def" Id) "123AbC456abc"
+-- Present "123AbC456defabc" (ReplaceAll' [] (abc) 123AbC456abc | 123AbC456defabc)
+-- PresentT "123AbC456defabc"
+--
+-- >>> pl @(ReplaceAllString 'ROverWrite "abc" "def" Id) "123AbC456abc"
+-- Present "123AbC456def" (ReplaceAll' [] (abc) 123AbC456abc | 123AbC456def)
+-- PresentT "123AbC456def"
+--
+-- >>> pl @(ReplaceAllString 'RAppend "abc" "def" Id) "123AbC456abc"
+-- Present "123AbC456abcdef" (ReplaceAll' [] (abc) 123AbC456abc | 123AbC456abcdef)
+-- PresentT "123AbC456abcdef"
+--
+data ReplaceAllString' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r
+type ReplaceAllStringT' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r = ReplaceAll' rs p (ReplaceFn o q) r
 
-instance P (ReplaceAllStringT' rs p q r) x => P (ReplaceAllString' rs p q r) x where
-  type PP (ReplaceAllString' rs p q r) x = PP (ReplaceAllStringT' rs p q r) x
-  eval _ = eval (Proxy @(ReplaceAllStringT' rs p q r))
+instance P (ReplaceAllStringT' rs o p q r) x => P (ReplaceAllString' rs o p q r) x where
+  type PP (ReplaceAllString' rs o p q r) x = PP (ReplaceAllStringT' rs o p q r) x
+  eval _ = eval (Proxy @(ReplaceAllStringT' rs o p q r))
 
-data ReplaceAllString p q r
-type ReplaceAllStringT p q r = ReplaceAllString' '[] p q r
+data ReplaceAllString o p q r
+type ReplaceAllStringT o p q r = ReplaceAllString' '[] o p q r
 
-instance P (ReplaceAllStringT p q r) x => P (ReplaceAllString p q r) x where
-  type PP (ReplaceAllString p q r) x = PP (ReplaceAllStringT p q r) x
-  eval _ = eval (Proxy @(ReplaceAllStringT p q r))
+instance P (ReplaceAllStringT o p q r) x => P (ReplaceAllString o p q r) x where
+  type PP (ReplaceAllString o p q r) x = PP (ReplaceAllStringT o p q r) x
+  eval _ = eval (Proxy @(ReplaceAllStringT o p q r))
 
-data ReplaceOneString' (rs :: [ROpt]) p q r
-type ReplaceOneStringT' (rs :: [ROpt]) p q r = ReplaceOne' rs p (ReplaceFn q) r
+data ReplaceOneString' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r
+type ReplaceOneStringT' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r = ReplaceOne' rs p (ReplaceFn o q) r
 
-instance P (ReplaceOneStringT' rs p q r) x => P (ReplaceOneString' rs p q r) x where
-  type PP (ReplaceOneString' rs p q r) x = PP (ReplaceOneStringT' rs p q r) x
-  eval _ = eval (Proxy @(ReplaceOneStringT' rs p q r))
+instance P (ReplaceOneStringT' rs o p q r) x => P (ReplaceOneString' rs o p q r) x where
+  type PP (ReplaceOneString' rs o p q r) x = PP (ReplaceOneStringT' rs o p q r) x
+  eval _ = eval (Proxy @(ReplaceOneStringT' rs o p q r))
 
-data ReplaceOneString p q r
-type ReplaceOneStringT p q r = ReplaceOneString' '[] p q r
+data ReplaceOneString (o :: ReplaceFnSub) p q r
+type ReplaceOneStringT (o :: ReplaceFnSub) p q r = ReplaceOneString' '[] o p q r
 
-instance P (ReplaceOneStringT p q r) x => P (ReplaceOneString p q r) x where
-  type PP (ReplaceOneString p q r) x = PP (ReplaceOneStringT p q r) x
-  eval _ = eval (Proxy @(ReplaceOneStringT p q r))
+instance P (ReplaceOneStringT o p q r) x => P (ReplaceOneString o p q r) x where
+  type PP (ReplaceOneString o p q r) x = PP (ReplaceOneStringT o p q r) x
+  eval _ = eval (Proxy @(ReplaceOneStringT o p q r))
 
 -- | Simple replacement string: see 'ReplaceAllString' and 'ReplaceOneString'
 --
-data ReplaceFn p
+data ReplaceFn (o :: ReplaceFnSub) p
 
-instance (PP p x ~ String
-        , P p x) => P (ReplaceFn p) x where
-  type PP (ReplaceFn p) x = RReplace
+instance (ReplaceFnSubC r
+        , PP p x ~ String
+        , P p x) => P (ReplaceFn r p) x where
+  type PP (ReplaceFn r p) x = RReplace
   eval _ opts x = do
     let msg0 = "ReplaceFn"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let b = RReplace p
+        let b = RReplace (getReplaceFnSub @r) p
         in mkNode opts (PresentT b) (msg0 <> show1 opts " | " p) [hh pp]
 
 -- | A replacement function @(String -> [String] -> String)@ which returns the whole match and the groups
@@ -1939,6 +1961,8 @@ instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
 
 -- microsoft json date is x*1000 ie milliseconds
 
+-- | convert posix time (seconds since 01-01-1970) to 'UTCTime'
+--
 -- >>> pl @(PosixToUTCTime Id) 1593384312
 -- Present 2020-06-28 22:45:12 UTC (PosixToUTCTime 2020-06-28 22:45:12 UTC | 1593384312 % 1)
 -- PresentT 2020-06-28 22:45:12 UTC
@@ -1946,6 +1970,17 @@ instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
 -- >>> pl @(PosixToUTCTime Id >> UTCTimeToPosix Id) 1593384312
 -- Present 1593384312 % 1 ((>>) 1593384312 % 1 | {UTCTimeToPosix 1593384312 % 1 | 2020-06-28 22:45:12 UTC})
 -- PresentT (1593384312 % 1)
+--
+-- >>> pl @(PosixToUTCTime (Id % 1000)) 1593384312000
+-- Present 2020-06-28 22:45:12 UTC (PosixToUTCTime 2020-06-28 22:45:12 UTC | 1593384312 % 1)
+-- PresentT 2020-06-28 22:45:12 UTC
+--
+-- >>> pl @(PosixToUTCTime Id) (3600*4+60*7+12)
+-- Present 1970-01-01 04:07:12 UTC (PosixToUTCTime 1970-01-01 04:07:12 UTC | 14832 % 1)
+-- PresentT 1970-01-01 04:07:12 UTC
+--
+-- >>> pz @(Rescan "^Date\\((\\d+)([^\\)]+)\\)" Id >> Head Id >> Snd Id >> ReadP Integer (Id !! 0) >> PosixToUTCTime (Id % 1000)) "Date(1530144000000+0530)"
+-- PresentT 2018-06-28 00:00:00 UTC
 --
 data PosixToUTCTime p
 
@@ -1960,6 +1995,20 @@ instance (PP p x ~ Rational, P p x) => P (PosixToUTCTime p) x where
         let d = P.posixSecondsToUTCTime (fromRational p)
         in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
 
+-- | convert 'UTCTime' to posix time (seconds since 01-01-1970)
+--
+-- >>> pl @(ReadP UTCTime Id >> UTCTimeToPosix Id) "2020-06-28 22:45:12"
+-- Present 1593384312 % 1 ((>>) 1593384312 % 1 | {UTCTimeToPosix 1593384312 % 1 | 2020-06-28 22:45:12 UTC})
+-- PresentT (1593384312 % 1)
+--
+-- >>> pz @(Rescan "^Date\\((\\d+)([^\\)]+)\\)" Id >> Head Id >> Snd Id >> ((ReadP Integer (Id !! 0) >> PosixToUTCTime (Id % 1000)) &&& ReadP TimeZone (Id !! 1))) "Date(1530144000000+0530)"
+-- PresentT (2018-06-28 00:00:00 UTC,+0530)
+--
+-- not so uesful: just use ParseTimeP FormatTimeP with %s %q %z etc
+
+-- >>> pz @(ParseTimeP ZonedTime "%s%Q%z" Id)  "153014400.000+0530"
+-- PresentT 1974-11-07 05:30:00 +0530
+--
 data UTCTimeToPosix p
 
 instance (PP p x ~ UTCTime, P p x) => P (UTCTimeToPosix p) x where

@@ -29,7 +29,7 @@ module Predicate.Examples.Common (
   , DdmmyyyyRE
   , Ddmmyyyyop
   , Ddmmyyyyop'
-
+  , JsonMicrosoftDateTime
   -- *** time checkers
   , Hmsip
   , Hmsop
@@ -216,3 +216,15 @@ type Luhn' (n :: Nat) =
            ]
         ,Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
         ])
+
+-- convert json microsoft datetime to zonedtime
+--type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id
+
+type JsonMicrosoftDateTime =
+  Do '[ Rescan "^Date\\((\\d+[+-]\\d{4})\\)" Id
+      , Head Id
+      , Snd Id
+      , Id !! 0
+      , ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id
+      , ParseTimeP ZonedTime "%s%Q%z" Id
+      ]

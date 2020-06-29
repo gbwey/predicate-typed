@@ -116,6 +116,8 @@ module Predicate.Util (
   , compileRegex
   , GetROpts(..)
   , RReplace(..)
+  , ReplaceFnSubC(..)
+  , ReplaceFnSub(..)
 
   -- ** useful type families
   , ZwischenT
@@ -534,13 +536,15 @@ show01 :: (Show a1, Show a2) => POpts -> String -> a1 -> a2 -> String
 show01 opts msg0 ret = lit01 opts msg0 ret . show
 
 lit01 :: Show a1 => POpts -> String -> a1 -> String -> String
-lit01 opts msg0 ret = lit01' opts msg0 ret ""
+lit01 opts msg0 ret as = lit01' opts msg0 ret "" as
 
 show01' :: (Show a1, Show a2) => POpts -> String -> a1 -> String -> a2 -> String
 show01' opts msg0 ret fmt = lit01' opts msg0 ret fmt . show
 
 lit01' :: Show a1 => POpts -> String -> a1 -> String -> String -> String
-lit01' opts msg0 ret fmt as =
+lit01' opts msg0 ret fmt as
+  | null fmt && null as = msg0
+  | otherwise =
          msg0
       <> show0 opts " " ret
       <> showLit1 opts (" | " ++ fmt) as
@@ -651,17 +655,25 @@ instance GetROpt 'Ungreedy where getROpt = RL.ungreedy
 instance GetROpt 'Utf8 where getROpt = RL.utf8
 instance GetROpt 'No_utf8_check where getROpt = RL.no_utf8_check
 
+data ReplaceFnSub = RPrepend | ROverWrite | RAppend deriving (Show,Eq)
+
+class ReplaceFnSubC (k :: ReplaceFnSub) where
+  getReplaceFnSub :: ReplaceFnSub
+instance ReplaceFnSubC 'RPrepend where getReplaceFnSub = RPrepend
+instance ReplaceFnSubC 'ROverWrite where getReplaceFnSub = ROverWrite
+instance ReplaceFnSubC 'RAppend where getReplaceFnSub = RAppend
+
 -- | used by 'Predicate.ReplaceImpl' and 'RH.sub' and 'RH.gsub' to allow more flexible replacement
 --   These parallel the RegexReplacement (not exported) class in "Text.Regex.PCRE.Heavy" but have overlappable instances which is problematic for this code so I use 'RReplace'
 data RReplace =
-     RReplace !String
+     RReplace !ReplaceFnSub !String
    | RReplace1 !(String -> [String] -> String)
    | RReplace2 !(String -> String)
    | RReplace3 !([String] -> String)
 
 instance Show RReplace where
   show = \case
-           RReplace s -> "RReplace " ++ s
+           RReplace o s -> "RReplace " ++ show o ++ " " ++ s
            RReplace1 {} -> "RReplace1 <fn>"
            RReplace2 {} -> "RReplace2 <fn>"
            RReplace3 {} -> "RReplace3 <fn>"
