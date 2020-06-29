@@ -128,6 +128,8 @@ module Predicate.Prelude (
   , MkDay
   , MkDay'
   , UnMkDay
+  , PosixToUTCTime
+  , UTCTimeToPosix
 
   -- ** numeric expressions
   , type (+)
@@ -579,6 +581,7 @@ import Data.Bool
 import Data.Either
 import qualified Data.Type.Equality as DE
 import Data.Time.Calendar.WeekDate
+import qualified Data.Time.Clock.POSIX as P
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy.Char8 as BL8
@@ -1933,6 +1936,42 @@ instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
         let (fromIntegral -> y, m, d) = toGregorian p
             b = (y, m, d)
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+
+-- microsoft json date is x*1000 ie milliseconds
+
+-- >>> pl @(PosixToUTCTime Id) 1593384312
+-- Present 2020-06-28 22:45:12 UTC (PosixToUTCTime 2020-06-28 22:45:12 UTC | 1593384312 % 1)
+-- PresentT 2020-06-28 22:45:12 UTC
+--
+-- >>> pl @(PosixToUTCTime Id >> UTCTimeToPosix Id) 1593384312
+-- Present 1593384312 % 1 ((>>) 1593384312 % 1 | {UTCTimeToPosix 1593384312 % 1 | 2020-06-28 22:45:12 UTC})
+-- PresentT (1593384312 % 1)
+--
+data PosixToUTCTime p
+
+instance (PP p x ~ Rational, P p x) => P (PosixToUTCTime p) x where
+  type PP (PosixToUTCTime p) x = UTCTime
+  eval _ opts x = do
+    let msg0 = "PosixToUTCTime"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let d = P.posixSecondsToUTCTime (fromRational p)
+        in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
+
+data UTCTimeToPosix p
+
+instance (PP p x ~ UTCTime, P p x) => P (UTCTimeToPosix p) x where
+  type PP (UTCTimeToPosix p) x = Rational
+  eval _ opts x = do
+    let msg0 = "UTCTimeToPosix"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let d = toRational $ P.utcTimeToPOSIXSeconds p
+        in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
 
 -- | uses the 'Read' of the given type \'t\' and \'p\' which points to the content to read
 --
@@ -7727,6 +7766,15 @@ instance (PP p x ~ [Int]
 -- >>> pz @(ReadBase Int 8 Id) "Abff"
 -- FailT "invalid base 8"
 --
+-- >>> pl @(ReadBase Int 16 Id >> GuardSimple (Id > 0xffff) >> ShowBase 16 Id) "12344"
+-- Present "12344" ((>>) "12344" | {ShowBase(16) 12344 | 74564})
+-- PresentT "12344"
+--
+-- >>> :set -XBinaryLiterals
+-- >>> pz @(ReadBase Int 16 Id >> GuardSimple (Id > 0b10011111) >> ShowBase 16 Id) "7f"
+-- FailT "(127 > 159)"
+--
+
 -- supports negative numbers unlike readInt
 data ReadBase' t (n :: Nat) p
 
