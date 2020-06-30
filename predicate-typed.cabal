@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 122aa6625462676b633e7e8ebc6452af4089f333cb8bb83eeaea36e8e3b4d2d9
+-- hash: 53499d159520a5f7d2fddfc49e61f02df712c4f6c989c1c8357d323a9bade74c
 
 name:           predicate-typed
 version:        0.6.2.1
@@ -13,9 +13,9 @@ description:    Please see the README on GitHub at <https://github.com/gbwey/pre
 category:       Data
 homepage:       https://github.com/gbwey/predicate-typed#readme
 bug-reports:    https://github.com/gbwey/predicate-typed/issues
-author:         Grant Weyburne <gbwey9@gmail.com>
-maintainer:     Grant Weyburne <gbwey9@gmail.com>
-copyright:      Copyright 2019, Grant Weyburne
+author:         gbwey
+maintainer:     gbwey
+copyright:      2019 Grant Weyburne
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple

@@ -10113,7 +10113,7 @@ instance (P p x
           Just Nothing -> mkNode opts (FailT (msg1 <> " file doesn't exist")) (msg1 <> " does not exist") hhs
           Just (Just s) ->
             case A.eitherDecodeStrict' s of
-               Right b -> mkNode opts (PresentT b) (msg1 <> " " ++ showL (if oDebug opts == OVerbose then oWidth opts else 30) b) hhs
+               Right b -> mkNode opts (PresentT b) (msg1 <> " " ++ showL (if oDebug opts == OVerbose then oWidth opts else min (oWidth opts) 80) b) hhs
                Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) (msg0 <> " failed " <> e <> " | " <> litBS (oWidth opts) s) hhs
 
 data ParseJsonFile (t :: Type) p
