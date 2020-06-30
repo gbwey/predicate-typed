@@ -107,90 +107,95 @@ import GHC.Stack
 --
 -- Although a common scenario is String as input, you are free to choose any input type you like
 --
--- >>> prtEval2 @(ReadBase Int 16 Id) @(Lt 255) oz "00fe"
+-- >>> prtEval2 @'OZ @(ReadBase Int 16 Id) @(Lt 255) "00fe"
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> prtEval2 @(ReadBase Int 16 Id) @(Lt 253) oz "00fe"
+-- >>> prtEval2 @'OZ @(ReadBase Int 16 Id) @(Lt 253) "00fe"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval2 @(ReadBase Int 16 Id) @(Lt 255) oz "00fg"
+-- >>> prtEval2 @'OZ @(ReadBase Int 16 Id) @(Lt 255) "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prtEval2 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) ol "198.162.3.1.5"
+-- >>> prtEval2 @'OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. False Boolean Check(op) | {length invalid:5 == 4}
 --
--- >>> prtEval2 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) oz "198.162.3.1.5"
+-- >>> prtEval2 @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> prtEval2 @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) oz "198.162.3.1"
+-- >>> prtEval2 @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1"
 -- Right (Refined2 {r2In = [198,162,3,1], r2Out = "198.162.3.1"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prtEval2 @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) oz (2019,10,13)
+-- >>> prtEval2 @'OZ @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,13)
 -- Right (Refined2 {r2In = (2019-10-13,41,7), r2Out = (2019,10,13)})
 --
--- >>> prtEval2 @(MkDay >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) ol (2019,10,12)
+-- >>> prtEval2 @'OL @(MkDay >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
 -- Left Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}
 --
--- >>> prtEval2 @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) oz (2019,10,12)
+-- >>> prtEval2 @'OZ @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
-data Refined2 ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: !i }
+data Refined2 (opts :: OptT) ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: !i }
 
-type role Refined2 nominal nominal nominal
+type role Refined2 nominal nominal nominal nominal
 
 -- | directly load values into 'Refined2'. It still checks to see that those values are valid
-unsafeRefined2' :: forall ip op i
-                . (Show (PP ip i), Refined2C ip op i, HasCallStack)
-                => POpts
-                -> i
-                -> Refined2 ip op i
-unsafeRefined2' opts i =
-  let (ret,mr) = eval2 @ip @op opts i
-  in fromMaybe (error $ show (prt2Impl opts ret)) mr
+unsafeRefined2' :: forall opts ip op i
+                . ( Show (PP ip i)
+                  , Refined2C opts ip op i
+                  , HasCallStack
+                  )
+                => i
+                -> Refined2 opts ip op i
+unsafeRefined2' i =
+  let (ret,mr) = eval2 @opts @ip @op i
+  in fromMaybe (error $ show (prt2Impl (getOptT @opts) ret)) mr
 
 -- | directly load values into 'Refined2' without any checking
-unsafeRefined2 :: forall ip op i . PP ip i -> i -> Refined2 ip op i
+unsafeRefined2 :: forall opts ip op i . PP ip i -> i -> Refined2 opts ip op i
 unsafeRefined2 = Refined2
 
 -- | Provides the constraints on Refined2
-type Refined2C ip op i =
-       ( P ip i
+type Refined2C opts ip op i =
+       ( OptTC opts
+       , P ip i
        , P op (PP ip i)
        , PP op (PP ip i) ~ Bool   -- the internal value needs to pass the predicate check
        )
 
-deriving instance (Show i, Show (PP ip i)) => Show (Refined2 ip op i)
-deriving instance (Eq i, Eq (PP ip i)) => Eq (Refined2 ip op i)
-deriving instance (TH.Lift (PP ip i), TH.Lift i) => TH.Lift (Refined2 ip op i)
+deriving instance (Show i, Show (PP ip i)) => Show (Refined2 opts ip op i)
+deriving instance (Eq i, Eq (PP ip i)) => Eq (Refined2 opts ip op i)
+deriving instance (TH.Lift (PP ip i), TH.Lift i) => TH.Lift (Refined2 opts ip op i)
 
-instance (Refined2C ip op String, Show (PP ip String)) => IsString (Refined2 ip op String) where
+instance ( Refined2C opts ip op String
+         , Show (PP ip String)
+         ) => IsString (Refined2 opts ip op String) where
   fromString s =
-    let (ret,mr) = eval2 @ip @op oa s
-    in fromMaybe (error $ "Refined2(fromString):" ++ show (prt2Impl oa ret)) mr
+    let (ret,mr) = eval2 @opts @ip @op s
+    in fromMaybe (error $ "Refined2(fromString):" ++ show (prt2Impl (getOptT @opts) ret)) mr
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined2'
 --
--- >>> reads @(Refined2 (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 254, r2Out = \"fe\"}"
+-- >>> reads @(Refined2 'OZ (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 254, r2Out = \"fe\"}"
 -- [(Refined2 {r2In = 254, r2Out = "fe"},"")]
 --
--- >>> reads @(Refined2 (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 300, r2Out = \"12c\"}"
+-- >>> reads @(Refined2 'OZ (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 300, r2Out = \"12c\"}"
 -- []
 --
--- >>> reads @(Refined2 (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
+-- >>> reads @(Refined2 'OZ (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
 -- [(Refined2 {r2In = -1234, r2Out = "-4d2"},"")]
 --
--- >>> reads @(Refined2 (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined2 'OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
 -- [(Refined2 {r2In = [192,168,0,1], r2Out = "192.168.0.1"},"")]
 --
 instance ( Eq i
          , Show i
          , Show (PP ip i)
-         , Refined2C ip op i
+         , Refined2C opts ip op i
          , Read (PP ip i)
          , Read i
-         ) => Read (Refined2 ip op i) where
+         ) => Read (Refined2 opts ip op i) where
     readPrec
       = GR.parens
           (PCR.prec
@@ -204,7 +209,7 @@ instance ( Eq i
                                "r2Out" (PCR.reset GR.readPrec)
                  GR.expectP (RL.Punc "}")
 
-                 let lr = getValLRFromTT $ runIdentity $ evalBool (Proxy @op) oz fld1
+                 let lr = getValLRFromTT $ runIdentity $ evalBool (Proxy @op) (getOptT @opts) fld1
                  case lr of
                    Left {} -> fail ""
                    Right True -> pure (Refined2 fld1 fld2)
@@ -216,23 +221,23 @@ instance ( Eq i
 -- | 'ToJSON' instance for 'Refined2'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined2 @(ReadBase Int 16 Id) @(Between 0 255 Id) 254 "fe")
+-- >>> A.encode (unsafeRefined2 @'OZ @(ReadBase Int 16 Id) @(Between 0 255 Id) 254 "fe")
 -- "\"fe\""
 --
--- >>> A.encode (unsafeRefined2 @Id @'True @Int 123 123)
+-- >>> A.encode (unsafeRefined2 @'OZ @Id @'True @Int 123 123)
 -- "123"
 --
-instance ToJSON i => ToJSON (Refined2 ip op i) where
+instance ToJSON i => ToJSON (Refined2 opts ip op i) where
   toJSON = toJSON . r2Out
 
 
 -- | 'FromJSON' instance for 'Refined2'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.eitherDecode' @(Refined2 (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe\""
+-- >>> A.eitherDecode' @(Refined2 'OZ (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe\""
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> removeAnsi $ A.eitherDecode' @(Refined2 (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe443a\""
+-- >>> removeAnsi $ A.eitherDecode' @(Refined2 'OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe443a\""
 -- Error in $: Refined2:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [16663610] ***
@@ -258,16 +263,17 @@ instance ToJSON i => ToJSON (Refined2 ip op i) where
 --    `- P '256
 -- <BLANKLINE>
 --
-instance (Show i
-        , Show (PP ip i)
-        , Refined2C ip op i
-        , FromJSON i
-        ) => FromJSON (Refined2 ip op i) where
+instance ( Show i
+         , Show (PP ip i)
+         , Refined2C opts ip op i
+         , FromJSON i
+         ) => FromJSON (Refined2 opts ip op i) where
   parseJSON z = do
                   i <- parseJSON @i z
-                  let (ret,mr) = eval2 @ip @op oa i
+                  let o = getOptT @opts
+                  let (ret,mr) = eval2 @opts @ip @op i
                   case mr of
-                    Nothing -> fail $ "Refined2:" ++ show (prt2Impl oa ret)
+                    Nothing -> fail $ "Refined2:" ++ show (prt2Impl o ret)
                     Just r -> return r
 
 
@@ -276,9 +282,9 @@ instance (Show i
 -- >>> import Control.Arrow ((+++))
 -- >>> import Control.Lens
 -- >>> import Data.Time
--- >>> type K1 = Refined2 (ReadP Day Id) 'True String
--- >>> type K2 = Refined2 (ReadP Day Id) (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id) String
--- >>> r = unsafeRefined2' oz "2019-04-23" :: K1
+-- >>> type K1 = Refined2 'OAN (ReadP Day Id) 'True String
+-- >>> type K2 = Refined2 'OAN (ReadP Day Id) (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id) String
+-- >>> r = unsafeRefined2' "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined2 {r2In = 2019-04-23, r2Out = "2019-04-23"}
 --
@@ -308,30 +314,32 @@ instance (Show i
 --
 instance ( Show i
          , Show (PP ip i)
-         , Refined2C ip op i
+         , Refined2C opts ip op i
          , Binary i
-         ) => Binary (Refined2 ip op i) where
+         ) => Binary (Refined2 opts ip op i) where
   get = do
           i <- B.get @i
-          let (ret,mr) = eval2 @ip @op oa i
+          let (ret,mr) = eval2 @opts @ip @op i
           case mr of
-            Nothing -> fail $ "Refined2:" ++ show (prt2Impl oa ret)
+            Nothing -> fail $ "Refined2:" ++ show (prt2Impl (getOptT @opts) ret)
             Just r -> return r
   put (Refined2 _ r) = B.put @i r
 
 -- | 'Hashable' instance for 'Refined2'
-instance (Refined2C ip op i
+instance (Refined2C opts ip op i
         , Hashable i
-        ) => Hashable (Refined2 ip op i) where
+        ) => Hashable (Refined2 opts ip op i) where
   hashWithSalt s (Refined2 _ b) = s + hash b
 
-withRefined2TIO :: forall ip op i m b
-  . (MonadIO m, Refined2C ip op i, Show (PP ip i))
-  => POpts
-  -> i
-  -> (Refined2 ip op i -> RefinedT m b)
+withRefined2TIO :: forall opts ip op i m b
+  . ( MonadIO m
+    , Refined2C opts ip op i
+    , Show (PP ip i)
+    )
+  => i
+  -> (Refined2 opts ip op i -> RefinedT m b)
   -> RefinedT m b
-withRefined2TIO opts = (>>=) . newRefined2TIO @_ @ip @op @i opts
+withRefined2TIO = (>>=) . newRefined2TIO @_ @opts @ip @op @i
 
 -- | create a 'Refined2' value using a continuation
 --
@@ -339,12 +347,12 @@ withRefined2TIO opts = (>>=) . newRefined2TIO @_ @ip @op @i opts
 -- reads a binary string and adds the values together
 --
 -- >>> :set -XPolyKinds
--- >>> prtRefinedTIO $ withRefined2T @(ReadBase Int 16 Id) @(Between 100 200 Id) oz "a3" $ \x -> withRefined2T @(ReadBase Int 2 Id) @'True oz "1001110111" $ \y -> pure (r2In x + r2In y)
+-- >>> prtRefinedTIO $ withRefined2T @'OZ @(ReadBase Int 16 Id) @(Between 100 200 Id) "a3" $ \x -> withRefined2T @'OZ @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (r2In x + r2In y)
 -- 794
 --
 -- this example fails as the the hex value is out of range
 --
--- >>> prtRefinedTIO $ withRefined2T @(ReadBase Int 16 Id) @(Between 100 200 Id) oan "a388" $ \x -> withRefined2T @(ReadBase Int 2 Id) @'True oan "1001110111" $ \y -> pure (x,y)
+-- >>> prtRefinedTIO $ withRefined2T @'OAN @(ReadBase Int 16 Id) @(Between 100 200 Id) "a388" $ \x -> withRefined2T @'OAN @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (x,y)
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [41864] ***
 -- <BLANKLINE>
@@ -364,75 +372,76 @@ withRefined2TIO opts = (>>=) . newRefined2TIO @_ @ip @op @i opts
 -- <BLANKLINE>
 -- failure msg[Step 2. False Boolean Check(op) | {41864 <= 200}]
 --
-withRefined2T :: forall ip op i m b
-  . (Monad m, Refined2C ip op i, Show (PP ip i))
-  => POpts
-  -> i
-  -> (Refined2 ip op i -> RefinedT m b)
+withRefined2T :: forall opts ip op i m b
+  . ( Monad m
+    , Refined2C opts ip op i
+    , Show (PP ip i)
+    )
+  => i
+  -> (Refined2 opts ip op i -> RefinedT m b)
   -> RefinedT m b
-withRefined2T opts = (>>=) . newRefined2TP (Proxy @'(ip,op,i)) opts
+withRefined2T = (>>=) . newRefined2TP (Proxy @'(opts,ip,op,i))
 
-withRefined2TP :: forall m ip op i b proxy
-  . (Monad m, Refined2C ip op i, Show (PP ip i))
-  => proxy '(ip,op,i)
-  -> POpts
+withRefined2TP :: forall m opts ip op i b proxy
+  . ( Monad m
+    , Refined2C opts ip op i
+    , Show (PP ip i)
+    )
+  => proxy '(opts,ip,op,i)
   -> i
-  -> (Refined2 ip op i -> RefinedT m b)
+  -> (Refined2 opts ip op i -> RefinedT m b)
   -> RefinedT m b
-withRefined2TP p opts = (>>=) . newRefined2TP p opts
+withRefined2TP p = (>>=) . newRefined2TP p
 
 -- | create a wrapped 'Refined2' type
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @(MkDay >> Just Id) @(Thd Id == 5) ol (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDay >> Just Id) @(Thd Id == 5) (2019,11,1)
 -- Refined2 {r2In = (2019-11-01,44,5), r2Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @(MkDay >> Just Id) @(Thd Id == 5) ol (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDay >> Just Id) @(Thd Id == 5) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @(MkDay >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) ol (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDay >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
 --
-newRefined2T :: forall m ip op i
-   . (Refined2C ip op i
-    , Monad m
-    , Show (PP ip i)
-    ) => POpts
-  -> i
-  -> RefinedT m (Refined2 ip op i)
+newRefined2T :: forall m opts ip op i
+   . ( Refined2C opts ip op i
+     , Monad m
+     , Show (PP ip i)
+    ) => i
+      -> RefinedT m (Refined2 opts ip op i)
 newRefined2T = newRefined2TImpl (return . runIdentity)
 
-newRefined2TP :: forall m ip op i proxy
-   . (Refined2C ip op i
-   , Monad m
-   , Show (PP ip i)
-   ) => proxy '(ip,op,i)
-  -> POpts
+newRefined2TP :: forall m opts ip op i proxy
+   . ( Refined2C opts ip op i
+     , Monad m
+     , Show (PP ip i)
+   ) => proxy '(opts,ip,op,i)
   -> i
-  -> RefinedT m (Refined2 ip op i)
+  -> RefinedT m (Refined2 opts ip op i)
 newRefined2TP _ = newRefined2TImpl (return . runIdentity)
 
 
-newRefined2TIO :: forall m ip op i
-   . (Refined2C ip op i
-    , MonadIO m
-    , Show (PP ip i)
-    ) => POpts
-  -> i
-  -> RefinedT m (Refined2 ip op i)
+newRefined2TIO :: forall m opts ip op i
+   . ( Refined2C opts ip op i
+     , MonadIO m
+     , Show (PP ip i)
+    ) => i
+      -> RefinedT m (Refined2 opts ip op i)
 newRefined2TIO = newRefined2TImpl liftIO
 
-newRefined2TImpl :: forall n m ip op i
-   . (Refined2C ip op i
-    , Monad m
-    , MonadEval n
-    , Show (PP ip i)
+newRefined2TImpl :: forall n m opts ip op i
+   . ( Refined2C opts ip op i
+     , Monad m
+     , MonadEval n
+     , Show (PP ip i)
    ) => (forall x . n x -> RefinedT m x)
-   -> POpts
    -> i
-   -> RefinedT m (Refined2 ip op i)
-newRefined2TImpl f opts i = do
-  (ret,mr) <- f $ eval2M opts i
-  let m2 = prt2Impl opts ret
+   -> RefinedT m (Refined2 opts ip op i)
+newRefined2TImpl f i = do
+  let o = getOptT @opts
+  (ret,mr) <- f $ eval2M i
+  let m2 = prt2Impl o ret
   tell [m2Long m2]
   case mr of
     Nothing -> throwError $ m2Desc m2 <> " | " <> m2Short m2
@@ -447,57 +456,59 @@ data RResults2 a =
      deriving Show
 
 -- | same as 'prtEval2P' but runs in IO
-prtEval2PIO :: forall ip op i proxy
-  . ( Refined2C ip op i
+prtEval2PIO :: forall opts ip op i proxy
+  . ( Refined2C opts ip op i
     , Show (PP ip i)
-    ) => proxy '(ip,op,i)
-  -> POpts
+    ) => proxy '(opts,ip,op,i)
   -> i
-  -> IO (Either String (Refined2 ip op i))
-prtEval2PIO _ opts i = do
-  x <- eval2M opts i
-  prt2IO opts x
+  -> IO (Either String (Refined2 opts ip op i))
+prtEval2PIO _ i = do
+  x <- eval2M i
+  prt2IO (getOptT @opts) x
 
 
-prtEval2 :: forall ip op i
-  . ( Refined2C ip op i
+prtEval2 :: forall opts ip op i
+  . ( Refined2C opts ip op i
     , Show (PP ip i)
-  ) => POpts
-  -> i
-  -> Either Msg2 (Refined2 ip op i)
-prtEval2 opts = prt2 opts . eval2 opts
+  ) => i
+    -> Either Msg2 (Refined2 opts ip op i)
+prtEval2 = prt2 (getOptT @opts) . eval2
 
-prtEval2P :: forall ip op i
-  . ( Refined2C ip op i
+prtEval2P :: forall opts ip op i
+  . ( Refined2C opts ip op i
     , Show (PP ip i)
-  ) => Proxy '(ip,op,i)
-  -> POpts
-  -> i
-  -> Either Msg2 (Refined2 ip op i)
-prtEval2P _ opts = prt2 opts . eval2 opts
+  ) => Proxy '(opts,ip,op,i)
+    -> i
+    -> Either Msg2 (Refined2 opts ip op i)
+prtEval2P _ = prt2 (getOptT @opts) . eval2
 
-eval2P :: forall ip op i . Refined2C ip op i
-  => Proxy '(ip,op,i)
-  -> POpts
+eval2P :: forall opts ip op i
+  . ( Refined2C opts ip op i
+    )
+  => Proxy '(opts,ip,op,i)
   -> i
-  -> (RResults2 (PP ip i), Maybe (Refined2 ip op i))
-eval2P _ opts = runIdentity . eval2M opts
+  -> (RResults2 (PP ip i), Maybe (Refined2 opts ip op i))
+eval2P _ = runIdentity . eval2M
 
-eval2 :: forall ip op i . Refined2C ip op i
-  => POpts
-  -> i
-  -> (RResults2 (PP ip i), Maybe (Refined2 ip op i))
-eval2 opts = runIdentity . eval2M opts
+eval2 :: forall opts ip op i
+   . ( Refined2C opts ip op i
+     )
+  => i
+  -> (RResults2 (PP ip i), Maybe (Refined2 opts ip op i))
+eval2 = runIdentity . eval2M
 
-eval2M :: forall m ip op i . (MonadEval m, Refined2C ip op i)
-  => POpts
-  -> i
-  -> m (RResults2 (PP ip i), Maybe (Refined2 ip op i))
-eval2M opts i = do
-  ll <- eval (Proxy @ip) opts i
+eval2M :: forall m opts ip op i
+  . ( MonadEval m
+    , Refined2C opts ip op i
+    )
+  => i
+  -> m (RResults2 (PP ip i), Maybe (Refined2 opts ip op i))
+eval2M i = do
+  let o = getOptT @opts
+  ll <- eval (Proxy @ip) o i
   case getValAndPE ll of
    (Right a, t1) -> do
-     rr <- evalBool (Proxy @op) opts a
+     rr <- evalBool (Proxy @op) (getOptT @opts) a
      pure $ case getValAndPE rr of
       (Right True,t2) -> (RTTrue a t1 t2, Just (Refined2 a i))
       (Right False,t2) -> (RTFalse a t1 t2, Nothing)
@@ -566,26 +577,31 @@ prt2Impl opts v =
 --
 -- set the 3-tuple directly
 --
--- >>> eg1 = mkProxy2 @'(ReadP Int Id, Gt 10, String)
--- >>> prtEval2P eg1 ol "24"
+-- >>> eg1 = mkProxy2 @'( 'OL, ReadP Int Id, Gt 10, String)
+-- >>> prtEval2P eg1 "24"
 -- Right (Refined2 {r2In = 24, r2Out = "24"})
 --
 -- skip the 4-tuple and set each parameter individually using type application
 --
--- >>> eg2 = mkProxy2 @_ @(ReadP Int Id) @(Gt 10)
--- >>> prtEval2P eg2 ol "24"
+-- >>> eg2 = mkProxy2 @_ @'OL @(ReadP Int Id) @(Gt 10)
+-- >>> prtEval2P eg2 "24"
 -- Right (Refined2 {r2In = 24, r2Out = "24"})
 --
-mkProxy2 :: forall z ip op i . z ~ '(ip,op,i) => Proxy '(ip,op,i)
+mkProxy2 :: forall z opts ip op i
+  . ( z ~ '(opts,ip,op,i)
+    ) => Proxy '(opts,ip,op,i)
 mkProxy2 = Proxy
 
 -- | same as 'mkProxy2' but checks to make sure the proxy is consistent with the 'Refined2C' constraint
-mkProxy2' :: forall z ip op i . (z ~ '(ip,op,i), Refined2C ip op i) => Proxy '(ip,op,i)
+mkProxy2' :: forall z opts ip op i
+  . ( z ~ '(ip,op,i)
+    , Refined2C opts ip op i
+    ) => Proxy '(opts,ip,op,i)
 mkProxy2' = Proxy
 
--- | type family for converting from a 3-tuple '(ip,op,i) to a 'Refined2' type
+-- | type family for converting from a 3-tuple '(opts,ip,op,i) to a 'Refined2' type
 type family MakeR2 p where
-  MakeR2 '(ip,op,i) = Refined2 ip op i
+  MakeR2 '(opts,ip,op,i) = Refined2 opts ip op i
 
 -- | used by 'Refined2' to extract \'ip\' from a promoted 3-tuple
 type family T3_1 x where

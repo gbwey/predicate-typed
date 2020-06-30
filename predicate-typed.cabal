@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5d72fc5c53a74b136d35214d3448473ec7a65826ef6c69c023a0944efbd35fe0
+-- hash: 122aa6625462676b633e7e8ebc6452af4089f333cb8bb83eeaea36e8e3b4d2d9
 
 name:           predicate-typed
 version:        0.6.2.1
@@ -58,6 +58,7 @@ library
     , ghc-prim
     , hashable
     , lens
+    , lens-action
     , mtl
     , pcre-heavy >=1.0.0.2
     , pcre-light
@@ -111,6 +112,7 @@ test-suite doctests
     , ghc-prim
     , hashable
     , lens
+    , lens-action
     , mtl
     , pcre-heavy >=1.0.0.2
     , pcre-light
@@ -156,6 +158,7 @@ test-suite predicate-typed-test
     , ghc-prim
     , hashable
     , lens
+    , lens-action
     , mtl
     , pcre-heavy >=1.0.0.2
     , pcre-light

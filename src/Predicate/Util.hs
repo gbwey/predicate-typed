@@ -95,6 +95,10 @@ module Predicate.Util (
   , setColor
   , setDebug
   , HOpts (..)
+  , OptT(..)
+  , OptTC(..)
+  , getOptT
+  , getOptsLen
 
 -- ** formatting functions
   , show01
@@ -576,6 +580,15 @@ showAImpl o i s a = showLitImpl o i s (show a)
 
 showL :: Show a => Int -> a -> String
 showL i = litL i . show
+
+getOptsLen :: POpts -> Int
+getOptsLen opts =
+  case oDebug opts of
+    OZero -> 0
+    OLite -> 50
+    OSubNormal -> 100
+    ONormal -> 200
+    OVerbose -> 1000
 
 litL :: Int -> String -> String
 litL i s = take i s <> if length s > i then "..." else ""
@@ -1251,4 +1264,48 @@ readField fieldName readVal = do
         GR.expectP (L.Punc "=")
         readVal
 
+data OptT = OZ | OL | OAN | OA | OAB | OU | OUB | OC !Nat | OD !Nat | OEmpty | OAppend !OptT !OptT
 
+instance Show OptT where
+  show = \case
+            OZ -> "OZ"
+            OL -> "OL"
+            OAN -> "OAN"
+            OA -> "OA"
+            OAB -> "OAB"
+            OU -> "OU"
+            OUB -> "OUB"
+            OC _n -> "OC"
+            OD _n -> "OD"
+            OEmpty -> "OEmpty"
+            OAppend a b -> "OAppend " ++ show a ++ " " ++ show b
+
+class OptTC (k :: OptT) where getOptT' :: POptsL
+instance OptTC 'OZ where getOptT' = setAnsi <> setColor 0 <> setDebug 0
+instance OptTC 'OL where getOptT' = setAnsi <> setColor 0 <> setDebug 1
+instance OptTC 'OAN where getOptT' = setAnsi <> setColor 0
+instance OptTC 'OA where getOptT' = setAnsi <> setColor 5
+instance OptTC 'OAB where getOptT' = setAnsi <> setColor 1
+instance OptTC 'OU where getOptT' = setUnicode <> setColor 5
+instance OptTC 'OUB where getOptT' = setUnicode <> setColor 1
+instance KnownNat n => OptTC ('OC (n :: Nat)) where getOptT' = setColor (nat @n)
+instance KnownNat n => OptTC ('OD (n :: Nat)) where getOptT' = setDebug (nat @n)
+
+instance OptTC 'OEmpty where getOptT' = mempty
+instance (OptTC a, OptTC b) => OptTC ('OAppend a b) where getOptT' = getOptT' @a <> getOptT' @b
+
+getOptT :: forall o . OptTC o => POpts
+getOptT = reifyOpts (getOptT' @o)
+{-
+data OptT = OZ | OL | OAN | OA | OAB | OU | OUB deriving (Show,Eq)
+
+class OptTC (k :: OptT) where
+  getOptT :: POpts
+instance OptTC 'OZ where getOptT = oz
+instance OptTC 'OL where getOptT = ol
+instance OptTC 'OAN where getOptT = oan
+instance OptTC 'OA where getOptT = oa
+instance OptTC 'OAB where getOptT = oab
+instance OptTC 'OU where getOptT = ou
+instance OptTC 'OUB where getOptT = oub
+-}

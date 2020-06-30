@@ -4,6 +4,7 @@
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -34,7 +35,7 @@ module Predicate.Examples.Refined3 (
   , Hms
   , HmsR
 
-  , hms'
+--  , hms'
   , Hms'
   , HmsR'
 
@@ -116,10 +117,10 @@ import Data.Time
 
 -- | credit card with luhn algorithm
 --
--- >>> prtEval3P cc11 oz "1234-5678-901"
+-- >>> prtEval3P (cc11 @'OZ) "1234-5678-901"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P cc11 oz "1234-5678-903"
+-- >>> prtEval3P (cc11 @'OZ) "1234-5678-903"
 -- Right (Refined3 {r3In = [1,2,3,4,5,6,7,8,9,0,3], r3Out = "1234-5678-903"})
 --
 -- >>> pz @(Ccip >> Ccop 11) "79927398713"
@@ -129,33 +130,37 @@ import Data.Time
 -- FailT "expected 10 digits but found 11"
 --
 
-type Ccn (ns :: [Nat]) = '(Ccip, Ccop (SumT ns), Ccfmt ns, String)
+type Ccn (opts :: OptT) (ns :: [Nat]) = '(opts, Ccip, Ccop (SumT ns), Ccfmt ns, String)
 
-type CC11 = Ccn '[4,4,3]
+type CC11 (opts :: OptT) = Ccn opts '[4,4,3]
 
-ccn :: Proxy (Ccn ns)
+ccn :: Proxy (Ccn opts ns)
 ccn = mkProxy3
 
 -- works but have to add all the constraints
-ccn' :: (PP ns String ~ [Integer], KnownNat (SumT ns), P ns String) => Proxy (Ccn ns)
+ccn' :: ( OptTC opts
+        , PP ns String ~ [Integer]
+        , KnownNat (SumT ns)
+        , P ns String
+        ) => Proxy (Ccn opts ns)
 ccn' = mkProxy3'
 
-cc11 :: Proxy (Ccn '[4,4,3])   -- or Proxy CC11
+cc11 :: OptTC opts => Proxy (Ccn opts '[4,4,3])   -- or Proxy CC11
 cc11 = mkProxy3'
 
 -- | read in a valid datetime
 --
--- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-14 02:57:04"
+-- >>> prtEval3P (datetime1 @'OL @LocalTime) "2018-09-14 02:57:04"
 -- Right (Refined3 {r3In = 2018-09-14 02:57:04, r3Out = "2018-09-14 02:57:04"})
 --
--- >>> prtEval3P (datetime1 @LocalTime) ol "2018-09-99 12:12:12"
+-- >>> prtEval3P (datetime1 @'OL @LocalTime) "2018-09-99 12:12:12"
 -- Left Step 1. Initial Conversion(ip) Failed | ParseTimeP LocalTime (%F %T) failed to parse
 --
-datetime1 :: Proxy (DateTime1 t)
+datetime1 :: Proxy (DateTime1 opts t)
 datetime1 = mkProxy3
 
 -- now that time is actually validated we dont need Dtop*
-type DateTime1 (t :: Type) = '(Dtip t, 'True, Dtfmt, String)
+type DateTime1 (opts :: OptT) (t :: Type) = '( opts, Dtip t, 'True, Dtfmt, String)
 
 -- fixed in time-1.9
 -- extra check to validate the time as parseTime doesnt validate the time component
@@ -163,121 +168,117 @@ type DateTime1 (t :: Type) = '(Dtip t, 'True, Dtfmt, String)
 -- UTCTime will do the same but any overages get tacked on to the day and time as necessary: makes the time valid! 99:98:97 becomes 04:39:37
 --    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
 
-ssn :: Proxy Ssn
+ssn :: OptTC opts => Proxy (Ssn opts)
 ssn = mkProxy3'
 
 -- | read in an ssn
 --
--- >>> prtEval3P ssn oz "134-01-2211"
+-- >>> prtEval3P (ssn @'OZ) "134-01-2211"
 -- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
 --
--- >>> prtEval3P ssn ol "666-01-2211"
+-- >>> prtEval3P (ssn @'OL) "666-01-2211"
 -- Left Step 2. False Boolean Check(op) | {Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))}
 --
--- >>> prtEval3P ssn ol "667-00-2211"
+-- >>> prtEval3P (ssn @'OL) "667-00-2211"
 -- Left Step 2. False Boolean Check(op) | {Bool(1) [number for group 1 invalid: found 0] (1 <= 0)}
 --
-type Ssn = '(Ssnip, Ssnop, Ssnfmt, String)
-type SsnR = MakeR3 Ssn
+type Ssn (opts :: OptT) = '(opts, Ssnip, Ssnop, Ssnfmt, String)
+type SsnR (opts :: OptT) = MakeR3 (Ssn opts)
 -- | read in a time and validate it
 --
--- >>> prtEval3P hms ol "23:13:59"
+-- >>> prtEval3P (hms @'OL) "23:13:59"
 -- Right (Refined3 {r3In = [23,13,59], r3Out = "23:13:59"})
 --
--- >>> prtEval3P hms ol "23:13:60"
+-- >>> prtEval3P (hms @'OL) "23:13:60"
 -- Left Step 2. Failed Boolean Check(op) | seconds invalid: found 60
 --
--- >>> prtEval3P hms ol "26:13:59"
+-- >>> prtEval3P (hms @'OL) "26:13:59"
 -- Left Step 2. Failed Boolean Check(op) | hours invalid: found 26
 --
-hms :: Proxy Hms
+hms :: OptTC opts => Proxy (Hms opts)
 hms = mkProxy3'
 
-type HmsR = MakeR3 Hms
+type HmsR (opts :: OptT) = MakeR3 (Hms opts)
+type Hms (opts :: OptT) = '(opts, Hmsip, Hmsop >> 'True, Hmsfmt, String)
 
-type Hms = '(Hmsip, Hmsop >> 'True, Hmsfmt, String)
+--hms' :: Proxy (Hms' 'OZ)
+--hms' = mkProxy3'
 
-
-hms' :: Proxy Hms'
-hms' = mkProxy3'
-
-type HmsR' = MakeR3 Hms'
-
-type Hms' = '(Hmsip, Hmsop', Hmsfmt, String)
+type HmsR' (opts :: OptT) = MakeR3 (Hms' opts)
+type Hms' (opts :: OptT) = '(opts, Hmsip, Hmsop', Hmsfmt, String)
 
 
 -- | read in an ipv4 address and validate it
 --
--- >>> prtEval3P ip4 oz "001.223.14.1"
+-- >>> prtEval3P (ip4 @'OZ) "001.223.14.1"
 -- Right (Refined3 {r3In = [1,223,14,1], r3Out = "001.223.014.001"})
 --
--- >>> prtEval3P ip4 ol "001.223.14.999"
+-- >>> prtEval3P (ip4 @'OL) "001.223.14.999"
 -- Left Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 999
 --
--- >>> prtEval3P ip4 oz "001.223.14.999.1"
+-- >>> prtEval3P (ip4 @'OZ) "001.223.14.999.1"
 -- Left Step 2. Failed Boolean Check(op) | Guards:invalid length(5) expected 4
 --
--- >>> prtEval3P ip4 ol "001.257.14.1"
+-- >>> prtEval3P (ip4 @'OL) "001.257.14.1"
 -- Left Step 2. Failed Boolean Check(op) | octet 1 out of range 0-255 found 257
 --
-type Ip4R = MakeR3 Ip4
+type Ip4R (opts :: OptT) = MakeR3 (Ip4 opts)
+type Ip4 (opts :: OptT) = '( opts, Ip4ip, Ip4op >> 'True, Ip4fmt, String) -- guards
 
-type Ip4 = '(Ip4ip, Ip4op >> 'True, Ip4fmt, String) -- guards
-
-ip4 :: Proxy Ip4
+ip4 :: OptTC opts => Proxy (Ip4 opts)
 ip4 = mkProxy3'
 
-type Ip4R' = MakeR3 Ip4'
-type Ip4' = '(Ip4ip, Ip4op', Ip4fmt, String) -- boolean predicates
+type Ip4R' (opts :: OptT) = MakeR3 (Ip4' opts)
+type Ip4' (opts :: OptT) = '( opts, Ip4ip, Ip4op', Ip4fmt, String) -- boolean predicates
 
-ip4' :: Proxy Ip4'
+ip4' :: OptTC opts => Proxy (Ip4' opts)
 ip4' = mkProxy3'
 
-type Ip6R = MakeR3 Ip6
-type Ip6 = '(Ip6ip, Ip6op, Ip6fmt, String) -- guards
+type Ip6R (opts :: OptT) = MakeR3 (Ip6 opts)
+type Ip6 (opts :: OptT) = '( opts, Ip6ip, Ip6op, Ip6fmt, String) -- guards
 
-ip6 :: Proxy Ip6
+ip6 :: Proxy (Ip6 opts)
 ip6 = Proxy
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
-type DateN = '(ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)
+type DateN (opts :: OptT) = '( opts, ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)
 
-type DateTimeNR = MakeR3 DateTimeN
-type DateTimeN = '(ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
+type DateTimeNR (opts :: OptT) = MakeR3 (DateTimeN opts)
+type DateTimeN (opts :: OptT) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
 
 -- | convert a string from a given base \'i\' and store it internally as an base 10 integer
 --
--- >>> prtEval3P base16 oz "00fe"
+-- >>> prtEval3P (base16 @'OZ) "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> prtEval3P (basen' @16 @(100 <..> 400)) oz "00fe"
+-- >>> prtEval3P (basen' @'OZ @16 @(100 <..> 400)) "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> prtEval3P (basen' @16 @(GuardSimple (Id < 400) >> 'True)) oz "f0fe"
+-- >>> prtEval3P (basen' @'OZ @16 @(GuardSimple (Id < 400) >> 'True)) "f0fe"
 -- Left Step 2. Failed Boolean Check(op) | (61694 < 400)
 --
--- >>> prtEval3P (basen' @16 @(Id < 400)) ol "f0fe" -- todo: why different parens vs braces
+-- >>> prtEval3P (basen' @'OL @16 @(Id < 400)) "f0fe" -- todo: why different parens vs braces
 -- Left Step 2. False Boolean Check(op) | {61694 < 400}
 --
-type BaseN (n :: Nat) = BaseN' n 'True
-type BaseN' (n :: Nat) p = '(ReadBase Int n Id, p, ShowBase n Id, String)
+type BaseN (opts :: OptT) (n :: Nat) = BaseN' opts n 'True
+type BaseN' (opts :: OptT) (n :: Nat) p = '( opts, ReadBase Int n Id, p, ShowBase n Id, String)
 
-base16 :: Proxy (BaseN 16)
+base16 :: Proxy (BaseN opts 16)
 base16 = basen
 
-base16' :: Proxy (BaseN' 16 p)
+base16' :: Proxy (BaseN' opts 16 p)
 base16' = basen'
 
-base2 :: Proxy (BaseN 2)
+base2 :: Proxy (BaseN opts 2)
 base2 = basen
 
-base2' :: Proxy (BaseN' 2 p)
+base2' :: Proxy (BaseN' opts 2 p)
 base2' = basen'
 
-basen :: Proxy (BaseN n)
+basen :: Proxy (BaseN opts n)
 basen = mkProxy3
 
-basen' :: Proxy (BaseN' n p)
+basen' :: Proxy (BaseN' opts n p)
 basen' = mkProxy3
 
 {-
@@ -290,21 +291,21 @@ basen' :: forall n p
        ) => Proxy (BaseN' n p)
 basen' = mkProxy3
 -}
-daten :: Proxy DateN
+daten :: OptTC opts => Proxy (DateN opts)
 daten = mkProxy3'
 
-datetimen :: Proxy DateTimeN
-datetimen = mkProxy3'
+datetimen :: OptTC opts => Proxy (DateTimeN opts)
+datetimen = mkProxy3X'
 
 -- | ensures that two numbers are in a given range (emulates 'Refined.Refined')
 --
--- >>> prtEval3P (between @10 @16) oz 14
+-- >>> prtEval3P (between @'OZ @10 @16) 14
 -- Right (Refined3 {r3In = 14, r3Out = 14})
 --
--- >>> prtEval3P (between @10 @16) oz 17
+-- >>> prtEval3P (between @'OZ @10 @16) 17
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P (between @10 @16) oan 17
+-- >>> prtEval3P (between @'OAN @10 @16) 17
 -- Left Step 2. False Boolean Check(op) | {17 <= 16}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) [17] ***
@@ -322,39 +323,40 @@ datetimen = mkProxy3'
 -- `- P '16
 -- <BLANKLINE>
 --
-between :: Proxy (BetweenN m n)
+between :: Proxy (BetweenN opts m n)
 between = mkProxy3
 
-type BetweenN m n = '(Id, Between m n Id, Id, Int)
-type BetweenR m n = RefinedEmulate (Between m n Id) Int
+type BetweenN (opts :: OptT) m n = '( opts, Id, Between m n Id, Id, Int)
+type BetweenR (opts :: OptT) m n = RefinedEmulate opts (Between m n Id) Int
 
-type LuhnR (n :: Nat) = MakeR3 (LuhnT n)
+type LuhnR (opts :: OptT) (n :: Nat) = MakeR3 (LuhnT opts n)
 
 -- | Luhn check
 --
--- >>> prtEval3P (Proxy @(LuhnT 4)) oz "1230"
+-- >>> prtEval3P (Proxy @(LuhnT 'OZ 4)) "1230"
 -- Right (Refined3 {r3In = [1,2,3,0], r3Out = "1230"})
 --
--- >>> prtEval3P (Proxy @(LuhnT 4)) ol "1234"
+-- >>> prtEval3P (Proxy @(LuhnT 'OL 4)) "1234"
 -- Left Step 2. False Boolean Check(op) | {True && False | (Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}
 --
 -- | uses builtin 'Luhn'
-type LuhnT (n :: Nat) =
-   '(Map (ReadP Int Id) (Ones Id)
-   , Msg "incorrect number of digits:"
-         (Len == n) && Luhn Id
-   , ConcatMap (ShowP Id) Id
-   , String)
+type LuhnT (opts :: OptT) (n :: Nat) =
+   '( opts
+    , Map (ReadP Int Id) (Ones Id)
+    , Msg "incorrect number of digits:"
+          (Len == n) && Luhn Id
+    , ConcatMap (ShowP Id) Id
+    , String)
 
 -- | noop true
-type Ok (t :: Type) = '(Id, 'True, Id, t)
-type OkR (t :: Type) = MakeR3 (Ok t)
+type Ok (opts :: OptT) (t :: Type) = '(opts, Id, 'True, Id, t)
+type OkR (opts :: OptT) (t :: Type) = MakeR3 (Ok opts t)
 
-ok :: Proxy (Ok t)
+ok :: Proxy (Ok opts t)
 ok = mkProxy3
 
 -- | noop false
-type OkNot (t :: Type) = '(Id, 'False, Id, t)
+type OkNot (t :: Type) = '( 'OA, Id, 'False, Id, t)
 type OkNotR (t :: Type) = MakeR3 (OkNot t)
 
 oknot :: Proxy (OkNot t)
@@ -362,63 +364,63 @@ oknot = mkProxy3
 
 -- | convert a string from a given base \'i\' and store it internally as a base \'j\' string
 --
--- >>> prtEval3P (Proxy @(BaseIJ 16 2)) oz "fe"
+-- >>> prtEval3P (Proxy @(BaseIJ 'OZ 16 2)) "fe"
 -- Right (Refined3 {r3In = "11111110", r3Out = "fe"})
 --
--- >>> prtEval3P (Proxy @(BaseIJ 16 2)) oz "fge"
+-- >>> prtEval3P (Proxy @(BaseIJ 'OZ 16 2)) "fge"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> prtEval3P (Proxy @(BaseIJ' 16 2 (ReadBase Int 2 Id < 1000))) ol "ffe"
+-- >>> prtEval3P (Proxy @(BaseIJ' 'OL 16 2 (ReadBase Int 2 Id < 1000))) "ffe"
 -- Left Step 2. False Boolean Check(op) | {4094 < 1000}
 --
-type BaseIJ (i :: Nat) (j :: Nat) = BaseIJ' i j 'True
-type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, ReadBase Int j Id >> ShowBase i Id, String)
+type BaseIJ (opts :: OptT) (i :: Nat) (j :: Nat) = BaseIJ' opts i j 'True
+type BaseIJ' (opts :: OptT) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id >> ShowBase j Id, p, ReadBase Int j Id >> ShowBase i Id, String)
 
 -- | take any valid Read/Show instance and turn it into a valid 'Refined3'
 --
 -- >>> :m + Data.Ratio
--- >>> prtEval3P (readshow @Rational) oz "13 % 3"
+-- >>> prtEval3P (readshow @'OZ @Rational) "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
--- >>> prtEval3P (readshow @Rational) oz "13x % 3"
+-- >>> prtEval3P (readshow @'OZ @Rational) "13x % 3"
 -- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3)
 --
--- >>> prtEval3P (readshow' @Rational @(3 % 1 <..> 5 % 1)) oz "13 % 3"
+-- >>> prtEval3P (readshow' @'OZ @Rational @(3 % 1 <..> 5 % 1)) "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (11 -% 2 <..> 3 -% 1))) oz "-13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' 'OZ Rational (11 -% 2 <..> 3 -% 1))) "-13 % 3"
 -- Right (Refined3 {r3In = (-13) % 3, r3Out = "(-13) % 3"})
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (15 % 1)))) oz "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' 'OZ Rational (Id > (15 % 1)))) "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Msg (PrintF "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1))))) ol "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' 'OL Rational (Msg (PrintF "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1))))) "13 % 3"
 -- Left Step 2. False Boolean Check(op) | {invalid=4.3313 % 3 > 15 % 1}
 --
--- >>> prtEval3P (Proxy @(ReadShow' Rational (Id > (11 % 1)))) oz "13 % 3"
+-- >>> prtEval3P (Proxy @(ReadShow' 'OZ Rational (Id > (11 % 1)))) "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
 -- >>> let tmString = "2018-10-19 14:53:11.5121359 UTC"
 -- >>> let tm = read tmString :: UTCTime
--- >>> prtEval3P (readshow @UTCTime) oz tmString
+-- >>> prtEval3P (readshow @'OZ @UTCTime) tmString
 -- Right (Refined3 {r3In = 2018-10-19 14:53:11.5121359 UTC, r3Out = "2018-10-19 14:53:11.5121359 UTC"})
 --
 -- >>> :m + Data.Aeson
--- >>> prtEval3P (readshow @Value) oz "String \"jsonstring\""
+-- >>> prtEval3P (readshow @'OZ @Value) "String \"jsonstring\""
 -- Right (Refined3 {r3In = String "jsonstring", r3Out = "String \"jsonstring\""})
 --
--- >>> prtEval3P (readshow @Value) oz "Number 123.4"
+-- >>> prtEval3P (readshow @'OZ @Value) "Number 123.4"
 -- Right (Refined3 {r3In = Number 123.4, r3Out = "Number 123.4"})
 --
-type ReadShow (t :: Type) = '(ReadP t Id, 'True, ShowP Id, String)
-type ReadShowR (t :: Type) = MakeR3 (ReadShow t)
+type ReadShow (opts :: OptT) (t :: Type) = '( opts, ReadP t Id, 'True, ShowP Id, String)
+type ReadShowR (opts :: OptT) (t :: Type) = MakeR3 (ReadShow opts t)
 
-type ReadShow' (t :: Type) p = '(ReadP t Id, p, ShowP Id, String)
-type ReadShowR' (t :: Type) p = MakeR3 (ReadShow' t p)
+type ReadShow' (opts :: OptT) (t :: Type) p = '( opts, ReadP t Id, p, ShowP Id, String)
+type ReadShowR' (opts :: OptT) (t :: Type) p = MakeR3 (ReadShow' opts t p)
 
-readshow :: Proxy (ReadShow t)
+readshow :: Proxy (ReadShow opts t)
 readshow = mkProxy3
 
-readshow' :: Proxy (ReadShow' t p)
+readshow' :: Proxy (ReadShow' opts t p)
 readshow' = mkProxy3
 

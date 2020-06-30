@@ -220,11 +220,14 @@ type Luhn' (n :: Nat) =
 -- convert json microsoft datetime to zonedtime
 --type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id
 
+-- type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z" Id
+
+-- jam the values together
+-- eg pu @JsonMicrosoftDateTime "Date(1593460089052+0800)"
 type JsonMicrosoftDateTime =
-  Do '[ Rescan "^Date\\((\\d+[+-]\\d{4})\\)" Id
+  Do '[ Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" Id
       , Head Id
       , Snd Id
-      , Id !! 0
-      , ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id
+      , Id !! 0 <> "." <> Id !! 1
       , ParseTimeP ZonedTime "%s%Q%z" Id
       ]

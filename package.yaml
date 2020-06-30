@@ -24,6 +24,7 @@ dependencies:
 - ghc-prim
 - hashable
 - lens
+- lens-action
 - mtl
 - pcre-heavy >= 1.0.0.2
 - pcre-light

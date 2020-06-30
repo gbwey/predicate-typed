@@ -471,6 +471,7 @@ module Predicate.Prelude (
   -- ** string expressions
   , ToLower
   , ToUpper
+  , ToTitle
   , TrimBoth
   , TrimL
   , TrimR
@@ -549,7 +550,7 @@ import qualified GHC.TypeLits as GL
 import Control.Lens hiding (iall)
 --import Control.Lens (Unwrapped, Wrapped, _Unwrapped', _Wrapped', Ixed, IxValue, Index, Reversing, Cons, Snoc, AsEmpty, FoldableWithIndex, allOf, (%~), (<&>), (^.), (^?), coerced, view, reversed, ix, cons, snoc, _Cons, _Snoc, (^?!), (.~), itoList, Identity(..), _Empty, has)
 import Data.List
-import qualified Data.Text.Lens as TL
+import qualified Data.Text.Lens as DTL
 import Data.Proxy
 import Control.Applicative
 import Data.Typeable
@@ -1222,7 +1223,12 @@ instance P (ReplaceOneT' rs p q r) x => P (ReplaceOne' rs p q r) x where
 -- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1530144000123+0530)"
 -- PresentT 2018-06-28 05:30:00.123 +0530
 --
-
+-- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1593460089052+0800)"
+-- PresentT 2020-06-30 03:48:09.052 +0800
+--
+-- >>> pz @(Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1593460089052+0800)"
+-- PresentT 2020-06-30 03:48:09.052 +0800
+--
 data ReplaceOne p q r
 type ReplaceOneT p q r = ReplaceOne' '[] p q r
 
@@ -1547,11 +1553,11 @@ data IsCharSetAll (cs :: CharSet)
 
 instance (GetCharSet cs
         , Show a
-        , TL.IsText a
+        , DTL.IsText a
         ) => P (IsCharSetAll cs) a where
   type PP (IsCharSetAll cs) a = Bool
   eval _ opts as =
-    let b = allOf TL.text f as
+    let b = allOf DTL.text f as
         msg0 = "Is" ++ drop 1 (show cs) ++ "All"
         (cs,f) = getCharSet @cs
     in pure $ mkNodeB opts b (msg0 <> show1 opts " | " as) []
@@ -1680,11 +1686,11 @@ instance P IsLatin1AllT x => P IsLatin1All x where
 --
 data ToLower
 
-instance (Show a, TL.IsText a) => P ToLower a where
+instance (Show a, DTL.IsText a) => P ToLower a where
   type PP ToLower a = a
   eval _ opts as =
     let msg0 = "ToLower"
-        xs = as & TL.text %~ toLower
+        xs = as & DTL.text %~ toLower
     in pure $ mkNode opts (PresentT xs) (show01 opts msg0 xs as) []
 
 -- | converts a string 'Data.Text.Lens.IsText' value to upper case
@@ -1694,12 +1700,36 @@ instance (Show a, TL.IsText a) => P ToLower a where
 --
 data ToUpper
 
-instance (Show a, TL.IsText a) => P ToUpper a where
+instance (Show a, DTL.IsText a) => P ToUpper a where
   type PP ToUpper a = a
   eval _ opts as =
     let msg0 = "ToUpper"
-        xs = as & TL.text %~ toUpper
+        xs = as & DTL.text %~ toUpper
     in pure $ mkNode opts (PresentT xs) (show01 opts msg0 xs as) []
+
+
+-- | converts a string 'Data.Text.Lens.IsText' value to title case
+--
+-- >>> pz @ToTitle "HeLlO wOrld!"
+-- PresentT "Hello world!"
+--
+-- >>> data Color = Red | White | Blue | Green | Black deriving (Show,Eq,Enum,Bounded,Read)
+-- >>> pz @(ToTitle >> ReadP Color Id) "red"
+-- PresentT Red
+--
+data ToTitle
+
+instance (Show a, DTL.IsText a) => P ToTitle a where
+  type PP ToTitle a = a
+  eval _ opts as =
+    let msg0 = "ToTitle"
+        xs = (toTitleAll (as ^. DTL.unpacked)) ^. DTL.packed
+    in pure $ mkNode opts (PresentT xs) (show01 opts msg0 xs as) []
+
+
+toTitleAll :: String -> String
+toTitleAll (x:xs) = toUpper x : map toLower xs
+toTitleAll [] = []
 
 
 -- | similar to 'Data.List.inits'
@@ -9012,7 +9042,7 @@ instance (FailUnlessT (OrT l r)
            ('GL.Text "TrimImpl: left and right cannot both be False")
         , GetBool l
         , GetBool r
-        , TL.IsText (PP p x)
+        , DTL.IsText (PP p x)
         , P p x
         ) => P (TrimImpl l r p) x where
   type PP (TrimImpl l r p) x = PP p x
@@ -9023,11 +9053,11 @@ instance (FailUnlessT (OrT l r)
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right (view TL.unpacked -> p) ->
+      Right (view DTL.unpacked -> p) ->
         let fl = if l then dropWhile isSpace else id
             fr = if r then dropWhileEnd isSpace else id
             b =  (fl . fr) p
-        in mkNode opts (PresentT (b ^. TL.packed)) (msg0 <> showLit0 opts "" b <> showLit1 opts " | " p) [hh pp]
+        in mkNode opts (PresentT (b ^. DTL.packed)) (msg0 <> showLit0 opts "" b <> showLit1 opts " | " p) [hh pp]
 
 data TrimL p
 type TrimLT p = TrimImpl 'True 'False p
@@ -9078,7 +9108,7 @@ data StripImpl(left :: Bool) p q
 instance (GetBool l
         , PP p x ~ String
         , P p x
-        , TL.IsText (PP q x)
+        , DTL.IsText (PP q x)
         , P q x
         ) => P (StripImpl l p q) x where
   type PP (StripImpl l p q) x = Maybe (PP q x)
@@ -9088,14 +9118,14 @@ instance (GetBool l
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
-      Right (p,view TL.unpacked -> q,pp,qq) ->
+      Right (p,view DTL.unpacked -> q,pp,qq) ->
         let b = if l then
                   let (before,after) = splitAt (length p) q
                   in if before == p then Just after else Nothing
                 else
                   let (before,after) = splitAt (length q - length p) q
                   in if after == p then Just before else Nothing
-        in mkNode opts (PresentT (fmap (view TL.packed) b)) (msg0 <> show0 opts "" b <> showLit1 opts " | p=" p <> showLit1 opts " | q=" q) [hh pp, hh qq]
+        in mkNode opts (PresentT (fmap (view DTL.packed) b)) (msg0 <> show0 opts "" b <> showLit1 opts " | p=" p <> showLit1 opts " | q=" q) [hh pp, hh qq]
 
 data StripL p q
 type StripLT p q = StripImpl 'True p q
@@ -10046,7 +10076,7 @@ instance (P p x
             msg1 = msg0 <> "(" ++ litBL 10 s ++ ")"
         in case A.eitherDecode' s of
            Right b -> mkNode opts (PresentT b) (msg0 <> " " ++ showL 30 b) hhs
-           Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e) ) (msg0 <> " failed " <> e <> " | " <> litBL 100 s) hhs
+           Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e) ) (msg0 <> " failed " <> e <> " | " <> litBL (getOptsLen opts) s) hhs
 
 data ParseJson (t :: Type) p
 type ParseJsonT (t :: Type) p = ParseJson' (Hole t) p
@@ -10085,7 +10115,7 @@ instance (P p x
             case A.eitherDecodeStrict' s of
                Right b -> mkNode opts (PresentT b) (msg1 <> " " ++ showL 30 b) hhs
 --                Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) (msg1 <> " failed " <> litL 100 e) hhs
-               Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) (msg0 <> " failed " <> e <> " | " <> litBS 100 s) hhs
+               Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) (msg0 <> " failed " <> e <> " | " <> litBS (getOptsLen opts) s) hhs
 
 data ParseJsonFile (t :: Type) p
 type ParseJsonFileT (t :: Type) p = ParseJsonFile' (Hole t) p
@@ -10119,7 +10149,7 @@ instance (A.ToJSON (PP p x), P p x) => P (EncodeJson p) x where
       Left e -> e
       Right p ->
         let d = A.encode p
-        in mkNode opts (PresentT d) (msg0 <> showLit0 opts " " (litBL 50 d)) [hh pp]
+        in mkNode opts (PresentT d) (msg0 <> showLit0 opts " " (litBL (getOptsLen opts) d)) [hh pp]
 
 -- | encode a json file
 data EncodeJsonFile p q
@@ -10141,7 +10171,7 @@ instance (PP p x ~ String
         mb <- runIO $ BL8.writeFile p d
         pure $ case mb of
           Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) (msg0 <> " must run in IO") hhs
-          Just () -> mkNode opts (PresentT ()) (msg0 <> showLit0 opts " " (litBL 50 d)) hhs
+          Just () -> mkNode opts (PresentT ()) (msg0 <> showLit0 opts " " (litBL (getOptsLen opts) d)) hhs
 
 -- | uncurry experiment
 --
