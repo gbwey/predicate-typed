@@ -29,50 +29,53 @@ To run all the examples you will need these settings (ghc>=8.2)
 
 ### Simplest refinement type
 ```haskell
-data Refined p a = Refined a
+newtype Refined opts p a = Refined a
 ```
-* **_a_** is the input type
+* **_opts_** display options
+        * 'OZ (show nothing)
+        * 'OL (shows one line)
+        * 'OA (ansi colors)
+        * 'OAB (bold)
+        * 'OU' (unicode) -- for unicode on windows run: chcp 65001
+        * 'OUB (bold)
 * **_p_** predicate on **_a_**
+* **_a_** input type
 
 ### Examples of Refined (for more information see [doctests](src/Predicate/Refined.hs))
 
-* if using unix you can replace 'oa' with 'ou' to get unicode output
-* 'ol' summarises the output in one line
-* 'oa' shows the tree of output with colors
-
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
->prtRefinedIO @(ReadP Int Id > 99) ol "123"
+>prtRefinedIO @'OL @(ReadP Int Id > 99) "123"
 Right (Refined {unRefined = "123"})
 ```
 
 2. tries to read in a number but fails
 ```haskell
->prtRefinedIO @(ReadP Int Id > 99) ol "1x2y3"
+>prtRefinedIO @'OA @(ReadP Int Id > 99) "1x2y3"
 Left (FailP "ReadP Int (1x2y3) failed")
 ```
 
 3. reads in a hexadecimal string and checks to see that it is between 99 and 256
 ```haskell
 --  (>>) acts like the monadic operator (>>=)
->prtRefinedIO @(ReadBase Int 16 Id >> Between 99 256 Id) ol "000fe"
+>prtRefinedIO @'OL @(ReadBase Int 16 Id >> Between 99 256 Id) "000fe"
 Right (Refined {unRefined = "000fe"})
 ```
 
 4. reads in a hexadecimal string but fails the predicate check
 ```haskell
->prtRefinedIO @(ReadBase Int 16 Id >> Between 99 253 Id) ol "000fe"
+>prtRefinedIO @'OL @(ReadBase Int 16 Id >> Between 99 253 Id) "000fe"
 Left FalseP
 ```
 
 5. same as 4. above but now we get details of where it went wrong
 ```haskell
->prtRefinedIO @(ReadBase Int 16 Id >> Between 99 253 Id) oa "000fe"
+>prtRefinedIO @'OA @(ReadBase Int 16 Id >> Between 99 253 Id) "000fe"
 ```
 
 6. reads in a string as time and does simple validation
 ```haskell
->prtRefinedIO @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) ol "12:01:05"
+>prtRefinedIO @'OL @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
 Right (Refined {unRefined = "12:01:05"})
 ```
   * `Resplit ":" Id`
@@ -100,33 +103,34 @@ for less detail use _pl_\
 ### An example using Refined2 (for more information see [doctests](src/Predicate/Refined2.hs))
 
 ```haskell
->type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, String)
+>type Hex = '( 'OL, ReadBase Int 16 Id, Between 0 255 Id, String)
 
->prtEval2P (Proxy @Hex) ol "0000fe"
+>prtEval2P (Proxy @Hex) "0000fe"
 Refined2 {r2In = 254, r2Out = "0000fe"}
 
->prtEval2P (Proxy @Hex) ol "1ffe"
+>prtEval2P (Proxy @Hex) "1ffe"
 Left "Step 2. False Boolean Check(op) | {8190 <= 255}"
 
 >import qualified Data.Aeson as A
->type Js = '(ParseJson (Int,String) Id, Msg "0-255:" (Between 0 255 (Fst Id)) && Msg "length:" (Length (Snd Id) == 3), String)
+>import Data.ByteString (ByteString)
+>type Js = '( 'OL, ParseJson (Int,String) Id, Msg "0-255:" (Between 0 255 (Fst Id)) && Msg "length:" (Length (Snd Id) == 3), ByteString)
 
->prtEval2P (Proxy @Js) ol "[10,\"Abc\"]"
+>prtEval2P (Proxy @Js) "[10,\"Abc\"]"
 Right (Refined2 {r2In = (10,"Abc"), r2Out = "[10,\"Abc\"]"})
 
->prtEval2P (Proxy @Js) ol "[10,\"Abcdef\"]"
+>prtEval2P (Proxy @Js) "[10,\"Abcdef\"]"
 Left Step 2. False Boolean Check(op) | {True && False | (length:6 == 3)}
 
->prtEval2P (Proxy @Js) ol "[-10,\"Abcdef\"]"
+>prtEval2P (Proxy @Js) "[-10,\"Abcdef\"]"
 Left Step 2. False Boolean Check(op) | {False && False | (0-255:0 <= -10) && (length:6 == 3)}
 ```
 
 ### An example using Refined3 (for more information see [doctests](src/Predicate/Examples/Refined3.hs))
 
 ```haskell
->type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
+>type Hex opts = '( opts, ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
 
->prtEval3PIO (Proxy @Hex) ol "0000fe"
+>prtEval3PIO (Proxy @(Hex 'OL)) "0000fe"
 Refined3 {r3In = 254, r3Out = "fe"}
 ```
 1. `ReadBase Int 16 Id`
@@ -138,7 +142,7 @@ Refined3 {r3In = 254, r3Out = "fe"}
 
 run this to get details in color of each evaluation step on failure:
 ```haskell
->prtEval3PIO (Proxy @Hex) oa "0000ffe"
+>prtEval3PIO (Proxy @(Hex 'OA)) "0000ffe"
 
 *** Step 1. Success Initial Conversion(ip) [4094] ***
 
@@ -168,30 +172,25 @@ TrueT
 PresentT "fe"
 ```
 
-**_Replace '$$(refinedTH ...)' '$$(refinedTH' oa ...)' for an evaluation tree_**
-
 ### Template Haskell versions
 
 ```haskell
-ex1 :: Refined (ReadP Int Id >> Id > 99) String
-ex1 = $$(refinedTH "123")
+ex1 :: Refined 'OL (ReadP Int Id >> Id > 99) String; ex1 = $$(refinedTH "123")
 ```
 
 Refined2 and Refined3 are the most useful refinement types as you can control the input and output types (see documentation and [doctests](src/Predicate/Refined2.hs) and [doctests](src/Predicate/Refined3.hs))
 
-**_Replace '$$(refined3TH ...)' with '$$(refined3TH' oa ...)' for a colored evaluation tree_**
-
 ```haskell
-type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
+type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
 
-$$(refined3TH "0000fe") :: MakeR3 Hex
+$$(refined3TH "0000fe") :: MakeR3 (Hex 'OL)
 ```
 
-Here is an example where the predicate fails at compile-time and we choose to show the details using oa.
+Here is an example where the predicate fails at compile-time and we choose to show the details using 'OA
 ```haskell
->type Hex = '(ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
+>type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
 
->$$(refined3TH' oa "000ffff") :: MakeR3 Hex
+>$$(refined3TH "000ffff") :: MakeR3 (Hex 'OA)
 
 <interactive>:18:4: error:
     *
@@ -212,29 +211,29 @@ False 65535 <= 255
 `- P '255
 
 refined3TH: predicate failed with Step 2. False Boolean Check(op) | {65535 <= 255}
-    * In the Template Haskell splice $$(refined3TH' oa "000ffff")
-      In the expression: $$(refined3TH' oa "000ffff") :: MakeR3 Hex
+    * In the Template Haskell splice $$(refined3TH "000ffff")
+      In the expression: $$(refined3TH "000ffff") :: MakeR3 (Hex 'OA)
       In an equation for `it':
-          it = $$(refined3TH' oa "000ffff") :: MakeR3 Hex
+          it = $$(refined3TH "000ffff") :: MakeR3 Hex
 ```
 
 ### Any valid Read/Show instance can be used with Refined3
 ```haskell
->$$(refined3TH "13 % 3") :: ReadShowR Rational
+>$$(refined3TH "13 % 3") :: ReadShowR 'OA Rational
 Refined3 {r3In = 13 % 3, r3Out = "13 % 3"}
 
->$$(refined3TH "2016-11-09") :: ReadShowR Day
+>$$(refined3TH "2016-11-09") :: ReadShowR 'OA Day
 Refined3 {r3In = 2016-11-09, r3Out = "2016-11-09"}
 ```
 
 An example of an invalid refined3TH call
 ```haskell
->$$(refined3TH "2016-xy-09") :: ReadShowR Day
+>$$(refined3TH "2016-xy-09") :: ReadShowR 'OA Day
 
 <interactive>:171:4: error:
     * refined3TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09) failed
     * In the Template Haskell splice $$(refined3TH "2016-xy-09")
-      In the expression: $$(refined3TH "2016-xy-09") :: ReadShowR Day
+      In the expression: $$(refined3TH "2016-xy-09") :: ReadShowR 'OA Day
       In an equation for `it':
           it = $$(refined3TH "2016-xy-09") :: ReadShowR Day
 ```
@@ -243,13 +242,13 @@ An example of an invalid refined3TH call
 
 #### This example is successful as it is a valid hexadecimal and is between 10 though 256
 ```haskell
->eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
+>eitherDecode' @(Refined3 'OA (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
 Right (Refined3 {r3In = 254, r3Out = "254"})
 ```
 
 #### This example fails as the value is not a valid hexadecimal string
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) 'True (ShowP Id) String) "\"00feg\""
+>either putStrLn print $ eitherDecode' @(Refined3 'OA (ReadBase Int 16 Id) 'True (ShowP Id) String) "\"00feg\""
 Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ***Step 1. Initial Conversion(ip) Failed ***
@@ -262,7 +261,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 #### This example fails as the hexadecimal value is valid but is not between 10 and 256
 
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined3 (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
+>either putStrLn print $ eitherDecode' @(Refined3 'OA (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
 Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | {16663610 < 256}}
 
 ***Step 1. Success Initial Conversion(ip) [16663610] ***
@@ -290,7 +289,7 @@ False True && False | {16663610 < 256}
 
 #### some more examples
 ```
->$$(refinedTH' @(Lt 3 || Gt 55) oa 44)
+>$$(refinedTH @'OA @(Lt 3 || Gt 55) 44)
 
 <interactive>:21:4: error:
     *
@@ -310,19 +309,19 @@ False False || False | (44 < 3) || (44 > 55)
 
 refinedTH: predicate failed with FalseP (False || False | (44 < 3) || (44 > 55))
     * In the Template Haskell splice
-        $$(refinedTH' @(Lt 3 || Gt 55) oa 44)
-      In the expression: $$(refinedTH' @(Lt 3 || Gt 55) oa 44)
-      In an equation for `it': it = $$(refinedTH' @(Lt 3 || Gt 55) oa 44)
+        $$(refinedTH @'OA @(Lt 3 || Gt 55) 44)
+      In the expression: $$(refinedTH @'OA @(Lt 3 || Gt 55) 44)
+      In an equation for `it': it = $$(refinedTH 'OA @(Lt 3 || Gt 55) 44)
 ```
 
 ```
->$$(refinedTH' @(Len > 7 || Elem 3 Id) oa [1..5])
+>$$(refinedTH @'OA @(Len > 7 || Elem 3 Id) [1..5])
 Refined {unRefined = [1,2,3,4,5]}
 it :: Refined ((Len > 7) || Elem 3 Id) [Int]
 ```
 
 ```
->$$(refinedTH' @(Len > 7 || Elem 7 Id) oa [1..5])
+>$$(refinedTH @'OA @(Len > 7 || Elem 7 Id) [1..5])
 
 <interactive>:26:4: error:
     *
@@ -342,15 +341,15 @@ False False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
 
 refinedTH: predicate failed with FalseP (False || False | (5 > 7) || (7 `elem` [1,2,3,4,5]))
     * In the Template Haskell splice
-        $$(refinedTH' @(Len > 7 || Elem 7 Id) oa [1 .. 5])
+        $$(refinedTH @'OA @(Len > 7 || Elem 7 Id) [1 .. 5])
       In the expression:
-        $$(refinedTH' @(Len > 7 || Elem 7 Id) oa [1 .. 5])
+        $$(refinedTH @'OA @(Len > 7 || Elem 7 Id) [1 .. 5])
       In an equation for `it':
-          it = $$(refinedTH' @(Len > 7 || Elem 7 Id) oa [1 .. 5])
+          it = $$(refinedTH @'OA @(Len > 7 || Elem 7 Id) [1 .. 5])
 ```
 
 ```
->$$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) oa "smith")
+>$$(refinedTH @'OA @(Re "^[A-Z][a-z]+$" Id) "smith")
 
 <interactive>:30:4: error:
     *
@@ -362,20 +361,20 @@ False Re' [] (^[A-Z][a-z]+$) | smith
 
 refinedTH: predicate failed with FalseP (Re' [] (^[A-Z][a-z]+$) | smith)
     * In the Template Haskell splice
-        $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) oa "smith")
+        $$(refinedTH @'OA @(Re "^[A-Z][a-z]+$" Id) "smith")
       In the expression:
-        $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) oa "smith")
+        $$(refinedTH @'OA @(Re "^[A-Z][a-z]+$" Id) "smith")
       In an equation for `it':
-          it = $$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) oa "smith")
+          it = $$(refinedTH @'OA @(Re "^[A-Z][a-z]+$" Id) "smith")
 ```
 
 ```
->$$(refinedTH' @(Re "^[A-Z][a-z]+$" Id) oa "Smith")
+>$$(refinedTH @'OA @(Re "^[A-Z][a-z]+$" Id) "Smith")
 Refined {unRefined = "Smith"}
 ```
 
 ```
->$$(refinedTH' @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) oa "smith")
+>$$(refinedTH @'OA @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) "smith")
 
 <interactive>:36:4: error:
     *
@@ -387,19 +386,19 @@ False expected title case:Re' [] (^[A-Z][a-z]+$) | smith
 
 refinedTH: predicate failed with FalseP (expected title case:Re' [] (^[A-Z][a-z]+$) | smith)
     * In the Template Haskell splice
-        $$(refinedTH'
-             @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) oa "smith")
+        $$(refinedTH @'OA
+             @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) "smith")
       In the expression:
-        $$(refinedTH'
-             @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) oa "smith")
+        $$(refinedTH @'OA
+             @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) "smith")
       In an equation for `it':
           it
-            = $$(refinedTH'
-                   @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) oa "smith")
+            = $$(refinedTH @'OA
+                   @(Msg "expected title case:" $ Re "^[A-Z][a-z]+$" Id) "smith")
 ```
 
 ```
->$$(refinedTH' @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True) oa "smith")
+>$$(refinedTH @'OA @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True) "smith")
 
 <interactive>:52:4: error:
     *
@@ -415,19 +414,16 @@ refinedTH: predicate failed with FalseP (expected title case:Re' [] (^[A-Z][a-z]
 
 refinedTH: predicate failed with FailP "expected title case:" ((>>) lhs failed)
     * In the Template Haskell splice
-        $$(refinedTH'
+        $$(refinedTH @'OA
              @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True)
-             oa
              "smith")
       In the expression:
-        $$(refinedTH'
+        $$(refinedTH @'OA
              @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True)
-             oa
              "smith")
       In an equation for `it':
           it
-            = $$(refinedTH'
+            = $$(refinedTH @'OA
                    @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True)
-                   oa
                    "smith")
 ```

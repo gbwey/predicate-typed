@@ -132,7 +132,7 @@ import GHC.Stack
 --
 -- >>> prtRefinedIO @'OZ @(Snd Id !! Fst Id >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Left FalseP
-newtype Refined opts p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
+newtype Refined (opts :: OptT) p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
 
 type role Refined nominal nominal nominal
 

@@ -180,8 +180,6 @@ import GHC.Stack
 -- >>> prtEval3P (Proxy @(T4 _)) (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
---data Refined3 ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: !(PP fmt (PP ip i)) }
-
 data Refined3 (opts :: OptT) ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: !(PP fmt (PP ip i)) }
 
 type role Refined3 nominal nominal nominal nominal nominal
