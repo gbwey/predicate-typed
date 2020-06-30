@@ -175,7 +175,8 @@ PresentT "fe"
 ### Template Haskell versions
 
 ```haskell
-ex1 :: Refined 'OL (ReadP Int Id >> Id > 99) String; ex1 = $$(refinedTH "123")
+ex1 :: Refined 'OL (ReadP Int Id >> Id > 99) String
+ex1 = $$(refinedTH "123")
 ```
 
 Refined2 and Refined3 are the most useful refinement types as you can control the input and output types (see documentation and [doctests](src/Predicate/Refined2.hs) and [doctests](src/Predicate/Refined3.hs))

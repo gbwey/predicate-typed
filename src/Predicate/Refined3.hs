@@ -600,21 +600,21 @@ newRefined3TPSkipIPImpl f _ a = do
     Just r -> return r
 
 -- | attempts to cast a wrapped 'Refined3' to another 'Refined3' with different predicates
-convertRefined3TP :: forall m opts ip op fmt i opts1 ip1 op1 fmt1 i1 .
+convertRefined3TP :: forall m opts ip op fmt i ip1 op1 fmt1 i1 .
   ( Refined3C opts ip op fmt i
-  , Refined3C opts1 ip1 op1 fmt1 i1
+  , Refined3C opts ip1 op1 fmt1 i1
   , Monad m
   , Show (PP ip i)
   , PP ip i ~ PP ip1 i1
   , Show i1)
   => Proxy '(opts, ip, op, fmt, i)
-  -> Proxy '(opts1, ip1, op1, fmt1, i1)
+  -> Proxy '(opts, ip1, op1, fmt1, i1)
   -> RefinedT m (Refined3 opts ip op fmt i)
-  -> RefinedT m (Refined3 opts1 ip1 op1 fmt1 i1)
+  -> RefinedT m (Refined3 opts ip1 op1 fmt1 i1)
 convertRefined3TP _ _ ma = do
   Refined3 x _ <- ma
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) (Proxy @'(opts1, ip1, op1, fmt1, i1)) x
+  Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) (Proxy @'(opts, ip1, op1, fmt1, i1)) x
   return (Refined3 a b)
 
 -- | applies a binary operation to two wrapped 'Refined3' parameters

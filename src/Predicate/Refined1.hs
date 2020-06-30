@@ -589,20 +589,20 @@ newRefined1TPSkipIPImpl f _ a = do
     Just r -> return r
 
 -- | attempts to cast a wrapped 'Refined1' to another 'Refined1' with different predicates
-convertRefined1TP :: forall m opts ip op fmt i opts1 ip1 op1 fmt1 i1 .
-  ( Refined1C opts1 ip1 op1 fmt1 i1
+convertRefined1TP :: forall m opts ip op fmt i ip1 op1 fmt1 i1 .
+  ( Refined1C opts ip1 op1 fmt1 i1
   , Monad m
   , Show (PP ip i)
   , PP ip i ~ PP ip1 i1
   , Show i1)
   => Proxy '(opts, ip, op, fmt, i)
-  -> Proxy '(opts1, ip1, op1, fmt1, i1)
+  -> Proxy '(opts, ip1, op1, fmt1, i1)
   -> RefinedT m (Refined1 opts ip op fmt i)
-  -> RefinedT m (Refined1 opts1 ip1 op1 fmt1 i1)
+  -> RefinedT m (Refined1 opts ip1 op1 fmt1 i1)
 convertRefined1TP _ _ ma = do
   Refined1 x <- ma
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  Refined1 a <- newRefined1TPSkipIPImpl (return . runIdentity) (Proxy @'(opts1, ip1, op1, fmt1, i1)) x
+  Refined1 a <- newRefined1TPSkipIPImpl (return . runIdentity) (Proxy @'(opts, ip1, op1, fmt1, i1)) x
   return (Refined1 a)
 
 -- | applies a binary operation to two wrapped 'Refined1' parameters

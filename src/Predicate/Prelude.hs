@@ -10076,7 +10076,7 @@ instance (P p x
             msg1 = msg0 <> "(" ++ litBL 10 s ++ ")"
         in case A.eitherDecode' s of
            Right b -> mkNode opts (PresentT b) (msg0 <> " " ++ showL 30 b) hhs
-           Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e) ) (msg0 <> " failed " <> e <> " | " <> litBL (getOptsLen opts) s) hhs
+           Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e) ) (msg0 <> " failed " <> e <> " | " <> litBL (oWidth opts) s) hhs
 
 data ParseJson (t :: Type) p
 type ParseJsonT (t :: Type) p = ParseJson' (Hole t) p
@@ -10113,9 +10113,8 @@ instance (P p x
           Just Nothing -> mkNode opts (FailT (msg1 <> " file doesn't exist")) (msg1 <> " does not exist") hhs
           Just (Just s) ->
             case A.eitherDecodeStrict' s of
-               Right b -> mkNode opts (PresentT b) (msg1 <> " " ++ showL 30 b) hhs
---                Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) (msg1 <> " failed " <> litL 100 e) hhs
-               Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) (msg0 <> " failed " <> e <> " | " <> litBS (getOptsLen opts) s) hhs
+               Right b -> mkNode opts (PresentT b) (msg1 <> " " ++ showL (if oDebug opts == OVerbose then oWidth opts else 30) b) hhs
+               Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) (msg0 <> " failed " <> e <> " | " <> litBS (oWidth opts) s) hhs
 
 data ParseJsonFile (t :: Type) p
 type ParseJsonFileT (t :: Type) p = ParseJsonFile' (Hole t) p
@@ -10149,7 +10148,7 @@ instance (A.ToJSON (PP p x), P p x) => P (EncodeJson p) x where
       Left e -> e
       Right p ->
         let d = A.encode p
-        in mkNode opts (PresentT d) (msg0 <> showLit0 opts " " (litBL (getOptsLen opts) d)) [hh pp]
+        in mkNode opts (PresentT d) (msg0 <> showLit0 opts " " (litBL (oWidth opts) d)) [hh pp]
 
 -- | encode a json file
 data EncodeJsonFile p q
@@ -10171,7 +10170,7 @@ instance (PP p x ~ String
         mb <- runIO $ BL8.writeFile p d
         pure $ case mb of
           Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) (msg0 <> " must run in IO") hhs
-          Just () -> mkNode opts (PresentT ()) (msg0 <> showLit0 opts " " (litBL (getOptsLen opts) d)) hhs
+          Just () -> mkNode opts (PresentT ()) (msg0 <> showLit0 opts " " (litBL (oWidth opts) d)) hhs
 
 -- | uncurry experiment
 --

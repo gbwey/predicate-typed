@@ -161,7 +161,7 @@ instance (RefinedC opts p a, Read a) => Read (Refined opts p a) where
                              "unRefined"
                              (PCR.reset GR.readPrec)
                GR.expectP (RL.Punc "}")
-               let (_,mr) = runIdentity $ newRefined @opts @p fld0 -- since we cant display the failure message ...
+               let (_,mr) = runIdentity $ newRefined @opts @p fld0 -- since we cant display the failure message
                case mr of
                  Nothing -> fail ""
                  Just _r -> pure (Refined fld0)
@@ -284,15 +284,15 @@ rapplyLift f (Refined a) (Refined b) = newRefinedT (f a b)
 
 -- | attempts to lift a refinement type to another refinement type by way of transformation function
 --   you can control both the predicate and the type
-convertRefinedT :: forall m opts p a opts1 p1 a1
-  . ( RefinedC opts1 p1 a1
+convertRefinedT :: forall m opts p a p1 a1
+  . ( RefinedC opts p1 a1
     , Monad m)
   => (a -> a1)
   -> RefinedT m (Refined opts p a)
-  -> RefinedT m (Refined opts1 p1 a1)
+  -> RefinedT m (Refined opts p1 a1)
 convertRefinedT f ma = do
   Refined a <- ma -- you already got a refined in there so no need to check RefinedC
-  newRefinedT @opts1 @p1 (f a)
+  newRefinedT @opts @p1 (f a)
 
 -- | invokes the callback with the 'Refined' value if \'a\' is valid for the predicate \'p\'
 withRefinedT :: forall opts p m a b

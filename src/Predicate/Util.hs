@@ -98,7 +98,6 @@ module Predicate.Util (
   , OptT(..)
   , OptTC(..)
   , getOptT
-  , getOptsLen
 
 -- ** formatting functions
   , show01
@@ -580,15 +579,6 @@ showAImpl o i s a = showLitImpl o i s (show a)
 
 showL :: Show a => Int -> a -> String
 showL i = litL i . show
-
-getOptsLen :: POpts -> Int
-getOptsLen opts =
-  case oDebug opts of
-    OZero -> 0
-    OLite -> 50
-    OSubNormal -> 100
-    ONormal -> 200
-    OVerbose -> 1000
 
 litL :: Int -> String -> String
 litL i s = take i s <> if length s > i then "..." else ""
@@ -1264,7 +1254,7 @@ readField fieldName readVal = do
         GR.expectP (L.Punc "=")
         readVal
 
-data OptT = OZ | OL | OAN | OA | OAB | OU | OUB | OC !Nat | OD !Nat | OEmpty | OAppend !OptT !OptT
+data OptT = OZ | OL | OAN | OA | OAB | OU | OUB | OC !Nat | OD !Nat | OW !Nat | OEmpty | OAppend !OptT !OptT
 
 instance Show OptT where
   show = \case
@@ -1277,6 +1267,7 @@ instance Show OptT where
             OUB -> "OUB"
             OC _n -> "OC"
             OD _n -> "OD"
+            OW _n -> "OW"
             OEmpty -> "OEmpty"
             OAppend a b -> "OAppend " ++ show a ++ " " ++ show b
 
@@ -1288,9 +1279,9 @@ instance OptTC 'OA where getOptT' = setAnsi <> setColor 5
 instance OptTC 'OAB where getOptT' = setAnsi <> setColor 1
 instance OptTC 'OU where getOptT' = setUnicode <> setColor 5
 instance OptTC 'OUB where getOptT' = setUnicode <> setColor 1
-instance KnownNat n => OptTC ('OC (n :: Nat)) where getOptT' = setColor (nat @n)
-instance KnownNat n => OptTC ('OD (n :: Nat)) where getOptT' = setDebug (nat @n)
-
+instance KnownNat n => OptTC ('OC n) where getOptT' = setColor (nat @n)
+instance KnownNat n => OptTC ('OD n) where getOptT' = setDebug (nat @n)
+instance KnownNat n => OptTC ('OW n) where getOptT' = setWidth (nat @n)
 instance OptTC 'OEmpty where getOptT' = mempty
 instance (OptTC a, OptTC b) => OptTC ('OAppend a b) where getOptT' = getOptT' @a <> getOptT' @b
 
