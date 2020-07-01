@@ -10086,6 +10086,10 @@ instance P (ParseJsonT t p) x => P (ParseJson t p) x where
   eval _ = eval (Proxy @(ParseJsonT t p))
 
 -- | parse a json file
+--
+-- >>> pz @(ParseJsonFile [A.Value] "test1.json" >> Id !! 2) ()
+-- PresentT (Object (fromList [("lastName",String "Doe"),("age",Number 45.0),("firstName",String "John"),("likesPizza",Bool False)]))
+--
 data ParseJsonFile' t p
 
 instance (P p x

@@ -25,7 +25,8 @@
 -}
 module Predicate.Refined (
   -- ** Refined
-    Refined(unRefined)
+    Refined
+  , unRefined
   , RefinedC
   , newRefined
   , RefinedT(..)
@@ -89,16 +90,16 @@ import GHC.Stack
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
 -- >>> prtRefinedIO @'OZ @(Between 10 14 Id) 13
--- Right (Refined {unRefined = 13})
+-- Right (Refined 13)
 --
 -- >>> prtRefinedIO @'OZ @(Between 10 14 Id) 99
 -- Left FalseP
 --
 -- >>> prtRefinedIO @'OZ @(Last Id >> Len == 4) ["one","two","three","four"]
--- Right (Refined {unRefined = ["one","two","three","four"]})
+-- Right (Refined ["one","two","three","four"])
 --
 -- >>> prtRefinedIO @'OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) "141.213.1.99"
--- Right (Refined {unRefined = "141.213.1.99"})
+-- Right (Refined "141.213.1.99")
 --
 -- >>> prtRefinedIO @'OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) "141.213.1"
 -- Left FalseP
@@ -113,26 +114,29 @@ import GHC.Stack
 -- Left (FailP "ReadP Int (1x34)")
 --
 -- >>> prtRefinedIO @'OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12344"
--- Right (Refined {unRefined = "12344"})
+-- Right (Refined "12344")
 --
 -- >>> prtRefinedIO @'OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12340"
 -- Left FalseP
 --
 -- >>> prtRefinedIO @'OZ @(Any (Prime Id) Id) [11,13,17,18]
--- Right (Refined {unRefined = [11,13,17,18]})
+-- Right (Refined [11,13,17,18])
 --
 -- >>> prtRefinedIO @'OZ @(All (Prime Id) Id) [11,13,17,18]
 -- Left FalseP
 --
 -- >>> prtRefinedIO @'OZ @(Snd Id !! Fst Id >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
--- Right (Refined {unRefined = (2,["abc","defghij","xyzxyazsfd"])})
+-- Right (Refined (2,["abc","defghij","xyzxyazsfd"]))
 --
 -- >>> prtRefinedIO @'OZ @(Snd Id !! Fst Id >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
 -- Left (FailP "(!!) index not found")
 --
 -- >>> prtRefinedIO @'OZ @(Snd Id !! Fst Id >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Left FalseP
-newtype Refined (opts :: OptT) p a = Refined { unRefined :: a } deriving (Show, Eq, Generic, TH.Lift)
+newtype Refined (opts :: OptT) p a = Refined a deriving (Show, Eq, Generic, TH.Lift)
+
+unRefined :: forall k (opts :: OptT) (p :: k) a. Refined opts p a -> a
+unRefined (Refined a) = a
 
 type role Refined nominal nominal nominal
 
@@ -143,10 +147,10 @@ instance RefinedC opts p String => IsString (Refined opts p String) where
 
 -- | 'Read' instance for 'Refined'
 --
--- >>> reads @(Refined 'OZ (Between 0 255 Id) Int) "Refined {unRefined = 254}"
--- [(Refined {unRefined = 254},"")]
+-- >>> reads @(Refined 'OZ (Between 0 255 Id) Int) "Refined 254"
+-- [(Refined 254,"")]
 --
--- >>> reads @(Refined 'OZ (Between 0 255 Id) Int) "Refined {unRefined = 300}"
+-- >>> reads @(Refined 'OZ (Between 0 255 Id) Int) "Refined 300"
 -- []
 --
 
@@ -156,11 +160,7 @@ instance (RefinedC opts p a, Read a) => Read (Refined opts p a) where
         (PCR.prec
            11
            (do GR.expectP (RL.Ident "Refined")
-               GR.expectP (RL.Punc "{")
-               fld0 <- readField
-                             "unRefined"
-                             (PCR.reset GR.readPrec)
-               GR.expectP (RL.Punc "}")
+               fld0 <- PCR.reset GR.readPrec
                let (_,mr) = runIdentity $ newRefined @opts @p fld0 -- since we cant display the failure message
                case mr of
                  Nothing -> fail ""
@@ -181,7 +181,7 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 -- >>> :set -XOverloadedStrings
 -- >>> import qualified Data.Aeson as A
 -- >>> A.eitherDecode' @(Refined 'OZ (Between 10 14 Id) Int) "13"
--- Right (Refined {unRefined = 13})
+-- Right (Refined 13)
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined 'OAN (Between 10 14 Id) Int) "16"
 -- Error in $: Refined:FalseP
@@ -211,7 +211,7 @@ instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
 -- >>> type K2 = Refined 'OAN (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") (ReadP Day Id)) String
 -- >>> r = unsafeRefined' @'OZ "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
--- Refined {unRefined = "2019-04-23"}
+-- Refined "2019-04-23"
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
 -- Refined:FalseP

@@ -19,11 +19,13 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Predicate
 import qualified Predicate.Refined as R
+import qualified Predicate.Refined3 as R3
 import qualified Predicate.Examples.Refined3 as R3
 import GHC.Generics (Generic)
 import Data.Text (Text)
 import Data.Aeson
 import qualified Data.ByteString as BS
+import Control.Lens
 
 suite :: TestTree
 suite = testGroup "testjson"
@@ -36,6 +38,14 @@ suite = testGroup "testjson"
   , testCase "parse fail person1" $ expectPE (FailT "ParseJsonFile [Person1 'OZ](test3.json) Error in $[0].ipaddress1") $ pl @(ParseJsonFile [Person1 'OZ] "test3.json") ()
   , testCase "parse ok person1" $ expectPE (PresentT 5) $ pl @(ParseJsonFile [Person1 'OA] "test2.json" >> Len) ()
   , testCase "missing file" $ expectPE (FailT "ParseJsonFile [Person1 'OZ](test2.jsoxxxn) file doesn't exist") $ pl @(ParseJsonFile [Person1 'OZ] "test2.jsoxxxn" >> Len) ()
+
+  , testCase "getRow2Age1" $ do
+                           x <- pz @(ParseJsonFile [Person1 'OUB] "test2.json" >> Id !! 2) ()
+                           (x ^?! _PresentT . to (unRefined . age1)) @=? 45
+                           (x ^?! _PresentT . to (R3.r3Out . ipaddress1)) @=? "124.001.012.223"
+  , testCase "getRow2" $ do
+                           x <- pz @(ParseJsonFile [Person1 'OUB] "test2.json" >> Id !! 2) ()
+                           x @=? PresentT (Person1 {firstName1 = unsafeRefined "John", lastName1 = unsafeRefined "Doe", age1 = unsafeRefined 45, likesPizza1 = False, date1 = R3.unsafeRefined3 (read "2003-01-12 04:05:33 UTC") "2003-01-12 04:05:33", ipaddress1 = R3.unsafeRefined3 [124,1,12,223] "124.001.012.223"})
   ]
 
 testPerson :: IO (Either String [Person])

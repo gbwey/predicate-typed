@@ -45,7 +45,7 @@ import Data.Functor.Identity
 -- | creates a 'Refined.Refined' refinement type
 --
 -- >>> $$(refinedTH 123) :: Refined 'OZ (Between 100 125 Id) Int
--- Refined {unRefined = 123}
+-- Refined 123
 --
 -- @
 -- >$$(refinedTH 99) :: Refined 'OZ (Between 100 125 Id) Int
@@ -60,7 +60,7 @@ import Data.Functor.Identity
 -- @
 --
 -- >>> $$(refinedTH 123) :: Refined 'OAN (Between 100 125 Id) Int
--- Refined {unRefined = 123}
+-- Refined 123
 --
 -- @
 -- >$$(refinedTH 99) :: Refined 'OAN (FailS "asdf" >> Between 100 125 Id) Int
@@ -96,13 +96,13 @@ refinedTH i = do
 -- | creates a 'Refined1.Refined1' refinement type
 --
 -- >>> $$(refined1TH 100) :: Refined1 'OZ Id (Between 100 125 Id) Id Int
--- Refined1 {unRefined1 = 100}
+-- Refined1 100
 --
 -- >>> $$(refined1TH 100) :: Refined1 'OZ Id (Between 100 125 Id) Id Int
--- Refined1 {unRefined1 = 100}
+-- Refined1 100
 --
 -- >>> $$(refined1TH 100) :: Refined1 'OZ Id (Between 100 125 Id) Id Int
--- Refined1 {unRefined1 = 100}
+-- Refined1 100
 --
 -- @
 -- >$$(refined1TH 99) :: Refined1 'OZ Id (Between 100 125 Id) Id Int

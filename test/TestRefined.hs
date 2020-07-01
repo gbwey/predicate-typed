@@ -42,30 +42,30 @@ suite =
 namedTests :: [TestTree]
 namedTests =
   [
-    testCase "always true" $ (@?=) ($$(refinedTH 7) :: Refined 'OA 'True Int) (unsafeRefined 7)
-  , testCase "between5and9" $ (@?=) ($$(refinedTH 7) :: Refined 'OA (Between 5 9 Id) Int) (unsafeRefined 7)
+    testCase "always true" $ (@=?) ($$(refinedTH 7) :: Refined 'OA 'True Int) (unsafeRefined 7)
+  , testCase "between5and9" $ (@=?) ($$(refinedTH 7) :: Refined 'OA (Between 5 9 Id) Int) (unsafeRefined 7)
   ]
 
 unnamedTests :: [IO ()]
 unnamedTests = [
-    (@?=) (unsafeRefined @'OA @'True ("1.2.3.4" :: String)) $$(refinedTH "1.2.3.4")
-  , (@?=) (unsafeRefined @'OA @((Len == 4) && Luhn Id) [1,2,3,0]) $$(refinedTH [1,2,3,0])
-  , (@?=) (unsafeRefined @'OA @(Not ((Len == 4) && Luhn Id)) [1,2,3,1]) $$(refinedTH [1,2,3,1])
+    (@=?) (unsafeRefined @'OA @'True ("1.2.3.4" :: String)) $$(refinedTH "1.2.3.4")
+  , (@=?) (unsafeRefined @'OA @((Len == 4) && Luhn Id) [1,2,3,0]) $$(refinedTH [1,2,3,0])
+  , (@=?) (unsafeRefined @'OA @(Not ((Len == 4) && Luhn Id)) [1,2,3,1]) $$(refinedTH [1,2,3,1])
 
-  , (@?=) [(unsafeRefined 7, "")] (reads @(Refined 'OA (Between 2 10 Id) Int) "Refined {unRefined = 7}")
-  , (@?=) [] (reads @(Refined 'OA (Between 2 10 Id) Int) "Refined {unRefined = 0}")
-  , (@?=) [(unsafeRefined "abcaaaabb", "")] (reads @(Refined 'OA (Re "^[abc]+$" Id) String) "Refined {unRefined = \"abcaaaabb\"}")
-  , (@?=) [] (reads @(Refined 'OA (Re "^[abc]+$" Id) String) "Refined {unRefined = \"abcaaaabbx\"}")
+  , (@=?) [(unsafeRefined 7, "")] (reads @(Refined 'OA (Between 2 10 Id) Int) "Refined 7")
+  , (@=?) [] (reads @(Refined 'OA (Between 2 10 Id) Int) "Refined 0")
+  , (@=?) [(unsafeRefined "abcaaaabb", "")] (reads @(Refined 'OA (Re "^[abc]+$" Id) String) "Refined \"abcaaaabb\"")
+  , (@=?) [] (reads @(Refined 'OA (Re "^[abc]+$" Id) String) "Refined \"abcaaaabbx\"")
 
   , expectJ (Left ["Error in $: Refined:FalseP"]) (toFrom (unsafeRefined @'OA @(Between 4 7 Id || Gt 14) 12))
   , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @'OA @(Between 4 7 Id || Gt 14) 22))
   , expectJ (Left ["Error in $: Refined:FailP \"someval\""]) (toFrom (unsafeRefined @'OA @(Between 4 7 Id || Gt 14 || Failt _ "someval") 12))
 
-  , (fst <$> unRavelT (tst2 10 200)) >>= (@?= Right (10,200))
-  , (fst <$> unRavelT (tst2 11 12)) >>= (@?= Left "FalseP")
+  , (fst <$> unRavelT (tst2 10 200)) >>= (@=? Right (10,200))
+  , (fst <$> unRavelT (tst2 11 12)) >>= (@=? Left "FalseP")
 
-  , (fst <$> unRavelT (tst1 10 200)) >>= (@?= Right (10,200))
-  , (fst <$> unRavelT (tst1 11 12)) >>= (@?= Left "FalseP")
+  , (fst <$> unRavelT (tst1 10 200)) >>= (@=? Right (10,200))
+  , (fst <$> unRavelT (tst1 11 12)) >>= (@=? Left "FalseP")
   ]
 
 allProps :: [TestTree]
