@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 53499d159520a5f7d2fddfc49e61f02df712c4f6c989c1c8357d323a9bade74c
+-- hash: 7fae80817279868d536df2331290af16da4a8b7a2cdc971f4c41d15539c12fae
 
 name:           predicate-typed
 version:        0.6.2.1
@@ -43,7 +43,7 @@ library
       Paths_predicate_typed
   hs-source-dirs:
       src
-  ghc-options: -Wincomplete-uni-patterns -Wincomplete-record-updates -Wcompat -Wmissing-export-lists -Wpartial-fields -Wredundant-constraints
+  ghc-options: -Wincomplete-uni-patterns -Wincomplete-record-updates -Wcompat -Wpartial-fields -Wredundant-constraints
   build-depends:
       QuickCheck
     , aeson

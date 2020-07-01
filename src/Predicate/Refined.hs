@@ -161,9 +161,9 @@ instance (RefinedC opts p a, Read a) => Read (Refined opts p a) where
            11
            (do GR.expectP (RL.Ident "Refined")
                fld0 <- PCR.reset GR.readPrec
-               let (_,mr) = runIdentity $ newRefined @opts @p fld0 -- since we cant display the failure message
+               let ((_bp,(_e,_top)),mr) = runIdentity $ newRefined @opts @p fld0 -- since we cant display the failure message
                case mr of
-                 Nothing -> fail ""
+                 Nothing -> fail ""   -- (show _bp ++ "\n" ++ _e)
                  Just _r -> pure (Refined fld0)
            ))
   readList = GR.readListDefault

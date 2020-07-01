@@ -48,7 +48,7 @@ library:
   - -Wcompat
 #  - -Widentities
 #  - -fhide-source-paths
-  - -Wmissing-export-lists
+#  - -Wmissing-export-lists
   - -Wpartial-fields
   - -Wredundant-constraints
   when:
