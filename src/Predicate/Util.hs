@@ -72,13 +72,7 @@ module Predicate.Util (
   , ODebug(..)
   , Disp(..)
   , defOpts
-  , oz
-  , ol
-  , oan
-  , oa
-  , oab
-  , ou
-  , oub
+  , PColor(..)
   , nocolor
   , color1
   , color2
@@ -93,6 +87,7 @@ module Predicate.Util (
   , setUnicode
   , setAnsi
   , setColor
+  , setColorImpl
   , setDebug
   , HOpts (..)
   , OptT(..)
@@ -393,22 +388,25 @@ reifyOpts h =
            (fromMaybe (oDisp defOpts) (getLast (oDisp h)))
            (fromMaybe (oColor defOpts) (getLast (oColor h)))
 
-setWidth :: Int -> HOpts Last
+setWidth :: Int -> POptsL
 setWidth i = mempty { oWidth = pure i }
 
-setDebug :: Int -> HOpts Last
+setDebug :: Int -> POptsL
 setDebug i =
   let (mn,mx) = (fromEnum (minBound :: ODebug), fromEnum (maxBound :: ODebug))
       ret = toEnum (min (max i mn) mx)
   in mempty { oDebug = pure ret }
 
-setAnsi :: HOpts Last
+setAnsi :: POptsL
 setAnsi = mempty { oDisp = pure Ansi }
 
-setUnicode :: HOpts Last
+setUnicode :: POptsL
 setUnicode = mempty { oDisp = pure Unicode }
 
-setColor :: Int -> HOpts Last
+setColorImpl :: (String, PColor) -> POptsL
+setColorImpl c = mempty { oColor = pure c }
+
+setColor :: Int -> POptsL
 setColor i =
   let ret=
        if | i == 0 -> nocolor
@@ -451,34 +449,6 @@ data ODebug =
      | ONormal  -- ^ outputs the evaluation tree but skips noisy subtrees
      | OVerbose -- ^ outputs the entire evaluation tree
      deriving (Ord, Show, Eq, Enum, Bounded)
-
--- | no data ie zero
-oz :: POpts
-oz = defOpts { oColor = nocolor, oDebug = OZero }
-
--- | returns the summary without colors ie lite
-ol :: POpts
-ol = defOpts { oColor = nocolor, oDebug = OLite }
-
--- | displays the detailed evaluation tree without colors.
-oan :: POpts
-oan = defOpts { oColor = nocolor }
-
--- | displays the detailed evaluation tree using colors.
-oa :: POpts
-oa = defOpts
-
--- | displays the detailed evaluation tree using ansi and background colors.
-oab :: POpts
-oab = oa { oColor = color1 }
-
--- | displays the detailed evaluation tree using unicode and colors. (on windows use chcp 65001)
-ou :: POpts
-ou = defOpts { oDisp = Unicode }
-
--- | displays the detailed evaluation tree using unicode and background colors. (on windows use chcp 65001)
-oub :: POpts
-oub = ou { oColor = color1 }
 
 -- | helper method to set the debug level
 isVerbose :: POpts -> Bool
@@ -1254,7 +1224,7 @@ readField fieldName readVal = do
         GR.expectP (L.Punc "=")
         readVal
 
-data OptT = OZ | OL | OAN | OA | OAB | OU | OUB | OC !Nat | OD !Nat | OW !Nat | OEmpty | OAppend !OptT !OptT
+data OptT = OZ | OL | OAN | OA | OAB | OU | OUB | OC !Nat | OD !Nat | OW !Nat | OEmpty | !OptT :*: !OptT
 
 instance Show OptT where
   show = \case
@@ -1269,8 +1239,8 @@ instance Show OptT where
             OD _n -> "OD"
             OW _n -> "OW"
             OEmpty -> "OEmpty"
-            OAppend a b -> "OAppend " ++ show a ++ " " ++ show b
-
+            a :*: b -> show a ++ " ':*: " ++ show b
+infixr 6 :*:
 class OptTC (k :: OptT) where getOptT' :: POptsL
 instance OptTC 'OZ where getOptT' = setAnsi <> setColor 0 <> setDebug 0
 instance OptTC 'OL where getOptT' = setAnsi <> setColor 0 <> setDebug 1
@@ -1283,20 +1253,13 @@ instance KnownNat n => OptTC ('OC n) where getOptT' = setColor (nat @n)
 instance KnownNat n => OptTC ('OD n) where getOptT' = setDebug (nat @n)
 instance KnownNat n => OptTC ('OW n) where getOptT' = setWidth (nat @n)
 instance OptTC 'OEmpty where getOptT' = mempty
-instance (OptTC a, OptTC b) => OptTC ('OAppend a b) where getOptT' = getOptT' @a <> getOptT' @b
+instance (OptTC a, OptTC b) => OptTC (a ':*: b) where getOptT' = getOptT' @a <> getOptT' @b
 
+-- | convert typelevel options to 'POpts'
+--
+-- >>> getOptT @('OA ':*: 'OC 3 ':*: 'OU  ':*: 'OA ':*: 'OW 321)
+-- HOpts {oWidth = 321, oDebug = ONormal, oDisp = Ansi, oColor = ("color5",PColor <fn>)}
+--
 getOptT :: forall o . OptTC o => POpts
 getOptT = reifyOpts (getOptT' @o)
-{-
-data OptT = OZ | OL | OAN | OA | OAB | OU | OUB deriving (Show,Eq)
 
-class OptTC (k :: OptT) where
-  getOptT :: POpts
-instance OptTC 'OZ where getOptT = oz
-instance OptTC 'OL where getOptT = ol
-instance OptTC 'OAN where getOptT = oan
-instance OptTC 'OA where getOptT = oa
-instance OptTC 'OAB where getOptT = oab
-instance OptTC 'OU where getOptT = ou
-instance OptTC 'OUB where getOptT = oub
--}

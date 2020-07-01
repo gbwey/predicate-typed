@@ -6804,7 +6804,7 @@ instance (Show a
 
 -- | similar to 'Guard' but uses the root message of the False predicate case as the failure message
 --
--- most uses of GuardSimple can be replaced by using 'ol' and a boolean predicate unless you require failure
+-- most uses of GuardSimple can be replaced by a boolean predicate unless you require a failure message instead of true/false
 --
 -- >>> pz @(GuardSimple (Luhn Id)) [1..4]
 -- FailT "(Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])"
@@ -6828,7 +6828,7 @@ instance (Show a
   type PP (GuardSimple p) a = a
   eval _ opts a = do
     let msg0 = "GuardSimple"
-    pp <- evalBool (Proxy @p) (if hasNoTree opts then oan else opts) a -- to not lose the message in oLite mode we use non lite and then fix it up after
+    pp <- evalBool (Proxy @p) (if hasNoTree opts then defOpts { oColor = nocolor } else opts) a -- to not lose the message in oLite mode we use non lite and then fix it up after
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right False ->

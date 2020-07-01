@@ -69,7 +69,7 @@ evalBool :: (MonadEval m, P p a, PP p a ~ Bool) => Proxy p -> POpts -> a -> m (T
 evalBool p opts a = fixBoolT <$> eval p opts a
 
 evalQuick :: forall p i . P p i => i -> Either String (PP p i)
-evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) ol i))
+evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) defOpts { oColor = nocolor, oDebug = OLite } i))
 
 
 -- | identity function
@@ -685,25 +685,24 @@ with :: forall p a . (Show (PP p a), P p a)
 with h = peWith @p (reifyOpts h)
 
 pan, pa, pu, pl, pz, pab, pub :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
--- | displays the evaluation tree in plain text without colors
-pan  = peWith @p oan
--- | displays the evaluation tree using colors without background colors
-pa = peWith @p oa
--- | displays the evaluation tree using background colors
-pab = peWith @p oab
--- | displays the evaluation tree using background colors
-pub = peWith @p oub
 -- | skips the evaluation tree and just displays the end result
-pz = peWith @p oz
+pz = peWith @p defOpts { oColor = nocolor, oDebug = OZero }
 -- | same as 'pz' but adds context to the end result
-pl = peWith @p ol
-
+pl = peWith @p defOpts { oColor = nocolor, oDebug = OLite }
+-- | displays the evaluation tree in plain text without colors
+pan  = peWith @p defOpts { oColor = nocolor }
+-- | displays the evaluation tree using colors without background colors
+pa = peWith @p defOpts
+-- | displays the evaluation tree using background colors
+pab = peWith @p defOpts { oColor = color1 }
 -- | display the evaluation tree using unicode and colors
 -- @
 --   pu @'(Id, "abc", 123) [1..4]
 -- @
-pu = peWith @p ou
+pu = peWith @p defOpts { oDisp = Unicode }
 -- | displays the evaluation tree using unicode and colors with background colors
+-- | displays the evaluation tree using background colors
+pub = peWith @p defOpts { oDisp = Unicode, oColor = color1 }
 
 peWith :: forall p a
         . (Show (PP p a), P p a)
