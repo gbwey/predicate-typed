@@ -73,6 +73,8 @@ module Predicate.Util (
   , Disp(..)
   , defOpts
   , PColor(..)
+  , markBoundary
+  , hasNoColor
   , nocolor
   , color1
   , color2
@@ -223,6 +225,8 @@ import qualified Data.ByteString.Char8 as BS8
 import GHC.Stack
 import Data.Monoid (Last (..))
 import Data.Maybe
+import Data.Function (on)
+import Data.Coerce
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -466,6 +470,11 @@ data ODebug =
 isVerbose :: POpts -> Bool
 isVerbose = (OVerbose==) . oDebug
 
+markBoundary :: forall (opts :: OptT) . OptTC opts => String -> String
+markBoundary =
+  let o = getOptT @opts
+  in if hasNoColor o then id else coerce (snd (oColor o)) PresentP
+
 -- | color palettes
 --
 -- italics dont work but underline does
@@ -473,6 +482,9 @@ nocolor, color1, color2, color3, color4, color5 :: (String, PColor)
 
 -- | no colors are displayed
 nocolor = ("nocolor", PColor $ flip const)
+
+hasNoColor :: POpts -> Bool
+hasNoColor = (on (==) fst nocolor) . oColor
 
 -- | default color palette
 color1 =

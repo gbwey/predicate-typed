@@ -3,6 +3,8 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wincomplete-record-updates #-}
+{-# OPTIONS -Wno-unused-imports #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -16,8 +18,9 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE TemplateHaskell #-}
 {- |
-     Contains prepackaged 4-tuples and proxies to use with 'Refined3'
+     Contains prepackaged 5-tuples and proxies to use with 'Refined3'
 -}
 module Predicate.Examples.Refined3 (
   -- ** date time checkers
@@ -44,7 +47,7 @@ module Predicate.Examples.Refined3 (
   , ccn'
   , Ccn
   , cc11
-  , CC11
+  , Cc11
   , LuhnR
   , LuhnT
 
@@ -105,6 +108,8 @@ import Predicate.Refined3
 import Predicate.Core
 import Predicate.Prelude
 import Predicate.Util
+import Predicate.Util_TH
+import Predicate.TH_Orphans ()
 import Data.Proxy
 import GHC.TypeLits (KnownNat, Nat)
 import Data.Kind (Type)
@@ -132,7 +137,7 @@ import Data.Time
 
 type Ccn (opts :: OptT) (ns :: [Nat]) = '(opts, Ccip, Ccop (SumT ns), Ccfmt ns, String)
 
-type CC11 (opts :: OptT) = Ccn opts '[4,4,3]
+type Cc11 (opts :: OptT) = Ccn opts '[4,4,3]
 
 ccn :: Proxy (Ccn opts ns)
 ccn = mkProxy3
@@ -145,7 +150,7 @@ ccn' :: ( OptTC opts
         ) => Proxy (Ccn opts ns)
 ccn' = mkProxy3'
 
-cc11 :: OptTC opts => Proxy (Ccn opts '[4,4,3])   -- or Proxy CC11
+cc11 :: OptTC opts => Proxy (Ccn opts '[4,4,3])   -- or Proxy Cc11
 cc11 = mkProxy3'
 
 -- | read in a valid datetime
@@ -167,6 +172,12 @@ type DateTime1 (opts :: OptT) (t :: Type) = '( opts, Dtip t, 'True, Dtfmt, Strin
 -- ZonedTime LocalTime and TimeOfDay don't do validation and allow invalid stuff through : eg 99:98:97 is valid
 -- UTCTime will do the same but any overages get tacked on to the day and time as necessary: makes the time valid! 99:98:97 becomes 04:39:37
 --    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
+
+-- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
+type DateN (opts :: OptT) = '( opts, ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)
+
+type DateTimeNR (opts :: OptT) = MakeR3 (DateTimeN opts)
+type DateTimeN (opts :: OptT) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
 
 ssn :: OptTC opts => Proxy (Ssn opts)
 ssn = mkProxy3'
@@ -200,9 +211,6 @@ hms = mkProxy3'
 
 type HmsR (opts :: OptT) = MakeR3 (Hms opts)
 type Hms (opts :: OptT) = '(opts, Hmsip, Hmsop >> 'True, Hmsfmt, String)
-
---hms' :: Proxy (Hms' 'OZ)
---hms' = mkProxy3'
 
 type HmsR' (opts :: OptT) = MakeR3 (Hms' opts)
 type Hms' (opts :: OptT) = '(opts, Hmsip, Hmsop', Hmsfmt, String)
@@ -239,12 +247,6 @@ type Ip6 (opts :: OptT) = '( opts, Ip6ip, Ip6op, Ip6fmt, String) -- guards
 
 ip6 :: Proxy (Ip6 opts)
 ip6 = Proxy
-
--- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
-type DateN (opts :: OptT) = '( opts, ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)
-
-type DateTimeNR (opts :: OptT) = MakeR3 (DateTimeN opts)
-type DateTimeN (opts :: OptT) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
 
 -- | convert a string from a given base \'i\' and store it internally as an base 10 integer
 --
@@ -423,4 +425,5 @@ readshow = mkProxy3
 
 readshow' :: Proxy (ReadShow' opts t p)
 readshow' = mkProxy3
+
 

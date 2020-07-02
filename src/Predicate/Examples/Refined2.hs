@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wno-unused-imports #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -15,8 +16,9 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE TemplateHaskell #-}
 {- |
-     Contains prepackaged 3-tuples to use with 'Refined2'
+     Contains prepackaged 4-tuples to use with 'Refined2'
 -}
 module Predicate.Examples.Refined2 (
   -- ** date time checkers
@@ -73,6 +75,8 @@ import Predicate.Refined2
 import Predicate.Examples.Common
 import Predicate.Prelude
 import Predicate.Util
+import Predicate.Util_TH
+import Predicate.TH_Orphans ()
 import GHC.TypeLits (Nat)
 import Data.Time
 import Data.Kind
@@ -109,11 +113,10 @@ type Ccn (opts :: OptT) (n :: Nat) = '(opts, Ccip, Ccop n, String)
 -- >>> prtEval2 @'OL @(Dtip LocalTime) @'True "2018-09-99 12:12:12"
 -- Left Step 1. Initial Conversion(ip) Failed | ParseTimeP LocalTime (%F %T) failed to parse
 --
-type DateTime1 (opts :: OptT) (t :: Type) = '(opts, Dtip t, 'True, String)
-
 datetime1 :: Proxy (DateTime1 opts t)
 datetime1 = mkProxy2
 
+type DateTime1 (opts :: OptT) (t :: Type) = '(opts, Dtip t, 'True, String)
 
 datetimen :: OptTC opts => Proxy (DateTimeN opts)
 datetimen = mkProxy2'
@@ -126,12 +129,6 @@ daten = mkProxy2'
 
 type DateTimeNR (opts :: OptT) = MakeR2 (DateTimeN opts)
 type DateTimeN (opts :: OptT) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True, String)
-
--- fixed in time-1.9
--- extra check to validate the time as parseTime doesnt validate the time component
--- ZonedTime LocalTime and TimeOfDay don't do validation and allow invalid stuff through : eg 99:98:97 is valid
--- UTCTime will do the same but any overages get tacked on to the day and time as necessary: makes the time valid! 99:98:97 becomes 04:39:37
---    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
 
 -- | read in an ssn
 --

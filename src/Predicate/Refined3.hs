@@ -96,7 +96,6 @@ import Control.Monad.Except
 import Control.Monad.Writer (tell)
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Language.Haskell.TH.Syntax as TH
-import System.Console.Pretty
 import Test.QuickCheck
 import qualified GHC.Read as GR
 import qualified Text.ParserCombinators.ReadPrec as PCR
@@ -118,15 +117,17 @@ import GHC.Stack
 -- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
 
--- | Refinement type that differentiates the input from output
+-- | Like 'Refined2' but reconstructs the output value to a standardized format
 --
---   * @i@ is the input type
+--   * @opts@ are the display options
 --   * @ip@ converts @i@ to @PP ip i@ which is the internal type and stored in 'r3In'
 --   * @op@ validates that internal type using @PP op (PP ip i) ~ Bool@
 --   * @fmt@ outputs the internal type @PP fmt (PP ip i) ~ i@ and stored in 'r3Out'
+--   * @i@ is the input type
+--
 --   * @PP fmt (PP ip i)@ should be valid as input for Refined3
 --
--- Setting @ip@ to @Id@ and @fmt@ to @Id@ makes it equivalent to 'Refined.Refined': see 'RefinedEmulate'
+-- Setting @ip@ to @Id@ and @fmt@ to @Id@ is equivalent to 'Refined.Refined': see 'RefinedEmulate'
 --
 -- Setting the input type @i@ to 'GHC.Base.String' resembles the corresponding Read/Show instances but with an additional predicate on the read value
 --
@@ -155,16 +156,16 @@ import GHC.Stack
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prtEval3 @'OZ @(MkDay Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
+-- >>> prtEval3 @'OZ @(MkDayExtra Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
--- >>> prtEval3 @'OL @(MkDay Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
+-- >>> prtEval3 @'OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}
 --
--- >>> prtEval3 @'OZ @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
+-- >>> prtEval3 @'OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
--- >>> type T4 k = '( 'OZ, MkDay Id >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
+-- >>> type T4 k = '( 'OZ, MkDayExtra Id >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
 -- >>> prtEval3P (Proxy @(T4 _)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
@@ -513,13 +514,13 @@ newRefined3T = newRefined3TP (Proxy @'(opts,ip,op,fmt,i))
 
 -- | create a wrapped 'Refined3' type
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OZ, MkDay Id >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OZ, MkDayExtra Id >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
 -- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OL, MkDay Id >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OL, MkDayExtra Id >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OL, MkDay Id >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OL, MkDayExtra Id >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
 --
 newRefined3TP :: forall m opts ip op fmt i proxy
@@ -626,12 +627,12 @@ rapply3P :: forall m opts ip op fmt i proxy .
   -> RefinedT m (Refined3 opts ip op fmt i)
   -> RefinedT m (Refined3 opts ip op fmt i)
 rapply3P p f ma mb = do
-  tell [bgColor Blue "=== a ==="]
+  tell [markBoundary @opts "=== a ==="]
   Refined3 x _ <- ma
-  tell [bgColor Blue "=== b ==="]
+  tell [markBoundary @opts "=== b ==="]
   Refined3 y _ <- mb
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  tell [bgColor Blue "=== a `op` b ==="]
+  tell [markBoundary @opts "=== a `op` b ==="]
   Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) p (f x y)
   return (Refined3 a b)
 

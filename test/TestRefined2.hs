@@ -26,7 +26,6 @@ import Predicate
 import Predicate.Refined2
 import Predicate.Examples.Refined2
 import Predicate.Examples.Common
-import Predicate.Util_TH
 import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 
 import Data.Ratio
@@ -339,3 +338,18 @@ test\TestRefined2.hs:77:33: error:
 77 |   , expectRight (testRefined2P (Proxy @(Ccn 11)) "123-45-6---789-03-")
    |                                 ^^^^^^^^^^^^^^^^^^
 -}
+
+test2a :: MakeR2 (BaseN 'OU 16)
+test2a = $$(refined2TH "0000fe")
+
+test2b :: Refined2 'OU
+   (Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" Id >> Snd (Head Id) >> Map (ReadP Int Id) Id)
+   (All (0 <..> 0xff) Id)
+   String
+test2b = $$(refined2TH "123.211.122.1")
+
+test2c :: Refined2 'OU
+   (Resplit "\\." Id >> Map (ReadP Int Id) Id)
+   (All (0 <..> 0xff) Id && Len == 4)
+   String
+test2c = $$(refined2TH "200.2.3.4")

@@ -29,7 +29,6 @@ import Predicate
 import Predicate.Refined3
 import Predicate.Examples.Refined3
 import Predicate.Examples.Common
-import Predicate.Util_TH
 import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 
 import Data.Ratio
@@ -52,7 +51,7 @@ suite =
 namedTests :: [TestTree]
 namedTests =
   [ testCase "ip9" $ (@?=) ($$(refined3TH "121.0.12.13") :: MakeR3 Ip9) (unsafeRefined3 [121,0,12,13] "121.000.012.013")
-  , testCase "luhn check" $ (@?=) ($$(refined3TH "12345678903") :: MakeR3 (CC11 'OAN)) (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
+  , testCase "luhn check" $ (@?=) ($$(refined3TH "12345678903") :: MakeR3 (Cc11 'OAN)) (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
   , testCase "datetime utctime" $ (@?=) ($$(refined3TH "2019-01-04 23:00:59") :: MakeR3 (DateTime1 'OZ UTCTime)) (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
   , testCase "datetime localtime" $ (@?=) ($$(refined3TH "2019-01-04 09:12:30") :: MakeR3 (DateTime1 'OZ LocalTime)) (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
   , testCase "hms" $ (@?=) ($$(refined3TH "12:0:59") :: MakeR3 (Hms 'OAN)) (unsafeRefined3 [12,0,59] "12:00:59")
@@ -377,3 +376,19 @@ expect3 :: (HasCallStack, Show i, Show r, Eq i, Eq r, Eq j, Show j)
 expect3 lhs (rhs,mr) =
   (@?=) (maybe (Left $ toRResults3 rhs) Right mr) lhs
 
+test3a :: MakeR3 (BaseN 'OU 16)
+test3a = $$(refined3TH "0000fe")
+
+test3b :: Refined3 'OU
+   (Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" Id >> Snd (Head Id) >> Map (ReadP Int Id) Id)
+   (All (0 <..> 0xff) Id)
+   (PrintL 4 "%03d.%03d.%03d.%03d" Id)
+   String
+test3b = $$(refined3TH "123.211.122.1")
+
+test3c :: Refined3 'OU
+   (Resplit "\\." Id >> Map (ReadP Int Id) Id)
+   (All (0 <..> 0xff) Id && Len == 4)
+   (PrintL 4 "%03d.%03d.%03d.%03d" Id)
+   String
+test3c = $$(refined3TH "200.2.3.4")

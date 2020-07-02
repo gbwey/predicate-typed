@@ -128,6 +128,8 @@ module Predicate.Prelude (
   , MkDay
   , MkDay'
   , UnMkDay
+  , MkDayExtra
+  , MkDayExtra'
   , PosixToUTCTime
   , UTCTimeToPosix
 
@@ -554,7 +556,6 @@ import Safe (succMay, predMay, toEnumMay)
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
 import Control.Lens hiding (iall)
---import Control.Lens (Unwrapped, Wrapped, _Unwrapped', _Wrapped', Ixed, IxValue, Index, Reversing, Cons, Snoc, AsEmpty, FoldableWithIndex, allOf, (%~), (<&>), (^.), (^?), coerced, view, reversed, ix, cons, snoc, _Cons, _Snoc, (^?!), (.~), itoList, Identity(..), _Empty, has)
 import Data.List
 import qualified Data.Text.Lens as DTL
 import Data.Proxy
@@ -1933,20 +1934,20 @@ instance P (ParseTimesT t p q) x => P (ParseTimes t p q) x where
 
 -- | create a 'Day' from three int values passed in as year month and day
 --
--- >>> pz @(MkDay '(1,2,3) >> Just Id >> Fst Id) ()
+-- >>> pz @(MkDay '(1,2,3) >> Just Id) ()
 -- PresentT 0001-02-03
 --
--- >>> pz @(Fst (Just (MkDay '(1,2,3)))) 1
+-- >>> pz @(Just (MkDay '(1,2,3))) 1
 -- PresentT 0001-02-03
 --
 -- >>> pz @(MkDay Id) (2019,12,30)
--- PresentT (Just (2019-12-30,1,1))
+-- PresentT (Just 2019-12-30)
 --
 -- >>> pz @(MkDay' (Fst Id) (Snd Id) (Thd Id)) (2019,99,99999)
 -- PresentT Nothing
 --
 -- >>> pz @(MkDay Id) (1999,3,13)
--- PresentT (Just (1999-03-13,10,6))
+-- PresentT (Just 1999-03-13)
 --
 data MkDay' p q r
 
@@ -1957,7 +1958,7 @@ instance (P p x
         , PP q x ~ Int
         , PP r x ~ Int
         ) => P (MkDay' p q r) x where
-  type PP (MkDay' p q r) x = Maybe (Day, Int, Int)
+  type PP (MkDay' p q r) x = Maybe Day
   eval _ opts x = do
     let msg0 = "MkDay"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
@@ -1970,10 +1971,7 @@ instance (P p x
           Left e -> e
           Right r ->
             let mday = fromGregorianValid (fromIntegral p) q r
-                b = mday <&> \day ->
-                      let (_, week, dow) = toWeekDate day
-                      in (day, week, dow)
-            in mkNode opts (PresentT b) (show01' opts msg0 b "(y,m,d)=" (p,q,r)) (hhs <> [hh rr])
+            in mkNode opts (PresentT mday) (show01' opts msg0 mday "(y,m,d)=" (p,q,r)) (hhs <> [hh rr])
 
 data MkDay p
 type MkDayT p = MkDay' (Fst p) (Snd p) (Thd p)
@@ -2000,6 +1998,59 @@ instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
         let (fromIntegral -> y, m, d) = toGregorian p
             b = (y, m, d)
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+
+
+-- | create a 'Day' + Week + Day of Week from three int values passed in as year month and day
+--
+-- >>> pz @(MkDayExtra '(1,2,3) >> Just Id >> Fst Id) ()
+-- PresentT 0001-02-03
+--
+-- >>> pz @(Fst (Just (MkDayExtra '(1,2,3)))) 1
+-- PresentT 0001-02-03
+--
+-- >>> pz @(MkDayExtra Id) (2019,12,30)
+-- PresentT (Just (2019-12-30,1,1))
+--
+-- >>> pz @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id)) (2019,99,99999)
+-- PresentT Nothing
+--
+-- >>> pz @(MkDayExtra Id) (1999,3,13)
+-- PresentT (Just (1999-03-13,10,6))
+--
+data MkDayExtra' p q r
+
+instance (P p x
+        , P q x
+        , P r x
+        , PP p x ~ Int
+        , PP q x ~ Int
+        , PP r x ~ Int
+        ) => P (MkDayExtra' p q r) x where
+  type PP (MkDayExtra' p q r) x = Maybe (Day, Int, Int)
+  eval _ opts x = do
+    let msg0 = "MkDayExtra"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    case lr of
+      Left e -> pure e
+      Right (p,q,pp,qq) -> do
+        let hhs = [hh pp, hh qq]
+        rr <- eval (Proxy @r) opts x
+        pure $ case getValueLR opts msg0 rr hhs of
+          Left e -> e
+          Right r ->
+            let mday = fromGregorianValid (fromIntegral p) q r
+                b = mday <&> \day ->
+                      let (_, week, dow) = toWeekDate day
+                      in (day, week, dow)
+            in mkNode opts (PresentT b) (show01' opts msg0 b "(y,m,d)=" (p,q,r)) (hhs <> [hh rr])
+
+data MkDayExtra p
+type MkDayExtraT p = MkDayExtra' (Fst p) (Snd p) (Thd p)
+
+instance P (MkDayExtraT p) x => P (MkDayExtra p) x where
+  type PP (MkDayExtra p) x = PP (MkDayExtraT p) x
+  eval _ = eval (Proxy @(MkDayExtraT p))
+
 
 -- microsoft json date is x*1000 ie milliseconds
 

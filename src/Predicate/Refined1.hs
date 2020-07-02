@@ -96,7 +96,6 @@ import Control.Monad.Except
 import Control.Monad.Writer (tell)
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Language.Haskell.TH.Syntax as TH
-import System.Console.Pretty
 import Test.QuickCheck
 import qualified GHC.Read as GR
 import qualified Text.ParserCombinators.ReadPrec as PCR
@@ -120,10 +119,12 @@ import GHC.Stack
 
 -- | Refinement type that differentiates the input from output: similar to 'Predicate.Refined3.Refined3' but only creates the output value as needed.
 --
---   * @i@ is the input type
+--   * @opts@ are the display options
 --   * @ip@ converts @i@ to @PP ip i@ which is the internal type and stored in 'unRefined1'
 --   * @op@ validates that internal type using @PP op (PP ip i) ~ Bool@
 --   * @fmt@ outputs the internal type @PP fmt (PP ip i) ~ i@ (not stored anywhere but created on demand)
+--   * @i@ is the input type
+--
 --   * @PP fmt (PP ip i)@ should be valid as input for Refined1
 --
 -- Setting @ip@ to @Id@ and @fmt@ to @Id@ makes it equivalent to 'Refined.Refined': see 'RefinedEmulate'
@@ -155,16 +156,16 @@ import GHC.Stack
 -- Right (Refined1 [198,162,3,1])
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prtEval1 @'OZ @(MkDay Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
+-- >>> prtEval1 @'OZ @(MkDayExtra Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
 -- Right (Refined1 (2019-10-13,41,7))
 --
--- >>> prtEval1 @'OL @(MkDay Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
+-- >>> prtEval1 @'OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}
 --
--- >>> prtEval1 @'OZ @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
+-- >>> prtEval1 @'OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
--- >>> type T4 k = '( 'OZ, MkDay Id >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
+-- >>> type T4 k = '( 'OZ, MkDayExtra Id >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
 -- >>> prtEval1P (Proxy @(T4 _)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
@@ -519,13 +520,13 @@ newRefined1T = newRefined1TP (Proxy @'(opts,ip,op,fmt,i))
 
 -- | create a wrapped 'Refined1' type
 --
--- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OZ, MkDay Id >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OZ, MkDayExtra Id >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
 -- Refined1 (2019-11-01,44,5)
 --
--- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OL, MkDay Id >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OL, MkDayExtra Id >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OL, MkDay Id >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OL, MkDayExtra Id >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
 --
 newRefined1TP :: forall m opts ip op fmt i proxy
@@ -630,12 +631,12 @@ rapply1P :: forall m opts ip op fmt i proxy .
   -> RefinedT m (Refined1 opts ip op fmt i)
   -> RefinedT m (Refined1 opts ip op fmt i)
 rapply1P p f ma mb = do
-  tell [bgColor Blue "=== a ==="]
+  tell [markBoundary @opts "=== a ==="]
   Refined1 x <- ma
-  tell [bgColor Blue "=== b ==="]
+  tell [markBoundary @opts "=== b ==="]
   Refined1 y <- mb
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  tell [bgColor Blue "=== a `op` b ==="]
+  tell [markBoundary @opts "=== a `op` b ==="]
   Refined1 a <- newRefined1TPSkipIPImpl (return . runIdentity) p (f x y)
   return (Refined1 a)
 

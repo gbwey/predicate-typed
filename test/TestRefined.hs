@@ -3,7 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wno-type-defaults #-}
-{-# OPTIONS -Wno-missing-export-lists #-}
+-- {-# OPTIONS -Wno-missing-export-lists #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -26,8 +26,6 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
 import Predicate
---import Predicate.Refined
-import Predicate.Util_TH
 import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 
 import Control.Lens
@@ -99,3 +97,5 @@ testRefinedJ a =
         Nothing -> error $ show bp ++ "\n" ++ e
         Just r -> eitherDecode @(Refined opts p a) $ encode r
 
+test0a :: Refined 'OA (Between 0 0xff Id) Int
+test0a = $$(refinedTH 0xfe)

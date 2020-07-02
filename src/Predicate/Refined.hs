@@ -68,7 +68,6 @@ import Control.Monad.Cont
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import GHC.Generics (Generic)
 import qualified Language.Haskell.TH.Syntax as TH
-import System.Console.Pretty
 import Test.QuickCheck
 import qualified GHC.Read as GR
 import qualified Text.ParserCombinators.ReadPrec as PCR
@@ -262,12 +261,12 @@ rapply :: forall m opts p a . (RefinedC opts p a, Monad m)
   -> RefinedT m (Refined opts p a)
   -> RefinedT m (Refined opts p a)
 rapply f ma mb = do
-  tell [bgColor Blue "=== a ==="]
+  tell [markBoundary @opts "=== a ==="]
   Refined x <- ma
-  tell [bgColor Blue "=== b ==="]
+  tell [markBoundary @opts "=== b ==="]
   Refined y <- mb
-  tell [bgColor Blue "=== a `op` b ==="]
-  newRefinedT @opts @p (f x y)
+  tell [markBoundary @opts "=== a `op` b ==="]
+  newRefinedT @m @opts @p (f x y)
 
 -- | takes two values and lifts them into 'RefinedT' and then applies the binary operation
 rapply0 :: forall opts p a m . (RefinedC opts p a, Monad m)
@@ -295,7 +294,7 @@ convertRefinedT :: forall m opts p a p1 a1
   -> RefinedT m (Refined opts p1 a1)
 convertRefinedT f ma = do
   Refined a <- ma -- you already got a refined in there so no need to check RefinedC
-  newRefinedT @opts @p1 (f a)
+  newRefinedT @m @opts @p1 (f a)
 
 -- | invokes the callback with the 'Refined' value if \'a\' is valid for the predicate \'p\'
 withRefinedT :: forall opts p m a b
@@ -305,7 +304,7 @@ withRefinedT :: forall opts p m a b
   => a
   -> (Refined opts p a -> RefinedT m b)
   -> RefinedT m b
-withRefinedT a k = newRefinedT @opts @p a >>= k
+withRefinedT a k = newRefinedT @m @opts @p a >>= k
 
 withRefinedTIO :: forall opts p m a b
      . ( MonadIO m
@@ -372,7 +371,7 @@ newRefinedTImpl f a = do
          in throwError rc -- RefinedT $ ExceptT $ WriterT $ return (Left rc, [])
 
 -- | returns a wrapper 'RefinedT' around a possible 'Refined' value if \'a\' is valid for the predicate \'p\'
-newRefinedT :: forall opts p a m
+newRefinedT :: forall m opts p a
   . ( RefinedC opts p a
     , Monad m)
   => a
