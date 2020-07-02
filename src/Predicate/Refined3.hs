@@ -63,9 +63,7 @@ module Predicate.Refined3 (
 
   -- ** proxy methods
   , mkProxy3
-  , mkProxy3X
   , mkProxy3'
-  , mkProxy3X'
   , MakeR3
   , MakeR3'
   , R3Opts
@@ -420,17 +418,9 @@ instance (Refined3C opts ip op fmt i
 mkProxy3 :: forall z opts ip op fmt i . z ~ '(opts,ip,op,fmt,i) => Proxy '(opts,ip,op,fmt,i)
 mkProxy3 = Proxy
 
-mkProxy3X :: forall opts z ip op fmt i . z ~ '(ip,op,fmt,i) => Proxy '(opts,ip,op,fmt,i)
-mkProxy3X = Proxy
-
-
-
 -- | same as 'mkProxy3' but checks to make sure the proxy is consistent with the 'Refined3C' constraint
 mkProxy3' :: forall z opts ip op fmt i . (z ~ '(opts,ip,op,fmt,i), Refined3C opts ip op fmt i) => Proxy '(opts,ip,op,fmt,i)
 mkProxy3' = Proxy
-
-mkProxy3X' :: forall opts z ip op fmt i . (z ~ '(ip,op,fmt,i), Refined3C opts ip op fmt i) => Proxy '(opts,ip,op,fmt,i)
-mkProxy3X' = Proxy
 
 -- | type family for converting from a 4-tuple '(opts,ip,op,fmt,i) to a 'Refined3' type
 type family MakeR3 p where

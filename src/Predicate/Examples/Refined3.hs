@@ -295,7 +295,7 @@ daten :: OptTC opts => Proxy (DateN opts)
 daten = mkProxy3'
 
 datetimen :: OptTC opts => Proxy (DateTimeN opts)
-datetimen = mkProxy3X'
+datetimen = mkProxy3'
 
 -- | ensures that two numbers are in a given range (emulates 'Refined.Refined')
 --
