@@ -153,6 +153,9 @@ instance RefinedC opts p String => IsString (Refined opts p String) where
 -- >>> reads @(Refined 'OZ (Between 0 255 Id) Int) "Refined 300"
 -- []
 --
+-- >>> reads @(Refined 'OZ 'True Int) "Refined (-123)xyz"
+-- [(Refined (-123),"xyz")]
+--
 
 instance (RefinedC opts p a, Read a) => Read (Refined opts p a) where
   readPrec

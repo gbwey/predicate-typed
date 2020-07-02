@@ -170,6 +170,18 @@ module Predicate.Util (
   , errorInProgram
   , readField
   , showThese
+
+  -- ** extract from n-tuple
+  , T4_1
+  , T4_2
+  , T4_3
+  , T4_4
+  , T5_1
+  , T5_2
+  , T5_3
+  , T5_4
+  , T5_5
+
     ) where
 import qualified GHC.TypeNats as GN
 import Data.Ratio
@@ -1263,3 +1275,22 @@ instance (OptTC a, OptTC b) => OptTC (a ':*: b) where getOptT' = getOptT' @a <> 
 getOptT :: forall o . OptTC o => POpts
 getOptT = reifyOpts (getOptT' @o)
 
+type family T4_1 x where
+  T4_1 '(a,_,_,_) = a
+type family T4_2 x where
+  T4_2 '(_,b,_,_) = b
+type family T4_3 x where
+  T4_3 '(_,_,c,_) = c
+type family T4_4 x where
+  T4_4 '(_,_,_,d) = d
+
+type family T5_1 x where
+  T5_1 '(a,_,_,_,_) = a
+type family T5_2 x where
+  T5_2 '(_,b,_,_,_) = b
+type family T5_3 x where
+  T5_3 '(_,_,c,_,_) = c
+type family T5_4 x where
+  T5_4 '(_,_,_,d,_) = d
+type family T5_5 x where
+  T5_5 '(_,_,_,_,e) = e

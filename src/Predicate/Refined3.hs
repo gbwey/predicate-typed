@@ -87,13 +87,6 @@ module Predicate.Refined3 (
   , RefinedEmulate
   , eval3PX
   , eval3X
-
-  -- ** extract from 4-tuple
-  , T4_1
-  , T4_2
-  , T4_3
-  , T4_4
-
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -164,16 +157,16 @@ import GHC.Stack
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prtEval3 @'OZ @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
+-- >>> prtEval3 @'OZ @(MkDay Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
--- >>> prtEval3 @'OL @(MkDay >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
+-- >>> prtEval3 @'OL @(MkDay Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}
 --
 -- >>> prtEval3 @'OZ @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
--- >>> type T4 k = '( 'OZ, MkDay >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
+-- >>> type T4 k = '( 'OZ, MkDay Id >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
 -- >>> prtEval3P (Proxy @(T4 _)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
@@ -530,13 +523,13 @@ newRefined3T = newRefined3TP (Proxy @'(opts,ip,op,fmt,i))
 
 -- | create a wrapped 'Refined3' type
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OZ, MkDay >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OZ, MkDay Id >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
 -- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OL, MkDay >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OL, MkDay Id >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OL, MkDay >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OL, MkDay Id >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
 --
 newRefined3TP :: forall m opts ip op fmt i proxy
@@ -884,38 +877,25 @@ eval3X = eval3PX (Proxy @'(opts,ip,op,fmt,i))
 -- | emulates 'Refined' using 'Refined3' by setting the input conversion and output formatting as noops
 type RefinedEmulate (opts :: OptT) p a = Refined3 opts Id p Id a
 
--- | used by 'Refined3' to extract \'ip\' from a promoted 4-tuple
 --
--- >>> pl @(T4_1 (Predicate.Examples.Refined3.Ip4 'OL)) "1.2.3.4"
+-- >>> pl @(T5_2 (Predicate.Examples.Refined3.Ip4 'OL)) "1.2.3.4"
 -- Present [1,2,3,4] (Map [1,2,3,4] | ["1","2","3","4"])
 -- PresentT [1,2,3,4]
 --
-type family T4_1 x where
-  T4_1 '(_,a,b,c,d) = a
-
--- | used by 'Refined3' for extracting the boolean predicate \'op\' from a promoted 4-tuple
 --
--- >>> pl @(T4_2 (Predicate.Examples.Refined3.Ip4 'OL)) [141,213,308,4]
+-- >>> pl @(T5_3 (Predicate.Examples.Refined3.Ip4 'OL)) [141,213,308,4]
 -- Error octet 2 out of range 0-255 found 308
 -- FailT "octet 2 out of range 0-255 found 308"
 --
--- >>> pl @(T4_2 (Predicate.Examples.Refined3.Ip4 'OL)) [141,213,308,4,8]
+--
+-- >>> pl @(T5_3 (Predicate.Examples.Refined3.Ip4 'OL)) [141,213,308,4,8]
 -- Error Guards:invalid length(5) expected 4
 -- FailT "Guards:invalid length(5) expected 4"
 --
-type family T4_2 x where
-  T4_2 '(_,a,b,c,d) = b
-
--- | used by 'Refined3' for extracting \'fmt\' from a promoted 4-tuple
 --
--- >>> pl @(T4_3 (Predicate.Examples.Refined3.Ip4 'OL)) [141,513,9,4]
+-- >>> pl @(T5_4 (Predicate.Examples.Refined3.Ip4 'OL)) [141,513,9,4]
 -- Present "141.513.009.004" (PrintL(4) [141.513.009.004] | s=%03d.%03d.%03d.%03d)
 -- PresentT "141.513.009.004"
 --
-type family T4_3 x where
-  T4_3 '(_,a,b,c,d) = c
 
--- | used by 'Refined3' for extracting the input type \'i\' from a promoted 4-tuple
-type family T4_4 x where
-  T4_4 '(_,a,b,c,d) = d
 

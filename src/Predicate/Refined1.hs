@@ -85,13 +85,6 @@ module Predicate.Refined1 (
   , RefinedEmulate
   , eval1PX
   , eval1X
-
-  -- ** extract from 4-tuple
-  , T4_1
-  , T4_2
-  , T4_3
-  , T4_4
-
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -162,16 +155,16 @@ import GHC.Stack
 -- Right (Refined1 [198,162,3,1])
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prtEval1 @'OZ @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
+-- >>> prtEval1 @'OZ @(MkDay Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
 -- Right (Refined1 (2019-10-13,41,7))
 --
--- >>> prtEval1 @'OL @(MkDay >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
+-- >>> prtEval1 @'OL @(MkDay Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}
 --
 -- >>> prtEval1 @'OZ @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
--- >>> type T4 k = '( 'OZ, MkDay >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
+-- >>> type T4 k = '( 'OZ, MkDay Id >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
 -- >>> prtEval1P (Proxy @(T4 _)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
@@ -237,6 +230,11 @@ instance (Refined1C opts ip op fmt String, Show (PP ip String)) => IsString (Ref
 -- >>> reads @(Refined1 'OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined1 [192,168,0,1]"
 -- [(Refined1 [192,168,0,1],"")]
 --
+-- >>> reads @(Refined1 'OZ Id 'True Id Int) "Refined1 (-123)xyz"
+-- [(Refined1 (-123),"xyz")]
+--
+
+
 instance ( Eq i
          , Show i
          , Eq (PP ip i)
@@ -521,13 +519,13 @@ newRefined1T = newRefined1TP (Proxy @'(opts,ip,op,fmt,i))
 
 -- | create a wrapped 'Refined1' type
 --
--- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OZ, MkDay >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OZ, MkDay Id >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
 -- Refined1 (2019-11-01,44,5)
 --
--- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OL, MkDay >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OL, MkDay Id >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OL, MkDay >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( 'OL, MkDay Id >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
 --
 newRefined1TP :: forall m opts ip op fmt i proxy
@@ -858,39 +856,4 @@ eval1X = eval1PX (Proxy @'(opts,ip,op,fmt,i))
 
 -- | emulates 'Refined' using 'Refined1' by setting the input conversion and output formatting as noops
 type RefinedEmulate (opts :: OptT) p a = Refined1 opts Id p Id a
-
--- | used by 'Refined1' to extract \'ip\' from a promoted 4-tuple
---
--- >>> pl @(T4_1 (Predicate.Examples.Refined3.Ip4 'OL)) "1.2.3.4"
--- Present [1,2,3,4] (Map [1,2,3,4] | ["1","2","3","4"])
--- PresentT [1,2,3,4]
---
-type family T4_1 x where
-  T4_1 '(_,a,b,c,d) = a
-
--- | used by 'Refined1' for extracting the boolean predicate \'op\' from a promoted 4-tuple
---
--- >>> pl @(T4_2 (Predicate.Examples.Refined3.Ip4 'OL)) [141,213,308,4]
--- Error octet 2 out of range 0-255 found 308
--- FailT "octet 2 out of range 0-255 found 308"
---
--- >>> pl @(T4_2 (Predicate.Examples.Refined3.Ip4 'OL)) [141,213,308,4,8]
--- Error Guards:invalid length(5) expected 4
--- FailT "Guards:invalid length(5) expected 4"
---
-type family T4_2 x where
-  T4_2 '(_,a,b,c,d) = b
-
--- | used by 'Refined1' for extracting \'fmt\' from a promoted 4-tuple
---
--- >>> pl @(T4_3 (Predicate.Examples.Refined3.Ip4 'OL)) [141,513,9,4]
--- Present "141.513.009.004" (PrintL(4) [141.513.009.004] | s=%03d.%03d.%03d.%03d)
--- PresentT "141.513.009.004"
---
-type family T4_3 x where
-  T4_3 '(_,a,b,c,d) = c
-
--- | used by 'Refined1' for extracting the input type \'i\' from a promoted 4-tuple
-type family T4_4 x where
-  T4_4 '(_,a,b,c,d) = d
 

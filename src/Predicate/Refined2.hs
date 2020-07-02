@@ -63,11 +63,6 @@ module Predicate.Refined2 (
   , unsafeRefined2
   , unsafeRefined2'
 
-  -- ** extract from 3-tuple
-  , T3_1
-  , T3_2
-  , T3_3
-
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -126,10 +121,10 @@ import GHC.Stack
 -- Right (Refined2 {r2In = [198,162,3,1], r2Out = "198.162.3.1"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prtEval2 @'OZ @(MkDay >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,13)
+-- >>> prtEval2 @'OZ @(MkDay Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,13)
 -- Right (Refined2 {r2In = (2019-10-13,41,7), r2Out = (2019,10,13)})
 --
--- >>> prtEval2 @'OL @(MkDay >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
+-- >>> prtEval2 @'OL @(MkDay Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
 -- Left Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}
 --
 -- >>> prtEval2 @'OZ @(MkDay' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,12)
@@ -395,13 +390,13 @@ withRefined2TP p = (>>=) . newRefined2TP p
 
 -- | create a wrapped 'Refined2' type
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDay >> Just Id) @(Thd Id == 5) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDay Id >> Just Id) @(Thd Id == 5) (2019,11,1)
 -- Refined2 {r2In = (2019-11-01,44,5), r2Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDay >> Just Id) @(Thd Id == 5) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDay Id >> Just Id) @(Thd Id == 5) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDay >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDay Id >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
 --
 newRefined2T :: forall m opts ip op i
@@ -603,14 +598,3 @@ mkProxy2' = Proxy
 type family MakeR2 p where
   MakeR2 '(opts,ip,op,i) = Refined2 opts ip op i
 
--- | used by 'Refined2' to extract \'ip\' from a promoted 3-tuple
-type family T3_1 x where
-  T3_1 '(a,b,c) = a
-
--- | used by 'Refined2' for extracting the boolean predicate \'op\' from a promoted 3-tuple
-type family T3_2 x where
-  T3_2 '(a,b,c) = b
-
--- | used by 'Refined2' for extracting the input type \'i\' from a promoted 3-tuple
-type family T3_3 x where
-  T3_3 '(a,b,c) = c

@@ -56,7 +56,7 @@ module Predicate.Prelude (
   , type (&*)
   , OrA
   , type (|+)
-
+  , IdBool
   -- ** regex expressions
   , Re
   , Re'
@@ -541,6 +541,12 @@ module Predicate.Prelude (
   , PrimeNext
   , Luhn
   , Char1
+  -- ** tuples
+  , Tuple2
+  , Tuple3
+  , Tuple4
+  , Tuple5
+  , Tuple6
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -1927,13 +1933,19 @@ instance P (ParseTimesT t p q) x => P (ParseTimes t p q) x where
 
 -- | create a 'Day' from three int values passed in as year month and day
 --
--- >>> pz @MkDay (2019,12,30)
+-- >>> pz @(MkDay '(1,2,3) >> Just Id >> Fst Id) ()
+-- PresentT 0001-02-03
+--
+-- >>> pz @(Fst (Just (MkDay '(1,2,3)))) 1
+-- PresentT 0001-02-03
+--
+-- >>> pz @(MkDay Id) (2019,12,30)
 -- PresentT (Just (2019-12-30,1,1))
 --
 -- >>> pz @(MkDay' (Fst Id) (Snd Id) (Thd Id)) (2019,99,99999)
 -- PresentT Nothing
 --
--- >>> pz @MkDay (1999,3,13)
+-- >>> pz @(MkDay Id) (1999,3,13)
 -- PresentT (Just (1999-03-13,10,6))
 --
 data MkDay' p q r
@@ -1963,12 +1975,12 @@ instance (P p x
                       in (day, week, dow)
             in mkNode opts (PresentT b) (show01' opts msg0 b "(y,m,d)=" (p,q,r)) (hhs <> [hh rr])
 
-data MkDay
-type MkDayT = MkDay' (Fst Id) (Snd Id) (Thd Id)
+data MkDay p
+type MkDayT p = MkDay' (Fst p) (Snd p) (Thd p)
 
-instance P MkDayT x => P MkDay x where
-  type PP MkDay x = PP MkDayT x
-  eval _ = eval (Proxy @MkDayT)
+instance P (MkDayT p) x => P (MkDay p) x where
+  type PP (MkDay p) x = PP (MkDayT p) x
+  eval _ = eval (Proxy @(MkDayT p))
 
 -- | uncreate a 'Day' returning year month and day
 --
@@ -7022,7 +7034,6 @@ instance (P p a
                   _ -> ""
         in mkNodeB opts (p~>q) (show p <> " " <> msg0 <> " " <> show q <> (if null zz then zz else " | " <> zz)) [hh pp, hh qq]
 
-
 -- | 'not' function
 --
 -- >>> pz @(Not Id) False
@@ -7049,6 +7060,34 @@ instance (PP p x ~ Bool, P p x) => P (Not p) x where
       Left e -> e
       Right p ->
         let b = not p
+        in mkNodeB opts b (msg0 <> " " <> topMessage pp) [hh pp]
+
+-- | 'id' function on a boolean
+--
+-- >>> pz @(IdBool Id) False
+-- FalseT
+--
+-- >>> pz @(IdBool Id) True
+-- TrueT
+--
+-- >>> pz @(IdBool (Fst Id)) (True,22)
+-- TrueT
+--
+-- >>> pl @(IdBool (Lt 3)) 13
+-- False (IdBool (13 < 3))
+-- FalseT
+--
+data IdBool p
+
+instance (PP p x ~ Bool, P p x) => P (IdBool p) x where
+  type PP (IdBool p) x = Bool
+  eval _ opts x = do
+    let msg0 = "IdBool"
+    pp <- evalBool (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = p
         in mkNodeB opts b (msg0 <> " " <> topMessage pp) [hh pp]
 
 -- | similar to 'compare'
@@ -10385,3 +10424,9 @@ type RotateT n p = SplitAt n p >> Swap >> First Reverse >> SapA
 instance P (RotateT n p) x => P (Rotate n p) x where
   type PP (Rotate n p) x = PP (RotateT n p) x
   eval _ = eval (Proxy @(RotateT n p))
+
+type Tuple2 p = '(p !! 0, p !! 1)
+type Tuple3 p = '(p !! 0, p !! 1, p !! 2)
+type Tuple4 p = '(p !! 0, p !! 1, p !! 2, p !! 3)
+type Tuple5 p = '(p !! 0, p !! 1, p !! 2, p !! 3, p !! 4)
+type Tuple6 p = '(p !! 0, p !! 1, p !! 2, p !! 3, p !! 4, p !! 5)
