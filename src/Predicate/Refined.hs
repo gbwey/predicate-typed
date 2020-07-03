@@ -82,6 +82,7 @@ import Data.Maybe
 import Data.Hashable (Hashable(..))
 import GHC.Stack
 import Data.Tree (Tree)
+import Data.List (intercalate)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -447,7 +448,7 @@ prtImpl :: POpts -> Tree PE -> String
 prtImpl o tt =
   let specialmsg = case oMessage o of
                      [] -> mempty
-                     s -> "[" <> s <> "]\n"
+                     s -> "[" <> intercalate " | " s <> "]\n"
   in specialmsg <> prtTreePure o tt
 
 type family ReplaceOptT (o :: OptT) t where

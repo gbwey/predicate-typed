@@ -389,7 +389,7 @@ data HOpts f =
         , oDebug :: !(HKD f ODebug) -- ^ debug level
         , oDisp :: !(HKD f Disp) -- ^ display the tree using the normal tree or unicode
         , oColor :: !(HKD f (String, PColor)) -- ^ color palette used
-        , oMessage :: !String -- ^ message associated with type
+        , oMessage :: ![String] -- ^ messages associated with type
         }
 
 deriving instance
@@ -397,7 +397,6 @@ deriving instance
   , Show (HKD f ODebug)
   , Show (HKD f Disp)
   , Show (HKD f (String, PColor))
---  , Show (HKD f (Maybe String))
   ) => Show (HOpts f)
 
 reifyOpts :: HOpts Last -> HOpts Identity
@@ -406,15 +405,13 @@ reifyOpts h =
         (fromMaybe (oDebug defOpts) (getLast (oDebug h)))
         (fromMaybe (oDisp defOpts) (getLast (oDisp h)))
         (fromMaybe (oColor defOpts) (getLast (oColor h)))
-        ((case oMessage defOpts of
-           [] -> id
-           s -> ((s <> " | ") <>)) (oMessage h))
+        (oMessage defOpts <> oMessage h)
 
 setWidth :: Int -> POptsL
 setWidth i = mempty { oWidth = pure i }
 
 setMessage :: String -> POptsL
-setMessage s = mempty { oMessage = s }
+setMessage s = mempty { oMessage = pure s }
 
 setDebug :: Int -> POptsL
 setDebug i =
@@ -465,7 +462,7 @@ defOpts = HOpts
     , oDebug = ONormal
     , oDisp = Ansi
     , oColor = color5
-    , oMessage = ""
+    , oMessage = mempty
     }
 
 data ODebug =
@@ -1308,10 +1305,10 @@ instance (OptTC a, OptTC b) => OptTC (a ':*: b) where getOptT' = getOptT' @a <> 
 -- | convert typelevel options to 'POpts'
 --
 -- >>> getOptT @('OA ':*: 'OC 3 ':*: 'OU  ':*: 'OA ':*: 'OW 321 ':*: 'OM "test message")
--- HOpts {oWidth = 321, oDebug = ONormal, oDisp = Ansi, oColor = ("color5",PColor <fn>), oMessage = "test message"}
+-- HOpts {oWidth = 321, oDebug = ONormal, oDisp = Ansi, oColor = ("color5",PColor <fn>), oMessage = ["test message"]}
 --
 -- >>> oMessage (getOptT @('OM "abc" ':*: 'OM "def"))
--- "abcdef"
+-- ["abc","def"]
 --
 getOptT :: forall o . OptTC o => POpts
 getOptT = reifyOpts (getOptT' @o)

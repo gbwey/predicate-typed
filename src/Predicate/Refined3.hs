@@ -112,6 +112,7 @@ import Data.Char (isSpace)
 import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
+import Data.List (intercalate)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -786,7 +787,7 @@ prt3Impl opts v =
   let outmsg msg = "\n*** " <> specialmsg <> msg <> " ***\n\n"
       specialmsg = case oMessage opts of
                      [] -> ""
-                     s -> "[" <> s <> "] "
+                     s -> "[" <> intercalate " | " s <> "] "
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg3 m n r | hasNoTree opts = Msg3 m n ""
                    | otherwise = Msg3 m n r
