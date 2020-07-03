@@ -130,6 +130,11 @@ module Predicate.Prelude (
   , UnMkDay
   , MkDayExtra
   , MkDayExtra'
+  , ToDay
+  , ToTime
+  , MkTime
+  , MkTime'
+  , UnMkTime
   , PosixToUTCTime
   , UTCTimeToPosix
 
@@ -596,6 +601,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Chimera as Chimera
+--import Data.Fixed (Pico)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -2050,6 +2056,139 @@ type MkDayExtraT p = MkDayExtra' (Fst p) (Snd p) (Thd p)
 instance P (MkDayExtraT p) x => P (MkDayExtra p) x where
   type PP (MkDayExtra p) x = PP (MkDayExtraT p) x
   eval _ = eval (Proxy @(MkDayExtraT p))
+
+class ToDayC a where
+  getDay :: a -> Day
+instance ToDayC UTCTime where
+  getDay = utctDay
+instance ToDayC ZonedTime where
+  getDay = getDay . zonedTimeToLocalTime
+instance ToDayC LocalTime where
+  getDay = localDay
+instance ToDayC Day where
+  getDay = id
+instance ToDayC Rational where
+  getDay = getDay . P.posixSecondsToUTCTime . fromRational
+
+class ToTimeC a where
+  getTime :: a -> TimeOfDay
+instance ToTimeC UTCTime where
+  getTime = getTime . utctDayTime
+instance ToTimeC ZonedTime where
+  getTime = getTime . zonedTimeToLocalTime
+instance ToTimeC LocalTime where
+  getTime = localTimeOfDay
+instance ToTimeC TimeOfDay where
+  getTime = id
+instance ToTimeC DiffTime where
+  getTime = timeToTimeOfDay
+instance ToTimeC Rational where
+  getTime = getTime . P.posixSecondsToUTCTime . fromRational
+
+-- | extract Day from DateTime
+--
+-- >>> pz @(ReadP UTCTime Id >> ToDay Id) "2020-07-06 12:11:13Z"
+-- PresentT 2020-07-06
+--
+data ToDay p
+
+instance (P p x, Show (PP p x), ToDayC (PP p x)) => P (ToDay p) x where
+  type PP (ToDay p) x = Day
+  eval _ opts x = do
+    let msg0 = "ToDay"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let ret = getDay p
+        in mkNode opts (PresentT ret) (show01 opts msg0 ret p) [hh pp]
+
+-- | extract Time from DateTime
+--
+-- >>> pz @(ReadP UTCTime Id >> ToDay Id) "2020-07-06 12:11:13Z"
+-- PresentT 2020-07-06
+--
+data ToTime p
+
+instance ( P p x
+         , Show (PP p x)
+         , ToTimeC (PP p x)
+         ) => P (ToTime p) x where
+  type PP (ToTime p) x = TimeOfDay
+  eval _ opts x = do
+    let msg0 = "ToTime"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let ret = getTime p
+        in mkNode opts (PresentT ret) (show01 opts msg0 ret p) [hh pp]
+
+
+-- | create a 'Time' from three int values passed in as year month and day
+--
+-- >>> pz @(MkTime '(1,2,3 % 12345)) ()
+-- PresentT 01:02:00.000243013365
+--
+-- >>> pz @(MkTime Id) (12,13,65)
+-- PresentT 12:13:65
+--
+-- >>> pz @(MkTime' (Fst Id) (Snd Id) (Thd Id)) (13,99,99999)
+-- PresentT 13:99:99999
+--
+-- >>> pz @(MkTime Id) (17,3,13)
+-- PresentT 17:03:13
+--
+data MkTime' p q r
+
+instance (P p x
+        , P q x
+        , P r x
+        , PP p x ~ Int
+        , PP q x ~ Int
+        , PP r x ~ Rational
+        ) => P (MkTime' p q r) x where
+  type PP (MkTime' p q r) x = TimeOfDay
+  eval _ opts x = do
+    let msg0 = "MkTime"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    case lr of
+      Left e -> pure e
+      Right (p,q,pp,qq) -> do
+        let hhs = [hh pp, hh qq]
+        rr <- eval (Proxy @r) opts x
+        pure $ case getValueLR opts msg0 rr hhs of
+          Left e -> e
+          Right r ->
+            let mtime = TimeOfDay p q (fromRational r)
+            in mkNode opts (PresentT mtime) (show01' opts msg0 mtime "(h,m,s)=" (p,q,r)) (hhs <> [hh rr])
+
+data MkTime p
+type MkTimeT p = MkTime' (Fst p) (Snd p) (Thd p)
+
+instance P (MkTimeT p) x => P (MkTime p) x where
+  type PP (MkTime p) x = PP (MkTimeT p) x
+  eval _ = eval (Proxy @(MkTimeT p))
+
+
+-- | uncreate a 'TimeOfDay' returning hour minute seconds picoseconds
+--
+-- >>> pz @(ReadP UTCTime "2019-01-01 12:13:14.1234Z" >> ToTime Id >> UnMkTime Id) ()
+-- PresentT (12,13,70617 % 5000)
+--
+data UnMkTime p
+
+instance (PP p x ~ TimeOfDay, P p x) => P (UnMkTime p) x where
+  type PP (UnMkTime p) x = (Int, Int, Rational)
+  eval _ opts x = do
+    let msg0 = "UnMkTime"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let TimeOfDay h m s = p
+            b = (h, m, toRational s)
+        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
 
 -- microsoft json date is x*1000 ie milliseconds
