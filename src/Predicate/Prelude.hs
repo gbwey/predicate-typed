@@ -594,6 +594,7 @@ import Data.Bool
 import Data.Either
 import qualified Data.Type.Equality as DE
 import Data.Time.Calendar.WeekDate
+import qualified Data.Time.Clock.System as CP
 import qualified Data.Time.Clock.POSIX as P
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Char8 as BS8
@@ -2069,6 +2070,8 @@ instance ToDayC Day where
   getDay = id
 instance ToDayC Rational where
   getDay = getDay . P.posixSecondsToUTCTime . fromRational
+instance ToDayC CP.SystemTime where
+  getDay = getDay . CP.systemToUTCTime
 
 class ToTimeC a where
   getTime :: a -> TimeOfDay
@@ -2084,8 +2087,10 @@ instance ToTimeC DiffTime where
   getTime = timeToTimeOfDay
 instance ToTimeC Rational where
   getTime = getTime . P.posixSecondsToUTCTime . fromRational
+instance ToTimeC CP.SystemTime where
+  getTime = getTime . CP.systemToUTCTime
 
--- | extract Day from DateTime
+-- | extract 'Day' from a DateTime
 --
 -- >>> pz @(ReadP UTCTime Id >> ToDay Id) "2020-07-06 12:11:13Z"
 -- PresentT 2020-07-06
@@ -2103,7 +2108,7 @@ instance (P p x, Show (PP p x), ToDayC (PP p x)) => P (ToDay p) x where
         let ret = getDay p
         in mkNode opts (PresentT ret) (show01 opts msg0 ret p) [hh pp]
 
--- | extract Time from DateTime
+-- | extract 'TimeOfDay' from DateTime
 --
 -- >>> pz @(ReadP UTCTime Id >> ToDay Id) "2020-07-06 12:11:13Z"
 -- PresentT 2020-07-06
@@ -8198,7 +8203,7 @@ instance (PP p x ~ [a]
             let d = intercalate p (map pure q)
             in mkNode opts (PresentT d) (show01 opts msg0 d p <> show1 opts " | " q) hhs
 
--- | uses PrintF to format output
+-- | uses PrintF to format output for a single value
 --
 -- >>> pz @(PrintF "value=%03d" Id) 12
 -- PresentT "value=012"
@@ -8912,7 +8917,7 @@ instance PrintC () where
 instance (PrintfArg a, PrintC rs) => PrintC (a,rs) where
   prtC s (a,rs) = prtC s rs a
 
--- | print for flat n-tuples
+-- | print for flat n-tuples of size two or larger
 --
 -- >>> pl @(PrintT "%d %s %s %s" '(Fst Id, Snd Id, Snd Id,Snd Id)) (10,"Asdf")
 -- Present "10 Asdf Asdf Asdf" (PrintT [10 Asdf Asdf Asdf] | s=%d %s %s %s)
@@ -8965,11 +8970,17 @@ instance (PrintC bs
           Left e -> mkNode opts (FailT (msg1 <> "(" <> e <> ")")) (msg1 <> " s=" <> s) hhs
           Right ret -> mkNode opts (PresentT ret) (msg1 <> " [" <> showLit0 opts "" ret <> "]" <> showLit0 opts " | s=" s) hhs
 
--- | print for lists  -- if you can use 'PrintT'
+-- | print for lists  -- use 'PrintT' as it is safer than 'PrintL'
 --
 -- >>> pl @(PrintL 4 "%s %s %s %s" '[W "xyz", ShowP (Fst Id), ShowP (Snd Id), Thd Id]) (123,'x',"ab")
 -- Present "xyz 123 'x' ab" (PrintL(4) [xyz 123 'x' ab] | s=%s %s %s %s)
 -- PresentT "xyz 123 'x' ab"
+--
+-- >>> pz @(PrintL 1 "%05d" '[Id]) 123  -- tick is required for a one element list (use 'PrintF')
+-- PresentT "00123"
+--
+-- >>> pz @(PrintL 2 "%d %05d" [Fst Id,Snd Id]) (29,123)
+-- PresentT "29 00123"
 --
 -- >>> pl @(PrintL 3 "first=%d second=%d third=%d" Id) [10,11,12]
 -- Present "first=10 second=11 third=12" (PrintL(3) [first=10 second=11 third=12] | s=first=%d second=%d third=%d)

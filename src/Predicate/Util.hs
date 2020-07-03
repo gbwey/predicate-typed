@@ -91,6 +91,7 @@ module Predicate.Util (
   , setColor
   , setColorImpl
   , setDebug
+  , setMessage
   , HOpts (..)
   , OptT(..)
   , OptTC(..)
@@ -388,6 +389,7 @@ data HOpts f =
         , oDebug :: !(HKD f ODebug) -- ^ debug level
         , oDisp :: !(HKD f Disp) -- ^ display the tree using the normal tree or unicode
         , oColor :: !(HKD f (String, PColor)) -- ^ color palette used
+        , oMessage :: !String -- ^ message associated with type
         }
 
 deriving instance
@@ -395,17 +397,24 @@ deriving instance
   , Show (HKD f ODebug)
   , Show (HKD f Disp)
   , Show (HKD f (String, PColor))
+--  , Show (HKD f (Maybe String))
   ) => Show (HOpts f)
 
 reifyOpts :: HOpts Last -> HOpts Identity
 reifyOpts h =
   HOpts (fromMaybe (oWidth defOpts) (getLast (oWidth h)))
-           (fromMaybe (oDebug defOpts) (getLast (oDebug h)))
-           (fromMaybe (oDisp defOpts) (getLast (oDisp h)))
-           (fromMaybe (oColor defOpts) (getLast (oColor h)))
+        (fromMaybe (oDebug defOpts) (getLast (oDebug h)))
+        (fromMaybe (oDisp defOpts) (getLast (oDisp h)))
+        (fromMaybe (oColor defOpts) (getLast (oColor h)))
+        ((case oMessage defOpts of
+           [] -> id
+           s -> ((s <> " | ") <>)) (oMessage h))
 
 setWidth :: Int -> POptsL
 setWidth i = mempty { oWidth = pure i }
+
+setMessage :: String -> POptsL
+setMessage s = mempty { oMessage = s }
 
 setDebug :: Int -> POptsL
 setDebug i =
@@ -437,10 +446,10 @@ setColor i =
 type POptsL = HOpts Last
 
 instance Monoid (HOpts Last) where
-  mempty = HOpts mempty mempty mempty mempty
+  mempty = HOpts mempty mempty mempty mempty mempty
 
 instance Semigroup (HOpts Last) where
-  HOpts a b c d <> HOpts a' b' c' d' = HOpts (a <> a') (b <> b') (c <> c') (d <> d')
+  HOpts a b c d e <> HOpts a' b' c' d' e' = HOpts (a <> a') (b <> b') (c <> c') (d <> d') (e <> e')
 
 --seqPOptsM :: HOpts Last -> Maybe (HOpts Identity)
 --seqPOptsM h = coerce (HOpts <$> oWidth h <*> oDebug h <*> oDisp h <*> oColor h)
@@ -456,6 +465,7 @@ defOpts = HOpts
     , oDebug = ONormal
     , oDisp = Ansi
     , oColor = color5
+    , oMessage = ""
     }
 
 data ODebug =
@@ -1113,9 +1123,10 @@ class InductListC (n :: Nat) a where
 instance (GL.TypeError ('GL.Text "InductListC: inductive tuple cannot be empty")) => InductListC 0 a where
   type InductListP 0 a = ()
   inductListC _ = errorInProgram "InductListC 0: shouldnt be called"
-instance (GL.TypeError ('GL.Text "InductListC: inductive tuple cannot have one element")) => InductListC 1 a where
-  type InductListP 1 a = a
-  inductListC _ = errorInProgram "InductListC 1: shouldnt be called"
+instance InductListC 1 a where
+  type InductListP 1 a = (a,())
+  inductListC [a] = (a,())
+  inductListC _ = errorInProgram "inductListC: expected 1 value"
 instance InductListC 2 a where
   type InductListP 2 a = (a,(a,()))
   inductListC [a,b] = (b,(a,()))
@@ -1248,7 +1259,20 @@ readField fieldName readVal = do
         GR.expectP (L.Punc "=")
         readVal
 
-data OptT = OZ | OL | OAN | OA | OAB | OU | OUB | OC !Nat | OD !Nat | OW !Nat | OEmpty | !OptT :*: !OptT
+data OptT =
+    OZ
+  | OL
+  | OAN
+  | OA
+  | OAB
+  | OU
+  | OUB
+  | OC !Nat
+  | OD !Nat
+  | OW !Nat
+  | OM Symbol
+  | OEmpty
+  | !OptT :*: !OptT
 
 instance Show OptT where
   show = \case
@@ -1262,6 +1286,7 @@ instance Show OptT where
             OC _n -> "OC"
             OD _n -> "OD"
             OW _n -> "OW"
+            OM _s -> "OM"
             OEmpty -> "OEmpty"
             a :*: b -> show a ++ " ':*: " ++ show b
 infixr 6 :*:
@@ -1276,13 +1301,17 @@ instance OptTC 'OUB where getOptT' = setUnicode <> setColor 1
 instance KnownNat n => OptTC ('OC n) where getOptT' = setColor (nat @n)
 instance KnownNat n => OptTC ('OD n) where getOptT' = setDebug (nat @n)
 instance KnownNat n => OptTC ('OW n) where getOptT' = setWidth (nat @n)
+instance KnownSymbol s => OptTC ('OM s) where getOptT' = setMessage (symb @s)
 instance OptTC 'OEmpty where getOptT' = mempty
 instance (OptTC a, OptTC b) => OptTC (a ':*: b) where getOptT' = getOptT' @a <> getOptT' @b
 
 -- | convert typelevel options to 'POpts'
 --
--- >>> getOptT @('OA ':*: 'OC 3 ':*: 'OU  ':*: 'OA ':*: 'OW 321)
--- HOpts {oWidth = 321, oDebug = ONormal, oDisp = Ansi, oColor = ("color5",PColor <fn>)}
+-- >>> getOptT @('OA ':*: 'OC 3 ':*: 'OU  ':*: 'OA ':*: 'OW 321 ':*: 'OM "test message")
+-- HOpts {oWidth = 321, oDebug = ONormal, oDisp = Ansi, oColor = ("color5",PColor <fn>), oMessage = "test message"}
+--
+-- >>> oMessage (getOptT @('OM "abc" ':*: 'OM "def"))
+-- "abcdef"
 --
 getOptT :: forall o . OptTC o => POpts
 getOptT = reifyOpts (getOptT' @o)

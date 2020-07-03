@@ -15,6 +15,8 @@ import Data.Fixed
 
 deriving instance TH.Lift Day
 deriving instance TH.Lift LocalTime
+deriving instance TH.Lift ZonedTime
+deriving instance TH.Lift TimeZone
 deriving instance TH.Lift TimeOfDay
 deriving instance TH.Lift (Fixed a)
 

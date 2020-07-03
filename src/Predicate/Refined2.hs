@@ -45,6 +45,7 @@ module Predicate.Refined2 (
   -- ** evaluation methods
   , eval2
   , eval2P
+  , eval2M
 
   -- ** create a wrapped Refined2 value
   , newRefined2T
@@ -63,6 +64,7 @@ module Predicate.Refined2 (
   , unsafeRefined2
   , unsafeRefined2'
 
+  , type ReplaceOptT2
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -533,7 +535,10 @@ prt2Impl :: Show a
   -> RResults2 a
   -> Msg2
 prt2Impl opts v =
-  let outmsg msg = "\n*** " <> msg <> " ***\n\n"
+  let outmsg msg = "\n*** " <> specialmsg <> msg <> " ***\n\n"
+      specialmsg = case oMessage opts of
+                     [] -> ""
+                     s -> "[" <> s <> "] "
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg2 m n r | hasNoTree opts = Msg2 m n ""
                    | otherwise = Msg2 m n r
@@ -599,3 +604,5 @@ mkProxy2' = Proxy
 type family MakeR2 p where
   MakeR2 '(opts,ip,op,i) = Refined2 opts ip op i
 
+type family ReplaceOptT2 (o :: OptT) t where
+  ReplaceOptT2 o (Refined2 _ ip op i) = Refined2 o ip op i

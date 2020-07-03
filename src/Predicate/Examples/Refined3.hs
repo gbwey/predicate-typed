@@ -104,6 +104,7 @@ module Predicate.Examples.Refined3 (
   , OkNotR
    ) where
 import Predicate.Examples.Common
+import Predicate.Refined
 import Predicate.Refined3
 import Predicate.Core
 import Predicate.Prelude

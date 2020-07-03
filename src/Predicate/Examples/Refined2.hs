@@ -71,6 +71,7 @@ module Predicate.Examples.Refined2 (
   , BaseIJip
    ) where
 import Predicate.Core
+import Predicate.Refined
 import Predicate.Refined2
 import Predicate.Examples.Common
 import Predicate.Prelude
@@ -291,4 +292,3 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- >>> prtEval2 @'OZ @(ReadP Value Id) @'True "Number 123.4"
 -- Right (Refined2 {r2In = Number 123.4, r2Out = "Number 123.4"})
 --
-

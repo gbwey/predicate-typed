@@ -54,6 +54,7 @@ module Predicate.Refined1 (
   -- ** evaluation methods
   , eval1
   , eval1P
+  , eval1M
 
   -- ** create a wrapped Refined1 value
   , newRefined1T
@@ -85,6 +86,9 @@ module Predicate.Refined1 (
   , RefinedEmulate
   , eval1PX
   , eval1X
+
+  , type ReplaceOptT1
+
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -774,7 +778,10 @@ prt1Impl :: (Show a, Show b)
   -> RResults1 a b
   -> Msg1
 prt1Impl opts v =
-  let outmsg msg = "\n*** " <> msg <> " ***\n\n"
+  let outmsg msg = "\n*** " <> specialmsg <> msg <> " ***\n\n"
+      specialmsg = case oMessage opts of
+                     [] -> ""
+                     s -> "[" <> s <> "] "
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg1 m n r | hasNoTree opts = Msg1 m n ""
                    | otherwise = Msg1 m n r
@@ -858,3 +865,5 @@ eval1X = eval1PX (Proxy @'(opts,ip,op,fmt,i))
 -- | emulates 'Refined' using 'Refined1' by setting the input conversion and output formatting as noops
 type RefinedEmulate (opts :: OptT) p a = Refined1 opts Id p Id a
 
+type family ReplaceOptT1 (o :: OptT) t where
+  ReplaceOptT1 o (Refined1 _ ip op fmt i) = Refined1 o ip op fmt i

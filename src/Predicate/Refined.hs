@@ -56,6 +56,9 @@ module Predicate.Refined (
   -- ** unsafe create methods
   , unsafeRefined
   , unsafeRefined'
+
+  , type ReplaceOptT
+
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -78,6 +81,7 @@ import Data.String
 import Data.Maybe
 import Data.Hashable (Hashable(..))
 import GHC.Stack
+import Data.Tree (Tree)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -324,7 +328,7 @@ prtRefinedIO :: forall opts p a
 prtRefinedIO a = do
   let o = getOptT @opts
   tt <- evalBool (Proxy @p) o a
-  let msg = (_tBool tt ^. boolT2P, prtTreePure o (fromTT tt))
+  let msg = (_tBool tt ^. boolT2P, prtImpl o (fromTT tt))
   case oDebug o of
      OZero -> pure ()  -- putStrLn $ showBoolP opts (fst msg) <> " " <> topMessage tt
      OLite -> putStrLn $ showBoolP o (fst msg) <> " " <> topMessage tt
@@ -347,7 +351,7 @@ newRefined a = do
       ss = case oDebug o of
              OZero -> ("","")
              OLite -> ("",topMessage tt)
-             _ -> (prtTreePure o (fromTT tt),topMessage tt)
+             _ -> (prtImpl o (fromTT tt),topMessage tt)
   pure $ ((rc,ss),) $ case getValueLR o "" tt [] of
        Right True -> Just (Refined a)
        _ -> Nothing
@@ -363,7 +367,7 @@ newRefinedTImpl :: forall opts p a n m
 newRefinedTImpl f a = do
   let o = getOptT @opts
   tt <- f $ evalBool (Proxy @p) o a
-  let msg = prtTreePure o (fromTT tt)
+  let msg = prtImpl o (fromTT tt)
   tell [msg]
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
@@ -437,4 +441,14 @@ unsafeRefined' a =
       tt = runIdentity $ evalBool (Proxy @p) o a
   in case getValueLR o "" tt [] of
        Right True -> Refined a
-       _ -> error $ prtTreePure o (fromTT tt)
+       _ -> error $ prtImpl o (fromTT tt)
+
+prtImpl :: POpts -> Tree PE -> String
+prtImpl o tt =
+  let specialmsg = case oMessage o of
+                     [] -> mempty
+                     s -> "[" <> s <> "]\n"
+  in specialmsg <> prtTreePure o tt
+
+type family ReplaceOptT (o :: OptT) t where
+  ReplaceOptT o (Refined _ p a) = Refined o p a

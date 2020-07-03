@@ -52,6 +52,7 @@ module Predicate.Refined3 (
   -- ** evaluation methods
   , eval3
   , eval3P
+  , eval3M
 
   -- ** create a wrapped Refined3 value
   , newRefined3T
@@ -85,6 +86,8 @@ module Predicate.Refined3 (
   , RefinedEmulate
   , eval3PX
   , eval3X
+
+  , type ReplaceOptT3
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -780,7 +783,10 @@ prt3Impl :: (Show a, Show b)
   -> RResults3 a b
   -> Msg3
 prt3Impl opts v =
-  let outmsg msg = "\n*** " <> msg <> " ***\n\n"
+  let outmsg msg = "\n*** " <> specialmsg <> msg <> " ***\n\n"
+      specialmsg = case oMessage opts of
+                     [] -> ""
+                     s -> "[" <> s <> "] "
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg3 m n r | hasNoTree opts = Msg3 m n ""
                    | otherwise = Msg3 m n r
@@ -889,4 +895,5 @@ type RefinedEmulate (opts :: OptT) p a = Refined3 opts Id p Id a
 -- PresentT "141.513.009.004"
 --
 
-
+type family ReplaceOptT3 (o :: OptT) t where
+  ReplaceOptT3 o (Refined3 _ ip op fmt i) = Refined3 o ip op fmt i

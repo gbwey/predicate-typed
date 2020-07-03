@@ -3,7 +3,6 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wno-type-defaults #-}
--- {-# OPTIONS -Wno-missing-export-lists #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}

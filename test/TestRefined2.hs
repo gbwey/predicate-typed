@@ -353,3 +353,9 @@ test2c :: Refined2 'OU
    (All (0 <..> 0xff) Id && Len == 4)
    String
 test2c = $$(refined2TH "200.2.3.4")
+
+test2d :: Refined2 'OU
+    TimeUtc
+    (ToDay Id > Just (MkDay '(1999,12,31)))
+    ()
+test2d = $$(refined2THIO ())
