@@ -249,8 +249,7 @@ testRefined2PJ :: forall opts ip op i proxy
    -> Either String (Refined2 opts ip op i)
 testRefined2PJ _ i =
   let (ret,mr) = eval2 @opts @ip @op i
-      o = getOptT @opts
-      m3 = prt2Impl o ret
+      m3 = prt2Impl @opts ret
   in case mr of
     Just r -> eitherDecode @(Refined2 opts ip op i) $ encode r
     Nothing -> Left $ show m3
@@ -267,12 +266,11 @@ testRefined2P :: forall opts ip op i proxy
    -> Either (String,String) (Refined2 opts ip op i, Refined2 opts ip op i)
 testRefined2P _ i =
   let (ret,mr) = eval2 @opts @ip @op i
-      o = getOptT @opts
-      m3 = prt2Impl o ret
+      m3 = prt2Impl @opts ret
   in case mr of
     Just r ->
       let (ret1,mr1) = eval2 @opts @ip @op (r2Out r)
-          m3a = prt2Impl o ret1
+          m3a = prt2Impl @opts ret1
       in case mr1 of
            Nothing -> Left ("testRefined2P(2): round trip failed: old(" ++ show i ++ ") new(" ++ show (r2Out r) ++ ")", show m3a)
            Just r1 ->

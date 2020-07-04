@@ -1,25 +1,27 @@
-Refined2 allows control the input type (see documentation [doctests](src/Predicate/Refined2.hs))
+### Refined2 allows you vary the input type (see documentation [doctests](src/Predicate/Refined2.hs))
 
 :load Predicate.Examples.Refined2
-
-### An example using Refined2 (for more information see [doctests](src/Predicate/Refined2.hs))
 
 ```haskell
 data Refined2 opts ip op i
 ```
 * **_opts_** display options eg
-        * 'OZ (no output:zero)
-        * 'OL (one line:lite)
-        * 'OA (ansi colors)
-        * 'OU (unicode colors) -- for unicode on windows run: chcp 65001
+  * 'OZ no output:zero
+  * 'OL one line:lite
+  * 'OA ansi colors
+  * 'OU unicode colors (on windows run: chcp 65001)
 * **_ip_** converts the external type **_i_** to an internal type
-* **_op_** predicate on internal type
+* **_op_** predicate on the internal type
 * **_i_** input type
 
 :load Predicate.Examples.Refined2
 
+
+converts a base 16 String to an Int and validates that the number is between 0 and 255
+internally Refined2 holds the internal value r2In as an Int and the original String in r2Out
+
 ```haskell
->type Hex = '( 'OL, ReadBase Int 16 Id, Between 0 255 Id, String)
+>type Hex = '( 'OL, ReadBase Int 16 Id, Between 0 0xff Id, String)
 
 >prtEval2P (Proxy @Hex) "0000fe"
 Refined2 {r2In = 254, r2Out = "0000fe"}

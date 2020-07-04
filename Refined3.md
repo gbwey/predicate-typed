@@ -1,4 +1,6 @@
-Refined3 allows control of input and output types (see documentation [doctests](src/Predicate/Refined3.hs))
+Refined3 allows control of both input and output types (see documentation [doctests](src/Predicate/Refined3.hs))
+
+:load Predicate.Examples.Refined3
 
 ### An example using Refined3 (for more information see [doctests](src/Predicate/Examples/Refined3.hs))
 
@@ -6,19 +8,20 @@ Refined3 allows control of input and output types (see documentation [doctests](
 data Refined3 opts ip op fmt i
 ```
 * **_opts_** display options eg
-        * 'OZ (no output:zero)
-        * 'OL (one line:lite)
-        * 'OA (ansi colors)
-        * 'OU (unicode colors) -- for unicode on windows run: chcp 65001
+  * 'OZ no output:zero
+  * 'OL one line:lite
+  * 'OA ansi colors
+  * 'OU unicode colors (on windows run: chcp 65001)
 * **_ip_** converts the external type **_i_** to an internal type
-* **_op_** predicate on internal type
-* **_fmt_** converts the internal type back to the external type
+* **_op_** predicate on the internal type
+* **_fmt_** converts the internal type back to the external type (canonical value)
 * **_i_** input type
 
-:load Predicate.Examples.Refined3
+converts a base 16 String to an Int and validates that the number is between 0 and 255
+and then roundtrips the value to a string
 
 ```haskell
->type Hex opts = '( opts, ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
+>type Hex opts = '( opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
 >prtEval3PIO (Proxy @(Hex 'OL)) "0000fe"
 Refined3 {r3In = 254, r3Out = "fe"}

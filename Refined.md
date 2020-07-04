@@ -1,20 +1,17 @@
-### Template Haskell versions
+### Refined is the simplest refinement type (for more information see [doctests](src/Predicate/Refined.hs))
 
-### Simplest refinement type
+:load Predicate
+
 ```haskell
 newtype Refined opts p a
 ```
 * **_opts_** display options eg
-        * 'OZ (no output:zero)
-        * 'OL (one line:lite)
-        * 'OA (ansi colors)
-        * 'OU (unicode colors) -- for unicode on windows run: chcp 65001
+  * 'OZ no output:zero
+  * 'OL one line:lite
+  * 'OA ansi colors
+  * 'OU unicode colors (on windows run: chcp 65001)
 * **_p_** predicate on **_a_**
 * **_a_** input type
-
-### Examples of Refined (for more information see [doctests](src/Predicate/Refined.hs))
-
-:load Predicate
 
 1. reads in a number and checks to see that it is greater than 99
 ```haskell

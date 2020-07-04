@@ -299,8 +299,7 @@ testRefined3PJ :: forall opts ip op fmt i proxy
    -> Either String (Refined3 opts ip op fmt i)
 testRefined3PJ _ i =
   let (ret,mr) = eval3 @opts @ip @op @fmt i
-      o = getOptT @opts
-      m3 = prt3Impl o ret
+      m3 = prt3Impl @opts ret
   in case mr of
     Just r -> eitherDecode @(Refined3 opts ip op fmt i) $ encode r
     Nothing -> Left $ show m3
@@ -317,12 +316,11 @@ testRefined3P :: forall opts ip op fmt i proxy
    -> Either (String,String) (Refined3 opts ip op fmt i, Refined3 opts ip op fmt i)
 testRefined3P _ i =
   let (ret,mr) = eval3 @opts @ip @op @fmt i
-      o = getOptT @opts
-      m3 = prt3Impl o ret
+      m3 = prt3Impl @opts ret
   in case mr of
     Just r ->
       let (ret1,mr1) = eval3 @opts @ip @op @fmt (r3Out r)
-          m3a = prt3Impl o ret1
+          m3a = prt3Impl @opts ret1
       in case mr1 of
            Nothing -> Left ("testRefined3P(2): round trip failed: old(" ++ show i ++ ") new(" ++ show (r3Out r) ++ ")", show m3a)
            Just r1 ->

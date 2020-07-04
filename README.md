@@ -1,22 +1,18 @@
-# predicate-typed
+# predicate-typed: a refinement type library
 
 [![Hackage](https://img.shields.io/hackage/v/predicate-typed.svg?colorB=5d0ef0&style=flat)](https://hackage.haskell.org/package/predicate-typed)
 
 what this library provides:
-1. a dsl for building refinement types
-2. Refined is a simple refinement type that validates the input against a predicate
-3. *Refined2 has an extra parameter to convert to an internal type
-4. Refined3 has an extra parameter for formatting to a canonical value
-5. validation against input values
-6. visualisation of each step in the evaluation of an expression
-7  template haskell methods for creating the refinement types at compile time
-8. ToJSON and FromJSON instances
-9. Read and Show instances
-10. Binary instances
-11. Hashable instances
-12. IsString instances
-13. quickcheck arbitrary methods for Refined and Refined3
-14. database encoders and decoders using hdbc(sqlhandler-odbc) or odbc(sqlhandler-odbcalt)
+1. a rich dsl for building refinement types eg regex expressions / arithmetic / datetime manipulation etc
+1. visualisation of each step in the evaluation of an expression using a colorized tree
+1. three types of Refinement types Refined/Refined2/Refined3
+1. Template Haskell methods for creating the refinement types
+1. Aeson (FromJSON ToJSON) instances
+1. Read and Show instances
+1. Binary instances
+1. Hashable instances
+1. IsString instances
+1. Database encoders and decoders for refinement types (sqlhandler-odbc)
 
 To run the examples you will need these settings (ghc>=8.6)
 ```haskell
@@ -29,6 +25,6 @@ To run the examples you will need these settings (ghc>=8.6)
 
 [Refined](Refined.md)
 
-[Refined2](Refined2.md)
+*[Refined2](Refined2.md)
 
 [Refined3](Refined3.md)
