@@ -92,6 +92,7 @@ module Predicate.Util (
   , setColorImpl
   , setDebug
   , setMessage
+  , setRecursion
   , HOpts (..)
   , OptT(..)
   , OptTC(..)
@@ -173,6 +174,7 @@ module Predicate.Util (
   , errorInProgram
   , readField
   , showThese
+  , chkSize
 
   -- ** extract from n-tuple
   , T4_1
@@ -228,6 +230,7 @@ import Data.Monoid (Last (..))
 import Data.Maybe
 import Data.Function (on)
 import Data.Coerce
+import Data.Foldable (toList)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -390,6 +393,7 @@ data HOpts f =
         , oDisp :: !(HKD f Disp) -- ^ display the tree using the normal tree or unicode
         , oColor :: !(HKD f (String, PColor)) -- ^ color palette used
         , oMessage :: ![String] -- ^ messages associated with type
+        , oRecursion :: !(HKD f Int) -- ^ max recursion
         }
 
 deriving instance
@@ -406,12 +410,16 @@ reifyOpts h =
         (fromMaybe (oDisp defOpts) (getLast (oDisp h)))
         (fromMaybe (oColor defOpts) (getLast (oColor h)))
         (oMessage defOpts <> oMessage h)
+        (fromMaybe (oRecursion defOpts) (getLast (oRecursion h)))
 
 setWidth :: Int -> POptsL
 setWidth i = mempty { oWidth = pure i }
 
 setMessage :: String -> POptsL
 setMessage s = mempty { oMessage = pure s }
+
+setRecursion :: Int -> POptsL
+setRecursion i = mempty { oRecursion = pure i }
 
 setDebug :: Int -> POptsL
 setDebug i =
@@ -443,10 +451,10 @@ setColor i =
 type POptsL = HOpts Last
 
 instance Monoid (HOpts Last) where
-  mempty = HOpts mempty mempty mempty mempty mempty
+  mempty = HOpts mempty mempty mempty mempty mempty mempty
 
 instance Semigroup (HOpts Last) where
-  HOpts a b c d e <> HOpts a' b' c' d' e' = HOpts (a <> a') (b <> b') (c <> c') (d <> d') (e <> e')
+  HOpts a b c d e f <> HOpts a' b' c' d' e' f' = HOpts (a <> a') (b <> b') (c <> c') (d <> d') (e <> e') (f <> f')
 
 --seqPOptsM :: HOpts Last -> Maybe (HOpts Identity)
 --seqPOptsM h = coerce (HOpts <$> oWidth h <*> oDebug h <*> oDisp h <*> oColor h)
@@ -463,6 +471,7 @@ defOpts = HOpts
     , oDisp = Ansi
     , oColor = color5
     , oMessage = mempty
+    , oRecursion = 100
     }
 
 data ODebug =
@@ -1268,6 +1277,7 @@ data OptT =
   | OD !Nat
   | OW !Nat
   | OM Symbol
+  | OR !Nat
   | OEmpty
   | !OptT :*: !OptT
 
@@ -1284,6 +1294,7 @@ instance Show OptT where
             OD _n -> "OD"
             OW _n -> "OW"
             OM _s -> "OM"
+            OR _n -> "OR"
             OEmpty -> "OEmpty"
             a :*: b -> show a ++ " ':*: " ++ show b
 infixr 6 :*:
@@ -1299,13 +1310,14 @@ instance KnownNat n => OptTC ('OC n) where getOptT' = setColor (nat @n)
 instance KnownNat n => OptTC ('OD n) where getOptT' = setDebug (nat @n)
 instance KnownNat n => OptTC ('OW n) where getOptT' = setWidth (nat @n)
 instance KnownSymbol s => OptTC ('OM s) where getOptT' = setMessage (symb @s)
+instance KnownNat n => OptTC ('OR n) where getOptT' = setRecursion (nat @n)
 instance OptTC 'OEmpty where getOptT' = mempty
 instance (OptTC a, OptTC b) => OptTC (a ':*: b) where getOptT' = getOptT' @a <> getOptT' @b
 
 -- | convert typelevel options to 'POpts'
 --
 -- >>> getOptT @('OA ':*: 'OC 3 ':*: 'OU  ':*: 'OA ':*: 'OW 321 ':*: 'OM "test message")
--- HOpts {oWidth = 321, oDebug = ONormal, oDisp = Ansi, oColor = ("color5",PColor <fn>), oMessage = ["test message"]}
+-- HOpts {oWidth = 321, oDebug = ONormal, oDisp = Ansi, oColor = ("color5",PColor <fn>), oMessage = ["test message"], oRecursion = 100}
 --
 -- >>> oMessage (getOptT @('OM "abc" ':*: 'OM "def"))
 -- ["abc","def"]
@@ -1332,3 +1344,11 @@ type family T5_4 x where
   T5_4 '(_,_,_,d,_) = d
 type family T5_5 x where
   T5_5 '(_,_,_,_,e) = e
+
+chkSize :: Foldable t => POpts -> String -> t a -> [Holder] -> Either (TT x) ()
+chkSize opts msg0 xs hhs =
+  let mx = oRecursion opts
+  in case splitAt mx (toList xs) of
+    (_,[]) -> Right ()
+    (_,_:_) -> Left $ mkNode opts (FailT (msg0 <> " list size exceeded")) (msg0 <> " list size exceeded: max is " ++ show mx) hhs
+

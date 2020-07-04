@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -329,7 +330,7 @@ prtRefinedIO :: forall opts p a
 prtRefinedIO a = do
   let o = getOptT @opts
   tt <- evalBool (Proxy @p) o a
-  let msg = (_tBool tt ^. boolT2P, prtImpl o (fromTT tt))
+  let msg = (_tBool tt ^. boolT2P, prtImpl @opts (fromTT tt))
   case oDebug o of
      OZero -> pure ()  -- putStrLn $ showBoolP opts (fst msg) <> " " <> topMessage tt
      OLite -> putStrLn $ showBoolP o (fst msg) <> " " <> topMessage tt
@@ -352,7 +353,7 @@ newRefined a = do
       ss = case oDebug o of
              OZero -> ("","")
              OLite -> ("",topMessage tt)
-             _ -> (prtImpl o (fromTT tt),topMessage tt)
+             _ -> (prtImpl @opts (fromTT tt),topMessage tt)
   pure $ ((rc,ss),) $ case getValueLR o "" tt [] of
        Right True -> Just (Refined a)
        _ -> Nothing
@@ -368,7 +369,7 @@ newRefinedTImpl :: forall opts p a n m
 newRefinedTImpl f a = do
   let o = getOptT @opts
   tt <- f $ evalBool (Proxy @p) o a
-  let msg = prtImpl o (fromTT tt)
+  let msg = prtImpl @opts (fromTT tt)
   tell [msg]
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
@@ -442,11 +443,12 @@ unsafeRefined' a =
       tt = runIdentity $ evalBool (Proxy @p) o a
   in case getValueLR o "" tt [] of
        Right True -> Refined a
-       _ -> error $ prtImpl o (fromTT tt)
+       _ -> error $ prtImpl @opts (fromTT tt)
 
-prtImpl :: POpts -> Tree PE -> String
-prtImpl o tt =
-  let specialmsg = case oMessage o of
+prtImpl :: forall opts . OptTC opts => Tree PE -> String
+prtImpl tt =
+  let o = getOptT @opts
+      specialmsg = case oMessage o of
                      [] -> mempty
                      s -> "[" <> intercalate " | " s <> "]\n"
   in specialmsg <> prtTreePure o tt

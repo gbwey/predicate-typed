@@ -873,12 +873,6 @@ instance (P p a
                         Just (_,(i,_),tt) ->
                           mkNodeB opts False (msg1 <> " i=" ++ showIndex i ++ " " <> topMessage tt) hhs
 
-chkSize :: Foldable t => POpts -> String -> t a -> [Holder] -> Either (TT x) ()
-chkSize opts msg0 xs hhs =
-  case splitAt _MX (toList xs) of
-    (_,[]) -> Right ()
-    (_,_:_) -> Left $ mkNode opts (FailT (msg0 <> " list size exceeded")) (msg0 <> " list size exceeded: max is " ++ show _MX) hhs
-
 showIndex :: (Show i, Num i) => i -> String
 showIndex i = show (i+0)
 -- | similar to 'any'
@@ -1057,7 +1051,7 @@ instance (GetROpts rs
         in case compileRegex @rs opts msg1 p hhs of
           Left tta -> tta
           Right regex ->
-            case splitAt _MX $ RH.scan regex q of
+            case splitAt (oRecursion opts) $ RH.scan regex q of
               (b, _:_) -> mkNode opts (FailT "Regex looping") (msg1 <> " Looping? " <> show (take 10 b) <> "..." <> show1 opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
                          mkNode opts (FailT "Regex no results") (msg1 <> " no match" <> show1 opts " | " q) [hh pp, hh qq]
@@ -1097,7 +1091,7 @@ instance (GetROpts rs
         in case compileRegex @rs opts msg1 p hhs of
           Left tta -> tta
           Right regex ->
-            case splitAt _MX $ RH.scanRanges regex q of
+            case splitAt (oRecursion opts) $ RH.scanRanges regex q of
               (b, _:_) -> mkNode opts (FailT "Regex looping") (msg1 <> " Looping? " <> show (take 10 b) <> "..." <> show1 opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
                          mkNode opts (FailT "Regex no results") (msg1 <> " no match" <> show1 opts " | " q) hhs
@@ -1143,7 +1137,7 @@ instance (GetROpts rs
         in case compileRegex @rs opts msg1 p hhs of
           Left tta -> tta
           Right regex ->
-            case splitAt _MX $ RH.split regex q of
+            case splitAt (oRecursion opts) $ RH.split regex q of
               (b, _:_) -> mkNode opts (FailT "Regex looping") (msg1 <> " Looping? " <> show (take 10 b) <> "..." <> show1 opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
                          mkNode opts (FailT "Regex no results") (msg1 <> " no match" <> show1 opts " | " q) hhs
@@ -1155,10 +1149,6 @@ type ResplitT p q = Resplit' '[] p q
 instance P (ResplitT p q) x => P (Resplit p q) x where
   type PP (Resplit p q) x = PP (ResplitT p q) x
   eval _ = eval (Proxy @(ResplitT p q))
-
--- | limit the size of the lists
-_MX :: Int
-_MX = 100
 
 -- | replaces regex \'s\' with a string \'s1\' inside the value
 --
@@ -6031,7 +6021,7 @@ instance (PP p (b,a) ~ b
           Right () -> do
             let msg1 = msg0  -- <> show0 opts " " q <> show0 opts " " r
                 ff i b as' rs
-                   | i >= _MX = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) (msg1 <> " i=" <> showIndex i <> " (b,as')=" <> show (b,as')) [])
+                   | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) (msg1 <> " i=" <> showIndex i <> " (b,as')=" <> show (b,as')) [])
                    | otherwise =
                        case as' of
                          [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (PresentT q) (msg1 <> "(done)") [])], Right ())
@@ -6105,7 +6095,7 @@ instance (PP q a ~ s
       Left e -> pure e
       Right q -> do
         let msg1 = msg0 <> show0 opts " " q
-            ff i s rs | i >= _MX = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) (msg1 <> " i=" <> showIndex i <> " s=" <> show s) [])
+            ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) (msg1 <> " i=" <> showIndex i <> " s=" <> show s) [])
                       | otherwise = do
                               pp :: TT (PP p s) <- eval (Proxy @p) opts s
                               case getValueLR opts (msg1 <> " i=" <> showIndex i <> " s=" <> show s) pp [] of

@@ -46,7 +46,6 @@ module Predicate.Refined1 (
   , prtEval1P
   , prtEval1PIO
   , prt1IO
-  , prt1
   , prt1Impl
   , Msg1 (..)
   , RResults1 (..)
@@ -195,7 +194,7 @@ unsafeRefined1' :: forall opts ip op fmt i
                 -> Refined1 opts ip op fmt i
 unsafeRefined1' i =
   let (ret,mr) = eval1 @opts @ip @op @fmt i
-  in fromMaybe (error $ show (prt1Impl (getOptT @opts) ret)) mr
+  in fromMaybe (error $ show (prt1Impl @opts ret)) mr
 
 -- | directly load values into 'Refined1' without any checking
 unsafeRefined1 :: forall opts ip op fmt i . PP ip i -> Refined1 opts ip op fmt i
@@ -219,7 +218,7 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 instance (Refined1C opts ip op fmt String, Show (PP ip String)) => IsString (Refined1 opts ip op fmt String) where
   fromString s =
     let (ret,mr) = eval1 @opts @ip @op @fmt s
-    in fromMaybe (error $ "Refined1(fromString):" ++ show (prt1Impl (getOptT @opts) ret)) mr
+    in fromMaybe (error $ "Refined1(fromString):" ++ show (prt1Impl @opts ret)) mr
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined1'
@@ -328,7 +327,7 @@ instance (Show ( PP fmt (PP ip i))
                   i <- parseJSON @i z
                   let (ret,mr) = eval1 @opts @ip @op @fmt i
                   case mr of
-                    Nothing -> fail $ "Refined1:" ++ show (prt1Impl (getOptT @opts) ret)
+                    Nothing -> fail $ "Refined1:" ++ show (prt1Impl @opts ret)
                     Just r -> return r
 
 {-
@@ -402,7 +401,7 @@ instance ( Show (PP fmt (PP ip i))
           i <- B.get @i
           let (ret,mr) = eval1 @opts @ip @op @fmt i
           case mr of
-            Nothing -> fail $ "Refined1:" ++ show (prt1Impl (getOptT @opts) ret)
+            Nothing -> fail $ "Refined1:" ++ show (prt1Impl @opts ret)
             Just r -> return r
   put (Refined1 x) =
       let ss = runIdentity $ eval (Proxy @fmt) (getOptT @opts) x
@@ -566,9 +565,8 @@ newRefined1TPImpl :: forall n m opts ip op fmt i proxy
    -> i
    -> RefinedT m (Refined1 opts ip op fmt i)
 newRefined1TPImpl f _ i = do
-  let o = getOptT @opts
   (ret,mr) <- f $ eval1M i
-  let m1 = prt1Impl o ret
+  let m1 = prt1Impl @opts ret
   tell [m1Long m1]
   case mr of
     Nothing -> throwError $ m1Desc m1 <> " | " <> m1Short m1
@@ -585,9 +583,8 @@ newRefined1TPSkipIPImpl :: forall n m opts ip op fmt i proxy
    -> PP ip i
    -> RefinedT m (Refined1 opts ip op fmt i)
 newRefined1TPSkipIPImpl f _ a = do
-  let o = getOptT @opts
   (ret,mr) <- f $ eval1MSkip a
-  let m1 = prt1Impl o ret
+  let m1 = prt1Impl @opts ret
   tell [m1Long m1]
   case mr of
     Nothing -> throwError $ m1Desc m1 <> " | " <> m1Short m1
@@ -664,7 +661,7 @@ prtEval1PIO :: forall opts ip op fmt i proxy
   -> IO (Either String (Refined1 opts ip op fmt i))
 prtEval1PIO _ i = do
   x <- eval1M i
-  prt1IO (getOptT @opts) x
+  prt1IO @opts x
 
 -- | same as 'prtEval1P' but skips the proxy and allows you to set each parameter individually using type application
 prtEval1 :: forall opts ip op fmt i
@@ -683,7 +680,9 @@ prtEval1P :: forall opts ip op fmt i proxy
   => proxy '(opts,ip,op,fmt,i)
   -> i
   -> Either Msg1 (Refined1 opts ip op fmt i)
-prtEval1P _ = prt1 (getOptT @opts) . eval1
+prtEval1P _ i =
+  let (ret,mr) = eval1 i
+  in maybe (Left $ prt1Impl @opts ret) Right mr
 
 -- | create a Refined1 value using a 4-tuple proxy (see 'mkProxy1')
 --
@@ -757,14 +756,11 @@ eval1MQuick a = do
         _ -> Nothing
     _ -> pure Nothing
 
-prt1IO :: (Show a, Show b) => POpts -> (RResults1 a b, Maybe r) -> IO (Either String r)
-prt1IO opts (ret,mr) = do
-  let m1 = prt1Impl opts ret
-  unless (hasNoTree opts) $ putStrLn $ m1Long m1
+prt1IO :: forall opts a b r . (OptTC opts, Show a, Show b) => (RResults1 a b, Maybe r) -> IO (Either String r)
+prt1IO (ret,mr) = do
+  let m1 = prt1Impl @opts ret
+  unless (hasNoTree (getOptT @opts)) $ putStrLn $ m1Long m1
   return $ maybe (Left (m1Desc m1 <> " | " <> m1Short m1)) Right mr
-
-prt1 :: (Show a, Show b) => POpts -> (RResults1 a b, Maybe r) -> Either Msg1 r
-prt1 opts (ret,mr) = maybe (Left $ prt1Impl opts ret) Right mr
 
 data Msg1 = Msg1 { m1Desc :: !String
                  , m1Short :: !String
@@ -774,12 +770,12 @@ data Msg1 = Msg1 { m1Desc :: !String
 instance Show Msg1 where
   show (Msg1 a b c) = a <> " | " <> b <> (if null c then "" else "\n" <> c)
 
-prt1Impl :: (Show a, Show b)
-  => POpts
-  -> RResults1 a b
+prt1Impl :: forall opts a b . (OptTC opts, Show a, Show b)
+  => RResults1 a b
   -> Msg1
-prt1Impl opts v =
-  let outmsg msg = "\n*** " <> specialmsg <> msg <> " ***\n\n"
+prt1Impl v =
+  let opts = getOptT @opts
+      outmsg msg = "\n*** " <> specialmsg <> msg <> " ***\n\n"
       specialmsg = case oMessage opts of
                      [] -> ""
                      s -> "[" <> intercalate " | " s <> "] "
