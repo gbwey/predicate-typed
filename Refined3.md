@@ -13,7 +13,7 @@ data Refined3 opts ip op fmt i
   * 'OZ no output:zero
   * 'OL one line:lite
   * 'OA ansi colors
-  * 'OU unicode colors (on windows run: chcp 65001)
+  * 'OU unicode colors (Windows: chcp 65001)
 * **_ip_** converts the external type **_i_** to an internal type
 * **_op_** predicate on the internal type
 * **_fmt_** converts the internal type back to the external type (canonical value)

@@ -267,7 +267,7 @@ type Ip9 = '(
 
 instance FromJSON G4
 instance ToJSON G4
-{- OL= summary vs 'OAB = detail
+{- 'OL= summary vs 'OAB = detail
 prtEval3P (daten @'OAB) "June 25 1900"
 prtEval3P (daten @'OAB) "12/02/19"
 prtEval3P (Proxy @(Ccn 'OAB '[1,1,1,1])) "1230"

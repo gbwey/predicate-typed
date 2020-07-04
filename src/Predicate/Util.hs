@@ -38,6 +38,7 @@ module Predicate.Util (
 
  -- ** BoolT
   , BoolT(..)
+  , BoolP(..) -- remove
   , _FailT
   , _PresentT
   , _FalseT
@@ -45,7 +46,7 @@ module Predicate.Util (
 
  -- ** BoolP
   , boolT2P
-  , BoolP
+--  , BoolP
   , PE(PE)
   , pString
   , pBool
@@ -69,33 +70,21 @@ module Predicate.Util (
  -- ** display options
   , POptsL
   , POpts
-  , ODebug(..)
-  , Disp(..)
-  , defOpts
-  , PColor(..)
+  , Debug(..)
   , markBoundary
-  , hasNoColor
-  , nocolor
-  , color1
-  , color2
-  , color3
-  , color4
-  , color5
   , colorMe
   , isVerbose
   , showBoolP
-  , reifyOpts
-  , setWidth
-  , setUnicode
-  , setAnsi
-  , setColor
-  , setColorImpl
-  , setDebug
-  , setMessage
-  , setRecursion
-  , HOpts (..)
+  , type NoColorSlow
+  , type Color1
+  , type Color2
+  , type Color3
+  , type Color4
+  , type Color5
+
+  , HOpts(..)
   , OptT(..)
-  , OptTC(..)
+  , OptTC()
   , getOptT
 
 -- ** formatting functions
@@ -228,7 +217,7 @@ import qualified Data.ByteString.Char8 as BS8
 import GHC.Stack
 import Data.Monoid (Last (..))
 import Data.Maybe
-import Data.Function (on)
+--import Data.Function (on)
 import Data.Coerce
 import Data.Foldable (toList)
 
@@ -313,8 +302,8 @@ pString afb s = (\b -> s { _pString = b }) <$> afb (_pString s)
 mkNode :: POpts -> BoolT a -> String -> [Holder] -> TT a
 mkNode opts bt ss hs =
   case oDebug opts of
-    OZero -> TT bt [] []
-    OLite -> TT bt ss [] -- keeps the last one so we can use the root to give more details on failure (especially for Refined* types)
+    DZero -> TT bt [] []
+    DLite -> TT bt ss [] -- keeps the last one so we can use the root to give more details on failure (especially for Refined* types)
     _ -> TT bt ss (map fromTTH hs)
 
 -- | creates a Boolean node for a predicate type
@@ -389,18 +378,20 @@ type POpts = HOpts Identity
 -- | customizable options
 data HOpts f =
   HOpts { oWidth :: !(HKD f Int) -- ^ length of data to display for 'showLitImpl'
-        , oDebug :: !(HKD f ODebug) -- ^ debug level
+        , oDebug :: !(HKD f Debug) -- ^ debug level
         , oDisp :: !(HKD f Disp) -- ^ display the tree using the normal tree or unicode
         , oColor :: !(HKD f (String, PColor)) -- ^ color palette used
         , oMessage :: ![String] -- ^ messages associated with type
         , oRecursion :: !(HKD f Int) -- ^ max recursion
+        , oNoColor :: !(HKD f Bool) -- ^ no colors
         }
 
 deriving instance
   ( Show (HKD f Int)
-  , Show (HKD f ODebug)
+  , Show (HKD f Debug)
   , Show (HKD f Disp)
   , Show (HKD f (String, PColor))
+  , Show (HKD f Bool)
   ) => Show (HOpts f)
 
 reifyOpts :: HOpts Last -> HOpts Identity
@@ -408,9 +399,11 @@ reifyOpts h =
   HOpts (fromMaybe (oWidth defOpts) (getLast (oWidth h)))
         (fromMaybe (oDebug defOpts) (getLast (oDebug h)))
         (fromMaybe (oDisp defOpts) (getLast (oDisp h)))
-        (fromMaybe (oColor defOpts) (getLast (oColor h)))
+        (if fromMaybe (oNoColor defOpts) (getLast (oNoColor h)) then nocolor
+         else fromMaybe (oColor defOpts) (getLast (oColor h)))
         (oMessage defOpts <> oMessage h)
         (fromMaybe (oRecursion defOpts) (getLast (oRecursion h)))
+        (fromMaybe (oNoColor defOpts) (getLast (oNoColor h)))
 
 setWidth :: Int -> POptsL
 setWidth i = mempty { oWidth = pure i }
@@ -421,40 +414,41 @@ setMessage s = mempty { oMessage = pure s }
 setRecursion :: Int -> POptsL
 setRecursion i = mempty { oRecursion = pure i }
 
-setDebug :: Int -> POptsL
-setDebug i =
-  let (mn,mx) = (fromEnum (minBound :: ODebug), fromEnum (maxBound :: ODebug))
-      ret = toEnum (min (max i mn) mx)
-  in mempty { oDebug = pure ret }
+setNoColor :: Bool -> POptsL
+setNoColor b = mempty { oNoColor = pure b }
 
-setAnsi :: POptsL
-setAnsi = mempty { oDisp = pure Ansi }
+setDisp :: Disp -> POptsL
+setDisp d = mempty { oDisp = pure d }
 
-setUnicode :: POptsL
-setUnicode = mempty { oDisp = pure Unicode }
+setCreateColor :: String
+   -> Color
+   -> Color
+   -> Color
+   -> Color
+   -> Color
+   -> Color
+   -> Color
+   -> Color
+   -> POptsL
+setCreateColor s c1 c2 c3 c4 c5 c6 c7 c8 =
+  let pc = \case
+       FailP {} -> color c1 . bgColor c2
+       FalseP -> color c3 . bgColor c4
+       TrueP -> color c5 . bgColor c6
+       PresentP -> color c7 . bgColor c8
+  in mempty { oColor = pure $ (s,PColor pc) }
 
-setColorImpl :: (String, PColor) -> POptsL
-setColorImpl c = mempty { oColor = pure c }
-
-setColor :: Int -> POptsL
-setColor i =
-  let ret=
-       if | i == 0 -> nocolor
-          | i == 1 -> color1
-          | i == 2 -> color2
-          | i == 3 -> color3
-          | i == 4 -> color4
-          | i == 5 -> color5
-          | otherwise -> error "dude: invalid color"
-  in mempty { oColor = pure ret }
+setDebug :: Debug -> POptsL
+setDebug d =
+  mempty { oDebug = pure d }
 
 type POptsL = HOpts Last
 
 instance Monoid (HOpts Last) where
-  mempty = HOpts mempty mempty mempty mempty mempty mempty
+  mempty = HOpts mempty mempty mempty mempty mempty mempty mempty
 
 instance Semigroup (HOpts Last) where
-  HOpts a b c d e f <> HOpts a' b' c' d' e' f' = HOpts (a <> a') (b <> b') (c <> c') (d <> d') (e <> e') (f <> f')
+  HOpts a b c d e f g <> HOpts a' b' c' d' e' f' g' = HOpts (a <> a') (b <> b') (c <> c') (d <> d') (e <> e') (f <> f') (g <> g')
 
 --seqPOptsM :: HOpts Last -> Maybe (HOpts Identity)
 --seqPOptsM h = coerce (HOpts <$> oWidth h <*> oDebug h <*> oDisp h <*> oColor h)
@@ -467,24 +461,29 @@ data Disp = Ansi -- ^ draw normal tree
 defOpts :: POpts
 defOpts = HOpts
     { oWidth = 200
-    , oDebug = ONormal
+    , oDebug = DNormal
     , oDisp = Ansi
-    , oColor = color5
+    , oColor = colorDef
     , oMessage = mempty
     , oRecursion = 100
+    , oNoColor = False
     }
 
-data ODebug =
-       OZero -- ^ one line summary used mainly for testing
-     | OLite -- ^ one line summary with additional context from the head of the evaluation tree
-     | OSubNormal -- ^ outputs the evaluation tree but skips noisy subtrees
-     | ONormal  -- ^ outputs the evaluation tree but skips noisy subtrees
-     | OVerbose -- ^ outputs the entire evaluation tree
+nocolor, colorDef :: (String, PColor)
+nocolor = ("nocolor", PColor $ flip const)
+colorDef = fromJust $ getLast $ oColor $ getOptT' @Color5
+
+data Debug =
+       DZero -- ^ one line summary used mainly for testing
+     | DLite -- ^ one line summary with additional context from the head of the evaluation tree
+     | DSubNormal -- ^ outputs the evaluation tree but skips noisy subtrees
+     | DNormal  -- ^ outputs the evaluation tree but skips noisy subtrees
+     | DVerbose -- ^ outputs the entire evaluation tree
      deriving (Ord, Show, Eq, Enum, Bounded)
 
--- | helper method to set the debug level
+-- | verbose debug level?
 isVerbose :: POpts -> Bool
-isVerbose = (OVerbose==) . oDebug
+isVerbose = (DVerbose==) . oDebug
 
 markBoundary :: forall (opts :: OptT) . OptTC opts => String -> String
 markBoundary =
@@ -494,49 +493,18 @@ markBoundary =
 -- | color palettes
 --
 -- italics dont work but underline does
-nocolor, color1, color2, color3, color4, color5 :: (String, PColor)
-
--- | no colors are displayed
-nocolor = ("nocolor", PColor $ flip const)
 
 hasNoColor :: POpts -> Bool
-hasNoColor = (on (==) fst nocolor) . oColor
+hasNoColor = oNoColor
 
--- | default color palette
-color1 =
-  ("color1",) $ PColor $ \case
-    FailP {} -> bgColor Blue
-    FalseP -> bgColor Red
-    TrueP -> colorize Foreground Black . bgColor Cyan
-    PresentP -> colorize Foreground Black . bgColor Yellow
 
-color2 =
-  ("color2",) $ PColor $ \case
-    FailP {} -> bgColor Magenta
-    FalseP -> bgColor Red
-    TrueP -> colorize Foreground Black . bgColor White
-    PresentP -> colorize Foreground Black . bgColor Yellow
-
-color3 =
-  ("color3",) $ PColor $ \case
-    FailP {} -> bgColor Blue
-    FalseP -> color Red
-    TrueP -> color White
-    PresentP -> colorize Foreground Black . bgColor Yellow
-
-color4 =
-  ("color4",) $ PColor $ \case
-    FailP {} -> bgColor Red
-    FalseP -> color Red
-    TrueP -> color Green
-    PresentP -> colorize Foreground Black . bgColor Yellow
-
-color5 =
-  ("color5",) $ PColor $ \case
-    FailP {} -> color Blue
-    FalseP -> color Red
-    TrueP -> color Cyan
-    PresentP -> color Yellow
+-- | color palettes
+type NoColorSlow = 'OC "nocolor" 'Default 'Default 'Default 'Default 'Default 'Default 'Default 'Default
+type Color1 = 'OC "color1" 'Default 'Blue 'Default 'Red 'Black 'Cyan 'Black 'Yellow
+type Color2 = 'OC "color2" 'Default 'Magenta 'Default 'Red 'Black 'White 'Black 'Yellow
+type Color3 = 'OC "color3" 'Default 'Blue 'Red 'Default 'White 'Default 'Black 'Yellow
+type Color4 = 'OC "color4" 'Default 'Red 'Red 'Default 'Green 'Default 'Black 'Yellow
+type Color5 = 'OC "color5" 'Blue 'Default 'Red 'Default 'Cyan 'Default 'Yellow 'Default
 
 -- | fix PresentT Bool to TrueT or FalseT
 fixBoolT :: TT Bool -> TT Bool
@@ -564,27 +532,27 @@ lit01' opts msg0 ret fmt as
 
 -- | display all data regardless of debug level
 showLit0 :: POpts -> String -> String -> String
-showLit0 o = showLitImpl o OLite
+showLit0 o = showLitImpl o DLite
 
 -- | more restrictive: only display data at debug level 1 or less
 showLit1 :: POpts -> String -> String -> String
-showLit1 o = showLitImpl o OLite
+showLit1 o = showLitImpl o DLite
 
-showLitImpl :: POpts -> ODebug -> String -> String -> String
+showLitImpl :: POpts -> Debug -> String -> String -> String
 showLitImpl o i s a =
   if oDebug o >= i then s <> litL (oWidth o) a
   else ""
 
 show0 :: Show a => POpts -> String -> a -> String
-show0 o = showAImpl o OLite
+show0 o = showAImpl o DLite
 
 show3 :: Show a => POpts -> String -> a -> String
-show3 o = showAImpl o OVerbose
+show3 o = showAImpl o DVerbose
 
 show1 :: Show a => POpts -> String -> a -> String
-show1 o = showAImpl o OLite
+show1 o = showAImpl o DLite
 
-showAImpl :: Show a => POpts -> ODebug -> String -> a -> String
+showAImpl :: Show a => POpts -> Debug -> String -> a -> String
 showAImpl o i s a = showLitImpl o i s (show a)
 
 showL :: Show a => Int -> a -> String
@@ -715,7 +683,7 @@ partitionTTExtended (s, t) =
     FalseT -> Right (False,s,t)
 
 formatList :: forall x z . Show x => POpts -> [((Int, x), z)] -> String
-formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts OLite ", a=" a <> ")")
+formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts DLite ", a=" a <> ")")
 
 instance Foldable TT where
   foldMap am = foldMap am . _tBool
@@ -933,13 +901,57 @@ instance GetOrdering 'EQ where
 instance GetOrdering 'GT where
   getOrdering = GT
 
--- | get bool from the typelevel
+-- | get Bool from the typelevel
 class GetBool (a :: Bool) where
   getBool :: Bool
 instance GetBool 'True where
   getBool = True
 instance GetBool 'False where
   getBool = False
+
+-- | get Disp from the typelevel
+class GetDisp (a :: Disp) where
+  getDisp :: Disp
+instance GetDisp 'Ansi where
+  getDisp = Ansi
+instance GetDisp 'Unicode where
+  getDisp = Unicode
+
+-- | get Debug from the typelevel
+class GetDebug (a :: Debug) where
+  getDebug :: Debug
+instance GetDebug 'DZero where
+  getDebug = DZero
+instance GetDebug 'DLite where
+  getDebug = DLite
+instance GetDebug 'DSubNormal where
+  getDebug = DSubNormal
+instance GetDebug 'DNormal where
+  getDebug = DNormal
+instance GetDebug 'DVerbose where
+  getDebug = DVerbose
+
+-- | get Color from the typelevel
+class GetColor (a :: Color) where
+  getColor :: Color
+instance GetColor 'Black where
+  getColor = Black
+instance GetColor 'Red where
+  getColor = Red
+instance GetColor 'Green where
+  getColor = Green
+instance GetColor 'Yellow where
+  getColor = Yellow
+instance GetColor 'Blue where
+  getColor = Blue
+instance GetColor 'Magenta where
+  getColor = Magenta
+instance GetColor 'Cyan where
+  getColor = Cyan
+instance GetColor 'White where
+  getColor = White
+instance GetColor 'Default where
+  getColor = Default
 
 data OrderingP = CGt | CGe | CEq | CLe | CLt | CNe deriving (Show, Eq, Enum, Bounded)
 
@@ -961,11 +973,11 @@ toNodeString opts bpe =
 hasNoTree :: POpts -> Bool
 hasNoTree opts =
   case oDebug opts of
-    OZero -> True
-    OLite -> True
-    OSubNormal -> False
-    ONormal -> False
-    OVerbose -> False
+    DZero -> True
+    DLite -> True
+    DSubNormal -> False
+    DNormal -> False
+    DVerbose -> False
 
 nullSpace :: String -> String
 nullSpace s | null s = ""
@@ -978,13 +990,7 @@ showBoolP o =
     b@PresentP -> colorMe o b "P"
     b@TrueP -> colorMe o b "True"
     b@FalseP -> colorMe o b "False"
-{-
-displayMessages :: [String] -> String
-displayMessages es =
-  case filter (not . all isSpace) es of
-    [] -> ""
-    z -> intercalate " | " z
--}
+
 -- | colors the result of the predicate based on the current color palette
 colorMe :: POpts -> BoolP -> String -> String
 colorMe o b s =
@@ -1266,23 +1272,45 @@ readField fieldName readVal = do
         readVal
 
 data OptT =
-    OZ
+    OD !Debug
+  | OW !Nat
+  | OM !Symbol
+  | OR !Nat
+  | OEmpty
+  | !OptT :# !OptT
+  | OC !Symbol !Color !Color !Color !Color !Color !Color !Color !Color
+  | ONoColor !Bool
+  | ODisp !Disp
+  | OZ
   | OL
   | OAN
   | OA
   | OAB
   | OU
   | OUB
-  | OC !Nat
-  | OD !Nat
-  | OW !Nat
-  | OM Symbol
-  | OR !Nat
-  | OEmpty
-  | !OptT :*: !OptT
-
+{-
+data OptT where
+  OD :: !Debug -> OptT
+  OW :: (forall n . KnownNat n => n) -> OptT
+  OM :: (forall s . KnownSymbol s => s) -> OptT
+  OR :: (forall n . KnownNat n => n) -> OptT
+  OEmpty :: OptT
+  (:#) :: !OptT -> !OptT -> OptT
+  OC :: (forall s . KnownSymbol s => s) -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> OptT
+  ONoColor :: !Bool -> OptT
+  ODisp :: d -> OptT
+-}
 instance Show OptT where
   show = \case
+            OD _n -> "OD"
+            OW _n -> "OW"
+            OM _s -> "OM"
+            OR _n -> "OR"
+            OEmpty -> "OEmpty"
+            a :# b -> show a ++ " ':# " ++ show b
+            OC _s _c1 _c2 _c3 _c4 _c5 _c6 _c7 _c8 -> "OC"
+            ONoColor b -> "ONoColor " ++ show b
+            ODisp b -> "ODisp " ++ show b
             OZ -> "OZ"
             OL -> "OL"
             OAN -> "OAN"
@@ -1290,36 +1318,60 @@ instance Show OptT where
             OAB -> "OAB"
             OU -> "OU"
             OUB -> "OUB"
-            OC _n -> "OC"
-            OD _n -> "OD"
-            OW _n -> "OW"
-            OM _s -> "OM"
-            OR _n -> "OR"
-            OEmpty -> "OEmpty"
-            a :*: b -> show a ++ " ':*: " ++ show b
-infixr 6 :*:
+
+infixr 6 :#
+{-
+type OZ = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'OD 'DZero
+type OL = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'OD 'DLite
+type OAN = 'ODisp 'Ansi ':# 'ONoColor 'True
+type OA = 'ODisp 'Ansi ':# Color5
+type OAB = 'ODisp 'Ansi ':# Color1
+type OU = 'ODisp 'Unicode ':# Color5
+type OUB = 'ODisp 'Unicode ':# Color1
+-}
 class OptTC (k :: OptT) where getOptT' :: POptsL
-instance OptTC 'OZ where getOptT' = setAnsi <> setColor 0 <> setDebug 0
-instance OptTC 'OL where getOptT' = setAnsi <> setColor 0 <> setDebug 1
-instance OptTC 'OAN where getOptT' = setAnsi <> setColor 0
-instance OptTC 'OA where getOptT' = setAnsi <> setColor 5
-instance OptTC 'OAB where getOptT' = setAnsi <> setColor 1
-instance OptTC 'OU where getOptT' = setUnicode <> setColor 5
-instance OptTC 'OUB where getOptT' = setUnicode <> setColor 1
-instance KnownNat n => OptTC ('OC n) where getOptT' = setColor (nat @n)
-instance KnownNat n => OptTC ('OD n) where getOptT' = setDebug (nat @n)
+instance GetDebug n => OptTC ('OD n) where getOptT' = setDebug (getDebug @n)
 instance KnownNat n => OptTC ('OW n) where getOptT' = setWidth (nat @n)
 instance KnownSymbol s => OptTC ('OM s) where getOptT' = setMessage (symb @s)
 instance KnownNat n => OptTC ('OR n) where getOptT' = setRecursion (nat @n)
 instance OptTC 'OEmpty where getOptT' = mempty
-instance (OptTC a, OptTC b) => OptTC (a ':*: b) where getOptT' = getOptT' @a <> getOptT' @b
+instance (OptTC a, OptTC b) => OptTC (a ':# b) where getOptT' = getOptT' @a <> getOptT' @b
+instance ( KnownSymbol s
+         , GetColor c1
+         , GetColor c2
+         , GetColor c3
+         , GetColor c4
+         , GetColor c5
+         , GetColor c6
+         , GetColor c7
+         , GetColor c8)
+  => OptTC ('OC s c1 c2 c3 c4 c5 c6 c7 c8) where
+     getOptT' = setCreateColor
+        (symb @s)
+        (getColor @c1)
+        (getColor @c2)
+        (getColor @c3)
+        (getColor @c4)
+        (getColor @c5)
+        (getColor @c6)
+        (getColor @c7)
+        (getColor @c8)
+instance GetBool b => OptTC ('ONoColor b) where getOptT' = setNoColor (getBool @b)
+instance GetDisp b => OptTC ('ODisp b) where getOptT' = setDisp (getDisp @b)
+instance OptTC 'OZ where getOptT' = setDisp Ansi <> setNoColor True <> setDebug DZero
+instance OptTC 'OL where getOptT' = setDisp Ansi <> setNoColor True <> setDebug DLite
+instance OptTC 'OAN where getOptT' = setDisp Ansi <> setNoColor True
+instance OptTC 'OA where getOptT' = setDisp Ansi <> getOptT' @Color5
+instance OptTC 'OAB where getOptT' = setDisp Ansi <> getOptT' @Color1
+instance OptTC 'OU where getOptT' = setDisp Unicode <> getOptT' @Color5
+instance OptTC 'OUB where getOptT' = setDisp Unicode <> getOptT' @Color1
 
 -- | convert typelevel options to 'POpts'
 --
--- >>> getOptT @('OA ':*: 'OC 3 ':*: 'OU  ':*: 'OA ':*: 'OW 321 ':*: 'OM "test message")
--- HOpts {oWidth = 321, oDebug = ONormal, oDisp = Ansi, oColor = ("color5",PColor <fn>), oMessage = ["test message"], oRecursion = 100}
+-- >>> (oDisp &&& fst . oColor) (getOptT @(OA ':# OU ':# OA ':# 'OW 321 ':# Color4 ':# 'OM "test message"))
+-- (Ansi,"color4")
 --
--- >>> oMessage (getOptT @('OM "abc" ':*: 'OM "def"))
+-- >>> oMessage (getOptT @('OM "abc" ':# 'OM "def"))
 -- ["abc","def"]
 --
 getOptT :: forall o . OptTC o => POpts

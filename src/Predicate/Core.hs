@@ -36,7 +36,8 @@ module Predicate.Core (
   , pub
   , pl
   , pz
-  , with
+--  , with
+  , run
 
   , P(..)
 
@@ -69,7 +70,7 @@ evalBool :: (MonadEval m, P p a, PP p a ~ Bool) => Proxy p -> POpts -> a -> m (T
 evalBool p opts a = fixBoolT <$> eval p opts a
 
 evalQuick :: forall p i . P p i => i -> Either String (PP p i)
-evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) defOpts { oColor = nocolor, oDebug = OLite } i))
+evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) (getOptT @'OL) i))
 
 
 -- | identity function
@@ -675,7 +676,7 @@ instance Show a => P 'Proxy a where
   eval _ opts a =
     let b = Proxy @a
     in pure $ mkNode opts (PresentT b) ("'Proxy" <> show1 opts " | " a) []
-
+{-
 -- with @('True || 'False || Failt _ "asdf") (setAnsi <> setWidth 100 <> setDebug 5 <> setColor 1) 123
 -- | set display options
 with :: forall p a . (Show (PP p a), P p a)
@@ -683,27 +684,39 @@ with :: forall p a . (Show (PP p a), P p a)
   -> a
   -> IO (BoolT (PP p a))
 with h = peWith @p (reifyOpts h)
-
+-}
 pan, pa, pu, pl, pz, pab, pub :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
 -- | skips the evaluation tree and just displays the end result
-pz = peWith @p defOpts { oColor = nocolor, oDebug = OZero }
+pz = run @'OZ @p
 -- | same as 'pz' but adds context to the end result
-pl = peWith @p defOpts { oColor = nocolor, oDebug = OLite }
+pl = run @'OL @p
 -- | displays the evaluation tree in plain text without colors
-pan  = peWith @p defOpts { oColor = nocolor }
+pan  = run @'OAN @p
 -- | displays the evaluation tree using colors without background colors
-pa = peWith @p defOpts
+pa = run @'OA @p
 -- | displays the evaluation tree using background colors
-pab = peWith @p defOpts { oColor = color1 }
+pab = run @'OAB @p
 -- | display the evaluation tree using unicode and colors
 -- @
 --   pu @'(Id, "abc", 123) [1..4]
 -- @
-pu = peWith @p defOpts { oDisp = Unicode }
+pu = run @'OU @p
 -- | displays the evaluation tree using unicode and colors with background colors
 -- | displays the evaluation tree using background colors
-pub = peWith @p defOpts { oDisp = Unicode, oColor = color1 }
+pub = run @'OUB @p
 
+run :: forall opts p a
+        . (OptTC opts, Show (PP p a), P p a)
+        => a
+        -> IO (BoolT (PP p a))
+run a = do
+  let opts = getOptT @opts
+  pp <- eval (Proxy @p) opts a
+  let r = pp ^. tBool
+  putStr $ prtTreeX opts pp
+  return r
+
+{-
 peWith :: forall p a
         . (Show (PP p a), P p a)
         => POpts
@@ -714,15 +727,15 @@ peWith opts a = do
   let r = pp ^. tBool
   putStr $ prtTreeX opts pp
   return r
-
+-}
 prtTreeX :: Show x => POpts -> TT x -> String
 prtTreeX opts pp =
   let r = pp ^. tBool
   in case (hasNoTree opts, oDebug opts) of
-       (True,OZero) -> ""
+       (True,DZero) -> ""
        (True,_) ->
           let f = colorMe opts (r ^. boolT2P)
-              tm = if oDebug opts == OZero then "" else topMessage pp
+              tm = if oDebug opts == DZero then "" else topMessage pp
           in (<>"\n") $ case r of
                FailT e -> f "Error" <> " " <> e
                TrueT -> f "True" <> " " <> tm

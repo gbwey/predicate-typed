@@ -7,7 +7,7 @@ Both the original input and the internal value are stored in Refined2
 ```haskell
 data Refined2 opts ip op i
 ```
-* **_opts_** display options eg
+* **_opts_** display options
   * 'OZ no output:zero
   * 'OL one line:lite
   * 'OA ansi colors

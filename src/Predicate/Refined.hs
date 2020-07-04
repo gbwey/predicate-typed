@@ -332,8 +332,8 @@ prtRefinedIO a = do
   tt <- evalBool (Proxy @p) o a
   let msg = (_tBool tt ^. boolT2P, prtImpl @opts (fromTT tt))
   case oDebug o of
-     OZero -> pure ()  -- putStrLn $ showBoolP opts (fst msg) <> " " <> topMessage tt
-     OLite -> putStrLn $ showBoolP o (fst msg) <> " " <> topMessage tt
+     DZero -> pure ()  -- putStrLn $ showBoolP opts (fst msg) <> " " <> topMessage tt
+     DLite -> putStrLn $ showBoolP o (fst msg) <> " " <> topMessage tt
      _ -> putStrLn $ snd msg
   pure $ case getValueLR o "" tt [] of
     Right True -> Right (Refined a)
@@ -351,8 +351,8 @@ newRefined a = do
   tt <- evalBool (Proxy @p) o a
   let rc = _tBool tt ^. boolT2P
       ss = case oDebug o of
-             OZero -> ("","")
-             OLite -> ("",topMessage tt)
+             DZero -> ("","")
+             DLite -> ("",topMessage tt)
              _ -> (prtImpl @opts (fromTT tt),topMessage tt)
   pure $ ((rc,ss),) $ case getValueLR o "" tt [] of
        Right True -> Just (Refined a)
