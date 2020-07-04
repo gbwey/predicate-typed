@@ -1,4 +1,6 @@
-Refined3 allows control of both input and output types (see documentation [doctests](src/Predicate/Refined3.hs))
+Refined3 validates after first converting to an internal value then creates a canonical value as output
+Both the internal value and the formatted output are stored in Refined3
+(see documentation [doctests](src/Predicate/Refined3.hs))
 
 :load Predicate.Examples.Refined3
 

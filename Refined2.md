@@ -1,4 +1,6 @@
-### Refined2 allows you vary the input type (see documentation [doctests](src/Predicate/Refined2.hs))
+### Refined2 validates after first converting to an internal value
+Both the original input and the internal value are stored in Refined2
+(see documentation [doctests](src/Predicate/Refined2.hs))
 
 :load Predicate.Examples.Refined2
 
@@ -9,7 +11,7 @@ data Refined2 opts ip op i
   * 'OZ no output:zero
   * 'OL one line:lite
   * 'OA ansi colors
-  * 'OU unicode colors (on windows run: chcp 65001)
+  * 'OU unicode colors (Windows: chcp 65001)
 * **_ip_** converts the external type **_i_** to an internal type
 * **_op_** predicate on the internal type
 * **_i_** input type

@@ -1,15 +1,17 @@
-### Refined is the simplest refinement type (for more information see [doctests](src/Predicate/Refined.hs))
+### Refined is the simplest refinement type which validates the input
+
+(see documentation [doctests](src/Predicate/Refined.hs))
 
 :load Predicate
 
 ```haskell
 newtype Refined opts p a
 ```
-* **_opts_** display options eg
+* **_opts_** display options
   * 'OZ no output:zero
   * 'OL one line:lite
   * 'OA ansi colors
-  * 'OU unicode colors (on windows run: chcp 65001)
+  * 'OU unicode colors (Windows: chcp 65001)
 * **_p_** predicate on **_a_**
 * **_a_** input type
 
