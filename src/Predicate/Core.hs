@@ -55,6 +55,7 @@ import Data.Typeable
 import Data.Kind (Type)
 import Data.These (These(..))
 import Data.Functor.Identity
+import Data.List (intercalate)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -713,7 +714,7 @@ run a = do
   let opts = getOptT @opts
   pp <- eval (Proxy @p) opts a
   let r = pp ^. tBool
-  putStr $ prtTreeX opts pp
+  putStr $ prtTreeX @opts pp
   return r
 
 {-
@@ -728,9 +729,13 @@ peWith opts a = do
   putStr $ prtTreeX opts pp
   return r
 -}
-prtTreeX :: Show x => POpts -> TT x -> String
-prtTreeX opts pp =
+prtTreeX :: forall opts x . (OptTC opts, Show x) => TT x -> String
+prtTreeX pp =
   let r = pp ^. tBool
+      opts = getOptT @opts
+      specialmsg = case oMessage opts of
+                     [] -> mempty
+                     s -> markBoundary @opts (intercalate " | " s <> "\n")
   in case (hasNoTree opts, oDebug opts) of
        (True,DZero) -> ""
        (True,_) ->
@@ -741,7 +746,7 @@ prtTreeX opts pp =
                TrueT -> f "True" <> " " <> tm
                FalseT -> f "False" <> " " <> tm
                PresentT x -> f "Present" <> " " <> show x <> " " <> tm
-       (False,_) -> prtTreePure opts (fromTT pp)
+       (False,_) -> specialmsg <> prtTreePure opts (fromTT pp)
 
 runPQ :: (P p a, P q a, MonadEval m)
    => String

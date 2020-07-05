@@ -847,7 +847,25 @@ allTests =
   -- test semigroup interaction
   , expectEQR (These (PresentT 6) (FailT "xyzhello")) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(FailS "xyz") 5) <> fmap That (pz @(FailS "hello") 1)
   , expectEQR (These (PresentT 6) (PresentT ("5",6))) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(ShowP Id &&& Succ Id) 5)
+-- test options
+  , oRecursion testopts1 @?= 11
+  , oDebug testopts1 @?= DVerbose
+  , oNoColor testopts1 @?= True
+  , oMessage testopts1 @?= ["abc", "def"]
+  , oWidth testopts1 @?= 99
+  , oDisp testopts1 @?= Unicode
+  , oDisp testopts2 @?= Ansi
+  , oDisp testopts3 @?= Unicode
+  , fst (oColor testopts1) @?= "nocolor"
+  , fst (oColor testopts2) @?= "testcolor"
+  , fst (oColor testopts3) @?= "testcolor"
   ]
+
+testopts1, testopts2, testopts3 :: POpts
+testopts1 = getOptT @('ORecursion 11 ':# 'ODebug 'DVerbose ':# 'ONoColor 'True ':# 'OWidth 123 ':# 'OMessage "abc" ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMessage "def" ':# 'OEmpty ':# 'ORecursion 11 ':# 'ODisp 'Unicode ':# 'OWidth 99)
+testopts2 = getOptT @('ONoColor 'False ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White)
+testopts3 = getOptT @('OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMessage "def" ':# 'ODisp 'Unicode)
+
 
 type Fizzbuzz = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")
 type Fizzbuzz'' = Case (MkLeft String (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '[ MkRight Int "fizzbuzz", MkRight Int "fizz", MkRight Int "buzz"] Id

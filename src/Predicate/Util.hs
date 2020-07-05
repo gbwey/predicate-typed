@@ -71,6 +71,8 @@ module Predicate.Util (
   , POptsL
   , POpts
   , Debug(..)
+  , Disp(..)
+  , Color(..)
   , markBoundary
   , colorMe
   , isVerbose
@@ -499,12 +501,12 @@ hasNoColor = oNoColor
 
 
 -- | color palettes
-type NoColorSlow = 'OC "nocolor" 'Default 'Default 'Default 'Default 'Default 'Default 'Default 'Default
-type Color1 = 'OC "color1" 'Default 'Blue 'Default 'Red 'Black 'Cyan 'Black 'Yellow
-type Color2 = 'OC "color2" 'Default 'Magenta 'Default 'Red 'Black 'White 'Black 'Yellow
-type Color3 = 'OC "color3" 'Default 'Blue 'Red 'Default 'White 'Default 'Black 'Yellow
-type Color4 = 'OC "color4" 'Default 'Red 'Red 'Default 'Green 'Default 'Black 'Yellow
-type Color5 = 'OC "color5" 'Blue 'Default 'Red 'Default 'Cyan 'Default 'Yellow 'Default
+type NoColorSlow = 'OColor "nocolor" 'Default 'Default 'Default 'Default 'Default 'Default 'Default 'Default
+type Color1 = 'OColor "color1" 'Default 'Blue 'Default 'Red 'Black 'Cyan 'Black 'Yellow
+type Color2 = 'OColor "color2" 'Default 'Magenta 'Default 'Red 'Black 'White 'Black 'Yellow
+type Color3 = 'OColor "color3" 'Default 'Blue 'Red 'Default 'White 'Default 'Black 'Yellow
+type Color4 = 'OColor "color4" 'Default 'Red 'Red 'Default 'Green 'Default 'Black 'Yellow
+type Color5 = 'OColor "color5" 'Blue 'Default 'Red 'Default 'Cyan 'Default 'Yellow 'Default
 
 -- | fix PresentT Bool to TrueT or FalseT
 fixBoolT :: TT Bool -> TT Bool
@@ -1272,43 +1274,52 @@ readField fieldName readVal = do
         readVal
 
 data OptT =
-    OD !Debug
-  | OW !Nat
-  | OM !Symbol
-  | OR !Nat
-  | OEmpty
-  | !OptT :# !OptT
-  | OC !Symbol !Color !Color !Color !Color !Color !Color !Color !Color
-  | ONoColor !Bool
-  | ODisp !Disp
-  | OZ
-  | OL
-  | OAN
-  | OA
-  | OAB
-  | OU
-  | OUB
+    ODebug !Debug         -- ^ set debug mode
+  | OWidth !Nat           -- ^ set display width
+  | OMessage !Symbol      -- ^ set text to add context to a failure message for refined types
+  | ORecursion !Nat       -- ^ set recursion limit eg for regex
+  | OEmpty                -- ^ mempty
+  | !OptT :# !OptT        -- ^ mappend
+  | OColor    -- ^ set color palette
+     !Symbol  -- ^ name of color palette
+     !Color   -- ^ Fail foreground color
+     !Color   -- ^ Fail background color
+     !Color   -- ^ False foreground color
+     !Color   -- ^ False background color
+     !Color   -- ^ True foreground color
+     !Color   -- ^ True background color
+     !Color   -- ^ Present foreground color
+     !Color   -- ^ Present background color
+  | ONoColor !Bool        -- ^ turn off colors (fast)
+  | ODisp !Disp           -- ^ ansi/unicode display
+  | OZ                    -- ^ composite: no messages
+  | OL                    -- ^ composite: lite version
+  | OAN                   -- ^ composite: ansi + no colors
+  | OA                    -- ^ composite: ansi + colors
+  | OAB                   -- ^ composite: ansi + colors + background
+  | OU                    -- ^ composite: unicode + colors
+  | OUB                   -- ^ composite: unicode + colors + background
 {-
 data OptT where
-  OD :: !Debug -> OptT
-  OW :: (forall n . KnownNat n => n) -> OptT
-  OM :: (forall s . KnownSymbol s => s) -> OptT
-  OR :: (forall n . KnownNat n => n) -> OptT
+  ODebug :: !Debug -> OptT
+  OWidth :: (forall n . KnownNat n => n) -> OptT
+  OMessage :: (forall s . KnownSymbol s => s) -> OptT
+  ORecursion :: (forall n . KnownNat n => n) -> OptT
   OEmpty :: OptT
   (:#) :: !OptT -> !OptT -> OptT
-  OC :: (forall s . KnownSymbol s => s) -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> OptT
+  OColor :: (forall s . KnownSymbol s => s) -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> OptT
   ONoColor :: !Bool -> OptT
   ODisp :: d -> OptT
 -}
 instance Show OptT where
   show = \case
-            OD _n -> "OD"
-            OW _n -> "OW"
-            OM _s -> "OM"
-            OR _n -> "OR"
+            ODebug _n -> "ODebug"
+            OWidth _n -> "OWidth"
+            OMessage _s -> "OMessage"
+            ORecursion _n -> "ORecursion"
             OEmpty -> "OEmpty"
             a :# b -> show a ++ " ':# " ++ show b
-            OC _s _c1 _c2 _c3 _c4 _c5 _c6 _c7 _c8 -> "OC"
+            OColor _s _c1 _c2 _c3 _c4 _c5 _c6 _c7 _c8 -> "OColor"
             ONoColor b -> "ONoColor " ++ show b
             ODisp b -> "ODisp " ++ show b
             OZ -> "OZ"
@@ -1321,8 +1332,8 @@ instance Show OptT where
 
 infixr 6 :#
 {-
-type OZ = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'OD 'DZero
-type OL = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'OD 'DLite
+type OZ = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'ODebug 'DZero
+type OL = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'ODebug 'DLite
 type OAN = 'ODisp 'Ansi ':# 'ONoColor 'True
 type OA = 'ODisp 'Ansi ':# Color5
 type OAB = 'ODisp 'Ansi ':# Color1
@@ -1330,10 +1341,10 @@ type OU = 'ODisp 'Unicode ':# Color5
 type OUB = 'ODisp 'Unicode ':# Color1
 -}
 class OptTC (k :: OptT) where getOptT' :: POptsL
-instance GetDebug n => OptTC ('OD n) where getOptT' = setDebug (getDebug @n)
-instance KnownNat n => OptTC ('OW n) where getOptT' = setWidth (nat @n)
-instance KnownSymbol s => OptTC ('OM s) where getOptT' = setMessage (symb @s)
-instance KnownNat n => OptTC ('OR n) where getOptT' = setRecursion (nat @n)
+instance GetDebug n => OptTC ('ODebug n) where getOptT' = setDebug (getDebug @n)
+instance KnownNat n => OptTC ('OWidth n) where getOptT' = setWidth (nat @n)
+instance KnownSymbol s => OptTC ('OMessage s) where getOptT' = setMessage (symb @s)
+instance KnownNat n => OptTC ('ORecursion n) where getOptT' = setRecursion (nat @n)
 instance OptTC 'OEmpty where getOptT' = mempty
 instance (OptTC a, OptTC b) => OptTC (a ':# b) where getOptT' = getOptT' @a <> getOptT' @b
 instance ( KnownSymbol s
@@ -1345,7 +1356,7 @@ instance ( KnownSymbol s
          , GetColor c6
          , GetColor c7
          , GetColor c8)
-  => OptTC ('OC s c1 c2 c3 c4 c5 c6 c7 c8) where
+  => OptTC ('OColor s c1 c2 c3 c4 c5 c6 c7 c8) where
      getOptT' = setCreateColor
         (symb @s)
         (getColor @c1)
@@ -1368,10 +1379,10 @@ instance OptTC 'OUB where getOptT' = setDisp Unicode <> getOptT' @Color1
 
 -- | convert typelevel options to 'POpts'
 --
--- >>> (oDisp &&& fst . oColor) (getOptT @(OA ':# OU ':# OA ':# 'OW 321 ':# Color4 ':# 'OM "test message"))
--- (Ansi,"color4")
+-- >>> (oDisp &&& fst . oColor &&& oWidth) (getOptT @('OA ':# 'OU ':# 'OA ':# 'OWidth 321 ':# Color4 ':# 'OMessage "test message"))
+-- (Ansi,("color4",321))
 --
--- >>> oMessage (getOptT @('OM "abc" ':# 'OM "def"))
+-- >>> oMessage (getOptT @('OMessage "abc" ':# 'OMessage "def"))
 -- ["abc","def"]
 --
 getOptT :: forall o . OptTC o => POpts
