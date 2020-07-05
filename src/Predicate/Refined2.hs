@@ -35,6 +35,7 @@ module Predicate.Refined2 (
  -- ** display results
   , prtEval2
   , prtEval2P
+  , prtEval2IO
   , prtEval2PIO
   , prt2IO
   , prt2Impl
@@ -64,6 +65,8 @@ module Predicate.Refined2 (
   , unsafeRefined2'
 
   , type ReplaceOptT2
+  , type AppendOptT2
+
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -452,6 +455,14 @@ data RResults2 a =
      | RTTrue !a !(Tree PE) !(Tree PE) -- op true
      deriving Show
 
+-- | same as 'prtEval2PIO' but runs passes in the Proxy
+prtEval2IO :: forall opts ip op i
+  . ( Refined2C opts ip op i
+    , Show (PP ip i)
+    ) => i
+  -> IO (Either String (Refined2 opts ip op i))
+prtEval2IO = prtEval2PIO Proxy
+
 -- | same as 'prtEval2P' but runs in IO
 prtEval2PIO :: forall opts ip op i proxy
   . ( Refined2C opts ip op i
@@ -460,7 +471,7 @@ prtEval2PIO :: forall opts ip op i proxy
   -> i
   -> IO (Either String (Refined2 opts ip op i))
 prtEval2PIO _ i = do
-  x <- eval2M i
+  x <- eval2M @_ @opts @ip @op i
   prt2IO @opts x
 
 prtEval2 :: forall opts ip op i
@@ -603,3 +614,6 @@ type family MakeR2 p where
 
 type family ReplaceOptT2 (o :: OptT) t where
   ReplaceOptT2 o (Refined2 _ ip op i) = Refined2 o ip op i
+
+type family AppendOptT2 (o :: OptT) t where
+  AppendOptT2 o (Refined2 o' ip op i) = Refined2 (o' ':# o) ip op i

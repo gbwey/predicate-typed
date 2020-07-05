@@ -67,12 +67,12 @@ instance ToJSON Person
 instance FromJSON Person
 
 data Person1 (opts :: OptT) = Person1 {
-       firstName1 :: NameR2 opts
-     , lastName1 :: NameR1 opts
-     , age1 :: AgeR opts
+       firstName1 :: NameR2 (opts ':# 'OMessage "person1 firstname1")
+     , lastName1 :: NameR1 (opts ':# 'OMessage "person1 lastname1")
+     , age1 :: AgeR (opts ':# 'OMessage "age1 errors")
      , likesPizza1 :: Bool
-     , date1 :: R3.DateTimeNR opts
-     , ipaddress1 :: R3.Ip4R opts
+     , date1 :: R3.DateTimeNR (opts ':# 'OMessage "person date1")
+     , ipaddress1 :: R3.Ip4R (opts ':# 'OMessage "ipaddress1 errors")
      } deriving (Show,Generic,Eq)
 
 instance OptTC opts => ToJSON (Person1 opts)

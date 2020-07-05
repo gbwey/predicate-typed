@@ -21,6 +21,7 @@
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE TypeOperators #-}
 {- |
      Simple refinement type with only one type and a predicate
 -}
@@ -59,6 +60,7 @@ module Predicate.Refined (
   , unsafeRefined'
 
   , type ReplaceOptT
+  , type AppendOptT
 
  ) where
 import Predicate.Core
@@ -455,3 +457,6 @@ prtImpl tt =
 
 type family ReplaceOptT (o :: OptT) t where
   ReplaceOptT o (Refined _ p a) = Refined o p a
+
+type family AppendOptT (o :: OptT) t where
+  AppendOptT o (Refined o' p a) = Refined (o' ':# o) p a

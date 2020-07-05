@@ -42,6 +42,7 @@ module Predicate.Refined3 (
  -- ** display results
   , prtEval3
   , prtEval3P
+  , prtEval3IO
   , prtEval3PIO
   , prt3IO
   , prt3Impl
@@ -87,6 +88,8 @@ module Predicate.Refined3 (
   , eval3X
 
   , type ReplaceOptT3
+  , type AppendOptT3
+
  ) where
 import Predicate.Refined
 import Predicate.Core
@@ -656,6 +659,15 @@ data RResults3 a b =
      | RTTrueT !a !(Tree PE) !(Tree PE) !b !(Tree PE)      -- Right a + Right True + Right b
      deriving Show
 
+-- | same as 'prtEval3PIO' but passes in the proxy
+prtEval3IO :: forall opts ip op fmt i
+  . ( Refined3C opts ip op fmt i
+    , Show (PP ip i)
+    , Show i)
+  => i
+  -> IO (Either String (Refined3 opts ip op fmt i))
+prtEval3IO = prtEval3PIO Proxy
+
 -- | same as 'prtEval3P' but runs in IO
 prtEval3PIO :: forall opts ip op fmt i proxy
   . ( Refined3C opts ip op fmt i
@@ -904,3 +916,6 @@ type RefinedEmulate (opts :: OptT) p a = Refined3 opts Id p Id a
 
 type family ReplaceOptT3 (o :: OptT) t where
   ReplaceOptT3 o (Refined3 _ ip op fmt i) = Refined3 o ip op fmt i
+
+type family AppendOptT3 (o :: OptT) t where
+  AppendOptT3 o (Refined3 o' ip op fmt i) = Refined3 (o' ':# o) ip op fmt i

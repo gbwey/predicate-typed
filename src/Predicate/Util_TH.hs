@@ -16,6 +16,7 @@ module Predicate.Util_TH
   (
   -- ** Refined
     refinedTH
+  , refinedTHIO
 
   -- ** Refined1
   , refined1TH
@@ -95,6 +96,20 @@ refinedTH i =
       let msg1 = if hasNoTree (getOptT @opts) then "" else "\n" ++ e ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
     Just r -> TH.TExp <$> TH.lift r
+
+refinedTHIO :: forall opts p i
+  . (TH.Lift i, RefinedC opts p i)
+  => i
+  -> TH.Q (TH.TExp (Refined opts p i))
+refinedTHIO i = do
+  let msg0 = "refinedTHIO"
+  ((bp,(e,top)),mr) <- TH.runIO (newRefined @opts @p i)
+  case mr of
+    Just a -> TH.TExp <$> TH.lift a
+    Nothing ->
+      let msg1 = if hasNoTree (getOptT @opts) then "" else "\n" ++ e ++ "\n"
+      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
+
 
 -- | creates a 'Refined1.Refined1' refinement type
 --
