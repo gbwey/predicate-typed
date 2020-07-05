@@ -88,6 +88,7 @@ module Predicate.Util (
   , OptT(..)
   , OptTC()
   , getOptT
+  , subopts
 
 -- ** formatting functions
   , show01
@@ -1437,3 +1438,8 @@ formatOMessage o suffix =
     [] -> mempty
     s@(_:_) -> "[" <> intercalate " | " s <> "]" <> suffix
 
+subopts :: POpts -> POpts
+subopts opts =
+  case oDebug opts of
+    DZero -> opts { oDebug = DLite }
+    _ -> opts

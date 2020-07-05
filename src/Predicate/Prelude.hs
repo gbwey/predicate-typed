@@ -6994,7 +6994,7 @@ instance (Show a
         qq <- eval (Proxy @prt) opts a
         pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
-          Right msgx -> mkNode opts (FailT msgx) (msg0 <> "(failed) [" <> msgx <> "]" <> show0 opts " | " a) (hh pp : [hh qq | isVerbose opts])
+          Right msg1 -> mkNode opts (FailT msg1) (msg0 <> "(failed) [" <> msg1 <> "]" <> show0 opts " | " a) (hh pp : [hh qq | isVerbose opts])
       Right True -> pure $ mkNode opts (PresentT a) (msg0 <> "(ok)" <> show0 opts " | " a) [hh pp]  -- dont show the guard message if successful
 
 
@@ -7024,10 +7024,7 @@ instance (Show a
   type PP (GuardSimple p) a = a
   eval _ opts a = do
     let msg0 = "GuardSimple"
-    let subopts = case oDebug opts of
-                    DZero -> opts { oDebug = DLite }
-                    _ -> opts
-    pp <- evalBool (Proxy @p) subopts a -- temporarily lift DZero to DLite so as not to lose the failure message
+    pp <- evalBool (Proxy @p) (subopts opts) a -- temporarily lift DZero to DLite so as not to lose the failure message
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right False ->
