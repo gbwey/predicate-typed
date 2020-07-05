@@ -77,7 +77,6 @@ module Predicate.Util (
   , colorMe
   , isVerbose
   , showBoolP
-  , type NoColorSlow
   , type Color1
   , type Color2
   , type Color3
@@ -192,7 +191,6 @@ import qualified Data.Tree.View as TV
 import Data.Tree
 import Data.Tree.Lens
 import Data.Proxy
---import Data.Char
 import Data.Data
 import System.Console.Pretty
 import GHC.Exts (Constraint)
@@ -387,6 +385,7 @@ data HOpts f =
         , oColor :: !(HKD f (String, PColor)) -- ^ color palette used
         , oMessage :: ![String] -- ^ messages associated with type
         , oRecursion :: !(HKD f Int) -- ^ max recursion
+        , oOther :: !(HKD f (Color, Color)) -- ^ other message effects
         , oNoColor :: !(HKD f Bool) -- ^ no colors
         }
 
@@ -396,6 +395,7 @@ deriving instance
   , Show (HKD f Disp)
   , Show (HKD f (String, PColor))
   , Show (HKD f Bool)
+  , Show (HKD f (Color, Color))
   ) => Show (HOpts f)
 
 reifyOpts :: HOpts Last -> HOpts Identity
@@ -407,6 +407,8 @@ reifyOpts h =
          else fromMaybe (oColor defOpts) (getLast (oColor h)))
         (oMessage defOpts <> oMessage h)
         (fromMaybe (oRecursion defOpts) (getLast (oRecursion h)))
+        (if fromMaybe (oNoColor defOpts) (getLast (oNoColor h)) then otherDef
+         else fromMaybe (oOther defOpts) (getLast (oOther h)))
         (fromMaybe (oNoColor defOpts) (getLast (oNoColor h)))
 
 setWidth :: Int -> POptsL
@@ -417,6 +419,9 @@ setMessage s = mempty { oMessage = pure s }
 
 setRecursion :: Int -> POptsL
 setRecursion i = mempty { oRecursion = pure i }
+
+setOther :: Color -> Color -> POptsL
+setOther c1 c2 = mempty { oOther = pure (c1, c2) }
 
 setNoColor :: Bool -> POptsL
 setNoColor b = mempty { oNoColor = pure b }
@@ -449,10 +454,18 @@ setDebug d =
 type POptsL = HOpts Last
 
 instance Monoid (HOpts Last) where
-  mempty = HOpts mempty mempty mempty mempty mempty mempty mempty
+  mempty = HOpts mempty mempty mempty mempty mempty mempty mempty mempty
 
 instance Semigroup (HOpts Last) where
-  HOpts a b c d e f g <> HOpts a' b' c' d' e' f' g' = HOpts (a <> a') (b <> b') (c <> c') (d <> d') (e <> e') (f <> f') (g <> g')
+  HOpts a b c d e f g h <> HOpts a' b' c' d' e' f' g' h'
+     = HOpts (a <> a')
+             (b <> b')
+             (c <> c')
+             (d <> d')
+             (e <> e')
+             (f <> f')
+             (g <> g')
+             (h <> h')
 
 --seqPOptsM :: HOpts Last -> Maybe (HOpts Identity)
 --seqPOptsM h = coerce (HOpts <$> oWidth h <*> oDebug h <*> oDisp h <*> oColor h)
@@ -470,8 +483,12 @@ defOpts = HOpts
     , oColor = colorDef
     , oMessage = mempty
     , oRecursion = 100
+    , oOther = otherDef
     , oNoColor = False
     }
+
+otherDef :: (Color, Color)
+otherDef = (Default, Default)
 
 nocolor, colorDef :: (String, PColor)
 nocolor = ("nocolor", PColor $ flip const)
@@ -493,16 +510,10 @@ markBoundary :: POpts -> String -> String
 markBoundary o =
   if hasNoColor o then id else coerce (snd (oColor o)) PresentP
 
--- | color palettes
---
--- italics dont work but underline does
-
 hasNoColor :: POpts -> Bool
 hasNoColor = oNoColor
 
-
 -- | color palettes
-type NoColorSlow = 'OColor "nocolor" 'Default 'Default 'Default 'Default 'Default 'Default 'Default 'Default
 type Color1 = 'OColor "color1" 'Default 'Blue 'Default 'Red 'Black 'Cyan 'Black 'Yellow
 type Color2 = 'OColor "color2" 'Default 'Magenta 'Default 'Red 'Black 'White 'Black 'Yellow
 type Color3 = 'OColor "color3" 'Default 'Blue 'Red 'Default 'White 'Default 'Black 'Yellow
@@ -1279,6 +1290,9 @@ data OptT =
   | OWidth !Nat           -- ^ set display width
   | OMessage !Symbol      -- ^ set text to add context to a failure message for refined types
   | ORecursion !Nat       -- ^ set recursion limit eg for regex
+  | OOther                -- ^ set effects for messages
+     !Color   -- ^ set foreground color
+     !Color   -- ^ set background color
   | OEmpty                -- ^ mempty
   | !OptT :# !OptT        -- ^ mappend
   | OColor    -- ^ set color palette
@@ -1318,6 +1332,7 @@ instance Show OptT where
             OWidth _n -> "OWidth"
             OMessage _s -> "OMessage"
             ORecursion _n -> "ORecursion"
+            OOther _c1 _c2 -> "OOther"
             OEmpty -> "OEmpty"
             a :# b -> show a ++ " ':# " ++ show b
             OColor _s _c1 _c2 _c3 _c4 _c5 _c6 _c7 _c8 -> "OColor"
@@ -1351,6 +1366,8 @@ instance KnownSymbol s => OptTC ('OMessage s) where
    getOptT' = setMessage (symb @s)
 instance KnownNat n => OptTC ('ORecursion n) where
    getOptT' = setRecursion (nat @n)
+instance (GetColor c1, GetColor c2) => OptTC ('OOther c1 c2) where
+   getOptT' = setOther (getColor @c1) (getColor @c2)
 instance OptTC 'OEmpty where
    getOptT' = mempty
 instance (OptTC a, OptTC b) => OptTC (a ':# b) where
@@ -1436,10 +1453,15 @@ formatOMessage :: POpts -> String -> String
 formatOMessage o suffix =
   case oMessage o of
     [] -> mempty
-    s@(_:_) -> "[" <> intercalate " | " s <> "]" <> suffix
+    s@(_:_) -> setOtherEffects o (intercalate " | " s) <> suffix
 
 subopts :: POpts -> POpts
 subopts opts =
   case oDebug opts of
     DZero -> opts { oDebug = DLite }
     _ -> opts
+
+setOtherEffects :: POpts -> String -> String
+setOtherEffects o =
+  if oNoColor o then id
+  else let (c1,c2) = oOther o in color c1 . bgColor c2
