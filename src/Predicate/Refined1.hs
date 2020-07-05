@@ -114,7 +114,6 @@ import Data.Char (isSpace)
 import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
-import Data.List (intercalate)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -196,7 +195,7 @@ unsafeRefined1' :: forall opts ip op fmt i
                 -> Refined1 opts ip op fmt i
 unsafeRefined1' i =
   let (ret,mr) = eval1 @opts @ip @op @fmt i
-  in fromMaybe (error $ show (prt1Impl @opts ret)) mr
+  in fromMaybe (error $ show (prt1Impl (getOptT @opts) ret)) mr
 
 -- | directly load values into 'Refined1' without any checking
 unsafeRefined1 :: forall opts ip op fmt i . PP ip i -> Refined1 opts ip op fmt i
@@ -220,7 +219,7 @@ deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Re
 instance (Refined1C opts ip op fmt String, Show (PP ip String)) => IsString (Refined1 opts ip op fmt String) where
   fromString s =
     let (ret,mr) = eval1 @opts @ip @op @fmt s
-    in fromMaybe (error $ "Refined1(fromString):" ++ show (prt1Impl @opts ret)) mr
+    in fromMaybe (error $ "Refined1(fromString):" ++ show (prt1Impl (getOptT @opts) ret)) mr
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined1'
@@ -329,7 +328,7 @@ instance (Show ( PP fmt (PP ip i))
                   i <- parseJSON @i z
                   let (ret,mr) = eval1 @opts @ip @op @fmt i
                   case mr of
-                    Nothing -> fail $ "Refined1:" ++ show (prt1Impl @opts ret)
+                    Nothing -> fail $ "Refined1:" ++ show (prt1Impl (getOptT @opts) ret)
                     Just r -> return r
 
 {-
@@ -403,7 +402,7 @@ instance ( Show (PP fmt (PP ip i))
           i <- B.get @i
           let (ret,mr) = eval1 @opts @ip @op @fmt i
           case mr of
-            Nothing -> fail $ "Refined1:" ++ show (prt1Impl @opts ret)
+            Nothing -> fail $ "Refined1:" ++ show (prt1Impl (getOptT @opts) ret)
             Just r -> return r
   put (Refined1 x) =
       let ss = runIdentity $ eval (Proxy @fmt) (getOptT @opts) x
@@ -568,7 +567,7 @@ newRefined1TPImpl :: forall n m opts ip op fmt i proxy
    -> RefinedT m (Refined1 opts ip op fmt i)
 newRefined1TPImpl f _ i = do
   (ret,mr) <- f $ eval1M i
-  let m1 = prt1Impl @opts ret
+  let m1 = prt1Impl (getOptT @opts) ret
   tell [m1Long m1]
   case mr of
     Nothing -> throwError $ m1Desc m1 <> " | " <> m1Short m1
@@ -586,7 +585,7 @@ newRefined1TPSkipIPImpl :: forall n m opts ip op fmt i proxy
    -> RefinedT m (Refined1 opts ip op fmt i)
 newRefined1TPSkipIPImpl f _ a = do
   (ret,mr) <- f $ eval1MSkip a
-  let m1 = prt1Impl @opts ret
+  let m1 = prt1Impl (getOptT @opts) ret
   tell [m1Long m1]
   case mr of
     Nothing -> throwError $ m1Desc m1 <> " | " <> m1Short m1
@@ -635,12 +634,13 @@ rapply1P :: forall m opts ip op fmt i proxy .
   -> RefinedT m (Refined1 opts ip op fmt i)
   -> RefinedT m (Refined1 opts ip op fmt i)
 rapply1P p f ma mb = do
-  tell [markBoundary @opts "=== a ==="]
+  let opts = getOptT @opts
+  tell [markBoundary opts "=== a ==="]
   Refined1 x <- ma
-  tell [markBoundary @opts "=== b ==="]
+  tell [markBoundary opts "=== b ==="]
   Refined1 y <- mb
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  tell [markBoundary @opts "=== a `op` b ==="]
+  tell [markBoundary opts "=== a `op` b ==="]
   Refined1 a <- newRefined1TPSkipIPImpl (return . runIdentity) p (f x y)
   return (Refined1 a)
 
@@ -693,7 +693,7 @@ prtEval1P :: forall opts ip op fmt i proxy
   -> Either Msg1 (Refined1 opts ip op fmt i)
 prtEval1P _ i =
   let (ret,mr) = eval1 i
-  in maybe (Left $ prt1Impl @opts ret) Right mr
+  in maybe (Left $ prt1Impl (getOptT @opts) ret) Right mr
 
 -- | create a Refined1 value using a 4-tuple proxy (see 'mkProxy1')
 --
@@ -769,8 +769,9 @@ eval1MQuick a = do
 
 prt1IO :: forall opts a b r . (OptTC opts, Show a, Show b) => (RResults1 a b, Maybe r) -> IO (Either String r)
 prt1IO (ret,mr) = do
-  let m1 = prt1Impl @opts ret
-  unless (hasNoTree (getOptT @opts)) $ putStrLn $ m1Long m1
+  let o = getOptT @opts
+  let m1 = prt1Impl o ret
+  unless (hasNoTree o) $ putStrLn $ m1Long m1
   return $ maybe (Left (m1Desc m1 <> " | " <> m1Short m1)) Right mr
 
 data Msg1 = Msg1 { m1Desc :: !String
@@ -781,15 +782,12 @@ data Msg1 = Msg1 { m1Desc :: !String
 instance Show Msg1 where
   show (Msg1 a b c) = a <> " | " <> b <> (if null c then "" else "\n" <> c)
 
-prt1Impl :: forall opts a b . (OptTC opts, Show a, Show b)
-  => RResults1 a b
+prt1Impl :: forall a b . (Show a, Show b)
+  => POpts
+  -> RResults1 a b
   -> Msg1
-prt1Impl v =
-  let opts = getOptT @opts
-      outmsg msg = "\n*** " <> specialmsg <> msg <> " ***\n\n"
-      specialmsg = case oMessage opts of
-                     [] -> ""
-                     s -> "[" <> intercalate " | " s <> "] "
+prt1Impl opts v =
+  let outmsg msg = "\n*** " <> formatOMessage opts " " <> msg <> " ***\n\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg1 m n r | hasNoTree opts = Msg1 m n ""
                    | otherwise = Msg1 m n r

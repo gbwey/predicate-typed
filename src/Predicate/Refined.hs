@@ -85,7 +85,6 @@ import Data.Maybe
 import Data.Hashable (Hashable(..))
 import GHC.Stack
 import Data.Tree (Tree)
-import Data.List (intercalate)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -269,11 +268,12 @@ rapply :: forall m opts p a . (RefinedC opts p a, Monad m)
   -> RefinedT m (Refined opts p a)
   -> RefinedT m (Refined opts p a)
 rapply f ma mb = do
-  tell [markBoundary @opts "=== a ==="]
+  let opts = getOptT @opts
+  tell [markBoundary opts "=== a ==="]
   Refined x <- ma
-  tell [markBoundary @opts "=== b ==="]
+  tell [markBoundary opts "=== b ==="]
   Refined y <- mb
-  tell [markBoundary @opts "=== a `op` b ==="]
+  tell [markBoundary opts "=== a `op` b ==="]
   newRefinedT @m @opts @p (f x y)
 
 -- | takes two values and lifts them into 'RefinedT' and then applies the binary operation
@@ -332,7 +332,7 @@ prtRefinedIO :: forall opts p a
 prtRefinedIO a = do
   let o = getOptT @opts
   tt <- evalBool (Proxy @p) o a
-  let msg = (_tBool tt ^. boolT2P, prtImpl @opts (fromTT tt))
+  let msg = (_tBool tt ^. boolT2P, prtImpl o (fromTT tt))
   case oDebug o of
      DZero -> pure ()  -- putStrLn $ showBoolP opts (fst msg) <> " " <> topMessage tt
      DLite -> putStrLn $ showBoolP o (fst msg) <> " " <> topMessage tt
@@ -355,7 +355,7 @@ newRefined a = do
       ss = case oDebug o of
              DZero -> ("","")
              DLite -> ("",topMessage tt)
-             _ -> (prtImpl @opts (fromTT tt),topMessage tt)
+             _ -> (prtImpl o (fromTT tt),topMessage tt)
   pure $ ((rc,ss),) $ case getValueLR o "" tt [] of
        Right True -> Just (Refined a)
        _ -> Nothing
@@ -371,7 +371,7 @@ newRefinedTImpl :: forall opts p a n m
 newRefinedTImpl f a = do
   let o = getOptT @opts
   tt <- f $ evalBool (Proxy @p) o a
-  let msg = prtImpl @opts (fromTT tt)
+  let msg = prtImpl o (fromTT tt)
   tell [msg]
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
@@ -445,15 +445,11 @@ unsafeRefined' a =
       tt = runIdentity $ evalBool (Proxy @p) o a
   in case getValueLR o "" tt [] of
        Right True -> Refined a
-       _ -> error $ prtImpl @opts (fromTT tt)
+       _ -> error $ prtImpl o (fromTT tt)
 
-prtImpl :: forall opts . OptTC opts => Tree PE -> String
-prtImpl tt =
-  let o = getOptT @opts
-      specialmsg = case oMessage o of
-                     [] -> mempty
-                     s -> "[" <> intercalate " | " s <> "]\n"
-  in specialmsg <> prtTreePure o tt
+prtImpl :: POpts -> Tree PE -> String
+prtImpl o tt =
+  formatOMessage o "\n" <> prtTreePure o tt
 
 type family ReplaceOptT (o :: OptT) t where
   ReplaceOptT o (Refined _ p a) = Refined o p a

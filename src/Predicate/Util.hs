@@ -151,6 +151,7 @@ module Predicate.Util (
   , prtTree
   , prtTreePure
   , prettyRational
+  , formatOMessage
 
  -- ** boolean methods
   , (~>)
@@ -487,10 +488,9 @@ data Debug =
 isVerbose :: POpts -> Bool
 isVerbose = (DVerbose==) . oDebug
 
-markBoundary :: forall (opts :: OptT) . OptTC opts => String -> String
-markBoundary =
-  let o = getOptT @opts
-  in if hasNoColor o then id else coerce (snd (oColor o)) PresentP
+markBoundary :: POpts -> String -> String
+markBoundary o =
+  if hasNoColor o then id else coerce (snd (oColor o)) PresentP
 
 -- | color palettes
 --
@@ -1331,7 +1331,7 @@ instance Show OptT where
             OUB -> "OUB"
 
 infixr 6 :#
-{-
+{- type families/synonyms expand
 type OZ = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'ODebug 'DZero
 type OL = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'ODebug 'DLite
 type OAN = 'ODisp 'Ansi ':# 'ONoColor 'True
@@ -1340,13 +1340,20 @@ type OAB = 'ODisp 'Ansi ':# Color1
 type OU = 'ODisp 'Unicode ':# Color5
 type OUB = 'ODisp 'Unicode ':# Color1
 -}
-class OptTC (k :: OptT) where getOptT' :: POptsL
-instance GetDebug n => OptTC ('ODebug n) where getOptT' = setDebug (getDebug @n)
-instance KnownNat n => OptTC ('OWidth n) where getOptT' = setWidth (nat @n)
-instance KnownSymbol s => OptTC ('OMessage s) where getOptT' = setMessage (symb @s)
-instance KnownNat n => OptTC ('ORecursion n) where getOptT' = setRecursion (nat @n)
-instance OptTC 'OEmpty where getOptT' = mempty
-instance (OptTC a, OptTC b) => OptTC (a ':# b) where getOptT' = getOptT' @a <> getOptT' @b
+class OptTC (k :: OptT) where
+   getOptT' :: POptsL
+instance GetDebug n => OptTC ('ODebug n) where
+   getOptT' = setDebug (getDebug @n)
+instance KnownNat n => OptTC ('OWidth n) where
+   getOptT' = setWidth (nat @n)
+instance KnownSymbol s => OptTC ('OMessage s) where
+   getOptT' = setMessage (symb @s)
+instance KnownNat n => OptTC ('ORecursion n) where
+   getOptT' = setRecursion (nat @n)
+instance OptTC 'OEmpty where
+   getOptT' = mempty
+instance (OptTC a, OptTC b) => OptTC (a ':# b) where
+   getOptT' = getOptT' @a <> getOptT' @b
 instance ( KnownSymbol s
          , GetColor c1
          , GetColor c2
@@ -1367,15 +1374,24 @@ instance ( KnownSymbol s
         (getColor @c6)
         (getColor @c7)
         (getColor @c8)
-instance GetBool b => OptTC ('ONoColor b) where getOptT' = setNoColor (getBool @b)
-instance GetDisp b => OptTC ('ODisp b) where getOptT' = setDisp (getDisp @b)
-instance OptTC 'OZ where getOptT' = setDisp Ansi <> setNoColor True <> setDebug DZero
-instance OptTC 'OL where getOptT' = setDisp Ansi <> setNoColor True <> setDebug DLite
-instance OptTC 'OAN where getOptT' = setDisp Ansi <> setNoColor True
-instance OptTC 'OA where getOptT' = setDisp Ansi <> getOptT' @Color5
-instance OptTC 'OAB where getOptT' = setDisp Ansi <> getOptT' @Color1
-instance OptTC 'OU where getOptT' = setDisp Unicode <> getOptT' @Color5
-instance OptTC 'OUB where getOptT' = setDisp Unicode <> getOptT' @Color1
+instance GetBool b => OptTC ('ONoColor b) where
+   getOptT' = setNoColor (getBool @b)
+instance GetDisp b => OptTC ('ODisp b) where
+   getOptT' = setDisp (getDisp @b)
+instance OptTC 'OZ where
+   getOptT' = setDisp Ansi <> setNoColor True <> setDebug DZero
+instance OptTC 'OL where
+   getOptT' = setDisp Ansi <> setNoColor True <> setDebug DLite
+instance OptTC 'OAN where
+   getOptT' = setDisp Ansi <> setNoColor True
+instance OptTC 'OA where
+   getOptT' = setDisp Ansi <> getOptT' @Color5
+instance OptTC 'OAB where
+   getOptT' = setDisp Ansi <> getOptT' @Color1
+instance OptTC 'OU where
+   getOptT' = setDisp Unicode <> getOptT' @Color5
+instance OptTC 'OUB where
+   getOptT' = setDisp Unicode <> getOptT' @Color1
 
 -- | convert typelevel options to 'POpts'
 --
@@ -1414,4 +1430,10 @@ chkSize opts msg0 xs hhs =
   in case splitAt mx (toList xs) of
     (_,[]) -> Right ()
     (_,_:_) -> Left $ mkNode opts (FailT (msg0 <> " list size exceeded")) (msg0 <> " list size exceeded: max is " ++ show mx) hhs
+
+formatOMessage :: POpts -> String -> String
+formatOMessage o suffix =
+  case oMessage o of
+    [] -> mempty
+    s@(_:_) -> "[" <> intercalate " | " s <> "]" <> suffix
 

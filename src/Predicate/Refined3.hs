@@ -113,7 +113,6 @@ import Data.Char (isSpace)
 import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
-import Data.List (intercalate)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -122,7 +121,7 @@ import Data.List (intercalate)
 -- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
 
--- | Like 'Refined2' but reconstructs the output value to a standardized format
+-- | Like 'Refined2' but additionally reconstructs the output value to a standardized format
 --
 --   * @opts@ are the display options
 --   * @ip@ converts @i@ to @PP ip i@ which is the internal type and stored in 'r3In'
@@ -192,7 +191,7 @@ unsafeRefined3' :: forall opts ip op fmt i
 unsafeRefined3' i =
   let (ret,mr) = eval3 @opts @ip @op @fmt i
   in case mr of
-       Nothing -> error $ show (prt3Impl @opts ret)
+       Nothing -> error $ show (prt3Impl (getOptT @opts) ret)
        Just r -> r
 
 -- | directly load values into 'Refined3' without any checking
@@ -219,7 +218,7 @@ instance (Refined3C opts ip op fmt String, Show (PP ip String))
   fromString s =
     let (ret,mr) = eval3 @opts @ip @op @fmt s
     in case mr of
-         Nothing -> error $ "Refined3(fromString):" ++ show (prt3Impl @opts ret)
+         Nothing -> error $ "Refined3(fromString):" ++ show (prt3Impl (getOptT @opts) ret)
          Just r -> r
 
 -- read instance from -ddump-deriv
@@ -321,7 +320,7 @@ instance (Show (PP fmt (PP ip i))
                   i <- parseJSON @i z
                   let (ret,mr) = eval3 @opts @ip @op @fmt i
                   case mr of
-                    Nothing -> fail $ "Refined3:" ++ show (prt3Impl @opts ret)
+                    Nothing -> fail $ "Refined3:" ++ show (prt3Impl (getOptT @opts) ret)
                     Just r -> return r
 
 {-
@@ -395,7 +394,7 @@ instance ( Show (PP fmt (PP ip i))
           i <- B.get @i
           let (ret,mr) = eval3 @opts @ip @op @fmt i
           case mr of
-            Nothing -> fail $ "Refined3:" ++ show (prt3Impl @opts ret)
+            Nothing -> fail $ "Refined3:" ++ show (prt3Impl (getOptT @opts) ret)
             Just r -> return r
   put (Refined3 _ r) = B.put @i r
 
@@ -572,7 +571,7 @@ newRefined3TPImpl :: forall n m opts ip op fmt i proxy
    -> RefinedT m (Refined3 opts ip op fmt i)
 newRefined3TPImpl f _ i = do
   (ret,mr) <- f $ eval3M  i
-  let m3 = prt3Impl @opts ret
+  let m3 = prt3Impl (getOptT @opts) ret
   tell [m3Long m3]
   case mr of
     Nothing -> throwError $ m3Desc m3 <> " | " <> m3Short m3
@@ -591,7 +590,7 @@ newRefined3TPSkipIPImpl :: forall n m opts ip op fmt i proxy
    -> RefinedT m (Refined3 opts ip op fmt i)
 newRefined3TPSkipIPImpl f _ a = do
   (ret,mr) <- f $ eval3MSkip a
-  let m3 = prt3Impl @opts ret
+  let m3 = prt3Impl (getOptT @opts) ret
   tell [m3Long m3]
   case mr of
     Nothing -> throwError $ m3Desc m3 <> " | " <> m3Short m3
@@ -641,12 +640,13 @@ rapply3P :: forall m opts ip op fmt i proxy .
   -> RefinedT m (Refined3 opts ip op fmt i)
   -> RefinedT m (Refined3 opts ip op fmt i)
 rapply3P p f ma mb = do
-  tell [markBoundary @opts "=== a ==="]
+  let opts = getOptT @opts
+  tell [markBoundary opts "=== a ==="]
   Refined3 x _ <- ma
-  tell [markBoundary @opts "=== b ==="]
+  tell [markBoundary opts "=== b ==="]
   Refined3 y _ <- mb
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  tell [markBoundary @opts "=== a `op` b ==="]
+  tell [markBoundary opts "=== a `op` b ==="]
   Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) p (f x y)
   return (Refined3 a b)
 
@@ -699,7 +699,7 @@ prtEval3P :: forall opts ip op fmt i proxy
   -> Either Msg3 (Refined3 opts ip op fmt i)
 prtEval3P _ i =
   let (ret,mr) = eval3 i
-  in maybe (Left $ prt3Impl @opts ret) Right mr
+  in maybe (Left $ prt3Impl (getOptT @opts) ret) Right mr
 
 -- | same as 'eval3P' but can pass the parameters individually using type application
 eval3 :: forall opts ip op fmt i
@@ -785,7 +785,7 @@ eval3MQuick a = do
 
 prt3IO :: forall opts a b r . (OptTC opts, Show a, Show b) => (RResults3 a b, Maybe r) -> IO (Either String r)
 prt3IO (ret,mr) = do
-  let m3 = prt3Impl @opts ret
+  let m3 = prt3Impl (getOptT @opts) ret
   unless (hasNoTree (getOptT @opts)) $ putStrLn $ m3Long m3
   return $ maybe (Left (m3Desc m3 <> " | " <> m3Short m3)) Right mr
 
@@ -797,15 +797,12 @@ data Msg3 = Msg3 { m3Desc :: !String
 instance Show Msg3 where
   show (Msg3 a b c) = a <> " | " <> b <> (if null c then "" else "\n" <> c)
 
-prt3Impl :: forall opts a b . (OptTC opts, Show a, Show b)
-  => RResults3 a b
+prt3Impl :: forall a b . (Show a, Show b)
+  => POpts
+  -> RResults3 a b
   -> Msg3
-prt3Impl v =
-  let opts = getOptT @opts
-      outmsg msg = "\n*** " <> specialmsg <> msg <> " ***\n\n"
-      specialmsg = case oMessage opts of
-                     [] -> ""
-                     s -> "[" <> intercalate " | " s <> "] "
+prt3Impl opts v =
+  let outmsg msg = "\n*** " <> formatOMessage opts " " <> msg <> " ***\n\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg3 m n r | hasNoTree opts = Msg3 m n ""
                    | otherwise = Msg3 m n r

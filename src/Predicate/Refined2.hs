@@ -90,7 +90,6 @@ import Data.Char (isSpace)
 import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
-import Data.List (intercalate)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -150,7 +149,7 @@ unsafeRefined2' :: forall opts ip op i
                 -> Refined2 opts ip op i
 unsafeRefined2' i =
   let (ret,mr) = eval2 @opts @ip @op i
-  in fromMaybe (error $ show (prt2Impl @opts ret)) mr
+  in fromMaybe (error $ show (prt2Impl (getOptT @opts) ret)) mr
 
 -- | directly load values into 'Refined2' without any checking
 unsafeRefined2 :: forall opts ip op i . PP ip i -> i -> Refined2 opts ip op i
@@ -174,7 +173,7 @@ instance ( s ~ String
          ) => IsString (Refined2 opts ip op s) where
   fromString s =
     let (ret,mr) = eval2 @opts @ip @op s
-    in fromMaybe (error $ "Refined2(fromString):" ++ show (prt2Impl @opts ret)) mr
+    in fromMaybe (error $ "Refined2(fromString):" ++ show (prt2Impl (getOptT @opts) ret)) mr
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined2'
@@ -274,7 +273,7 @@ instance ( Show i
                   i <- parseJSON @i z
                   let (ret,mr) = eval2 @opts @ip @op i
                   case mr of
-                    Nothing -> fail $ "Refined2:" ++ show (prt2Impl @opts ret)
+                    Nothing -> fail $ "Refined2:" ++ show (prt2Impl (getOptT @opts) ret)
                     Just r -> return r
 
 
@@ -322,7 +321,7 @@ instance ( Show i
           i <- B.get @i
           let (ret,mr) = eval2 @opts @ip @op i
           case mr of
-            Nothing -> fail $ "Refined2:" ++ show (prt2Impl @opts ret)
+            Nothing -> fail $ "Refined2:" ++ show (prt2Impl (getOptT @opts) ret)
             Just r -> return r
   put (Refined2 _ r) = B.put @i r
 
@@ -441,7 +440,7 @@ newRefined2TImpl :: forall n m opts ip op i
    -> RefinedT m (Refined2 opts ip op i)
 newRefined2TImpl f i = do
   (ret,mr) <- f $ eval2M i
-  let m2 = prt2Impl @opts ret
+  let m2 = prt2Impl (getOptT @opts) ret
   tell [m2Long m2]
   case mr of
     Nothing -> throwError $ m2Desc m2 <> " | " <> m2Short m2
@@ -489,7 +488,7 @@ prtEval2P :: forall opts ip op i
     -> Either Msg2 (Refined2 opts ip op i)
 prtEval2P _ i =
   let (ret,mr) = eval2 i
-  in maybe (Left $ prt2Impl @opts ret) Right mr
+  in maybe (Left $ prt2Impl (getOptT @opts) ret) Right mr
 
 eval2P :: forall opts ip op i
   . ( Refined2C opts ip op i
@@ -517,7 +516,7 @@ eval2M i = do
   ll <- eval (Proxy @ip) o i
   case getValAndPE ll of
    (Right a, t1) -> do
-     rr <- evalBool (Proxy @op) (getOptT @opts) a
+     rr <- evalBool (Proxy @op) o a
      pure $ case getValAndPE rr of
       (Right True,t2) -> (RTTrue a t1 t2, Just (Refined2 a i))
       (Right False,t2) -> (RTFalse a t1 t2, Nothing)
@@ -526,8 +525,9 @@ eval2M i = do
 
 prt2IO :: forall opts a r . (OptTC opts, Show a) => (RResults2 a, Maybe r) -> IO (Either String r)
 prt2IO (ret,mr) = do
-  let m2 = prt2Impl @opts ret
-  unless (hasNoTree (getOptT @opts)) $ putStrLn $ m2Long m2
+  let m2 = prt2Impl o ret
+      o = getOptT @opts
+  unless (hasNoTree o) $ putStrLn $ m2Long m2
   return $ maybe (Left (m2Desc m2 <> " | " <> m2Short m2)) Right mr
 
 data Msg2 = Msg2 { m2Desc :: !String
@@ -538,15 +538,12 @@ data Msg2 = Msg2 { m2Desc :: !String
 instance Show Msg2 where
   show (Msg2 a b c) = a <> " | " <> b <> (if null c then "" else "\n" <> c)
 
-prt2Impl :: forall opts a . (OptTC opts, Show a)
-  => RResults2 a
+prt2Impl :: forall a . Show a
+  => POpts
+  -> RResults2 a
   -> Msg2
-prt2Impl v =
-  let opts = getOptT @opts
-      outmsg msg = "\n*** " <> specialmsg <> msg <> " ***\n\n"
-      specialmsg = case oMessage opts of
-                     [] -> ""
-                     s -> "[" <> intercalate " | " s <> "] "
+prt2Impl opts v =
+  let outmsg msg = "\n*** " <> formatOMessage opts " " <> msg <> " ***\n\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg2 m n r | hasNoTree opts = Msg2 m n ""
                    | otherwise = Msg2 m n r

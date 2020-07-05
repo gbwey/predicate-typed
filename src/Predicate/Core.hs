@@ -55,7 +55,6 @@ import Data.Typeable
 import Data.Kind (Type)
 import Data.These (These(..))
 import Data.Functor.Identity
-import Data.List (intercalate)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -714,39 +713,23 @@ run a = do
   let opts = getOptT @opts
   pp <- eval (Proxy @p) opts a
   let r = pp ^. tBool
-  putStr $ prtTreeX @opts pp
+  putStr $ prtTree' opts pp
   return r
 
-{-
-peWith :: forall p a
-        . (Show (PP p a), P p a)
-        => POpts
-        -> a
-        -> IO (BoolT (PP p a))
-peWith opts a = do
-  pp <- eval (Proxy @p) opts a
+prtTree' :: Show x => POpts -> TT x -> String
+prtTree' opts pp =
   let r = pp ^. tBool
-  putStr $ prtTreeX opts pp
-  return r
--}
-prtTreeX :: forall opts x . (OptTC opts, Show x) => TT x -> String
-prtTreeX pp =
-  let r = pp ^. tBool
-      opts = getOptT @opts
-      specialmsg = case oMessage opts of
-                     [] -> mempty
-                     s -> markBoundary @opts (intercalate " | " s <> "\n")
-  in case (hasNoTree opts, oDebug opts) of
-       (True,DZero) -> ""
-       (True,_) ->
+  in case oDebug opts of
+       DZero -> ""
+       DLite ->
           let f = colorMe opts (r ^. boolT2P)
-              tm = if oDebug opts == DZero then "" else topMessage pp
-          in (<>"\n") $ case r of
+              tm = formatOMessage opts " " <> topMessage pp
+          in (<> "\n") $ case r of
                FailT e -> f "Error" <> " " <> e
                TrueT -> f "True" <> " " <> tm
                FalseT -> f "False" <> " " <> tm
                PresentT x -> f "Present" <> " " <> show x <> " " <> tm
-       (False,_) -> specialmsg <> prtTreePure opts (fromTT pp)
+       _ -> formatOMessage opts "\n" <> prtTreePure opts (fromTT pp)
 
 runPQ :: (P p a, P q a, MonadEval m)
    => String

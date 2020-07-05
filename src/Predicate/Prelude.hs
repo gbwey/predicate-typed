@@ -7024,7 +7024,10 @@ instance (Show a
   type PP (GuardSimple p) a = a
   eval _ opts a = do
     let msg0 = "GuardSimple"
-    pp <- evalBool (Proxy @p) (if hasNoTree opts then getOptT @('ONoColor 'True) else opts) a -- to not lose the message in oZero/oLite mode we use non lite and then fix it up after
+    let subopts = case oDebug opts of
+                    DZero -> opts { oDebug = DLite }
+                    _ -> opts
+    pp <- evalBool (Proxy @p) subopts a -- temporarily lift DZero to DLite so as not to lose the failure message
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right False ->

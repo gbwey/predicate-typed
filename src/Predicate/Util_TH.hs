@@ -155,11 +155,12 @@ refined1TH :: forall opts ip op fmt i
   -> TH.Q (TH.TExp (Refined1 opts ip op fmt i))
 refined1TH i =
   let msg0 = "refined1TH"
+      o = getOptT @opts
       (ret,mr) = eval1 @opts @ip @op @fmt i
   in case mr of
     Nothing ->
-      let m1 = prt1Impl @opts ret
-          msg1 = if hasNoTree (getOptT @opts) then "" else m1Long m1 ++ "\n"
+      let m1 = prt1Impl o ret
+          msg1 = if hasNoTree o then "" else m1Long m1 ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m1Desc m1 <> " | " <> m1Short m1)
     Just r -> TH.TExp <$> TH.lift r
 
@@ -213,7 +214,7 @@ refined2TH i =
       (ret,mr) = eval2 @opts @ip @op i
   in case mr of
     Nothing ->
-      let m2 = prt2Impl @opts ret
+      let m2 = prt2Impl o ret
           msg1 = if hasNoTree o then "" else m2Long m2 ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m2Desc m2 <> " | " <> m2Short m2)
     Just r -> TH.TExp <$> TH.lift r
@@ -230,7 +231,7 @@ refined2THIO i = do
   x <- TH.runIO (eval2M @_ @opts @ip @op i)
   case x of
     (_, Just a) -> TH.TExp <$> TH.lift a
-    (ret, Nothing) -> fail $ show $ prt2Impl @opts ret
+    (ret, Nothing) -> fail $ show $ prt2Impl (getOptT @opts) ret
 
 -- | creates a 'Refined3.Refined3' refinement type
 --
@@ -281,8 +282,9 @@ refined3TH i =
       (ret,mr) = eval3 @opts @ip @op @fmt i
   in case mr of
     Nothing ->
-      let m3 = prt3Impl @opts ret
-          msg1 = if hasNoTree (getOptT @opts) then "" else m3Long m3 ++ "\n"
+      let m3 = prt3Impl o ret
+          o = getOptT @opts
+          msg1 = if hasNoTree o then "" else m3Long m3 ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m3Desc m3 <> " | " <> m3Short m3)
     Just r -> TH.TExp <$> TH.lift r
 
@@ -299,5 +301,5 @@ refined3THIO i = do
   x <- TH.runIO (eval3M @_ @opts @ip @op @fmt i)
   case x of
     (_, Just a) -> TH.TExp <$> TH.lift a
-    (ret, Nothing) -> fail $ show $ prt3Impl @opts ret
+    (ret, Nothing) -> fail $ show $ prt3Impl (getOptT @opts) ret
 

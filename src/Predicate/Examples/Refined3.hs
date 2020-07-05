@@ -102,6 +102,7 @@ module Predicate.Examples.Refined3 (
   , oknot
   , OkNot
   , OkNotR
+
    ) where
 import Predicate.Examples.Common
 import Predicate.Refined
@@ -426,5 +427,4 @@ readshow = mkProxy3
 
 readshow' :: Proxy (ReadShow' opts t p)
 readshow' = mkProxy3
-
 
