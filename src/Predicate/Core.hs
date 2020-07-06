@@ -463,7 +463,7 @@ instance (Show (PP p a), Show a, P p a) => P '[p] a where
     let msg0 = ""
     pure $ case getValueLR opts msg0 pp [] of
        Left e -> e
-       Right b -> mkNode opts (PresentT [b]) (show01 opts msg0 b a) [hh pp]
+       Right b -> mkNode opts (PresentT [b]) ("'" <> show0 opts "" [b] <> show1 opts " | " a) [hh pp]
 
 instance (Show (PP p a)
         , Show a
