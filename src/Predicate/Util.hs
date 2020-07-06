@@ -488,7 +488,7 @@ defOpts = HOpts
     }
 
 otherDef :: (Color, Color)
-otherDef = (Default, Default)
+otherDef = (Magenta, Default)
 
 nocolor, colorDef :: (String, PColor)
 nocolor = ("nocolor", PColor $ flip const)
@@ -1464,4 +1464,6 @@ subopts opts =
 setOtherEffects :: POpts -> String -> String
 setOtherEffects o =
   if oNoColor o then id
-  else let (c1,c2) = oOther o in color c1 . bgColor c2
+  else case oOther o of
+         (Default, Default) -> id
+         (c1,c2) -> color c1 . bgColor c2

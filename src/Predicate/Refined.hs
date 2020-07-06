@@ -354,7 +354,7 @@ newRefined a = do
   let rc = _tBool tt ^. boolT2P
       ss = case oDebug o of
              DZero -> ("","")
-             DLite -> ("",topMessage tt)
+             DLite -> ("",formatOMessage o " " <> topMessage tt)
              _ -> (prtImpl o (fromTT tt),topMessage tt)
   pure $ ((rc,ss),) $ case getValueLR o "" tt [] of
        Right True -> Just (Refined a)

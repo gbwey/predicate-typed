@@ -3549,7 +3549,7 @@ instance (P p a
           Left e -> e
           Right q ->
                 let hhs = [hh pp, hh qq]
-                in if q < 0 then mkNode opts (FailT (msg0 <> " negative exponent")) (msg0 <> " negative exponent") hhs
+                in if q < 0 then mkNode opts (FailT (msg0 <> " negative exponent")) msg0 hhs
                    else let d = p ^ q
                         in mkNode opts (PresentT d) (show p <> " ^ " <> show q <> " = " <> show d) hhs
 
@@ -3576,8 +3576,8 @@ instance (PP p a ~ PP q a
       Left e -> e
       Right (p,q,pp,qq) ->
          let hhs = [hh pp, hh qq]
-         in if q < 0 then mkNode opts (FailT (msg0 <> " negative exponent")) (msg0 <> " negative exponent") hhs
-            else if p == 0 && q == 0 then mkNode opts (FailT (msg0 <> " zero/zero")) (msg0 <> " zero/zero") hhs
+         in if q < 0 then mkNode opts (FailT (msg0 <> " negative exponent")) msg0 hhs
+            else if p == 0 && q == 0 then mkNode opts (FailT (msg0 <> " zero/zero")) msg0 hhs
             else let d = p ** q
                 in mkNode opts (PresentT d) (show p <> " ** " <> show q <> " = " <> show d) hhs
 
@@ -6020,7 +6020,7 @@ instance (PP p (b,a) ~ b
           Right () -> do
             let msg1 = msg0  -- <> show0 opts " " q <> show0 opts " " r
                 ff i b as' rs
-                   | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) (msg1 <> " i=" <> showIndex i <> " (b,as')=" <> show (b,as')) [])
+                   | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) (msg1 <> " (b,as')=" <> show (b,as')) [])
                    | otherwise =
                        case as' of
                          [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (PresentT q) (msg1 <> "(done)") [])], Right ())
@@ -6094,7 +6094,7 @@ instance (PP q a ~ s
       Left e -> pure e
       Right q -> do
         let msg1 = msg0 <> show0 opts " " q
-            ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) (msg1 <> " i=" <> showIndex i <> " s=" <> show s) [])
+            ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) (msg1 <> " s=" <> show s) [])
                       | otherwise = do
                               pp :: TT (PP p s) <- eval (Proxy @p) opts s
                               case getValueLR opts (msg1 <> " i=" <> showIndex i <> " s=" <> show s) pp [] of
@@ -6497,7 +6497,7 @@ instance (PP p a ~ PP q a
       Right (p,q,pp,qq) ->
          let hhs = [hh pp, hh qq]
          in case q of
-              0 -> mkNode opts (FailT (msg0 <> " zero denominator")) (msg0 <> " zero denominator") hhs
+              0 -> mkNode opts (FailT (msg0 <> " zero denominator")) msg0 hhs
               _ -> let d = p `div` q
                    in mkNode opts (PresentT d) (show p <> " `div` " <> show q <> " = " <> show d) hhs
 
@@ -6526,7 +6526,7 @@ instance (PP p a ~ PP q a
       Right (p,q,pp,qq) ->
          let hhs = [hh pp, hh qq]
          in case q of
-              0 -> mkNode opts (FailT (msg0 <> " zero denominator")) (msg0 <> " zero denominator") hhs
+              0 -> mkNode opts (FailT (msg0 <> " zero denominator")) msg0 hhs
               _ -> let d = p `mod` q
                    in mkNode opts (PresentT d) (show p <> " `mod` " <> show q <> " = " <> show d) hhs
 
@@ -6564,7 +6564,7 @@ instance (PP p a ~ PP q a
       Right (p,q,pp,qq) ->
         let hhs = [hh pp, hh qq]
         in case q of
-             0 -> mkNode opts (FailT (msg0 <> " zero denominator")) (msg0 <> " zero denominator") hhs
+             0 -> mkNode opts (FailT (msg0 <> " zero denominator")) msg0 hhs
              _ -> let d = p `divMod` q
                   in mkNode opts (PresentT d) (show p <> " `divMod` " <> show q <> " = " <> show d) hhs
 
@@ -6602,7 +6602,7 @@ instance (PP p a ~ PP q a
       Right (p,q,pp,qq) ->
         let hhs = [hh pp, hh qq]
         in case q of
-             0 -> mkNode opts (FailT (msg0 <> " zero denominator")) (msg0 <> " zero denominator") hhs
+             0 -> mkNode opts (FailT (msg0 <> " zero denominator")) msg0 hhs
              _ -> let d = p `quotRem` q
                   in mkNode opts (PresentT d) (show p <> " `quotRem` " <> show q <> " = " <> show d) hhs
 
@@ -7892,7 +7892,7 @@ instance (PP l a ~ x
 -- PresentT [(1,'a'),(99,'b'),(99,'c')]
 --
 -- >>> pl @(ZipL 99 '[1,2,3] "ab") ()
--- Error ZipL(3,2) rhs would be truncated
+-- Error ZipL(3,2) rhs would be truncated (ZipL(3,2) | p=[1,2,3] | q="ab")
 -- FailT "ZipL(3,2) rhs would be truncated"
 --
 data ZipL l p q
@@ -7919,7 +7919,7 @@ instance (PP l a ~ x
             let lls = (length p,length q)
             case uncurry compare lls of
               GT -> let msg1 = msg0 ++ show lls
-                    in pure $ mkNode opts (FailT (msg1 ++ " rhs would be truncated")) (msg1 <> "rhs would be truncated " <> show1 opts " | p=" p <> show1 opts " | q=" q) hhs
+                    in pure $ mkNode opts (FailT (msg1 ++ " rhs would be truncated")) (msg1 <> show1 opts " | p=" p <> show1 opts " | q=" q) hhs
               _ -> do
                      ll <- eval (Proxy @l) opts a
                      pure $ case getValueLR opts (msg0 <> " l failed") ll hhs of
@@ -7943,7 +7943,7 @@ instance (PP l a ~ x
 -- PresentT [(1,'a'),(2,'Z'),(3,'Z')]
 --
 -- >>> pl @(ZipR (Char1 "Z") '[1,2] "abc") ()
--- Error ZipR(2,3) rhs would be truncated
+-- Error ZipR(2,3) rhs would be truncated (ZipR(2,3) | p=[1,2] | q="abc")
 -- FailT "ZipR(2,3) rhs would be truncated"
 --
 data ZipR r p q
@@ -7970,7 +7970,7 @@ instance (PP r a ~ y
             let lls = (length p,length q)
             case uncurry compare lls of
               LT -> let msg1 = msg0 ++ show lls
-                    in pure $ mkNode opts (FailT (msg1 ++ " rhs would be truncated")) (msg1 <> "rhs would be truncated " <> show1 opts " | p=" p <> show1 opts " | q=" q) hhs
+                    in pure $ mkNode opts (FailT (msg1 ++ " rhs would be truncated")) (msg1 <> show1 opts " | p=" p <> show1 opts " | q=" q) hhs
               _ -> do
                      rr <- eval (Proxy @r) opts a
                      pure $ case getValueLR opts (msg0 <> " l failed") rr hhs of
@@ -7986,11 +7986,11 @@ instance (PP r a ~ y
 -- PresentT [(1,'a'),(2,'b'),(3,'c')]
 --
 -- >>> pl @(Zip '[1,2,3] "ab") ()
--- Error Zip(3,2) length mismatch
+-- Error Zip(3,2) length mismatch (Zip(3,2) | p=[1,2,3] | q="ab")
 -- FailT "Zip(3,2) length mismatch"
 --
 -- >>> pl @(Zip '[1,2] "abc") ()
--- Error Zip(2,3) length mismatch
+-- Error Zip(2,3) length mismatch (Zip(2,3) | p=[1,2] | q="abc")
 -- FailT "Zip(2,3) length mismatch"
 --
 data Zip p q
@@ -8017,7 +8017,7 @@ instance (PP p a ~ [x]
                  EQ -> let d = zip p q
                        in mkNode opts (PresentT d) (show01' opts msg0 d "p=" p <> show1 opts " | q=" q) hhs
                  _ -> let msg1 = msg0 ++ show lls
-                      in mkNode opts (FailT (msg1 <> " length mismatch")) (msg1 <> " length mismatch" ++ show1 opts " | p=" p <> show1 opts " | q=" q) hhs
+                      in mkNode opts (FailT (msg1 <> " length mismatch")) (msg1 <> show1 opts " | p=" p <> show1 opts " | q=" q) hhs
 
 -- | Luhn predicate check on last digit
 --
@@ -8542,7 +8542,7 @@ instance (PP p x ~ String, P p x) => P (ReadFile p) x where
                 if b then Just <$> readFile p
                 else pure Nothing
         pure $ case mb of
-          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) (msg1 <> " must run in IO") [hh pp]
+          Nothing -> mkNode opts (FailT msg1) msg1 [hh pp]
           Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (length b) <> showLit0 opts " Just " b) [hh pp]
 
@@ -8574,7 +8574,7 @@ instance (PP p x ~ String, P p x) => P (ReadDir p) x where
                 if b then Just <$> listDirectory p
                 else pure Nothing
         pure $ case mb of
-          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) (msg1 <> " must run in IO") [hh pp]
+          Nothing -> mkNode opts (FailT msg1) msg1 [hh pp]
           Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (length b) <> show0 opts " Just " b) [hh pp]
 
@@ -8596,7 +8596,7 @@ instance (PP p x ~ String, P p x) => P (ReadEnv p) x where
         let msg1 = msg0 <> "[" <> p <> "]"
         mb <- runIO $ lookupEnv p
         pure $ case mb of
-          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) (msg1 <> " must run in IO") [hh pp]
+          Nothing -> mkNode opts (FailT msg1) msg1 [hh pp]
           Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just v) -> mkNode opts (PresentT (Just v)) (msg1 <> showLit0 opts " " v) [hh pp]
 
@@ -8927,11 +8927,11 @@ instance (PrintfArg a, PrintC rs) => PrintC (a,rs) where
 -- PresentT "xyz 123 x ab"
 --
 -- >>> pl @(PrintT "%d %c %s" Id) (123,'x')
--- Error PrintT(IO e=printf: argument list ended prematurely)
+-- Error PrintT(IO e=printf: argument list ended prematurely) (PrintT s=%d %c %s)
 -- FailT "PrintT(IO e=printf: argument list ended prematurely)"
 --
 -- >>> pl @(PrintT "%d %c %s" Id) (123,'x',"abc",11)
--- Error PrintT(IO e=printf: formatting string ended prematurely)
+-- Error PrintT(IO e=printf: formatting string ended prematurely) (PrintT s=%d %c %s)
 -- FailT "PrintT(IO e=printf: formatting string ended prematurely)"
 --
 data PrintT s p
@@ -8976,11 +8976,11 @@ instance (PrintC bs
 -- PresentT "first=10 second=11 third=12"
 --
 -- >>> pl @(PrintL 2 "first=%d second=%d third=%d" Id) [10,11,12]
--- Error PrintL(2) arg count=3
+-- Error PrintL(2) arg count=3 (PrintL(2) wrong length 3)
 -- FailT "PrintL(2) arg count=3"
 --
 -- >>> pl @(PrintL 4 "first=%d second=%d third=%d" Id) [10,11,12]
--- Error PrintL(4) arg count=3
+-- Error PrintL(4) arg count=3 (PrintL(4) wrong length 3)
 -- FailT "PrintL(4) arg count=3"
 --
 data PrintL (n :: Nat) s p
@@ -10227,7 +10227,7 @@ instance ( ExtractL1C (PP q x)
 -- | gets the singleton value from a foldable
 --
 -- >>> pl @(OneP Id) [10..15]
--- Error OneP 6 elements
+-- Error OneP 6 elements (OneP expected one element)
 -- FailT "OneP 6 elements"
 --
 -- >>> pl @(OneP Id) [10]
@@ -10235,7 +10235,7 @@ instance ( ExtractL1C (PP q x)
 -- PresentT 10
 --
 -- >>> pl @(OneP Id) []
--- Error OneP empty
+-- Error OneP empty (OneP expected one element)
 -- FailT "OneP empty"
 --
 -- >>> pl @(OneP Id) (Just 10)
@@ -10243,7 +10243,7 @@ instance ( ExtractL1C (PP q x)
 -- PresentT 10
 --
 -- >>> pl @(OneP Id) Nothing
--- Error OneP empty
+-- Error OneP empty (OneP expected one element)
 -- FailT "OneP empty"
 --
 data OneP p
@@ -10270,7 +10270,7 @@ instance (Foldable t
 -- PresentT (10,"abc")
 --
 -- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\",99]"
--- Error ParseJson (Int,[Char])([10,"abc",...) Error in $
+-- Error ParseJson (Int,[Char])([10,"abc",...) Error in $ (ParseJson (Int,[Char]) failed Error in $: cannot unpack array of length 3 into a tuple of length 2 | [10,"abc",99])
 -- FailT "ParseJson (Int,[Char])([10,\"abc\",...) Error in $"
 --
 -- >>> pl @(ParseJson (Int,Bool) (FromString _ Id)) ("[1,true]" :: String)
@@ -10282,7 +10282,7 @@ instance (Foldable t
 -- PresentT (1,True)
 --
 -- >>> pl @(ParseJson () Id) "[1,true]"
--- Error ParseJson ()([1,true]) Error in $
+-- Error ParseJson ()([1,true]) Error in $ (ParseJson () failed Error in $: parsing () failed, expected an empty array | [1,true])
 -- FailT "ParseJson ()([1,true]) Error in $"
 --
 data ParseJson' t p
@@ -10342,8 +10342,8 @@ instance (P p x
                 if b then Just <$> BS8.readFile p
                 else pure Nothing
         pure $ case mb of
-          Nothing -> mkNode opts (FailT (msg1 <> " must run in IO")) (msg1 <> " must run in IO") hhs
-          Just Nothing -> mkNode opts (FailT (msg1 <> " file doesn't exist")) (msg1 <> " does not exist") hhs
+          Nothing -> mkNode opts (FailT msg1) msg1 hhs
+          Just Nothing -> mkNode opts (FailT (msg1 <> " file does not exist")) msg1 hhs
           Just (Just s) ->
             case A.eitherDecodeStrict' s of
                Right b -> mkNode opts (PresentT b) (msg1 <> " " ++ showL (if isVerbose opts then oWidth opts else min (oWidth opts) 80) b) hhs

@@ -37,7 +37,7 @@ suite = testGroup "testjson"
   , testCase "testperson1 age 99 out of range" $ expectIO (testPerson1 @'OAB 5) (expectLeftWith ["Error in $[0].age1"])
   , testCase "parse fail person1" $ expectPE (FailT "ParseJsonFile [Person1 'OZ](test3.json) Error in $[0].ipaddress1") $ pl @(ParseJsonFile [Person1 'OZ] "test3.json") ()
   , testCase "parse ok person1" $ expectPE (PresentT 5) $ pl @(ParseJsonFile [Person1 'OA] "test2.json" >> Len) ()
-  , testCase "missing file" $ expectPE (FailT "ParseJsonFile [Person1 'OZ](test2.jsoxxxn) file doesn't exist") $ pl @(ParseJsonFile [Person1 'OZ] "test2.jsoxxxn" >> Len) ()
+  , testCase "missing file" $ expectPE (FailT "ParseJsonFile [Person1 'OZ](test2.jsoxxxn) file does not exist") $ pl @(ParseJsonFile [Person1 'OZ] "test2.jsoxxxn" >> Len) ()
 
   , testCase "getRow2Age1" $ do
                            x <- pz @(ParseJsonFile [Person1 'OUB] "test2.json" >> Id !! 2) ()
