@@ -265,6 +265,7 @@ module Predicate.Prelude (
   , Concat
   , ConcatMap
   , Partition
+  , GroupOn
   , Filter
   , Break
   , Span
@@ -602,6 +603,7 @@ import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Data.Chimera as Chimera
+import qualified Data.Map.Strict as M
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -6283,6 +6285,45 @@ instance (P p x
                      zz1 = (map (view (_2 . _2)) *** map (view (_2 . _2))) w0
                  in mkNode opts (PresentT zz1) (show01' opts msg0 zz1 "s=" q) (hh qq : map (hh . fixit) itts)
 
+-- | groups values based on a function
+--
+-- >>> pl @(GroupOn Ordering (Case (Failt _ "asdf") '[Id < 2, Id == 2, Id > 2] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
+-- Present fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])] (GroupOn fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])] | s=[-4,2,5,6,7,1,2,3,4])
+-- PresentT (fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])])
+--
+-- >>> pl @(GroupOn Ordering (Case (Failt _ "xyzxyzxyzzyyysyfsyfydf") '[Id < 2, Id == 2, Id > 3] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
+-- Error xyzxyzxyzzyyysyfsyfydf (GroupOn(i=7, a=3) excnt=1)
+-- FailT "xyzxyzxyzzyyysyfsyfydf"
+--
+data GroupOn t p q
+
+instance (P p x
+        , Ord t
+        , Show x
+        , Show t
+        , PP q a ~ [x]
+        , PP p x ~ t
+        , P q a
+        ) => P (GroupOn t p q) a where
+  type PP (GroupOn t p q) a = M.Map t (PP q a)
+  eval _ opts a' = do
+    let msg0 = "GroupOn"
+    qq <- eval (Proxy @q) opts a'
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q ->
+        case chkSize opts msg0 q [hh qq] of
+          Left e -> pure e
+          Right () -> do
+             ts <- zipWithM (\i a -> ((i, a),) <$> eval (Proxy @p) opts a) [0::Int ..] q
+             pure $ case splitAndAlign opts msg0 ts of
+                   Left e -> e
+                   Right abcs ->
+                     let kvs = map (view _1 &&& ((:[]) . view (_2 . _2))) abcs
+                         itts = map (view _2 &&& view _3) abcs
+                         ret = M.fromListWith (++) kvs
+                     in mkNode opts (PresentT ret) (show01' opts msg0 ret "s=" q ) (hh qq : map (hh . fixit) itts)
+
 data Filter p q
 type FilterT p q = Fst (Partition p q)
 
@@ -7527,6 +7568,13 @@ instance (Show l
         z = GE.toList as
     in pure $ mkNode opts (PresentT z) (show01 opts msg0 z as) []
 
+-- | invokes 'GE.fromList'
+--
+-- >>> import qualified Data.Set as Set
+-- >>> run @('OMessage "Fred" ':# 'ODebug 'DLite ':# 'ONoColor 'True) @(FromList (Set.Set Int) << '[2,1,5,5,2,5,2]) ()
+-- Fred >>> Present fromList [1,2,5] ((>>) fromList [1,2,5] | {FromList fromList [1,2,5]})
+-- PresentT (fromList [1,2,5])
+--
 data FromList (t :: Type) -- doesnt work with OverloadedLists unless you cast to [a] explicitly
 
 instance (a ~ GE.Item t
@@ -8341,16 +8389,19 @@ instance ( P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) x
 
 -- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
 --
--- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 50
+-- >>> pz @(Case (Failt _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 50
 -- PresentT "50 is same50"
 --
--- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 9
+-- >>> pz @(Case (Failt _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 9
 -- PresentT "9 is lt10"
 --
--- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 3
+-- >>> pz @(Case (Failt _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 3
 -- PresentT "3 is lt4"
 --
--- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy ) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
+-- >>> pz @(Case (Failt _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
+-- FailT "asdf"
+--
+-- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
 -- FailT "asdf"
 --
 data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
