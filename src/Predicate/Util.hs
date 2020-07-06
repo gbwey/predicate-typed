@@ -1285,6 +1285,7 @@ readField fieldName readVal = do
         GR.expectP (L.Punc "=")
         readVal
 
+-- | Display options
 data OptT =
     ODebug !Debug         -- ^ set debug mode
   | OWidth !Nat           -- ^ set display width
@@ -1314,18 +1315,7 @@ data OptT =
   | OAB                   -- ^ composite: ansi + colors + background
   | OU                    -- ^ composite: unicode + colors
   | OUB                   -- ^ composite: unicode + colors + background
-{-
-data OptT where
-  ODebug :: !Debug -> OptT
-  OWidth :: (forall n . KnownNat n => n) -> OptT
-  OMessage :: (forall s . KnownSymbol s => s) -> OptT
-  ORecursion :: (forall n . KnownNat n => n) -> OptT
-  OEmpty :: OptT
-  (:#) :: !OptT -> !OptT -> OptT
-  OColor :: (forall s . KnownSymbol s => s) -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> !Color -> OptT
-  ONoColor :: !Bool -> OptT
-  ODisp :: d -> OptT
--}
+
 instance Show OptT where
   show = \case
             ODebug _n -> "ODebug"
@@ -1401,15 +1391,15 @@ instance OptTC 'OZ where
 instance OptTC 'OL where
    getOptT' = setDisp Ansi <> setNoColor True <> setDebug DLite
 instance OptTC 'OAN where
-   getOptT' = setDisp Ansi <> setNoColor True
+   getOptT' = setDisp Ansi <> setNoColor True <> setDebug DNormal
 instance OptTC 'OA where
-   getOptT' = setDisp Ansi <> getOptT' @Color5
+   getOptT' = setDisp Ansi <> getOptT' @Color5 <> setDebug DNormal
 instance OptTC 'OAB where
-   getOptT' = setDisp Ansi <> getOptT' @Color1
+   getOptT' = setDisp Ansi <> getOptT' @Color1 <> setDebug DNormal
 instance OptTC 'OU where
-   getOptT' = setDisp Unicode <> getOptT' @Color5
+   getOptT' = setDisp Unicode <> getOptT' @Color5 <> setDebug DNormal
 instance OptTC 'OUB where
-   getOptT' = setDisp Unicode <> getOptT' @Color1
+   getOptT' = setDisp Unicode <> getOptT' @Color1 <> setDebug DNormal
 
 -- | convert typelevel options to 'POpts'
 --

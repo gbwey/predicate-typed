@@ -21,6 +21,7 @@ To run the examples you will need these settings (ghc>=8.6)
 :set -XPolyKinds
 :set -XTemplateHaskell
 :set -XNoStarIsType
+:set -XTypeFamilies
 ```
 
 [Refined](Refined.md)
