@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wno-redundant-constraints #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -67,7 +68,6 @@ module Predicate.Refined3 (
   , mkProxy3'
   , MakeR3
   , MakeR3'
-  , R3Opts
 
   -- ** unsafe methods for creating Refined3
   , unsafeRefined3
@@ -79,8 +79,8 @@ module Predicate.Refined3 (
   , rapply3P
 
   -- ** QuickCheck methods
-  , arbRefined3
-  , arbRefined3With
+  , genRefined3
+  , genRefined3P
 
   -- ** emulate Refined3 using Refined
   , RefinedEmulate
@@ -323,32 +323,41 @@ instance (Show (PP fmt (PP ip i))
                     Nothing -> fail $ "Refined3:" ++ show (prt3Impl (getOptT @opts) ret)
                     Just r -> return r
 
-{-
-instance (Arbitrary (PP ip i)
-        , Show (PP ip i)
-        , Show i
-        , Refined3C opts ip op fmt i
-        ) => Arbitrary (Refined3 ip op fmt i) where
-  arbitrary = suchThatMap (arbitrary @(PP ip i)) $ eval3MQuickIdentity @ip @op @fmt
--}
-arbRefined3 :: forall opts ip op fmt i .
-   ( Arbitrary (PP ip i)
-   , Refined3C opts ip op fmt i
-   ) => Proxy '(opts,ip,op,fmt,i)
-     -> Gen (Refined3 opts ip op fmt i)
-arbRefined3 = flip arbRefined3With id
+instance ( Arbitrary (PP ip i)
+         , Refined3C opts ip op fmt i
+         ) => Arbitrary (Refined3 opts ip op fmt i) where
+  arbitrary = genRefined3 arbitrary
 
--- | uses arbitrary to generate the internal 'r3In' and then uses \'fmt\' to fill in the 'r3Out' value
-arbRefined3With ::
+-- | create a 'Refined3' generator
+genRefined3 ::
     forall opts ip op fmt i
-  . (Arbitrary (PP ip i)
-   , Refined3C opts ip op fmt i
-     )
-  => Proxy '(opts,ip,op,fmt,i)
-  -> (PP ip i -> PP ip i)
+  . Refined3C opts ip op fmt i
+  => Gen (PP ip i)
   -> Gen (Refined3 opts ip op fmt i)
-arbRefined3With _ f =
-  suchThatMap (f <$> arbitrary @(PP ip i)) $ eval3MQuickIdentity @opts @ip @op @fmt
+genRefined3 = genRefined3P Proxy
+
+-- | create a 'Refined3' generator
+genRefined3P ::
+    forall opts ip op fmt i
+  . Refined3C opts ip op fmt i
+  => Proxy '(opts,ip,op,fmt,i)
+  -> Gen (PP ip i)
+  -> Gen (Refined3 opts ip op fmt i)
+genRefined3P _ g =
+  let o = getOptT @opts
+      f !cnt = do
+        mppi <- suchThatMaybe g (\a -> getValLRFromTT (runIdentity (eval @_ (Proxy @op) o a)) == Right True)
+        case mppi of
+          Nothing ->
+             if cnt >= oRecursion o
+             then fail $ markBoundary o ("genRefined3 recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             else f (cnt+1)
+          Just ppi -> do
+             let lr = getValLRFromTT (runIdentity (eval @_ (Proxy @fmt) o ppi))
+             case lr of
+               Left e -> fail $ "formatting failed!! " ++ e
+               Right r -> pure $ unsafeRefined3 ppi r
+  in f 0
 
 -- | 'Binary' instance for 'Refined3'
 --
@@ -430,10 +439,6 @@ mkProxy3' = Proxy
 -- | type family for converting from a 5-tuple '(opts,ip,op,fmt,i) to a 'Refined3' type
 type family MakeR3 p where
   MakeR3 '(opts,ip,op,fmt,i) = Refined3 opts ip op fmt i
-
-type family R3Opts opts' x where
-  R3Opts opts' (Refined3 opts ip op fmt i) = Refined3 opts' ip op fmt i
-
 
 type family MakeR3' opts p where
   MakeR3' opts '(ip,op,fmt,i) = Refined3 opts ip op fmt i
@@ -626,7 +631,7 @@ rapply3 :: forall m opts ip op fmt i .
   -> RefinedT m (Refined3 opts ip op fmt i)
 rapply3 = rapply3P (Proxy @'(opts,ip,op,fmt,i))
 
--- prtRefinedT $ rapply3P base16 (+) (newRefined3TP Proxy "ff") (newRefined3TP Proxy "22")
+-- prtRefinedTIO $ rapply3P base16 (+) (newRefined3TP Proxy "ff") (newRefined3TP Proxy "22")
 
 -- | same as 'rapply3' but uses a 5-tuple proxy instead
 rapply3P :: forall m opts ip op fmt i proxy .
@@ -762,28 +767,10 @@ eval3MSkip a = do
     (Right False,t2) -> pure (RTFalse a mkNodeSkipP t2, Nothing)
     (Left e,t2) -> pure (RTF a mkNodeSkipP e t2, Nothing)
 
--- | calculates from internal value
-eval3MQuickIdentity :: forall opts ip op fmt i . Refined3C opts ip op fmt i
-   => PP ip i
-   -> Maybe (Refined3 opts ip op fmt i)
-eval3MQuickIdentity = runIdentity . eval3MQuick
-
--- from PP ip i
-eval3MQuick :: forall m opts ip op fmt i . (MonadEval m, Refined3C opts ip op fmt i)
-   => PP ip i
-   -> m (Maybe (Refined3 opts ip op fmt i))
-eval3MQuick a = do
-  let o = getOptT @opts
-  rr <- evalBool (Proxy @op) o a
-  case getValLRFromTT rr of
-    Right True -> do
-      ss <- eval (Proxy @fmt) o a
-      pure $ case getValLRFromTT ss of
-        Right b -> Just (Refined3 a b)
-        _ -> Nothing
-    _ -> pure Nothing
-
-prt3IO :: forall opts a b r . (OptTC opts, Show a, Show b) => (RResults3 a b, Maybe r) -> IO (Either String r)
+prt3IO :: forall opts a b r .
+     (OptTC opts, Show a, Show b)
+  => (RResults3 a b, Maybe r)
+  -> IO (Either String r)
 prt3IO (ret,mr) = do
   let m3 = prt3Impl (getOptT @opts) ret
   unless (hasNoTree (getOptT @opts)) $ putStrLn $ m3Long m3
@@ -802,7 +789,7 @@ prt3Impl :: forall a b . (Show a, Show b)
   -> RResults3 a b
   -> Msg3
 prt3Impl opts v =
-  let outmsg msg = "\n*** " <> formatOMessage opts " " <> msg <> " ***\n\n"
+  let outmsg msg = "\n*** " <> formatOMsg opts " " <> msg <> " ***\n\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg3 m n r | hasNoTree opts = Msg3 m n ""
                    | otherwise = Msg3 m n r
@@ -847,7 +834,7 @@ prt3Impl opts v =
               <> fixLite opts b t3
          in mkMsg3 m n r
 
--- | similar to 'eval3P' but it emulates 'Refined3' but using 'Refined'
+-- | similar to 'eval3P' but it emulates 'Refined3' using 'Refined'
 --
 -- takes a 5-tuple proxy as input but outputs the Refined value and the result separately
 --
@@ -858,8 +845,7 @@ prt3Impl opts v =
 -- * if any of the above steps fail the process stops it and dumps out 'RResults3'
 --
 eval3PX :: forall opts ip op fmt i proxy
-  . ( Refined3C opts ip op fmt i
-    )
+  . Refined3C opts ip op fmt i
   => proxy '(opts,ip,op,fmt,i)
   -> i
   -> (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined opts op (PP ip i), PP fmt (PP ip i)))
@@ -890,29 +876,11 @@ eval3X = eval3PX (Proxy @'(opts,ip,op,fmt,i))
 -- | emulates 'Refined' using 'Refined3' by setting the input conversion and output formatting as noops
 type RefinedEmulate (opts :: OptT) p a = Refined3 opts Id p Id a
 
---
--- >>> pl @(T5_2 (Predicate.Examples.Refined3.Ip4 'OL)) "1.2.3.4"
--- Present [1,2,3,4] (Map [1,2,3,4] | ["1","2","3","4"])
--- PresentT [1,2,3,4]
---
---
--- >>> pl @(T5_3 (Predicate.Examples.Refined3.Ip4 'OL)) [141,213,308,4]
--- Error octet 2 out of range 0-255 found 308
--- FailT "octet 2 out of range 0-255 found 308"
---
---
--- >>> pl @(T5_3 (Predicate.Examples.Refined3.Ip4 'OL)) [141,213,308,4,8]
--- Error Guards:invalid length(5) expected 4
--- FailT "Guards:invalid length(5) expected 4"
---
---
--- >>> pl @(T5_4 (Predicate.Examples.Refined3.Ip4 'OL)) [141,513,9,4]
--- Present "141.513.009.004" (PrintL(4) [141.513.009.004] | s=%03d.%03d.%03d.%03d)
--- PresentT "141.513.009.004"
---
-
+-- | replace the opts type
 type family ReplaceOptT3 (o :: OptT) t where
   ReplaceOptT3 o (Refined3 _ ip op fmt i) = Refined3 o ip op fmt i
 
+-- | change the opts type
 type family AppendOptT3 (o :: OptT) t where
   AppendOptT3 o (Refined3 o' ip op fmt i) = Refined3 (o' ':# o) ip op fmt i
+

@@ -851,7 +851,7 @@ allTests =
   , oRecursion testopts1 @?= 11
   , oDebug testopts1 @?= DVerbose
   , oNoColor testopts1 @?= True
-  , oMessage testopts1 @?= ["abc", "def"]
+  , oMsg testopts1 @?= ["abc", "def"]
   , oWidth testopts1 @?= 99
   , oDisp testopts1 @?= Unicode
   , oDisp testopts2 @?= Ansi
@@ -862,9 +862,9 @@ allTests =
   ]
 
 testopts1, testopts2, testopts3 :: POpts
-testopts1 = getOptT @('ORecursion 11 ':# 'ODebug 'DVerbose ':# 'ONoColor 'True ':# 'OWidth 123 ':# 'OMessage "abc" ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMessage "def" ':# 'OEmpty ':# 'ORecursion 11 ':# 'ODisp 'Unicode ':# 'OWidth 99)
+testopts1 = getOptT @('ORecursion 11 ':# 'ODebug 'DVerbose ':# 'ONoColor 'True ':# 'OWidth 123 ':# 'OMsg "abc" ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMsg "def" ':# 'OEmpty ':# 'ORecursion 11 ':# 'ODisp 'Unicode ':# 'OWidth 99)
 testopts2 = getOptT @('ONoColor 'False ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White)
-testopts3 = getOptT @('OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMessage "def" ':# 'ODisp 'Unicode)
+testopts3 = getOptT @('OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMsg "def" ':# 'ODisp 'Unicode)
 
 
 type Fizzbuzz = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")

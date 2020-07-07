@@ -1,6 +1,3 @@
--- add Writer to MonadEval so we dont need to specify [hh pp ...]
--- the mkNode opts (FailT msg) msg .. -- repetitive: needs to add value
--- no types referring to types otherwise we lose use of _ as Type
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wno-compat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -7571,7 +7568,7 @@ instance (Show l
 -- | invokes 'GE.fromList'
 --
 -- >>> import qualified Data.Set as Set
--- >>> run @('OMessage "Fred" ':# 'ODebug 'DLite ':# 'ONoColor 'True) @(FromList (Set.Set Int) << '[2,1,5,5,2,5,2]) ()
+-- >>> run @('OMsg "Fred" ':# 'ODebug 'DLite ':# 'ONoColor 'True) @(FromList (Set.Set Int) << '[2,1,5,5,2,5,2]) ()
 -- Fred >>> Present fromList [1,2,5] ((>>) fromList [1,2,5] | {FromList fromList [1,2,5]})
 -- PresentT (fromList [1,2,5])
 --

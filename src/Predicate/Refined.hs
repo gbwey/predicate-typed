@@ -4,6 +4,7 @@
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -36,7 +37,6 @@ module Predicate.Refined (
   -- ** print methods
   , prtRefinedIO
   , prtRefinedTIO
-  , prtRefinedT
 
   -- ** create methods
   , withRefinedT
@@ -45,12 +45,11 @@ module Predicate.Refined (
   , newRefinedTIO
 
   -- ** QuickCheck method
-  , arbRefined
+  , genRefined
 
   -- ** manipulate RefinedT values
   , convertRefinedT
   , unRavelT
-  , unRavelTIO
   , rapply
   , rapply0
   , rapplyLift
@@ -85,6 +84,7 @@ import Data.Maybe
 import Data.Hashable (Hashable(..))
 import GHC.Stack
 import Data.Tree (Tree)
+--import Debug.Trace
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -141,6 +141,7 @@ import Data.Tree (Tree)
 -- Left FalseP
 newtype Refined (opts :: OptT) p a = Refined a deriving (Show, Eq, Generic, TH.Lift)
 
+-- | extract the value from Refined
 unRefined :: forall k (opts :: OptT) (p :: k) a. Refined opts p a -> a
 unRefined (Refined a) = a
 
@@ -254,12 +255,25 @@ instance ( RefinedC opts p a
          ) => Hashable (Refined opts p a) where
   hashWithSalt s (Refined a) = s + hash a
 
+instance (Arbitrary a, RefinedC opts p a, Show a) => Arbitrary (Refined opts p a) where
+  arbitrary = genRefined arbitrary
+
 -- | 'arbitrary' value for 'Refined'
-arbRefined :: forall opts p a.
-   ( Arbitrary a
-   , RefinedC opts p a
-   ) => Gen (Refined opts p a)
-arbRefined = suchThatMap (arbitrary @a) (snd . runIdentity . newRefined @opts @p)
+genRefined :: forall opts p a .
+   RefinedC opts p a
+   => Gen a
+   -> Gen (Refined opts p a)
+genRefined g =
+  let o = getOptT @opts
+      f !cnt = do
+        ma <- suchThatMaybe g (\a -> getValLRFromTT (runIdentity (eval @_ (Proxy @p) o a)) == Right True)
+        case ma of
+          Nothing -> do
+             if cnt >= oRecursion o
+             then fail $ markBoundary o ("genRefined recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             else f (cnt+1)
+          Just a -> pure $ unsafeRefined a
+  in f 0
 
 -- | binary operation applied to two 'RefinedT' values
 rapply :: forall m opts p a . (RefinedC opts p a, Monad m)
@@ -314,6 +328,7 @@ withRefinedT :: forall opts p m a b
   -> RefinedT m b
 withRefinedT a k = newRefinedT @m @opts @p a >>= k
 
+-- | IO version of `withRefinedT`
 withRefinedTIO :: forall opts p m a b
      . ( MonadIO m
        , RefinedC opts p a
@@ -354,7 +369,7 @@ newRefined a = do
   let rc = _tBool tt ^. boolT2P
       ss = case oDebug o of
              DZero -> ("","")
-             DLite -> ("",formatOMessage o " " <> topMessage tt)
+             DLite -> ("",formatOMsg o " " <> topMessage tt)
              _ -> (prtImpl o (fromTT tt),topMessage tt)
   pure $ ((rc,ss),) $ case getValueLR o "" tt [] of
        Right True -> Just (Refined a)
@@ -386,6 +401,7 @@ newRefinedT :: forall m opts p a
   -> RefinedT m (Refined opts p a)
 newRefinedT = newRefinedTImpl (return . runIdentity)
 
+-- | IO version of 'newRefinedT'
 newRefinedTIO :: forall opts p a m
   . ( RefinedC opts p a
     , MonadIO m)
@@ -393,6 +409,7 @@ newRefinedTIO :: forall opts p a m
   -> RefinedT m (Refined opts p a)
 newRefinedTIO = newRefinedTImpl liftIO
 
+-- | effect wrapper for the refinement value
 newtype RefinedT m a = RefinedT { unRefinedT :: ExceptT String (WriterT [String] m) a }
   deriving (Functor, Applicative, Monad, MonadCont, MonadWriter [String], Show, MonadIO)
 
@@ -410,11 +427,9 @@ instance Monad m => MonadError String (RefinedT m) where
         Left e -> unRavelT (tell ss >> ema e) -- keep the old messages??
         Right _ -> ma
 
+-- | unwrap the 'RefinedT' value
 unRavelT :: RefinedT m a -> m (Either String a, [String])
 unRavelT = runWriterT . runExceptT . unRefinedT
-
-unRavelTIO :: RefinedT IO a -> IO (Either String a, [String])
-unRavelTIO = runWriterT . runExceptT . unRefinedT
 
 prtRefinedTImpl :: forall n m a . (MonadIO n, Show a) => (forall x . m x -> n x) -> RefinedT m a -> n ()
 prtRefinedTImpl f rt = do
@@ -428,14 +443,11 @@ prtRefinedTImpl f rt = do
 prtRefinedTIO :: (MonadIO m, Show a) => RefinedT m a -> m ()
 prtRefinedTIO = prtRefinedTImpl id
 
-prtRefinedT :: (MonadIO m, Show a) => RefinedT Identity a -> m ()
-prtRefinedT = prtRefinedTImpl (return . runIdentity)
-
--- | a way to unsafely create a 'Refined' value
+-- | create an unsafe 'Refined' value without running the predicate
 unsafeRefined :: forall opts p a . a -> Refined opts p a
 unsafeRefined = Refined
 
--- | a way to unsafely create a 'Refined' value but run the predicate
+-- | create an unsafe 'Refined' value and also run the predicate
 unsafeRefined' :: forall opts p a
   . ( RefinedC opts p a
     , HasCallStack
@@ -449,7 +461,7 @@ unsafeRefined' a =
 
 prtImpl :: POpts -> Tree PE -> String
 prtImpl o tt =
-  formatOMessage o "\n" <> prtTreePure o tt
+  formatOMsg o "\n" <> prtTreePure o tt
 
 type family ReplaceOptT (o :: OptT) t where
   ReplaceOptT o (Refined _ p a) = Refined o p a

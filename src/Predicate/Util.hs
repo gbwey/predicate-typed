@@ -151,7 +151,7 @@ module Predicate.Util (
   , prtTree
   , prtTreePure
   , prettyRational
-  , formatOMessage
+  , formatOMsg
 
  -- ** boolean methods
   , (~>)
@@ -383,7 +383,7 @@ data HOpts f =
         , oDebug :: !(HKD f Debug) -- ^ debug level
         , oDisp :: !(HKD f Disp) -- ^ display the tree using the normal tree or unicode
         , oColor :: !(HKD f (String, PColor)) -- ^ color palette used
-        , oMessage :: ![String] -- ^ messages associated with type
+        , oMsg :: ![String] -- ^ messages associated with type
         , oRecursion :: !(HKD f Int) -- ^ max recursion
         , oOther :: !(HKD f (Color, Color)) -- ^ other message effects
         , oNoColor :: !(HKD f Bool) -- ^ no colors
@@ -405,7 +405,7 @@ reifyOpts h =
         (fromMaybe (oDisp defOpts) (getLast (oDisp h)))
         (if fromMaybe (oNoColor defOpts) (getLast (oNoColor h)) then nocolor
          else fromMaybe (oColor defOpts) (getLast (oColor h)))
-        (oMessage defOpts <> oMessage h)
+        (oMsg defOpts <> oMsg h)
         (fromMaybe (oRecursion defOpts) (getLast (oRecursion h)))
         (if fromMaybe (oNoColor defOpts) (getLast (oNoColor h)) then otherDef
          else fromMaybe (oOther defOpts) (getLast (oOther h)))
@@ -415,7 +415,7 @@ setWidth :: Int -> POptsL
 setWidth i = mempty { oWidth = pure i }
 
 setMessage :: String -> POptsL
-setMessage s = mempty { oMessage = pure s }
+setMessage s = mempty { oMsg = pure s }
 
 setRecursion :: Int -> POptsL
 setRecursion i = mempty { oRecursion = pure i }
@@ -481,7 +481,7 @@ defOpts = HOpts
     , oDebug = DNormal
     , oDisp = Ansi
     , oColor = colorDef
-    , oMessage = mempty
+    , oMsg = mempty
     , oRecursion = 100
     , oOther = otherDef
     , oNoColor = False
@@ -1289,7 +1289,7 @@ readField fieldName readVal = do
 data OptT =
     ODebug !Debug         -- ^ set debug mode
   | OWidth !Nat           -- ^ set display width
-  | OMessage !Symbol      -- ^ set text to add context to a failure message for refined types
+  | OMsg !Symbol      -- ^ set text to add context to a failure message for refined types
   | ORecursion !Nat       -- ^ set recursion limit eg for regex
   | OOther                -- ^ set effects for messages
      !Color   -- ^ set foreground color
@@ -1320,7 +1320,7 @@ instance Show OptT where
   show = \case
             ODebug _n -> "ODebug"
             OWidth _n -> "OWidth"
-            OMessage _s -> "OMessage"
+            OMsg _s -> "OMsg"
             ORecursion _n -> "ORecursion"
             OOther _c1 _c2 -> "OOther"
             OEmpty -> "OEmpty"
@@ -1352,7 +1352,7 @@ instance GetDebug n => OptTC ('ODebug n) where
    getOptT' = setDebug (getDebug @n)
 instance KnownNat n => OptTC ('OWidth n) where
    getOptT' = setWidth (nat @n)
-instance KnownSymbol s => OptTC ('OMessage s) where
+instance KnownSymbol s => OptTC ('OMsg s) where
    getOptT' = setMessage (symb @s)
 instance KnownNat n => OptTC ('ORecursion n) where
    getOptT' = setRecursion (nat @n)
@@ -1403,10 +1403,10 @@ instance OptTC 'OUB where
 
 -- | convert typelevel options to 'POpts'
 --
--- >>> (oDisp &&& fst . oColor &&& oWidth) (getOptT @('OA ':# 'OU ':# 'OA ':# 'OWidth 321 ':# Color4 ':# 'OMessage "test message"))
+-- >>> (oDisp &&& fst . oColor &&& oWidth) (getOptT @('OA ':# 'OU ':# 'OA ':# 'OWidth 321 ':# Color4 ':# 'OMsg "test message"))
 -- (Ansi,("color4",321))
 --
--- >>> oMessage (getOptT @('OMessage "abc" ':# 'OMessage "def"))
+-- >>> oMsg (getOptT @('OMsg "abc" ':# 'OMsg "def"))
 -- ["abc","def"]
 --
 getOptT :: forall o . OptTC o => POpts
@@ -1439,9 +1439,9 @@ chkSize opts msg0 xs hhs =
     (_,[]) -> Right ()
     (_,_:_) -> Left $ mkNode opts (FailT (msg0 <> " list size exceeded")) (msg0 <> " list size exceeded: max is " ++ show mx) hhs
 
-formatOMessage :: POpts -> String -> String
-formatOMessage o suffix =
-  case oMessage o of
+formatOMsg :: POpts -> String -> String
+formatOMsg o suffix =
+  case oMsg o of
     [] -> mempty
     s@(_:_) -> setOtherEffects o (intercalate " | " s) <> suffix
 

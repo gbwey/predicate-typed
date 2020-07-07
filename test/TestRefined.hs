@@ -69,8 +69,8 @@ unnamedTests = [
 allProps :: [TestTree]
 allProps =
   [
-    testProperty "readshow" $ forAll (arbRefined @'OA @(Between 10 45 Id)) (\r -> read @(Refined 'OA (Between 10 45 Id) Int) (show r) === r)
-  , testProperty "jsonroundtrip" $ forAll (arbRefined @'OA @(Between 10 45 Id)) (\r -> testRefinedJ @'OA @(Between 10 45 Id) (unRefined r) === Right r)
+    testProperty "readshow" $ forAll (genRefined @'OA @(Between 10 45 Id) (choose (1,100))) (\r -> read @(Refined 'OA (Between 10 45 Id) Int) (show r) === r)
+  , testProperty "jsonroundtrip" $ forAll (genRefined @'OA @(Between 10 45 Id) (choose (1,100))) (\r -> testRefinedJ @'OA @(Between 10 45 Id) (unRefined r) === Right r)
   ]
 
 tst1 :: Monad m => Int -> Int -> RefinedT m (Int,Int)

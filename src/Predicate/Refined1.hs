@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wno-redundant-constraints #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -79,8 +80,8 @@ module Predicate.Refined1 (
   , rapply1P
 
   -- ** QuickCheck methods
-  , arbRefined1
-  , arbRefined1With
+  , genRefined1
+  , genRefined1P
 
   -- ** emulate Refined1 using Refined
   , RefinedEmulate
@@ -200,7 +201,6 @@ unsafeRefined1' i =
 -- | directly load values into 'Refined1' without any checking
 unsafeRefined1 :: forall opts ip op fmt i . PP ip i -> Refined1 opts ip op fmt i
 unsafeRefined1 = Refined1
-
 
 -- | Provides the constraints on Refined1
 type Refined1C opts ip op fmt i =
@@ -331,31 +331,38 @@ instance (Show ( PP fmt (PP ip i))
                     Nothing -> fail $ "Refined1:" ++ show (prt1Impl (getOptT @opts) ret)
                     Just r -> return r
 
-{-
 instance (Arbitrary (PP ip i)
-        , Show (PP ip i)
-        , Show i
         , Refined1C opts ip op fmt i
         ) => Arbitrary (Refined1 opts ip op fmt i) where
-  arbitrary = suchThatMap (arbitrary @(PP ip i)) $ eval1MQuickIdentity @ip @op @fmt
--}
-arbRefined1 :: forall opts ip op fmt i .
-   ( Arbitrary (PP ip i)
-   , Refined1C opts ip op fmt i
-   ) => Proxy '(ip,op,fmt,i)
-     -> Gen (Refined1 opts ip op fmt i)
-arbRefined1 = flip arbRefined1With id
+  arbitrary = genRefined1 arbitrary
 
--- | uses arbitrary to generate the internal 'unRefined1' and then uses \'fmt\' to fill create output value
-arbRefined1With ::
+-- | create a 'Refined1' generator
+genRefined1 ::
     forall opts ip op fmt i
-  . (Arbitrary (PP ip i)
-   , Refined1C opts ip op fmt i)
-  => Proxy '(ip,op,fmt,i)
-  -> (PP ip i -> PP ip i)
+  . Refined1C opts ip op fmt i
+  => Gen (PP ip i)
   -> Gen (Refined1 opts ip op fmt i)
-arbRefined1With _ f =
-  suchThatMap (f <$> arbitrary @(PP ip i)) $ eval1MQuickIdentity @opts @ip @op @fmt
+genRefined1 = genRefined1P Proxy
+
+-- | create a 'Refined1' generator
+genRefined1P ::
+    forall opts ip op fmt i
+  . Refined1C opts ip op fmt i
+  => Proxy '(opts,ip,op,fmt,i)
+  -> Gen (PP ip i)
+  -> Gen (Refined1 opts ip op fmt i)
+genRefined1P _ g =
+  let o = getOptT @opts
+      f !cnt = do
+        mppi <- suchThatMaybe g (\a -> getValLRFromTT (runIdentity (eval @_ (Proxy @op) o a)) == Right True)
+        case mppi of
+          Nothing ->
+             if cnt >= oRecursion o
+             then fail $ markBoundary o ("genRefined1 recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             else f (cnt+1)
+          Just ppi -> do
+             pure $ unsafeRefined1 ppi
+  in f 0
 
 -- | 'Binary' instance for 'Refined1'
 --
@@ -416,17 +423,17 @@ instance (Refined1C opts ip op fmt i
         ) => Hashable (Refined1 opts ip op fmt i) where
   hashWithSalt s (Refined1 a) = s + hash a
 
--- | creates a 4-tuple proxy (see 'withRefined1TP' 'newRefined1TP' 'eval1P' 'prtEval1P')
+-- | creates a 5-tuple proxy (see 'withRefined1TP' 'newRefined1TP' 'eval1P' 'prtEval1P')
 --
--- use type application to set the 4-tuple or set the individual parameters directly
+-- use type application to set the 5-tuple or set the individual parameters directly
 --
--- set the 4-tuple directly
+-- set the 5-tuple directly
 --
 -- >>> eg1 = mkProxy1 @'( 'OL, ReadP Int Id, Gt 10, ShowP Id, String)
 -- >>> prtEval1P eg1 "24"
 -- Right (Refined1 24)
 --
--- skip the 4-tuple and set each parameter individually using type application
+-- skip the 5-tuple and set each parameter individually using type application
 --
 -- >>> eg2 = mkProxy1 @_ @'OL @(ReadP Int Id) @(Gt 10) @(ShowP Id)
 -- >>> prtEval1P eg2 "24"
@@ -442,7 +449,7 @@ mkProxy1' :: forall z opts ip op fmt i
     ) => Proxy '(opts,ip,op,fmt,i)
 mkProxy1' = Proxy
 
--- | type family for converting from a 4-tuple '(ip,op,fmt,i) to a 'Refined1' type
+-- | type family for converting from a 5-tuple '(ip,op,fmt,i) to a 'Refined1' type
 type family MakeR1 p where
   MakeR1 '(opts,ip,op,fmt,i) = Refined1 opts ip op fmt i
 
@@ -620,9 +627,9 @@ rapply1 :: forall m opts ip op fmt i .
   -> RefinedT m (Refined1 opts ip op fmt i)
 rapply1 = rapply1P (Proxy @'(opts,ip,op,fmt,i))
 
--- prtRefinedT $ rapply1P base16 (+) (newRefined1TP Proxy "ff") (newRefined1TP Proxy "22")
+-- prtRefinedTIO $ rapply1P base16 (+) (newRefined1TP Proxy "ff") (newRefined1TP Proxy "22")
 
--- | same as 'rapply1' but uses a 4-tuple proxy instead
+-- | same as 'rapply1' but uses a 5-tuple proxy instead
 rapply1P :: forall m opts ip op fmt i proxy .
   ( Refined1C opts ip op fmt i
   , Monad m
@@ -683,7 +690,7 @@ prtEval1 :: forall opts ip op fmt i
   -> Either Msg1 (Refined1 opts ip op fmt i)
 prtEval1 = prtEval1P Proxy
 
--- | create a Refined1 using a 4-tuple proxy and aggregate the results on failure
+-- | create a Refined1 using a 5-tuple proxy and aggregate the results on failure
 prtEval1P :: forall opts ip op fmt i proxy
   . ( Refined1C opts ip op fmt i
     , Show (PP ip i)
@@ -695,9 +702,9 @@ prtEval1P _ i =
   let (ret,mr) = eval1 i
   in maybe (Left $ prt1Impl (getOptT @opts) ret) Right mr
 
--- | create a Refined1 value using a 4-tuple proxy (see 'mkProxy1')
+-- | create a Refined1 value using a 5-tuple proxy (see 'mkProxy1')
 --
--- use 'mkProxy1' to package all the types together as a 4-tuple
+-- use 'mkProxy1' to package all the types together as a 5-tuple
 --
 eval1P :: forall opts ip op fmt i proxy . Refined1C opts ip op fmt i
   => proxy '(opts,ip,op,fmt,i)
@@ -746,27 +753,6 @@ eval1MSkip a = do
     (Right False,t2) -> pure (RTFalse a mkNodeSkipP t2, Nothing)
     (Left e,t2) -> pure (RTF a mkNodeSkipP e t2, Nothing)
 
--- | calculates from internal value
-eval1MQuickIdentity :: forall opts ip op fmt i . Refined1C opts ip op fmt i
-   => PP ip i
-   -> Maybe (Refined1 opts ip op fmt i)
-eval1MQuickIdentity = runIdentity . eval1MQuick
-
--- from PP ip i
-eval1MQuick :: forall m opts ip op fmt i . (MonadEval m, Refined1C opts ip op fmt i)
-   => PP ip i
-   -> m (Maybe (Refined1 opts ip op fmt i))
-eval1MQuick a = do
-  let o = getOptT @opts
-  rr <- evalBool (Proxy @op) o a
-  case getValLRFromTT rr of
-    Right True -> do
-      ss <- eval (Proxy @fmt) o a
-      pure $ case getValLRFromTT ss of
-        Right _ -> Just (Refined1 a)
-        _ -> Nothing
-    _ -> pure Nothing
-
 prt1IO :: forall opts a b r . (OptTC opts, Show a, Show b) => (RResults1 a b, Maybe r) -> IO (Either String r)
 prt1IO (ret,mr) = do
   let o = getOptT @opts
@@ -787,7 +773,7 @@ prt1Impl :: forall a b . (Show a, Show b)
   -> RResults1 a b
   -> Msg1
 prt1Impl opts v =
-  let outmsg msg = "\n*** " <> formatOMessage opts " " <> msg <> " ***\n\n"
+  let outmsg msg = "\n*** " <> formatOMsg opts " " <> msg <> " ***\n\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg1 m n r | hasNoTree opts = Msg1 m n ""
                    | otherwise = Msg1 m n r
@@ -834,7 +820,7 @@ prt1Impl opts v =
 
 -- | similar to 'eval1P' but it emulates 'Refined1' but using 'Refined'
 --
--- takes a 4-tuple proxy as input but outputs the Refined value and the result separately
+-- takes a 5-tuple proxy as input but outputs the Refined value and the result separately
 --
 -- * initial conversion using \'ip\' and stores that in 'Refined'
 -- * runs the boolean predicate \'op\' to make sure to validate the converted value from 1.
@@ -871,8 +857,10 @@ eval1X = eval1PX (Proxy @'(opts,ip,op,fmt,i))
 -- | emulates 'Refined' using 'Refined1' by setting the input conversion and output formatting as noops
 type RefinedEmulate (opts :: OptT) p a = Refined1 opts Id p Id a
 
+-- | replace the opts type
 type family ReplaceOptT1 (o :: OptT) t where
   ReplaceOptT1 o (Refined1 _ ip op fmt i) = Refined1 o ip op fmt i
 
+-- | change the opts type
 type family AppendOptT1 (o :: OptT) t where
   AppendOptT1 o (Refined1 o' ip op fmt i) = Refined1 (o' ':# o) ip op fmt i

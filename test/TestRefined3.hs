@@ -191,9 +191,9 @@ unnamedTests = [
 allProps :: [TestTree]
 allProps =
   [
-    testProperty "base16" $ forAll (arbRefined3 (mkProxy3 @'( 'OAN, ReadBase Int 16 Id, 'True, ShowBase 16 Id, String))) (\r -> evalQuick @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
-  , testProperty "readshow" $ forAll (arbRefined3 Proxy :: Gen (HexLtR3 'OAN)) (\r -> read @(HexLtR3 'OAN) (show r) === r)
-  , testProperty "jsonroundtrip1" $ forAll (arbRefined3 Proxy :: Gen (HexLtR3 'OAN))
+    testProperty "base16" $ forAll (genRefined3P (mkProxy3 @'( 'OAN, ReadBase Int 16 Id, 'True, ShowBase 16 Id, String)) arbitrary) (\r -> evalQuick @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
+  , testProperty "readshow" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 'OAN)) (\r -> read @(HexLtR3 'OAN) (show r) === r)
+  , testProperty "jsonroundtrip1" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 'OAN))
       (\r -> testRefined3PJ Proxy (r3Out r) === Right r)
   ]
 
@@ -274,7 +274,7 @@ prtEval3P (Proxy @(Ccn 'OAB '[1,1,1,1])) "1230"
 prtEval3P (Proxy @(Ccn 'OAB '[1,2,3])) "123455" -- succeeds
 -}
 
--- prtRefinedT tst1a
+-- prtRefinedTIO tst1a
 tst1a :: Monad m => RefinedT m ((Int,String),(Int,String))
 tst1a = withRefined3T @'OAN @(ReadBase Int 16 Id) @(Between 100 200 Id) @(ShowBase 16 Id) @String "a3"
   $ \r1 -> withRefined3T @'OAN @(ReadP Int Id) @'True @(ShowP Id) @String "12"

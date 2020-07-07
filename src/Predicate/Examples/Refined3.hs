@@ -428,3 +428,23 @@ readshow = mkProxy3
 readshow' :: Proxy (ReadShow' opts t p)
 readshow' = mkProxy3
 
+--
+-- >>> pl @(T5_2 (Ip4 'OL)) "1.2.3.4"
+-- Present [1,2,3,4] (Map [1,2,3,4] | ["1","2","3","4"])
+-- PresentT [1,2,3,4]
+--
+--
+-- >>> pl @(T5_3 (Ip4 'OL)) [141,213,308,4]
+-- Error octet 2 out of range 0-255 found 308
+-- FailT "octet 2 out of range 0-255 found 308"
+--
+--
+-- >>> pl @(T5_3 (Ip4 'OL)) [141,213,308,4,8]
+-- Error Guards:invalid length(5) expected 4
+-- FailT "Guards:invalid length(5) expected 4"
+--
+--
+-- >>> pl @(T5_4 (Ip4 'OL)) [141,513,9,4]
+-- Present "141.513.009.004" (PrintL(4) [141.513.009.004] | s=%03d.%03d.%03d.%03d)
+-- PresentT "141.513.009.004"
+--

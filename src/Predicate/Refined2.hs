@@ -331,6 +331,7 @@ instance (Refined2C opts ip op i
         ) => Hashable (Refined2 opts ip op i) where
   hashWithSalt s (Refined2 _ b) = s + hash b
 
+-- | same as 'withRefined2T' for IO
 withRefined2TIO :: forall opts ip op i m b
   . ( MonadIO m
     , Refined2C opts ip op i
@@ -412,6 +413,7 @@ newRefined2T :: forall m opts ip op i
       -> RefinedT m (Refined2 opts ip op i)
 newRefined2T = newRefined2TImpl (return . runIdentity)
 
+-- | create a wrapped 'Refined2' type with an explicit proxy
 newRefined2TP :: forall m opts ip op i proxy
    . ( Refined2C opts ip op i
      , Monad m
@@ -421,7 +423,7 @@ newRefined2TP :: forall m opts ip op i proxy
   -> RefinedT m (Refined2 opts ip op i)
 newRefined2TP _ = newRefined2TImpl (return . runIdentity)
 
-
+-- | create a wrapped 'Refined2' type in IO
 newRefined2TIO :: forall m opts ip op i
    . ( Refined2C opts ip op i
      , MonadIO m
@@ -454,7 +456,7 @@ data RResults2 a =
      | RTTrue !a !(Tree PE) !(Tree PE) -- op true
      deriving Show
 
--- | same as 'prtEval2PIO' but runs passes in the Proxy
+-- | same as 'prtEval2PIO' without a proxy for used with TypeApplications
 prtEval2IO :: forall opts ip op i
   . ( Refined2C opts ip op i
     , Show (PP ip i)
@@ -543,7 +545,7 @@ prt2Impl :: forall a . Show a
   -> RResults2 a
   -> Msg2
 prt2Impl opts v =
-  let outmsg msg = "\n*** " <> formatOMessage opts " " <> msg <> " ***\n\n"
+  let outmsg msg = "\n*** " <> formatOMsg opts " " <> msg <> " ***\n\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
       mkMsg2 m n r | hasNoTree opts = Msg2 m n ""
                    | otherwise = Msg2 m n r
@@ -577,11 +579,11 @@ prt2Impl opts v =
               <> prtTreePure opts t2
          in mkMsg2 m n r
 
--- | creates a 3-tuple proxy (see 'withRefined2TP' 'newRefined2TP' 'eval2P' 'prtEval2P')
+-- | creates a 4-tuple proxy (see 'withRefined2TP' 'newRefined2TP' 'eval2P' 'prtEval2P')
 --
 -- use type application to set the 4-tuple or set the individual parameters directly
 --
--- set the 3-tuple directly
+-- set the 4-tuple directly
 --
 -- >>> eg1 = mkProxy2 @'( 'OL, ReadP Int Id, Gt 10, String)
 -- >>> prtEval2P eg1 "24"
@@ -605,7 +607,7 @@ mkProxy2' :: forall z opts ip op i
     ) => Proxy '(opts,ip,op,i)
 mkProxy2' = Proxy
 
--- | type family for converting from a 3-tuple '(opts,ip,op,i) to a 'Refined2' type
+-- | type family for converting from a 4-tuple '(opts,ip,op,i) to a 'Refined2' type
 type family MakeR2 p where
   MakeR2 '(opts,ip,op,i) = Refined2 opts ip op i
 

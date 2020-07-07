@@ -225,7 +225,7 @@ prtEval2 (Proxy @(Ccn 'OAB '[1,1,1,1])) "1230"
 prtEval2 (Proxy @(Ccn 'OAB '[1,2,3])) "123455" -- succeeds
 -}
 
--- prtRefinedT tst1a
+-- prtRefinedTIO tst1a
 tst1a :: Monad m => RefinedT m ((Int,String),(Int,String))
 tst1a = withRefined2T @'OA @(ReadBase Int 16 Id) @(Between 100 200 Id) @String "a3"
   $ \r1 -> withRefined2T @'OA @(ReadP Int Id) @'True @String "12"

@@ -723,14 +723,14 @@ prtTree' opts pp =
        DZero -> ""
        DLite ->
           let f = colorMe opts (r ^. boolT2P)
-              pf = formatOMessage opts " >>> "
+              pf = formatOMsg opts " >>> "
               tm = topMessage pp
           in (\x -> pf <> x <> " " <> tm <> "\n") $ case r of
                FailT e -> f "Error" <> " " <> e
                TrueT -> f "True"
                FalseT -> f "False"
                PresentT x -> f "Present" <> " " <> show x
-       _ -> formatOMessage opts "\n" <> prtTreePure opts (fromTT pp)
+       _ -> formatOMsg opts "\n" <> prtTreePure opts (fromTT pp)
 
 runPQ :: (P p a, P q a, MonadEval m)
    => String
