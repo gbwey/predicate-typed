@@ -350,12 +350,12 @@ genRefined3P _ g =
         case mppi of
           Nothing ->
              if cnt >= oRecursion o
-             then fail $ markBoundary o ("genRefined3 recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             then error $ markBoundary o ("genRefined3 recursion exceeded(" ++ show (oRecursion o) ++ ")")
              else f (cnt+1)
           Just ppi -> do
              let lr = getValLRFromTT (runIdentity (eval @_ (Proxy @fmt) o ppi))
              case lr of
-               Left e -> fail $ "formatting failed!! " ++ e
+               Left e -> error $ "formatting failed!! " ++ e
                Right r -> pure $ unsafeRefined3 ppi r
   in f 0
 

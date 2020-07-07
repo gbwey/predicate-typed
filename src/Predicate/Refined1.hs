@@ -358,7 +358,7 @@ genRefined1P _ g =
         case mppi of
           Nothing ->
              if cnt >= oRecursion o
-             then fail $ markBoundary o ("genRefined1 recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             then error $ markBoundary o ("genRefined1 recursion exceeded(" ++ show (oRecursion o) ++ ")")
              else f (cnt+1)
           Just ppi -> do
              pure $ unsafeRefined1 ppi

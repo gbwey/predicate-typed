@@ -270,7 +270,7 @@ genRefined g =
         case ma of
           Nothing -> do
              if cnt >= oRecursion o
-             then fail $ markBoundary o ("genRefined recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             then error $ markBoundary o ("genRefined recursion exceeded(" ++ show (oRecursion o) ++ ")")
              else f (cnt+1)
           Just a -> pure $ unsafeRefined a
   in f 0
@@ -390,8 +390,7 @@ newRefinedTImpl f a = do
   tell [msg]
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
-    _ -> let rc = show (_tBool tt ^. boolT2P)
-         in throwError rc -- RefinedT $ ExceptT $ WriterT $ return (Left rc, [])
+    _ -> throwError $ show (_tBool tt ^. boolT2P)
 
 -- | returns a wrapper 'RefinedT' around a possible 'Refined' value if \'a\' is valid for the predicate \'p\'
 newRefinedT :: forall m opts p a
