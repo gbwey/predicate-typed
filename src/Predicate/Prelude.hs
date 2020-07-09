@@ -1725,7 +1725,7 @@ instance (Show a, DTL.IsText a) => P ToTitle a where
   type PP ToTitle a = a
   eval _ opts as =
     let msg0 = "ToTitle"
-        xs = (toTitleAll (as ^. DTL.unpacked)) ^. DTL.packed
+        xs = toTitleAll (as ^. DTL.unpacked) ^. DTL.packed
     in pure $ mkNode opts (PresentT xs) (show01 opts msg0 xs as) []
 
 
@@ -4546,7 +4546,7 @@ instance (PP p x ~ a
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let b = if p < 1 then False else isPrime $ fromIntegral p
+        let b = p > 1 && isPrime (fromIntegral p)
         in mkNodeB opts b (msg0 <> show1 opts " | " p) [hh pp]
 
 isPrimeF :: (Word -> Bool) -> Word -> Bool

@@ -90,12 +90,12 @@ refinedTH :: forall opts p i
   -> TH.Q (TH.TExp (Refined opts p i))
 refinedTH i =
   let msg0 = "refinedTH"
-      ((bp,(e,top)),mr) = runIdentity $ newRefined @opts @p i
+      ((bp,(top,e)),mr) = runIdentity $ newRefinedM @opts @p i
   in case mr of
-    Nothing ->
-      let msg1 = if hasNoTree (getOptT @opts) then "" else "\n" ++ e ++ "\n"
-      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
-    Just r -> TH.TExp <$> TH.lift r
+       Nothing ->
+         let msg1 = if hasNoTree (getOptT @opts) then "" else "\n" ++ e ++ "\n"
+         in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
+       Just r -> TH.TExp <$> TH.lift r
 
 refinedTHIO :: forall opts p i
   . (TH.Lift i, RefinedC opts p i)
@@ -103,13 +103,12 @@ refinedTHIO :: forall opts p i
   -> TH.Q (TH.TExp (Refined opts p i))
 refinedTHIO i = do
   let msg0 = "refinedTHIO"
-  ((bp,(e,top)),mr) <- TH.runIO (newRefined @opts @p i)
+  ((bp,(top,e)),mr) <- TH.runIO (newRefinedM @opts @p i)
   case mr of
-    Just a -> TH.TExp <$> TH.lift a
-    Nothing ->
-      let msg1 = if hasNoTree (getOptT @opts) then "" else "\n" ++ e ++ "\n"
-      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
-
+       Nothing ->
+         let msg1 = if hasNoTree (getOptT @opts) then "" else "\n" ++ e ++ "\n"
+         in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
+       Just r -> TH.TExp <$> TH.lift r
 
 -- | creates a 'Refined1.Refined1' refinement type
 --

@@ -36,8 +36,8 @@ module Predicate.Core (
   , pub
   , pl
   , pz
---  , with
   , run
+  , colorBoolT
 
   , P(..)
 
@@ -46,6 +46,7 @@ module Predicate.Core (
   , runPQBool
   , evalBool
   , evalQuick
+  , prtTree'
   ) where
 import Predicate.Util
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
@@ -676,15 +677,7 @@ instance Show a => P 'Proxy a where
   eval _ opts a =
     let b = Proxy @a
     in pure $ mkNode opts (PresentT b) ("'Proxy" <> show1 opts " | " a) []
-{-
--- with @('True || 'False || Failt _ "asdf") (setAnsi <> setWidth 100 <> setDebug 5 <> setColor 1) 123
--- | set display options
-with :: forall p a . (Show (PP p a), P p a)
-  => POptsL
-  -> a
-  -> IO (BoolT (PP p a))
-with h = peWith @p (reifyOpts h)
--}
+
 pan, pa, pu, pl, pz, pab, pub :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
 -- | skips the evaluation tree and just displays the end result
 pz = run @'OZ @p
@@ -706,7 +699,9 @@ pu = run @'OU @p
 pub = run @'OUB @p
 
 run :: forall opts p a
-        . (OptTC opts, Show (PP p a), P p a)
+        . ( OptTC opts
+          , Show (PP p a)
+          , P p a)
         => a
         -> IO (BoolT (PP p a))
 run a = do
@@ -722,15 +717,22 @@ prtTree' opts pp =
   in case oDebug opts of
        DZero -> ""
        DLite ->
-          let f = colorMe opts (r ^. boolT2P)
-              pf = formatOMsg opts " >>> "
-              tm = topMessage pp
-          in (\x -> pf <> x <> " " <> tm <> "\n") $ case r of
-               FailT e -> f "Error" <> " " <> e
-               TrueT -> f "True"
-               FalseT -> f "False"
-               PresentT x -> f "Present" <> " " <> show x
-       _ -> formatOMsg opts "\n" <> prtTreePure opts (fromTT pp)
+             formatOMsg opts " >>> "
+          <> colorBoolT opts r
+          <> " "
+          <> topMessage pp
+          <> "\n"
+       _ -> formatOMsg opts "\n"
+         <> prtTreePure opts (fromTT pp)
+
+colorBoolT :: Show a => POpts -> BoolT a -> String
+colorBoolT o r =
+  let f = colorMe o (r ^. boolT2P)
+  in case r of
+      FailT e -> f "Error" <> " " <> e
+      TrueT -> f "True"
+      FalseT -> f "False"
+      PresentT x -> f "Present" <> " " <> show x
 
 runPQ :: (P p a, P q a, MonadEval m)
    => String
@@ -768,4 +770,26 @@ runPQBool msg0 proxyp proxyq opts a hhs = do
            Left e -> Left e
            Right q -> Right (p, q, pp, qq)
 
-
+-- | typelevel 'BoolT'
+--
+-- >>> pz @'TrueT ()
+-- TrueT
+--
+-- >>> pz @'FalseT ()
+-- FalseT
+--
+-- >>> pz @('PresentT 123) ()
+-- PresentT False
+--
+-- >>> pz @('FailT '[]) ()
+-- FailT "'FailT _"
+--
+instance GetBoolT x b => P (b :: BoolT x) a where
+  type PP b a = Bool
+  eval _ opts _ = do
+    let msg0 = "'BoolT"
+    let ret = getBoolT @x @b
+    pure $ case ret of
+      Left b -> mkNodeB opts b (if b then "TrueT" else "FalseT") []
+      Right True -> mkNode opts (PresentT False) (msg0 <> " PresentT") []
+      Right False -> mkNode opts (FailT "'FailT _") (msg0 <> " FailT") []

@@ -46,6 +46,8 @@ module Predicate.Refined2 (
   , eval2
   , eval2P
   , eval2M
+  , newRefined2
+  , newRefined2P
 
   -- ** create a wrapped Refined2 value
   , newRefined2T
@@ -97,6 +99,7 @@ import GHC.Stack
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
+-- >>> :m + Data.Time
 
 -- | Refinement type for specifying an input type that is different from the output type
 --
@@ -107,33 +110,33 @@ import GHC.Stack
 --
 -- Although a common scenario is String as input, you are free to choose any input type you like
 --
--- >>> prtEval2 @'OZ @(ReadBase Int 16 Id) @(Lt 255) "00fe"
+-- >>> newRefined2 @'OZ @(ReadBase Int 16 Id) @(Lt 255) "00fe"
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> prtEval2 @'OZ @(ReadBase Int 16 Id) @(Lt 253) "00fe"
--- Left Step 2. False Boolean Check(op) | FalseP
+-- >>> newRefined2 @'OZ @(ReadBase Int 16 Id) @(Lt 253) "00fe"
+-- Left "Step 2. False Boolean Check(op) | FalseP"
 --
--- >>> prtEval2 @'OZ @(ReadBase Int 16 Id) @(Lt 255) "00fg"
--- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
+-- >>> newRefined2 @'OZ @(ReadBase Int 16 Id) @(Lt 255) "00fg"
+-- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"
 --
--- >>> prtEval2 @'OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
--- Left Step 2. False Boolean Check(op) | {length invalid:5 == 4}
+-- >>> newRefined2 @'OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
+-- Left "Step 2. False Boolean Check(op) | {length invalid:5 == 4}"
 --
--- >>> prtEval2 @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1.5"
--- Left Step 2. Failed Boolean Check(op) | found length=5
+-- >>> newRefined2 @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1.5"
+-- Left "Step 2. Failed Boolean Check(op) | found length=5"
 --
--- >>> prtEval2 @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1"
+-- >>> newRefined2 @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1"
 -- Right (Refined2 {r2In = [198,162,3,1], r2Out = "198.162.3.1"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> prtEval2 @'OZ @(MkDayExtra Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,13)
+-- >>> newRefined2 @'OZ @(MkDayExtra Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,13)
 -- Right (Refined2 {r2In = (2019-10-13,41,7), r2Out = (2019,10,13)})
 --
--- >>> prtEval2 @'OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
--- Left Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}
+-- >>> newRefined2 @'OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
+-- Left "Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}"
 --
--- >>> prtEval2 @'OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,12)
--- Left Step 2. Failed Boolean Check(op) | expected a Sunday
+-- >>> newRefined2 @'OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,12)
+-- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
 --
 data Refined2 (opts :: OptT) ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: !i }
 
@@ -394,6 +397,32 @@ withRefined2TP :: forall m opts ip op i b proxy
   -> RefinedT m b
 withRefined2TP p = (>>=) . newRefined2TP p
 
+-- | pure version for extracting Refined2
+--
+-- >>> newRefined2 @'OU @Id @'True 22
+-- Right (Refined2 {r2In = 22, r2Out = 22})
+--
+-- >>> newRefined2 @'OU @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-04 12:13:14Z"
+-- Right (Refined2 {r2In = 2020-05-04 12:13:14 UTC, r2Out = "2020-05-04 12:13:14Z"})
+--
+-- >>> newRefined2 @'OU @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-08 12:13:14Z"
+-- Left "Step 2. False Boolean Check(op) | {Just 2020-05-08 <= Just 2020-05-07}"
+--
+newRefined2 :: forall opts ip op i
+   . ( Refined2C opts ip op i
+     , Show (PP ip i)
+    ) => i
+      -> Either String (Refined2 opts ip op i)
+newRefined2 = newRefined2P Proxy
+
+newRefined2P :: forall opts ip op i proxy
+   . ( Refined2C opts ip op i
+     , Show (PP ip i)
+    ) => proxy '(opts,ip,op,i)
+      -> i
+      -> Either String (Refined2 opts ip op i)
+newRefined2P _ = fst . runIdentity . unRavelT . newRefined2T @_ @opts @ip @op
+
 -- | create a wrapped 'Refined2' type
 --
 -- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,1)
@@ -586,13 +615,13 @@ prt2Impl opts v =
 -- set the 4-tuple directly
 --
 -- >>> eg1 = mkProxy2 @'( 'OL, ReadP Int Id, Gt 10, String)
--- >>> prtEval2P eg1 "24"
+-- >>> newRefined2P eg1 "24"
 -- Right (Refined2 {r2In = 24, r2Out = "24"})
 --
 -- skip the 4-tuple and set each parameter individually using type application
 --
 -- >>> eg2 = mkProxy2 @_ @'OL @(ReadP Int Id) @(Gt 10)
--- >>> prtEval2P eg2 "24"
+-- >>> newRefined2P eg2 "24"
 -- Right (Refined2 {r2In = 24, r2Out = "24"})
 --
 mkProxy2 :: forall z opts ip op i

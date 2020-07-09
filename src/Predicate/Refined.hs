@@ -32,6 +32,7 @@ module Predicate.Refined (
   , unRefined
   , RefinedC
   , newRefined
+  , newRefinedM
   , RefinedT(..)
 
   -- ** print methods
@@ -64,7 +65,7 @@ module Predicate.Refined (
  ) where
 import Predicate.Core
 import Predicate.Util
-import Control.Lens ((^.))
+import Control.Lens
 import Data.Functor.Identity (Identity(..))
 import Data.Proxy
 import Control.Monad.Except
@@ -80,11 +81,10 @@ import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
 import Data.String
-import Data.Maybe
 import Data.Hashable (Hashable(..))
 import GHC.Stack
 import Data.Tree (Tree)
---import Debug.Trace
+import Data.Maybe (fromMaybe)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -149,8 +149,8 @@ type role Refined nominal nominal nominal
 
 instance RefinedC opts p String => IsString (Refined opts p String) where
   fromString s =
-    let ((bp,(e,_top)),mr) = runIdentity $ newRefined @opts @p s
-    in fromMaybe (error $ "Refined(fromString):" ++ show bp ++ "\n" ++ e) mr
+    let ((bp,(e,top)),mr) = runIdentity $ newRefinedM @opts @p s
+    in fromMaybe (error $ "Refined(fromString):" ++ show bp ++ " " ++ top ++ "\n" ++ e) mr
 
 -- | 'Read' instance for 'Refined'
 --
@@ -163,7 +163,6 @@ instance RefinedC opts p String => IsString (Refined opts p String) where
 -- >>> reads @(Refined 'OZ 'True Int) "Refined (-123)xyz"
 -- [(Refined (-123),"xyz")]
 --
-
 instance (RefinedC opts p a, Read a) => Read (Refined opts p a) where
   readPrec
     = GR.parens
@@ -171,10 +170,9 @@ instance (RefinedC opts p a, Read a) => Read (Refined opts p a) where
            11
            (do GR.expectP (RL.Ident "Refined")
                fld0 <- PCR.reset GR.readPrec
-               let ((_bp,(_e,_top)),mr) = runIdentity $ newRefined @opts @p fld0 -- since we cant display the failure message
-               case mr of
-                 Nothing -> fail ""   -- (show _bp ++ "\n" ++ _e)
-                 Just _r -> pure (Refined fld0)
+               case newRefined @opts @p fld0 of -- since we cant display the failure message
+                 Left _e -> fail ""
+                 Right _r -> pure (Refined fld0)
            ))
   readList = GR.readListDefault
   readListPrec = GR.readListPrecDefault
@@ -194,7 +192,7 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 -- Right (Refined 13)
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined 'OAN (Between 10 14 Id) Int) "16"
--- Error in $: Refined:FalseP
+-- Error in $: Refined(FromJSON:parseJSON):FalseP (16 <= 14)
 -- False 16 <= 14
 -- |
 -- +- P Id 16
@@ -206,11 +204,11 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 --
 instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
   parseJSON z = do
-                  a <- parseJSON z
-                  let ((bp,(e,_top)),mr) = runIdentity $ newRefined @opts @p a
-                  case mr of
-                    Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
-                    Just r -> return r
+    a <- parseJSON z
+    let ((bp,(e,top)),mr) = runIdentity $ newRefinedM @opts @p a
+    case mr of
+      Nothing -> fail $ "Refined(FromJSON:parseJSON):" ++ show bp ++ " " ++ top ++ "\n" ++ e
+      Just r -> return r
 
 -- | 'Binary' instance for 'Refined'
 --
@@ -224,7 +222,7 @@ instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
 -- Refined "2019-04-23"
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined:FalseP
+-- Refined(Binary:get):FalseP (2019-05-30 <= 2019-04-23)
 -- False 2019-05-30 <= 2019-04-23
 -- |
 -- +- P ReadP Day 2019-04-23
@@ -242,11 +240,11 @@ instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
 --
 instance (RefinedC opts p a, Binary a) => Binary (Refined opts p a) where
   get = do
-          fld0 <- B.get @a
-          let ((bp,(e,_top)),mr) = runIdentity $ newRefined @opts @p fld0
-          case mr of
-            Nothing -> fail $ "Refined:" ++ show bp ++ "\n" ++ e
-            Just r -> return r
+    fld0 <- B.get @a
+    let ((bp,(e,top)),mr) = runIdentity $ newRefinedM @opts @p fld0
+    case mr of
+      Nothing -> fail $ "Refined(Binary:get):" ++ show bp ++ " " ++ top ++ "\n" ++ e
+      Just r -> return r
   put (Refined r) = B.put @a r
 
 -- | 'Hashable' instance for 'Refined'
@@ -268,7 +266,7 @@ genRefined g =
       f !cnt = do
         ma <- suchThatMaybe g (\a -> getValLRFromTT (runIdentity (eval @_ (Proxy @p) o a)) == Right True)
         case ma of
-          Nothing -> do
+          Nothing ->
              if cnt >= oRecursion o
              then error $ markBoundary o ("genRefined recursion exceeded(" ++ show (oRecursion o) ++ ")")
              else f (cnt+1)
@@ -340,8 +338,7 @@ withRefinedTIO a k = newRefinedTIO @opts @p a >>= k
 
 -- | same as 'newRefined' but prints the results
 prtRefinedIO :: forall opts p a
-   . ( RefinedC opts p a
-     )
+   . RefinedC opts p a
    => a
    -> IO (Either BoolP (Refined opts p a))
 prtRefinedIO a = do
@@ -357,15 +354,38 @@ prtRefinedIO a = do
     _ -> Left (fst msg)
 
 -- | returns a 'Refined' value if \'a\' is valid for the predicate \'p\'
-newRefined :: forall opts p a m
+--
+-- >>> newRefined @'OL @(ReadP Int Id > 99) "123"
+-- Right (Refined "123")
+--
+-- >>> newRefined @'OL @(ReadP Int Id > 99) "12"
+-- Left "(12 > 99)"
+--
+newRefined :: forall opts p a
+   . RefinedC opts p a
+   => a
+   -> Either String (Refined opts p a)
+newRefined a =
+  let ((bp,(_top,e)),mr) = runIdentity $ newRefinedM @opts @p a
+  in case mr of
+       Nothing -> if null e then Left (show bp) else Left e
+       Just r -> Right r
+
+newRefinedM :: forall opts p a m
    . ( MonadEval m
      , RefinedC opts p a
      )
    => a
    -> m ((BoolP, (String, String)), Maybe (Refined opts p a))
-newRefined a = do
+newRefinedM a = do
   let o = getOptT @opts
   tt <- evalBool (Proxy @p) o a
+{-
+  let s = prtTree' o tt
+  pure $ ((_tBool tt ^. boolT2P, topMessage tt, s),) $ case getValueLR o "" tt [] of
+    Right True -> Just (Refined a)
+    _ -> Nothing
+-}
   let rc = _tBool tt ^. boolT2P
       ss = case oDebug o of
              DZero -> ("","")
@@ -374,6 +394,7 @@ newRefined a = do
   pure $ ((rc,ss),) $ case getValueLR o "" tt [] of
        Right True -> Just (Refined a)
        _ -> Nothing
+
 
 newRefinedTImpl :: forall opts p a n m
   . ( RefinedC opts p a

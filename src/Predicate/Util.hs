@@ -16,13 +16,13 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {- |
      Utility methods for Predicate / methods for displaying the evaluation tree
 -}
@@ -38,7 +38,8 @@ module Predicate.Util (
 
  -- ** BoolT
   , BoolT(..)
-  , BoolP(..) -- remove
+  , BoolP
+  , GetBoolT(..)
   , _FailT
   , _PresentT
   , _FalseT
@@ -132,6 +133,7 @@ module Predicate.Util (
   , type (%%)
   , type (%&)
   , type (<%>)
+  , AnyT
 
  -- ** extract values from the type level
   , nat
@@ -241,6 +243,7 @@ data BoolT a where
   FalseT :: BoolT Bool        -- false predicate
   TrueT :: BoolT Bool         -- true predicate
   PresentT :: !a -> BoolT a    -- non predicate value
+
 {- too restrictive
 instance Semigroup a => Semigroup (BoolT a) where
    PresentT a <> PresentT a1 = PresentT (a <> a1)
@@ -259,9 +262,19 @@ instance Semigroup (BoolT a) where
    PresentT a <> TrueT = PresentT a
    PresentT a <> PresentT _ = PresentT a
 
-
 deriving instance Show a => Show (BoolT a)
 deriving instance Eq a => Eq (BoolT a)
+
+class GetBoolT a (x :: BoolT a) | x -> a where
+  getBoolT :: Either Bool Bool
+instance GetBoolT Bool 'TrueT where
+  getBoolT = Left True
+instance GetBoolT Bool 'FalseT where
+  getBoolT = Left False
+instance GetBoolT a ('PresentT b) where
+  getBoolT = Right True
+instance GetBoolT a ('FailT s) where
+  getBoolT = Right False
 
 -- | lens for accessing 'BoolT' in 'TT'
 tBool :: Lens (TT a) (TT b) (BoolT a) (BoolT b)
@@ -445,7 +458,7 @@ setCreateColor s c1 c2 c3 c4 c5 c6 c7 c8 =
        FalseP -> color c3 . bgColor c4
        TrueP -> color c5 . bgColor c6
        PresentP -> color c7 . bgColor c8
-  in mempty { oColor = pure $ (s,PColor pc) }
+  in mempty { oColor = pure (s,PColor pc) }
 
 setDebug :: Debug -> POptsL
 setDebug d =
@@ -502,7 +515,7 @@ data Debug =
      | DVerbose -- ^ outputs the entire evaluation tree
      deriving (Ord, Show, Eq, Enum, Bounded)
 
--- | verbose debug level?
+-- | verbose debug flag
 isVerbose :: POpts -> Bool
 isVerbose = (DVerbose==) . oDebug
 
@@ -510,6 +523,7 @@ markBoundary :: POpts -> String -> String
 markBoundary o =
   if hasNoColor o then id else coerce (snd (oColor o)) PresentP
 
+-- | color flag
 hasNoColor :: POpts -> Bool
 hasNoColor = oNoColor
 
@@ -531,7 +545,7 @@ show01 :: (Show a1, Show a2) => POpts -> String -> a1 -> a2 -> String
 show01 opts msg0 ret = lit01 opts msg0 ret . show
 
 lit01 :: Show a1 => POpts -> String -> a1 -> String -> String
-lit01 opts msg0 ret as = lit01' opts msg0 ret "" as
+lit01 opts msg0 ret = lit01' opts msg0 ret ""
 
 show01' :: (Show a1, Show a2) => POpts -> String -> a1 -> String -> a2 -> String
 show01' opts msg0 ret fmt = lit01' opts msg0 ret fmt . show
@@ -1457,3 +1471,5 @@ setOtherEffects o =
   else case oOther o of
          (Default, Default) -> id
          (c1,c2) -> color c1 . bgColor c2
+
+type family AnyT :: k where {}

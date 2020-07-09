@@ -176,9 +176,9 @@ type IntLtR3 (opts :: OptT) = Refined2 opts (ReadP Int Id) (Id < 10) String
 -- 1. packaged up as a promoted tuple
 type Tst3 (opts :: OptT) = '(opts, Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, String)
 
-www1, www2 :: String -> Either Msg2 (MakeR2 (Tst3 'OA))
-www1 = prtEval2P (Proxy @(Tst3 'OA))
-www2 = prtEval2P tst3
+www1, www2 :: String -> Either String (MakeR2 (Tst3 'OA))
+www1 = newRefined2P (Proxy @(Tst3 'OA))
+www2 = newRefined2P tst3
 
 -- just pass in an ipaddress as a string: eg 1.2.3.4 or 1.2.3.4.5 (invalid) 1.2.3.400 (invalid)
 
@@ -191,13 +191,13 @@ tst3 = Proxy
 
 
 -- 3. direct
-ww3 :: String -> Either Msg2 (Refined2 'OA
+ww3 :: String -> Either String (Refined2 'OA
                                (Map (ReadP Int Id) (Resplit "\\." Id))
                                ((Len == 4) && All (Between 0 255 Id) Id)
                                String)
-ww3 = prtEval2
+ww3 = newRefined2
 {-
-ww3 = prtEval2
+ww3 = newRefined2
         @'OA
         @(Map (ReadP Int Id) (Resplit "\\." Id))
         @((Len == 4) && All (Between 0 255 Id))
@@ -218,12 +218,14 @@ type Ip9 (opts :: OptT) = '(opts,
 
 instance OptTC opts => FromJSON (G4 opts)
 instance OptTC opts => ToJSON (G4 opts)
-{-
-prtEval2 (daten @'OUB) "June 25 1900"
-prtEval2 (daten @'OUB) "12/02/19"
-prtEval2 (Proxy @(Ccn 'OAB '[1,1,1,1])) "1230"
-prtEval2 (Proxy @(Ccn 'OAB '[1,2,3])) "123455" -- succeeds
--}
+
+tst0a :: [Bool]
+tst0a =
+  [ newRefined2P (daten @'OUB) "June 25 1900" == Right (unsafeRefined2 (fromGregorian 1900 6 25) "June 25 1900")
+  , newRefined2P (daten @'OUB) "12/02/19" == Right (unsafeRefined2 (fromGregorian 2019 12 2) "12/02/19")
+  , newRefined2P (Proxy @(Ccn 'OAB 4)) "1230" == Right (unsafeRefined2 [1,2,3,0] "1230")
+  , newRefined2P (Proxy @(Ccn 'OAB 6)) "123455" == Right (unsafeRefined2 [1,2,3,4,5,5] "123455")
+  ]
 
 -- prtRefinedTIO tst1a
 tst1a :: Monad m => RefinedT m ((Int,String),(Int,String))
