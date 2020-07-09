@@ -18,31 +18,30 @@ data Refined2 opts ip op i
 
 :load Predicate.Examples.Refined2
 
-
 converts a base 16 String to an Int and validates that the number is between 0 and 255
 internally Refined2 holds the internal value r2In as an Int and the original String in r2Out
 
 ```haskell
 >type Hex = '( 'OL, ReadBase Int 16 Id, Between 0 0xff Id, String)
 
->prtEval2P (Proxy @Hex) "0000fe"
+>newRefined2P (Proxy @Hex) "0000fe"
 Refined2 {r2In = 254, r2Out = "0000fe"}
 
->prtEval2P (Proxy @Hex) "1ffe"
+>newRefined2P (Proxy @Hex) "1ffe"
 Left "Step 2. False Boolean Check(op) | {8190 <= 255}"
 
 >import qualified Data.Aeson as A
 >import Data.ByteString (ByteString)
 >type Js = '( 'OL, ParseJson (Int,String) Id, Msg "0-255:" (Between 0 255 (Fst Id)) && Msg "length:" (Length (Snd Id) == 3), ByteString)
 
->prtEval2P (Proxy @Js) "[10,\"Abc\"]"
+>newRefined2P (Proxy @Js) "[10,\"Abc\"]"
 Right (Refined2 {r2In = (10,"Abc"), r2Out = "[10,\"Abc\"]"})
 
->prtEval2P (Proxy @Js) "[10,\"Abcdef\"]"
-Left Step 2. False Boolean Check(op) | {True && False | (length:6 == 3)}
+>newRefined2P (Proxy @Js) "[10,\"Abcdef\"]"
+Left "Step 2. False Boolean Check(op) | {True && False | (length:6 == 3)}"
 
->prtEval2P (Proxy @Js) "[-10,\"Abcdef\"]"
-Left Step 2. False Boolean Check(op) | {False && False | (0-255:0 <= -10) && (length:6 == 3)}
+>newRefined2P (Proxy @Js) "[-10,\"Abcdef\"]"
+Left "Step 2. False Boolean Check(op) | {False && False | (0-255:0 <= -10) && (length:6 == 3)}"
 ```
 
 ```haskell

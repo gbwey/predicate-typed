@@ -18,7 +18,7 @@ newtype Refined opts p a
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
 >prtRefinedIO @'OL @(ReadP Int Id > 99) "123"
-Right (Refined {unRefined = "123"})
+Right (Refined "123")
 ```
 
 2. tries to read in a number but fails
@@ -31,7 +31,7 @@ Left (FailP "ReadP Int (1x2y3) failed")
 ```haskell
 --  (>>) forward composition
 >prtRefinedIO @'OL @(ReadBase Int 16 Id >> Between 99 256 Id) "000fe"
-Right (Refined {unRefined = "000fe"})
+Right (Refined "000fe")
 ```
 
 4. reads in a hexadecimal string but fails the predicate check
@@ -48,7 +48,7 @@ Left FalseP
 6. reads in a string as time and does simple validation
 ```haskell
 >prtRefinedIO @'OL @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
-Right (Refined {unRefined = "12:01:05"})
+Right (Refined "12:01:05")
 ```
   * `Resplit ":" Id`
      split using regex using a colon as a delimiter  ["12","01","05"]
@@ -105,7 +105,7 @@ refinedTH: predicate failed with FalseP (False || False | (44 < 3) || (44 > 55))
 
 ```
 >$$(refinedTH @'OU @(Len > 7 || Elem 3 Id) [1..5])
-Refined {unRefined = [1,2,3,4,5]}
+Refined [1,2,3,4,5]
 it :: Refined ((Len > 7) || Elem 3 Id) [Int]
 ```
 
@@ -159,7 +159,7 @@ refinedTH: predicate failed with FalseP (Re' [] (^[A-Z][a-z]+$) | smith)
 
 ```
 >$$(refinedTH @'OU @(Re "^[A-Z][a-z]+$" Id) "Smith")
-Refined {unRefined = "Smith"}
+Refined "Smith"
 ```
 
 ```

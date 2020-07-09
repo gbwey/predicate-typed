@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5810399c7e171d4673b4ac1ec78d0c5e2afd7f7bc4bc401f27a686bc1f538134
+-- hash: 5805e9d6cc2812ba6d412ba04a3f9d62be886e299b7e49c41bdeb87c535a3eaa
 
 name:           predicate-typed
 version:        0.7.0.0
@@ -29,6 +29,7 @@ library
       Predicate
       Predicate.Core
       Predicate.Examples.Common
+      Predicate.Examples.Refined1
       Predicate.Examples.Refined2
       Predicate.Examples.Refined3
       Predicate.Prelude
@@ -82,6 +83,7 @@ test-suite doctests
       Predicate
       Predicate.Core
       Predicate.Examples.Common
+      Predicate.Examples.Refined1
       Predicate.Examples.Refined2
       Predicate.Examples.Refined3
       Predicate.Prelude
