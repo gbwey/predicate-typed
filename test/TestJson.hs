@@ -41,8 +41,8 @@ suite = testGroup "testjson"
 
   , testCase "getRow2Age1" $ do
                            x <- pz @(ParseJsonFile [Person1 'OUB] "test2.json" >> Id !! 2) ()
-                           (x ^?! _PresentT . to (unRefined . age1)) @=? 45
-                           (x ^?! _PresentT . to (R3.r3Out . ipaddress1)) @=? "124.001.012.223"
+                           (x ^? _PresentT . to (unRefined . age1)) @=? Just 45
+                           (x ^? _PresentT . to (R3.r3Out . ipaddress1)) @=? Just "124.001.012.223"
   , testCase "getRow2" $ do
                            x <- pz @(ParseJsonFile [Person1 'OUB] "test2.json" >> Id !! 2) ()
                            x @=? PresentT (Person1 {firstName1 = unsafeRefined "John", lastName1 = unsafeRefined "Doe", age1 = unsafeRefined 45, likesPizza1 = False, date1 = R3.unsafeRefined3 (read "2003-01-12 04:05:33 UTC") "2003-01-12 04:05:33", ipaddress1 = R3.unsafeRefined3 [124,1,12,223] "124.001.012.223"})

@@ -54,15 +54,15 @@ unnamedTests = [
   , (@=?) [(unsafeRefined "abcaaaabb", "")] (reads @(Refined 'OA (Re "^[abc]+$" Id) String) "Refined \"abcaaaabb\"")
   , (@=?) [] (reads @(Refined 'OA (Re "^[abc]+$" Id) String) "Refined \"abcaaaabbx\"")
 
-  , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):FalseP"]) (toFrom (unsafeRefined @'OZ @(Between 4 7 Id || Gt 14) 12))
+  , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):False"]) (toFrom (unsafeRefined @'OZ @(Between 4 7 Id || Gt 14) 12))
   , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @'OZ @(Between 4 7 Id || Gt 14) 22))
-  , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):FailP \"someval\" (|| [someval])"]) (toFrom (unsafeRefined @'OL @(Between 4 7 Id || Gt 14 || Failt _ "someval") 12))
+  , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):FailT someval (|| [someval])"]) (toFrom (unsafeRefined @'OL @(Between 4 7 Id || Gt 14 || Failt _ "someval") 12))
 
-  , (fst <$> unRavelT (tst2 10 200)) >>= (@=? Right (10,200))
-  , (fst <$> unRavelT (tst2 11 12)) >>= (@=? Left "FalseP")
+  , (fst <$> unRavelT (tst2 10 200)) >>= (@?= Right (10,200))
+  , (fst <$> unRavelT (tst2 11 12)) >>= (@?= Left "FalseT")
 
   , (fst <$> unRavelT (tst1 10 200)) >>= (@=? Right (10,200))
-  , (fst <$> unRavelT (tst1 11 12)) >>= (@=? Left "FalseP")
+  , (fst <$> unRavelT (tst1 11 12)) >>= (@=? Left "FalseT")
   ]
 
 allProps :: [TestTree]
@@ -73,13 +73,13 @@ allProps =
   ]
 
 tst1 :: Monad m => Int -> Int -> RefinedT m (Int,Int)
-tst1 i j = withRefinedT @'OA @(Between 2 11 Id) i
-  $ \x -> withRefinedT @'OA @(Between 200 211 Id) j
+tst1 i j = withRefinedT @'OAN @(Between 2 11 Id) i
+  $ \x -> withRefinedT @'OAN @(Between 200 211 Id) j
      $ \y -> return (unRefined x, unRefined y)
 
 tst2 :: MonadIO m => Int -> Int -> RefinedT m (Int,Int)
-tst2 i j = withRefinedTIO @'OA @(Between 2 11 Id) i
-  $ \x -> withRefinedTIO @'OA @(Stderr "startio..." |> Between 200 211 Id >| Stderr "...endio") j
+tst2 i j = withRefinedTIO @'OAN @(Between 2 11 Id) i
+  $ \x -> withRefinedTIO @'OAN @(Stderr "startio..." |> Between 200 211 Id >| Stderr "...endio") j
      $ \y -> return (unRefined x, unRefined y)
 
 -- roundtrip tojson then fromjson
@@ -90,10 +90,7 @@ testRefinedJ :: forall opts p a
    => a
    -> Either String (Refined opts p a)
 testRefinedJ a =
-   let ((bp,(e,_top)),mr) = runIdentity $ newRefinedM @opts @p a
+   let ((bp,(_top,e)),mr) = runIdentity $ newRefinedM @opts @p a
    in case mr of
-        Nothing -> error $ show bp ++ "\n" ++ e
+        Nothing -> error $ bp ++ "\n" ++ e
         Just r -> eitherDecode @(Refined opts p a) $ encode r
-
---test0a :: Refined 'OA (Between 0 0xff Id) Int
---test0a = $$(refinedTH 0xfe)

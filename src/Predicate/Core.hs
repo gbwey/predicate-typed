@@ -37,7 +37,6 @@ module Predicate.Core (
   , pl
   , pz
   , run
-  , colorBoolT
 
   , P(..)
 
@@ -718,21 +717,12 @@ prtTree' opts pp =
        DZero -> ""
        DLite ->
              formatOMsg opts " >>> "
-          <> colorBoolT opts r
+          <> colorBoolT' opts r
           <> " "
           <> topMessage pp
           <> "\n"
        _ -> formatOMsg opts "\n"
          <> prtTreePure opts (fromTT pp)
-
-colorBoolT :: Show a => POpts -> BoolT a -> String
-colorBoolT o r =
-  let f = colorMe o (r ^. boolT2P)
-  in case r of
-      FailT e -> f "Error" <> " " <> e
-      TrueT -> f "True"
-      FalseT -> f "False"
-      PresentT x -> f "Present" <> " " <> show x
 
 runPQ :: (P p a, P q a, MonadEval m)
    => String

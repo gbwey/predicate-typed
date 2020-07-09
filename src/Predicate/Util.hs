@@ -77,7 +77,9 @@ module Predicate.Util (
   , markBoundary
   , colorMe
   , isVerbose
-  , showBoolP
+  , colorBoolP
+  , colorBoolT
+  , colorBoolT'
   , type Color1
   , type Color2
   , type Color3
@@ -996,7 +998,7 @@ instance GetOrd 'CNe where getOrd = ("/=",(/=))
 toNodeString :: POpts -> PE -> String
 toNodeString opts bpe =
   if hasNoTree opts then errorInProgram $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
-  else showBoolP opts (_pBool bpe) <> " " <> _pString bpe
+  else colorBoolP opts (_pBool bpe) <> " " <> _pString bpe
 
 hasNoTree :: POpts -> Bool
 hasNoTree opts =
@@ -1011,13 +1013,31 @@ nullSpace :: String -> String
 nullSpace s | null s = ""
             | otherwise = " " <> s
 
-showBoolP :: POpts -> BoolP -> String
-showBoolP o =
+colorBoolP :: POpts -> BoolP -> String
+colorBoolP o =
   \case
     b@(FailP e) -> "[" <> colorMe o b "Error" <> nullSpace e <> "]"
     b@PresentP -> colorMe o b "P"
     b@TrueP -> colorMe o b "True"
     b@FalseP -> colorMe o b "False"
+
+colorBoolT' :: Show a => POpts -> BoolT a -> String
+colorBoolT' o r =
+  let f = colorMe o (r ^. boolT2P)
+  in case r of
+      FailT e -> f "Error" <> " " <> e
+      TrueT -> f "True"
+      FalseT -> f "False"
+      PresentT x -> f "Present" <> " " <> show x
+
+colorBoolT :: Show a => POpts -> BoolT a -> String
+colorBoolT o r =
+  let f = colorMe o (r ^. boolT2P)
+  in case r of
+      FailT e -> f "FailT" <> " " <> e
+      TrueT -> f "TrueT"
+      FalseT -> f "FalseT"
+      PresentT x -> f "PresentT" <> " " <> show x
 
 -- | colors the result of the predicate based on the current color palette
 colorMe :: POpts -> BoolP -> String -> String
@@ -1046,15 +1066,17 @@ fixPresentP :: Show a => POpts -> BoolP -> a -> String
 fixPresentP opts bp a =
   case bp of
     PresentP -> colorMe opts PresentP "Present" <> " " <> show a
-    _ -> showBoolP opts bp
+    _ -> colorBoolP opts bp
 
 prtTreePure :: POpts -> Tree PE -> String
 prtTreePure opts t
-  | hasNoTree opts = showBoolP opts (t ^. root . pBool)
+  | hasNoTree opts = colorBoolP opts (t ^. root . pBool)
   | otherwise = showImpl opts $ fmap (toNodeString opts) t
 
 topMessage :: TT a -> String
-topMessage pp =  "(" <> (pp ^. tString) <> ")"
+topMessage pp =
+  let s = pp ^. tString
+  in if null s then "" else "(" <> s <> ")"
 
 showImpl :: POpts -> Tree String -> String
 showImpl o =

@@ -47,18 +47,18 @@ suite =
 
 namedTests :: [TestTree]
 namedTests =
-  [ testCase "ip9" $ (@?=) (newRefined2 "121.0.12.13" ^?! _Right :: MakeR2 (Ip9 'OA)) (unsafeRefined2 [121,0,12,13] "121.0.12.13")
-  , testCase "luhn check" $ (@?=) (newRefined2 "12345678903" ^?! _Right :: MakeR2 (Ccn 'OA 11)) (unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "12345678903")
-  , testCase "datetime utctime" $ (@?=) (newRefined2 "2019-01-04 23:00:59" ^?! _Right :: MakeR2 (DateTime1 'OA UTCTime)) (unsafeRefined2 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59")
-  , testCase "datetime localtime" $ (@?=) (newRefined2 "2019-01-04 09:12:30" ^?! _Right :: MakeR2 (DateTime1 'OA LocalTime)) (unsafeRefined2 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30")
-  , testCase "hms" $ (@?=) (newRefined2 "12:0:59" ^?! _Right :: MakeR2 (Hms 'OA)) (unsafeRefined2 [12,0,59] "12:0:59")
-  , testCase "between5and9" $ (@?=) (newRefined2 "7" ^?! _Right :: Refined2 'OA (ReadP Int Id) (Between 5 9 Id) String) (unsafeRefined2 7 "7")
-  , testCase "ssn" $ (@?=) (newRefined2 "123-45-6789" ^?! _Right :: MakeR2 (Ssn 'OA)) (unsafeRefined2 [123,45,6789] "123-45-6789")
-  , testCase "base16" $ (@?=) (newRefined2 "12f" ^?! _Right :: MakeR2 (BaseN 'OA 16)) (unsafeRefined2 303 "12f")
-  , testCase "daten1" $ (@?=) (newRefined2 "June 25 1900" ^?! _Right :: MakeR2 (DateN 'OA)) (unsafeRefined2 (read "1900-06-25") "June 25 1900")
-  , testCase "daten2" $ (@?=) (newRefined2 "12/02/99" ^?! _Right :: MakeR2 (DateN 'OA)) (unsafeRefined2 (read "1999-12-02") "12/02/99")
-  , testCase "daten3" $ (@?=) (newRefined2 "2011-12-02" ^?! _Right :: MakeR2 (DateN 'OA)) (unsafeRefined2 (read "2011-12-02") "2011-12-02")
-  , testCase "ccn123" $ (@?=) (newRefined2 "123455" ^?! _Right :: MakeR2 (Ccn 'OA 6)) (unsafeRefined2 [1,2,3,4,5,5] "123455")
+  [ testCase "ip9" $ (@?=) (newRefined2 "121.0.12.13" :: Either String (MakeR2 (Ip9 'OA))) (Right (unsafeRefined2 [121,0,12,13] "121.0.12.13"))
+  , testCase "luhn check" $ (@?=) (newRefined2 "12345678903" :: Either String (MakeR2 (Ccn 'OA 11))) (Right (unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "12345678903"))
+  , testCase "datetime utctime" $ (@?=) (newRefined2 "2019-01-04 23:00:59" :: Either String (MakeR2 (DateTime1 'OA UTCTime))) (Right (unsafeRefined2 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59"))
+  , testCase "datetime localtime" $ (@?=) (newRefined2 "2019-01-04 09:12:30" :: Either String (MakeR2 (DateTime1 'OA LocalTime))) (Right (unsafeRefined2 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30"))
+  , testCase "hms" $ (@?=) (newRefined2 "12:0:59" :: Either String (MakeR2 (Hms 'OA))) (Right (unsafeRefined2 [12,0,59] "12:0:59"))
+  , testCase "between5and9" $ (@?=) (newRefined2 "7" :: Either String (Refined2 'OA (ReadP Int Id) (Between 5 9 Id) String)) (Right (unsafeRefined2 7 "7"))
+  , testCase "ssn" $ (@?=) (newRefined2 "123-45-6789" :: Either String (MakeR2 (Ssn 'OA))) (Right (unsafeRefined2 [123,45,6789] "123-45-6789"))
+  , testCase "base16" $ (@?=) (newRefined2 "12f" :: Either String (MakeR2 (BaseN 'OA 16))) (Right (unsafeRefined2 303 "12f"))
+  , testCase "daten1" $ (@?=) (newRefined2 "June 25 1900" :: Either String (MakeR2 (DateN 'OA))) (Right (unsafeRefined2 (read "1900-06-25") "June 25 1900"))
+  , testCase "daten2" $ (@?=) (newRefined2 "12/02/99" :: Either String (MakeR2 (DateN 'OA))) (Right (unsafeRefined2 (read "1999-12-02") "12/02/99"))
+  , testCase "daten3" $ (@?=) (newRefined2 "2011-12-02" :: Either String (MakeR2 (DateN 'OA))) (Right (unsafeRefined2 (read "2011-12-02") "2011-12-02"))
+  , testCase "ccn123" $ (@?=) (newRefined2 "123455" :: Either String (MakeR2 (Ccn 'OA 6))) (Right (unsafeRefined2 [1,2,3,4,5,5] "123455"))
   ]
 
 unnamedTests :: [IO ()]
@@ -67,7 +67,7 @@ unnamedTests = [
   , (@?=) [] (reads @(Refined2 'OA (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 256, r2Out = \"100\"}")
   , (@?=) [(unsafeRefined2 (-1234) "-4d2", "")] (reads @(Refined2 'OA (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}")
 
-  , (@?=) (unsafeRefined2 [1,2,3,4] "1.2.3.4") (newRefined2 "1.2.3.4" ^?! _Right :: Ip4R 'OA)
+  , (@?=) (Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")) (newRefined2 "1.2.3.4" :: Either String (Ip4R 'OA))
 
   , expectJ (Right (G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))) (toFrom $ G4 @'OA (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))
   , expectJ (Left ["Error in $.g4Ip", "False Boolean Check"]) (toFrom $ G4 @'OA (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.400"))
@@ -322,42 +322,23 @@ expect2 :: (HasCallStack, Show i, Show r, Eq i, Eq r)
 expect2 lhs (rhs,mr) =
   (@?=) (maybe (Left $ toRResults2 rhs) Right mr) lhs
 
+test2a :: Either String (MakeR2 (BaseN 'OU 16))
+test2a = newRefined2 "0000fe"
 
-{-
-
-test\TestRefined2.hs:77:33: error:
-    * Cannot apply expression of type 'Proxy _0'
-      to a visible type argument '(Ccn 11)'
-    * In the first argument of 'testRefined2P', namely
-        '(Proxy @_ @(Ccn 11))'
-      In the first argument of 'expectRight', namely
-        '(testRefined2P (Proxy @_ @(Ccn 11)) "123-45-6---789-03-")'
-      In the expression:
-        expectRight
-          (testRefined2P (Proxy @_ @(Ccn 11)) "123-45-6---789-03-")
-   |
-77 |   , expectRight (testRefined2P (Proxy @(Ccn 11)) "123-45-6---789-03-")
-   |                                 ^^^^^^^^^^^^^^^^^^
--}
-
-test2a :: MakeR2 (BaseN 'OU 16)
-test2a = newRefined2 "0000fe" ^?! _Right
-
-test2b :: Refined2 'OU
+test2b :: Either String (Refined2 'OU
    (Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" Id >> Snd (Head Id) >> Map (ReadP Int Id) Id)
    (All (0 <..> 0xff) Id)
-   String
-test2b = newRefined2 "123.211.122.1" ^?! _Right
+   String)
+test2b = newRefined2 "123.211.122.1"
 
-test2c :: Refined2 'OU
+test2c :: Either String (Refined2 'OU
    (Resplit "\\." Id >> Map (ReadP Int Id) Id)
    (All (0 <..> 0xff) Id && Len == 4)
-   String
-test2c = newRefined2 "200.2.3.4" ^?! _Right
-{-
-test2d :: Refined2 'OU
+   String)
+test2c = newRefined2 "200.2.3.4"
+
+test2d :: Either String (Refined2 'OU
     TimeUtc
-    (ToDay Id > Just (MkDay '(1999,12,31)))
-    ()
-test2d = $$(refined2THIO ())
--}
+    (ToDay Id > Just (MkDay '(2020,05,31)))
+    ())
+test2d = newRefined2P Proxy ()

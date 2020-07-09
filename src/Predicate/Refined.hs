@@ -83,7 +83,6 @@ import Data.Binary (Binary)
 import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
-import Data.Tree (Tree)
 import Data.Maybe (fromMaybe)
 
 -- $setup
@@ -149,8 +148,14 @@ type role Refined nominal nominal nominal
 
 instance RefinedC opts p String => IsString (Refined opts p String) where
   fromString s =
-    let ((bp,(e,top)),mr) = runIdentity $ newRefinedM @opts @p s
-    in fromMaybe (error $ "Refined(fromString):" ++ show bp ++ " " ++ top ++ "\n" ++ e) mr
+    let (w,mr) = runIdentity $ newRefinedM @opts @p s
+    in fromMaybe (error $ "Refined(fromString):" ++ errorDisplay (getOptT @opts) w) mr
+
+errorDisplay :: POpts -> (String,(String,String)) -> String
+errorDisplay o (bp,(top,e)) =
+     bp
+  ++ (if null top then "" else " " ++ top)
+  ++ (if null e || hasNoTree o then "" else "\n" ++ e)
 
 -- | 'Read' instance for 'Refined'
 --
@@ -192,7 +197,7 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 -- Right (Refined 13)
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined 'OAN (Between 10 14 Id) Int) "16"
--- Error in $: Refined(FromJSON:parseJSON):FalseP (16 <= 14)
+-- Error in $: Refined(FromJSON:parseJSON):FalseT (16 <= 14)
 -- False 16 <= 14
 -- |
 -- +- P Id 16
@@ -205,9 +210,9 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
   parseJSON z = do
     a <- parseJSON z
-    let ((bp,(e,top)),mr) = runIdentity $ newRefinedM @opts @p a
+    let (w,mr) = runIdentity $ newRefinedM @opts @p a
     case mr of
-      Nothing -> fail $ "Refined(FromJSON:parseJSON):" ++ show bp ++ " " ++ top ++ "\n" ++ e
+      Nothing -> fail $ "Refined(FromJSON:parseJSON):" ++ errorDisplay (getOptT @opts) w
       Just r -> return r
 
 -- | 'Binary' instance for 'Refined'
@@ -222,7 +227,7 @@ instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
 -- Refined "2019-04-23"
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined(Binary:get):FalseP (2019-05-30 <= 2019-04-23)
+-- Refined(Binary:get):FalseT (2019-05-30 <= 2019-04-23)
 -- False 2019-05-30 <= 2019-04-23
 -- |
 -- +- P ReadP Day 2019-04-23
@@ -241,9 +246,9 @@ instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
 instance (RefinedC opts p a, Binary a) => Binary (Refined opts p a) where
   get = do
     fld0 <- B.get @a
-    let ((bp,(e,top)),mr) = runIdentity $ newRefinedM @opts @p fld0
+    let (w,mr) = runIdentity $ newRefinedM @opts @p fld0
     case mr of
-      Nothing -> fail $ "Refined(Binary:get):" ++ show bp ++ " " ++ top ++ "\n" ++ e
+      Nothing -> fail $ "Refined(Binary:get):" ++ errorDisplay (getOptT @opts) w
       Just r -> return r
   put (Refined r) = B.put @a r
 
@@ -344,10 +349,10 @@ prtRefinedIO :: forall opts p a
 prtRefinedIO a = do
   let o = getOptT @opts
   tt <- evalBool (Proxy @p) o a
-  let msg = (_tBool tt ^. boolT2P, prtImpl o (fromTT tt))
+  let msg = (_tBool tt ^. boolT2P, prtTree' o tt) -- (fromTT tt))
   case oDebug o of
-     DZero -> pure ()  -- putStrLn $ showBoolP opts (fst msg) <> " " <> topMessage tt
-     DLite -> putStrLn $ showBoolP o (fst msg) <> " " <> topMessage tt
+     DZero -> pure ()  -- putStrLn $ colorBoolP opts (fst msg) <> " " <> topMessage tt
+     DLite -> putStrLn $ colorBoolT' o (_tBool tt) <> " " <> topMessage tt
      _ -> putStrLn $ snd msg
   pure $ case getValueLR o "" tt [] of
     Right True -> Right (Refined a)
@@ -359,16 +364,19 @@ prtRefinedIO a = do
 -- Right (Refined "123")
 --
 -- >>> newRefined @'OL @(ReadP Int Id > 99) "12"
--- Left "(12 > 99)"
+-- Left "FalseT (12 > 99)"
 --
 newRefined :: forall opts p a
    . RefinedC opts p a
    => a
    -> Either String (Refined opts p a)
 newRefined a =
-  let ((bp,(_top,e)),mr) = runIdentity $ newRefinedM @opts @p a
+  let ((bp,(top,e)),mr) = runIdentity $ newRefinedM @opts @p a
   in case mr of
-       Nothing -> if null e then Left (show bp) else Left e
+       Nothing -> case oDebug (getOptT @opts) of
+                    DZero -> Left bp
+                    DLite -> Left (bp <> (if null top then "" else " " <> top))
+                    _ -> Left e
        Just r -> Right r
 
 newRefinedM :: forall opts p a m
@@ -376,25 +384,15 @@ newRefinedM :: forall opts p a m
      , RefinedC opts p a
      )
    => a
-   -> m ((BoolP, (String, String)), Maybe (Refined opts p a))
+   -> m ((String, (String, String)), Maybe (Refined opts p a))
 newRefinedM a = do
   let o = getOptT @opts
-  tt <- evalBool (Proxy @p) o a
-{-
-  let s = prtTree' o tt
-  pure $ ((_tBool tt ^. boolT2P, topMessage tt, s),) $ case getValueLR o "" tt [] of
-    Right True -> Just (Refined a)
-    _ -> Nothing
--}
-  let rc = _tBool tt ^. boolT2P
-      ss = case oDebug o of
-             DZero -> ("","")
-             DLite -> ("",formatOMsg o " " <> topMessage tt)
-             _ -> (prtImpl o (fromTT tt),topMessage tt)
-  pure $ ((rc,ss),) $ case getValueLR o "" tt [] of
+  pp <- evalBool (Proxy @p) o a
+  let r = colorBoolT o (_tBool pp)
+      s = prtTree' o pp
+  pure $ ((r,(topMessage pp, s)),) $ case getValueLR o "" pp [] of
        Right True -> Just (Refined a)
        _ -> Nothing
-
 
 newRefinedTImpl :: forall opts p a n m
   . ( RefinedC opts p a
@@ -407,11 +405,11 @@ newRefinedTImpl :: forall opts p a n m
 newRefinedTImpl f a = do
   let o = getOptT @opts
   tt <- f $ evalBool (Proxy @p) o a
-  let msg = prtImpl o (fromTT tt)
+  let msg = prtTree' o tt
   tell [msg]
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
-    _ -> throwError $ show (_tBool tt ^. boolT2P)
+    _ -> throwError $ colorBoolT o (_tBool tt)
 
 -- | returns a wrapper 'RefinedT' around a possible 'Refined' value if \'a\' is valid for the predicate \'p\'
 newRefinedT :: forall m opts p a
@@ -477,11 +475,11 @@ unsafeRefined' a =
       tt = runIdentity $ evalBool (Proxy @p) o a
   in case getValueLR o "" tt [] of
        Right True -> Refined a
-       _ -> error $ prtImpl o (fromTT tt)
-
-prtImpl :: POpts -> Tree PE -> String
-prtImpl o tt =
-  formatOMsg o "\n" <> prtTreePure o tt
+       _ -> let s = prtTree' o tt
+            in case oDebug o of
+                 DZero -> error $ colorBoolT' o (view tBool tt)
+                 DLite -> error s
+                 _ -> error $ "\n" ++ s
 
 type family ReplaceOptT (o :: OptT) t where
   ReplaceOptT o (Refined _ p a) = Refined o p a

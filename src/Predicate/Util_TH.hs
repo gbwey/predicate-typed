@@ -94,7 +94,7 @@ refinedTH i =
   in case mr of
        Nothing ->
          let msg1 = if hasNoTree (getOptT @opts) then "" else "\n" ++ e ++ "\n"
-         in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
+         in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top
        Just r -> TH.TExp <$> TH.lift r
 
 refinedTHIO :: forall opts p i
@@ -107,7 +107,7 @@ refinedTHIO i = do
   case mr of
        Nothing ->
          let msg1 = if hasNoTree (getOptT @opts) then "" else "\n" ++ e ++ "\n"
-         in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ show bp ++ " " ++ top
+         in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top
        Just r -> TH.TExp <$> TH.lift r
 
 -- | creates a 'Refined1.Refined1' refinement type
@@ -266,6 +266,9 @@ refined2THIO i = do
 --       In an equation for \'it\':
 --           it = $$(refined3TH 99) :: Refined3 'OAN Id (Between 100 125 Id) Id Int
 -- @
+--
+-- >>> $$(refined3TH @'OZ @(Resplit "\\." Id >> Map (ReadP Int Id) Id) @(All (0 <..> 0xff) Id && Len == 4) @(PrintL 4 "%03d.%03d.%03d.%03d" Id)  "200.2.3.4")
+-- Refined3 {r3In = [200,2,3,4], r3Out = "200.002.003.004"}
 --
 refined3TH :: forall opts ip op fmt i
   . ( Show i

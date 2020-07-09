@@ -284,16 +284,6 @@ basen = mkProxy3
 basen' :: Proxy (BaseN' opts n p)
 basen' = mkProxy3
 
-{-
-basen' :: forall n p
-       . (P p Int
-       , PP p Int ~ Bool
-       , KnownNat n
-       , (n GN.<=? 36) ~ 'True
-       , (2 GN.<=? n) ~ 'True
-       ) => Proxy (BaseN' n p)
-basen' = mkProxy3
--}
 daten :: OptTC opts => Proxy (DateN opts)
 daten = mkProxy3'
 

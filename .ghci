@@ -1,0 +1,81 @@
+:seti -fprint-explicit-kinds
+:seti -XTemplateHaskell
+:seti -XTypeOperators
+:seti -XDataKinds
+:seti -XOverloadedStrings
+:seti -XTypeApplications
+:seti -XScopedTypeVariables
+:seti -XTupleSections
+:seti -XLambdaCase
+:seti -XOverloadedLabels
+:seti -XGADTs
+:seti -XFlexibleContexts
+:seti -XKindSignatures
+:seti -XTypeInType
+:seti -XTypeFamilies
+:seti -XUndecidableInstances
+:seti -XNoStarIsType
+
+:seti -Wall
+:seti -Wcompat
+:seti -Wincomplete-record-updates
+:seti -Wincomplete-uni-patterns
+:seti -Wredundant-constraints
+
+{- need this for ghci -}
+:seti -Wno-type-defaults
+:set prompt >
+:set +t
+import Control.Applicative
+import qualified Control.Arrow as A
+import Control.Lens
+import qualified Control.Lens as L
+import Control.Monad
+import Data.Char
+import Data.Either
+import Data.Foldable
+import Data.Function
+import Data.List
+import Data.List.NonEmpty ((<|),NonEmpty(..))
+import qualified Data.List.NonEmpty as N
+import Data.Maybe
+import qualified Data.Semigroup as SG
+import qualified Data.Monoid as MM
+import Data.Ord
+import Data.Proxy
+import Data.Traversable
+import Data.Void
+import qualified Data.Type.Equality as DTE
+import qualified GHC.TypeNats as GN
+import qualified GHC.TypeLits as GL
+import qualified Data.Map.Strict as M
+import qualified Data.IntMap.Strict as IM
+import Data.These
+import Data.These.Combinators
+import Data.Tree
+import Data.Tree.Lens
+import qualified Data.Sequence as Seq
+import Data.Sequence (Seq(..))
+import Control.Monad.IO.Class
+import Control.Monad.Writer (WriterT(..), runWriterT, MonadWriter, tell)
+import Control.Monad.Except
+import Data.Bitraversable
+import qualified Data.Text as T
+import qualified Control.Exception as E
+import Text.Show.Functions ()
+import Text.Printf
+import qualified GHC.Exts as GE
+import Data.String
+import Data.Time
+import qualified Data.ByteString.Lazy.Char8 as BL8
+import qualified Data.ByteString.Char8 as B8
+import qualified Language.Haskell.TH.Syntax as TH
+import qualified Language.Haskell.TH as TH
+import Data.Aeson
+import qualified Data.Aeson as A
+import qualified Test.QuickCheck as Q
+import qualified Data.Binary as B
+import Data.Binary (Binary)
+import System.IO
+import Control.Lens.Action
+import System.Console.Pretty
