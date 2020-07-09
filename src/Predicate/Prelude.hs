@@ -599,7 +599,6 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import qualified Data.Chimera as Chimera
 import qualified Data.Map.Strict as M
 
 -- $setup
@@ -4549,15 +4548,8 @@ instance (PP p x ~ a
         let b = p > 1 && isPrime (fromIntegral p)
         in mkNodeB opts b (msg0 <> show1 opts " | " p) [hh pp]
 
-isPrimeF :: (Word -> Bool) -> Word -> Bool
-isPrimeF f n = n > 1 && and [ n `rem` d /= 0 | d <- [2 .. floor (sqrt @Double (fromIntegral n))], f d]
-
--- segfaults if Word<0
 isPrime :: Word -> Bool
-isPrime = Chimera.memoizeFix isPrimeF
-
---isPrime :: Integer -> Bool
---isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
+isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
 
 -- | get the next prime number
 --

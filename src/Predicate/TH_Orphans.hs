@@ -8,19 +8,22 @@
      Mainly contains useful Template Haskell Lift instances for Date Time
 -}
 module Predicate.TH_Orphans () where
-import qualified Language.Haskell.TH.Syntax as TH
-import qualified Language.Haskell.TH.Lift as TL
+import Language.Haskell.TH.Syntax
 import Data.Time
 import Data.Fixed
+import qualified Language.Haskell.TH.Lift as TL
 
-deriving instance TH.Lift Day
-deriving instance TH.Lift LocalTime
-deriving instance TH.Lift ZonedTime
-deriving instance TH.Lift TimeZone
-deriving instance TH.Lift TimeOfDay
-deriving instance TH.Lift (Fixed a)
-
-deriving instance TH.Lift UTCTime
+deriving instance Lift Day
+deriving instance Lift LocalTime
+deriving instance Lift ZonedTime
+deriving instance Lift TimeZone
+deriving instance Lift TimeOfDay
+deriving instance Lift (Fixed a)
 
 $(TL.deriveLift ''DiffTime)
+--instance Lift DiffTime where
+--  lift x = return $ LitE (IntegerL $ diffTimeToPicoseconds x)
+
+deriving instance Lift UTCTime
+
 

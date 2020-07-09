@@ -29,8 +29,7 @@ import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 
 import Control.Lens
 import Data.Aeson
-import Control.Monad.IO.Class (MonadIO(..))
---import Text.Show.Functions ()
+import Control.Monad.IO.Class (MonadIO)
 
 suite :: TestTree
 suite =
@@ -40,15 +39,15 @@ suite =
 namedTests :: [TestTree]
 namedTests =
   [
-    testCase "always true" $ (@=?) ($$(refinedTH 7) :: Refined 'OA 'True Int) (unsafeRefined 7)
-  , testCase "between5and9" $ (@=?) ($$(refinedTH 7) :: Refined 'OA (Between 5 9 Id) Int) (unsafeRefined 7)
+    testCase "always true" $ (@=?) (newRefined @'OA @'True @Int 7) (Right (unsafeRefined 7))
+  , testCase "between5and9" $ (@=?) (newRefined @'OA @(Between 5 9 Id) @Int 7) (Right (unsafeRefined 7))
   ]
 
 unnamedTests :: [IO ()]
 unnamedTests = [
-    (@=?) (unsafeRefined @'OA @'True ("1.2.3.4" :: String)) $$(refinedTH "1.2.3.4")
-  , (@=?) (unsafeRefined @'OA @((Len == 4) && Luhn Id) [1,2,3,0]) $$(refinedTH [1,2,3,0])
-  , (@=?) (unsafeRefined @'OA @(Not ((Len == 4) && Luhn Id)) [1,2,3,1]) $$(refinedTH [1,2,3,1])
+    (@=?) (Right (unsafeRefined @'OA @'True ("1.2.3.4" :: String))) (newRefined "1.2.3.4")
+  , (@=?) (Right (unsafeRefined @'OA @((Len == 4) && Luhn Id) [1,2,3,0])) (newRefined [1,2,3,0])
+  , (@=?) (Right (unsafeRefined @'OA @(Not ((Len == 4) && Luhn Id)) [1,2,3,1])) (newRefined [1,2,3,1])
 
   , (@=?) [(unsafeRefined 7, "")] (reads @(Refined 'OA (Between 2 10 Id) Int) "Refined 7")
   , (@=?) [] (reads @(Refined 'OA (Between 2 10 Id) Int) "Refined 0")
@@ -96,5 +95,5 @@ testRefinedJ a =
         Nothing -> error $ show bp ++ "\n" ++ e
         Just r -> eitherDecode @(Refined opts p a) $ encode r
 
-test0a :: Refined 'OA (Between 0 0xff Id) Int
-test0a = $$(refinedTH 0xfe)
+--test0a :: Refined 'OA (Between 0 0xff Id) Int
+--test0a = $$(refinedTH 0xfe)

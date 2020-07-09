@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5805e9d6cc2812ba6d412ba04a3f9d62be886e299b7e49c41bdeb87c535a3eaa
+-- hash: 1b42872ffc591d9cb7bcd20f5c3d3e2423a1bb60b254a1a1aada96539b974cfe
 
 name:           predicate-typed
 version:        0.7.0.0
@@ -51,7 +51,6 @@ library
     , base >=4.7 && <5
     , binary
     , bytestring
-    , chimera >=0.3.1.0
     , comonad
     , containers
     , deepseq
@@ -105,7 +104,6 @@ test-suite doctests
     , base
     , binary
     , bytestring
-    , chimera >=0.3.1.0
     , comonad
     , containers
     , deepseq
@@ -152,7 +150,6 @@ test-suite predicate-typed-test
     , base
     , binary
     , bytestring
-    , chimera >=0.3.1.0
     , comonad
     , containers
     , deepseq
