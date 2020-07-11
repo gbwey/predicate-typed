@@ -5,7 +5,6 @@
 {-# OPTIONS -Wredundant-constraints #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wno-unused-imports #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}

@@ -98,7 +98,7 @@ import Data.Maybe (fromMaybe)
 -- Right (Refined 13)
 --
 -- >>> prtRefinedIO @'OZ @(Between 10 14 Id) 99
--- Left FalseP
+-- Left FalseT
 --
 -- >>> prtRefinedIO @'OZ @(Last Id >> Len == 4) ["one","two","three","four"]
 -- Right (Refined ["one","two","three","four"])
@@ -107,37 +107,38 @@ import Data.Maybe (fromMaybe)
 -- Right (Refined "141.213.1.99")
 --
 -- >>> prtRefinedIO @'OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) "141.213.1"
--- Left FalseP
+-- Left FalseT
 --
 -- >>> prtRefinedIO @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> 'True) "141.213.1"
--- Left (FailP "bad length: found 3")
+-- Left (FailT "bad length: found 3")
 --
 -- >>> prtRefinedIO @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id) >> 'True) "141.213.1.444"
--- Left (FailP "octet 3 out of range 444")
+-- Left (FailT "octet 3 out of range 444")
 --
 -- >>> prtRefinedIO @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id) >> 'True) "141.213.1x34.444"
--- Left (FailP "ReadP Int (1x34)")
+-- Left (FailT "ReadP Int (1x34)")
 --
 -- >>> prtRefinedIO @'OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12344"
 -- Right (Refined "12344")
 --
 -- >>> prtRefinedIO @'OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12340"
--- Left FalseP
+-- Left FalseT
 --
 -- >>> prtRefinedIO @'OZ @(Any (Prime Id) Id) [11,13,17,18]
 -- Right (Refined [11,13,17,18])
 --
 -- >>> prtRefinedIO @'OZ @(All (Prime Id) Id) [11,13,17,18]
--- Left FalseP
+-- Left FalseT
 --
 -- >>> prtRefinedIO @'OZ @(Snd Id !! Fst Id >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Right (Refined (2,["abc","defghij","xyzxyazsfd"]))
 --
 -- >>> prtRefinedIO @'OZ @(Snd Id !! Fst Id >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
--- Left (FailP "(!!) index not found")
+-- Left (FailT "(!!) index not found")
 --
 -- >>> prtRefinedIO @'OZ @(Snd Id !! Fst Id >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
--- Left FalseP
+-- Left FalseT
+--
 newtype Refined (opts :: OptT) p a = Refined a deriving (Show, Eq, Generic, TH.Lift)
 
 -- | extract the value from Refined
@@ -146,6 +147,14 @@ unRefined (Refined a) = a
 
 type role Refined nominal nominal nominal
 
+-- | 'IsString' instance for Refined
+--
+-- >>> pureTryTest $ fromString @(Refined 'OL (ReadP Int Id >> Id > 244) String) "523"
+-- Right (Refined "523")
+--
+-- >>> pureTryTest $ fromString @(Refined 'OL (ReadP Int Id >> Id > 244) String) "52"
+-- Left ()
+--
 instance RefinedC opts p String => IsString (Refined opts p String) where
   fromString s =
     let (w,mr) = runIdentity $ newRefinedM @opts @p s
@@ -273,7 +282,7 @@ genRefined g =
         case ma of
           Nothing ->
              if cnt >= oRecursion o
-             then error $ markBoundary o ("genRefined recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             then error $ setOtherEffects o ("genRefined recursion exceeded(" ++ show (oRecursion o) ++ ")")
              else f (cnt+1)
           Just a -> pure $ unsafeRefined a
   in f 0
@@ -286,11 +295,11 @@ rapply :: forall m opts p a . (RefinedC opts p a, Monad m)
   -> RefinedT m (Refined opts p a)
 rapply f ma mb = do
   let opts = getOptT @opts
-  tell [markBoundary opts "=== a ==="]
+  tell [setOtherEffects opts "=== a ==="]
   Refined x <- ma
-  tell [markBoundary opts "=== b ==="]
+  tell [setOtherEffects opts "=== b ==="]
   Refined y <- mb
-  tell [markBoundary opts "=== a `op` b ==="]
+  tell [setOtherEffects opts "=== a `op` b ==="]
   newRefinedT @m @opts @p (f x y)
 
 -- | takes two values and lifts them into 'RefinedT' and then applies the binary operation
@@ -345,18 +354,18 @@ withRefinedTIO a k = newRefinedTIO @opts @p a >>= k
 prtRefinedIO :: forall opts p a
    . RefinedC opts p a
    => a
-   -> IO (Either BoolP (Refined opts p a))
+   -> IO (Either (BoolT Bool) (Refined opts p a))
 prtRefinedIO a = do
   let o = getOptT @opts
   tt <- evalBool (Proxy @p) o a
-  let msg = (_tBool tt ^. boolT2P, prtTree' o tt) -- (fromTT tt))
+  let r = _tBool tt
   case oDebug o of
-     DZero -> pure ()  -- putStrLn $ colorBoolP opts (fst msg) <> " " <> topMessage tt
-     DLite -> putStrLn $ colorBoolT' o (_tBool tt) <> " " <> topMessage tt
-     _ -> putStrLn $ snd msg
+     DZero -> pure ()
+     DLite -> putStrLn $ colorBoolT o r <> " " <> topMessage tt
+     _ -> putStrLn $ prtTree' o tt
   pure $ case getValueLR o "" tt [] of
     Right True -> Right (Refined a)
-    _ -> Left (fst msg)
+    _ -> Left r
 
 -- | returns a 'Refined' value if \'a\' is valid for the predicate \'p\'
 --
@@ -388,7 +397,7 @@ newRefinedM :: forall opts p a m
 newRefinedM a = do
   let o = getOptT @opts
   pp <- evalBool (Proxy @p) o a
-  let r = colorBoolT o (_tBool pp)
+  let r = colorBoolT' o (_tBool pp)
       s = prtTree' o pp
   pure $ ((r,(topMessage pp, s)),) $ case getValueLR o "" pp [] of
        Right True -> Just (Refined a)
@@ -409,7 +418,7 @@ newRefinedTImpl f a = do
   tell [msg]
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
-    _ -> throwError $ colorBoolT o (_tBool tt)
+    _ -> throwError $ colorBoolT' o (_tBool tt)
 
 -- | returns a wrapper 'RefinedT' around a possible 'Refined' value if \'a\' is valid for the predicate \'p\'
 newRefinedT :: forall m opts p a
@@ -476,10 +485,11 @@ unsafeRefined' a =
   in case getValueLR o "" tt [] of
        Right True -> Refined a
        _ -> let s = prtTree' o tt
+                bp = colorBoolT' o (view tBool tt)
             in case oDebug o of
-                 DZero -> error $ colorBoolT' o (view tBool tt)
-                 DLite -> error s
-                 _ -> error $ "\n" ++ s
+                 DZero -> error bp
+                 DLite -> error $ bp ++ "\n" ++ s
+                 _ -> error $ bp ++ "\n" ++ s
 
 type family ReplaceOptT (o :: OptT) t where
   ReplaceOptT o (Refined _ p a) = Refined o p a

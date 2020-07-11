@@ -7,7 +7,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
@@ -38,7 +37,6 @@ module Predicate.Util (
 
  -- ** BoolT
   , BoolT(..)
-  , BoolP
   , GetBoolT(..)
   , _FailT
   , _PresentT
@@ -46,11 +44,8 @@ module Predicate.Util (
   , _TrueT
 
  -- ** BoolP
-  , boolT2P
---  , BoolP
-  , PE(PE)
+  , PE
   , pString
-  , pBool
 
  -- ** create tree functions
   , mkNode
@@ -74,17 +69,19 @@ module Predicate.Util (
   , Debug(..)
   , Disp(..)
   , Color(..)
-  , markBoundary
   , colorMe
   , isVerbose
   , colorBoolP
   , colorBoolT
   , colorBoolT'
+  , setOtherEffects
   , type Color1
   , type Color2
   , type Color3
   , type Color4
   , type Color5
+  , type Other1
+  , type Other2
 
   , HOpts(..)
   , OptT(..)
@@ -112,7 +109,7 @@ module Predicate.Util (
   , compileRegex
   , GetROpts(..)
   , RReplace(..)
-  , ReplaceFnSubC(..)
+  , GetReplaceFnSub(..)
   , ReplaceFnSub(..)
 
   -- ** useful type families
@@ -160,6 +157,17 @@ module Predicate.Util (
  -- ** boolean methods
   , (~>)
 
+  -- ** extract from n-tuple
+  , T4_1
+  , T4_2
+  , T4_3
+  , T4_4
+  , T5_1
+  , T5_2
+  , T5_3
+  , T5_4
+  , T5_5
+
  -- ** miscellaneous
   , Holder
   , hh
@@ -171,17 +179,8 @@ module Predicate.Util (
   , readField
   , showThese
   , chkSize
-
-  -- ** extract from n-tuple
-  , T4_1
-  , T4_2
-  , T4_3
-  , T4_4
-  , T5_1
-  , T5_2
-  , T5_3
-  , T5_4
-  , T5_5
+  , pureTryTest
+  , pureTryTestPred
 
     ) where
 import qualified GHC.TypeNats as GN
@@ -207,6 +206,7 @@ import Data.Sequence (Seq)
 import Control.Applicative (ZipList)
 import Data.Kind (Type)
 import Data.These (These(..))
+import Data.These.Combinators (isThis, isThat, isThese)
 import qualified Control.Exception as E
 import Control.DeepSeq
 import System.IO.Unsafe (unsafePerformIO)
@@ -223,7 +223,6 @@ import qualified Data.ByteString.Char8 as BS8
 import GHC.Stack
 import Data.Monoid (Last (..))
 import Data.Maybe
---import Data.Function (on)
 import Data.Coerce
 import Data.Foldable (toList)
 
@@ -239,7 +238,6 @@ data TT a = TT { _tBool :: !(BoolT a)  -- ^ the value at this root node
                } deriving Show
 
 -- | contains the typed result from evaluating the expression tree
---
 data BoolT a where
   FailT :: !String -> BoolT a  -- failure with string
   FalseT :: BoolT Bool        -- false predicate
@@ -267,6 +265,7 @@ instance Semigroup (BoolT a) where
 deriving instance Show a => Show (BoolT a)
 deriving instance Eq a => Eq (BoolT a)
 
+-- | extracts the 'BoolT a' constructors from the typelevel
 class GetBoolT a (x :: BoolT a) | x -> a where
   getBoolT :: Either Bool Bool
 instance GetBoolT Bool 'TrueT where
@@ -282,9 +281,11 @@ instance GetBoolT a ('FailT s) where
 tBool :: Lens (TT a) (TT b) (BoolT a) (BoolT b)
 tBool afb s = (\b -> s { _tBool = b }) <$> afb (_tBool s)
 
+-- | lens for accessing the message from 'BoolT'
 tString :: Lens' (TT a) String
 tString afb s = (\b -> s { _tString = b }) <$> afb (_tString s)
 
+-- | lens for accessing the subtree from 'BoolT'
 tForest :: Lens' (TT a) (Forest PE)
 tForest afb s = (\b -> s { _tForest = b }) <$> afb (_tForest s)
 
@@ -309,9 +310,11 @@ data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
              , _pString :: !String -- ^ optional strings to include in the results
              } deriving Show
 
+-- | prism for accessing '_pBool'
 pBool :: Lens' PE BoolP
 pBool afb (PE x y) = flip PE y <$> afb x
 
+-- | prism for accessing 'PE'
 pString :: Lens' PE String
 pString afb s = (\b -> s { _pString = b }) <$> afb (_pString s)
 
@@ -381,18 +384,35 @@ getValueLRImpl showError opts msg0 tt hs =
           )
           (getValLRFromTT tt)
 
+-- | wrapper for a show instance around 'Color'
+newtype SColor = SColor Color
+
+instance Show SColor where
+  show (SColor c) =
+    case c of
+      Black-> "Black"
+      Red-> "Red"
+      Green-> "Green"
+      Yellow-> "Yellow"
+      Blue-> "Blue"
+      Magenta-> "Magenta"
+      Cyan-> "Cyan"
+      White-> "White"
+      Default -> "Default"
+
 -- | the color palette for displaying the expression tree
 newtype PColor = PColor (BoolP -> String -> String)
 instance Show PColor where
   show PColor {} = "PColor <fn>"
 
+-- | elide the 'Identity' wrapper so it acts like a normal adt
 type family HKD f a where
   HKD Identity a = a
   HKD f a = f a
 
 type POpts = HOpts Identity
 
--- | customizable options
+-- | customizable options for running a typelevel expression
 data HOpts f =
   HOpts { oWidth :: !(HKD f Int) -- ^ length of data to display for 'showLitImpl'
         , oDebug :: !(HKD f Debug) -- ^ debug level
@@ -400,7 +420,7 @@ data HOpts f =
         , oColor :: !(HKD f (String, PColor)) -- ^ color palette used
         , oMsg :: ![String] -- ^ messages associated with type
         , oRecursion :: !(HKD f Int) -- ^ max recursion
-        , oOther :: !(HKD f (Color, Color)) -- ^ other message effects
+        , oOther :: !(HKD f (Bool, SColor, SColor)) -- ^ other message effects
         , oNoColor :: !(HKD f Bool) -- ^ no colors
         }
 
@@ -410,9 +430,10 @@ deriving instance
   , Show (HKD f Disp)
   , Show (HKD f (String, PColor))
   , Show (HKD f Bool)
-  , Show (HKD f (Color, Color))
+  , Show (HKD f (Bool, SColor, SColor))
   ) => Show (HOpts f)
 
+-- | combine options ala monoid
 reifyOpts :: HOpts Last -> HOpts Identity
 reifyOpts h =
   HOpts (fromMaybe (oWidth defOpts) (getLast (oWidth h)))
@@ -426,24 +447,31 @@ reifyOpts h =
          else fromMaybe (oOther defOpts) (getLast (oOther h)))
         (fromMaybe (oNoColor defOpts) (getLast (oNoColor h)))
 
+-- | set maximum display width of expressions
 setWidth :: Int -> POptsL
 setWidth i = mempty { oWidth = pure i }
 
+-- | set title message for the display tree
 setMessage :: String -> POptsL
 setMessage s = mempty { oMsg = pure s }
 
+-- | set maximum recursion eg when running regex
 setRecursion :: Int -> POptsL
 setRecursion i = mempty { oRecursion = pure i }
 
-setOther :: Color -> Color -> POptsL
-setOther c1 c2 = mempty { oOther = pure (c1, c2) }
+-- | set color of title message
+setOther :: Bool -> Color -> Color -> POptsL
+setOther b c1 c2 = mempty { oOther = pure $ coerce (b, c1, c2) }
 
+-- | turn on/off colors
 setNoColor :: Bool -> POptsL
 setNoColor b = mempty { oNoColor = pure b }
 
+-- | display type eg 'Unicode' or 'Ansi'
 setDisp :: Disp -> POptsL
 setDisp d = mempty { oDisp = pure d }
 
+-- | create color palette for the expression tree
 setCreateColor :: String
    -> Color
    -> Color
@@ -462,10 +490,12 @@ setCreateColor s c1 c2 c3 c4 c5 c6 c7 c8 =
        PresentP -> color c7 . bgColor c8
   in mempty { oColor = pure (s,PColor pc) }
 
+-- | set debug mode
 setDebug :: Debug -> POptsL
 setDebug d =
   mempty { oDebug = pure d }
 
+-- | monoid opts
 type POptsL = HOpts Last
 
 instance Monoid (HOpts Last) where
@@ -490,6 +520,7 @@ data Disp = Ansi -- ^ draw normal tree
           | Unicode  -- ^ use unicode
           deriving (Show, Eq)
 
+-- | default options
 defOpts :: POpts
 defOpts = HOpts
     { oWidth = 200
@@ -502,13 +533,15 @@ defOpts = HOpts
     , oNoColor = False
     }
 
-otherDef :: (Color, Color)
-otherDef = (Magenta, Default)
+-- | default title message color and boundaries between multipart refine messages
+otherDef :: (Bool, SColor, SColor)
+otherDef = coerce (True, Default, Default)
 
 nocolor, colorDef :: (String, PColor)
 nocolor = ("nocolor", PColor $ flip const)
 colorDef = fromJust $ getLast $ oColor $ getOptT' @Color5
 
+-- | how much detail to show in the expression tree
 data Debug =
        DZero -- ^ one line summary used mainly for testing
      | DLite -- ^ one line summary with additional context from the head of the evaluation tree
@@ -521,20 +554,15 @@ data Debug =
 isVerbose :: POpts -> Bool
 isVerbose = (DVerbose==) . oDebug
 
-markBoundary :: POpts -> String -> String
-markBoundary o =
-  if hasNoColor o then id else coerce (snd (oColor o)) PresentP
-
--- | color flag
-hasNoColor :: POpts -> Bool
-hasNoColor = oNoColor
-
 -- | color palettes
 type Color1 = 'OColor "color1" 'Default 'Blue 'Default 'Red 'Black 'Cyan 'Black 'Yellow
 type Color2 = 'OColor "color2" 'Default 'Magenta 'Default 'Red 'Black 'White 'Black 'Yellow
 type Color3 = 'OColor "color3" 'Default 'Blue 'Red 'Default 'White 'Default 'Black 'Yellow
 type Color4 = 'OColor "color4" 'Default 'Red 'Red 'Default 'Green 'Default 'Black 'Yellow
 type Color5 = 'OColor "color5" 'Blue 'Default 'Red 'Default 'Cyan 'Default 'Yellow 'Default
+
+type Other1 = 'OOther 'True 'Yellow 'Default
+type Other2 = 'OOther 'True 'Default 'Default
 
 -- | fix PresentT Bool to TrueT or FalseT
 fixBoolT :: TT Bool -> TT Bool
@@ -666,13 +694,15 @@ instance GetROpt 'Ungreedy where getROpt = RL.ungreedy
 instance GetROpt 'Utf8 where getROpt = RL.utf8
 instance GetROpt 'No_utf8_check where getROpt = RL.no_utf8_check
 
+-- | simple regex string replacement options
 data ReplaceFnSub = RPrepend | ROverWrite | RAppend deriving (Show,Eq)
 
-class ReplaceFnSubC (k :: ReplaceFnSub) where
+-- | extract replacement options from typelevel
+class GetReplaceFnSub (k :: ReplaceFnSub) where
   getReplaceFnSub :: ReplaceFnSub
-instance ReplaceFnSubC 'RPrepend where getReplaceFnSub = RPrepend
-instance ReplaceFnSubC 'ROverWrite where getReplaceFnSub = ROverWrite
-instance ReplaceFnSubC 'RAppend where getReplaceFnSub = RAppend
+instance GetReplaceFnSub 'RPrepend where getReplaceFnSub = RPrepend
+instance GetReplaceFnSub 'ROverWrite where getReplaceFnSub = ROverWrite
+instance GetReplaceFnSub 'RAppend where getReplaceFnSub = RAppend
 
 -- | used by 'Predicate.ReplaceImpl' and 'RH.sub' and 'RH.gsub' to allow more flexible replacement
 --   These parallel the RegexReplacement (not exported) class in "Text.Regex.PCRE.Heavy" but have overlappable instances which is problematic for this code so I use 'RReplace'
@@ -689,7 +719,7 @@ instance Show RReplace where
            RReplace2 {} -> "RReplace2 <fn>"
            RReplace3 {} -> "RReplace3 <fn>"
 
--- | extract values from the trees or if there are errors returned a tree with added context
+-- | extract values from the trees or if there are errors return a tree with context
 splitAndAlign :: Show x =>
                     POpts
                     -> String
@@ -703,6 +733,12 @@ splitAndAlign opts msgs ts =
                        (msgs <> (formatList opts [fst e] <> " excnt=" <> show (length excs)))
                        (map (hh . snd) ts)
      ([], tfs) -> Right tfs
+
+groupErrors :: [String] -> String
+groupErrors =
+     intercalate " | "
+   . map (\xs@(x :| _) -> x <> (if length xs > 1 then "(" <> show (length xs) <> ")" else ""))
+   . N.group
 
 partitionTTExtended :: (w, TT a) -> Either ((w, TT x), String) (a, w, TT a)
 partitionTTExtended (s, t) =
@@ -732,28 +768,26 @@ _boolT = prism' (bool FalseT TrueT)
               FalseT -> Just False
               FailT {} -> Nothing
 
-groupErrors :: [String] -> String
-groupErrors =
-     intercalate " | "
-   . map (\xs@(x :| _) -> x <> (if length xs > 1 then "(" <> show (length xs) <> ")" else ""))
-   . N.group
-
+-- | 'FailT' prism
 _FailT :: Prism' (BoolT a) String
 _FailT = prism' FailT $ \case
                          FailT s -> Just s
                          _ -> Nothing
 
+-- | 'PresentT' prism
 _PresentT :: Prism' (BoolT a) a
 _PresentT = prism' PresentT $ \case
                                 PresentT a -> Just a
                                 _ -> Nothing
 
+-- | 'FalseT' prism
 _FalseT :: Prism' (BoolT Bool) ()
 _FalseT = prism' (const FalseT) $
             \case
                FalseT -> Just ()
                _ -> Nothing
 
+-- | 'TrueT' prism
 _TrueT :: Prism' (BoolT Bool) ()
 _TrueT = prism' (const TrueT) $
             \case
@@ -773,7 +807,7 @@ _TrueT = prism' (const TrueT) $
 --
 -- >>> False ~> True
 -- True
-
+--
 (~>) :: Bool -> Bool -> Bool
 p ~> q = not p || q
 infixr 1 ~>
@@ -789,27 +823,27 @@ type family ZwischenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
              ':<>: 'GL.Text " and "
              ':<>: 'GL.ShowType n)
 
--- | helper method to fail with a msg when True
+-- | helper method that fails with a msg when True
 type family FailWhenT (b :: Bool) (msg :: GL.ErrorMessage) :: Constraint where
   FailWhenT 'False _ = ()
   FailWhenT 'True e = GL.TypeError e
 
--- | helper method to fail with msg when False
+-- | helper method that fails with msg when False
 type family FailUnlessT (b :: Bool) (msg :: GL.ErrorMessage) :: Constraint where
   FailUnlessT 'True _ = ()
   FailUnlessT 'False e = GL.TypeError e
 
--- | typelevel And
+-- | typelevel boolean And
 type family AndT (b :: Bool) (b1 :: Bool) :: Bool where
   AndT 'False _ = 'False
   AndT 'True b1 = b1
 
--- | typelevel Or
+-- | typelevel boolean Or
 type family OrT (b :: Bool) (b1 :: Bool) :: Bool where
   OrT 'True _ = 'True
   OrT 'False b1 = b1
 
--- | typelevel Not
+-- | typelevel boolean Not
 type family NotT (b :: Bool) :: Bool where
   NotT 'True = 'False
   NotT 'False = 'True
@@ -893,13 +927,14 @@ instance GetLen ('These a b) where
 instance GetLen xs => GetLen (x ':| xs) where
   getLen = 1 + getLen @xs
 
-
+-- | display constructor name for 'These'
 showThese :: These a b -> String
 showThese = \case
   This {} -> "This"
   That {} -> "That"
   These {} -> "These"
 
+-- | get 'These' from typelevel
 class GetThese th where
   getThese :: (String, These w v -> Bool)
 instance GetThese ('This x) where
@@ -908,18 +943,6 @@ instance GetThese ('That y) where
   getThese = ("That", isThat)
 instance GetThese ('These x y) where
   getThese = ("These", isThese)
-
-isThis :: These a b -> Bool
-isThis This {} = True
-isThis _ = False
-
-isThat :: These a b -> Bool
-isThat That {} = True
-isThat _ = False
-
-isThese :: These a b -> Bool
-isThese These {} = True
-isThese _ = False
 
 -- | get ordering from the typelevel
 class GetOrdering (cmp :: Ordering) where
@@ -931,7 +954,7 @@ instance GetOrdering 'EQ where
 instance GetOrdering 'GT where
   getOrdering = GT
 
--- | get Bool from the typelevel
+-- | get 'Bool' from the typelevel
 class GetBool (a :: Bool) where
   getBool :: Bool
 instance GetBool 'True where
@@ -939,7 +962,7 @@ instance GetBool 'True where
 instance GetBool 'False where
   getBool = False
 
--- | get Disp from the typelevel
+-- | get 'Disp' from the typelevel
 class GetDisp (a :: Disp) where
   getDisp :: Disp
 instance GetDisp 'Ansi where
@@ -947,7 +970,7 @@ instance GetDisp 'Ansi where
 instance GetDisp 'Unicode where
   getDisp = Unicode
 
--- | get Debug from the typelevel
+-- | get 'Debug' from the typelevel
 class GetDebug (a :: Debug) where
   getDebug :: Debug
 instance GetDebug 'DZero where
@@ -961,7 +984,7 @@ instance GetDebug 'DNormal where
 instance GetDebug 'DVerbose where
   getDebug = DVerbose
 
--- | get Color from the typelevel
+-- | get 'Color' from the typelevel
 class GetColor (a :: Color) where
   getColor :: Color
 instance GetColor 'Black where
@@ -983,8 +1006,10 @@ instance GetColor 'White where
 instance GetColor 'Default where
   getColor = Default
 
+-- | all the ways to compare two values
 data OrderingP = CGt | CGe | CEq | CLe | CLt | CNe deriving (Show, Eq, Enum, Bounded)
 
+-- | extract 'OrderingP' from the typelevel
 class GetOrd (k :: OrderingP) where
   getOrd :: Ord a => (String, a -> a -> Bool)
 
@@ -995,9 +1020,11 @@ instance GetOrd 'CLe where getOrd = ("<=",(<=))
 instance GetOrd 'CLt where getOrd = ("<", (<))
 instance GetOrd 'CNe where getOrd = ("/=",(/=))
 
+-- | pretty print a tree
 toNodeString :: POpts -> PE -> String
 toNodeString opts bpe =
-  if hasNoTree opts then errorInProgram $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
+  if hasNoTree opts
+  then errorInProgram $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
   else colorBoolP opts (_pBool bpe) <> " " <> _pString bpe
 
 hasNoTree :: POpts -> Bool
@@ -1013,6 +1040,7 @@ nullSpace :: String -> String
 nullSpace s | null s = ""
             | otherwise = " " <> s
 
+-- | render the 'BoolP' value with colors
 colorBoolP :: POpts -> BoolP -> String
 colorBoolP o =
   \case
@@ -1021,8 +1049,9 @@ colorBoolP o =
     b@TrueP -> colorMe o b "True"
     b@FalseP -> colorMe o b "False"
 
-colorBoolT' :: Show a => POpts -> BoolT a -> String
-colorBoolT' o r =
+-- | render the 'BoolT' value with colors
+colorBoolT :: Show a => POpts -> BoolT a -> String
+colorBoolT o r =
   let f = colorMe o (r ^. boolT2P)
   in case r of
       FailT e -> f "Error" <> " " <> e
@@ -1030,8 +1059,8 @@ colorBoolT' o r =
       FalseT -> f "False"
       PresentT x -> f "Present" <> " " <> show x
 
-colorBoolT :: Show a => POpts -> BoolT a -> String
-colorBoolT o r =
+colorBoolT' :: Show a => POpts -> BoolT a -> String
+colorBoolT' o r =
   let f = colorMe o (r ^. boolT2P)
   in case r of
       FailT e -> f "FailT" <> " " <> e
@@ -1042,7 +1071,7 @@ colorBoolT o r =
 -- | colors the result of the predicate based on the current color palette
 colorMe :: POpts -> BoolP -> String -> String
 colorMe o b s =
-  let (_, PColor f) = oColor o
+  let (_, PColor f) = if oNoColor o then nocolor else oColor o
   in f b s
 
 prtTTIO :: POpts -> IO (TT a) -> IO ()
@@ -1328,6 +1357,7 @@ data OptT =
   | OMsg !Symbol      -- ^ set text to add context to a failure message for refined types
   | ORecursion !Nat       -- ^ set recursion limit eg for regex
   | OOther                -- ^ set effects for messages
+     !Bool    -- ^ set underline
      !Color   -- ^ set foreground color
      !Color   -- ^ set background color
   | OEmpty                -- ^ mempty
@@ -1358,7 +1388,7 @@ instance Show OptT where
             OWidth _n -> "OWidth"
             OMsg _s -> "OMsg"
             ORecursion _n -> "ORecursion"
-            OOther _c1 _c2 -> "OOther"
+            OOther _b _c1 _c2 -> "OOther"
             OEmpty -> "OEmpty"
             a :# b -> show a ++ " ':# " ++ show b
             OColor _s _c1 _c2 _c3 _c4 _c5 _c6 _c7 _c8 -> "OColor"
@@ -1377,10 +1407,10 @@ infixr 6 :#
 type OZ = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'ODebug 'DZero
 type OL = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'ODebug 'DLite
 type OAN = 'ODisp 'Ansi ':# 'ONoColor 'True
-type OA = 'ODisp 'Ansi ':# Color5
-type OAB = 'ODisp 'Ansi ':# Color1
-type OU = 'ODisp 'Unicode ':# Color5
-type OUB = 'ODisp 'Unicode ':# Color1
+type OA = 'ODisp 'Ansi ':# Color5 ':# Other2
+type OAB = 'ODisp 'Ansi ':# Color1 ':# Other1
+type OU = 'ODisp 'Unicode ':# Color5 ':# Other2
+type OUB = 'ODisp 'Unicode ':# Color1 ':# Other1
 -}
 class OptTC (k :: OptT) where
    getOptT' :: POptsL
@@ -1392,8 +1422,8 @@ instance KnownSymbol s => OptTC ('OMsg s) where
    getOptT' = setMessage (symb @s)
 instance KnownNat n => OptTC ('ORecursion n) where
    getOptT' = setRecursion (nat @n)
-instance (GetColor c1, GetColor c2) => OptTC ('OOther c1 c2) where
-   getOptT' = setOther (getColor @c1) (getColor @c2)
+instance (GetBool b, GetColor c1, GetColor c2) => OptTC ('OOther b c1 c2) where
+   getOptT' = setOther (getBool @b) (getColor @c1) (getColor @c2)
 instance OptTC 'OEmpty where
    getOptT' = mempty
 instance (OptTC a, OptTC b) => OptTC (a ':# b) where
@@ -1429,13 +1459,13 @@ instance OptTC 'OL where
 instance OptTC 'OAN where
    getOptT' = setDisp Ansi <> setNoColor True <> setDebug DNormal
 instance OptTC 'OA where
-   getOptT' = setDisp Ansi <> getOptT' @Color5 <> setDebug DNormal
+   getOptT' = setDisp Ansi <> getOptT' @Color5 <> setDebug DNormal <> getOptT' @Other2
 instance OptTC 'OAB where
-   getOptT' = setDisp Ansi <> getOptT' @Color1 <> setDebug DNormal
+   getOptT' = setDisp Ansi <> getOptT' @Color1 <> setDebug DNormal <> getOptT' @Other1
 instance OptTC 'OU where
-   getOptT' = setDisp Unicode <> getOptT' @Color5 <> setDebug DNormal
+   getOptT' = setDisp Unicode <> getOptT' @Color5 <> setDebug DNormal <> getOptT' @Other2
 instance OptTC 'OUB where
-   getOptT' = setDisp Unicode <> getOptT' @Color1 <> setDebug DNormal
+   getOptT' = setDisp Unicode <> getOptT' @Color1 <> setDebug DNormal <> getOptT' @Other1
 
 -- | convert typelevel options to 'POpts'
 --
@@ -1444,6 +1474,15 @@ instance OptTC 'OUB where
 --
 -- >>> oMsg (getOptT @('OMsg "abc" ':# 'OMsg "def"))
 -- ["abc","def"]
+--
+-- >>> oOther (getOptT @('OOther 'False 'Red 'White ':# 'OOther 'True 'Red 'Black))
+-- (True,Red,Black)
+--
+-- >>> a = show (getOptT @('OEmpty ':# 'OU))
+-- >>> b = show (getOptT @('OU ':# 'OEmpty));
+-- >>> c = show (getOptT @'OU)
+-- >>> a==b && b==c
+-- True
 --
 getOptT :: forall o . OptTC o => POpts
 getOptT = reifyOpts (getOptT' @o)
@@ -1479,7 +1518,7 @@ formatOMsg :: POpts -> String -> String
 formatOMsg o suffix =
   case oMsg o of
     [] -> mempty
-    s@(_:_) -> setOtherEffects o (intercalate " | " s) <> suffix
+    s@(_:_) -> intercalate " | " (map (setOtherEffects o) s) <> suffix
 
 subopts :: POpts -> POpts
 subopts opts =
@@ -1490,8 +1529,19 @@ subopts opts =
 setOtherEffects :: POpts -> String -> String
 setOtherEffects o =
   if oNoColor o then id
-  else case oOther o of
-         (Default, Default) -> id
-         (c1,c2) -> color c1 . bgColor c2
+  else case coerce (oOther o) of
+         (False, Default, Default) -> id
+         (b, c1, c2) -> (if b then style Underline else id) . color c1 . bgColor c2
 
 type family AnyT :: k where {}
+
+pureTryTest :: a -> IO (Either () a)
+pureTryTest = fmap (left (const ())) . E.try @E.SomeException . E.evaluate
+
+pureTryTestPred :: (String -> Bool) -> a -> IO (Either String (Either () a))
+pureTryTestPred p a = do
+  lr <- left E.displayException <$> E.try @E.SomeException (E.evaluate a)
+  return $ case lr of
+    Left e | p e -> Right (Left ())
+           | otherwise -> Left ("no match found: e=" ++ e)
+    Right r -> Right (Right r)

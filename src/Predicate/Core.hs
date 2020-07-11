@@ -72,7 +72,6 @@ evalBool p opts a = fixBoolT <$> eval p opts a
 evalQuick :: forall p i . P p i => i -> Either String (PP p i)
 evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) (getOptT @'OL) i))
 
-
 -- | identity function
 --
 -- >>> pz @I 23
@@ -510,7 +509,7 @@ instance (Show (PP p a)
       Nothing -> pure $ mkNode opts (FailT (msg0 <> " found Nothing")) (msg0 <> " found Nothing") []
 
 -- | expects Nothing otherwise it fails
--- if the value is Nothing then it returns \'Proxy a\' as this provides more information than '()'
+-- if the value is Nothing then it returns \'Proxy a\' as this provides type information
 --
 -- >>> pz @'Nothing Nothing
 -- PresentT Proxy
@@ -677,6 +676,30 @@ instance Show a => P 'Proxy a where
     let b = Proxy @a
     in pure $ mkNode opts (PresentT b) ("'Proxy" <> show1 opts " | " a) []
 
+-- | typelevel 'BoolT'
+--
+-- >>> pz @'TrueT ()
+-- TrueT
+--
+-- >>> pz @'FalseT ()
+-- FalseT
+--
+-- >>> pz @('PresentT 123) ()
+-- PresentT False
+--
+-- >>> pz @('FailT '[]) ()
+-- FailT "'FailT _"
+--
+instance GetBoolT x b => P (b :: BoolT x) a where
+  type PP b a = Bool
+  eval _ opts _ = do
+    let msg0 = "'BoolT"
+    let ret = getBoolT @x @b
+    pure $ case ret of
+      Left b -> mkNodeB opts b (if b then "TrueT" else "FalseT") []
+      Right True -> mkNode opts (PresentT False) (msg0 <> " PresentT") []
+      Right False -> mkNode opts (FailT "'FailT _") (msg0 <> " FailT") []
+
 pan, pa, pu, pl, pz, pab, pub :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
 -- | skips the evaluation tree and just displays the end result
 pz = run @'OZ @p
@@ -694,9 +717,13 @@ pab = run @'OAB @p
 -- @
 pu = run @'OU @p
 -- | displays the evaluation tree using unicode and colors with background colors
--- | displays the evaluation tree using background colors
 pub = run @'OUB @p
 
+-- | evaluate a typelevel expression (use type applications to pass in the options and the expression)
+--
+-- >>> run @'OZ @Id 123
+-- PresentT 123
+--
 run :: forall opts p a
         . ( OptTC opts
           , Show (PP p a)
@@ -717,7 +744,7 @@ prtTree' opts pp =
        DZero -> ""
        DLite ->
              formatOMsg opts " >>> "
-          <> colorBoolT' opts r
+          <> colorBoolT opts r
           <> " "
           <> topMessage pp
           <> "\n"
@@ -759,27 +786,3 @@ runPQBool msg0 proxyp proxyq opts a hhs = do
          pure $ case getValueLR opts msg0 qq (hhs <> [hh pp]) of
            Left e -> Left e
            Right q -> Right (p, q, pp, qq)
-
--- | typelevel 'BoolT'
---
--- >>> pz @'TrueT ()
--- TrueT
---
--- >>> pz @'FalseT ()
--- FalseT
---
--- >>> pz @('PresentT 123) ()
--- PresentT False
---
--- >>> pz @('FailT '[]) ()
--- FailT "'FailT _"
---
-instance GetBoolT x b => P (b :: BoolT x) a where
-  type PP b a = Bool
-  eval _ opts _ = do
-    let msg0 = "'BoolT"
-    let ret = getBoolT @x @b
-    pure $ case ret of
-      Left b -> mkNodeB opts b (if b then "TrueT" else "FalseT") []
-      Right True -> mkNode opts (PresentT False) (msg0 <> " PresentT") []
-      Right False -> mkNode opts (FailT "'FailT _") (msg0 <> " FailT") []

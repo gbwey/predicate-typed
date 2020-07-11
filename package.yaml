@@ -31,7 +31,7 @@ dependencies:
 - template-haskell
 - text
 - th-lift
-- these
+- these >= 0.8
 - time
 - tree-view >= 0.5
 

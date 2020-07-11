@@ -241,6 +241,7 @@ module Predicate.Prelude (
   , ToEnum
   , ToEnum'
   , EnumFromTo
+  , EnumFromThenTo
   -- *** bounded enum expressions
   , SuccB
   , SuccB'
@@ -1295,7 +1296,7 @@ instance P (ReplaceOneStringT o p q r) x => P (ReplaceOneString o p q r) x where
 --
 data ReplaceFn (o :: ReplaceFnSub) p
 
-instance (ReplaceFnSubC r
+instance (GetReplaceFnSub r
         , PP p x ~ String
         , P p x) => P (ReplaceFn r p) x where
   type PP (ReplaceFn r p) x = RReplace
@@ -2117,7 +2118,7 @@ instance ( P p x
         in mkNode opts (PresentT ret) (show01 opts msg0 ret p) [hh pp]
 
 
--- | create a 'Time' from three int values passed in as year month and day
+-- | create a 'TimeOfDay' from three int values passed in as year month and day
 --
 -- >>> pz @(MkTime '(1,2,3 % 12345)) ()
 -- PresentT 01:02:00.000243013365
@@ -2221,15 +2222,15 @@ instance (PP p x ~ Rational, P p x) => P (PosixToUTCTime p) x where
 
 -- | convert 'UTCTime' to posix time (seconds since 01-01-1970)
 --
--- >>> pl @(ReadP UTCTime Id >> UTCTimeToPosix Id) "2020-06-28 22:45:12"
+-- >>> pl @(ReadP UTCTime Id >> UTCTimeToPosix Id) "2020-06-28 22:45:12 UTC"
 -- Present 1593384312 % 1 ((>>) 1593384312 % 1 | {UTCTimeToPosix 1593384312 % 1 | 2020-06-28 22:45:12 UTC})
 -- PresentT (1593384312 % 1)
 --
 -- >>> pz @(Rescan "^Date\\((\\d+)([^\\)]+)\\)" Id >> Head Id >> Snd Id >> ((ReadP Integer (Id !! 0) >> PosixToUTCTime (Id % 1000)) &&& ReadP TimeZone (Id !! 1))) "Date(1530144000000+0530)"
 -- PresentT (2018-06-28 00:00:00 UTC,+0530)
 --
--- not so uesful: just use ParseTimeP FormatTimeP with %s %q %z etc
-
+-- not so useful: instead use ParseTimeP FormatTimeP with %s %q %z etc
+--
 -- >>> pz @(ParseTimeP ZonedTime "%s%Q%z" Id)  "153014400.000+0530"
 -- PresentT 1974-11-07 05:30:00 +0530
 --
@@ -3520,7 +3521,7 @@ instance P (MultT p q) x => P (p * q) x where
   type PP (p * q) x = PP (MultT p q) x
   eval _ = eval (Proxy @(MultT p q))
 
--- | similar to '(^)'
+-- | similar to 'GHC.Real.(^)'
 --
 -- >>> pz @(Fst Id ^ Snd Id) (10,4)
 -- PresentT 10000
@@ -3551,7 +3552,7 @@ instance (P p a
                    else let d = p ^ q
                         in mkNode opts (PresentT d) (show p <> " ^ " <> show q <> " = " <> show d) hhs
 
--- | similar to '(**)'
+-- | similar to 'GHC.Float.(**)'
 --
 -- >>> pz @(Fst Id ** Snd Id) (10,4)
 -- PresentT 10000.0
@@ -5894,6 +5895,9 @@ instance P NullT a => P Null a where
 -- >>> pz @(EnumFromTo (Pred Id) (Succ Id)) (SG.Max 10)
 -- PresentT [Max {getMax = 9},Max {getMax = 10},Max {getMax = 11}]
 --
+-- >>> pz @(EnumFromTo 1 20 >> Map '(Id, (If (Id `Mod` 3 == 0) "Fizz" "" <> If (Id `Mod` 5 == 0) "Buzz" "" )) Id) 123
+-- PresentT [(1,""),(2,""),(3,"Fizz"),(4,""),(5,"Buzz"),(6,"Fizz"),(7,""),(8,""),(9,"Fizz"),(10,"Buzz"),(11,""),(12,"Fizz"),(13,""),(14,""),(15,"FizzBuzz"),(16,""),(17,""),(18,"Fizz"),(19,""),(20,"Buzz")]
+--
 data EnumFromTo p q
 
 instance (P p x
@@ -5910,6 +5914,38 @@ instance (P p x
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) -> mkNode opts (PresentT (enumFromTo p q)) (msg0 <> " [" <> show p <> " .. " <> show q <> "]") [hh pp, hh qq]
+
+-- | similar to 'enumFromThenTo'
+--
+-- >>> pz @(EnumFromThenTo (ToEnum Day 10) (ToEnum Day 20) (ToEnum Day 70)) ()
+-- PresentT [1858-11-27,1858-12-07,1858-12-17,1858-12-27,1859-01-06,1859-01-16,1859-01-26]
+--
+-- >>> pz @(EnumFromThenTo (ReadP Day "2020-01-12") (ReadP Day "2020-02-12") (ReadP Day "2020-08-12")) ()
+-- PresentT [2020-01-12,2020-02-12,2020-03-14,2020-04-14,2020-05-15,2020-06-15,2020-07-16]
+--
+data EnumFromThenTo p q r
+
+instance (P p x
+        , P q x
+        , P r x
+        , PP p x ~ a
+        , Show a
+        , PP q x ~ a
+        , PP r x ~ a
+        , Enum a
+        ) => P (EnumFromThenTo p q r) x where
+  type PP (EnumFromThenTo p q r) x = [PP p x]
+  eval _ opts z = do
+    let msg0 = "EnumFromThenTo"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
+    case lr of
+      Left e -> pure e
+      Right (p,q,pp,qq) -> do
+        rr <- eval (Proxy @r) opts z
+        pure $ case getValueLR opts (msg0 ++ " r failed") rr [hh pp, hh qq] of
+          Left e -> e
+          Right r ->
+            mkNode opts (PresentT (enumFromThenTo p q r)) (msg0 <> " [" <> show p <> ", " <> show q <> " .. " <> show r <> "]") [hh pp, hh qq, hh rr]
 
 -- | similar to 'partitionEithers'
 --
@@ -6063,9 +6099,6 @@ instance P (FoldLT p q r) x => P (FoldL p q r) x where
 -- >>> pz @(Unfoldr (MaybeBool (Not Null) (SplitAt 2 Id)) Id) [1..5]
 -- PresentT [[1,2],[3,4],[5]]
 --
--- >>> pz @(IterateN 4 (Succ Id)) 4
--- PresentT [4,5,6,7]
---
 data Unfoldr p q
 --type IterateN (t :: Type) n f = Unfoldr (If (Fst Id == 0) (MkNothing t) (Snd Id &&& (Pred Id *** f) >> MkJust Id)) '(n, Id)
 
@@ -6107,6 +6140,14 @@ instance (PP q a ~ s
 type family UnfoldT mbs where
   UnfoldT (Maybe (b,s)) = b
 
+-- | like 'iterate' but for a fixed number of elements
+--
+-- >>> pz @(IterateN 4 (Succ Id)) 4
+-- PresentT [4,5,6,7]
+--
+-- >>> pz @('(0,1) >> IterateN 20 '(Snd Id, Fst Id + Snd Id) >> Map (Fst Id) Id) "sdf"
+-- PresentT [0,1,1,2,3,5,8,13,21,34,55,89,144,233,377,610,987,1597,2584,4181]
+--
 data IterateN n f
 type IterateNT n f = Unfoldr (MaybeBool (Fst Id > 0) '(Snd Id, Pred Id *** f)) '(n, Id)
 
@@ -6185,6 +6226,10 @@ instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
 --
 -- >>> pz @(If (Gt 4) "greater than 4" "less than or equal to 4") 0
 -- PresentT "less than or equal to 4"
+--
+-- >>> pz @(If (Snd Id == "a") '("xxx",Fst Id + 13) (If (Snd Id == "b") '("yyy",Fst Id + 7) (Failt _ "oops"))) (99,"b")
+-- PresentT ("yyy",106)
+--
 data If p q r
 
 instance (Show (PP r a)
@@ -8393,6 +8438,15 @@ instance ( P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) x
 -- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
 -- FailT "asdf"
 --
+-- >>> pz @(Case (Failt _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "b"
+-- PresentT "there"
+--
+-- >>> pz @(Case (Failt _ "x") '[Id == "a",Id == "b"] '["hey","there"] Id) "a"
+-- PresentT "hey"
+--
+-- >>> pz @(Case (Failt _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "c"
+-- FailT "x"
+--
 data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- ps = conditions
 -- qs = what to do [one to one
@@ -10405,10 +10459,6 @@ instance P (ParseJsonFileT t p) x => P (ParseJsonFile t p) x where
 -- >>> pl @(EncodeJson Id >> ParseJson (Int,Bool) Id) (1,True)
 -- Present (1,True) ((>>) (1,True) | {ParseJson (Int,Bool) (1,True)})
 -- PresentT (1,True)
---
--- >>> pl @(ParseJson ([String], These Int ()) (EncodeJson Id)) (["abc","def"],This 110)
--- Present (["abc","def"],This 110) (ParseJson ([[Char]],(These Int ())) (["abc","def"],This 110))
--- PresentT (["abc","def"],This 110)
 --
 data EncodeJson p
 

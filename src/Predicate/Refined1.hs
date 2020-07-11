@@ -100,6 +100,7 @@ import Predicate.Util
 import Data.Functor.Identity (Identity(..))
 import Data.Tree
 import Data.Proxy
+import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Writer (tell)
 import Data.Aeson (ToJSON(..), FromJSON(..))
@@ -219,6 +220,14 @@ deriving instance (Show i, Show (PP ip i), Show (PP fmt (PP ip i))) => Show (Ref
 deriving instance (Eq i, Eq (PP ip i), Eq (PP fmt (PP ip i))) => Eq (Refined1 opts ip op fmt i)
 deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Refined1 opts ip op fmt i)
 
+-- | 'IsString' instance for Refined1
+--
+-- >>> pureTryTest $ fromString @(Refined1 'OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "523"
+-- Right (Refined1 523)
+--
+-- >>> pureTryTest $ fromString @(Refined1 'OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "2"
+-- Left ()
+--
 instance (Refined1C opts ip op fmt String, Show (PP ip String)) => IsString (Refined1 opts ip op fmt String) where
   fromString s =
     let (ret,mr) = eval1 @opts @ip @op @fmt s
@@ -361,7 +370,7 @@ genRefined1P _ g =
         case mppi of
           Nothing ->
              if cnt >= oRecursion o
-             then error $ markBoundary o ("genRefined1 recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             then error $ setOtherEffects o ("genRefined1 recursion exceeded(" ++ show (oRecursion o) ++ ")")
              else f (cnt+1)
           Just ppi ->
              pure $ unsafeRefined1 ppi
@@ -525,13 +534,13 @@ withRefined1TP p = (>>=) . newRefined1TP p
 
 -- | pure version for extracting Refined1
 --
--- >>> newRefined1 @'OU @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:15:7"
+-- >>> newRefined1 @'OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:15:7"
 -- Right (Refined1 01:15:07)
 --
--- >>> newRefined1 @'OU @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:2:x"
+-- >>> newRefined1 @'OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:2:x"
 -- Left "Step 1. Initial Conversion(ip) Failed | ParseTimeP TimeOfDay (%-H:%-M:%-S) failed to parse"
 --
--- >>> newRefined1 @'OU @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" Id >> Snd (Head Id) >> Map (ReadP Int Id) Id) @(All (0 <..> 59) Id && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"
+-- >>> newRefined1 @'OL @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" Id >> Snd (Head Id) >> Map (ReadP Int Id) Id) @(All (0 <..> 59) Id && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"
 -- Right (Refined1 [1,2,3])
 --
 newRefined1 :: forall opts ip op fmt i
@@ -551,7 +560,9 @@ newRefined1P :: forall opts ip op fmt i proxy
    => proxy '(opts,ip,op,fmt,i)
    -> i
    -> Either String (Refined1 opts ip op fmt i)
-newRefined1P _ = fst . runIdentity . unRavelT . newRefined1T @_ @opts @ip @op @fmt
+newRefined1P _ x =
+  let (lr,xs) = runIdentity $ unRavelT $ newRefined1T @_ @opts @ip @op @fmt x
+  in left (\e -> e ++ (if all null xs then "" else "\n" ++ unlines xs)) lr
 
 newRefined1T :: forall m opts ip op fmt i
   . ( Refined1C opts ip op fmt i
@@ -675,12 +686,12 @@ rapply1P :: forall m opts ip op fmt i proxy .
   -> RefinedT m (Refined1 opts ip op fmt i)
 rapply1P p f ma mb = do
   let opts = getOptT @opts
-  tell [markBoundary opts "=== a ==="]
+  tell [setOtherEffects opts "=== a ==="]
   Refined1 x <- ma
-  tell [markBoundary opts "=== b ==="]
+  tell [setOtherEffects opts "=== b ==="]
   Refined1 y <- mb
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  tell [markBoundary opts "=== a `op` b ==="]
+  tell [setOtherEffects opts "=== a `op` b ==="]
   Refined1 a <- newRefined1TPSkipIPImpl (return . runIdentity) p (f x y)
   return (Refined1 a)
 

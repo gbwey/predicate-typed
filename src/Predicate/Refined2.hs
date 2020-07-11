@@ -76,6 +76,7 @@ import Predicate.Util
 import Data.Functor.Identity (Identity(..))
 import Data.Tree
 import Data.Proxy
+import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Writer (tell)
 import Data.Aeson (ToJSON(..), FromJSON(..))
@@ -170,6 +171,14 @@ deriving instance (Show i, Show (PP ip i)) => Show (Refined2 opts ip op i)
 deriving instance (Eq i, Eq (PP ip i)) => Eq (Refined2 opts ip op i)
 deriving instance (TH.Lift (PP ip i), TH.Lift i) => TH.Lift (Refined2 opts ip op i)
 
+-- | 'IsString' instance for Refined2
+--
+-- >>> pureTryTest $ fromString @(Refined2 'OL (ReadP Int Id) (Id > 12) String) "523"
+-- Right (Refined2 {r2In = 523, r2Out = "523"})
+--
+-- >>> pureTryTest $ fromString @(Refined2 'OL (ReadP Int Id) (Id > 12) String) "2"
+-- Left ()
+--
 instance ( s ~ String
          , Refined2C opts ip op s
          , Show (PP ip s)
@@ -399,13 +408,13 @@ withRefined2TP p = (>>=) . newRefined2TP p
 
 -- | pure version for extracting Refined2
 --
--- >>> newRefined2 @'OU @Id @'True 22
+-- >>> newRefined2 @'OL @Id @'True 22
 -- Right (Refined2 {r2In = 22, r2Out = 22})
 --
--- >>> newRefined2 @'OU @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-04 12:13:14Z"
+-- >>> newRefined2 @'OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-04 12:13:14Z"
 -- Right (Refined2 {r2In = 2020-05-04 12:13:14 UTC, r2Out = "2020-05-04 12:13:14Z"})
 --
--- >>> newRefined2 @'OU @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-08 12:13:14Z"
+-- >>> newRefined2 @'OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-08 12:13:14Z"
 -- Left "Step 2. False Boolean Check(op) | {Just 2020-05-08 <= Just 2020-05-07}"
 --
 newRefined2 :: forall opts ip op i
@@ -421,7 +430,9 @@ newRefined2P :: forall opts ip op i proxy
     ) => proxy '(opts,ip,op,i)
       -> i
       -> Either String (Refined2 opts ip op i)
-newRefined2P _ = fst . runIdentity . unRavelT . newRefined2T @_ @opts @ip @op
+newRefined2P _ x =
+  let (lr,xs) = runIdentity $ unRavelT $ newRefined2T @_ @opts @ip @op x
+  in left (\e -> e ++ (if all null xs then "" else "\n" ++ unlines xs)) lr
 
 -- | create a wrapped 'Refined2' type
 --

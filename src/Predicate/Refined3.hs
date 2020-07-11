@@ -99,6 +99,7 @@ import Predicate.Util
 import Data.Functor.Identity (Identity(..))
 import Data.Tree
 import Data.Proxy
+import Control.Arrow (left)
 import Control.Monad.Except
 import Control.Monad.Writer (tell)
 import Data.Aeson (ToJSON(..), FromJSON(..))
@@ -124,7 +125,7 @@ import GHC.Stack
 -- >>> :m + Predicate.Prelude
 -- >>> :m + Data.Time
 
--- | Like 'Refined2' but additionally reconstructs the output value to a standardized format
+-- | Like 'Predicate.Refined2' but additionally reconstructs the output value to a standardized format
 --
 --   * @opts@ are the display options
 --   * @ip@ converts @i@ to @PP ip i@ which is the internal type and stored in 'r3In'
@@ -216,6 +217,14 @@ deriving instance (Show i, Show (PP ip i), Show (PP fmt (PP ip i))) => Show (Ref
 deriving instance (Eq i, Eq (PP ip i), Eq (PP fmt (PP ip i))) => Eq (Refined3 opts ip op fmt i)
 deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Refined3 opts ip op fmt i)
 
+-- | 'IsString' instance for Refined3
+--
+-- >>> pureTryTest $ fromString @(Refined3 'OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "523"
+-- Right (Refined3 {r3In = 523, r3Out = "523"})
+--
+-- >>> pureTryTest $ fromString @(Refined3 'OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "2"
+-- Left ()
+--
 instance (Refined3C opts ip op fmt String, Show (PP ip String))
   => IsString (Refined3 opts ip op fmt String) where
   fromString s =
@@ -353,7 +362,7 @@ genRefined3P _ g =
         case mppi of
           Nothing ->
              if cnt >= oRecursion o
-             then error $ markBoundary o ("genRefined3 recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             then error $ setOtherEffects o ("genRefined3 recursion exceeded(" ++ show (oRecursion o) ++ ")")
              else f (cnt+1)
           Just ppi -> do
              let lr = getValLRFromTT (runIdentity (eval @_ (Proxy @fmt) o ppi))
@@ -516,13 +525,13 @@ withRefined3TP p = (>>=) . newRefined3TP p
 
 -- | pure version for extracting Refined3
 --
--- >>> newRefined3 @'OU @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:15:7"
+-- >>> newRefined3 @'OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:15:7"
 -- Right (Refined3 {r3In = 01:15:07, r3Out = "01:15:07"})
 --
--- >>> newRefined3 @'OU @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:2:x"
+-- >>> newRefined3 @'OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:2:x"
 -- Left "Step 1. Initial Conversion(ip) Failed | ParseTimeP TimeOfDay (%-H:%-M:%-S) failed to parse"
 --
--- >>> newRefined3 @'OU @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" Id >> Snd (Head Id) >> Map (ReadP Int Id) Id) @(All (0 <..> 59) Id && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"
+-- >>> newRefined3 @'OL @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" Id >> Snd (Head Id) >> Map (ReadP Int Id) Id) @(All (0 <..> 59) Id && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"
 -- Right (Refined3 {r3In = [1,2,3], r3Out = "01:02:03"})
 --
 newRefined3 :: forall opts ip op fmt i
@@ -542,7 +551,9 @@ newRefined3P :: forall opts ip op fmt i proxy
    => proxy '(opts,ip,op,fmt,i)
    -> i
    -> Either String (Refined3 opts ip op fmt i)
-newRefined3P _ = fst . runIdentity . unRavelT . newRefined3T @_ @opts @ip @op @fmt
+newRefined3P _ x =
+  let (lr,xs) = runIdentity $ unRavelT $ newRefined3T @_ @opts @ip @op @fmt x
+  in left (\e -> e ++ (if all null xs then "" else "\n" ++ unlines xs)) lr
 
 -- | create a wrapped 'Refined3' type
 --
@@ -679,12 +690,12 @@ rapply3P :: forall m opts ip op fmt i proxy .
   -> RefinedT m (Refined3 opts ip op fmt i)
 rapply3P p f ma mb = do
   let opts = getOptT @opts
-  tell [markBoundary opts "=== a ==="]
+  tell [setOtherEffects opts "=== a ==="]
   Refined3 x _ <- ma
-  tell [markBoundary opts "=== b ==="]
+  tell [setOtherEffects opts "=== b ==="]
   Refined3 y _ <- mb
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  tell [markBoundary opts "=== a `op` b ==="]
+  tell [setOtherEffects opts "=== a `op` b ==="]
   Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) p (f x y)
   return (Refined3 a b)
 
