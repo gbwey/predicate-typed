@@ -335,12 +335,24 @@ instance (Show (PP fmt (PP ip i))
                     Nothing -> fail $ "Refined3:" ++ show (prt3Impl (getOptT @opts) ret)
                     Just r -> return r
 
+-- | 'Arbitrary' instance for 'Refined3'
+--
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined3 'OU (ReadP Int Id) (1 <..> 120 && Even) (ShowP Id) String)))
+-- >>> all (\x -> let y = r3In x in y /= 0 && r3Out x == show y) xs
+-- True
+--
 instance ( Arbitrary (PP ip i)
          , Refined3C opts ip op fmt i
          ) => Arbitrary (Refined3 opts ip op fmt i) where
   arbitrary = genRefined3 arbitrary
 
--- | create a 'Refined3' generator
+-- | create a 'Refined3' generator using a generator to restrict the values (so it completes)
+--
+-- >>> g = genRefined3 @'OU @(ReadP Int Id) @(Between 10 100 Id && Even) @(ShowP Id) (choose (10,100))
+-- >>> xs <- generate (vectorOf 10 g)
+-- >>> all (\x -> let y = r3In x in y >= 0 && y <= 100 && even y) xs
+-- True
+--
 genRefined3 ::
     forall opts ip op fmt i
   . Refined3C opts ip op fmt i
@@ -348,7 +360,7 @@ genRefined3 ::
   -> Gen (Refined3 opts ip op fmt i)
 genRefined3 = genRefined3P Proxy
 
--- | create a 'Refined3' generator
+-- | create a 'Refined3' generator using a proxy
 genRefined3P ::
     forall opts ip op fmt i
   . Refined3C opts ip op fmt i
@@ -362,7 +374,7 @@ genRefined3P _ g =
         case mppi of
           Nothing ->
              if cnt >= oRecursion o
-             then error $ setOtherEffects o ("genRefined3 recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             then error $ setOtherEffects o ("genRefined3P recursion exceeded(" ++ show (oRecursion o) ++ ")")
              else f (cnt+1)
           Just ppi -> do
              let lr = getValLRFromTT (runIdentity (eval @_ (Proxy @fmt) o ppi))

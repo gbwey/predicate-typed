@@ -393,9 +393,7 @@ type BaseIJ' (opts :: OptT) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id 
 -- >>> newRefined3P (Proxy @(ReadShow' 'OZ Rational (Id > (11 % 1)))) "13 % 3"
 -- Left "Step 2. False Boolean Check(op) | FalseP"
 --
--- >>> let tmString = "2018-10-19 14:53:11.5121359 UTC"
--- >>> let tm = read tmString :: UTCTime
--- >>> newRefined3P (readshow @'OZ @UTCTime) tmString
+-- >>> newRefined3P (readshow @'OZ @UTCTime) "2018-10-19 14:53:11.5121359 UTC"
 -- Right (Refined3 {r3In = 2018-10-19 14:53:11.5121359 UTC, r3Out = "2018-10-19 14:53:11.5121359 UTC"})
 --
 -- >>> :m + Data.Aeson

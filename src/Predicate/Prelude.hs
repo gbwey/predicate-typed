@@ -4549,9 +4549,6 @@ instance (PP p x ~ a
         let b = p > 1 && isPrime (fromIntegral p)
         in mkNodeB opts b (msg0 <> show1 opts " | " p) [hh pp]
 
-isPrime :: Word -> Bool
-isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
-
 -- | get the next prime number
 --
 -- >>> pz @(PrimeNext Id) 6
@@ -4567,7 +4564,7 @@ instance (PP p x ~ a
         , Show a
         , Integral a
         ) => P (PrimeNext p) x where
-  type PP (PrimeNext p) x = Word
+  type PP (PrimeNext p) x = Int
   eval _ opts x = do
     let msg0 = "PrimeNext"
     pp <- eval (Proxy @p) opts x

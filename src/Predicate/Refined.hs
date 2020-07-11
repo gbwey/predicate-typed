@@ -267,10 +267,23 @@ instance ( RefinedC opts p a
          ) => Hashable (Refined opts p a) where
   hashWithSalt s (Refined a) = s + hash a
 
-instance (Arbitrary a, RefinedC opts p a, Show a) => Arbitrary (Refined opts p a) where
-  arbitrary = genRefined arbitrary
+-- | 'Arbitrary' instance for 'Refined'
+--
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined 'OU (Id /= 0) Int)))
+-- >>> all ((/=0) . unRefined) xs
+-- True
+--
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined 'OU (Prime Id) Int)))
+-- >>> all (isPrime . unRefined) xs
+-- True
+--
+instance ( Arbitrary a
+         , RefinedC opts p a
+         , Show a
+         ) => Arbitrary (Refined opts p a) where
+  arbitrary = genRefined @opts @p @a (arbitrary @a)
 
--- | 'arbitrary' value for 'Refined'
+-- | create 'Refined' generator using a generator to restrict the values
 genRefined :: forall opts p a .
    RefinedC opts p a
    => Gen a

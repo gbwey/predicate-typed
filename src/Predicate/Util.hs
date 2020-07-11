@@ -181,6 +181,7 @@ module Predicate.Util (
   , chkSize
   , pureTryTest
   , pureTryTestPred
+  , isPrime
 
     ) where
 import qualified GHC.TypeNats as GN
@@ -243,11 +244,6 @@ data BoolT a where
   FalseT :: BoolT Bool        -- false predicate
   TrueT :: BoolT Bool         -- true predicate
   PresentT :: !a -> BoolT a    -- non predicate value
-
-{- too restrictive
-instance Semigroup a => Semigroup (BoolT a) where
-   PresentT a <> PresentT a1 = PresentT (a <> a1)
--}
 
 -- | semigroup instance for 'BoolT'
 --
@@ -1403,15 +1399,7 @@ instance Show OptT where
             OUB -> "OUB"
 
 infixr 6 :#
-{- type families/synonyms expand
-type OZ = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'ODebug 'DZero
-type OL = 'ODisp 'Ansi ':# 'ONoColor 'True ':# 'ODebug 'DLite
-type OAN = 'ODisp 'Ansi ':# 'ONoColor 'True
-type OA = 'ODisp 'Ansi ':# Color5 ':# Other2
-type OAB = 'ODisp 'Ansi ':# Color1 ':# Other1
-type OU = 'ODisp 'Unicode ':# Color5 ':# Other2
-type OUB = 'ODisp 'Unicode ':# Color1 ':# Other1
--}
+
 class OptTC (k :: OptT) where
    getOptT' :: POptsL
 instance GetDebug n => OptTC ('ODebug n) where
@@ -1545,3 +1533,7 @@ pureTryTestPred p a = do
     Left e | p e -> Right (Left ())
            | otherwise -> Left ("no match found: e=" ++ e)
     Right r -> Right (Right r)
+
+isPrime :: Int -> Bool
+isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
+

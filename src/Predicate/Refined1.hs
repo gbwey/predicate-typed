@@ -342,13 +342,28 @@ instance (Show ( PP fmt (PP ip i))
                   case mr of
                     Nothing -> fail $ "Refined1:" ++ show (prt1Impl (getOptT @opts) ret)
                     Just r -> return r
-
+-- | 'Arbitrary' instance for 'Refined1'
+--
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined1 'OU (ReadP Int Id) (1 <..> 120 && Even) (ShowP Id) String)))
+-- >>> all ((/=0) . unRefined1) xs
+-- True
+--
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined1 'OU Id (Prime Id) Id Int)))
+-- >>> all (isPrime . unRefined1) xs
+-- True
+--
 instance (Arbitrary (PP ip i)
         , Refined1C opts ip op fmt i
         ) => Arbitrary (Refined1 opts ip op fmt i) where
   arbitrary = genRefined1 arbitrary
 
 -- | create a 'Refined1' generator
+--
+-- >>> g = genRefined1 @'OU @(ReadP Int Id) @(Between 10 100 Id && Even) @(ShowP Id) (choose (10,100))
+-- >>> xs <- generate (vectorOf 10 g)
+-- >>> all (\x -> let y = unRefined1 x in y >= 0 && y <= 100 && even y) xs
+-- True
+--
 genRefined1 ::
     forall opts ip op fmt i
   . Refined1C opts ip op fmt i
@@ -356,7 +371,7 @@ genRefined1 ::
   -> Gen (Refined1 opts ip op fmt i)
 genRefined1 = genRefined1P Proxy
 
--- | create a 'Refined1' generator
+-- | create a 'Refined1' generator with a Proxy
 genRefined1P ::
     forall opts ip op fmt i
   . Refined1C opts ip op fmt i

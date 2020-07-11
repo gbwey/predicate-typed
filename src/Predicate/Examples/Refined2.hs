@@ -278,9 +278,7 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- >>> newRefined2 @'OZ @(ReadP Rational Id) @(Id > (11 % 1)) "13 % 3"
 -- Left "Step 2. False Boolean Check(op) | FalseP"
 --
--- >>> let tmString = "2018-10-19 14:53:11.5121359 UTC"
--- >>> let tm = read tmString :: UTCTime
--- >>> newRefined2 @'OZ @(ReadP UTCTime Id) @'True tmString
+-- >>> newRefined2 @'OZ @(ReadP UTCTime Id) @'True "2018-10-19 14:53:11.5121359 UTC"
 -- Right (Refined2 {r2In = 2018-10-19 14:53:11.5121359 UTC, r2Out = "2018-10-19 14:53:11.5121359 UTC"})
 --
 -- >>> :m + Data.Aeson
