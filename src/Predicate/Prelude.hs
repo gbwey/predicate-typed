@@ -127,6 +127,8 @@ module Predicate.Prelude (
   , UnMkDay
   , MkDayExtra
   , MkDayExtra'
+  , ToWeekDate
+  , ToWeekYear
   , ToDay
   , ToTime
   , MkTime
@@ -2045,6 +2047,44 @@ type MkDayExtraT p = MkDayExtra' (Fst p) (Snd p) (Thd p)
 instance P (MkDayExtraT p) x => P (MkDayExtra p) x where
   type PP (MkDayExtra p) x = PP (MkDayExtraT p) x
   eval _ = eval (Proxy @(MkDayExtraT p))
+
+data ToWeekDate p
+
+instance ( P p x
+         , PP p x ~ Day) => P (ToWeekDate p) x where
+  type PP (ToWeekDate p) x = (Int, String)
+  eval _ opts x = do
+    let msg0 = "ToWeekDate"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let (_, _week, dow) = toWeekDate p
+            dowString =
+              case dow of
+                 1 -> "Monday"
+                 2 -> "Tuesday"
+                 3 -> "Wednesday"
+                 4 -> "Thursday"
+                 5 -> "Friday"
+                 6 -> "Saturday"
+                 7 -> "Sunday"
+                 _ -> error $ "oops: ToWeekDate invalid " ++ show dow
+        in mkNode opts (PresentT (dow,dowString)) (show01 opts msg0 dow p) [hh pp]
+
+data ToWeekYear p
+
+instance ( P p x
+         , PP p x ~ Day) => P (ToWeekYear p) x where
+  type PP (ToWeekYear p) x = Int
+  eval _ opts x = do
+    let msg0 = "ToWeekYear"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let (_, week, _dow) = toWeekDate p
+        in mkNode opts (PresentT week) (show01 opts msg0 week p) [hh pp]
 
 class ToDayC a where
   getDay :: a -> Day

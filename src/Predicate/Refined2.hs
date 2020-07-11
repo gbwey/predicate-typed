@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wno-redundant-constraints #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -62,6 +63,10 @@ module Predicate.Refined2 (
   , mkProxy2
   , mkProxy2'
 
+  -- ** QuickCheck methods
+  , genRefined2
+  , genRefined2P
+
   -- ** unsafe methods for creating Refined2
   , unsafeRefined2
   , unsafeRefined2'
@@ -86,13 +91,14 @@ import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
-import Data.Maybe (fromMaybe)
-import Control.Lens ((^.))
+import Data.Maybe (fromMaybe, isJust)
+import Control.Lens
 import Data.Tree.Lens (root)
 import Data.Char (isSpace)
 import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
+import Test.QuickCheck
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -101,6 +107,7 @@ import GHC.Stack
 -- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
 -- >>> :m + Data.Time
+-- >>> :m + Data.Time.Calendar.WeekDate
 
 -- | Refinement type for specifying an input type that is different from the output type
 --
@@ -288,11 +295,63 @@ instance ( Show i
                     Nothing -> fail $ "Refined2:" ++ show (prt2Impl (getOptT @opts) ret)
                     Just r -> return r
 
+-- | 'Arbitrary' instance for 'Refined2'
+--
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined2 'OU (ToEnum Day Id) (Snd (ToWeekDate Id) == "Tuesday") Int)))
+-- >>> all (\x -> let y = toEnum @Day (r2Out x) in view _3 (toWeekDate y) == 2 && r2In x == y) xs
+-- True
+--
+instance ( Arbitrary i
+         , Refined2C opts ip op i
+         , Show (PP ip i)
+         ) => Arbitrary (Refined2 opts ip op i) where
+  arbitrary = genRefined2 arbitrary
+
+-- | create a 'Refined2' generator using a generator to restrict the values (so it completes)
+--
+-- >>> g = genRefined2 @'OU @(ToEnum Day Id) @(UnMkDay Id >> Snd Id == 10) arbitrary
+-- >>> xs <- generate (vectorOf 10 g)
+-- >>> all (\x -> let y = toEnum @Day (fromIntegral (r2Out x)) in view _2 (toGregorian y) == 10 && y == r2In x) xs
+-- True
+--
+genRefined2 ::
+    forall opts ip op i
+  . ( Refined2C opts ip op i
+    , Show (PP ip i)
+    )
+  => Gen i
+  -> Gen (Refined2 opts ip op i)
+genRefined2 = genRefined2P Proxy
+
+-- generates the external value unlike Refined3 as we dont have a way to recreate the output from the internal value
+-- | create a 'Refined2' generator using a proxy
+genRefined2P ::
+    forall opts ip op i
+  . ( Refined2C opts ip op i
+    , Show (PP ip i)
+    )
+  => Proxy '(opts,ip,op,i)
+  -> Gen i
+  -> Gen (Refined2 opts ip op i)
+genRefined2P _ g =
+  let o = getOptT @opts
+      f !cnt = do
+        mi <- suchThatMaybe g (isJust . snd . eval2 @opts @ip @op)
+        case mi of
+          Nothing ->
+             if cnt >= oRecursion o
+             then error $ setOtherEffects o ("genRefined2P recursion exceeded(" ++ show (oRecursion o) ++ ")")
+             else f (cnt+1)
+          Just i -> do
+             let lr = newRefined2 @opts @ip @op i
+             case lr of
+               Left e -> error $ "conversion failed: programming error failed!! " ++ e
+               Right r -> pure r
+  in f 0
 
 -- | 'Binary' instance for 'Refined2'
 --
 -- >>> import Control.Arrow ((+++))
--- >>> import Control.Lens
 -- >>> import Data.Time
 -- >>> type K1 = Refined2 'OAN (ReadP Day Id) 'True String
 -- >>> type K2 = Refined2 'OAN (ReadP Day Id) (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id) String
