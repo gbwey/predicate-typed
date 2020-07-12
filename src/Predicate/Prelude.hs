@@ -31,7 +31,9 @@
 module Predicate.Prelude (
   -- ** boolean expressions
     type (&&)
+  , type (&&~)
   , type (||)
+  , type (||~)
   , type (~>)
   , Not
   , Ands
@@ -2048,10 +2050,16 @@ instance P (MkDayExtraT p) x => P (MkDayExtra p) x where
   type PP (MkDayExtra p) x = PP (MkDayExtraT p) x
   eval _ = eval (Proxy @(MkDayExtraT p))
 
+-- | get day of week
+--
+-- >>> pz @(Just (MkDay '(2020,7,11)) >> '(UnMkDay Id, ToWeekYear Id,ToWeekDate Id)) ()
+-- PresentT ((2020,7,11),28,(6,"Saturday"))
+--
 data ToWeekDate p
 
 instance ( P p x
-         , PP p x ~ Day) => P (ToWeekDate p) x where
+         , PP p x ~ Day
+         ) => P (ToWeekDate p) x where
   type PP (ToWeekDate p) x = (Int, String)
   eval _ opts x = do
     let msg0 = "ToWeekDate"
@@ -2072,10 +2080,16 @@ instance ( P p x
                  _ -> error $ "oops: ToWeekDate invalid " ++ show dow
         in mkNode opts (PresentT (dow,dowString)) (show01 opts msg0 dow p) [hh pp]
 
+-- | get week number of the year
+--
+-- >>> pz @(Just (MkDay '(2020,7,11)) >> ToWeekYear Id) ()
+-- PresentT 28
+--
 data ToWeekYear p
 
 instance ( P p x
-         , PP p x ~ Day) => P (ToWeekYear p) x where
+         , PP p x ~ Day
+         ) => P (ToWeekYear p) x where
   type PP (ToWeekYear p) x = Int
   eval _ opts x = do
     let msg0 = "ToWeekYear"
@@ -2208,6 +2222,12 @@ instance P (MkTimeT p) x => P (MkTime p) x where
 --
 -- >>> pz @(ReadP UTCTime "2019-01-01 12:13:14.1234Z" >> ToTime Id >> UnMkTime Id) ()
 -- PresentT (12,13,70617 % 5000)
+--
+-- >>> pz @(ReadP UTCTime Id >> ToTime Id >> UnMkTime Id) "2020-07-22 08:01:14.127Z"
+-- PresentT (8,1,14127 % 1000)
+--
+-- >>> pz @(ReadP ZonedTime Id >> '(UnMkDay (ToDay Id), UnMkTime (ToTime Id))) "2020-07-11 11:41:12.333 CET"
+-- PresentT ((2020,7,11),(11,41,12333 % 1000))
 --
 data UnMkTime p
 
@@ -6528,6 +6548,9 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 -- >>> pz @(Catch' (Succ Id) (Second (ShowP Id) >> PrintT "%s %s" Id)) LT
 -- PresentT EQ
 --
+-- >>> pz @(Len > 1 && Catch (Id !! 3 == 66) 'False) [1,2]
+-- FalseT
+--
 -- more flexible: takes a (String,x) and a proxy so we can still call 'False 'True
 -- now takes the FailT string and x so you can print more detail if you want
 -- need the proxy so we can fail without having to explicitly specify a type
@@ -7268,6 +7291,45 @@ instance (P p a
                   (False, False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
         in mkNodeB opts (p&&q) (show p <> " " <> msg0 <> " " <> show q <> (if null zz then zz else " | " <> zz)) [hh pp, hh qq]
 
+-- | short circuit version of boolean And
+--
+-- >>> pl @(Id > 10 &&~ Failt _ "ss") 9
+-- False (False &&~ ... | (9 > 10))
+-- FalseT
+--
+-- >>> pl @(Id > 10 &&~ Id == 12) 11
+-- False (True &&~ False | (11 == 12))
+-- FalseT
+--
+-- >>> pl @(Id > 10 &&~ Id == 11) 11
+-- True (True &&~ True)
+-- TrueT
+--
+data p &&~ q
+infixr 3 &&~
+
+instance (P p a
+        , P q a
+        , PP p a ~ Bool
+        , PP q a ~ Bool
+        ) => P (p &&~ q) a where
+  type PP (p &&~ q) a = Bool
+  eval _ opts a = do
+    let msg0 = "&&~"
+    pp <- eval (Proxy @p) opts a
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right False ->
+        pure $ mkNodeB opts False ("False" <> " " <> msg0 <> " ... | " <> topMessage pp) [hh pp]
+      Right True -> do
+        qq <- eval (Proxy @q) opts a
+        pure $ case getValueLR opts msg0 qq [hh pp] of
+          Left e -> e
+          Right q ->
+            let zz = if q then ""
+                     else " | " <> topMessage qq
+            in mkNodeB opts q ("True" <> " " <> msg0 <> " " <> show q <> zz) [hh pp, hh qq]
+
 -- | similar to 'Prelude.||'
 --
 -- >>> pz @(Fst Id || (Length (Snd Id) >= 4)) (False,[11,12,13,14])
@@ -7292,9 +7354,46 @@ instance (P p a
       Left e -> e
       Right (p,q,pp,qq) ->
         let zz = case (p,q) of
-                  (False,False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+                  (False,False) -> " | " <> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
                   _ -> ""
-        in mkNodeB opts (p||q) (show p <> " " <> msg0 <> " " <> show q <> (if null zz then zz else " | " <> zz)) [hh pp, hh qq]
+        in mkNodeB opts (p||q) (show p <> " " <> msg0 <> " " <> show q <> zz) [hh pp, hh qq]
+
+-- | short circuit version of boolean Or
+--
+-- >>> pl @(Id > 10 ||~ Failt _ "ss") 11
+-- True (True ||~ ...)
+-- TrueT
+--
+-- >>> pz @(Id > 10 ||~ Id == 9) 9
+-- TrueT
+--
+-- >>> pz @(Id > 10 ||~ Id > 9) 9
+-- FalseT
+--
+data p ||~ q
+infixr 2 ||~
+
+instance (P p a
+        , P q a
+        , PP p a ~ Bool
+        , PP q a ~ Bool
+        ) => P (p ||~ q) a where
+  type PP (p ||~ q) a = Bool
+  eval _ opts a = do
+    let msg0 = "||~"
+    pp <- eval (Proxy @p) opts a
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right False -> do
+        qq <- eval (Proxy @q) opts a
+        pure $ case getValueLR opts msg0 qq [hh pp] of
+          Left e -> e
+          Right q ->
+            let zz = if q then " | " <> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
+                     else ""
+            in mkNodeB opts q ("False" <> " " <> msg0 <> " " <> show q <> zz) [hh pp, hh qq]
+      Right True ->
+        pure $ mkNodeB opts True ("True" <> " " <> msg0 <> " ...") [hh pp]
 
 -- | implication
 --

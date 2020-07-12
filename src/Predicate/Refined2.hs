@@ -107,7 +107,6 @@ import Test.QuickCheck
 -- >>> :set -XOverloadedStrings
 -- >>> :m + Predicate.Prelude
 -- >>> :m + Data.Time
--- >>> :m + Data.Time.Calendar.WeekDate
 
 -- | Refinement type for specifying an input type that is different from the output type
 --
@@ -297,6 +296,7 @@ instance ( Show i
 
 -- | 'Arbitrary' instance for 'Refined2'
 --
+-- >>> :m + Data.Time.Calendar.WeekDate
 -- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined2 'OU (ToEnum Day Id) (Snd (ToWeekDate Id) == "Tuesday") Int)))
 -- >>> all (\x -> let y = toEnum @Day (r2Out x) in view _3 (toWeekDate y) == 2 && r2In x == y) xs
 -- True
