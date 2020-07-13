@@ -71,7 +71,6 @@ module Predicate.Util (
   , Color(..)
   , colorMe
   , isVerbose
-  , colorBoolP
   , colorBoolT
   , colorBoolT'
   , setOtherEffects
@@ -147,9 +146,6 @@ module Predicate.Util (
   , GetOrd(..)
 
  -- ** printing methods
-  , prtTTIO
-  , prtTT
-  , prtTree
   , prtTreePure
   , prettyRational
   , formatOMsg
@@ -1069,18 +1065,6 @@ colorMe :: POpts -> BoolP -> String -> String
 colorMe o b s =
   let (_, PColor f) = if oNoColor o then nocolor else oColor o
   in f b s
-
-prtTTIO :: POpts -> IO (TT a) -> IO ()
-prtTTIO  = prtTT'
-
-prtTT :: POpts -> Identity (TT a) -> IO ()
-prtTT  = prtTT'
-
-prtTT' :: MonadEval m => POpts -> m (TT a) -> IO ()
-prtTT' o y = liftEval y >>= prtTree o . fromTT
-
-prtTree :: POpts -> Tree PE -> IO ()
-prtTree o = putStr . prtTreePure o
 
 fixLite :: forall a . Show a => POpts -> a -> Tree PE -> String
 fixLite opts a t

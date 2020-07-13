@@ -45,7 +45,7 @@ module Predicate.Core (
   , runPQBool
   , evalBool
   , evalQuick
-  , prtTree'
+  , prtTree
   ) where
 import Predicate.Util
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
@@ -734,11 +734,11 @@ run a = do
   let opts = getOptT @opts
   pp <- eval (Proxy @p) opts a
   let r = pp ^. tBool
-  putStr $ prtTree' opts pp
+  putStr $ prtTree opts pp
   return r
 
-prtTree' :: Show x => POpts -> TT x -> String
-prtTree' opts pp =
+prtTree :: Show x => POpts -> TT x -> String
+prtTree opts pp =
   let r = pp ^. tBool
   in case oDebug opts of
        DZero -> ""

@@ -7367,7 +7367,8 @@ instance (P p a
 -- >>> pz @(Id > 10 ||~ Id == 9) 9
 -- TrueT
 --
--- >>> pz @(Id > 10 ||~ Id > 9) 9
+-- >>> pl @(Id > 10 ||~ Id > 9) 9
+-- False (False ||~ False | (9 > 10) ||~ (9 > 9))
 -- FalseT
 --
 data p ||~ q
@@ -7389,8 +7390,8 @@ instance (P p a
         pure $ case getValueLR opts msg0 qq [hh pp] of
           Left e -> e
           Right q ->
-            let zz = if q then " | " <> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
-                     else ""
+            let zz = if q then ""
+                     else " | " <> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
             in mkNodeB opts q ("False" <> " " <> msg0 <> " " <> show q <> zz) [hh pp, hh qq]
       Right True ->
         pure $ mkNodeB opts True ("True" <> " " <> msg0 <> " ...") [hh pp]

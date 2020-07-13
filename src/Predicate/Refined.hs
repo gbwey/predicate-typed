@@ -31,8 +31,6 @@ module Predicate.Refined (
     Refined
   , unRefined
   , RefinedC
-  , newRefined
-  , newRefinedM
   , RefinedT(..)
 
   -- ** print methods
@@ -40,6 +38,8 @@ module Predicate.Refined (
   , prtRefinedTIO
 
   -- ** create methods
+  , newRefined
+  , newRefinedM
   , withRefinedT
   , withRefinedTIO
   , newRefinedT
@@ -375,7 +375,7 @@ prtRefinedIO a = do
   case oDebug o of
      DZero -> pure ()
      DLite -> putStrLn $ colorBoolT o r <> " " <> topMessage tt
-     _ -> putStrLn $ prtTree' o tt
+     _ -> putStrLn $ prtTree o tt
   pure $ case getValueLR o "" tt [] of
     Right True -> Right (Refined a)
     _ -> Left r
@@ -411,7 +411,7 @@ newRefinedM a = do
   let o = getOptT @opts
   pp <- evalBool (Proxy @p) o a
   let r = colorBoolT' o (_tBool pp)
-      s = prtTree' o pp
+      s = prtTree o pp
   pure $ ((r,(topMessage pp, s)),) $ case getValueLR o "" pp [] of
        Right True -> Just (Refined a)
        _ -> Nothing
@@ -427,7 +427,7 @@ newRefinedTImpl :: forall opts p a n m
 newRefinedTImpl f a = do
   let o = getOptT @opts
   tt <- f $ evalBool (Proxy @p) o a
-  let msg = prtTree' o tt
+  let msg = prtTree o tt
   tell [msg]
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
@@ -497,7 +497,7 @@ unsafeRefined' a =
       tt = runIdentity $ evalBool (Proxy @p) o a
   in case getValueLR o "" tt [] of
        Right True -> Refined a
-       _ -> let s = prtTree' o tt
+       _ -> let s = prtTree o tt
                 bp = colorBoolT' o (view tBool tt)
             in case oDebug o of
                  DZero -> error bp
