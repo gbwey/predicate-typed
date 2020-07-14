@@ -281,7 +281,7 @@ instance ( Arbitrary a
          , RefinedC opts p a
          , Show a
          ) => Arbitrary (Refined opts p a) where
-  arbitrary = genRefined @opts @p @a (arbitrary @a)
+  arbitrary = genRefined arbitrary
 
 -- | create 'Refined' generator using a generator to restrict the values
 genRefined :: forall opts p a .
