@@ -471,7 +471,11 @@ instance Monad m => MonadError String (RefinedT m) where
 unRavelT :: RefinedT m a -> m (Either String a, [String])
 unRavelT = runWriterT . runExceptT . unRefinedT
 
-prtRefinedTImpl :: forall n m a . (MonadIO n, Show a) => (forall x . m x -> n x) -> RefinedT m a -> n ()
+prtRefinedTImpl :: forall n m a
+  . (MonadIO n, Show a)
+  => (forall x . m x -> n x)
+  -> RefinedT m a
+  -> n ()
 prtRefinedTImpl f rt = do
   (lr,ws) <-  f $ unRavelT rt
   liftIO $ do

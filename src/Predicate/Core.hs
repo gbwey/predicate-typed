@@ -63,10 +63,20 @@ import Data.Functor.Identity
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Predicate.Prelude.>>'
 class P p a where
   type PP (p :: k) a :: Type -- PP is the output type
-  eval :: MonadEval m => Proxy p -> POpts -> a -> m (TT (PP p a)) -- ^ returns a tree of results
+  eval :: MonadEval m
+     => proxy p -- ^ proxy for the expression
+     -> POpts  -- ^ display options
+     -> a      -- ^ value
+     -> m (TT (PP p a)) -- ^ returns a tree of results
 
 -- | A specialised form of 'eval' that works only on predicates
-evalBool :: (MonadEval m, P p a, PP p a ~ Bool) => Proxy p -> POpts -> a -> m (TT (PP p a))
+evalBool :: ( MonadEval m
+            , P p a
+            , PP p a ~ Bool
+            ) => proxy p
+              -> POpts
+              -> a
+              -> m (TT (PP p a))
 evalBool p opts a = fixBoolT <$> eval p opts a
 
 evalQuick :: forall p i . P p i => i -> Either String (PP p i)
@@ -104,7 +114,9 @@ instance Show a => P Id a where
 -- >>> pz @IdT 23
 -- PresentT 23
 data IdT
-instance (Typeable a, Show a) => P IdT a where
+instance ( Typeable a
+         , Show a
+         ) => P IdT a where
   type PP IdT a = a
   eval _ opts a =
     let msg0 = "IdT(" <> t <> ")"
@@ -195,7 +207,9 @@ instance KnownSymbol s => P (s :: Symbol) a where
 -- >>> pz @'(Id, 4) "hello"
 -- PresentT ("hello",4)
 --
-instance (P p a, P q a) => P '(p,q) a where
+instance ( P p a
+         , P q a
+         ) => P '(p,q) a where
   type PP '(p,q) a = (PP p a, PP q a)
   eval _ opts a = do
     let msg = "'(,)"
@@ -455,7 +469,10 @@ instance P ('[] :: [k]) a where
 -- >>> pz @'[W 1, W 2, W 3, Id] 999
 -- PresentT [1,2,3,999]
 --
-instance (Show (PP p a), Show a, P p a) => P '[p] a where
+instance ( Show (PP p a)
+         , Show a
+         , P p a
+         ) => P '[p] a where
   type PP '[p] a = [PP p a]
   eval _ opts a = do
     pp <- eval (Proxy @p) opts a
@@ -700,7 +717,12 @@ instance GetBoolT x b => P (b :: BoolT x) a where
       Right True -> mkNode opts (PresentT False) (msg0 <> " PresentT") []
       Right False -> mkNode opts (FailT "'FailT _") (msg0 <> " FailT") []
 
-pan, pa, pu, pl, pz, pab, pub :: forall p a . (Show (PP p a), P p a) => a -> IO (BoolT (PP p a))
+pan, pa, pu, pl, pz, pab, pub
+  :: forall p a
+  . ( Show (PP p a)
+    , P p a
+    ) => a
+      -> IO (BoolT (PP p a))
 -- | skips the evaluation tree and just displays the end result
 pz = run @'OZ @p
 -- | same as 'pz' but adds context to the end result
@@ -753,8 +775,8 @@ prtTree opts pp =
 
 runPQ :: (P p a, P q a, MonadEval m)
    => String
-   -> Proxy p
-   -> Proxy q
+   -> proxy1 p
+   -> proxy2 q
    -> POpts
    -> a
    -> [Holder]
@@ -769,10 +791,13 @@ runPQ msg0 proxyp proxyq opts a hhs = do
            Left e -> Left e
            Right q -> Right (p, q, pp, qq)
 
-runPQBool :: (P p a, PP p a ~ Bool, P q a, PP q a ~ Bool, MonadEval m)
+runPQBool :: ( P p a
+             , PP p a ~ Bool
+             , P q a
+             , PP q a ~ Bool, MonadEval m)
    => String
-   -> Proxy p
-   -> Proxy q
+   -> proxy1 p
+   -> proxy2 q
    -> POpts
    -> a
    -> [Holder]

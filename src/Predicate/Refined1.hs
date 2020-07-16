@@ -216,9 +216,17 @@ type Refined1C opts ip op fmt i =
        , PP fmt (PP ip i) ~ i  -- the output type must match the original input type
        )
 
-deriving instance (Show i, Show (PP ip i), Show (PP fmt (PP ip i))) => Show (Refined1 opts ip op fmt i)
-deriving instance (Eq i, Eq (PP ip i), Eq (PP fmt (PP ip i))) => Eq (Refined1 opts ip op fmt i)
-deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Refined1 opts ip op fmt i)
+deriving instance ( Show i
+                  , Show (PP ip i)
+                  , Show (PP fmt (PP ip i))
+                  ) => Show (Refined1 opts ip op fmt i)
+deriving instance ( Eq i
+                  , Eq (PP ip i)
+                  , Eq (PP fmt (PP ip i))
+                  ) => Eq (Refined1 opts ip op fmt i)
+deriving instance ( TH.Lift (PP ip i)
+                  , TH.Lift (PP fmt (PP ip i))
+                  ) => TH.Lift (Refined1 opts ip op fmt i)
 
 -- | 'IsString' instance for Refined1
 --
@@ -466,7 +474,10 @@ instance (Refined1C opts ip op fmt i
 -- >>> newRefined1P eg2 "24"
 -- Right (Refined1 24)
 --
-mkProxy1 :: forall z opts ip op fmt i . z ~ '(opts,ip,op,fmt,i) => Proxy '(opts,ip,op,fmt,i)
+mkProxy1 ::
+  forall z opts ip op fmt i
+       . z ~ '(opts,ip,op,fmt,i)
+       => Proxy '(opts,ip,op,fmt,i)
 mkProxy1 = Proxy
 
 -- | same as 'mkProxy1' but checks to make sure the proxy is consistent with the 'Refined1C' constraint

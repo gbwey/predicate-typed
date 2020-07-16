@@ -199,7 +199,11 @@ unsafeRefined3' i =
        Just r -> r
 
 -- | directly load values into 'Refined3' without any checking
-unsafeRefined3 :: forall opts ip op fmt i . PP ip i -> PP fmt (PP ip i) -> Refined3 opts ip op fmt i
+unsafeRefined3 ::
+    forall opts ip op fmt i
+  . PP ip i
+  -> PP fmt (PP ip i)
+  -> Refined3 opts ip op fmt i
 unsafeRefined3 = Refined3
 
 
@@ -213,9 +217,17 @@ type Refined3C opts ip op fmt i =
        , PP fmt (PP ip i) ~ i  -- the output type must match the original input type
        )
 
-deriving instance (Show i, Show (PP ip i), Show (PP fmt (PP ip i))) => Show (Refined3 opts ip op fmt i)
-deriving instance (Eq i, Eq (PP ip i), Eq (PP fmt (PP ip i))) => Eq (Refined3 opts ip op fmt i)
-deriving instance (TH.Lift (PP ip i), TH.Lift (PP fmt (PP ip i))) => TH.Lift (Refined3 opts ip op fmt i)
+deriving instance ( Show i
+                  , Show (PP ip i)
+                  , Show (PP fmt (PP ip i))
+                  ) => Show (Refined3 opts ip op fmt i)
+deriving instance ( Eq i
+                  , Eq (PP ip i)
+                  , Eq (PP fmt (PP ip i))
+                  ) => Eq (Refined3 opts ip op fmt i)
+deriving instance ( TH.Lift (PP ip i)
+                  , TH.Lift (PP fmt (PP ip i))
+                  ) => TH.Lift (Refined3 opts ip op fmt i)
 
 -- | 'IsString' instance for Refined3
 --
@@ -453,7 +465,10 @@ instance (Refined3C opts ip op fmt i
 -- >>> newRefined3P eg2 "24"
 -- Right (Refined3 {r3In = 24, r3Out = "24"})
 --
-mkProxy3 :: forall z opts ip op fmt i . z ~ '(opts,ip,op,fmt,i) => Proxy '(opts,ip,op,fmt,i)
+mkProxy3 ::
+  forall z opts ip op fmt i
+       . z ~ '(opts,ip,op,fmt,i)
+      => Proxy '(opts,ip,op,fmt,i)
 mkProxy3 = Proxy
 
 -- | same as 'mkProxy3' but checks to make sure the proxy is consistent with the 'Refined3C' constraint

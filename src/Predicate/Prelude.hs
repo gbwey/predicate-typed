@@ -29,6 +29,7 @@
      Contains instances of the class 'P' for evaluating expressions at the type level.
 -}
 module Predicate.Prelude (
+
   -- ** boolean expressions
     type (&&)
   , type (&&~)
@@ -56,6 +57,7 @@ module Predicate.Prelude (
   , OrA
   , type (|+)
   , IdBool
+
   -- ** regex expressions
   , Re
   , Re'
@@ -95,7 +97,7 @@ module Predicate.Prelude (
   , Unassoc
   , Pairs
 
- -- ** character expressions
+ -- ** character predicates
   , IsLower
   , IsUpper
   , IsDigit
@@ -551,6 +553,7 @@ module Predicate.Prelude (
   , PrimeNext
   , Luhn
   , Char1
+
   -- ** tuples
   , Tuple2
   , Tuple3
@@ -1398,7 +1401,9 @@ instance (PP p x ~ ([String] -> String)
 --
 data IsCharSet (cs :: CharSet)
 
-instance (x ~ Char, GetCharSet cs) => P (IsCharSet cs) x where
+instance ( x ~ Char
+         , GetCharSet cs
+         ) => P (IsCharSet cs) x where
   type PP (IsCharSet cs) x = Bool
   eval _ opts c =
     let msg0 = "Is" ++ drop 1 (show cs)
@@ -1692,7 +1697,9 @@ instance P IsLatin1AllT x => P IsLatin1All x where
 --
 data ToLower
 
-instance (Show a, DTL.IsText a) => P ToLower a where
+instance ( Show a
+         , DTL.IsText a
+         ) => P ToLower a where
   type PP ToLower a = a
   eval _ opts as =
     let msg0 = "ToLower"
@@ -1706,7 +1713,9 @@ instance (Show a, DTL.IsText a) => P ToLower a where
 --
 data ToUpper
 
-instance (Show a, DTL.IsText a) => P ToUpper a where
+instance ( Show a
+         , DTL.IsText a
+         ) => P ToUpper a where
   type PP ToUpper a = a
   eval _ opts as =
     let msg0 = "ToUpper"
@@ -1725,7 +1734,9 @@ instance (Show a, DTL.IsText a) => P ToUpper a where
 --
 data ToTitle
 
-instance (Show a, DTL.IsText a) => P ToTitle a where
+instance ( Show a
+         , DTL.IsText a
+         ) => P ToTitle a where
   type PP ToTitle a = a
   eval _ opts as =
     let msg0 = "ToTitle"
@@ -1748,7 +1759,9 @@ toTitleAll [] = []
 --
 data Inits
 
-instance ([a] ~ x, Show a) => P Inits x where
+instance ( [a] ~ x
+         , Show a
+         ) => P Inits x where
   type PP Inits x = [x]
   eval _ opts as =
     let msg0 = "Inits"
@@ -1765,7 +1778,9 @@ instance ([a] ~ x, Show a) => P Inits x where
 --
 data Tails
 
-instance ([a] ~ x, Show a) => P Tails x where
+instance ( [a] ~ x
+         , Show a
+         ) => P Tails x where
   type PP Tails x = [x]
   eval _ opts as =
     let msg0 = "Tails"
@@ -1812,7 +1827,9 @@ instance ( PP p x ~ [a]
 --
 data ShowP p
 
-instance (Show (PP p x), P p x) => P (ShowP p) x where
+instance ( Show (PP p x)
+         , P p x
+         ) => P (ShowP p) x where
   type PP (ShowP p) x = String
   eval _ opts x = do
     let msg0 = "ShowP"
@@ -1986,7 +2003,9 @@ instance P (MkDayT p) x => P (MkDay p) x where
 --
 data UnMkDay p
 
-instance (PP p x ~ Day, P p x) => P (UnMkDay p) x where
+instance ( PP p x ~ Day
+         , P p x
+         ) => P (UnMkDay p) x where
   type PP (UnMkDay p) x = (Int, Int, Int)
   eval _ opts x = do
     let msg0 = "UnMkDay"
@@ -2139,7 +2158,10 @@ instance ToTimeC CP.SystemTime where
 --
 data ToDay p
 
-instance (P p x, Show (PP p x), ToDayC (PP p x)) => P (ToDay p) x where
+instance ( P p x
+         , Show (PP p x)
+         , ToDayC (PP p x)
+         ) => P (ToDay p) x where
   type PP (ToDay p) x = Day
   eval _ opts x = do
     let msg0 = "ToDay"
@@ -2174,17 +2196,8 @@ instance ( P p x
 
 -- | create a 'TimeOfDay' from three int values passed in as year month and day
 --
--- >>> pz @(MkTime '(1,2,3 % 12345)) ()
--- PresentT 01:02:00.000243013365
---
--- >>> pz @(MkTime Id) (12,13,65)
--- PresentT 12:13:65
---
 -- >>> pz @(MkTime' (Fst Id) (Snd Id) (Thd Id)) (13,99,99999)
 -- PresentT 13:99:99999
---
--- >>> pz @(MkTime Id) (17,3,13)
--- PresentT 17:03:13
 --
 data MkTime' p q r
 
@@ -2210,6 +2223,17 @@ instance (P p x
             let mtime = TimeOfDay p q (fromRational r)
             in mkNode opts (PresentT mtime) (show01' opts msg0 mtime "(h,m,s)=" (p,q,r)) (hhs <> [hh rr])
 
+-- | create a 'TimeOfDay' from a three-tuple of year month and day
+--
+-- >>> pz @(MkTime '(1,2,3 % 12345)) ()
+-- PresentT 01:02:00.000243013365
+--
+-- >>> pz @(MkTime Id) (12,13,65)
+-- PresentT 12:13:65
+--
+-- >>> pz @(MkTime Id) (17,3,13)
+-- PresentT 17:03:13
+--
 data MkTime p
 type MkTimeT p = MkTime' (Fst p) (Snd p) (Thd p)
 
@@ -2231,7 +2255,9 @@ instance P (MkTimeT p) x => P (MkTime p) x where
 --
 data UnMkTime p
 
-instance (PP p x ~ TimeOfDay, P p x) => P (UnMkTime p) x where
+instance ( PP p x ~ TimeOfDay
+         , P p x
+         ) => P (UnMkTime p) x where
   type PP (UnMkTime p) x = (Int, Int, Rational)
   eval _ opts x = do
     let msg0 = "UnMkTime"
@@ -2269,7 +2295,9 @@ instance (PP p x ~ TimeOfDay, P p x) => P (UnMkTime p) x where
 --
 data PosixToUTCTime p
 
-instance (PP p x ~ Rational, P p x) => P (PosixToUTCTime p) x where
+instance ( PP p x ~ Rational
+         , P p x
+         ) => P (PosixToUTCTime p) x where
   type PP (PosixToUTCTime p) x = UTCTime
   eval _ opts x = do
     let msg0 = "PosixToUTCTime"
@@ -2296,7 +2324,9 @@ instance (PP p x ~ Rational, P p x) => P (PosixToUTCTime p) x where
 --
 data UTCTimeToPosix p
 
-instance (PP p x ~ UTCTime, P p x) => P (UTCTimeToPosix p) x where
+instance ( PP p x ~ UTCTime
+         , P p x
+         ) => P (UTCTimeToPosix p) x where
   type PP (UTCTimeToPosix p) x = Rational
   eval _ opts x = do
     let msg0 = "UTCTimeToPosix"
@@ -2417,7 +2447,9 @@ instance P (ReadQT t p) x => P (ReadQ t p) x where
 --
 data Sum
 
-instance (Num a, Show a) => P Sum [a] where
+instance ( Num a
+         , Show a
+         ) => P Sum [a] where
   type PP Sum [a] = a
   eval _ opts as =
     let msg0 = "Sum"
@@ -2434,7 +2466,9 @@ instance (Num a, Show a) => P Sum [a] where
 --
 data Product
 
-instance (Num a, Show a) => P Product [a] where
+instance ( Num a
+         , Show a
+         ) => P Product [a] where
   type PP Product [a] = a
   eval _ opts as =
     let msg0 = "Product"
@@ -2451,7 +2485,9 @@ instance (Num a, Show a) => P Product [a] where
 --
 data Min
 
-instance (Ord a, Show a) => P Min [a] where
+instance ( Ord a
+         , Show a
+         ) => P Min [a] where
   type PP Min [a] = a
   eval _ opts as' = do
     let msg0 = "Min"
@@ -2472,7 +2508,9 @@ instance (Ord a, Show a) => P Min [a] where
 
 data Max
 
-instance (Ord a, Show a) => P Max [a] where
+instance ( Ord a
+         , Show a
+         ) => P Max [a] where
   type PP Max [a] = a
   eval _ opts as' = do
     let msg0 = "Max"
@@ -2572,7 +2610,9 @@ instance P (SortOnDescT p q) x => P (SortOnDesc p q) x where
 -- PresentT 0
 --
 data Len
-instance (Show a, as ~ [a]) => P Len as where
+instance ( Show a
+         , as ~ [a]
+         ) => P Len as where
   type PP Len as = Int
   eval _ opts as =
     let msg0 = "Len"
@@ -3474,7 +3514,9 @@ instance (Show (PP p a)
 --
 data IsLeft p
 
-instance (P p x, PP p x ~ Either a b) => P (IsLeft p) x where
+instance ( P p x
+         , PP p x ~ Either a b
+         ) => P (IsLeft p) x where
   type PP (IsLeft p) x = Bool
   eval _ opts x = do
     let msg0 = "IsLeft"
@@ -3496,7 +3538,9 @@ instance (P p x, PP p x ~ Either a b) => P (IsLeft p) x where
 
 data IsRight p
 
-instance (P p x, PP p x ~ Either a b) => P (IsRight p) x where
+instance ( P p x
+         , PP p x ~ Either a b
+         ) => P (IsRight p) x where
   type PP (IsRight p) x = Bool
   eval _ opts x = do
     let msg0 = "IsRight"
@@ -3942,7 +3986,10 @@ instance P (NegateRatioT p q) x => P (p -% q) x where
 --
 data Negate p
 
-instance (Show (PP p x), Num (PP p x), P p x) => P (Negate p) x where
+instance ( Show (PP p x)
+         , Num (PP p x)
+         , P p x
+         ) => P (Negate p) x where
   type PP (Negate p) x = PP p x
   eval _ opts x = do
     let msg0 = "Negate"
@@ -3970,7 +4017,10 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Negate p) x where
 --
 data Abs p
 
-instance (Show (PP p x), Num (PP p x), P p x) => P (Abs p) x where
+instance ( Show (PP p x)
+         , Num (PP p x)
+         , P p x
+         ) => P (Abs p) x where
   type PP (Abs p) x = PP p x
   eval _ opts x = do
     let msg0 = "Abs"
@@ -3996,7 +4046,10 @@ instance (Show (PP p x), Num (PP p x), P p x) => P (Abs p) x where
 --
 data Signum p
 
-instance (Show (PP p x), Num (PP p x), P p x) => P (Signum p) x where
+instance ( Show (PP p x)
+         , Num (PP p x)
+         , P p x
+         ) => P (Signum p) x where
   type PP (Signum p) x = PP p x
   eval _ opts x = do
     let msg0 = "Signum"
@@ -4161,7 +4214,9 @@ instance (Show (f (t a))
 --
 data Reverse
 
-instance (Show a, as ~ [a]) => P Reverse as where
+instance ( Show a
+         , as ~ [a]
+         ) => P Reverse as where
   type PP Reverse as = as
   eval _ opts as =
     let msg0 = "Reverse"
@@ -4178,7 +4233,9 @@ instance (Show a, as ~ [a]) => P Reverse as where
 --
 data ReverseL
 
-instance (Show t, Reversing t) => P ReverseL t where
+instance ( Show t
+         , Reversing t
+         ) => P ReverseL t where
   type PP ReverseL t = t
   eval _ opts as =
     let msg0 = "ReverseL"
@@ -5062,7 +5119,9 @@ instance (P q a
 --
 data IsJust p
 
-instance (P p x, PP p x ~ Maybe a) => P (IsJust p) x where
+instance ( P p x
+         , PP p x ~ Maybe a
+         ) => P (IsJust p) x where
   type PP (IsJust p) x = Bool
   eval _ opts x = do
     let msg0 = "IsJust"
@@ -5083,7 +5142,9 @@ instance (P p x, PP p x ~ Maybe a) => P (IsJust p) x where
 --
 data IsNothing p
 
-instance (P p x, PP p x ~ Maybe a) => P (IsNothing p) x where
+instance ( P p x
+         , PP p x ~ Maybe a
+         ) => P (IsNothing p) x where
   type PP (IsNothing p) x = Bool
   eval _ opts x = do
     let msg0 = "IsNothing"
@@ -5177,7 +5238,9 @@ instance (P p x
 --
 -- no Monoid for Maybe a unless a is also a monoid but can use empty!
 data MEmptyT' t
-instance (Show (PP t a), Monoid (PP t a)) => P (MEmptyT' t) a where
+instance ( Show (PP t a)
+         , Monoid (PP t a)
+         ) => P (MEmptyT' t) a where
   type PP (MEmptyT' t) a = PP t a
   eval _ opts _ =
     let msg0 = "MEmptyT"
@@ -5252,7 +5315,10 @@ instance P (MkNothing t) x where
 -- PresentT (Just 44)
 --
 data MkJust p
-instance (PP p x ~ a, P p x, Show a) => P (MkJust p) x where
+instance ( PP p x ~ a
+         , P p x
+         , Show a
+         ) => P (MkJust p) x where
   type PP (MkJust p) x = Maybe (PP p x)
   eval _ opts x = do
     let msg0 = "MkJust"
@@ -5270,7 +5336,9 @@ instance (PP p x ~ a, P p x, Show a) => P (MkJust p) x where
 --
 data MkLeft' t p
 
-instance (Show (PP p x), P p x) => P (MkLeft' t p) x where
+instance ( Show (PP p x)
+         , P p x
+         ) => P (MkLeft' t p) x where
   type PP (MkLeft' t p) x = Either (PP p x) (PP t x)
   eval _ opts x = do
     let msg0 = "MkLeft"
@@ -5295,7 +5363,9 @@ instance P (MkLeftT t p) x => P (MkLeft t p) x where
 --
 data MkRight' t p
 
-instance (Show (PP p x), P p x) => P (MkRight' t p) x where
+instance ( Show (PP p x)
+         , P p x
+         ) => P (MkRight' t p) x where
   type PP (MkRight' t p) x = Either (PP t x) (PP p x)
   eval _ opts x = do
     let msg0 = "MkRight"
@@ -5323,7 +5393,9 @@ instance P (MkRightT t p) x => P (MkRight t p) x where
 --
 data MkThis' t p
 
-instance (Show (PP p x), P p x) => P (MkThis' t p) x where
+instance ( Show (PP p x)
+         , P p x
+         ) => P (MkThis' t p) x where
   type PP (MkThis' t p) x = These (PP p x) (PP t x)
   eval _ opts x = do
     let msg0 = "MkThis"
@@ -5348,7 +5420,9 @@ instance P (MkThisT t p) x => P (MkThis t p) x where
 --
 data MkThat' t p
 
-instance (Show (PP p x), P p x) => P (MkThat' t p) x where
+instance ( Show (PP p x)
+         , P p x
+         ) => P (MkThat' t p) x where
   type PP (MkThat' t p) x = These (PP t x) (PP p x)
   eval _ opts x = do
     let msg0 = "MkThat"
@@ -5898,7 +5972,9 @@ instance (Show (ConsT s)
 --
 data IsEmpty
 
-instance (Show as, AsEmpty as) => P IsEmpty as where
+instance ( Show as
+         , AsEmpty as
+         ) => P IsEmpty as where
   type PP IsEmpty as = Bool
   eval _ opts as =
     let b = has _Empty as
@@ -6020,7 +6096,9 @@ instance (P p x
 --
 data PartitionEithers
 
-instance (Show a, Show b) => P PartitionEithers [Either a b] where
+instance ( Show a
+         , Show b
+         ) => P PartitionEithers [Either a b] where
   type PP PartitionEithers [Either a b] = ([a], [b])
   eval _ opts as =
     let msg0 = "PartitionEithers"
@@ -6034,7 +6112,9 @@ instance (Show a, Show b) => P PartitionEithers [Either a b] where
 --
 data PartitionThese
 
-instance (Show a, Show b) => P PartitionThese [These a b] where
+instance ( Show a
+         , Show b
+         ) => P PartitionThese [These a b] where
   type PP PartitionThese [These a b] = ([a], [b], [(a, b)])
   eval _ opts as =
     let msg0 = "PartitionThese"
@@ -6788,7 +6868,10 @@ data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 
 data Guards (ps :: [(k,k1)])
 
-instance ([a] ~ x, GetLen ps, P (GuardsImpl (LenT ps) ps) x) => P (Guards ps) x where
+instance ( [a] ~ x
+         , GetLen ps
+         , P (GuardsImpl (LenT ps) ps) x
+         ) => P (Guards ps) x where
   type PP (Guards ps) x = PP (GuardsImpl (LenT ps) ps) x
   eval _ opts as = do
     let msg0 = "Guards"
@@ -6798,11 +6881,17 @@ instance ([a] ~ x, GetLen ps, P (GuardsImpl (LenT ps) ps) x) => P (Guards ps) x 
        in pure $ mkNode opts (FailT msg1) msg1 []
     else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
 
-badLength :: (Foldable t, Show n, Num n) => t a -> n -> String
+badLength :: ( Foldable t
+             , Show n
+             , Num n
+             ) => t a
+               -> n
+               -> String
 badLength as n = ":invalid length(" <> show (length as) <> ") expected " ++ show (n+0)
 
-instance ([a] ~ x, Show a)
-         => P (GuardsImpl n ('[] :: [(k,k1)])) x where
+instance ( [a] ~ x
+         , Show a
+         ) => P (GuardsImpl n ('[] :: [(k,k1)])) x where
   type PP (GuardsImpl n ('[] :: [(k,k1)])) x = x
   eval _ opts as =
     let msg0 = "Guards"
@@ -6990,7 +7079,9 @@ instance (PP (Bools (ToGuardsT prt ps)) x ~ Bool
 data BoolsN prt (n :: Nat) (p :: k1)
 type BoolsNT prt (n :: Nat) (p :: k1) = Bools (ToGuardsT prt (RepeatT n p))
 
-instance (x ~ [a], P (BoolsNT prt n p) x) => P (BoolsN prt n p) x where
+instance ( x ~ [a]
+         , P (BoolsNT prt n p) x
+         ) => P (BoolsN prt n p) x where
   type PP (BoolsN prt n p) x = PP (BoolsNT prt n p) x
   eval _ = evalBool (Proxy @(BoolsNT prt n p))
 
@@ -7022,8 +7113,9 @@ instance ([a] ~ x
 
 data GuardsImplX (n :: Nat) (os :: [(k,k1)])
 
-instance ([a] ~ x, Show a)
-        => P (GuardsImplX n ('[] :: [(k,k1)])) x where
+instance ( [a] ~ x
+         , Show a
+         ) => P (GuardsImplX n ('[] :: [(k,k1)])) x where
   type PP (GuardsImplX n ('[] :: [(k,k1)])) x = x
   eval _ opts as =
     let msg0 = "Guards"
@@ -7089,7 +7181,9 @@ type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
 data GuardsN prt (n :: Nat) p
 type GuardsNT prt (n :: Nat) p = Guards (ToGuardsT prt (RepeatT n p))
 
-instance (x ~ [a], P (GuardsNT prt n p) x) => P (GuardsN prt n p) x where
+instance ( x ~ [a]
+         , P (GuardsNT prt n p) x
+         ) => P (GuardsN prt n p) x where
   type PP (GuardsN prt n p) x = PP (GuardsNT prt n p) x
   eval _ = eval (Proxy @(GuardsNT prt n p))
 
@@ -7173,7 +7267,9 @@ instance (Show a
 -- for example for use with Stdout so it doesnt interfere with the \'a\' on the rhs unless there is an failure
 data Skip p
 
-instance (Show (PP p a), P p a) => P (Skip p) a where
+instance ( Show (PP p a)
+         , P p a
+         ) => P (Skip p) a where
   type PP (Skip p) a = a
   eval _ opts a = do
     let msg0 = "Skip"
@@ -7447,7 +7543,9 @@ instance (P p a
 --
 data Not p
 
-instance (PP p x ~ Bool, P p x) => P (Not p) x where
+instance ( PP p x ~ Bool
+         , P p x
+         ) => P (Not p) x where
   type PP (Not p) x = Bool
   eval _ opts x = do
     let msg0 = "Not"
@@ -7475,7 +7573,9 @@ instance (PP p x ~ Bool, P p x) => P (Not p) x where
 --
 data IdBool p
 
-instance (PP p x ~ Bool, P p x) => P (IdBool p) x where
+instance ( PP p x ~ Bool
+         , P p x
+         ) => P (IdBool p) x where
   type PP (IdBool p) x = Bool
   eval _ opts x = do
     let msg0 = "IdBool"
@@ -7960,7 +8060,9 @@ instance P p x => P (Singleton p) x where
 -- PresentT 'a'
 --
 data Char1 (s :: Symbol)  -- gets the first char from the Symbol [requires that Symbol is not empty]
-instance (KnownSymbol s, GL.CmpSymbol s "" ~ 'GT) => P (Char1 s) a where
+instance ( KnownSymbol s
+         , GL.CmpSymbol s "" ~ 'GT
+         ) => P (Char1 s) a where
   type PP (Char1 s) a = Char
   eval _ opts _ =
      case symb @s of
@@ -8759,7 +8861,9 @@ instance P (FileExistsT p) x => P (FileExists p) x where
   type PP (FileExists p) x = PP (FileExistsT p) x
   eval _ = evalBool (Proxy @(FileExistsT p))
 
-instance (PP p x ~ String, P p x) => P (ReadFile p) x where
+instance ( PP p x ~ String
+         , P p x
+         ) => P (ReadFile p) x where
   type PP (ReadFile p) x = Maybe String
   eval _ opts x = do
     let msg0 = "ReadFile"
@@ -8791,7 +8895,9 @@ instance P (DirExistsT p) x => P (DirExists p) x where
   eval _ = evalBool (Proxy @(DirExistsT p))
 
 
-instance (PP p x ~ String, P p x) => P (ReadDir p) x where
+instance ( PP p x ~ String
+         , P p x
+         ) => P (ReadDir p) x where
   type PP (ReadDir p) x = Maybe [FilePath]
   eval _ opts x = do
     let msg0 = "ReadDir"
@@ -8816,7 +8922,9 @@ instance (PP p x ~ String, P p x) => P (ReadDir p) x where
 --
 data ReadEnv p
 
-instance (PP p x ~ String, P p x) => P (ReadEnv p) x where
+instance ( PP p x ~ String
+         , P p x
+         ) => P (ReadEnv p) x where
   type PP (ReadEnv p) x = Maybe String
   eval _ opts x = do
     let msg0 = "ReadEnv"
@@ -9134,7 +9242,9 @@ class PrintC x where
   prtC :: (PrintfArg a, PrintfType r) => String -> (a,x) -> r
 instance PrintC () where
   prtC s (a,()) = printf s a
-instance (PrintfArg a, PrintC rs) => PrintC (a,rs) where
+instance ( PrintfArg a
+         , PrintC rs
+         ) => PrintC (a,rs) where
   prtC s (a,rs) = prtC s rs a
 
 -- | print for flat n-tuples of size two or larger
@@ -10599,7 +10709,9 @@ instance P (ParseJsonFileT t p) x => P (ParseJsonFile t p) x where
 --
 data EncodeJson p
 
-instance (A.ToJSON (PP p x), P p x) => P (EncodeJson p) x where
+instance ( A.ToJSON (PP p x)
+         , P p x
+         ) => P (EncodeJson p) x where
   type PP (EncodeJson p) x = BL8.ByteString
   eval _ opts x = do
     let msg0 = "EncodeJson"
@@ -10776,7 +10888,9 @@ instance P (OrAT p q) x => P (p |+ q) x where
 
 -- | very simple conversion to a string
 data ToString p
-instance (ToStringC (PP p x), P p x) => P (ToString p) x where
+instance ( ToStringC (PP p x)
+         , P p x
+         ) => P (ToString p) x where
   type PP (ToString p) x = String
   eval _ opts x = do
     let msg0 = "ToString"

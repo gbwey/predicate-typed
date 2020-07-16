@@ -29,3 +29,71 @@ To run the examples you will need these settings (ghc>=8.6)
 *[Refined2](Refined2.md)
 
 [Refined3](Refined3.md)
+
+# General information
+
+* **_opts_** common display options for evaluating the typelevel expression
+  * 'OZ no output:zero
+  * 'OL one line:lite
+  * 'OA ascii plus colors
+  * 'OAN ascii without colors
+  * 'OU unicode plus colors (for Windows: chcp 65001)
+
+* BoolT is a GADT that holds the return value from evaluating the type level expression
+   TrueT : predicate is true
+   FalseT : predicate is false
+   PresentT a : 'a' is any value
+   FailT : indicates a failure
+
+for testing out expressions use:
+pa == run @'OA
+pu == run @'OU
+pl == run @'OL
+pz == run @'OZ
+
+examples of running the dsl
+
+> pu @(Between 4 10 Id) 7
+True 4 <= 7 <= 10
+...
+TrueT
+
+> pu @(Between 4 10 Id) 11
+...
+FalseT
+
+-- <..> is between
+> pu @(Between (4 % 7) (10 % 2) Id) 7
+...
+False (7 % 1 <= 5 % 1)
+FalseT
+
+> pu @(Re "^[[:upper:]][[:lower:]]+" Id) "Fred"
+...
+TrueT
+
+pu @(Re "^[[:upper:]][[:lower:]]+" Id) "fred"
+...
+FalseT
+
+> pu @(Resplit "\\s+" Id >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+" Id) Id)) "Fred Abel Bart Jimmy"
+...
+PresentT ["Fred","Abel","Bart","Jimmy"]
+
+> pu @(Resplit "\\s+" Id >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+" Id) Id)) "Fred Abel bart Jimmy"
+...
+FailT "(True && False | (All(4) i=2 (Re' [] (^[[:upper:]][[:lower:]]+) | bart)))"
+
+>pu @(ReadP Day Id >> ToWeekDate Id >> Snd Id == "Monday") "2020-07-13"
+...
+TrueT
+
+> pu @(ReadP Day Id >> ToWeekDate Id >> Snd Id == "Monday") "2020-07-14"
+...
+False (>>) False | {"Tuesday" == "Monday"}
+FalseT
+
+> pu @(ReadP Day Id >> ToWeekDate Id >> GuardSimple (Snd Id == "Monday")) "2020-07-13"
+...
+PresentT (1,"Monday")
+

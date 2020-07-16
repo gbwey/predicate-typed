@@ -43,7 +43,7 @@ module Predicate.Util (
   , _FalseT
   , _TrueT
 
- -- ** BoolP
+ -- ** PE
   , PE
   , pString
 
@@ -69,7 +69,6 @@ module Predicate.Util (
   , Debug(..)
   , Disp(..)
   , Color(..)
-  , colorMe
   , isVerbose
   , colorBoolT
   , colorBoolT'
@@ -252,7 +251,7 @@ instance Semigroup (BoolT a) where
    TrueT <> TrueT = TrueT
    TrueT <> PresentT a = PresentT a
    PresentT a <> TrueT = PresentT a
-   PresentT a <> PresentT _ = PresentT a
+   PresentT _ <> PresentT a = PresentT a
 
 deriving instance Show a => Show (BoolT a)
 deriving instance Eq a => Eq (BoolT a)
@@ -311,7 +310,11 @@ pString :: Lens' PE String
 pString afb s = (\b -> s { _pString = b }) <$> afb (_pString s)
 
 -- | creates a Node for the evaluation tree
-mkNode :: POpts -> BoolT a -> String -> [Holder] -> TT a
+mkNode :: POpts
+       -> BoolT a
+       -> String
+       -> [Holder]
+       -> TT a
 mkNode opts bt ss hs =
   case oDebug opts of
     DZero -> TT bt [] []
@@ -319,7 +322,11 @@ mkNode opts bt ss hs =
     _ -> TT bt ss (map fromTTH hs)
 
 -- | creates a Boolean node for a predicate type
-mkNodeB :: POpts -> Bool -> String -> [Holder] -> TT Bool
+mkNodeB :: POpts
+        -> Bool
+        -> String
+        -> [Holder]
+        -> TT Bool
 mkNodeB opts b = mkNode opts (bool FalseT TrueT b)
 
 mkNodeSkipP :: Tree PE
@@ -355,16 +362,29 @@ hh :: TT w -> Holder
 hh = Holder
 
 -- | see 'getValueLRImpl' : add more detail to the tree if there are errors
-getValueLR :: POpts -> String -> TT a -> [Holder] -> Either (TT x) a
+getValueLR :: POpts
+           -> String
+           -> TT a
+           -> [Holder]
+           -> Either (TT x) a
 getValueLR = getValueLRImpl True
 
 -- | see 'getValueLRImpl' : add less detail to the tree if there are errors
-getValueLRHide :: POpts -> String -> TT a -> [Holder] -> Either (TT x) a
+getValueLRHide :: POpts
+               -> String
+               -> TT a
+               -> [Holder]
+               -> Either (TT x) a
 getValueLRHide = getValueLRImpl False
 
 -- elide FailT msg in tString[0] if showError is False
 -- | a helper method to add extra context on failure to the tree or extract the value at the root of the tree
-getValueLRImpl :: Bool -> POpts -> String -> TT a -> [Holder] -> Either (TT x) a
+getValueLRImpl :: Bool
+               -> POpts
+               -> String
+               -> TT a
+               -> [Holder]
+               -> Either (TT x) a
 getValueLRImpl showError opts msg0 tt hs =
   let tt' = hs ++ [hh tt]
   in left (\e -> mkNode
@@ -452,7 +472,10 @@ setRecursion :: Int -> POptsL
 setRecursion i = mempty { oRecursion = pure i }
 
 -- | set color of title message
-setOther :: Bool -> Color -> Color -> POptsL
+setOther :: Bool
+         -> Color
+         -> Color
+         -> POptsL
 setOther b c1 c2 = mempty { oOther = pure $ coerce (b, c1, c2) }
 
 -- | turn on/off colors
@@ -563,16 +586,38 @@ fixBoolT t =
     Nothing -> t
     Just b -> t & tBool .~ _boolT # b
 
-show01 :: (Show a1, Show a2) => POpts -> String -> a1 -> a2 -> String
+show01 :: (Show a1, Show a2)
+  => POpts
+  -> String
+  -> a1
+  -> a2
+  -> String
 show01 opts msg0 ret = lit01 opts msg0 ret . show
 
-lit01 :: Show a1 => POpts -> String -> a1 -> String -> String
+lit01 :: Show a1
+  => POpts
+  -> String
+  -> a1
+  -> String
+  -> String
 lit01 opts msg0 ret = lit01' opts msg0 ret ""
 
-show01' :: (Show a1, Show a2) => POpts -> String -> a1 -> String -> a2 -> String
+show01' :: (Show a1, Show a2)
+  => POpts
+  -> String
+  -> a1
+  -> String
+  -> a2
+  -> String
 show01' opts msg0 ret fmt = lit01' opts msg0 ret fmt . show
 
-lit01' :: Show a1 => POpts -> String -> a1 -> String -> String -> String
+lit01' :: Show a1
+  => POpts
+  -> String
+  -> a1
+  -> String
+  -> String
+  -> String
 lit01' opts msg0 ret fmt as
   | null fmt && null as = msg0
   | otherwise =
@@ -581,31 +626,61 @@ lit01' opts msg0 ret fmt as
       <> showLit1 opts (" | " ++ fmt) as
 
 -- | display all data regardless of debug level
-showLit0 :: POpts -> String -> String -> String
+showLit0 :: POpts
+         -> String
+         -> String
+         -> String
 showLit0 o = showLitImpl o DLite
 
 -- | more restrictive: only display data at debug level 1 or less
-showLit1 :: POpts -> String -> String -> String
+showLit1 :: POpts
+         -> String
+         -> String
+         -> String
 showLit1 o = showLitImpl o DLite
 
-showLitImpl :: POpts -> Debug -> String -> String -> String
+showLitImpl :: POpts
+            -> Debug
+            -> String
+            -> String
+            -> String
 showLitImpl o i s a =
   if oDebug o >= i then s <> litL (oWidth o) a
   else ""
 
-show0 :: Show a => POpts -> String -> a -> String
+show0 :: Show a
+  => POpts
+  -> String
+  -> a
+  -> String
 show0 o = showAImpl o DLite
 
-show3 :: Show a => POpts -> String -> a -> String
+show3 :: Show a
+  => POpts
+  -> String
+  -> a
+  -> String
 show3 o = showAImpl o DVerbose
 
-show1 :: Show a => POpts -> String -> a -> String
+show1 :: Show a
+  => POpts
+  -> String
+  -> a
+  -> String
 show1 o = showAImpl o DLite
 
-showAImpl :: Show a => POpts -> Debug -> String -> a -> String
+showAImpl :: Show a
+  => POpts
+  -> Debug
+  -> String
+  -> a
+  -> String
 showAImpl o i s a = showLitImpl o i s (show a)
 
-showL :: Show a => Int -> a -> String
+showL :: Show a
+  => Int
+  -> a
+  -> String
 showL i = litL i . show
 
 litL :: Int -> String -> String
@@ -644,7 +719,11 @@ data ROpt =
 
 -- | compile a regex using the type level symbol
 compileRegex :: forall rs a . GetROpts rs
-  => POpts -> String -> String -> [Holder] -> Either (TT a) RH.Regex
+  => POpts
+  -> String
+  -> String
+  -> [Holder]
+  -> Either (TT a) RH.Regex
 compileRegex opts nm s hhs
   | null s = Left (mkNode opts (FailT "Regex cannot be empty") nm hhs)
   | otherwise =
@@ -740,7 +819,10 @@ partitionTTExtended (s, t) =
     TrueT -> Right (True,s,t)
     FalseT -> Right (False,s,t)
 
-formatList :: forall x z . Show x => POpts -> [((Int, x), z)] -> String
+formatList :: forall x z . Show x
+  => POpts
+  -> [((Int, x), z)]
+  -> String
 formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts DLite ", a=" a <> ")")
 
 instance Foldable TT where
@@ -1013,7 +1095,9 @@ instance GetOrd 'CLt where getOrd = ("<", (<))
 instance GetOrd 'CNe where getOrd = ("/=",(/=))
 
 -- | pretty print a tree
-toNodeString :: POpts -> PE -> String
+toNodeString :: POpts
+             -> PE
+             -> String
 toNodeString opts bpe =
   if hasNoTree opts
   then errorInProgram $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
@@ -1033,7 +1117,10 @@ nullSpace s | null s = ""
             | otherwise = " " <> s
 
 -- | render the 'BoolP' value with colors
-colorBoolP :: POpts -> BoolP -> String
+colorBoolP ::
+     POpts
+  -> BoolP
+  -> String
 colorBoolP o =
   \case
     b@(FailP e) -> "[" <> colorMe o b "Error" <> nullSpace e <> "]"
@@ -1042,7 +1129,10 @@ colorBoolP o =
     b@FalseP -> colorMe o b "False"
 
 -- | render the 'BoolT' value with colors
-colorBoolT :: Show a => POpts -> BoolT a -> String
+colorBoolT :: Show a
+    => POpts
+    -> BoolT a
+    -> String
 colorBoolT o r =
   let f = colorMe o (r ^. boolT2P)
   in case r of
@@ -1051,7 +1141,10 @@ colorBoolT o r =
       FalseT -> f "False"
       PresentT x -> f "Present" <> " " <> show x
 
-colorBoolT' :: Show a => POpts -> BoolT a -> String
+colorBoolT' :: Show a
+   => POpts
+   -> BoolT a
+   -> String
 colorBoolT' o r =
   let f = colorMe o (r ^. boolT2P)
   in case r of
@@ -1061,23 +1154,38 @@ colorBoolT' o r =
       PresentT x -> f "PresentT" <> " " <> show x
 
 -- | colors the result of the predicate based on the current color palette
-colorMe :: POpts -> BoolP -> String -> String
+colorMe ::
+     POpts
+  -> BoolP
+  -> String
+  -> String
 colorMe o b s =
   let (_, PColor f) = if oNoColor o then nocolor else oColor o
   in f b s
 
-fixLite :: forall a . Show a => POpts -> a -> Tree PE -> String
+fixLite :: forall a . Show a
+   => POpts
+   -> a
+   -> Tree PE
+   -> String
 fixLite opts a t
   | hasNoTree opts = fixPresentP opts (t ^. root . pBool) a <> "\n"
   | otherwise = prtTreePure opts t
 
-fixPresentP :: Show a => POpts -> BoolP -> a -> String
+fixPresentP :: Show a
+  => POpts
+  -> BoolP
+  -> a
+  -> String
 fixPresentP opts bp a =
   case bp of
     PresentP -> colorMe opts PresentP "Present" <> " " <> show a
     _ -> colorBoolP opts bp
 
-prtTreePure :: POpts -> Tree PE -> String
+prtTreePure ::
+     POpts
+  -> Tree PE
+  -> String
 prtTreePure opts t
   | hasNoTree opts = colorBoolP opts (t ^. root . pBool)
   | otherwise = showImpl opts $ fmap (toNodeString opts) t
@@ -1087,7 +1195,9 @@ topMessage pp =
   let s = pp ^. tString
   in if null s then "" else "(" <> s <> ")"
 
-showImpl :: POpts -> Tree String -> String
+showImpl :: POpts
+         -> Tree String
+         -> String
 showImpl o =
   case oDisp o of
     Unicode -> TV.showTree
@@ -1394,11 +1504,16 @@ instance KnownSymbol s => OptTC ('OMsg s) where
    getOptT' = setMessage (symb @s)
 instance KnownNat n => OptTC ('ORecursion n) where
    getOptT' = setRecursion (nat @n)
-instance (GetBool b, GetColor c1, GetColor c2) => OptTC ('OOther b c1 c2) where
+instance ( GetBool b
+         , GetColor c1
+         , GetColor c2
+         ) => OptTC ('OOther b c1 c2) where
    getOptT' = setOther (getBool @b) (getColor @c1) (getColor @c2)
 instance OptTC 'OEmpty where
    getOptT' = mempty
-instance (OptTC a, OptTC b) => OptTC (a ':# b) where
+instance ( OptTC a
+         , OptTC b
+         ) => OptTC (a ':# b) where
    getOptT' = getOptT' @a <> getOptT' @b
 instance ( KnownSymbol s
          , GetColor c1
@@ -1479,7 +1594,12 @@ type family T5_4 x where
 type family T5_5 x where
   T5_5 '(_,_,_,_,e) = e
 
-chkSize :: Foldable t => POpts -> String -> t a -> [Holder] -> Either (TT x) ()
+chkSize :: Foldable t
+   => POpts
+   -> String
+   -> t a
+   -> [Holder]
+   -> Either (TT x) ()
 chkSize opts msg0 xs hhs =
   let mx = oRecursion opts
   in case splitAt mx (toList xs) of
@@ -1510,7 +1630,9 @@ type family AnyT :: k where {}
 pureTryTest :: a -> IO (Either () a)
 pureTryTest = fmap (left (const ())) . E.try @E.SomeException . E.evaluate
 
-pureTryTestPred :: (String -> Bool) -> a -> IO (Either String (Either () a))
+pureTryTestPred :: (String -> Bool)
+                -> a
+                -> IO (Either String (Either () a))
 pureTryTestPred p a = do
   lr <- left E.displayException <$> E.try @E.SomeException (E.evaluate a)
   return $ case lr of

@@ -149,7 +149,11 @@ refinedTHIO i = do
 -- @
 --
 refined1TH :: forall opts ip op fmt i
-  . (Show i, Show (PP ip i), TH.Lift i, TH.Lift (PP ip i), Refined1C opts ip op fmt i)
+  . ( Show i
+    , Show (PP ip i)
+    , TH.Lift i
+    , TH.Lift (PP ip i)
+    , Refined1C opts ip op fmt i)
   => i
   -> TH.Q (TH.TExp (Refined1 opts ip op fmt i))
 refined1TH i =

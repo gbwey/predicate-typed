@@ -434,9 +434,9 @@ allTests =
   , expectPE (PresentT (3, SG.Any True)) $ pl @(Id !! FromString _ "d" &&& (Map (Snd Id >> Gt 3 >> Coerce SG.Any) (IToList _ Id) >> MConcat Id) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
   , expectPE (PresentT (3, True)) $ pl @(Id !! FromString _ "d" &&& (Map (Snd Id >> Gt 3 >> Wrap SG.Any Id) (IToList _ Id) >> MConcat Id >> Unwrap Id) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
     --- have to wrap with W cos different kinds
---  , expectPE TrueT $ pl @(Do '[ W ('PresentT I), W 'FalseT, Not Id]) False
---  , expectPE FalseT $ pl @(Do '[ W ('PresentT Id), W 'FalseT ]) True -- have to wrap them cos BoolT a vs BoolT Bool ie different types
---  , expectPE TrueT $ pl @('PresentT I >> Not 'FalseT) False
+  , expectPE TrueT $ pl @(Do '[ W ('PresentT I), W 'FalseT, Not Id]) False
+  , expectPE FalseT $ pl @(Do '[ W ('PresentT Id), W 'FalseT ]) True -- have to wrap them cos BoolT a vs BoolT Bool ie different types
+  , expectPE TrueT $ pl @('PresentT I >> Not 'FalseT) False
   -- IxL "d" doesnt work cos is Text not String
   , expectPE (PresentT 3) $ pl @(Id !! FromString _ "d") (M.fromList $ zip (map T.singleton "abcd") [0 ..])
   -- use Fromstring
