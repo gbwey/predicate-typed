@@ -45,55 +45,86 @@ To run the examples you will need these settings (ghc>=8.6)
    PresentT a : 'a' is any value
    FailT : indicates a failure
 
-for testing out expressions use:
-pa == run @'OA
-pu == run @'OU
-pl == run @'OL
-pz == run @'OZ
 
-examples of running the dsl
+# testing the dsl
 
+ * pu  is a shortcut for run @'OU  (unicode with colors)
+ * pa  is a shortcut for run @'OA  (ascii with colors)
+ * pl  is a shortcut for run @'OL  (short one liner)
+ * pan is a shortcut for run @'OAN (ascii only)
+
+```haskell
 > pu @(Between 4 10 Id) 7
 True 4 <= 7 <= 10
-...
+|
++- P Id 7
+|
++- P '4
+|
+`- P '10
 TrueT
+```
 
+```haskell
 > pu @(Between 4 10 Id) 11
-...
+False 11 <= 10
+|
++- P Id 11
+|
++- P '4
+|
+`- P '10
 FalseT
+```
 
--- <..> is between
+```haskell
 > pu @(Between (4 % 7) (10 % 2) Id) 7
 ...
 False (7 % 1 <= 5 % 1)
 FalseT
+```
 
+```haskell
 > pu @(Re "^[[:upper:]][[:lower:]]+" Id) "Fred"
 ...
 TrueT
+```
 
+```haskell
 pu @(Re "^[[:upper:]][[:lower:]]+" Id) "fred"
 ...
 FalseT
+```
 
+```haskell
 > pu @(Resplit "\\s+" Id >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+" Id) Id)) "Fred Abel Bart Jimmy"
 ...
 PresentT ["Fred","Abel","Bart","Jimmy"]
+```
 
+```haskell
 > pu @(Resplit "\\s+" Id >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+" Id) Id)) "Fred Abel bart Jimmy"
 ...
 FailT "(True && False | (All(4) i=2 (Re' [] (^[[:upper:]][[:lower:]]+) | bart)))"
+```
 
+```haskell
 >pu @(ReadP Day Id >> ToWeekDate Id >> Snd Id == "Monday") "2020-07-13"
 ...
 TrueT
+```
 
+```haskell
 > pu @(ReadP Day Id >> ToWeekDate Id >> Snd Id == "Monday") "2020-07-14"
 ...
 False (>>) False | {"Tuesday" == "Monday"}
 FalseT
+```
 
+```haskell
 > pu @(ReadP Day Id >> ToWeekDate Id >> GuardSimple (Snd Id == "Monday")) "2020-07-13"
 ...
 PresentT (1,"Monday")
+```
+
 

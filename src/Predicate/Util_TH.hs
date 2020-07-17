@@ -126,7 +126,7 @@ refinedTHIO i = do
 --
 -- <interactive>:127:4: error:
 --     *
--- *** Step 1. Success Initial Conversion(ip) [99] ***
+-- *** Step 1. Success Initial Conversion(ip) (99) ***
 --
 -- P Id 99
 --
@@ -181,7 +181,7 @@ refined1TH i =
 --
 -- <interactive>:127:4: error:
 --     *
--- *** Step 1. Success Initial Conversion(ip) [99] ***
+-- *** Step 1. Success Initial Conversion(ip) (99) ***
 --
 -- P Id 99
 --
@@ -249,7 +249,7 @@ refined2THIO i = do
 --
 -- <interactive>:127:4: error:
 --     *
--- *** Step 1. Success Initial Conversion(ip) [99] ***
+-- *** Step 1. Success Initial Conversion(ip) (99) ***
 --
 -- P Id 99
 --

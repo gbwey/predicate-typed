@@ -162,7 +162,10 @@ unsafeRefined2' i =
   in fromMaybe (error $ show (prt2Impl (getOptT @opts) ret)) mr
 
 -- | directly load values into 'Refined2' without any checking
-unsafeRefined2 :: forall opts ip op i . PP ip i -> i -> Refined2 opts ip op i
+unsafeRefined2 :: forall opts ip op i
+   . PP ip i
+  -> i
+  -> Refined2 opts ip op i
 unsafeRefined2 = Refined2
 
 -- | Provides the constraints on Refined2
@@ -259,7 +262,7 @@ instance ToJSON i => ToJSON (Refined2 opts ip op i) where
 -- >>> removeAnsi $ A.eitherDecode' @(Refined2 'OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe443a\""
 -- Error in $: Refined2:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- <BLANKLINE>
--- *** Step 1. Success Initial Conversion(ip) [16663610] ***
+-- *** Step 1. Success Initial Conversion(ip) (16663610) ***
 -- <BLANKLINE>
 -- P ReadBase(Int,16) 16663610 | "00fe443a"
 -- |
@@ -362,7 +365,7 @@ genRefined2P _ g =
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
 -- Refined2:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
 -- <BLANKLINE>
--- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
+-- *** Step 1. Success Initial Conversion(ip) (2019-04-23) ***
 -- <BLANKLINE>
 -- P ReadP Day 2019-04-23
 -- |
@@ -426,7 +429,7 @@ withRefined2TIO = (>>=) . newRefined2TIO @_ @opts @ip @op @i
 --
 -- >>> prtRefinedTIO $ withRefined2T @'OAN @(ReadBase Int 16 Id) @(Between 100 200 Id) "a388" $ \x -> withRefined2T @'OAN @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (x,y)
 -- <BLANKLINE>
--- *** Step 1. Success Initial Conversion(ip) [41864] ***
+-- *** Step 1. Success Initial Conversion(ip) (41864) ***
 -- <BLANKLINE>
 -- P ReadBase(Int,16) 41864 | "a388"
 -- |
@@ -645,7 +648,7 @@ prt2Impl :: forall a . Show a
   -> Msg2
 prt2Impl opts v =
   let outmsg msg = "\n*** " <> formatOMsg opts " " <> msg <> " ***\n\n"
-      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
+      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ show a ++ ")")
       mkMsg2 m n r | hasNoTree opts = Msg2 m n ""
                    | otherwise = Msg2 m n r
   in case v of

@@ -773,7 +773,9 @@ prtTree opts pp =
        _ -> formatOMsg opts "\n"
          <> prtTreePure opts (fromTT pp)
 
-runPQ :: (P p a, P q a, MonadEval m)
+runPQ :: ( P p a
+         , P q a
+         , MonadEval m)
    => String
    -> proxy1 p
    -> proxy2 q

@@ -1938,7 +1938,7 @@ instance (ParseTime (PP t a)
             hhs = [hh pp, hh qq]
             zs = map (\d -> (d,) <$> parseTimeM @Maybe @(PP t a) True defaultTimeLocale d q) p
         in case catMaybes zs of
-             [] -> mkNode opts (FailT ("no match on [" ++ q ++ "]")) (msg1 <> " no match") hhs
+             [] -> mkNode opts (FailT ("no match on (" ++ q ++ ")")) (msg1 <> " no match") hhs
              (d,b):_ -> mkNode opts (PresentT b) (lit01' opts msg1 b "fmt=" d <> show1 opts " | " q) hhs
 
 data ParseTimes (t :: Type) p q

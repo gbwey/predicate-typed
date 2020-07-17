@@ -312,7 +312,7 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 opts ip op fmt i) where
 -- >>> removeAnsi $ A.eitherDecode' @(Refined3 'OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
 -- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- <BLANKLINE>
--- *** Step 1. Success Initial Conversion(ip) [16663610] ***
+-- *** Step 1. Success Initial Conversion(ip) (16663610) ***
 -- <BLANKLINE>
 -- P ReadBase(Int,16) 16663610 | "00fe443a"
 -- |
@@ -409,7 +409,7 @@ genRefined3P _ g =
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
 -- Refined3:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
 -- <BLANKLINE>
--- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
+-- *** Step 1. Success Initial Conversion(ip) (2019-04-23) ***
 -- <BLANKLINE>
 -- P ReadP Day 2019-04-23
 -- |
@@ -509,7 +509,7 @@ withRefined3TIO = (>>=) . newRefined3TPIO (Proxy @'(opts,ip,op,fmt,i))
 --
 -- >>> prtRefinedTIO $ withRefined3TP (b16 @'OAN) "a388" $ \x -> withRefined3TP (b2 @'OAN) "1001110111" $ \y -> pure (x,y)
 -- <BLANKLINE>
--- *** Step 1. Success Initial Conversion(ip) [41864] ***
+-- *** Step 1. Success Initial Conversion(ip) (41864) ***
 -- <BLANKLINE>
 -- P ReadBase(Int,16) 41864 | "a388"
 -- |
@@ -861,7 +861,7 @@ prt3Impl :: forall a b . (Show a, Show b)
   -> Msg3
 prt3Impl opts v =
   let outmsg msg = "\n*** " <> formatOMsg opts " " <> msg <> " ***\n\n"
-      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
+      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ show a ++ ")")
       mkMsg3 m n r | hasNoTree opts = Msg3 m n ""
                    | otherwise = Msg3 m n r
   in case v of

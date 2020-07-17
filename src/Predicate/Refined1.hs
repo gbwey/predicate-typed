@@ -316,7 +316,7 @@ instance ( OptTC opts
 -- >>> removeAnsi $ A.eitherDecode' @(Refined1 'OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
 -- Error in $: Refined1:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- <BLANKLINE>
--- *** Step 1. Success Initial Conversion(ip) [16663610] ***
+-- *** Step 1. Success Initial Conversion(ip) (16663610) ***
 -- <BLANKLINE>
 -- P ReadBase(Int,16) 16663610 | "00fe443a"
 -- |
@@ -413,7 +413,7 @@ genRefined1P _ g =
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
 -- Refined1:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
 -- <BLANKLINE>
--- *** Step 1. Success Initial Conversion(ip) [2019-04-23] ***
+-- *** Step 1. Success Initial Conversion(ip) (2019-04-23) ***
 -- <BLANKLINE>
 -- P ReadP Day 2019-04-23
 -- |
@@ -518,7 +518,7 @@ withRefined1TIO = (>>=) . newRefined1TPIO (Proxy @'(opts,ip,op,fmt,i))
 --
 -- >>> prtRefinedTIO $ withRefined1TP (b16 @'OAN) "a388" $ \x -> withRefined1TP (b2 @'OAN) "1001110111" $ \y -> pure (x,y)
 -- <BLANKLINE>
--- *** Step 1. Success Initial Conversion(ip) [41864] ***
+-- *** Step 1. Success Initial Conversion(ip) (41864) ***
 -- <BLANKLINE>
 -- P ReadBase(Int,16) 41864 | "a388"
 -- |
@@ -844,7 +844,7 @@ prt1Impl :: forall a b . (Show a, Show b)
   -> Msg1
 prt1Impl opts v =
   let outmsg msg = "\n*** " <> formatOMsg opts " " <> msg <> " ***\n\n"
-      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) [" ++ show a ++ "]")
+      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ show a ++ ")")
       mkMsg1 m n r | hasNoTree opts = Msg1 m n ""
                    | otherwise = Msg1 m n r
   in case v of

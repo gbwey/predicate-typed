@@ -301,7 +301,7 @@ datetimen = mkProxy3'
 -- >>> prtEval3P (between @'OAN @10 @16) 17
 -- Left Step 2. False Boolean Check(op) | {17 <= 16}
 -- <BLANKLINE>
--- *** Step 1. Success Initial Conversion(ip) [17] ***
+-- *** Step 1. Success Initial Conversion(ip) (17) ***
 -- <BLANKLINE>
 -- P Id 17
 -- <BLANKLINE>
