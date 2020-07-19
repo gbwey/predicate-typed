@@ -302,6 +302,7 @@ module Predicate.Prelude (
   , IToList
   , IToList'
   , FromList
+  , ToNEList
   , EmptyList
   , EmptyList'
   , Singleton
@@ -350,6 +351,7 @@ module Predicate.Prelude (
   -- ** semigroup / monoid expressions
   , type (<>)
   , MConcat
+  , SConcat
   , STimes
   , SapA
   , SapA'
@@ -581,6 +583,8 @@ import Data.Foldable
 import Data.Maybe
 import Control.Arrow
 import qualified Data.Semigroup as SG
+import qualified Data.List.NonEmpty as N
+import Data.List.NonEmpty (NonEmpty(..))
 import Numeric
 import Data.Char
 import Data.Function
@@ -1064,7 +1068,7 @@ instance (GetROpts rs
           Left tta -> tta
           Right regex ->
             case splitAt (oRecursion opts) $ RH.scan regex q of
-              (b, _:_) -> mkNode opts (FailT "Regex looping") (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
+              (b, _:_) -> mkNode opts (FailT ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
                          mkNode opts (FailT "Regex no results") (msg1 <> showVerbose opts " | " q) [hh pp, hh qq]
               (b, _) -> mkNode opts (PresentT b) (lit01 opts msg1 b "" q) [hh pp, hh qq]
@@ -1104,7 +1108,7 @@ instance (GetROpts rs
           Left tta -> tta
           Right regex ->
             case splitAt (oRecursion opts) $ RH.scanRanges regex q of
-              (b, _:_) -> mkNode opts (FailT "Regex looping") (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
+              (b, _:_) -> mkNode opts (FailT ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
                          mkNode opts (FailT "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
               (b, _) -> mkNode opts (PresentT b) (lit01 opts msg1 b "" q) hhs
@@ -1150,7 +1154,7 @@ instance (GetROpts rs
           Left tta -> tta
           Right regex ->
             case splitAt (oRecursion opts) $ RH.split regex q of
-              (b, _:_) -> mkNode opts (FailT "Regex looping") (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
+              (b, _:_) -> mkNode opts (FailT ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
                          mkNode opts (FailT "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
               (b, _) -> mkNode opts (PresentT b) (lit01 opts msg1 b "" q) hhs
@@ -3667,6 +3671,9 @@ instance (P p a
 -- >>> pz @(Fst Id ** Snd Id) (10,4)
 -- PresentT 10000.0
 --
+-- >>> pz @'(Prime Id,Id ^ 3,(FromIntegral _ Id) ** (FromRational _ (1 % 2))) 4
+-- PresentT (False,64,2.0)
+--
 data p ** q
 infixr 8 **
 
@@ -4091,7 +4098,6 @@ instance (PP p x ~ s
 
 -- | wraps a value (see '_Wrapped'' and '_Unwrapped'')
 --
--- >>> :m + Data.List.NonEmpty
 -- >>> pz @(Wrap (SG.Sum _) Id) (-13)
 -- PresentT (Sum {getSum = -13})
 --
@@ -5475,6 +5481,9 @@ instance (P p a
 -- >>> pz @(MConcat Id) [SG.Sum 44, SG.Sum 12, SG.Sum 3]
 -- PresentT (Sum {getSum = 59})
 --
+-- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) Id >> MConcat Id) [7 :: Int,6,1,3,5] -- monoid so need eg Int
+-- PresentT (Sum {getSum = 22},Max {getMax = 7})
+--
 data MConcat p
 
 instance (PP p x ~ [a]
@@ -5491,6 +5500,43 @@ instance (PP p x ~ [a]
       Right p ->
         let b = mconcat p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+
+-- | similar to 'SG.sconcat'
+--
+-- >>> pz @(ToNEList >> SConcat Id) [SG.Sum 44, SG.Sum 12, SG.Sum 3]
+-- PresentT (Sum {getSum = 59})
+--
+-- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) Id >> ToNEList >> SConcat Id) [7,6,1,3,5]
+-- PresentT (Sum {getSum = 22},Max {getMax = 7})
+--
+data SConcat p
+
+instance (PP p x ~ NonEmpty a
+        , P p x
+        , Show a
+        , Semigroup a
+        ) => P (SConcat p) x where
+  type PP (SConcat p) x = ExtractAFromTA (PP p x)
+  eval _ opts x = do
+    let msg0 = "SConcat"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = SG.sconcat p
+        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+
+data ToNEList
+instance (Show (t a)
+        , Foldable t
+        ) => P ToNEList (t a) where
+  type PP ToNEList (t a) = NonEmpty a
+  eval _ opts as =
+    let msg0 = "ToNEList"
+    in pure $ case toList as of
+         [] -> mkNode opts (FailT "empty list") msg0 []
+         x:xs -> mkNode opts (PresentT (x N.:| xs)) (msg0 <> showVerbose opts " " as) []
+
 
 -- | similar to a limited form of 'foldMap'
 --
@@ -6188,26 +6234,25 @@ instance (PP p (b,a) ~ b
         case chkSize opts msg0 r [hh rr] of
           Left e -> pure e
           Right () -> do
-            let msg1 = msg0  -- <> showLite opts " " q <> showLite opts " " r
-                ff i b as' rs
-                   | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) ("(b,as')=" <> showL opts (b,as')) [])
+            let ff i b as' rs
+                   | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg0 <> ":recursion limit i=" <> showIndex i)) ("(b,as')=" <> showL opts (b,as')) [])
                    | otherwise =
                        case as' of
-                         [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (PresentT q) (msg1 <> "(done)") [])], Right ())
+                         [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (PresentT q) (msg0 <> "(done)") [])], Right ())
                          a:as -> do
                             pp :: TT b <- eval (Proxy @p) opts (b,a)
-                            case getValueLR opts (msg1 <> " i=" <> showIndex i <> " a=" <> show a) pp [] of
+                            case getValueLR opts (msg0 <> " i=" <> showIndex i <> " a=" <> show a) pp [] of
                                Left e  -> pure (rs,Left e)
                                Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
             (ts,lrx) :: ([((Int, b), TT b)], Either (TT [b]) ()) <- ff 1 q r []
-            pure $ case splitAndAlign opts msg1 (((0,q), mkNode opts (PresentT q) (msg1 <> "(initial)") []) : ts) of
+            pure $ case splitAndAlign opts msg0 (((0,q), mkNode opts (PresentT q) (msg0 <> "(initial)") []) : ts) of
                  Left e -> errorInProgram $ "Scanl e=" ++ show (fromTT e)
                  Right abcs ->
                    let vals = map (view _1) abcs
                        itts = map (view _2 &&& view _3) abcs
                    in case lrx of
-                        Left e -> mkNode opts (_tBool e) msg1 (hh qq : hh rr : map (hh . fixit) itts ++ [hh e])
-                        Right () -> mkNode opts (PresentT vals) (show01' opts msg1 vals "b=" q <> showVerbose opts " | as=" r) (hh qq : hh rr : map (hh . fixit) itts)
+                        Left e -> mkNode opts (_tBool e) msg0 (hh qq : hh rr : map (hh . fixit) itts ++ [hh e])
+                        Right () -> mkNode opts (PresentT vals) (show01' opts msg0 vals "b=" q <> showVerbose opts " | as=" r) (hh qq : hh rr : map (hh . fixit) itts)
 
 data ScanN n p q
 type ScanNT n p q = Scanl (Fst Id >> q) p (EnumFromTo 1 n) -- n times using q then run p
@@ -6261,7 +6306,7 @@ instance (PP q a ~ s
       Left e -> pure e
       Right q -> do
         let msg1 = msg0 <> showLite opts " " q
-            ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":failed at i=" <> showIndex i)) ("s=" <> showL opts s) [])
+            ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":recursion limit i=" <> showIndex i)) ("s=" <> showL opts s) [])
                       | otherwise = do
                               pp :: TT (PP p s) <- eval (Proxy @p) opts s
                               case getValueLR opts (msg1 <> " i=" <> showIndex i <> " s=" <> show s) pp [] of
@@ -7781,13 +7826,12 @@ instance P (IToListT t p) x => P (IToList t p) x where
 data ToList
 instance (Show (t a)
         , Foldable t
-        , Show a
         ) => P ToList (t a) where
   type PP ToList (t a) = [a]
   eval _ opts as =
     let msg0 = "ToList"
         z = toList as
-    in pure $ mkNode opts (PresentT z) (show01 opts msg0 z as) []
+    in pure $ mkNode opts (PresentT z) (msg0 <> showVerbose opts " " as) []
 
 -- | similar to 'toList'
 --

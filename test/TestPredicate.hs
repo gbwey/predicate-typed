@@ -721,7 +721,7 @@ allTests =
   , expectPE (PresentT [95,94,93,92,91]) $ pl @(IterateNUntil 10 (Id <= 90) (Pred Id)) 95
   , expectPE (PresentT [95,94,93]) $ pl @(IterateNUntil 3 (Id <= 90) (Pred Id)) 95
   -- check for infinite loops
-  , expectPE (FailT "Unfoldr (9999,1):failed at i=100") $ pl @(IterateNUntil 9999 'False I) 1
+  , expectPE (FailT "Unfoldr (9999,1):recursion limit i=100") $ pl @(IterateNUntil 9999 'False I) 1
   , expectPE (FailT "Scanl list size exceeded") $ pl @(FoldL (Fst Id) '() (EnumFromTo 1 9999)) ()
   , expectPE (PresentT "a=9 b=rhs") $ pl @(TheseX (PrintF "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (PrintT "a=%d b=%s" (Snd Id)) Id) (These @Int 9 "rhs")
   , expectPE (PresentT "a=10") $ pl @(TheseX (PrintF "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (PrintT "a=%d b=%s" (Snd Id)) Id) (This @Int 9)
