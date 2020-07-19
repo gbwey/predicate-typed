@@ -42,7 +42,7 @@ To run the examples you will need these settings (ghc>=8.6)
 * BoolT is a GADT that holds the return value from evaluating the type level expression
    TrueT : predicate is true
    FalseT : predicate is false
-   PresentT a : 'a' is any value
+   PresentT a : 'a' is any other value
    FailT : indicates a failure
 
 

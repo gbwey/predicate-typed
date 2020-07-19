@@ -52,7 +52,6 @@ module Predicate.Refined (
   , convertRefinedT
   , unRavelT
   , rapply
-  , rapply0
   , rapplyLift
 
   -- ** unsafe create methods
@@ -301,27 +300,98 @@ genRefined g =
   in f 0
 
 -- | binary operation applied to two 'RefinedT' values
-rapply :: forall m opts p a . (RefinedC opts p a, Monad m)
+--
+-- >>> x = newRefinedT @_ @'OAN @(Between 4 12 Id) 4
+-- >>> y = newRefinedT @_ @'OAN @(Between 4 12 Id) 5
+-- >>> prtRefinedTIO (rapply (+) x y)
+-- === a ===
+-- True 4 <= 4 <= 12
+-- |
+-- +- P Id 4
+-- |
+-- +- P '4
+-- |
+-- `- P '12
+-- <BLANKLINE>
+-- === b ===
+-- True 4 <= 5 <= 12
+-- |
+-- +- P Id 5
+-- |
+-- +- P '4
+-- |
+-- `- P '12
+-- <BLANKLINE>
+-- === a `op` b ===
+-- True 4 <= 9 <= 12
+-- |
+-- +- P Id 9
+-- |
+-- +- P '4
+-- |
+-- `- P '12
+-- <BLANKLINE>
+-- Refined 9
+--
+-- >>> x = newRefinedT @_ @'OAN @(Prime Id || Id < 3) 3
+-- >>> y = newRefinedT @_ @'OAN @(Prime Id || Id < 3) 5
+-- >>> prtRefinedTIO (rapply (+) x y)
+-- === a ===
+-- True True || False
+-- |
+-- +- True Prime
+-- |  |
+-- |  `- P Id 3
+-- |
+-- `- False 3 < 3
+--    |
+--    +- P Id 3
+--    |
+--    `- P '3
+-- <BLANKLINE>
+-- === b ===
+-- True True || False
+-- |
+-- +- True Prime
+-- |  |
+-- |  `- P Id 5
+-- |
+-- `- False 5 < 3
+--    |
+--    +- P Id 5
+--    |
+--    `- P '3
+-- <BLANKLINE>
+-- === a `op` b ===
+-- False False || False | (Prime) || (8 < 3)
+-- |
+-- +- False Prime
+-- |  |
+-- |  `- P Id 8
+-- |
+-- `- False 8 < 3
+--    |
+--    +- P Id 8
+--    |
+--    `- P '3
+-- <BLANKLINE>
+-- failure msg[FalseT]
+--
+rapply :: forall m opts p a opts1 z . (z ~ (opts ':# opts1), OptTC opts1, RefinedC opts p a, Monad m)
   => (a -> a -> a)
   -> RefinedT m (Refined opts p a)
-  -> RefinedT m (Refined opts p a)
-  -> RefinedT m (Refined opts p a)
+  -> RefinedT m (Refined opts1 p a)
+  -> RefinedT m (Refined z p a)
 rapply f ma mb = do
   let opts = getOptT @opts
   tell [setOtherEffects opts "=== a ==="]
   Refined x <- ma
-  tell [setOtherEffects opts "=== b ==="]
+  let opts1 = getOptT @opts1
+  tell [setOtherEffects opts1 "=== b ==="]
   Refined y <- mb
-  tell [setOtherEffects opts "=== a `op` b ==="]
-  newRefinedT @m @opts @p (f x y)
-
--- | takes two values and lifts them into 'RefinedT' and then applies the binary operation
-rapply0 :: forall opts p a m . (RefinedC opts p a, Monad m)
-  => (a -> a -> a)
-  -> a
-  -> a
-  -> RefinedT m (Refined opts p a)
-rapply0 f a b = rapply f (newRefinedT a) (newRefinedT b)
+  let opts2 = getOptT @z
+  tell [setOtherEffects opts2 "=== a `op` b ==="]
+  newRefinedT @_ @_ @p (f x y)
 
 -- | same as 'rapply' except we already have valid 'Refined' values as input
 rapplyLift :: forall m opts p a . (RefinedC opts p a, Monad m)

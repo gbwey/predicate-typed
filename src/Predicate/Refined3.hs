@@ -314,7 +314,7 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 opts ip op fmt i) where
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
 -- <BLANKLINE>
--- P ReadBase(Int,16) 16663610 | "00fe443a"
+-- P ReadBase(Int,16) 16663610
 -- |
 -- `- P Id "00fe443a"
 -- <BLANKLINE>
@@ -511,7 +511,7 @@ withRefined3TIO = (>>=) . newRefined3TPIO (Proxy @'(opts,ip,op,fmt,i))
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (41864) ***
 -- <BLANKLINE>
--- P ReadBase(Int,16) 41864 | "a388"
+-- P ReadBase(Int,16) 41864
 -- |
 -- `- P Id "a388"
 -- <BLANKLINE>
@@ -723,8 +723,7 @@ rapply3P p f ma mb = do
   Refined3 y _ <- mb
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
   tell [setOtherEffects opts "=== a `op` b ==="]
-  Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) p (f x y)
-  return (Refined3 a b)
+  newRefined3TPSkipIPImpl (return . runIdentity) p (f x y)
 
 -- | An ADT that summarises the results of evaluating Refined3 representing all possible states
 data RResults3 a b =

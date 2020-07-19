@@ -264,7 +264,7 @@ instance ToJSON i => ToJSON (Refined2 opts ip op i) where
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
 -- <BLANKLINE>
--- P ReadBase(Int,16) 16663610 | "00fe443a"
+-- P ReadBase(Int,16) 16663610
 -- |
 -- `- P Id "00fe443a"
 -- <BLANKLINE>
@@ -431,7 +431,7 @@ withRefined2TIO = (>>=) . newRefined2TIO @_ @opts @ip @op @i
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (41864) ***
 -- <BLANKLINE>
--- P ReadBase(Int,16) 41864 | "a388"
+-- P ReadBase(Int,16) 41864
 -- |
 -- `- P Id "a388"
 -- <BLANKLINE>

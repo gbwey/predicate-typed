@@ -58,9 +58,9 @@ Here is an example where the predicate fails at compile-time and we choose to sh
 
 <interactive>:18:4: error:
     *
-*** Step 1. Success Initial Conversion(ip) [65535] ***
+*** Step 1. Success nitial Conversion(ip) (65535) ***
 
-P ReadBase(Int,16) 65535 | "000ffff"
+P ReadBase(Int,16) 65535
 |
 `- P Id "000ffff"
 

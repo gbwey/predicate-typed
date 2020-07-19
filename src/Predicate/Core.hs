@@ -37,6 +37,7 @@ module Predicate.Core (
   , pl
   , pz
   , run
+  , runs
 
   , P(..)
 
@@ -105,7 +106,7 @@ instance Show a => P Id a where
   type PP Id a = a
   eval _ opts a =
     let msg0 = "Id"
-    in pure $ mkNode opts (PresentT a) (msg0 <> show0 opts " " a) []
+    in pure $ mkNode opts (PresentT a) (msg0 <> showLite opts " " a) []
 
 
 -- even more constraints than 'Id' so we might need to explicitly add types (Typeable)
@@ -121,7 +122,7 @@ instance ( Typeable a
   eval _ opts a =
     let msg0 = "IdT(" <> t <> ")"
         t = showT @a
-    in pure $ mkNode opts (PresentT a) (msg0 <> show0 opts " " a) []
+    in pure $ mkNode opts (PresentT a) (msg0 <> showLite opts " " a) []
 
 -- | transparent predicate wrapper to make k of kind 'Type' so it can be in a promoted list (cant mix kinds) see 'Predicate.Core.Do'
 --
@@ -200,7 +201,7 @@ instance KnownSymbol s => P (s :: Symbol) a where
   type PP s a = String
   eval _ opts _ =
     let s = symb @s
-    in pure $ mkNode opts (PresentT s) ("'" <> showLit0 opts "" s) []
+    in pure $ mkNode opts (PresentT s) ("'" <> litLite opts "" s) []
 
 -- | run the predicates in a promoted 2-tuple; similar to 'Control.Arrow.&&&'
 --
@@ -479,7 +480,7 @@ instance ( Show (PP p a)
     let msg0 = ""
     pure $ case getValueLR opts msg0 pp [] of
        Left e -> e
-       Right b -> mkNode opts (PresentT [b]) ("'" <> show0 opts "" [b] <> show1 opts " | " a) [hh pp]
+       Right b -> mkNode opts (PresentT [b]) ("'" <> showLite opts "" [b] <> showVerbose opts " | " a) [hh pp]
 
 instance (Show (PP p a)
         , Show a
@@ -497,7 +498,7 @@ instance (Show (PP p a)
       Right (p,q,pp,qq) ->
         let ret = p:q
         -- no gap between ' and ret!
-        in mkNode opts (PresentT ret) ("'" <> show0 opts "" ret <> show1 opts " | " a) [hh pp, hh qq]
+        in mkNode opts (PresentT ret) ("'" <> showLite opts "" ret <> showVerbose opts " | " a) [hh pp, hh qq]
 
 -- | extracts the \'a\' from type level \'Maybe a\' if the value exists
 --
@@ -523,7 +524,7 @@ instance (Show (PP p a)
         pure $ case getValueLR opts msg0 pp [] of
           Left e -> e
           Right b -> mkNode opts (PresentT b) (show01 opts msg0 b ma) [hh pp]
-      Nothing -> pure $ mkNode opts (FailT (msg0 <> " found Nothing")) (msg0 <> " found Nothing") []
+      Nothing -> pure $ mkNode opts (FailT (msg0 <> " found Nothing")) "" []
 
 -- | expects Nothing otherwise it fails
 -- if the value is Nothing then it returns \'Proxy a\' as this provides type information
@@ -540,7 +541,7 @@ instance P 'Nothing (Maybe a) where
     let msg0 = "'Nothing"
     in pure $ case ma of
          Nothing -> mkNode opts (PresentT Proxy) msg0 []
-         Just _ -> mkNode opts (FailT (msg0 <> " found Just")) (msg0 <> " found Just") []
+         Just _ -> mkNode opts (FailT (msg0 <> " found Just")) "" []
 
 -- omitted Show x so we can have less ambiguity
 -- | extracts the \'a\' from type level \'Either a b\' if the value exists
@@ -559,7 +560,7 @@ instance (Show a
   eval _ opts lr =
     let msg0 = "'Left"
     in case lr of
-         Right _ -> pure $ mkNode opts (FailT (msg0 <> " found Right")) (msg0 <> " found Right") []
+         Right _ -> pure $ mkNode opts (FailT (msg0 <> " found Right")) "" []
          Left a -> do
             pp <- eval (Proxy @p) opts a
             pure $ case getValueLR opts msg0 pp [] of
@@ -582,7 +583,7 @@ instance (Show a
   eval _ opts lr = do
     let msg0 = "'Right"
     case lr of
-         Left _ -> pure $ mkNode opts (FailT (msg0 <> " found Left")) (msg0 <> " found Left") []
+         Left _ -> pure $ mkNode opts (FailT (msg0 <> " found Left")) "" []
          Right a -> do
             pp <- eval (Proxy @p) opts a
             pure $ case getValueLR opts msg0 pp [] of
@@ -615,7 +616,7 @@ instance (Show a
             pure $ case getValueLR opts msg0 pp [] of
                  Left e -> e
                  Right b -> mkNode opts (_tBool pp) (show01' opts msg0 b "This " a) [hh pp]
-         _ -> pure $ mkNode opts (FailT (msg0 <> " found " <> showThese th)) (msg0 <> " found " <> showThese th) []
+         _ -> pure $ mkNode opts (FailT (msg0 <> " found " <> showThese th)) "" []
 
 -- | extracts the \'b\' from type level \'These a b\' if the value exists
 --
@@ -641,7 +642,7 @@ instance (Show a
             pure $ case getValueLR opts msg0 pp [] of
                  Left e -> e
                  Right b -> mkNode opts (_tBool pp) (show01' opts msg0 b "That " a) [hh pp]
-         _ -> pure $ mkNode opts (FailT (msg0 <> " found " <> showThese th)) (msg0 <> " found " <> showThese th) []
+         _ -> pure $ mkNode opts (FailT (msg0 <> " found " <> showThese th)) "" []
 
 
 -- | extracts the (a,b) from type level 'These a b' if the value exists
@@ -675,12 +676,12 @@ instance (Show a
                Left e -> pure e
                Right p -> do
                  qq <- eval (Proxy @q) opts b
-                 pure $ case getValueLR opts (msg0 <> " q failed p=" <> show p) qq [hh pp] of
+                 pure $ case getValueLR opts (msg0 <> " q failed p=" <> showL opts p) qq [hh pp] of
                     Left e -> e
                     Right q ->
                       let ret =(p,q)
                       in  mkNode opts (PresentT ret) (show01 opts msg0 ret (These a b)) [hh pp, hh qq]
-         _ -> pure $ mkNode opts (FailT (msg0 <> " found " <> showThese th)) (msg0 <> " found " <> showThese th) []
+         _ -> pure $ mkNode opts (FailT (msg0 <> " found " <> showThese th)) "" []
 
 -- | converts the value to the corresponding 'Proxy'
 --
@@ -691,7 +692,7 @@ instance Show a => P 'Proxy a where
   type PP 'Proxy a = Proxy a
   eval _ opts a =
     let b = Proxy @a
-    in pure $ mkNode opts (PresentT b) ("'Proxy" <> show1 opts " | " a) []
+    in pure $ mkNode opts (PresentT b) ("'Proxy" <> showVerbose opts " | " a) []
 
 -- | typelevel 'BoolT'
 --
@@ -710,12 +711,11 @@ instance Show a => P 'Proxy a where
 instance GetBoolT x b => P (b :: BoolT x) a where
   type PP b a = Bool
   eval _ opts _ = do
-    let msg0 = "'BoolT"
     let ret = getBoolT @x @b
     pure $ case ret of
-      Left b -> mkNodeB opts b (if b then "TrueT" else "FalseT") []
-      Right True -> mkNode opts (PresentT False) (msg0 <> " PresentT") []
-      Right False -> mkNode opts (FailT "'FailT _") (msg0 <> " FailT") []
+      Left b -> mkNodeB opts b (if b then "'TrueT" else "'FalseT") []
+      Right True -> mkNode opts (PresentT False) "'PresentT _" []
+      Right False -> mkNode opts (FailT "'FailT _") "BoolT" []
 
 pan, pa, pu, pl, pz, pab, pub
   :: forall p a
@@ -746,6 +746,14 @@ pub = run @'OUB @p
 -- >>> run @'OZ @Id 123
 -- PresentT 123
 --
+-- >>> run @('OMsg "field1" ':# 'OL) @('Left Id) (Right 123)
+-- field1 >>> Error 'Left found Right
+-- FailT "'Left found Right"
+--
+-- >>> run @(OptTT '[ 'OMsg "test", 'OU, 'OEmpty, 'OL, 'OMsg "field2"]) @('FailT '[]) ()
+-- test | field2 >>> Error 'FailT _ (BoolT)
+-- FailT "'FailT _"
+--
 run :: forall opts p a
         . ( OptTC opts
           , Show (PP p a)
@@ -758,6 +766,25 @@ run a = do
   let r = pp ^. tBool
   putStr $ prtTree opts pp
   return r
+
+-- | run expression with multiple options in a list
+--
+-- >>> runs @'[ 'OL, 'OMsg "field2"] @'( 'True, 'False) ()
+-- field2 >>> Present (True,False) ('(,))
+-- PresentT (True,False)
+--
+-- >>> runs @'[ 'OMsg "test", 'OU, 'OEmpty, 'OL, 'OMsg "field2"] @('FailT '[]) ()
+-- test | field2 >>> Error 'FailT _ (BoolT)
+-- FailT "'FailT _"
+--
+runs :: forall optss p a
+        . ( OptTC (OptTT optss)
+          , Show (PP p a)
+          , P p a)
+        => a
+        -> IO (BoolT (PP p a))
+runs = run @(OptTT optss) @p
+
 
 prtTree :: Show x => POpts -> TT x -> String
 prtTree opts pp =

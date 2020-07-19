@@ -118,7 +118,7 @@ False False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
 |
 +- False 5 > 7
 |  |
-|  +- P Len 5 | [1,2,3,4,5]
+|  +- P Len 5
 |  |
 |  `- P '7
 |
@@ -142,7 +142,7 @@ refinedTH: predicate failed with FalseP (False || False | (5 > 7) || (7 `elem` [
 
 <interactive>:30:4: error:
     *
-False Re' [] (^[A-Z][a-z]+$) | smith
+False Re' [] (^[A-Z][a-z]+$)
 |
 +- P '^[A-Z][a-z]+$
 |
@@ -167,7 +167,7 @@ Refined "Smith"
 
 <interactive>:36:4: error:
     *
-False expected title case:Re' [] (^[A-Z][a-z]+$) | smith
+False expected title case:Re' [] (^[A-Z][a-z]+$)
 |
 +- P '^[A-Z][a-z]+$
 |
@@ -191,17 +191,17 @@ refinedTH: predicate failed with FalseP (expected title case:Re' [] (^[A-Z][a-z]
 
 <interactive>:52:4: error:
     *
-[Error expected title case:] (>>) lhs failed
+[Error expected title case:]
 |
-`- [Error expected title case:] Guard(failed) [expected title case:] | "smith"
+`- [Error expected title case:] Guard | "smith"
    |
-   `- False Re' [] (^[A-Z][a-z]+$) | smith
+   `- False Re' [] (^[A-Z][a-z]+$)
       |
       +- P '^[A-Z][a-z]+$
       |
       `- P Id "smith"
 
-refinedTH: predicate failed with FailP "expected title case:" ((>>) lhs failed)
+refinedTH: predicate failed with FailP "expected title case:
     * In the Template Haskell splice
         $$(refinedTH @'OU
              @(Guard "expected title case:" (Re "^[A-Z][a-z]+$" Id) >> True)

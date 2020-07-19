@@ -57,7 +57,6 @@ module Predicate.Util (
   , getValLRFromTT
   , fromTT
   , getValueLR
-  , getValueLRHide
   , fixLite
   , fixit
   , prefixMsg
@@ -83,20 +82,20 @@ module Predicate.Util (
 
   , HOpts(..)
   , OptT(..)
-  , OptTC()
+  , OptTC(..)
+  , type OptTT
   , getOptT
   , subopts
 
 -- ** formatting functions
   , show01
-  , lit01
   , show01'
-  , lit01'
-  , showLit0
-  , showLit1
-  , show0
-  , show3
-  , show1
+  , lit01
+  , litLite
+  , litVerbose
+  , showLite
+  , showNormal
+  , showVerbose
   , showL
   , litL
   , litBL
@@ -367,31 +366,12 @@ getValueLR :: POpts
            -> TT a
            -> [Holder]
            -> Either (TT x) a
-getValueLR = getValueLRImpl True
-
--- | see 'getValueLRImpl' : add less detail to the tree if there are errors
-getValueLRHide :: POpts
-               -> String
-               -> TT a
-               -> [Holder]
-               -> Either (TT x) a
-getValueLRHide = getValueLRImpl False
-
--- elide FailT msg in tString[0] if showError is False
--- | a helper method to add extra context on failure to the tree or extract the value at the root of the tree
-getValueLRImpl :: Bool
-               -> POpts
-               -> String
-               -> TT a
-               -> [Holder]
-               -> Either (TT x) a
-getValueLRImpl showError opts msg0 tt hs =
+getValueLR opts msg0 tt hs =
   let tt' = hs ++ [hh tt]
   in left (\e -> mkNode
                    opts
                   (FailT e)
-                   (msg0 <> if showError || isVerbose opts then (if null msg0 then "" else " ") <> "[" <> e <> "]"
-                            else "")
+                   msg0
                   tt'
           )
           (getValLRFromTT tt)
@@ -560,7 +540,6 @@ colorDef = fromJust $ getLast $ oColor $ getOptT' @Color5
 data Debug =
        DZero -- ^ one line summary used mainly for testing
      | DLite -- ^ one line summary with additional context from the head of the evaluation tree
-     | DSubNormal -- ^ outputs the evaluation tree but skips noisy subtrees
      | DNormal  -- ^ outputs the evaluation tree but skips noisy subtrees
      | DVerbose -- ^ outputs the entire evaluation tree
      deriving (Ord, Show, Eq, Enum, Bounded)
@@ -592,7 +571,7 @@ show01 :: (Show a1, Show a2)
   -> a1
   -> a2
   -> String
-show01 opts msg0 ret = lit01 opts msg0 ret . show
+show01 opts msg0 ret = lit01 opts msg0 ret "" . show
 
 lit01 :: Show a1
   => POpts
@@ -600,7 +579,13 @@ lit01 :: Show a1
   -> a1
   -> String
   -> String
-lit01 opts msg0 ret = lit01' opts msg0 ret ""
+  -> String
+lit01 opts msg0 ret fmt as
+  | null fmt && null as = msg0
+  | otherwise =
+         msg0
+      <> showLite opts " " ret
+      <> litVerbose opts (" | " ++ fmt) as
 
 show01' :: (Show a1, Show a2)
   => POpts
@@ -609,35 +594,21 @@ show01' :: (Show a1, Show a2)
   -> String
   -> a2
   -> String
-show01' opts msg0 ret fmt = lit01' opts msg0 ret fmt . show
-
-lit01' :: Show a1
-  => POpts
-  -> String
-  -> a1
-  -> String
-  -> String
-  -> String
-lit01' opts msg0 ret fmt as
-  | null fmt && null as = msg0
-  | otherwise =
-         msg0
-      <> show0 opts " " ret
-      <> showLit1 opts (" | " ++ fmt) as
+show01' opts msg0 ret fmt = lit01 opts msg0 ret fmt . show
 
 -- | display all data regardless of debug level
-showLit0 :: POpts
+litLite :: POpts
          -> String
          -> String
          -> String
-showLit0 o = showLitImpl o DLite
+litLite o = showLitImpl o DLite
 
 -- | more restrictive: only display data at debug level 1 or less
-showLit1 :: POpts
+litVerbose :: POpts
          -> String
          -> String
          -> String
-showLit1 o = showLitImpl o DLite
+litVerbose o = showLitImpl o DVerbose
 
 showLitImpl :: POpts
             -> Debug
@@ -645,29 +616,29 @@ showLitImpl :: POpts
             -> String
             -> String
 showLitImpl o i s a =
-  if oDebug o >= i then s <> litL (oWidth o) a
+  if oDebug o >= i || oDebug o == DLite then s <> litL o a
   else ""
 
-show0 :: Show a
+showLite :: Show a
   => POpts
   -> String
   -> a
   -> String
-show0 o = showAImpl o DLite
+showLite o = showAImpl o DLite
 
-show3 :: Show a
+showNormal :: Show a
   => POpts
   -> String
   -> a
   -> String
-show3 o = showAImpl o DVerbose
+showNormal o = showAImpl o DNormal
 
-show1 :: Show a
+showVerbose :: Show a
   => POpts
   -> String
   -> a
   -> String
-show1 o = showAImpl o DLite
+showVerbose o = showAImpl o DVerbose
 
 showAImpl :: Show a
   => POpts
@@ -678,19 +649,26 @@ showAImpl :: Show a
 showAImpl o i s a = showLitImpl o i s (show a)
 
 showL :: Show a
-  => Int
+  => POpts
   -> a
   -> String
-showL i = litL i . show
+showL o = litL o . show
 
-litL :: Int -> String -> String
-litL i s = take i s <> if length s > i then "..." else ""
+litL :: POpts -> String -> String
+litL = litL' . oWidth
 
-litBL :: Int -> BL8.ByteString -> String
-litBL i s = litL i (BL8.unpack (BL8.take (fromIntegral i+1) s))
+litL' :: Int -> String -> String
+litL' i s = take i s <> if length s > i then "..." else ""
 
-litBS :: Int -> BS8.ByteString -> String
-litBS i s = litL i (BS8.unpack (BS8.take (i+1) s))
+litBL :: POpts -> BL8.ByteString -> String
+litBL o s =
+  let i = oWidth o
+  in litL' i (BL8.unpack (BL8.take (fromIntegral i+1) s))
+
+litBS :: POpts -> BS8.ByteString -> String
+litBS o s =
+  let i = oWidth o
+  in litL' i (BS8.unpack (BS8.take (i+1) s))
 
 -- | Regex options for Rescan Resplit Re etc
 data ROpt =
@@ -730,7 +708,7 @@ compileRegex opts nm s hhs
       let rs = getROpts @rs
           mm = nm <> " " <> show rs
       in flip left (RH.compileM (TE.encodeUtf8 (T.pack s)) rs)
-            $ \e -> mkNode opts (FailT "Regex failed to compile") (mm <> " compile failed with regex msg[" <> e <> "]") hhs
+            $ \e -> mkNode opts (FailT "Regex failed to compile") (mm <> ":" <> e) hhs
 
 -- | extract the regex options from the type level list
 class GetROpts (os :: [ROpt]) where
@@ -1036,28 +1014,6 @@ instance GetBool 'True where
 instance GetBool 'False where
   getBool = False
 
--- | get 'Disp' from the typelevel
-class GetDisp (a :: Disp) where
-  getDisp :: Disp
-instance GetDisp 'Ansi where
-  getDisp = Ansi
-instance GetDisp 'Unicode where
-  getDisp = Unicode
-
--- | get 'Debug' from the typelevel
-class GetDebug (a :: Debug) where
-  getDebug :: Debug
-instance GetDebug 'DZero where
-  getDebug = DZero
-instance GetDebug 'DLite where
-  getDebug = DLite
-instance GetDebug 'DSubNormal where
-  getDebug = DSubNormal
-instance GetDebug 'DNormal where
-  getDebug = DNormal
-instance GetDebug 'DVerbose where
-  getDebug = DVerbose
-
 -- | get 'Color' from the typelevel
 class GetColor (a :: Color) where
   getColor :: Color
@@ -1108,7 +1064,6 @@ hasNoTree opts =
   case oDebug opts of
     DZero -> True
     DLite -> True
-    DSubNormal -> False
     DNormal -> False
     DVerbose -> False
 
@@ -1442,8 +1397,7 @@ readField fieldName readVal = do
 
 -- | Display options
 data OptT =
-    ODebug !Debug         -- ^ set debug mode
-  | OWidth !Nat           -- ^ set display width
+    OWidth !Nat           -- ^ set display width
   | OMsg !Symbol      -- ^ set text to add context to a failure message for refined types
   | ORecursion !Nat       -- ^ set recursion limit eg for regex
   | OOther                -- ^ set effects for messages
@@ -1463,7 +1417,6 @@ data OptT =
      !Color   -- ^ Present foreground color
      !Color   -- ^ Present background color
   | ONoColor !Bool        -- ^ turn off colors (fast)
-  | ODisp !Disp           -- ^ ansi/unicode display
   | OZ                    -- ^ composite: no messages
   | OL                    -- ^ composite: lite version
   | OAN                   -- ^ composite: ansi + no colors
@@ -1471,10 +1424,16 @@ data OptT =
   | OAB                   -- ^ composite: ansi + colors + background
   | OU                    -- ^ composite: unicode + colors
   | OUB                   -- ^ composite: unicode + colors + background
+  | OUV                   -- ^ composite: unicode + colors + verbose
+  | OAnsi                 -- ^ ansi display
+  | OUnicode              -- ^ unicode display
+  | OZero                 -- ^ debug mode return nothing
+  | OLite                 -- ^ debug mode return one line
+  | ONormal               -- ^ debug mode normal
+  | OVerbose              -- ^ debug mode verbose
 
 instance Show OptT where
   show = \case
-            ODebug _n -> "ODebug"
             OWidth _n -> "OWidth"
             OMsg _s -> "OMsg"
             ORecursion _n -> "ORecursion"
@@ -1483,7 +1442,6 @@ instance Show OptT where
             a :# b -> show a ++ " ':# " ++ show b
             OColor _s _c1 _c2 _c3 _c4 _c5 _c6 _c7 _c8 -> "OColor"
             ONoColor b -> "ONoColor " ++ show b
-            ODisp b -> "ODisp " ++ show b
             OZ -> "OZ"
             OL -> "OL"
             OAN -> "OAN"
@@ -1491,13 +1449,18 @@ instance Show OptT where
             OAB -> "OAB"
             OU -> "OU"
             OUB -> "OUB"
+            OUV -> "OUV"
+            OAnsi -> "OAnsi"
+            OUnicode -> "OUnicode"
+            OZero -> "OZero"
+            OLite -> "OLite"
+            ONormal -> "ONormal"
+            OVerbose -> "OVerbose"
 
 infixr 6 :#
 
 class OptTC (k :: OptT) where
    getOptT' :: POptsL
-instance GetDebug n => OptTC ('ODebug n) where
-   getOptT' = setDebug (getDebug @n)
 instance KnownNat n => OptTC ('OWidth n) where
    getOptT' = setWidth (nat @n)
 instance KnownSymbol s => OptTC ('OMsg s) where
@@ -1537,8 +1500,6 @@ instance ( KnownSymbol s
         (getColor @c8)
 instance GetBool b => OptTC ('ONoColor b) where
    getOptT' = setNoColor (getBool @b)
-instance GetDisp b => OptTC ('ODisp b) where
-   getOptT' = setDisp (getDisp @b)
 instance OptTC 'OZ where
    getOptT' = setDisp Ansi <> setNoColor True <> setDebug DZero
 instance OptTC 'OL where
@@ -1553,6 +1514,20 @@ instance OptTC 'OU where
    getOptT' = setDisp Unicode <> getOptT' @Color5 <> setDebug DNormal <> getOptT' @Other2
 instance OptTC 'OUB where
    getOptT' = setDisp Unicode <> getOptT' @Color1 <> setDebug DNormal <> getOptT' @Other1
+instance OptTC 'OUV where
+   getOptT' = getOptT' @('OU ':# 'OVerbose)
+instance OptTC 'OAnsi where
+   getOptT' = setDisp Ansi
+instance OptTC 'OUnicode where
+   getOptT' = setDisp Unicode
+instance OptTC 'OZero where
+   getOptT' = setDebug DZero
+instance OptTC 'OLite where
+   getOptT' = setDebug DLite
+instance OptTC 'ONormal where
+   getOptT' = setDebug DNormal
+instance OptTC 'OVerbose where
+   getOptT' = setDebug DVerbose
 
 -- | convert typelevel options to 'POpts'
 --
@@ -1604,7 +1579,7 @@ chkSize opts msg0 xs hhs =
   let mx = oRecursion opts
   in case splitAt mx (toList xs) of
     (_,[]) -> Right ()
-    (_,_:_) -> Left $ mkNode opts (FailT (msg0 <> " list size exceeded")) (msg0 <> " list size exceeded: max is " ++ show mx) hhs
+    (_,_:_) -> Left $ mkNode opts (FailT (msg0 <> " list size exceeded")) ("max is " ++ show mx) hhs
 
 formatOMsg :: POpts -> String -> String
 formatOMsg o suffix =
@@ -1625,8 +1600,6 @@ setOtherEffects o =
          (False, Default, Default) -> id
          (b, c1, c2) -> (if b then style Underline else id) . color c1 . bgColor c2
 
-type family AnyT :: k where {}
-
 pureTryTest :: a -> IO (Either () a)
 pureTryTest = fmap (left (const ())) . E.try @E.SomeException . E.evaluate
 
@@ -1640,6 +1613,27 @@ pureTryTestPred p a = do
            | otherwise -> Left ("no match found: e=" ++ e)
     Right r -> Right (Right r)
 
+-- | prime predicate
+--
+-- >>> isPrime 7
+-- True
+--
+-- >>> isPrime 6
+-- False
+--
 isPrime :: Int -> Bool
 isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
 
+type family AnyT :: k where {}
+
+-- | mconcat  options at the type level
+--
+-- >>> x = getOptT @(OptTT '[ 'OMsg "test", 'ORecursion 123, 'OU, 'OL, 'OMsg "field2"])
+-- >>> oMsg x
+-- ["test","field2"]
+-- >>> oRecursion x
+-- 123
+--
+type family OptTT (xs :: [OptT]) where
+  OptTT '[] = 'OEmpty
+  OptTT (x ': xs) = x ':# OptTT xs

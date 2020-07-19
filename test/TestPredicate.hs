@@ -862,9 +862,9 @@ allTests =
   ]
 
 testopts1, testopts2, testopts3 :: POpts
-testopts1 = getOptT @('ORecursion 11 ':# 'ODebug 'DVerbose ':# 'ONoColor 'True ':# 'OWidth 123 ':# 'OMsg "abc" ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMsg "def" ':# 'OEmpty ':# 'ORecursion 11 ':# 'ODisp 'Unicode ':# 'OWidth 99)
+testopts1 = getOptT @('ORecursion 11 ':# 'OVerbose ':# 'ONoColor 'True ':# 'OWidth 123 ':# 'OMsg "abc" ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMsg "def" ':# 'OEmpty ':# 'ORecursion 11 ':# 'OUnicode ':# 'OWidth 99)
 testopts2 = getOptT @('ONoColor 'False ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White)
-testopts3 = getOptT @('OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMsg "def" ':# 'ODisp 'Unicode)
+testopts3 = getOptT @('OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMsg "def" ':# 'OUnicode)
 
 
 type Fizzbuzz = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")

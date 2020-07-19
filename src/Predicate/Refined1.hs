@@ -318,7 +318,7 @@ instance ( OptTC opts
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
 -- <BLANKLINE>
--- P ReadBase(Int,16) 16663610 | "00fe443a"
+-- P ReadBase(Int,16) 16663610
 -- |
 -- `- P Id "00fe443a"
 -- <BLANKLINE>
@@ -520,7 +520,7 @@ withRefined1TIO = (>>=) . newRefined1TPIO (Proxy @'(opts,ip,op,fmt,i))
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (41864) ***
 -- <BLANKLINE>
--- P ReadBase(Int,16) 41864 | "a388"
+-- P ReadBase(Int,16) 41864
 -- |
 -- `- P Id "a388"
 -- <BLANKLINE>
@@ -718,8 +718,7 @@ rapply1P p f ma mb = do
   Refined1 y <- mb
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
   tell [setOtherEffects opts "=== a `op` b ==="]
-  Refined1 a <- newRefined1TPSkipIPImpl (return . runIdentity) p (f x y)
-  return (Refined1 a)
+  newRefined1TPSkipIPImpl (return . runIdentity) p (f x y)
 
 -- | An ADT that summarises the results of evaluating Refined1 representing all possible states
 data RResults1 a b =

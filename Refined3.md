@@ -41,7 +41,7 @@ run this to get details in color of each evaluation step on failure:
 
 *** Step 1. Success Initial Conversion(ip) [4094] ***
 
-P ReadBase(Int,16) 4094 | "0000ffe"
+P ReadBase(Int,16) 4094
 |
 `- P Id "0000ffe"
 
@@ -82,9 +82,9 @@ Here is an example where the predicate fails at compile-time and we choose to sh
 
 <interactive>:18:4: error:
     *
-*** Step 1. Success Initial Conversion(ip) [65535] ***
+*** Step 1. Success Initial Conversion(ip) (65535) ***
 
-P ReadBase(Int,16) 65535 | "000ffff"
+P ReadBase(Int,16) 65535
 |
 `- P Id "000ffff"
 
@@ -118,12 +118,20 @@ An example of an invalid refined3TH call
 ```haskell
 >$$(refined3TH "2016-xy-09") :: ReadShowR 'OU Day
 
-<interactive>:171:4: error:
-    * refined3TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09) failed
-    * In the Template Haskell splice $$(refined3TH "2016-xy-09")
-      In the expression: $$(refined3TH "2016-xy-09") :: ReadShowR 'OU Day
-      In an equation for `it':
-          it = $$(refined3TH "2016-xy-09") :: ReadShowR Day
+<interactive>:719:4: error:
+    •
+*** Step 1. Initial Conversion(ip) Failed ***
+
+[Error ReadP Day (2016-xy-09)]
+|
+`- P Id "2016-xy-09"
+
+refined3TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09)
+    • In the Template Haskell splice $$(refined3TH "2016-xy-09")
+      In the expression:
+          $$(refined3TH "2016-xy-09") :: ReadShowR  'OU Day
+      In an equation for ‘it’:
+          it = $$(refined3TH "2016-xy-09") :: ReadShowR  'OU Day
 ```
 
 ### Json decoding
@@ -152,9 +160,9 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 >either putStrLn print $ eitherDecode' @(Refined3 'OU (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
 Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | {16663610 < 256}}
 
-***Step 1. Success Initial Conversion(ip) [16663610] ***
+***Step 1. Success Initial Conversion(ip) (16663610) ***
 
-P ReadBase(Int,16) 16663610 | "00fe443a"
+P ReadBase(Int,16) 16663610
 |
 `- P Id "00fe443a"
 
