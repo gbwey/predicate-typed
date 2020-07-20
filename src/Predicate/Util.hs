@@ -1416,7 +1416,8 @@ data OptT =
      !Color   -- ^ True background color
      !Color   -- ^ Present foreground color
      !Color   -- ^ Present background color
-  | ONoColor !Bool        -- ^ turn off colors (fast)
+  | OColorOn  -- ^ turn on colors
+  | OColorOff -- ^ turn off colors
   | OZ                    -- ^ composite: no messages
   | OL                    -- ^ composite: lite version
   | OAN                   -- ^ composite: ansi + no colors
@@ -1441,7 +1442,8 @@ instance Show OptT where
             OEmpty -> "OEmpty"
             a :# b -> show a ++ " ':# " ++ show b
             OColor _s _c1 _c2 _c3 _c4 _c5 _c6 _c7 _c8 -> "OColor"
-            ONoColor b -> "ONoColor " ++ show b
+            OColorOn -> "OColorOn"
+            OColorOff -> "OColorOff"
             OZ -> "OZ"
             OL -> "OL"
             OAN -> "OAN"
@@ -1498,8 +1500,10 @@ instance ( KnownSymbol s
         (getColor @c6)
         (getColor @c7)
         (getColor @c8)
-instance GetBool b => OptTC ('ONoColor b) where
-   getOptT' = setNoColor (getBool @b)
+instance OptTC 'OColorOn where
+   getOptT' = setNoColor False
+instance OptTC 'OColorOff where
+   getOptT' = setNoColor True
 instance OptTC 'OZ where
    getOptT' = setDisp Ansi <> setNoColor True <> setDebug DZero
 instance OptTC 'OL where

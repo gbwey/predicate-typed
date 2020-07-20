@@ -854,17 +854,18 @@ allTests =
   , oMsg testopts1 @?= ["abc", "def"]
   , oWidth testopts1 @?= 99
   , oDisp testopts1 @?= Unicode
-  , oDisp testopts2 @?= Ansi
-  , oDisp testopts3 @?= Unicode
   , fst (oColor testopts1) @?= "nocolor"
   , fst (oColor testopts2) @?= "testcolor"
-  , fst (oColor testopts3) @?= "testcolor"
+  , oDisp testopts2 @?= Ansi
+  , fst (oColor testopts3) @?= "testcolor1"
+  , oDisp testopts3 @?= Unicode
+  , oMsg testopts3 @?= ["def"]
   ]
 
 testopts1, testopts2, testopts3 :: POpts
-testopts1 = getOptT @('ORecursion 11 ':# 'OVerbose ':# 'ONoColor 'True ':# 'OWidth 123 ':# 'OMsg "abc" ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMsg "def" ':# 'OEmpty ':# 'ORecursion 11 ':# 'OUnicode ':# 'OWidth 99)
-testopts2 = getOptT @('ONoColor 'False ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White)
-testopts3 = getOptT @('OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMsg "def" ':# 'OUnicode)
+testopts1 = getOptT @('ORecursion 11 ':# 'OVerbose ':# 'OColorOff ':# 'OWidth 123 ':# 'OMsg "abc" ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMsg "def" ':# 'OEmpty ':# 'ORecursion 11 ':# 'OUnicode ':# 'OWidth 99)
+testopts2 = getOptT @('OColorOn ':# 'OColor "testcolor" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White)
+testopts3 = getOptT @('OColor "testcolor1" 'Red 'Green 'Default 'White 'Default 'White 'Default 'White ':# 'OMsg "def" ':# 'OUnicode)
 
 
 type Fizzbuzz = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")

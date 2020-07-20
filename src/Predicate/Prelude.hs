@@ -7441,7 +7441,7 @@ instance (P p a
 -- | short circuit version of boolean And
 --
 -- >>> pl @(Id > 10 &&~ Failt _ "ss") 9
--- False (False &&~ ... | (9 > 10))
+-- False (False &&~ _ | (9 > 10))
 -- FalseT
 --
 -- >>> pl @(Id > 10 &&~ Id == 12) 11
@@ -7467,7 +7467,7 @@ instance (P p a
     case getValueLR opts msg0 pp [] of
       Left e -> pure e
       Right False ->
-        pure $ mkNodeB opts False ("False" <> " " <> msg0 <> " ... | " <> topMessage pp) [hh pp]
+        pure $ mkNodeB opts False ("False" <> " " <> msg0 <> " _" <> litVerbose opts " | " (topMessage pp)) [hh pp]
       Right True -> do
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts msg0 qq [hh pp] of
@@ -7475,7 +7475,7 @@ instance (P p a
           Right q ->
             let zz = if q then ""
                      else " | " <> topMessage qq
-            in mkNodeB opts q ("True" <> " " <> msg0 <> " " <> showL opts q <> zz) [hh pp, hh qq]
+            in mkNodeB opts q ("True" <> " " <> msg0 <> " " <> showL opts q <> litVerbose opts "" zz) [hh pp, hh qq]
 
 -- | similar to 'Prelude.||'
 --
@@ -7508,7 +7508,7 @@ instance (P p a
 -- | short circuit version of boolean Or
 --
 -- >>> pl @(Id > 10 ||~ Failt _ "ss") 11
--- True (True ||~ ...)
+-- True (True ||~ _ | (11 > 10))
 -- TrueT
 --
 -- >>> pz @(Id > 10 ||~ Id == 9) 9
@@ -7539,9 +7539,9 @@ instance (P p a
           Right q ->
             let zz = if q then ""
                      else " | " <> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
-            in mkNodeB opts q ("False" <> " " <> msg0 <> " " <> showL opts q <> zz) [hh pp, hh qq]
+            in mkNodeB opts q ("False" <> " " <> msg0 <> " " <> showL opts q <> litVerbose opts "" zz) [hh pp, hh qq]
       Right True ->
-        pure $ mkNodeB opts True ("True" <> " " <> msg0 <> " ...") [hh pp]
+        pure $ mkNodeB opts True ("True" <> " " <> msg0 <> " _" <> litVerbose opts " | " (topMessage pp)) [hh pp]
 
 -- | implication
 --
@@ -7605,7 +7605,7 @@ instance ( PP p x ~ Bool
       Left e -> e
       Right p ->
         let b = not p
-        in mkNodeB opts b (msg0 <> " " <> topMessage pp) [hh pp]
+        in mkNodeB opts b (msg0 <> litVerbose opts " " (topMessage pp)) [hh pp]
 
 -- | 'id' function on a boolean
 --
@@ -7635,7 +7635,7 @@ instance ( PP p x ~ Bool
       Left e -> e
       Right p ->
         let b = p
-        in mkNodeB opts b (msg0 <> " " <> topMessage pp) [hh pp]
+        in mkNodeB opts b (msg0 <> litVerbose opts " " (topMessage pp)) [hh pp]
 
 -- | similar to 'compare'
 --
@@ -7892,7 +7892,7 @@ instance (Show l
 -- | invokes 'GE.fromList'
 --
 -- >>> import qualified Data.Set as Set
--- >>> run @('OMsg "Fred" ':# 'OLite ':# 'ONoColor 'True) @(FromList (Set.Set Int) << '[2,1,5,5,2,5,2]) ()
+-- >>> run @('OMsg "Fred" ':# 'OLite ':# 'OColorOff) @(FromList (Set.Set Int) << '[2,1,5,5,2,5,2]) ()
 -- Fred >>> Present fromList [1,2,5] ((>>) fromList [1,2,5] | {FromList fromList [1,2,5]})
 -- PresentT (fromList [1,2,5])
 --
@@ -10827,7 +10827,7 @@ instance (PP q x ~ (a,b)
           Left e -> e
           Right _ ->
             let hhs = hhs0 ++ [hh pp]
-            in mkNode opts (_tBool pp) (msg0 <> " " <> topMessage pp) hhs
+            in mkNode opts (_tBool pp) (msg0 <> litVerbose opts " " (topMessage pp)) hhs
 
 -- | like 'Predicate.Prelude.&&' but for a tuple
 --
