@@ -48,11 +48,11 @@ import Data.Functor.Identity
 
 -- | creates a 'Refined.Refined' refinement type
 --
--- >>> $$(refinedTH 123) :: Refined 'OZ (Between 100 125 Id) Int
+-- >>> $$(refinedTH 123) :: Refined OZ (Between 100 125 Id) Int
 -- Refined 123
 --
 -- @
--- >$$(refinedTH 99) :: Refined 'OZ (Between 100 125 Id) Int
+-- >$$(refinedTH 99) :: Refined OZ (Between 100 125 Id) Int
 --
 -- <interactive>:8:4: error:
 --     * refinedTH: predicate failed with FalseP (100 <= 99)
@@ -63,11 +63,11 @@ import Data.Functor.Identity
 --           it = $$(refinedTH 99) :: Refined (Between 100 125 Id) Int
 -- @
 --
--- >>> $$(refinedTH 123) :: Refined 'OAN (Between 100 125 Id) Int
+-- >>> $$(refinedTH 123) :: Refined OAN (Between 100 125 Id) Int
 -- Refined 123
 --
 -- @
--- >$$(refinedTH 99) :: Refined 'OAN (FailS "asdf" >> Between 100 125 Id) Int
+-- >$$(refinedTH 99) :: Refined OAN (FailS "asdf" >> Between 100 125 Id) Int
 --
 -- <interactive>:116:4: error:
 --     *
@@ -75,7 +75,7 @@ import Data.Functor.Identity
 -- |
 -- `- [Error asdf] Fail asdf
 --    |
---    `- P 'asdf
+--    `- P '"asdf"
 --
 -- refinedTH: predicate failed with FailP "asdf" ((>>) lhs failed)
 --     * In the Template Haskell splice $$(refinedTH 99)
@@ -112,17 +112,17 @@ refinedTHIO i = do
 
 -- | creates a 'Refined1.Refined1' refinement type
 --
--- >>> $$(refined1TH 100) :: Refined1 'OZ Id (Between 100 125 Id) Id Int
+-- >>> $$(refined1TH 100) :: Refined1 OZ Id (Between 100 125 Id) Id Int
 -- Refined1 100
 --
--- >>> $$(refined1TH 100) :: Refined1 'OZ Id (Between 100 125 Id) Id Int
+-- >>> $$(refined1TH 100) :: Refined1 OZ Id (Between 100 125 Id) Id Int
 -- Refined1 100
 --
--- >>> $$(refined1TH 100) :: Refined1 'OZ Id (Between 100 125 Id) Id Int
+-- >>> $$(refined1TH 100) :: Refined1 OZ Id (Between 100 125 Id) Id Int
 -- Refined1 100
 --
 -- @
--- >$$(refined1TH 99) :: Refined1 'OZ Id (Between 100 125 Id) Id Int
+-- >$$(refined1TH 99) :: Refined1 OZ Id (Between 100 125 Id) Id Int
 --
 -- <interactive>:127:4: error:
 --     *
@@ -143,9 +143,9 @@ refinedTHIO i = do
 -- refined1TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
 --     * In the Template Haskell splice $$(refined1TH 99)
 --       In the expression:
---           $$(refined1TH 99) :: Refined1 'OZ Id (Between 100 125 Id) Id Int
+--           $$(refined1TH 99) :: Refined1 OZ Id (Between 100 125 Id) Id Int
 --       In an equation for \'it\':
---           it = $$(refined1TH 99) :: Refined1 'OZ Id (Between 100 125 Id) Id Int
+--           it = $$(refined1TH 99) :: Refined1 OZ Id (Between 100 125 Id) Id Int
 -- @
 --
 refined1TH :: forall opts ip op fmt i
@@ -170,14 +170,14 @@ refined1TH i =
 
 -- | creates a 'Refined2.Refined2' refinement type
 --
--- >>> $$(refined2TH 100) :: Refined2 'OA Id (Between 100 125 Id) Int
+-- >>> $$(refined2TH 100) :: Refined2 OA Id (Between 100 125 Id) Int
 -- Refined2 {r2In = 100, r2Out = 100}
 --
--- >>> $$(refined2TH 100) :: Refined2 'OAN Id (Between 100 125 Id) Int
+-- >>> $$(refined2TH 100) :: Refined2 OAN Id (Between 100 125 Id) Int
 -- Refined2 {r2In = 100, r2Out = 100}
 --
 -- @
--- >$$(refined2TH 99) :: Refined2 'OAN Id (Between 100 125 Id) Int
+-- >$$(refined2TH 99) :: Refined2 OAN Id (Between 100 125 Id) Int
 --
 -- <interactive>:127:4: error:
 --     *
@@ -198,9 +198,9 @@ refined1TH i =
 -- refined2TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
 --     * In the Template Haskell splice $$(refined2TH 99)
 --       In the expression:
---           $$(refined2TH 99) :: Refined2 'OZ Id (Between 100 125 Id) Id Int
+--           $$(refined2TH 99) :: Refined2 OZ Id (Between 100 125 Id) Id Int
 --       In an equation for \'it\':
---           it = $$(refined2TH 99) :: Refined2 'OZ Id (Between 100 125 Id) Id Int
+--           it = $$(refined2TH 99) :: Refined2 OZ Id (Between 100 125 Id) Id Int
 -- @
 --
 refined2TH :: forall opts ip op i
@@ -238,14 +238,14 @@ refined2THIO i = do
 
 -- | creates a 'Refined3.Refined3' refinement type
 --
--- >>> $$(refined3TH 100) :: Refined3 'OZ Id (Between 100 125 Id) Id Int
+-- >>> $$(refined3TH 100) :: Refined3 OZ Id (Between 100 125 Id) Id Int
 -- Refined3 {r3In = 100, r3Out = 100}
 --
--- >>> $$(refined3TH 100) :: Refined3 'OAN Id (Between 100 125 Id) Id Int
+-- >>> $$(refined3TH 100) :: Refined3 OAN Id (Between 100 125 Id) Id Int
 -- Refined3 {r3In = 100, r3Out = 100}
 --
 -- @
--- >$$(refined3TH 99) :: Refined3 'OAN Id (Between 100 125 Id) Id Int
+-- >$$(refined3TH 99) :: Refined3 OAN Id (Between 100 125 Id) Id Int
 --
 -- <interactive>:127:4: error:
 --     *
@@ -266,12 +266,12 @@ refined2THIO i = do
 -- refined3TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
 --     * In the Template Haskell splice $$(refined3TH 99)
 --       In the expression:
---           $$(refined3TH 99) :: Refined3 'OAN Id (Between 100 125 Id) Id Int
+--           $$(refined3TH 99) :: Refined3 OAN Id (Between 100 125 Id) Id Int
 --       In an equation for \'it\':
---           it = $$(refined3TH 99) :: Refined3 'OAN Id (Between 100 125 Id) Id Int
+--           it = $$(refined3TH 99) :: Refined3 OAN Id (Between 100 125 Id) Id Int
 -- @
 --
--- >>> $$(refined3TH @'OZ @(Resplit "\\." Id >> Map (ReadP Int Id) Id) @(All (0 <..> 0xff) Id && Len == 4) @(PrintL 4 "%03d.%03d.%03d.%03d" Id)  "200.2.3.4")
+-- >>> $$(refined3TH @OZ @(Resplit "\\." Id >> Map (ReadP Int Id) Id) @(All (0 <..> 0xff) Id && Len == 4) @(PrintL 4 "%03d.%03d.%03d.%03d" Id)  "200.2.3.4")
 -- Refined3 {r3In = [200,2,3,4], r3Out = "200.002.003.004"}
 --
 refined3TH :: forall opts ip op fmt i

@@ -33,11 +33,11 @@ To run the examples you will need these settings (ghc>=8.6)
 # General information
 
 * **_opts_** common display options for evaluating the typelevel expression
-  * 'OZ no output:zero
-  * 'OL one line:lite
-  * 'OA ascii plus colors
-  * 'OAN ascii without colors
-  * 'OU unicode plus colors (for Windows: chcp 65001)
+  * OZ no output:zero
+  * OL one line:lite
+  * OA ascii plus colors
+  * OAN ascii without colors
+  * OU unicode plus colors (for Windows: chcp 65001)
 
 * BoolT is a GADT that holds the return value from evaluating the type level expression
    TrueT : predicate is true
@@ -48,10 +48,10 @@ To run the examples you will need these settings (ghc>=8.6)
 
 # testing the dsl
 
- * pu  is a shortcut for run @'OU  (unicode with colors)
- * pa  is a shortcut for run @'OA  (ascii with colors)
- * pl  is a shortcut for run @'OL  (short one liner)
- * pan is a shortcut for run @'OAN (ascii only)
+ * pu  is a shortcut for run @OU  (unicode with colors)
+ * pa  is a shortcut for run @OA  (ascii with colors)
+ * pl  is a shortcut for run @OL  (short one liner)
+ * pan is a shortcut for run @OAN (ascii only)
 
 ```haskell
 > pu @(Between 4 10 Id) 7

@@ -93,49 +93,49 @@ import Data.Maybe (fromMaybe)
 
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
--- >>> prtRefinedIO @'OZ @(Between 10 14 Id) 13
+-- >>> prtRefinedIO @OZ @(Between 10 14 Id) 13
 -- Right (Refined 13)
 --
--- >>> prtRefinedIO @'OZ @(Between 10 14 Id) 99
+-- >>> prtRefinedIO @OZ @(Between 10 14 Id) 99
 -- Left FalseT
 --
--- >>> prtRefinedIO @'OZ @(Last Id >> Len == 4) ["one","two","three","four"]
+-- >>> prtRefinedIO @OZ @(Last Id >> Len == 4) ["one","two","three","four"]
 -- Right (Refined ["one","two","three","four"])
 --
--- >>> prtRefinedIO @'OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) "141.213.1.99"
+-- >>> prtRefinedIO @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) "141.213.1.99"
 -- Right (Refined "141.213.1.99")
 --
--- >>> prtRefinedIO @'OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) "141.213.1"
+-- >>> prtRefinedIO @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) "141.213.1"
 -- Left FalseT
 --
--- >>> prtRefinedIO @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> 'True) "141.213.1"
+-- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> 'True) "141.213.1"
 -- Left (FailT "bad length: found 3")
 --
--- >>> prtRefinedIO @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id) >> 'True) "141.213.1.444"
+-- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id) >> 'True) "141.213.1.444"
 -- Left (FailT "octet 3 out of range 444")
 --
--- >>> prtRefinedIO @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id) >> 'True) "141.213.1x34.444"
+-- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id) >> 'True) "141.213.1x34.444"
 -- Left (FailT "ReadP Int (1x34)")
 --
--- >>> prtRefinedIO @'OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12344"
+-- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12344"
 -- Right (Refined "12344")
 --
--- >>> prtRefinedIO @'OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12340"
+-- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12340"
 -- Left FalseT
 --
--- >>> prtRefinedIO @'OZ @(Any (Prime Id) Id) [11,13,17,18]
+-- >>> prtRefinedIO @OZ @(Any (Prime Id) Id) [11,13,17,18]
 -- Right (Refined [11,13,17,18])
 --
--- >>> prtRefinedIO @'OZ @(All (Prime Id) Id) [11,13,17,18]
+-- >>> prtRefinedIO @OZ @(All (Prime Id) Id) [11,13,17,18]
 -- Left FalseT
 --
--- >>> prtRefinedIO @'OZ @(Snd Id !! Fst Id >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @OZ @(Snd Id !! Fst Id >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Right (Refined (2,["abc","defghij","xyzxyazsfd"]))
 --
--- >>> prtRefinedIO @'OZ @(Snd Id !! Fst Id >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @OZ @(Snd Id !! Fst Id >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
 -- Left (FailT "(!!) index not found")
 --
--- >>> prtRefinedIO @'OZ @(Snd Id !! Fst Id >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @OZ @(Snd Id !! Fst Id >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Left FalseT
 --
 newtype Refined (opts :: OptT) p a = Refined a deriving (Show, Eq, Generic, TH.Lift)
@@ -148,10 +148,10 @@ type role Refined nominal nominal nominal
 
 -- | 'IsString' instance for Refined
 --
--- >>> pureTryTest $ fromString @(Refined 'OL (ReadP Int Id >> Id > 244) String) "523"
+-- >>> pureTryTest $ fromString @(Refined OL (ReadP Int Id >> Id > 244) String) "523"
 -- Right (Refined "523")
 --
--- >>> pureTryTest $ fromString @(Refined 'OL (ReadP Int Id >> Id > 244) String) "52"
+-- >>> pureTryTest $ fromString @(Refined OL (ReadP Int Id >> Id > 244) String) "52"
 -- Left ()
 --
 instance RefinedC opts p String => IsString (Refined opts p String) where
@@ -167,13 +167,13 @@ errorDisplay o (bp,(top,e)) =
 
 -- | 'Read' instance for 'Refined'
 --
--- >>> reads @(Refined 'OZ (Between 0 255 Id) Int) "Refined 254"
+-- >>> reads @(Refined OZ (Between 0 255 Id) Int) "Refined 254"
 -- [(Refined 254,"")]
 --
--- >>> reads @(Refined 'OZ (Between 0 255 Id) Int) "Refined 300"
+-- >>> reads @(Refined OZ (Between 0 255 Id) Int) "Refined 300"
 -- []
 --
--- >>> reads @(Refined 'OZ 'True Int) "Refined (-123)xyz"
+-- >>> reads @(Refined OZ 'True Int) "Refined (-123)xyz"
 -- [(Refined (-123),"xyz")]
 --
 instance (RefinedC opts p a, Read a) => Read (Refined opts p a) where
@@ -201,10 +201,10 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 --
 -- >>> :set -XOverloadedStrings
 -- >>> import qualified Data.Aeson as A
--- >>> A.eitherDecode' @(Refined 'OZ (Between 10 14 Id) Int) "13"
+-- >>> A.eitherDecode' @(Refined OZ (Between 10 14 Id) Int) "13"
 -- Right (Refined 13)
 --
--- >>> removeAnsi $ A.eitherDecode' @(Refined 'OAN (Between 10 14 Id) Int) "16"
+-- >>> removeAnsi $ A.eitherDecode' @(Refined OAN (Between 10 14 Id) Int) "16"
 -- Error in $: Refined(FromJSON:parseJSON):FalseT (16 <= 14)
 -- False 16 <= 14
 -- |
@@ -228,9 +228,9 @@ instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
 -- >>> import Data.Time
 -- >>> import Control.Lens
 -- >>> import Control.Arrow ((+++))
--- >>> type K1 = Refined 'OZ (ReadP Day Id >> 'True) String
--- >>> type K2 = Refined 'OAN (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") (ReadP Day Id)) String
--- >>> r = unsafeRefined' @'OZ "2019-04-23" :: K1
+-- >>> type K1 = Refined OZ (ReadP Day Id >> 'True) String
+-- >>> type K2 = Refined OAN (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") (ReadP Day Id)) String
+-- >>> r = unsafeRefined' @OZ "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined "2019-04-23"
 --
@@ -244,11 +244,11 @@ instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
 -- |
 -- +- P ReadP Day 2019-05-30
 -- |  |
--- |  `- P '2019-05-30
+-- |  `- P '"2019-05-30"
 -- |
 -- `- P ReadP Day 2019-06-01
 --    |
---    `- P '2019-06-01
+--    `- P '"2019-06-01"
 -- <BLANKLINE>
 --
 instance (RefinedC opts p a, Binary a) => Binary (Refined opts p a) where
@@ -268,11 +268,11 @@ instance ( RefinedC opts p a
 
 -- | 'Arbitrary' instance for 'Refined'
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined 'OU (Id /= 0) Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined OU (Id /= 0) Int)))
 -- >>> all ((/=0) . unRefined) xs
 -- True
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined 'OU (Prime Id) Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined OU (Prime Id) Int)))
 -- >>> all (isPrime . unRefined) xs
 -- True
 --
@@ -301,8 +301,8 @@ genRefined g =
 
 -- | binary operation applied to two 'RefinedT' values
 --
--- >>> x = newRefinedT @_ @'OAN @(Between 4 12 Id) 4
--- >>> y = newRefinedT @_ @'OAN @(Between 4 12 Id) 5
+-- >>> x = newRefinedT @_ @OAN @(Between 4 12 Id) 4
+-- >>> y = newRefinedT @_ @OAN @(Between 4 12 Id) 5
 -- >>> prtRefinedTIO (rapply (+) x y)
 -- === a ===
 -- True 4 <= 4 <= 12
@@ -333,8 +333,8 @@ genRefined g =
 -- <BLANKLINE>
 -- Refined 9
 --
--- >>> x = newRefinedT @_ @'OAN @(Prime Id || Id < 3) 3
--- >>> y = newRefinedT @_ @'OAN @(Prime Id || Id < 3) 5
+-- >>> x = newRefinedT @_ @OAN @(Prime Id || Id < 3) 3
+-- >>> y = newRefinedT @_ @OAN @(Prime Id || Id < 3) 5
 -- >>> prtRefinedTIO (rapply (+) x y)
 -- === a ===
 -- True True || False
@@ -452,10 +452,10 @@ prtRefinedIO a = do
 
 -- | returns a 'Refined' value if \'a\' is valid for the predicate \'p\'
 --
--- >>> newRefined @'OL @(ReadP Int Id > 99) "123"
+-- >>> newRefined @OL @(ReadP Int Id > 99) "123"
 -- Right (Refined "123")
 --
--- >>> newRefined @'OL @(ReadP Int Id > 99) "12"
+-- >>> newRefined @OL @(ReadP Int Id > 99) "12"
 -- Left "FalseT (12 > 99)"
 --
 newRefined :: forall opts p a

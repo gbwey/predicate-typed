@@ -44,12 +44,12 @@ import Data.Time
 -- | tests
 --
 -- >>> :m + Data.Ratio
--- >>> newRefined1P (readshow @'OZ @Rational) "13 % 3"
+-- >>> newRefined1P (readshow @OZ @Rational) "13 % 3"
 -- Right (Refined1 (13 % 3))
 --
--- >>> newRefined1P (readshow @'OZ @Rational) "13x % 3"
+-- >>> newRefined1P (readshow @OZ @Rational) "13x % 3"
 -- Left "Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3)"
 --
--- >>> newRefined1P (Proxy @(ReadShow' 'OZ Rational (11 -% 2 <..> 3 -% 1))) "-13 % 3"
+-- >>> newRefined1P (Proxy @(ReadShow' OZ Rational (11 -% 2 <..> 3 -% 1))) "-13 % 3"
 -- Right (Refined1 ((-13) % 3))
 --

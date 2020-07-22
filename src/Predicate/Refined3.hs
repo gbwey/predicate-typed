@@ -145,35 +145,35 @@ import GHC.Stack
 --
 -- Although a common scenario is String as input, you are free to choose any input type you like
 --
--- >>> newRefined3 @'OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fe"
+-- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> newRefined3 @'OZ @(ReadBase Int 16 Id) @(Lt 253) @(PrintF "%x" Id) "00fe"
+-- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 253) @(PrintF "%x" Id) "00fe"
 -- Left "Step 2. False Boolean Check(op) | FalseP"
 --
--- >>> newRefined3 @'OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fg"
+-- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fg"
 -- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"
 --
--- >>> newRefined3 @'OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
+-- >>> newRefined3 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left "Step 2. False Boolean Check(op) | {length invalid:5 == 4}"
 --
--- >>> newRefined3 @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
+-- >>> newRefined3 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left "Step 2. Failed Boolean Check(op) | found length=5"
 --
--- >>> newRefined3 @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
+-- >>> newRefined3 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> newRefined3 @'OZ @(MkDayExtra Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
+-- >>> newRefined3 @OZ @(MkDayExtra Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
--- >>> newRefined3 @'OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
+-- >>> newRefined3 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left "Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}"
 --
--- >>> newRefined3 @'OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
+-- >>> newRefined3 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
 --
--- >>> type T4 k = '( 'OZ, MkDayExtra Id >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
+-- >>> type T4 k = '( OZ, MkDayExtra Id >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
 -- >>> newRefined3P (Proxy @(T4 _)) (2019,10,12)
 -- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
 --
@@ -231,10 +231,10 @@ deriving instance ( TH.Lift (PP ip i)
 
 -- | 'IsString' instance for Refined3
 --
--- >>> pureTryTest $ fromString @(Refined3 'OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "523"
+-- >>> pureTryTest $ fromString @(Refined3 OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "523"
 -- Right (Refined3 {r3In = 523, r3Out = "523"})
 --
--- >>> pureTryTest $ fromString @(Refined3 'OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "2"
+-- >>> pureTryTest $ fromString @(Refined3 OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "2"
 -- Left ()
 --
 instance (Refined3C opts ip op fmt String, Show (PP ip String))
@@ -248,16 +248,16 @@ instance (Refined3C opts ip op fmt String, Show (PP ip String))
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
 --
--- >>> reads @(Refined3 'OZ (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
+-- >>> reads @(Refined3 OZ (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
 -- [(Refined3 {r3In = 254, r3Out = "fe"},"")]
 --
--- >>> reads @(Refined3 'OZ (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
+-- >>> reads @(Refined3 OZ (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
 -- []
 --
--- >>> reads @(Refined3 'OZ (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
+-- >>> reads @(Refined3 OZ (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
 -- [(Refined3 {r3In = -1234, r3Out = "-4d2"},"")]
 --
--- >>> reads @(Refined3 'OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined3 OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
 -- [(Refined3 {r3In = [192,168,0,1], r3Out = "192.168.0.1"},"")]
 --
 instance ( Eq i
@@ -293,10 +293,10 @@ instance ( Eq i
 -- | 'ToJSON' instance for 'Refined3'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined3 @'OZ @(ReadBase Int 16 Id) @(Between 0 255 Id) @(ShowBase 16 Id) 254 "fe")
+-- >>> A.encode (unsafeRefined3 @OZ @(ReadBase Int 16 Id) @(Between 0 255 Id) @(ShowBase 16 Id) 254 "fe")
 -- "\"fe\""
 --
--- >>> A.encode (unsafeRefined3 @'OZ @Id @'True @Id 123 123)
+-- >>> A.encode (unsafeRefined3 @OZ @Id @'True @Id 123 123)
 -- "123"
 --
 instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 opts ip op fmt i) where
@@ -306,10 +306,10 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 opts ip op fmt i) where
 -- | 'FromJSON' instance for 'Refined3'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.eitherDecode' @(Refined3 'OZ (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe\""
+-- >>> A.eitherDecode' @(Refined3 OZ (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe\""
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> removeAnsi $ A.eitherDecode' @(Refined3 'OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
+-- >>> removeAnsi $ A.eitherDecode' @(Refined3 OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
 -- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
@@ -349,7 +349,7 @@ instance (Show (PP fmt (PP ip i))
 
 -- | 'Arbitrary' instance for 'Refined3'
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined3 'OU (ReadP Int Id) (1 <..> 120 && Even) (ShowP Id) String)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined3 OU (ReadP Int Id) (1 <..> 120 && Even) (ShowP Id) String)))
 -- >>> all (\x -> let y = r3In x in y /= 0 && r3Out x == show y) xs
 -- True
 --
@@ -360,7 +360,7 @@ instance ( Arbitrary (PP ip i)
 
 -- | create a 'Refined3' generator using a generator to restrict the values (so it completes)
 --
--- >>> g = genRefined3 @'OU @(ReadP Int Id) @(Between 10 100 Id && Even) @(ShowP Id) (choose (10,100))
+-- >>> g = genRefined3 @OU @(ReadP Int Id) @(Between 10 100 Id && Even) @(ShowP Id) (choose (10,100))
 -- >>> xs <- generate (vectorOf 10 g)
 -- >>> all (\x -> let y = r3In x in y >= 0 && y <= 100 && even y) xs
 -- True
@@ -400,8 +400,8 @@ genRefined3P _ g =
 -- >>> import Control.Arrow ((+++))
 -- >>> import Control.Lens
 -- >>> import Data.Time
--- >>> type K1 = MakeR3 '( 'OAN, ReadP Day Id, 'True, ShowP Id, String)
--- >>> type K2 = MakeR3 '( 'OAN, ReadP Day Id, Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id, ShowP Id, String)
+-- >>> type K1 = MakeR3 '( OAN, ReadP Day Id, 'True, ShowP Id, String)
+-- >>> type K2 = MakeR3 '( OAN, ReadP Day Id, Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id, ShowP Id, String)
 -- >>> r = unsafeRefined3' "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
@@ -423,11 +423,11 @@ genRefined3P _ g =
 -- |
 -- +- P ReadP Day 2019-05-30
 -- |  |
--- |  `- P '2019-05-30
+-- |  `- P '"2019-05-30"
 -- |
 -- `- P ReadP Day 2019-06-01
 --    |
---    `- P '2019-06-01
+--    `- P '"2019-06-01"
 -- <BLANKLINE>
 --
 instance ( Show (PP fmt (PP ip i))
@@ -455,13 +455,13 @@ instance (Refined3C opts ip op fmt i
 --
 -- set the 5-tuple directly
 --
--- >>> eg1 = mkProxy3 @'( 'OL, ReadP Int Id, Gt 10, ShowP Id, String)
+-- >>> eg1 = mkProxy3 @'( OL, ReadP Int Id, Gt 10, ShowP Id, String)
 -- >>> newRefined3P eg1 "24"
 -- Right (Refined3 {r3In = 24, r3Out = "24"})
 --
 -- skip the 5-tuple and set each parameter individually using type application
 --
--- >>> eg2 = mkProxy3 @_ @'OL @(ReadP Int Id) @(Gt 10) @(ShowP Id)
+-- >>> eg2 = mkProxy3 @_ @OL @(ReadP Int Id) @(Gt 10) @(ShowP Id)
 -- >>> newRefined3P eg2 "24"
 -- Right (Refined3 {r3In = 24, r3Out = "24"})
 --
@@ -502,12 +502,12 @@ withRefined3TIO = (>>=) . newRefined3TPIO (Proxy @'(opts,ip,op,fmt,i))
 -- >>> :set -XRankNTypes
 -- >>> b16 :: forall opts . Proxy '( opts, ReadBase Int 16 Id, Between 100 200 Id, ShowBase 16 Id, String); b16 = Proxy
 -- >>> b2 :: forall opts . Proxy '( opts, ReadBase Int 2 Id, 'True, ShowBase 2 Id, String); b2 = Proxy
--- >>> prtRefinedTIO $ withRefined3TP (b16 @'OZ) "a3" $ \x -> withRefined3TP (b2 @'OZ) "1001110111" $ \y -> pure (r3In x + r3In y)
+-- >>> prtRefinedTIO $ withRefined3TP (b16 @OZ) "a3" $ \x -> withRefined3TP (b2 @OZ) "1001110111" $ \y -> pure (r3In x + r3In y)
 -- 794
 --
 -- this example fails as the the hex value is out of range
 --
--- >>> prtRefinedTIO $ withRefined3TP (b16 @'OAN) "a388" $ \x -> withRefined3TP (b2 @'OAN) "1001110111" $ \y -> pure (x,y)
+-- >>> prtRefinedTIO $ withRefined3TP (b16 @OAN) "a388" $ \x -> withRefined3TP (b2 @OAN) "1001110111" $ \y -> pure (x,y)
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (41864) ***
 -- <BLANKLINE>
@@ -552,13 +552,13 @@ withRefined3TP p = (>>=) . newRefined3TP p
 
 -- | pure version for extracting Refined3
 --
--- >>> newRefined3 @'OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:15:7"
+-- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:15:7"
 -- Right (Refined3 {r3In = 01:15:07, r3Out = "01:15:07"})
 --
--- >>> newRefined3 @'OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:2:x"
+-- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:2:x"
 -- Left "Step 1. Initial Conversion(ip) Failed | ParseTimeP TimeOfDay (%-H:%-M:%-S) failed to parse"
 --
--- >>> newRefined3 @'OL @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" Id >> Snd (Head Id) >> Map (ReadP Int Id) Id) @(All (0 <..> 59) Id && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"
+-- >>> newRefined3 @OL @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" Id >> Snd (Head Id) >> Map (ReadP Int Id) Id) @(All (0 <..> 59) Id && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"
 -- Right (Refined3 {r3In = [1,2,3], r3Out = "01:02:03"})
 --
 newRefined3 :: forall opts ip op fmt i
@@ -584,13 +584,13 @@ newRefined3P _ x =
 
 -- | create a wrapped 'Refined3' type
 --
--- >>> prtRefinedTIO $ newRefined3T @_ @'OZ @(MkDayExtra Id >> Just Id) @(GuardSimple (Thd Id == 5) >> 'True) @(UnMkDay (Fst Id)) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined3T @_ @OZ @(MkDayExtra Id >> Just Id) @(GuardSimple (Thd Id == 5) >> 'True) @(UnMkDay (Fst Id)) (2019,11,1)
 -- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined3T @_ @'OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) @(UnMkDay (Fst Id)) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined3T @_ @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) @(UnMkDay (Fst Id)) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined3T @_ @'OL @(MkDayExtra Id >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) @(UnMkDay (Fst Id)) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined3T @_ @OL @(MkDayExtra Id >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) @(UnMkDay (Fst Id)) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
 --
 newRefined3T :: forall m opts ip op fmt i
@@ -605,13 +605,13 @@ newRefined3T = newRefined3TP (Proxy @'(opts,ip,op,fmt,i))
 
 -- | create a wrapped 'Refined3' type
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OZ, MkDayExtra Id >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( OZ, MkDayExtra Id >> Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
 -- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OL, MkDayExtra Id >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( OL, MkDayExtra Id >> Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( 'OL, MkDayExtra Id >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( OL, MkDayExtra Id >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
 --
 newRefined3TP :: forall m opts ip op fmt i proxy

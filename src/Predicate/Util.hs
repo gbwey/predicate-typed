@@ -79,6 +79,16 @@ module Predicate.Util (
   , type Color5
   , type Other1
   , type Other2
+  , type OZ
+  , type OL
+  , type OAN
+  , type OANV
+  , type OA
+  , type OAB
+  , type OU
+  , type OUB
+  , type OUV
+  , type OAV
 
   , HOpts(..)
   , OptT(..)
@@ -91,10 +101,7 @@ module Predicate.Util (
   , show01
   , show01'
   , lit01
-  , litLite
   , litVerbose
-  , showLite
-  , showNormal
   , showVerbose
   , showL
   , litL
@@ -108,6 +115,7 @@ module Predicate.Util (
   , RReplace(..)
   , GetReplaceFnSub(..)
   , ReplaceFnSub(..)
+  , displayROpts
 
   -- ** useful type families
   , ZwischenT
@@ -166,6 +174,7 @@ module Predicate.Util (
   , Holder
   , hh
   , showT
+  , showTK
   , prettyOrd
   , removeAnsi
   , MonadEval(..)
@@ -300,11 +309,11 @@ data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
              , _pString :: !String -- ^ optional strings to include in the results
              } deriving Show
 
--- | prism for accessing '_pBool'
+-- | lens for accessing '_pBool'
 pBool :: Lens' PE BoolP
-pBool afb (PE x y) = flip PE y <$> afb x
+pBool afb s = (\b -> s { _pBool = b }) <$> afb (_pBool s)
 
--- | prism for accessing 'PE'
+-- | lens for accessing 'PE'
 pString :: Lens' PE String
 pString afb s = (\b -> s { _pString = b }) <$> afb (_pString s)
 
@@ -518,7 +527,7 @@ data Disp = Ansi -- ^ draw normal tree
 -- | default options
 defOpts :: POpts
 defOpts = HOpts
-    { oWidth = 200
+    { oWidth = 100
     , oDebug = DNormal
     , oDisp = Ansi
     , oColor = colorDef
@@ -573,6 +582,15 @@ show01 :: (Show a1, Show a2)
   -> String
 show01 opts msg0 ret = lit01 opts msg0 ret "" . show
 
+show01' :: (Show a1, Show a2)
+  => POpts
+  -> String
+  -> a1
+  -> String
+  -> a2
+  -> String
+show01' opts msg0 ret fmt = lit01 opts msg0 ret fmt . show
+
 lit01 :: Show a1
   => POpts
   -> String
@@ -584,26 +602,11 @@ lit01 opts msg0 ret fmt as
   | null fmt && null as = msg0
   | otherwise =
          msg0
-      <> showLite opts " " ret
+      <> " "
+      <> showL opts ret
       <> litVerbose opts (" | " ++ fmt) as
 
-show01' :: (Show a1, Show a2)
-  => POpts
-  -> String
-  -> a1
-  -> String
-  -> a2
-  -> String
-show01' opts msg0 ret fmt = lit01 opts msg0 ret fmt . show
-
--- | display all data regardless of debug level
-litLite :: POpts
-         -> String
-         -> String
-         -> String
-litLite o = showLitImpl o DLite
-
--- | more restrictive: only display data at debug level 1 or less
+-- | more restrictive: only display data in verbose debug mode
 litVerbose :: POpts
          -> String
          -> String
@@ -618,20 +621,6 @@ showLitImpl :: POpts
 showLitImpl o i s a =
   if oDebug o >= i || oDebug o == DLite then s <> litL o a
   else ""
-
-showLite :: Show a
-  => POpts
-  -> String
-  -> a
-  -> String
-showLite o = showAImpl o DLite
-
-showNormal :: Show a
-  => POpts
-  -> String
-  -> a
-  -> String
-showNormal o = showAImpl o DNormal
 
 showVerbose :: Show a
   => POpts
@@ -707,16 +696,19 @@ compileRegex opts nm s hhs
   | otherwise =
       let rs = getROpts @rs
           mm = nm <> " " <> show rs
-      in flip left (RH.compileM (TE.encodeUtf8 (T.pack s)) rs)
+      in flip left (RH.compileM (TE.encodeUtf8 (T.pack s)) (snd rs))
             $ \e -> mkNode opts (FailT "Regex failed to compile") (mm <> ":" <> e) hhs
 
 -- | extract the regex options from the type level list
 class GetROpts (os :: [ROpt]) where
-  getROpts :: [RL.PCREOption]
+  getROpts :: ([String], [RL.PCREOption])
 instance GetROpts '[] where
-  getROpts = []
-instance (GetROpt r, GetROpts rs) => GetROpts (r ': rs) where
-  getROpts = getROpt @r : getROpts @rs
+  getROpts = ([], [])
+instance (Typeable r, GetROpt r, GetROpts rs) => GetROpts (r ': rs) where
+  getROpts = ((showTK @r :) *** (getROpt @r :)) (getROpts @rs)
+
+displayROpts :: [String] -> String
+displayROpts xs = "[" <> (intercalate ", " (nub xs)) <> "]"
 
 -- | convert type level regex option to the value level
 class GetROpt (o :: ROpt) where
@@ -1171,8 +1163,13 @@ prefixMsg :: String -> TT a -> TT a
 prefixMsg msg t =
    t & tString %~ (msg <>)
 
+-- | show the type as a string
 showT :: forall (t :: Type) . Typeable t => String
 showT = show (typeRep (Proxy @t))
+
+-- | show the kind as a string
+showTK :: forall r . Typeable r => String
+showTK = show (typeRep (Proxy @r))
 
 prettyOrd :: Ordering -> String
 prettyOrd = \case
@@ -1395,10 +1392,12 @@ readField fieldName readVal = do
         GR.expectP (L.Punc "=")
         readVal
 
+-- composite types are used instead of type synonyms as showT (typeRep) unrolls the definition
+-- eg sqlhandler.encode/decode and parsejson* etc
 -- | Display options
 data OptT =
     OWidth !Nat           -- ^ set display width
-  | OMsg !Symbol      -- ^ set text to add context to a failure message for refined types
+  | OMsg !Symbol          -- ^ set text to add context to a failure message for refined types
   | ORecursion !Nat       -- ^ set recursion limit eg for regex
   | OOther                -- ^ set effects for messages
      !Bool    -- ^ set underline
@@ -1418,20 +1417,22 @@ data OptT =
      !Color   -- ^ Present background color
   | OColorOn  -- ^ turn on colors
   | OColorOff -- ^ turn off colors
-  | OZ                    -- ^ composite: no messages
-  | OL                    -- ^ composite: lite version
-  | OAN                   -- ^ composite: ansi + no colors
-  | OA                    -- ^ composite: ansi + colors
-  | OAB                   -- ^ composite: ansi + colors + background
-  | OU                    -- ^ composite: unicode + colors
-  | OUB                   -- ^ composite: unicode + colors + background
-  | OUV                   -- ^ composite: unicode + colors + verbose
   | OAnsi                 -- ^ ansi display
   | OUnicode              -- ^ unicode display
   | OZero                 -- ^ debug mode return nothing
   | OLite                 -- ^ debug mode return one line
   | ONormal               -- ^ debug mode normal
   | OVerbose              -- ^ debug mode verbose
+  | OZ                    -- ^ composite: no messages
+  | OL                    -- ^ composite: lite version
+  | OAN                   -- ^ composite: ansi + no colors
+  | OANV                  -- ^ composite: ansi + no colors + verbose
+  | OA                    -- ^ composite: ansi + colors
+  | OAV                   -- ^ composite: ansi + colors + verbose
+  | OAB                   -- ^ composite: ansi + colors + background
+  | OU                    -- ^ composite: unicode + colors
+  | OUB                   -- ^ composite: unicode + colors + background
+  | OUV                   -- ^ composite: unicode + colors + verbose
 
 instance Show OptT where
   show = \case
@@ -1444,20 +1445,22 @@ instance Show OptT where
             OColor _s _c1 _c2 _c3 _c4 _c5 _c6 _c7 _c8 -> "OColor"
             OColorOn -> "OColorOn"
             OColorOff -> "OColorOff"
-            OZ -> "OZ"
-            OL -> "OL"
-            OAN -> "OAN"
-            OA -> "OA"
-            OAB -> "OAB"
-            OU -> "OU"
-            OUB -> "OUB"
-            OUV -> "OUV"
             OAnsi -> "OAnsi"
             OUnicode -> "OUnicode"
             OZero -> "OZero"
             OLite -> "OLite"
             ONormal -> "ONormal"
             OVerbose -> "OVerbose"
+            OZ -> "OZ"
+            OL -> "OL"
+            OAN -> "OAN"
+            OANV -> "OANV"
+            OA -> "OA"
+            OAB -> "OAB"
+            OAV -> "OAV"
+            OU -> "OU"
+            OUB -> "OUB"
+            OUV -> "OUV"
 
 infixr 6 :#
 
@@ -1504,22 +1507,6 @@ instance OptTC 'OColorOn where
    getOptT' = setNoColor False
 instance OptTC 'OColorOff where
    getOptT' = setNoColor True
-instance OptTC 'OZ where
-   getOptT' = setDisp Ansi <> setNoColor True <> setDebug DZero
-instance OptTC 'OL where
-   getOptT' = setDisp Ansi <> setNoColor True <> setDebug DLite
-instance OptTC 'OAN where
-   getOptT' = setDisp Ansi <> setNoColor True <> setDebug DNormal
-instance OptTC 'OA where
-   getOptT' = setDisp Ansi <> getOptT' @Color5 <> setDebug DNormal <> getOptT' @Other2
-instance OptTC 'OAB where
-   getOptT' = setDisp Ansi <> getOptT' @Color1 <> setDebug DNormal <> getOptT' @Other1
-instance OptTC 'OU where
-   getOptT' = setDisp Unicode <> getOptT' @Color5 <> setDebug DNormal <> getOptT' @Other2
-instance OptTC 'OUB where
-   getOptT' = setDisp Unicode <> getOptT' @Color1 <> setDebug DNormal <> getOptT' @Other1
-instance OptTC 'OUV where
-   getOptT' = getOptT' @('OU ':# 'OVerbose)
 instance OptTC 'OAnsi where
    getOptT' = setDisp Ansi
 instance OptTC 'OUnicode where
@@ -1532,10 +1519,41 @@ instance OptTC 'ONormal where
    getOptT' = setDebug DNormal
 instance OptTC 'OVerbose where
    getOptT' = setDebug DVerbose
+instance OptTC 'OZ where
+   getOptT' = setDisp Ansi <> setNoColor True <> setDebug DZero
+instance OptTC 'OL where
+   getOptT' = setDisp Ansi <> setNoColor True <> setDebug DLite <> setWidth 200
+instance OptTC 'OAN where
+   getOptT' = setDisp Ansi <> setNoColor True <> setDebug DNormal <> setWidth 100
+instance OptTC 'OANV where
+   getOptT' = setDisp Ansi <> setNoColor True <> setDebug DVerbose <> setWidth 200
+instance OptTC 'OA where
+   getOptT' = setDisp Ansi <> getOptT' @Color5 <> setDebug DNormal <> getOptT' @Other2 <> setWidth 100
+instance OptTC 'OAB where
+   getOptT' = setDisp Ansi <> getOptT' @Color1 <> setDebug DNormal <> getOptT' @Other1 <> setWidth 100
+instance OptTC 'OAV where
+   getOptT' = getOptT' @('OA ':# 'OVerbose ':# 'OWidth 200)
+instance OptTC 'OU where
+   getOptT' = getOptT' @('OA ':# 'OUnicode)
+instance OptTC 'OUB where
+   getOptT' = getOptT' @('OAB ':# 'OUnicode)
+instance OptTC 'OUV where
+   getOptT' = getOptT' @('OAV ':# 'OUnicode)
+
+type OZ = 'OAnsi ':# 'OColorOff ':# 'OZero
+type OL = 'OAnsi ':# 'OColorOff ':# 'OLite ':# 'OWidth 200
+type OAN = 'OAnsi ':# 'OColorOff ':# 'ONormal ':# 'OWidth 100
+type OANV = 'OAnsi ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
+type OA = 'OAnsi ':# Color5 ':# 'ONormal ':# Other2 ':# 'OWidth 100
+type OAB = 'OAnsi ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
+type OAV = 'OAnsi ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
+type OU = 'OUnicode ':# Color5 ':# 'ONormal ':# Other2 ':# 'OWidth 100
+type OUB = 'OUnicode ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
+type OUV = 'OUnicode ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
 
 -- | convert typelevel options to 'POpts'
 --
--- >>> (oDisp &&& fst . oColor &&& oWidth) (getOptT @('OA ':# 'OU ':# 'OA ':# 'OWidth 321 ':# Color4 ':# 'OMsg "test message"))
+-- >>> (oDisp &&& fst . oColor &&& oWidth) (getOptT @(OA ':# OU ':# OA ':# 'OWidth 321 ':# Color4 ':# 'OMsg "test message"))
 -- (Ansi,("color4",321))
 --
 -- >>> oMsg (getOptT @('OMsg "abc" ':# 'OMsg "def"))
@@ -1544,9 +1562,9 @@ instance OptTC 'OVerbose where
 -- >>> oOther (getOptT @('OOther 'False 'Red 'White ':# 'OOther 'True 'Red 'Black))
 -- (True,Red,Black)
 --
--- >>> a = show (getOptT @('OEmpty ':# 'OU))
--- >>> b = show (getOptT @('OU ':# 'OEmpty));
--- >>> c = show (getOptT @'OU)
+-- >>> a = show (getOptT @('OEmpty ':# OU))
+-- >>> b = show (getOptT @(OU ':# 'OEmpty));
+-- >>> c = show (getOptT @OU)
 -- >>> a==b && b==c
 -- True
 --
@@ -1632,7 +1650,7 @@ type family AnyT :: k where {}
 
 -- | mconcat  options at the type level
 --
--- >>> x = getOptT @(OptTT '[ 'OMsg "test", 'ORecursion 123, 'OU, 'OL, 'OMsg "field2"])
+-- >>> x = getOptT @(OptTT '[ 'OMsg "test", 'ORecursion 123, OU, OL, 'OMsg "field2"])
 -- >>> oMsg x
 -- ["test","field2"]
 -- >>> oRecursion x

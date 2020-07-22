@@ -27,13 +27,17 @@ module Predicate.Core (
   , IdT
   , W
   , Msg
+  , Hide
 
   -- ** display evaluation tree
   , pan
+  , panv
   , pa
   , pu
   , pab
   , pub
+  , pav
+  , puv
   , pl
   , pz
   , run
@@ -50,7 +54,7 @@ module Predicate.Core (
   ) where
 import Predicate.Util
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
-import Control.Lens ((^.))
+import Control.Lens ((&), (^.), (.~))
 import Data.Proxy
 import Data.Typeable
 import Data.Kind (Type)
@@ -81,7 +85,7 @@ evalBool :: ( MonadEval m
 evalBool p opts a = fixBoolT <$> eval p opts a
 
 evalQuick :: forall p i . P p i => i -> Either String (PP p i)
-evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) (getOptT @'OL) i))
+evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) (getOptT @OL) i))
 
 -- | identity function
 --
@@ -106,7 +110,7 @@ instance Show a => P Id a where
   type PP Id a = a
   eval _ opts a =
     let msg0 = "Id"
-    in pure $ mkNode opts (PresentT a) (msg0 <> showLite opts " " a) []
+    in pure $ mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
 
 
 -- even more constraints than 'Id' so we might need to explicitly add types (Typeable)
@@ -122,7 +126,7 @@ instance ( Typeable a
   eval _ opts a =
     let msg0 = "IdT(" <> t <> ")"
         t = showT @a
-    in pure $ mkNode opts (PresentT a) (msg0 <> showLite opts " " a) []
+    in pure $ mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
 
 -- | transparent predicate wrapper to make k of kind 'Type' so it can be in a promoted list (cant mix kinds) see 'Predicate.Core.Do'
 --
@@ -135,7 +139,7 @@ instance ( Typeable a
 data W (p :: k)
 instance P p a => P (W p) a where
   type PP (W p) a = PP p a
-  eval _ = eval (Proxy @(Msg "W" p))
+  eval _ = eval (Proxy @(Msg "W " p))
 
 -- | add a message to give more context to the evaluation tree
 --
@@ -159,6 +163,16 @@ instance (P prt a
     case getValueLR opts "Msg" pp [] of
          Left e -> pure e
          Right msg -> prefixMsg msg <$> eval (Proxy @p) opts a
+
+-- | run the expression \'p\' but remove the subtrees
+data Hide p
+-- type H p = Hide p -- doesnt work with %   -- unsaturated!
+
+instance P p x => P (Hide p) x where
+  type PP (Hide p) x = PP p x
+  eval _ opts x = do
+      tt <- eval (Proxy @p) opts x
+      pure $ tt & tForest .~ []
 
 -- | 'const' () function
 --
@@ -201,7 +215,7 @@ instance KnownSymbol s => P (s :: Symbol) a where
   type PP s a = String
   eval _ opts _ =
     let s = symb @s
-    in pure $ mkNode opts (PresentT s) ("'" <> litLite opts "" s) []
+    in pure $ mkNode opts (PresentT s) ("'" <> litL opts ("\"" <> s <> "\"")) []
 
 -- | run the predicates in a promoted 2-tuple; similar to 'Control.Arrow.&&&'
 --
@@ -210,6 +224,8 @@ instance KnownSymbol s => P (s :: Symbol) a where
 --
 instance ( P p a
          , P q a
+--         , Show (PP p a)
+--         , Show (PP q a)
          ) => P '(p,q) a where
   type PP '(p,q) a = (PP p a, PP q a)
   eval _ opts a = do
@@ -219,6 +235,7 @@ instance ( P p a
        Left e -> e
        Right (p,q,pp,qq) ->
          mkNode opts (PresentT (p,q)) msg [hh pp, hh qq]
+--         mkNode opts (PresentT (p,q)) ("'(" <> showL opts p <> ", " <> showL opts q <> ")") [hh pp, hh qq]
 
 -- | run the predicates in a promoted 3-tuple
 --
@@ -480,7 +497,7 @@ instance ( Show (PP p a)
     let msg0 = ""
     pure $ case getValueLR opts msg0 pp [] of
        Left e -> e
-       Right b -> mkNode opts (PresentT [b]) ("'" <> showLite opts "" [b] <> showVerbose opts " | " a) [hh pp]
+       Right b -> mkNode opts (PresentT [b]) ("'" <> showL opts [b] <> showVerbose opts " | " a) [hh pp]
 
 instance (Show (PP p a)
         , Show a
@@ -498,7 +515,7 @@ instance (Show (PP p a)
       Right (p,q,pp,qq) ->
         let ret = p:q
         -- no gap between ' and ret!
-        in mkNode opts (PresentT ret) ("'" <> showLite opts "" ret <> showVerbose opts " | " a) [hh pp, hh qq]
+        in mkNode opts (PresentT ret) ("'" <> showL opts ret <> showVerbose opts " | " a) [hh pp, hh qq]
 
 -- | extracts the \'a\' from type level \'Maybe a\' if the value exists
 --
@@ -717,40 +734,46 @@ instance GetBoolT x b => P (b :: BoolT x) a where
       Right True -> mkNode opts (PresentT False) "'PresentT _" []
       Right False -> mkNode opts (FailT "'FailT _") "BoolT" []
 
-pan, pa, pu, pl, pz, pab, pub
+pan, panv, pa, pu, pl, pz, pab, pub, pav, puv
   :: forall p a
   . ( Show (PP p a)
     , P p a
     ) => a
       -> IO (BoolT (PP p a))
 -- | skips the evaluation tree and just displays the end result
-pz = run @'OZ @p
+pz = run @OZ @p
 -- | same as 'pz' but adds context to the end result
-pl = run @'OL @p
+pl = run @OL @p
 -- | displays the evaluation tree in plain text without colors
-pan  = run @'OAN @p
+pan = run @OAN @p
+-- | displays the evaluation tree in plain text without colors and verbose
+panv = run @OANV @p
 -- | displays the evaluation tree using colors without background colors
-pa = run @'OA @p
+pa = run @OA @p
 -- | displays the evaluation tree using background colors
-pab = run @'OAB @p
+pab = run @OAB @p
+-- | 'pa' and verbose
+pav = run @OAV @p
 -- | display the evaluation tree using unicode and colors
 -- @
 --   pu @'(Id, "abc", 123) [1..4]
 -- @
-pu = run @'OU @p
+pu = run @OU @p
 -- | displays the evaluation tree using unicode and colors with background colors
-pub = run @'OUB @p
+pub = run @OUB @p
+-- | 'pu' and verbose
+puv = run @OUV @p
 
 -- | evaluate a typelevel expression (use type applications to pass in the options and the expression)
 --
--- >>> run @'OZ @Id 123
+-- >>> run @OZ @Id 123
 -- PresentT 123
 --
--- >>> run @('OMsg "field1" ':# 'OL) @('Left Id) (Right 123)
+-- >>> run @('OMsg "field1" ':# OL) @('Left Id) (Right 123)
 -- field1 >>> Error 'Left found Right
 -- FailT "'Left found Right"
 --
--- >>> run @(OptTT '[ 'OMsg "test", 'OU, 'OEmpty, 'OL, 'OMsg "field2"]) @('FailT '[]) ()
+-- >>> run @(OptTT '[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"]) @('FailT '[]) ()
 -- test | field2 >>> Error 'FailT _ (BoolT)
 -- FailT "'FailT _"
 --
@@ -769,11 +792,11 @@ run a = do
 
 -- | run expression with multiple options in a list
 --
--- >>> runs @'[ 'OL, 'OMsg "field2"] @'( 'True, 'False) ()
+-- >>> runs @'[ OL, 'OMsg "field2"] @'( 'True, 'False) ()
 -- field2 >>> Present (True,False) ('(,))
 -- PresentT (True,False)
 --
--- >>> runs @'[ 'OMsg "test", 'OU, 'OEmpty, 'OL, 'OMsg "field2"] @('FailT '[]) ()
+-- >>> runs @'[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"] @('FailT '[]) ()
 -- test | field2 >>> Error 'FailT _ (BoolT)
 -- FailT "'FailT _"
 --

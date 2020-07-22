@@ -117,32 +117,32 @@ import Test.QuickCheck
 --
 -- Although a common scenario is String as input, you are free to choose any input type you like
 --
--- >>> newRefined2 @'OZ @(ReadBase Int 16 Id) @(Lt 255) "00fe"
+-- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(Lt 255) "00fe"
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> newRefined2 @'OZ @(ReadBase Int 16 Id) @(Lt 253) "00fe"
+-- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(Lt 253) "00fe"
 -- Left "Step 2. False Boolean Check(op) | FalseP"
 --
--- >>> newRefined2 @'OZ @(ReadBase Int 16 Id) @(Lt 255) "00fg"
+-- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(Lt 255) "00fg"
 -- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"
 --
--- >>> newRefined2 @'OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
+-- >>> newRefined2 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
 -- Left "Step 2. False Boolean Check(op) | {length invalid:5 == 4}"
 --
--- >>> newRefined2 @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1.5"
+-- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1.5"
 -- Left "Step 2. Failed Boolean Check(op) | found length=5"
 --
--- >>> newRefined2 @'OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1"
+-- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1"
 -- Right (Refined2 {r2In = [198,162,3,1], r2Out = "198.162.3.1"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> newRefined2 @'OZ @(MkDayExtra Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,13)
+-- >>> newRefined2 @OZ @(MkDayExtra Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,13)
 -- Right (Refined2 {r2In = (2019-10-13,41,7), r2Out = (2019,10,13)})
 --
--- >>> newRefined2 @'OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
+-- >>> newRefined2 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
 -- Left "Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}"
 --
--- >>> newRefined2 @'OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,12)
+-- >>> newRefined2 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,12)
 -- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
 --
 data Refined2 (opts :: OptT) ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: !i }
@@ -182,10 +182,10 @@ deriving instance (TH.Lift (PP ip i), TH.Lift i) => TH.Lift (Refined2 opts ip op
 
 -- | 'IsString' instance for Refined2
 --
--- >>> pureTryTest $ fromString @(Refined2 'OL (ReadP Int Id) (Id > 12) String) "523"
+-- >>> pureTryTest $ fromString @(Refined2 OL (ReadP Int Id) (Id > 12) String) "523"
 -- Right (Refined2 {r2In = 523, r2Out = "523"})
 --
--- >>> pureTryTest $ fromString @(Refined2 'OL (ReadP Int Id) (Id > 12) String) "2"
+-- >>> pureTryTest $ fromString @(Refined2 OL (ReadP Int Id) (Id > 12) String) "2"
 -- Left ()
 --
 instance ( s ~ String
@@ -199,16 +199,16 @@ instance ( s ~ String
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined2'
 --
--- >>> reads @(Refined2 'OZ (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 254, r2Out = \"fe\"}"
+-- >>> reads @(Refined2 OZ (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 254, r2Out = \"fe\"}"
 -- [(Refined2 {r2In = 254, r2Out = "fe"},"")]
 --
--- >>> reads @(Refined2 'OZ (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 300, r2Out = \"12c\"}"
+-- >>> reads @(Refined2 OZ (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 300, r2Out = \"12c\"}"
 -- []
 --
--- >>> reads @(Refined2 'OZ (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
+-- >>> reads @(Refined2 OZ (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
 -- [(Refined2 {r2In = -1234, r2Out = "-4d2"},"")]
 --
--- >>> reads @(Refined2 'OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined2 OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
 -- [(Refined2 {r2In = [192,168,0,1], r2Out = "192.168.0.1"},"")]
 --
 instance ( Eq i
@@ -243,10 +243,10 @@ instance ( Eq i
 -- | 'ToJSON' instance for 'Refined2'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined2 @'OZ @(ReadBase Int 16 Id) @(Between 0 255 Id) 254 "fe")
+-- >>> A.encode (unsafeRefined2 @OZ @(ReadBase Int 16 Id) @(Between 0 255 Id) 254 "fe")
 -- "\"fe\""
 --
--- >>> A.encode (unsafeRefined2 @'OZ @Id @'True @Int 123 123)
+-- >>> A.encode (unsafeRefined2 @OZ @Id @'True @Int 123 123)
 -- "123"
 --
 instance ToJSON i => ToJSON (Refined2 opts ip op i) where
@@ -256,10 +256,10 @@ instance ToJSON i => ToJSON (Refined2 opts ip op i) where
 -- | 'FromJSON' instance for 'Refined2'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.eitherDecode' @(Refined2 'OZ (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe\""
+-- >>> A.eitherDecode' @(Refined2 OZ (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe\""
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> removeAnsi $ A.eitherDecode' @(Refined2 'OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe443a\""
+-- >>> removeAnsi $ A.eitherDecode' @(Refined2 OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe443a\""
 -- Error in $: Refined2:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
@@ -300,7 +300,7 @@ instance ( Show i
 -- | 'Arbitrary' instance for 'Refined2'
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined2 'OU (ToEnum Day Id) (Snd (ToWeekDate Id) == "Tuesday") Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined2 OU (ToEnum Day Id) (Snd (ToWeekDate Id) == "Tuesday") Int)))
 -- >>> all (\x -> let y = toEnum @Day (r2Out x) in view _3 (toWeekDate y) == 2 && r2In x == y) xs
 -- True
 --
@@ -312,7 +312,7 @@ instance ( Arbitrary i
 
 -- | create a 'Refined2' generator using a generator to restrict the values (so it completes)
 --
--- >>> g = genRefined2 @'OU @(ToEnum Day Id) @(UnMkDay Id >> Snd Id == 10) arbitrary
+-- >>> g = genRefined2 @OU @(ToEnum Day Id) @(UnMkDay Id >> Snd Id == 10) arbitrary
 -- >>> xs <- generate (vectorOf 10 g)
 -- >>> all (\x -> let y = toEnum @Day (fromIntegral (r2Out x)) in view _2 (toGregorian y) == 10 && y == r2In x) xs
 -- True
@@ -356,8 +356,8 @@ genRefined2P _ g =
 --
 -- >>> import Control.Arrow ((+++))
 -- >>> import Data.Time
--- >>> type K1 = Refined2 'OAN (ReadP Day Id) 'True String
--- >>> type K2 = Refined2 'OAN (ReadP Day Id) (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id) String
+-- >>> type K1 = Refined2 OAN (ReadP Day Id) 'True String
+-- >>> type K2 = Refined2 OAN (ReadP Day Id) (Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id) String
 -- >>> r = unsafeRefined2' "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined2 {r2In = 2019-04-23, r2Out = "2019-04-23"}
@@ -379,11 +379,11 @@ genRefined2P _ g =
 -- |
 -- +- P ReadP Day 2019-05-30
 -- |  |
--- |  `- P '2019-05-30
+-- |  `- P '"2019-05-30"
 -- |
 -- `- P ReadP Day 2019-06-01
 --    |
---    `- P '2019-06-01
+--    `- P '"2019-06-01"
 -- <BLANKLINE>
 --
 instance ( Show i
@@ -422,12 +422,12 @@ withRefined2TIO = (>>=) . newRefined2TIO @_ @opts @ip @op @i
 -- reads a binary string and adds the values together
 --
 -- >>> :set -XPolyKinds
--- >>> prtRefinedTIO $ withRefined2T @'OZ @(ReadBase Int 16 Id) @(Between 100 200 Id) "a3" $ \x -> withRefined2T @'OZ @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (r2In x + r2In y)
+-- >>> prtRefinedTIO $ withRefined2T @OZ @(ReadBase Int 16 Id) @(Between 100 200 Id) "a3" $ \x -> withRefined2T @OZ @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (r2In x + r2In y)
 -- 794
 --
 -- this example fails as the the hex value is out of range
 --
--- >>> prtRefinedTIO $ withRefined2T @'OAN @(ReadBase Int 16 Id) @(Between 100 200 Id) "a388" $ \x -> withRefined2T @'OAN @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (x,y)
+-- >>> prtRefinedTIO $ withRefined2T @OAN @(ReadBase Int 16 Id) @(Between 100 200 Id) "a388" $ \x -> withRefined2T @OAN @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (x,y)
 -- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (41864) ***
 -- <BLANKLINE>
@@ -470,13 +470,13 @@ withRefined2TP p = (>>=) . newRefined2TP p
 
 -- | pure version for extracting Refined2
 --
--- >>> newRefined2 @'OL @Id @'True 22
+-- >>> newRefined2 @OL @Id @'True 22
 -- Right (Refined2 {r2In = 22, r2Out = 22})
 --
--- >>> newRefined2 @'OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-04 12:13:14Z"
+-- >>> newRefined2 @OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-04 12:13:14Z"
 -- Right (Refined2 {r2In = 2020-05-04 12:13:14 UTC, r2Out = "2020-05-04 12:13:14Z"})
 --
--- >>> newRefined2 @'OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-08 12:13:14Z"
+-- >>> newRefined2 @OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-08 12:13:14Z"
 -- Left "Step 2. False Boolean Check(op) | {Just 2020-05-08 <= Just 2020-05-07}"
 --
 newRefined2 :: forall opts ip op i
@@ -498,13 +498,13 @@ newRefined2P _ x =
 
 -- | create a wrapped 'Refined2' type
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined2T @_ @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,1)
 -- Refined2 {r2In = (2019-11-01,44,5), r2Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @_ @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @'OL @(MkDayExtra Id >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @_ @OL @(MkDayExtra Id >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
 --
 newRefined2T :: forall m opts ip op i
@@ -687,13 +687,13 @@ prt2Impl opts v =
 --
 -- set the 4-tuple directly
 --
--- >>> eg1 = mkProxy2 @'( 'OL, ReadP Int Id, Gt 10, String)
+-- >>> eg1 = mkProxy2 @'( OL, ReadP Int Id, Gt 10, String)
 -- >>> newRefined2P eg1 "24"
 -- Right (Refined2 {r2In = 24, r2Out = "24"})
 --
 -- skip the 4-tuple and set each parameter individually using type application
 --
--- >>> eg2 = mkProxy2 @_ @'OL @(ReadP Int Id) @(Gt 10)
+-- >>> eg2 = mkProxy2 @_ @OL @(ReadP Int Id) @(Gt 10)
 -- >>> newRefined2P eg2 "24"
 -- Right (Refined2 {r2In = 24, r2Out = "24"})
 --
