@@ -185,6 +185,7 @@ module Predicate.Util (
   , pureTryTest
   , pureTryTestPred
   , isPrime
+  , unlessNull
 
     ) where
 import qualified GHC.TypeNats as GN
@@ -229,6 +230,7 @@ import Data.Monoid (Last (..))
 import Data.Maybe
 import Data.Coerce
 import Data.Foldable (toList)
+import Data.Containers.ListUtils (nubOrd)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -708,7 +710,7 @@ instance (Typeable r, GetROpt r, GetROpts rs) => GetROpts (r ': rs) where
   getROpts = ((showTK @r :) *** (getROpt @r :)) (getROpts @rs)
 
 displayROpts :: [String] -> String
-displayROpts xs = "[" <> (intercalate ", " (nub xs)) <> "]"
+displayROpts xs = "[" <> intercalate ", " (nubOrd xs) <> "]"
 
 -- | convert type level regex option to the value level
 class GetROpt (o :: ROpt) where
@@ -1659,3 +1661,8 @@ type family AnyT :: k where {}
 type family OptTT (xs :: [OptT]) where
   OptTT '[] = 'OEmpty
   OptTT (x ': xs) = x ':# OptTT xs
+
+unlessNull :: (Foldable t, Monoid m) => t a -> m -> m
+unlessNull t m | null t = mempty
+               | otherwise = m
+

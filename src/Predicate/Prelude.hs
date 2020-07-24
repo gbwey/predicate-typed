@@ -247,6 +247,7 @@ module Predicate.Prelude (
   , ToEnum
   , ToEnum'
   , EnumFromTo
+  , type (...)
   , EnumFromThenTo
   -- *** bounded enum expressions
   , SuccB
@@ -269,7 +270,7 @@ module Predicate.Prelude (
   , Concat
   , ConcatMap
   , Partition
-  , GroupOn
+  , PartitionBy
   , GroupBy
   , Filter
   , Break
@@ -585,7 +586,7 @@ import Control.Arrow
 import qualified Data.Semigroup as SG
 import qualified Data.List.NonEmpty as N
 import Data.List.NonEmpty (NonEmpty(..))
-import Numeric
+import qualified Numeric
 import Data.Char
 import Data.Function
 import Data.These (These(..))
@@ -871,7 +872,7 @@ instance (P p a
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
-            ts <- zipWithM (\i a -> ((i, a),) <$> (if isVerbose opts then evalBool (Proxy @p) else evalBool (Proxy @(Hide p))) opts a) [0::Int ..] (toList q)
+            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide (Proxy @p) opts a) [0::Int ..] (toList q)
             pure $ case splitAndAlign opts msg0 ts of
                  Left e -> e
                  Right abcs ->
@@ -916,7 +917,7 @@ instance (P p a
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
-            ts <- zipWithM (\i a -> ((i, a),) <$> (if isVerbose opts then evalBool (Proxy @p) else evalBool (Proxy @(Hide p))) opts a) [0::Int ..] (toList q)
+            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide (Proxy @p) opts a) [0::Int ..] (toList q)
             pure $ case splitAndAlign opts msg0 ts of
                  Left e -> e
                  Right abcs ->
@@ -1005,7 +1006,7 @@ instance (GetROpts rs
         ) => P (Re' rs p q) x where
   type PP (Re' rs p q) x = Bool
   eval _ opts x = do
-    let msg0 = "Re" <> (if null rs then "" else ("' " <> displayROpts fs))
+    let msg0 = "Re" <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
@@ -1056,7 +1057,7 @@ instance (GetROpts rs
         ) => P (Rescan' rs p q) x where
   type PP (Rescan' rs p q) x = [(String, [String])]
   eval _ opts x = do
-    let msg0 = "Rescan" <> (if null rs then "" else ("' " <> displayROpts fs))
+    let msg0 = "Rescan" <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
@@ -1096,7 +1097,7 @@ instance (GetROpts rs
         ) => P (RescanRanges' rs p q) x where
   type PP (RescanRanges' rs p q) x = [((Int,Int), [(Int,Int)])]
   eval _ opts x = do
-    let msg0 = "RescanRanges" <> (if null rs then "" else ("' " <> displayROpts fs))
+    let msg0 = "RescanRanges" <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
@@ -1142,7 +1143,7 @@ instance (GetROpts rs
         ) => P (Resplit' rs p q) x where
   type PP (Resplit' rs p q) x = [String]
   eval _ opts x = do
-    let msg0 = "Resplit" <> (if null rs then "" else ("' " <> displayROpts fs))
+    let msg0 = "Resplit" <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
@@ -1184,7 +1185,7 @@ instance (GetBool b
         ) => P (ReplaceImpl b rs p q r) x where
   type PP (ReplaceImpl b rs p q r) x = String
   eval _ opts x = do
-    let msg0 = "Replace" <> (if alle then "All" else "One") <> (if null rs then "" else ("' " <> displayROpts fs))
+    let msg0 = "Replace" <> (if alle then "All" else "One") <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
         alle = getBool @b
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
@@ -2572,12 +2573,7 @@ instance (P p (a,a)
                 [] -> pure $ mkNode opts (PresentT mempty) (msg0 <> " empty") [hh qq]
                 [w] -> pure $ mkNode opts (PresentT [w]) (msg0 <> " one element " <> showL opts w) [hh qq]
                 w:ys@(_:_) -> do
-                  pp <- (if isVerbose opts then
-                              eval (Proxy @(SortByHelperT p))
-                         else eval (Proxy @(Hide (SortByHelperT p)))) opts (map (w,) ys)
---                  pp <- eval (Proxy @(Hide (Partition (p >> Id == 'GT) Id))) opts (map (w,) ys)
--- too much output: dont need (Map (Snd Id) *** Map (Snd Id)) -- just do map snd in code
---                  pp <- eval (Proxy @(Partition (p >> (Id == 'GT)) Id >> (Map (Snd Id) *** Map (Snd Id)))) opts (map (w,) ys)
+                  pp <- evalHide (Proxy @(SortByHelperT p)) opts (map (w,) ys)
                   case getValueLR opts msg0 pp [hh qq] of
                     Left e -> pure e
                     Right (ll', rr') -> do
@@ -4528,7 +4524,6 @@ instance (Show a
 -- >>> pz @(Pred Id) LT
 -- FailT "Pred IO e=Prelude.Enum.Ordering.pred: bad argument"
 --
-
 data Pred p
 
 instance (Show a
@@ -6070,10 +6065,10 @@ instance P NullT a => P Null a where
 
 -- | similar to 'enumFromTo'
 --
--- >>> pz @(EnumFromTo 2 5) ()
+-- >>> pz @(2 ... 5) ()
 -- PresentT [2,3,4,5]
 --
--- >>> pz @(EnumFromTo 'LT 'GT) ()
+-- >>> pz @('LT ... 'GT) ()
 -- PresentT [LT,EQ,GT]
 --
 -- >>> pz @(EnumFromTo 'GT 'LT) ()
@@ -6086,6 +6081,14 @@ instance P NullT a => P Null a where
 -- PresentT [(1,""),(2,""),(3,"Fizz"),(4,""),(5,"Buzz"),(6,"Fizz"),(7,""),(8,""),(9,"Fizz"),(10,"Buzz"),(11,""),(12,"Fizz"),(13,""),(14,""),(15,"FizzBuzz"),(16,""),(17,""),(18,"Fizz"),(19,""),(20,"Buzz")]
 --
 data EnumFromTo p q
+data p ... q
+infix 4 ...
+
+type EnumFromToT p q = EnumFromTo p q
+
+instance P (EnumFromToT p q) x => P (p ... q) x where
+  type PP (p ... q) x = PP (EnumFromToT p q) x
+  eval _ = eval (Proxy @(EnumFromToT p q))
 
 instance (P p x
         , P q x
@@ -6096,11 +6099,11 @@ instance (P p x
         ) => P (EnumFromTo p q) x where
   type PP (EnumFromTo p q) x = [PP p x]
   eval _ opts z = do
-    let msg0 = "EnumFromTo"
+    let msg0 = "..."
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq) -> mkNode opts (PresentT (enumFromTo p q)) (msg0 <> " [" <> showL opts p <> " .. " <> showL opts q <> "]") [hh pp, hh qq]
+      Right (p,q,pp,qq) -> mkNode opts (PresentT (enumFromTo p q)) (showL opts p <> " " <> msg0 <> " " <> showL opts q) [hh pp, hh qq]
 
 -- | similar to 'enumFromThenTo'
 --
@@ -6242,7 +6245,7 @@ instance (PP p (b,a) ~ b
                        case as' of
                          [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (PresentT q) (msg0 <> "(done)") [])], Right ())
                          a:as -> do
-                            pp :: TT b <- (if isVerbose opts then eval (Proxy @p) else eval (Proxy @(Hide p))) opts (b,a)
+                            pp :: TT b <- evalHide (Proxy @p) opts (b,a)
                             case getValueLR opts (msg0 <> " i=" <> showIndex i <> " a=" <> show a) pp [] of
                                Left e  -> pure (rs,Left e)
                                Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
@@ -6310,7 +6313,7 @@ instance (PP q a ~ s
         let msg1 = msg0 <> " " <> showL opts q
             ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":recursion limit i=" <> showIndex i)) ("s=" <> showL opts s) [])
                       | otherwise = do
-                              pp :: TT (PP p s) <- (if isVerbose opts then eval (Proxy @p) else eval (Proxy @(Hide p))) opts s
+                              pp :: TT (PP p s) <- evalHide (Proxy @p) opts s
                               case getValueLR opts (msg1 <> " i=" <> showIndex i <> " s=" <> show s) pp [] of
                                    Left e  -> pure (rs, Left e)
                                    Right Nothing -> pure (rs, Right ())
@@ -6395,7 +6398,7 @@ instance (Show (PP p a)
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
       Right q -> do
-        ts <- zipWithM (\i a -> ((i, a),) <$> (if isVerbose opts then eval (Proxy @p) else eval (Proxy @(Hide p))) opts a) [0::Int ..] (toList q)
+        ts <- zipWithM (\i a -> ((i, a),) <$> evalHide (Proxy @p) opts a) [0::Int ..] (toList q)
         pure $ case splitAndAlign opts msg0 ts of
              Left e -> e
              Right abcs ->
@@ -6500,7 +6503,7 @@ instance (P p x
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
-             ts <- zipWithM (\i a -> ((i, a),) <$> (if isVerbose opts then evalBool (Proxy @p) else evalBool (Proxy @(Hide p))) opts a) [0::Int ..] q
+             ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide (Proxy @p) opts a) [0::Int ..] q
              pure $ case splitAndAlign opts msg0 ts of
                Left e -> e
                Right abcs ->
@@ -6510,17 +6513,20 @@ instance (P p x
                  in mkNode opts (PresentT zz1) (show01' opts msg0 zz1 "s=" q) (hh qq : map (hh . fixit) itts)
 
 
--- | groups values based on a function
+-- | partition values based on a function
 --
--- >>> pl @(GroupOn Ordering (Case (Failt _ "asdf") '[Id < 2, Id == 2, Id > 2] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
--- Present fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])] (GroupOn fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])] | s=[-4,2,5,6,7,1,2,3,4])
+-- >>> pz @(PartitionBy Ordering (Case 'EQ '[Id < 0, Id > 0] '[ 'LT, 'GT] Id) Id) [-4,-2,5,6,7,0,-1,2,-3,4,0]
+-- PresentT (fromList [(LT,[-3,-1,-2,-4]),(EQ,[0,0]),(GT,[4,2,7,6,5])])
+--
+-- >>> pl @(PartitionBy Ordering (Case (Failt _ "asdf") '[Id < 2, Id == 2, Id > 2] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
+-- Present fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])] (PartitionBy fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])] | s=[-4,2,5,6,7,1,2,3,4])
 -- PresentT (fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])])
 --
--- >>> pl @(GroupOn Ordering (Case (Failt _ "xyzxyzxyzzyyysyfsyfydf") '[Id < 2, Id == 2, Id > 3] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
--- Error xyzxyzxyzzyyysyfsyfydf (GroupOn(i=7, a=3) excnt=1)
+-- >>> pl @(PartitionBy Ordering (Case (Failt _ "xyzxyzxyzzyyysyfsyfydf") '[Id < 2, Id == 2, Id > 3] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
+-- Error xyzxyzxyzzyyysyfsyfydf (PartitionBy(i=7, a=3) excnt=1)
 -- FailT "xyzxyzxyzzyyysyfsyfydf"
 --
-data GroupOn t p q
+data PartitionBy t p q
 
 instance (P p x
         , Ord t
@@ -6529,10 +6535,10 @@ instance (P p x
         , PP q a ~ [x]
         , PP p x ~ t
         , P q a
-        ) => P (GroupOn t p q) a where
-  type PP (GroupOn t p q) a = M.Map t (PP q a)
+        ) => P (PartitionBy t p q) a where
+  type PP (PartitionBy t p q) a = M.Map t (PP q a)
   eval _ opts a' = do
-    let msg0 = "GroupOn"
+    let msg0 = "PartitionBy"
     qq <- eval (Proxy @q) opts a'
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
@@ -6540,7 +6546,7 @@ instance (P p x
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
-             ts <- zipWithM (\i a -> ((i, a),) <$> (if isVerbose opts then eval (Proxy @p) else eval (Proxy @(Hide p))) opts a) [0::Int ..] q
+             ts <- zipWithM (\i a -> ((i, a),) <$> evalHide (Proxy @p) opts a) [0::Int ..] q
              pure $ case splitAndAlign opts msg0 ts of
                    Left e -> e
                    Right abcs ->
@@ -6633,7 +6639,7 @@ instance (Show x
                [] -> pure $ mkNode opts (PresentT []) (show01' opts msg0 q "s=" q) [hh qq]
                [_] -> pure $ mkNode opts (PresentT [q]) (show01' opts msg0 [q] "s=" q) [hh qq]
                x:xs -> do
-                 ts <- zipWithM (\i (a,b) -> ((i, b),) <$> (if isVerbose opts then eval (Proxy @p) else eval (Proxy @(Hide p))) opts (a,b)) [0::Int ..] (zip (x:xs) xs)
+                 ts <- zipWithM (\i (a,b) -> ((i, b),) <$> evalBoolHide (Proxy @p) opts (a,b)) [0::Int ..] (zip (x:xs) xs)
                  pure $ case splitAndAlign opts msg0 ts of
                    Left e -> e
                    Right abcs ->
@@ -6642,7 +6648,7 @@ instance (Show x
                      in mkNode opts (PresentT ret) (show01' opts msg0 ret "s=" q ) (hh qq : map (hh . fixit) itts)
 
 gp1 :: x -> [(Bool, (Int, x), TT Bool)] -> [[x]]
-gp1 b xs = go [b] xs
+gp1 b = go [b]
   where
   go ret =
      \case
@@ -6686,7 +6692,7 @@ instance (P p x
           Right () -> do
             let ff [] zs = pure (zs, [], Nothing) -- [(ia,qq)] extras | the rest of the data | optional last pivot or failure
                 ff ((i,a):ias) zs = do
-                   pp <- (if isVerbose opts then evalBool (Proxy @p) else evalBool (Proxy @(Hide p))) opts a
+                   pp <- evalBoolHide (Proxy @p) opts a
                    let v = ((i,a), pp)
                    case getValueLR opts msg0 pp [hh qq] of
                      Right False -> ff ias (zs Seq.|> v)
@@ -7069,11 +7075,12 @@ instance (PP prt (Int, a) ~ String
      let cpos = n-pos-1
          msgbase1 = "Guard(" <> show cpos <> ")"
          msgbase2 = "Guards"
-         n :: Int = nat @n
+         n :: Int
+         n = nat @n
          pos = getLen @ps
      case as' of
          a:as -> do
-            pp <- evalBool (Proxy @p) opts a
+            pp <- evalBoolHide (Proxy @p) opts a
             case getValueLR opts (msgbase1 <> " p failed") pp [] of
                  Left e -> pure e
                  Right False -> do
@@ -7193,7 +7200,7 @@ instance (PP prt (Int, a) ~ String
          pos = getLen @ps
      case as' of
          a:as -> do
-            pp <- evalBool (Proxy @p) opts a
+            pp <- evalBoolHide (Proxy @p) opts a
             case getValueLR opts (msgbase1 <> " p failed") pp [] of
                  Left e -> pure e
                  Right False -> do
@@ -7298,7 +7305,7 @@ instance (PP prt a ~ String
          pos = getLen @ps
      case as' of
          a:as -> do
-            pp <- evalBool (Proxy @p) opts a
+            pp <- evalBoolHide (Proxy @p) opts a
             case getValueLR opts (msgbase1 <> " p failed") pp [] of
                  Left e -> pure e
                  Right False -> do
@@ -8576,7 +8583,7 @@ instance (Typeable (PP t x)
         let (ff,p1) = case p of
                         '-':q -> (negate,q)
                         _ -> (id,p)
-        in case readInt (fromIntegral n)
+        in case Numeric.readInt (fromIntegral n)
             ((`elem` xs) . toLower)
             (fromJust . (`elemIndex` xs) . toLower)
             p1 of
@@ -8631,7 +8638,7 @@ instance (PP p x ~ a
       Left e -> e
       Right p ->
         let (ff,a') = if p < 0 then (('-':), abs p) else (id,p)
-            b = showIntAtBase (fromIntegral n) (xs !!) a' ""
+            b = Numeric.showIntAtBase (fromIntegral n) (xs !!) a' ""
         in mkNode opts (PresentT (ff b)) (msg0 <> " " <> litL opts (ff b) <> showVerbose opts " | " p) [hh pp]
 
 -- | intercalate two lists

@@ -49,6 +49,8 @@ module Predicate.Core (
   , runPQ
   , runPQBool
   , evalBool
+  , evalBoolHide
+  , evalHide
   , evalQuick
   , prtTree
   ) where
@@ -509,13 +511,17 @@ instance (Show (PP p a)
   type PP (p ': p1 ': ps) a = [PP p a]
   eval _ opts a = do
     let msg0 = "'(p':q)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @(p1 ': ps)) opts a []
-    pure $ case lr of
-      Left e -> e
-      Right (p,q,pp,qq) ->
-        let ret = p:q
-        -- no gap between ' and ret!
-        in mkNode opts (PresentT ret) ("'" <> showL opts ret <> showVerbose opts " | " a) [hh pp, hh qq]
+    pp <- eval (Proxy @p) opts a
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right p -> do
+        qq <- eval (Proxy @(p1 ': ps)) opts a
+        pure $ case getValueLR opts msg0 qq [hh pp] of
+          Left e -> e
+          Right q ->
+            let ret = p:q
+            -- no gap between ' and ret!
+            in mkNode opts (PresentT ret) ("'" <> showL opts ret <> litVerbose opts " " (topMessage pp) <> showVerbose opts " | " a) ([hh pp | isVerbose opts] <> [hh qq])
 
 -- | extracts the \'a\' from type level \'Maybe a\' if the value exists
 --
@@ -863,3 +869,23 @@ runPQBool msg0 proxyp proxyq opts a hhs = do
          pure $ case getValueLR opts msg0 qq (hhs <> [hh pp]) of
            Left e -> Left e
            Right q -> Right (p, q, pp, qq)
+
+evalBoolHide :: forall m p a proxy
+  . (MonadEval m, P p a, PP p a ~ Bool)
+  => proxy p
+  -> POpts
+  -> a
+  -> m (TT (PP p a))
+evalBoolHide _ opts =
+  if isVerbose opts then evalBool (Proxy @p) opts
+  else evalBool (Proxy @(Hide p)) opts
+
+evalHide :: forall m p a proxy
+  . (MonadEval m, P p a)
+  => proxy p
+  -> POpts
+  -> a
+  -> m (TT (PP p a))
+evalHide _ opts =
+  if isVerbose opts then eval (Proxy @p) opts
+  else eval (Proxy @(Hide p)) opts
