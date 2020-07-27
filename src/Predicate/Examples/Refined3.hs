@@ -388,7 +388,7 @@ type BaseIJ' (opts :: OptT) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id 
 -- Left "Step 2. False Boolean Check(op) | FalseP"
 --
 -- >>> newRefined3P (Proxy @(ReadShow' OL Rational (Msg (PrintF "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1))))) "13 % 3"
--- Left "Step 2. False Boolean Check(op) | {invalid=4.3313 % 3 > 15 % 1}"
+-- Left "Step 2. False Boolean Check(op) | {invalid=4.33 13 % 3 > 15 % 1}"
 --
 -- >>> newRefined3P (Proxy @(ReadShow' OZ Rational (Id > (11 % 1)))) "13 % 3"
 -- Left "Step 2. False Boolean Check(op) | FalseP"

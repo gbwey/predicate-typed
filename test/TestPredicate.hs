@@ -217,13 +217,13 @@ allTests =
   , expectPE (PresentT 13.345) $ pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$" Id) >> ReadP Double Id) "13.345"
   , expectPE (PresentT 13) $ pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$" Id) >> ReadP Double Id) "13"
   , expectPE (FailT "regex failed") $ pl @(ExitWhen "regex failed" (Not (Re "^\\d+(?:\\.\\d+)?$" Id)) >> ReadP Double Id) "-13.4"
-  , expectPE (PresentT GT) $ pl @(FoldN 2 Id (Succ Id)) LT
-  , expectPE (FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument") $ pl @(FoldN 30 Id (Succ Id)) LT
-  , expectPE (PresentT 'g') $ pl @(FoldN 6 Id (Succ Id)) 'a'
-  , expectPE (PresentT '[') $ pl @(FoldN 6 Id (Pred Id)) 'a'
+  , expectPE (PresentT GT) $ pl @(FoldN 2 (Succ Id) Id) LT
+  , expectPE (FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument") $ pl @(FoldN 30 (Succ Id) Id) LT
+  , expectPE (PresentT 'g') $ pl @(FoldN 6 (Succ Id) Id) 'a'
+  , expectPE (PresentT '[') $ pl @(FoldN 6 (Pred Id) Id) 'a'
   , expectPE (FailT "Regex failed to compile") $ pl @(Re "\\d{4}\\" Id) "ayx"
-  , expectPE (PresentT LT) $ pl @(FoldN 0 Id (Succ Id)) LT
-  , expectPE (PresentT LT) $ pl @(FoldN 2 Id (Succ Id) >> FoldN 2 Id (Pred Id)) LT
+  , expectPE (PresentT LT) $ pl @(FoldN 0 (Succ Id) Id) LT
+  , expectPE (PresentT LT) $ pl @(FoldN 2 (Succ Id) Id >> FoldN 2 (Pred Id) Id) LT
   , expectPE (PresentT ["2","2"]) $ pl @(Map (Fst Id) (Rescan "." (ShowP Id)) >> Filter (Same "2") Id) 12324
   , expectPE (PresentT [LT,LT,LT,GT,EQ,LT]) $ pl @((Ones Id << ShowP Id) >> Map (Fst Id ==! Snd Id) Pairs) 1234223
   , expectPE (PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]) $ pl @(IToList _ Id) ("abcd" :: String)
@@ -350,7 +350,7 @@ allTests =
   , expectPE (FailT "(3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3)") $ pl @(Map (GuardSimple (Lt 3) >> 'True) Id) [1::Int .. 10]
   , expectPE FalseT $ pl @(All (Lt 3) Id) [1::Int .. 10]
   , expectPE (PresentT [True,True,True,True,True,True,True,True,True,True]) $ pl @(Map (GuardSimple (Ge 1) >> 'True) Id) [1::Int .. 10]
-  , expectPE (PresentT [4,5,6]) $ pl @(ScanN 2 Id (Succ Id)) 4
+  , expectPE (PresentT [4,5,6]) $ pl @(ScanN 2 (Succ Id) Id) 4
   , expectPE (PresentT [4,4,4,4,4,4]) $ pl @(ScanN 5 Id Id) 4
   , expectPE (PresentT [1,2,3,244]) $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id) >> Ip4op) "1.2.3.244"
   , expectPE (FailT "octet 1 out of range 0-255 found 256") $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id) >> Ip4op) "1.256.3.244"
@@ -365,7 +365,7 @@ allTests =
   , expectPE (PresentT [1,2,4,0]) $ pl @(Do '[Succ Id,Id,ShowP Id,Ones Id,Map (ReadBase Int 8 Id) Id]) 1239
   , expectPE (FailT "invalid base 8") $ pl @(Do '[Pred Id,Id,ShowP Id,Ones Id,Map (ReadBase Int 8 Id) Id]) 1239
   , expectPE (PresentT 47) $ pl @(ReadBase Int 2 Id) "101111"
-  , expectPE (PresentT [LT,EQ,GT,EQ,EQ,EQ,EQ,EQ,EQ,EQ]) $ pl @(ScanN 2 Id (Succ Id) >> PadR 10 (MEmptyT Ordering) Id) LT
+  , expectPE (PresentT [LT,EQ,GT,EQ,EQ,EQ,EQ,EQ,EQ,EQ]) $ pl @(ScanN 2 (Succ Id) Id >> PadR 10 (MEmptyT Ordering) Id) LT
   , expectPE (PresentT 12) $ pl @('This Id) (This 12)
   , expectPE (FailT "'This found That") $ pl @('This Id) (That @() 12)
   , expectPE (PresentT (SG.Sum 12)) $ pl @(ThisDef (MEmptyT _) Id) (This @_ @() (SG.Sum 12))
@@ -477,7 +477,7 @@ allTests =
   , expectPE (PresentT (SG.Min 19)) $ pl @((FromInteger _ 12 &&& Id) >> Fst Id + Snd Id) (SG.Min 7)
   , expectPE (PresentT (SG.Product 84)) $ pl @((FromInteger _ 12 &&& Id) >> SapA) (SG.Product 7)
   , expectPE (PresentT "xyxyxyxy") $ pl @(STimes (Fst Id) (Snd Id)) (4,['x','y'])
-  , expectPE (PresentT (concat (replicate 16 "abc"))) $ pl @(FoldN 4 Id ((Id &&& Id) >> SapA)) "abc"
+  , expectPE (PresentT (concat (replicate 16 "abc"))) $ pl @(FoldN 4 ((Id &&& Id) >> SapA) Id) "abc"
   , expectPE (PresentT (concat (replicate 4 "abc"))) $ pl @(STimes (Fst Id) (Snd Id)) (4,"abc")
   , expectPE (PresentT (concat (replicate 4 "abc"))) $ pl @(STimes 4 Id) "abc"
   , expectPE (PresentT "abcd") $ pl @(Map (FromEnum Id) Id >> Map (ToEnum Char Id) Id) ("abcd" :: String)

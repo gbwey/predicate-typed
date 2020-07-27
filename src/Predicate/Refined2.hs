@@ -127,7 +127,7 @@ import Test.QuickCheck
 -- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"
 --
 -- >>> newRefined2 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
--- Left "Step 2. False Boolean Check(op) | {length invalid:5 == 4}"
+-- Left "Step 2. False Boolean Check(op) | {length invalid: 5 == 4}"
 --
 -- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1.5"
 -- Left "Step 2. Failed Boolean Check(op) | found length=5"
@@ -140,7 +140,7 @@ import Test.QuickCheck
 -- Right (Refined2 {r2In = (2019-10-13,41,7), r2Out = (2019,10,13)})
 --
 -- >>> newRefined2 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
--- Left "Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}"
+-- Left "Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}"
 --
 -- >>> newRefined2 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,12)
 -- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
@@ -414,7 +414,7 @@ withRefined2TIO :: forall opts ip op i m b
   => i
   -> (Refined2 opts ip op i -> RefinedT m b)
   -> RefinedT m b
-withRefined2TIO = (>>=) . newRefined2TIO @_ @opts @ip @op @i
+withRefined2TIO = (>>=) . newRefined2TIO @opts @ip @op @i
 
 -- | create a 'Refined2' value using a continuation
 --
@@ -457,7 +457,7 @@ withRefined2T :: forall opts ip op i m b
   -> RefinedT m b
 withRefined2T = (>>=) . newRefined2TP (Proxy @'(opts,ip,op,i))
 
-withRefined2TP :: forall m opts ip op i b proxy
+withRefined2TP :: forall opts ip op i b proxy m
   . ( Monad m
     , Refined2C opts ip op i
     , Show (PP ip i)
@@ -493,21 +493,24 @@ newRefined2P :: forall opts ip op i proxy
       -> i
       -> Either String (Refined2 opts ip op i)
 newRefined2P _ x =
-  let (lr,xs) = runIdentity $ unRavelT $ newRefined2T @_ @opts @ip @op x
+  let (lr,xs) = runIdentity $ unRavelT $ newRefined2T @opts @ip @op x
   in left (\e -> e ++ (if all null xs then "" else "\n" ++ unlines xs)) lr
 
 -- | create a wrapped 'Refined2' type
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,1)
 -- Refined2 {r2In = (2019-11-01,44,5), r2Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined2T @_ @OL @(MkDayExtra Id >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
+-- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
+-- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
 --
-newRefined2T :: forall m opts ip op i
+-- >>> prtRefinedTIO $ newRefined2TIO @OL @(Hide (Rescan "(\\d+)" Id >> ConcatMap (Snd Id) Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff) Id) "|23|99|255|254.911."
+-- failure msg[Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}]
+--
+newRefined2T :: forall opts ip op i m
    . ( Refined2C opts ip op i
      , Monad m
      , Show (PP ip i)
@@ -516,7 +519,7 @@ newRefined2T :: forall m opts ip op i
 newRefined2T = newRefined2TImpl (return . runIdentity)
 
 -- | create a wrapped 'Refined2' type with an explicit proxy
-newRefined2TP :: forall m opts ip op i proxy
+newRefined2TP :: forall opts ip op i proxy m
    . ( Refined2C opts ip op i
      , Monad m
      , Show (PP ip i)
@@ -526,13 +529,13 @@ newRefined2TP :: forall m opts ip op i proxy
 newRefined2TP _ = newRefined2TImpl (return . runIdentity)
 
 -- | create a wrapped 'Refined2' type in IO
-newRefined2TIO :: forall m opts ip op i
+newRefined2TIO :: forall opts ip op i m
    . ( Refined2C opts ip op i
      , MonadIO m
      , Show (PP ip i)
     ) => i
       -> RefinedT m (Refined2 opts ip op i)
-newRefined2TIO = newRefined2TImpl liftIO
+newRefined2TIO = newRefined2TImpl @IO @m liftIO
 
 newRefined2TImpl :: forall n m opts ip op i
    . ( Refined2C opts ip op i
@@ -574,7 +577,7 @@ prtEval2PIO :: forall opts ip op i proxy
   -> i
   -> IO (Either String (Refined2 opts ip op i))
 prtEval2PIO _ i = do
-  x <- eval2M @_ @opts @ip @op i
+  x <- eval2M @opts @ip @op i
   prt2IO @opts x
 
 prtEval2 :: forall opts ip op i
@@ -609,7 +612,7 @@ eval2 :: forall opts ip op i
   -> (RResults2 (PP ip i), Maybe (Refined2 opts ip op i))
 eval2 = runIdentity . eval2M
 
-eval2M :: forall m opts ip op i
+eval2M :: forall opts ip op i m
   . ( MonadEval m
     , Refined2C opts ip op i
     )

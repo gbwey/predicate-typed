@@ -27,6 +27,7 @@ module Predicate.Core (
   , IdT
   , W
   , Msg
+  , MsgI
   , Hide
 
   -- ** display evaluation tree
@@ -141,16 +142,16 @@ instance ( Typeable a
 data W (p :: k)
 instance P p a => P (W p) a where
   type PP (W p) a = PP p a
-  eval _ = eval (Proxy @(Msg "W " p))
+  eval _ = eval (Proxy @(MsgI "W " p))
 
 -- | add a message to give more context to the evaluation tree
 --
--- >>> pan @(Msg "[somemessage] " Id) 999
+-- >>> pan @(Msg "[somemessage]" Id) 999
 -- P [somemessage] Id 999
 -- PresentT 999
 --
 -- >>> pan @(Msg Id 999) "info message:"
--- P info message:'999
+-- P info message: '999
 -- PresentT 999
 --
 data Msg prt p
@@ -163,6 +164,29 @@ instance (P prt a
   eval _ opts a = do
     pp <- eval (Proxy @prt) opts a
     case getValueLR opts "Msg" pp [] of
+         Left e -> pure e
+         Right msg -> prefixMsg (setOtherEffects opts msg <> " ") <$> eval (Proxy @p) opts a
+
+-- | add a message to give more context to the evaluation tree
+--
+-- >>> pan @(MsgI "[somemessage] " Id) 999
+-- P [somemessage] Id 999
+-- PresentT 999
+--
+-- >>> pan @(MsgI Id 999) "info message:"
+-- P info message:'999
+-- PresentT 999
+--
+data MsgI prt p
+
+instance (P prt a
+        , PP prt a ~ String
+        , P p a
+        ) => P (MsgI prt p) a where
+  type PP (MsgI prt p) a = PP p a
+  eval _ opts a = do
+    pp <- eval (Proxy @prt) opts a
+    case getValueLR opts "MsgI" pp [] of
          Left e -> pure e
          Right msg -> prefixMsg msg <$> eval (Proxy @p) opts a
 
@@ -870,22 +894,20 @@ runPQBool msg0 proxyp proxyq opts a hhs = do
            Left e -> Left e
            Right q -> Right (p, q, pp, qq)
 
-evalBoolHide :: forall m p a proxy
+evalBoolHide :: forall p a m
   . (MonadEval m, P p a, PP p a ~ Bool)
-  => proxy p
-  -> POpts
+  => POpts
   -> a
   -> m (TT (PP p a))
-evalBoolHide _ opts =
+evalBoolHide opts =
   if isVerbose opts then evalBool (Proxy @p) opts
   else evalBool (Proxy @(Hide p)) opts
 
-evalHide :: forall m p a proxy
+evalHide :: forall p a m
   . (MonadEval m, P p a)
-  => proxy p
-  -> POpts
+  => POpts
   -> a
   -> m (TT (PP p a))
-evalHide _ opts =
+evalHide opts =
   if isVerbose opts then eval (Proxy @p) opts
   else eval (Proxy @(Hide p)) opts

@@ -273,7 +273,7 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- Left "Step 2. False Boolean Check(op) | FalseP"
 --
 -- >>> newRefined2 @OL @(ReadP Rational Id) @(Msg (PrintF "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1))) "13 % 3"
--- Left "Step 2. False Boolean Check(op) | {invalid=4.3313 % 3 > 15 % 1}"
+-- Left "Step 2. False Boolean Check(op) | {invalid=4.33 13 % 3 > 15 % 1}"
 --
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @(Id > (11 % 1)) "13 % 3"
 -- Left "Step 2. False Boolean Check(op) | FalseP"

@@ -103,10 +103,10 @@ unnamedTests = [
                   $ eval2 @OA @Id @(Gt (7 -% 3)) 4.123
 
   , expect2 (Right $ unsafeRefined2 [1,2,3,4] "1.2.3.4")
-                  $ eval2 @OA @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255 Id) Id && (Len == 4))                   "1.2.3.4"
+                  $ eval2 @OA @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255 Id) Id && (Len == 4)) "1.2.3.4"
 
-  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
-                  $ eval2 @OA @Ip6ip @Ip6op "123:Ffeff:1123:11:1"
+  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
+                  $ eval2 @OAN @Ip6ip @Ip6op "123:Ffeff:1123:11:1"
 
   , expect2 (Right $ unsafeRefined2 [12,2,0,255] "12.2.0.255")
                   $ eval2 @OA @Ip4ip @Ip4op' "12.2.0.255"
@@ -128,12 +128,12 @@ unnamedTests = [
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   "123-45-6789"
 
-  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
-                  $ eval2 @OA @Ip6ip @Ip6op
+  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
+                  $ eval2 @OAN @Ip6ip @Ip6op
                   "123:Ffeff:1123:11:1"
 
-  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
-                  $ eval2 @OA @Ip6ip @Ip6op
+  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
+                  $ eval2 @OAN @Ip6ip @Ip6op
                   "123:Ffeff:1123:11:1"
 
   , expect2 (Right $ unsafeRefined2 [0,0,0,291,65535,4387,17,1] "123:Ffff:1123:11:1")

@@ -872,7 +872,7 @@ instance (P p a
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
-            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide (Proxy @p) opts a) [0::Int ..] (toList q)
+            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] (toList q)
             pure $ case splitAndAlign opts msg0 ts of
                  Left e -> e
                  Right abcs ->
@@ -917,7 +917,7 @@ instance (P p a
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
-            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide (Proxy @p) opts a) [0::Int ..] (toList q)
+            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] (toList q)
             pure $ case splitAndAlign opts msg0 ts of
                  Left e -> e
                  Right abcs ->
@@ -2573,7 +2573,7 @@ instance (P p (a,a)
                 [] -> pure $ mkNode opts (PresentT mempty) (msg0 <> " empty") [hh qq]
                 [w] -> pure $ mkNode opts (PresentT [w]) (msg0 <> " one element " <> showL opts w) [hh qq]
                 w:ys@(_:_) -> do
-                  pp <- evalHide (Proxy @(SortByHelperT p)) opts (map (w,) ys)
+                  pp <- evalHide @(SortByHelperT p) opts (map (w,) ys)
                   case getValueLR opts msg0 pp [hh qq] of
                     Left e -> pure e
                     Right (ll', rr') -> do
@@ -6206,13 +6206,13 @@ instance P ThesesT x => P Theses x where
 -- >>> pz @(Scanl (Snd Id :+ Fst Id) (Fst Id) (Snd Id)) ([99],[1..5])
 -- PresentT [[99],[1,99],[2,1,99],[3,2,1,99],[4,3,2,1,99],[5,4,3,2,1,99]]
 --
--- >>> pz @(ScanN 4 Id (Succ Id)) 'c'
+-- >>> pz @(ScanN 4 (Succ Id) Id) 'c'
 -- PresentT "cdefg"
 --
--- >>> pz @(FoldN 4 Id (Succ Id)) 'c'
+-- >>> pz @(FoldN 4 (Succ Id) Id) 'c'
 -- PresentT 'g'
 --
--- >>> pz @(Dup >> ScanN 4 Id (Pred Id *** Succ Id)) 'g'
+-- >>> pz @(Dup >> ScanN 4 (Pred Id *** Succ Id) Id) 'g'
 -- PresentT [('g','g'),('f','h'),('e','i'),('d','j'),('c','k')]
 --
 data Scanl p q r
@@ -6245,7 +6245,7 @@ instance (PP p (b,a) ~ b
                        case as' of
                          [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (PresentT q) (msg0 <> "(done)") [])], Right ())
                          a:as -> do
-                            pp :: TT b <- evalHide (Proxy @p) opts (b,a)
+                            pp :: TT b <- evalHide @p opts (b,a)
                             case getValueLR opts (msg0 <> " i=" <> showIndex i <> " a=" <> show a) pp [] of
                                Left e  -> pure (rs,Left e)
                                Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
@@ -6260,14 +6260,14 @@ instance (PP p (b,a) ~ b
                         Right () -> mkNode opts (PresentT vals) (show01' opts msg0 vals "b=" q <> showVerbose opts " | as=" r) (hh qq : hh rr : map (hh . fixit) itts)
 
 data ScanN n p q
-type ScanNT n p q = Scanl (Fst Id >> q) p (EnumFromTo 1 n) -- n times using q then run p
+type ScanNT n p q = Scanl (Fst Id >> p) q (EnumFromTo 1 n) -- n times using q then run p
 
 instance P (ScanNT n p q) x => P (ScanN n p q) x where
   type PP (ScanN n p q) x = PP (ScanNT n p q) x
   eval _ = eval (Proxy @(ScanNT n p q))
 
 data ScanNA q
-type ScanNAT q = ScanN (Fst Id) (Snd Id) q
+type ScanNAT q = ScanN (Fst Id) q (Snd Id)
 
 instance P (ScanNAT q) x => P (ScanNA q) x where
   type PP (ScanNA q) x = PP (ScanNAT q) x
@@ -6313,7 +6313,7 @@ instance (PP q a ~ s
         let msg1 = msg0 <> " " <> showL opts q
             ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg1 <> ":recursion limit i=" <> showIndex i)) ("s=" <> showL opts s) [])
                       | otherwise = do
-                              pp :: TT (PP p s) <- evalHide (Proxy @p) opts s
+                              pp :: TT (PP p s) <- evalHide @p opts s
                               case getValueLR opts (msg1 <> " i=" <> showIndex i <> " s=" <> show s) pp [] of
                                    Left e  -> pure (rs, Left e)
                                    Right Nothing -> pure (rs, Right ())
@@ -6398,7 +6398,7 @@ instance (Show (PP p a)
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
       Right q -> do
-        ts <- zipWithM (\i a -> ((i, a),) <$> evalHide (Proxy @p) opts a) [0::Int ..] (toList q)
+        ts <- zipWithM (\i a -> ((i, a),) <$> evalHide @p opts a) [0::Int ..] (toList q)
         pure $ case splitAndAlign opts msg0 ts of
              Left e -> e
              Right abcs ->
@@ -6503,7 +6503,7 @@ instance (P p x
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
-             ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide (Proxy @p) opts a) [0::Int ..] q
+             ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] q
              pure $ case splitAndAlign opts msg0 ts of
                Left e -> e
                Right abcs ->
@@ -6546,7 +6546,7 @@ instance (P p x
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right () -> do
-             ts <- zipWithM (\i a -> ((i, a),) <$> evalHide (Proxy @p) opts a) [0::Int ..] q
+             ts <- zipWithM (\i a -> ((i, a),) <$> evalHide @p opts a) [0::Int ..] q
              pure $ case splitAndAlign opts msg0 ts of
                    Left e -> e
                    Right abcs ->
@@ -6639,7 +6639,7 @@ instance (Show x
                [] -> pure $ mkNode opts (PresentT []) (show01' opts msg0 q "s=" q) [hh qq]
                [_] -> pure $ mkNode opts (PresentT [q]) (show01' opts msg0 [q] "s=" q) [hh qq]
                x:xs -> do
-                 ts <- zipWithM (\i (a,b) -> ((i, b),) <$> evalBoolHide (Proxy @p) opts (a,b)) [0::Int ..] (zip (x:xs) xs)
+                 ts <- zipWithM (\i (a,b) -> ((i, b),) <$> evalBoolHide @p opts (a,b)) [0::Int ..] (zip (x:xs) xs)
                  pure $ case splitAndAlign opts msg0 ts of
                    Left e -> e
                    Right abcs ->
@@ -6692,7 +6692,7 @@ instance (P p x
           Right () -> do
             let ff [] zs = pure (zs, [], Nothing) -- [(ia,qq)] extras | the rest of the data | optional last pivot or failure
                 ff ((i,a):ias) zs = do
-                   pp <- evalBoolHide (Proxy @p) opts a
+                   pp <- evalBoolHide @p opts a
                    let v = ((i,a), pp)
                    case getValueLR opts msg0 pp [hh qq] of
                      Right False -> ff ias (zs Seq.|> v)
@@ -7080,7 +7080,7 @@ instance (PP prt (Int, a) ~ String
          pos = getLen @ps
      case as' of
          a:as -> do
-            pp <- evalBoolHide (Proxy @p) opts a
+            pp <- evalBoolHide @p opts a
             case getValueLR opts (msgbase1 <> " p failed") pp [] of
                  Left e -> pure e
                  Right False -> do
@@ -7200,7 +7200,7 @@ instance (PP prt (Int, a) ~ String
          pos = getLen @ps
      case as' of
          a:as -> do
-            pp <- evalBoolHide (Proxy @p) opts a
+            pp <- evalBoolHide @p opts a
             case getValueLR opts (msgbase1 <> " p failed") pp [] of
                  Left e -> pure e
                  Right False -> do
@@ -7305,7 +7305,7 @@ instance (PP prt a ~ String
          pos = getLen @ps
      case as' of
          a:as -> do
-            pp <- evalBoolHide (Proxy @p) opts a
+            pp <- evalBoolHide @p opts a
             case getValueLR opts (msgbase1 <> " p failed") pp [] of
                  Left e -> pure e
                  Right False -> do
@@ -10665,7 +10665,7 @@ instance P (p q) a => P (q & p) a where
 data K (p :: k) (q :: k1)
 instance P p a => P (K p q) a where
   type PP (K p q) a = PP p a
-  eval _ = eval (Proxy @(Msg "K " p))
+  eval _ = eval (Proxy @(MsgI "K " p))
 
 -- | applies \'p\' to the first and second slot of an n-tuple
 --

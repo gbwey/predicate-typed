@@ -157,7 +157,7 @@ import GHC.Stack
 -- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"
 --
 -- >>> newRefined1 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
--- Left "Step 2. False Boolean Check(op) | {length invalid:5 == 4}"
+-- Left "Step 2. False Boolean Check(op) | {length invalid: 5 == 4}"
 --
 -- >>> newRefined1 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left "Step 2. Failed Boolean Check(op) | found length=5"
@@ -170,7 +170,7 @@ import GHC.Stack
 -- Right (Refined1 (2019-10-13,41,7))
 --
 -- >>> newRefined1 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
--- Left "Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}"
+-- Left "Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}"
 --
 -- >>> newRefined1 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
@@ -276,7 +276,7 @@ instance ( Eq i
              (do GR.expectP (RL.Ident "Refined1")
                  fld1 <- PCR.reset GR.readPrec
 
-                 let (_ret,mr) = runIdentity $ eval1MSkip @_ @opts @ip @op @fmt fld1
+                 let (_ret,mr) = runIdentity $ eval1MSkip @opts @ip @op @fmt fld1
                  case mr of
                    Nothing -> fail ""
                    Just (Refined1 r1)
@@ -546,7 +546,7 @@ withRefined1T :: forall opts ip op fmt i m b
   -> RefinedT m b
 withRefined1T = (>>=) . newRefined1TP (Proxy @'(opts,ip,op,fmt,i))
 
-withRefined1TP :: forall m opts ip op fmt i b proxy
+withRefined1TP :: forall opts ip op fmt i b proxy m
   . ( Monad m
     , Refined1C opts ip op fmt i
     , Show (PP ip i)
@@ -587,10 +587,10 @@ newRefined1P :: forall opts ip op fmt i proxy
    -> i
    -> Either String (Refined1 opts ip op fmt i)
 newRefined1P _ x =
-  let (lr,xs) = runIdentity $ unRavelT $ newRefined1T @_ @opts @ip @op @fmt x
+  let (lr,xs) = runIdentity $ unRavelT $ newRefined1T @opts @ip @op @fmt x
   in left (\e -> e ++ (if all null xs then "" else "\n" ++ unlines xs)) lr
 
-newRefined1T :: forall m opts ip op fmt i
+newRefined1T :: forall opts ip op fmt i m
   . ( Refined1C opts ip op fmt i
     , Monad m
     , Show (PP ip i)
@@ -609,9 +609,9 @@ newRefined1T = newRefined1TP (Proxy @'(opts,ip,op,fmt,i))
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
 -- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( OL, MkDayExtra Id >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
+-- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
 --
-newRefined1TP :: forall m opts ip op fmt i proxy
+newRefined1TP :: forall opts ip op fmt i proxy m
    . ( Refined1C opts ip op fmt i
      , Monad m
      , Show (PP ip i)
@@ -622,7 +622,7 @@ newRefined1TP :: forall m opts ip op fmt i proxy
   -> RefinedT m (Refined1 opts ip op fmt i)
 newRefined1TP = newRefined1TPImpl (return . runIdentity)
 
-newRefined1TPIO :: forall m opts ip op fmt i proxy
+newRefined1TPIO :: forall opts ip op fmt i proxy m
    . ( Refined1C opts ip op fmt i
      , MonadIO m
      , Show (PP ip i)
@@ -669,7 +669,7 @@ newRefined1TPSkipIPImpl f _ a = do
     Just r -> return r
 
 -- | attempts to cast a wrapped 'Refined1' to another 'Refined1' with different predicates
-convertRefined1TP :: forall m opts ip op fmt i ip1 op1 fmt1 i1 .
+convertRefined1TP :: forall opts ip op fmt i ip1 op1 fmt1 i1 m .
   ( Refined1C opts ip1 op1 fmt1 i1
   , Monad m
   , Show (PP ip i)
@@ -686,7 +686,7 @@ convertRefined1TP _ _ ma = do
   return (Refined1 a)
 
 -- | applies a binary operation to two wrapped 'Refined1' parameters
-rapply1 :: forall m opts ip op fmt i .
+rapply1 :: forall opts ip op fmt i m .
   ( Refined1C opts ip op fmt i
   , Monad m
   , Show (PP ip i)
@@ -700,7 +700,7 @@ rapply1 = rapply1P (Proxy @'(opts,ip,op,fmt,i))
 -- prtRefinedTIO $ rapply1P base16 (+) (newRefined1TP Proxy "ff") (newRefined1TP Proxy "22")
 
 -- | same as 'rapply1' but uses a 5-tuple proxy instead
-rapply1P :: forall m opts ip op fmt i proxy .
+rapply1P :: forall opts ip op fmt i proxy m .
   ( Refined1C opts ip op fmt i
   , Monad m
   , Show (PP ip i)
@@ -787,7 +787,7 @@ eval1 :: forall opts ip op fmt i . Refined1C opts ip op fmt i
   -> (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined1 opts ip op fmt i))
 eval1 = eval1P Proxy
 
-eval1M :: forall m opts ip op fmt i . (MonadEval m, Refined1C opts ip op fmt i)
+eval1M :: forall opts ip op fmt i m . (MonadEval m, Refined1C opts ip op fmt i)
   => i
   -> m (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined1 opts ip op fmt i))
 eval1M i = do
@@ -807,7 +807,7 @@ eval1M i = do
    (Left e,t1) -> pure (RF e t1, Nothing)
 
 -- | creates Refined1 value but skips the initial conversion
-eval1MSkip :: forall m opts ip op fmt i . (MonadEval m, Refined1C opts ip op fmt i)
+eval1MSkip :: forall opts ip op fmt i m . (MonadEval m, Refined1C opts ip op fmt i)
    => PP ip i
    -> m (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined1 opts ip op fmt i))
 eval1MSkip a = do

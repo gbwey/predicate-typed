@@ -231,7 +231,7 @@ refined2THIO :: forall opts ip op i
   => i
   -> TH.Q (TH.TExp (Refined2 opts ip op i))
 refined2THIO i = do
-  x <- TH.runIO (eval2M @_ @opts @ip @op i)
+  x <- TH.runIO (eval2M @opts @ip @op i)
   case x of
     (_, Just a) -> TH.TExp <$> TH.lift a
     (ret, Nothing) -> fail $ show $ prt2Impl (getOptT @opts) ret
@@ -304,7 +304,7 @@ refined3THIO :: forall opts ip op fmt i
   => i
   -> TH.Q (TH.TExp (Refined3 opts ip op fmt i))
 refined3THIO i = do
-  x <- TH.runIO (eval3M @_ @opts @ip @op @fmt i)
+  x <- TH.runIO (eval3M @opts @ip @op @fmt i)
   case x of
     (_, Just a) -> TH.TExp <$> TH.lift a
     (ret, Nothing) -> fail $ show $ prt3Impl (getOptT @opts) ret

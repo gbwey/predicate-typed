@@ -61,6 +61,7 @@ module Predicate.Refined3 (
   , newRefined3T
   , newRefined3TP
   , newRefined3TPIO
+  , newRefined3TIO
   , withRefined3T
   , withRefined3TIO
   , withRefined3TP
@@ -155,7 +156,7 @@ import GHC.Stack
 -- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"
 --
 -- >>> newRefined3 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
--- Left "Step 2. False Boolean Check(op) | {length invalid:5 == 4}"
+-- Left "Step 2. False Boolean Check(op) | {length invalid: 5 == 4}"
 --
 -- >>> newRefined3 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left "Step 2. Failed Boolean Check(op) | found length=5"
@@ -168,7 +169,7 @@ import GHC.Stack
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
 -- >>> newRefined3 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
--- Left "Step 2. False Boolean Check(op) | {expected a Sunday:6 == 7}"
+-- Left "Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}"
 --
 -- >>> newRefined3 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
@@ -280,7 +281,7 @@ instance ( Eq i
                                "r3Out" (PCR.reset GR.readPrec)
                  GR.expectP (RL.Punc "}")
 
-                 let (_ret,mr) = runIdentity $ eval3MSkip @_ @opts @ip @op @fmt fld1
+                 let (_ret,mr) = runIdentity $ eval3MSkip @opts @ip @op @fmt fld1
                  case mr of
                    Nothing -> fail ""
                    Just (Refined3 _r1 r2)
@@ -538,7 +539,7 @@ withRefined3T :: forall opts ip op fmt i m b
   -> RefinedT m b
 withRefined3T = (>>=) . newRefined3TP (Proxy @'(opts,ip,op,fmt,i))
 
-withRefined3TP :: forall m opts ip op fmt i b proxy
+withRefined3TP :: forall opts ip op fmt i b proxy m
   . ( Monad m
     , Refined3C opts ip op fmt i
     , Show (PP ip i)
@@ -579,21 +580,21 @@ newRefined3P :: forall opts ip op fmt i proxy
    -> i
    -> Either String (Refined3 opts ip op fmt i)
 newRefined3P _ x =
-  let (lr,xs) = runIdentity $ unRavelT $ newRefined3T @_ @opts @ip @op @fmt x
+  let (lr,xs) = runIdentity $ unRavelT $ newRefined3T @opts @ip @op @fmt x
   in left (\e -> e ++ (if all null xs then "" else "\n" ++ unlines xs)) lr
 
 -- | create a wrapped 'Refined3' type
 --
--- >>> prtRefinedTIO $ newRefined3T @_ @OZ @(MkDayExtra Id >> Just Id) @(GuardSimple (Thd Id == 5) >> 'True) @(UnMkDay (Fst Id)) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined3T @OZ @(MkDayExtra Id >> Just Id) @(GuardSimple (Thd Id == 5) >> 'True) @(UnMkDay (Fst Id)) (2019,11,1)
 -- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined3T @_ @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) @(UnMkDay (Fst Id)) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined3T @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) @(UnMkDay (Fst Id)) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined3T @_ @OL @(MkDayExtra Id >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) @(UnMkDay (Fst Id)) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
+-- >>> prtRefinedTIO $ newRefined3T @OL @(MkDayExtra Id >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) @(UnMkDay (Fst Id)) (2019,11,2)
+-- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
 --
-newRefined3T :: forall m opts ip op fmt i
+newRefined3T :: forall opts ip op fmt i m
   . ( Refined3C opts ip op fmt i
     , Monad m
     , Show (PP ip i)
@@ -612,9 +613,9 @@ newRefined3T = newRefined3TP (Proxy @'(opts,ip,op,fmt,i))
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
 -- >>> prtRefinedTIO $ newRefined3TP (Proxy @'( OL, MkDayExtra Id >> Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {wrong day:6 == 5}]
+-- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
 --
-newRefined3TP :: forall m opts ip op fmt i proxy
+newRefined3TP :: forall opts ip op fmt i proxy m
    . ( Refined3C opts ip op fmt i
      , Monad m
      , Show (PP ip i)
@@ -625,7 +626,24 @@ newRefined3TP :: forall m opts ip op fmt i proxy
   -> RefinedT m (Refined3 opts ip op fmt i)
 newRefined3TP = newRefined3TPImpl (return . runIdentity)
 
-newRefined3TPIO :: forall m opts ip op fmt i proxy
+-- | wrap a Refined3 type using RefinedT and IO
+--
+-- >>> prtRefinedTIO $ newRefined3TIO @OL @(Hide (Rescan "(\\d+)" Id >> ConcatMap (Snd Id) Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff) Id) @(ShowP Id) "|23|99|255|254.911."
+-- failure msg[Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}]
+--
+-- >>> unRavelT $ newRefined3TIO @OL @(Hide (Rescan "(\\d+)" Id >> ConcatMap (Snd Id) Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff) Id) @(ShowP Id) "|23|99|255|254.911."
+-- (Left "Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}",[""])
+--
+newRefined3TIO :: forall opts ip op fmt i m
+   . ( Refined3C opts ip op fmt i
+     , MonadIO m
+     , Show (PP ip i)
+     , Show i)
+  => i
+  -> RefinedT m (Refined3 opts ip op fmt i)
+newRefined3TIO = newRefined3TPImpl liftIO Proxy
+
+newRefined3TPIO :: forall opts ip op fmt i proxy m
    . ( Refined3C opts ip op fmt i
      , MonadIO m
      , Show (PP ip i)
@@ -646,7 +664,7 @@ newRefined3TPImpl :: forall n m opts ip op fmt i proxy
    -> i
    -> RefinedT m (Refined3 opts ip op fmt i)
 newRefined3TPImpl f _ i = do
-  (ret,mr) <- f $ eval3M  i
+  (ret,mr) <- f $ eval3M i
   let m3 = prt3Impl (getOptT @opts) ret
   tell [m3Long m3]
   case mr of
@@ -673,7 +691,7 @@ newRefined3TPSkipIPImpl f _ a = do
     Just r -> return r
 
 -- | attempts to cast a wrapped 'Refined3' to another 'Refined3' with different predicates
-convertRefined3TP :: forall m opts ip op fmt i ip1 op1 fmt1 i1 .
+convertRefined3TP :: forall opts ip op fmt i ip1 op1 fmt1 i1 m .
   ( Refined3C opts ip op fmt i
   , Refined3C opts ip1 op1 fmt1 i1
   , Monad m
@@ -691,7 +709,7 @@ convertRefined3TP _ _ ma = do
   return (Refined3 a b)
 
 -- | applies a binary operation to two wrapped 'Refined3' parameters
-rapply3 :: forall m opts ip op fmt i .
+rapply3 :: forall opts ip op fmt i m .
   ( Refined3C opts ip op fmt i
   , Monad m
   , Show (PP ip i)
@@ -705,7 +723,7 @@ rapply3 = rapply3P (Proxy @'(opts,ip,op,fmt,i))
 -- prtRefinedTIO $ rapply3P base16 (+) (newRefined3TP Proxy "ff") (newRefined3TP Proxy "22")
 
 -- | same as 'rapply3' but uses a 5-tuple proxy instead
-rapply3P :: forall m opts ip op fmt i proxy .
+rapply3P :: forall opts ip op fmt i proxy m .
   ( Refined3C opts ip op fmt i
   , Monad m
   , Show (PP ip i)
@@ -796,7 +814,7 @@ eval3P :: forall opts ip op fmt i proxy
   -> (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 opts ip op fmt i))
 eval3P _ = runIdentity . eval3M
 
-eval3M :: forall m opts ip op fmt i
+eval3M :: forall opts ip op fmt i m
   . ( MonadEval m
     , Refined3C opts ip op fmt i
     )
@@ -819,7 +837,7 @@ eval3M i = do
    (Left e,t1) -> pure (RF e t1, Nothing)
 
 -- | creates Refined3 value but skips the initial conversion
-eval3MSkip :: forall m opts ip op fmt i
+eval3MSkip :: forall opts ip op fmt i m
   . ( MonadEval m
     , Refined3C opts ip op fmt i
     )

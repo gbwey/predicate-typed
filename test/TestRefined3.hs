@@ -113,7 +113,7 @@ unnamedTests = [
                   $ eval3 @OAN @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255 Id) Id && (Len == 4)) @""
                   "1.2.3.4"
 
-  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
+  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
                   $ eval3 @OAN @Ip6ip @Ip6op @"" "123:Ffeff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [12,2,0,255] "abc")
@@ -138,7 +138,7 @@ unnamedTests = [
                   @"xyz"
                   "123-45-6789"
 
-  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds:All(8) i=4 (1048319 <= 65535))")
+  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
                   $ eval3 @OAN @Ip6ip @Ip6op @"xyz"
                   "123:Ffeff:1123:11:1"
 
@@ -201,8 +201,8 @@ type Tst1 = '( OAN, ReadP Int Id, Between 1 7 Id, PrintF "someval val=%03d" Id, 
 
 yy1, yy2, yy3, yy4 :: RefinedT Identity (MakeR3 Tst1)
 
-yy1 = newRefined3TP @Identity (Proxy @Tst1) "4"
-yy2 = newRefined3TP @Identity (Proxy @Tst1) "3"
+yy1 = newRefined3TP (Proxy @Tst1) "4"
+yy2 = newRefined3TP (Proxy @Tst1) "3"
 
 yy3 = rapply3 (*) yy1 yy2 -- fails
 yy4 = rapply3 (+) yy1 yy2 -- pure ()

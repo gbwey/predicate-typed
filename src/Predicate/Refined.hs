@@ -301,8 +301,8 @@ genRefined g =
 
 -- | binary operation applied to two 'RefinedT' values
 --
--- >>> x = newRefinedT @_ @OAN @(Between 4 12 Id) 4
--- >>> y = newRefinedT @_ @OAN @(Between 4 12 Id) 5
+-- >>> x = newRefinedT @OAN @(Between 4 12 Id) 4
+-- >>> y = newRefinedT @OAN @(Between 4 12 Id) 5
 -- >>> prtRefinedTIO (rapply (+) x y)
 -- === a ===
 -- True 4 <= 4 <= 12
@@ -333,8 +333,8 @@ genRefined g =
 -- <BLANKLINE>
 -- Refined 9
 --
--- >>> x = newRefinedT @_ @OAN @(Prime Id || Id < 3) 3
--- >>> y = newRefinedT @_ @OAN @(Prime Id || Id < 3) 5
+-- >>> x = newRefinedT @OAN @(Prime Id || Id < 3) 3
+-- >>> y = newRefinedT @OAN @(Prime Id || Id < 3) 5
 -- >>> prtRefinedTIO (rapply (+) x y)
 -- === a ===
 -- True True || False
@@ -377,7 +377,7 @@ genRefined g =
 -- <BLANKLINE>
 -- failure msg[FalseT]
 --
-rapply :: forall m opts p a opts1 z . (z ~ (opts ':# opts1), OptTC opts1, RefinedC opts p a, Monad m)
+rapply :: forall opts p a opts1 z m . (z ~ (opts ':# opts1), OptTC opts1, RefinedC opts p a, Monad m)
   => (a -> a -> a)
   -> RefinedT m (Refined opts p a)
   -> RefinedT m (Refined opts1 p a)
@@ -391,10 +391,10 @@ rapply f ma mb = do
   Refined y <- mb
   let opts2 = getOptT @z
   tell [setOtherEffects opts2 "=== a `op` b ==="]
-  newRefinedT @_ @_ @p (f x y)
+  newRefinedT @_ @p (f x y)
 
 -- | same as 'rapply' except we already have valid 'Refined' values as input
-rapplyLift :: forall m opts p a . (RefinedC opts p a, Monad m)
+rapplyLift :: forall opts p a m . (RefinedC opts p a, Monad m)
   => (a -> a -> a)
   -> Refined opts p a
   -> Refined opts p a
@@ -403,7 +403,7 @@ rapplyLift f (Refined a) (Refined b) = newRefinedT (f a b)
 
 -- | attempts to lift a refinement type to another refinement type by way of transformation function
 --   you can control both the predicate and the type
-convertRefinedT :: forall m opts p a p1 a1
+convertRefinedT :: forall opts p a p1 a1 m
   . ( RefinedC opts p1 a1
     , Monad m)
   => (a -> a1)
@@ -411,7 +411,7 @@ convertRefinedT :: forall m opts p a p1 a1
   -> RefinedT m (Refined opts p1 a1)
 convertRefinedT f ma = do
   Refined a <- ma -- you already got a refined in there so no need to check RefinedC
-  newRefinedT @m @opts @p1 (f a)
+  newRefinedT @opts @p1 (f a)
 
 -- | invokes the callback with the 'Refined' value if \'a\' is valid for the predicate \'p\'
 withRefinedT :: forall opts p m a b
@@ -421,7 +421,7 @@ withRefinedT :: forall opts p m a b
   => a
   -> (Refined opts p a -> RefinedT m b)
   -> RefinedT m b
-withRefinedT a k = newRefinedT @m @opts @p a >>= k
+withRefinedT a k = newRefinedT @opts @p a >>= k
 
 -- | IO version of `withRefinedT`
 withRefinedTIO :: forall opts p m a b
@@ -504,7 +504,7 @@ newRefinedTImpl f a = do
     _ -> throwError $ colorBoolT' o (_tBool tt)
 
 -- | returns a wrapper 'RefinedT' around a possible 'Refined' value if \'a\' is valid for the predicate \'p\'
-newRefinedT :: forall m opts p a
+newRefinedT :: forall opts p a m
   . ( RefinedC opts p a
     , Monad m)
   => a
