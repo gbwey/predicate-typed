@@ -1085,10 +1085,10 @@ colorBoolT :: Show a
 colorBoolT o r =
   let f = colorMe o (r ^. boolT2P)
   in case r of
-      FailT e -> f "Error" <> " " <> e
+      FailT e -> f "Error " <> e
       TrueT -> f "True"
       FalseT -> f "False"
-      PresentT x -> f "Present" <> " " <> show x
+      PresentT x -> f "Present " <> show x
 
 colorBoolT' :: Show a
    => POpts
@@ -1097,10 +1097,10 @@ colorBoolT' :: Show a
 colorBoolT' o r =
   let f = colorMe o (r ^. boolT2P)
   in case r of
-      FailT e -> f "FailT" <> " " <> e
+      FailT e -> f "FailT " <> e
       TrueT -> f "TrueT"
       FalseT -> f "FalseT"
-      PresentT x -> f "PresentT" <> " " <> show x
+      PresentT x -> f "PresentT " <> show x
 
 -- | colors the result of the predicate based on the current color palette
 colorMe ::
@@ -1128,7 +1128,7 @@ fixPresentP :: Show a
   -> String
 fixPresentP opts bp a =
   case bp of
-    PresentP -> colorMe opts PresentP "Present" <> " " <> show a
+    PresentP -> colorMe opts PresentP "Present " <> show a
     _ -> colorBoolP opts bp
 
 prtTreePure ::

@@ -599,6 +599,14 @@ instance P 'Nothing (Maybe a) where
 -- >>> pz @('Left Id) (Right "aaa")
 -- FailT "'Left found Right"
 --
+-- >>> pl @('Left Id) (Left 123)
+-- Present 123 ('Left 123 | Left 123)
+-- PresentT 123
+--
+-- >>> pl @('Left Id) (Right @() 123)
+-- Error 'Left found Right
+-- FailT "'Left found Right"
+--
 instance (Show a
         , Show (PP p a)
         , P p a
@@ -620,6 +628,14 @@ instance (Show a
 -- PresentT 123
 --
 -- >>> pz @('Right Id) (Left "aaa")
+-- FailT "'Right found Left"
+--
+-- >>> pl @('Right Id) (Right 123)
+-- Present 123 ('Right 123 | Right 123)
+-- PresentT 123
+--
+-- >>> pl @('Right Id) (Left @_ @() 123)
+-- Error 'Right found Left
 -- FailT "'Right found Left"
 --
 instance (Show a
@@ -649,6 +665,14 @@ instance (Show a
 --
 -- >>> pz @('This Id) (These 999 "aaa")
 -- FailT "'This found These"
+--
+-- >>> pl @('This Id) (This 12)
+-- Present 12 ('This 12 | This 12)
+-- PresentT 12
+--
+-- >>> pl @('This Id) (That @() 12)
+-- Error 'This found That
+-- FailT "'This found That"
 --
 instance (Show a
         , Show (PP p a)

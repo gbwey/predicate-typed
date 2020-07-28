@@ -28,6 +28,7 @@ dependencies:
 - pretty
 - pretty-terminal >= 0.1.0.0
 - safe
+- string-conversions
 - template-haskell
 - text
 - th-lift
