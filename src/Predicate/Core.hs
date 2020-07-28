@@ -250,8 +250,8 @@ instance KnownSymbol s => P (s :: Symbol) a where
 --
 instance ( P p a
          , P q a
---         , Show (PP p a)
---         , Show (PP q a)
+         , Show (PP p a)
+         , Show (PP q a)
          ) => P '(p,q) a where
   type PP '(p,q) a = (PP p a, PP q a)
   eval _ opts a = do
@@ -260,8 +260,8 @@ instance ( P p a
     pure $ case lr of
        Left e -> e
        Right (p,q,pp,qq) ->
-         mkNode opts (PresentT (p,q)) msg [hh pp, hh qq]
---         mkNode opts (PresentT (p,q)) ("'(" <> showL opts p <> ", " <> showL opts q <> ")") [hh pp, hh qq]
+--         mkNode opts (PresentT (p,q)) msg [hh pp, hh qq]
+         mkNode opts (PresentT (p,q)) ("'(" <> showL opts p <> "," <> showL opts q <> ")") [hh pp, hh qq]
 
 -- | run the predicates in a promoted 3-tuple
 --
@@ -848,7 +848,7 @@ run a = do
 -- | run expression with multiple options in a list
 --
 -- >>> runs @'[ OL, 'OMsg "field2"] @'( 'True, 'False) ()
--- field2 >>> Present (True,False) ('(,))
+-- field2 >>> Present (True,False) ('(True,False))
 -- PresentT (True,False)
 --
 -- >>> runs @'[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"] @('FailT '[]) ()

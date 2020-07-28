@@ -543,7 +543,6 @@ module Predicate.Prelude (
   , type (|>)
   , type (>|)
   , type (>|>)
-  , Uncurry
 
   -- *** parallel expressions
   , Para
@@ -1317,11 +1316,11 @@ instance (GetROpts rs
 -- PresentT ["123","2","3","5","6"]
 --
 -- >>> pl @(Map (ReadP Int Id) (Resplit "\\." Id) >> '(Id, '(Len == 4, All (Between 0 255 Id) Id))) "141.214.125.1.2.3333"
--- Present ([141,214,125,1,2,3333],(False,False)) ((>>) ([141,214,125,1,2,3333],(False,False)) | {'(,)})
+-- Present ([141,214,125,1,2,3333],(False,False)) ((>>) ([141,214,125,1,2,3333],(False,False)) | {'([141,214,125,1,2,3333],(False,False))})
 -- PresentT ([141,214,125,1,2,3333],(False,False))
 --
 -- >>> pl @(Map (ReadP Int Id) (Resplit "\\." Id) >> Id &&& ((Len == 4) &&& All (Between 0 255 Id) Id)) "141.214.125.1.2.6"
--- Present ([141,214,125,1,2,6],(False,True)) ((>>) ([141,214,125,1,2,6],(False,True)) | {W '(,)})
+-- Present ([141,214,125,1,2,6],(False,True)) ((>>) ([141,214,125,1,2,6],(False,True)) | {W '([141,214,125,1,2,6],(False,True))})
 -- PresentT ([141,214,125,1,2,6],(False,True))
 --
 -- >>> pl @(Resplit "\\." Id >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (Between 0 255 Id) Id)) "141.214.125."
@@ -3860,23 +3859,23 @@ instance P (DropT n p) x => P (Drop n p) x where
 -- PresentT 127
 --
 -- >>> pl @(4 &&& "sadf" &&& 'LT) ()
--- Present (4,("sadf",LT)) (W '(,))
+-- Present (4,("sadf",LT)) (W '(4,("sadf",LT)))
 -- PresentT (4,("sadf",LT))
 --
 -- >>> pl @(Id &&& '() &&& ()) (Just 10)
--- Present (Just 10,((),())) (W '(,))
+-- Present (Just 10,((),())) (W '(Just 10,((),())))
 -- PresentT (Just 10,((),()))
 --
 -- >>> pl @(Fst Id &&& Snd Id &&& Thd Id &&& ()) (1,'x',True)
--- Present (1,('x',(True,()))) (W '(,))
+-- Present (1,('x',(True,()))) (W '(1,('x',(True,()))))
 -- PresentT (1,('x',(True,())))
 --
 -- >>> pl @(Fst Id &&& Snd Id &&& Thd Id &&& ()) (1,'x',True)
--- Present (1,('x',(True,()))) (W '(,))
+-- Present (1,('x',(True,()))) (W '(1,('x',(True,()))))
 -- PresentT (1,('x',(True,())))
 --
 -- >>> pl @(Fst Id &&& Snd Id &&& Thd Id &&& ()) (1,1.4,"aaa")
--- Present (1,(1.4,("aaa",()))) (W '(,))
+-- Present (1,(1.4,("aaa",()))) (W '(1,(1.4,("aaa",()))))
 -- PresentT (1,(1.4,("aaa",())))
 --
 data p &&& q
@@ -4114,7 +4113,7 @@ instance (Show (PP p a)
 -- | duplicate a value into a tuple
 --
 -- >>> pl @Dup 4
--- Present (4,4) (W '(,))
+-- Present (4,4) (W '(4,4))
 -- PresentT (4,4)
 --
 -- >>> pl @(Dup >> Id) 4
@@ -4122,11 +4121,11 @@ instance (Show (PP p a)
 -- PresentT (4,4)
 --
 -- >>> pl @(Dup << Fst Id * Snd Id) (4,5)
--- Present (20,20) ((>>) (20,20) | {W '(,)})
+-- Present (20,20) ((>>) (20,20) | {W '(20,20)})
 -- PresentT (20,20)
 --
 -- >>> pl @(Fst Id * Snd Id >> Dup) (4,5)
--- Present (20,20) ((>>) (20,20) | {W '(,)})
+-- Present (20,20) ((>>) (20,20) | {W '(20,20)})
 -- PresentT (20,20)
 --
 data Dup
@@ -6332,7 +6331,7 @@ instance ( P p x
 -- TrueT
 --
 -- >>> pl @(Not (IsNothing Id) &&& (Just Id >> Id + 12)) (Just 1)
--- Present (True,13) (W '(,))
+-- Present (True,13) (W '(True,13))
 -- PresentT (True,13)
 --
 -- >>> pl @(Not (IsNothing Id) &&& (Just Id >> Id + 12)) Nothing
@@ -6889,7 +6888,7 @@ instance (Show (t a)
 -- TrueT
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) &&& FoldMap (SG.Sum _) Id) [1..20]
--- Present (False,210) (W '(,))
+-- Present (False,210) (W '(False,210))
 -- PresentT (False,210)
 --
 -- >>> pl @(FoldMap SG.Any Id) [False,False,True,False]
@@ -7229,11 +7228,11 @@ instance (P q a
 -- PresentT 3
 --
 -- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd Id >> Gt 3 >> Coerce SG.Any) (IToList _ Id) >> MConcat Id) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
--- Present (3,Any {getAny = True}) (W '(,))
+-- Present (3,Any {getAny = True}) (W '(3,Any {getAny = True}))
 -- PresentT (3,Any {getAny = True})
 --
 -- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd Id >> Gt 3 >> Wrap SG.Any Id) (IToList _ Id) >> MConcat Id >> Unwrap Id) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
--- Present (3,True) (W '(,))
+-- Present (3,True) (W '(3,True))
 -- PresentT (3,True)
 --
 -- >>> pl @(Id !! FromString _ "d") (M.fromList $ zip (map T.singleton "abcd") [0 ..])
@@ -9439,7 +9438,7 @@ instance ( x ~ [a]
 -- FailT "someval"
 --
 -- >>> pl @(Guard "someval" (Len == 2) >> (Id &&& ShowP Id)) [2,3]
--- Present ([2,3],"[2,3]") ((>>) ([2,3],"[2,3]") | {W '(,)})
+-- Present ([2,3],"[2,3]") ((>>) ([2,3],"[2,3]") | {W '([2,3],"[2,3]")})
 -- PresentT ([2,3],"[2,3]")
 --
 -- >>> pl @(Guard "someval" (Len == 2) >> (ShowP Id &&& Id)) [2,3,4]
@@ -10003,7 +10002,7 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 -- PresentT LT
 --
 -- >>> pl @(Fst Id ===~ Snd Id &&& Fst Id ==! Snd Id) ("abc","abc")
--- Present (EQ,EQ) (W '(,))
+-- Present (EQ,EQ) (W '(EQ,EQ))
 -- PresentT (EQ,EQ)
 --
 --
@@ -13459,15 +13458,15 @@ instance P (p q) a => P (p $ q) a where
 -- PresentT 1
 --
 -- >>> pl @(2 & (&&&) "abc") ()
--- Present ("abc",2) (W '(,))
+-- Present ("abc",2) (W '("abc",2))
 -- PresentT ("abc",2)
 --
 -- >>> pl @(2 & '(,) "abc") ()
--- Present ("abc",2) ('(,))
+-- Present ("abc",2) ('("abc",2))
 -- PresentT ("abc",2)
 --
 -- >>> pl @('(,) 4 $ '(,) 7 $ "aa") ()
--- Present (4,(7,"aa")) ('(,))
+-- Present (4,(7,"aa")) ('(4,(7,"aa")))
 -- PresentT (4,(7,"aa"))
 --
 -- >>> pl @(Thd $ Snd $ Fst Id) ((1,("W",9,'a')),(3,4))
@@ -13488,7 +13487,7 @@ instance P (p q) a => P (q & p) a where
 -- PresentT "xxx"
 --
 -- >>> pl @(RDot '[Fst,Snd,Thd,K '("abc",Id)] Id) ((1,(2,9,10)),(3,4))
--- Present ("abc",((1,(2,9,10)),(3,4))) (K '(,))
+-- Present ("abc",((1,(2,9,10)),(3,4))) (K '("abc",((1,(2,9,10)),(3,4))))
 -- PresentT ("abc",((1,(2,9,10)),(3,4)))
 --
 -- >>> pl @(Thd $ Snd $ Fst $ K Id "dud") ((1,("W",9,'a')),(3,4))
@@ -13743,43 +13742,6 @@ instance (PP p x ~ String
           Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" hhs
           Just () -> mkNode opts (PresentT ()) (msg0 <> " " <> litL opts (litBL opts d)) hhs
 
--- | uncurry experiment
---
--- >>> pl @(Uncurry Between (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2019-10-12"
--- False (Uncurry (2019-10-12 <= 2018-12-30))
--- FalseT
---
--- >>> pl @(Uncurry Between (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2017-10-12"
--- True (Uncurry (2017-04-11 <= 2017-10-12 <= 2018-12-30))
--- TrueT
---
--- >>> pl @(Uncurry Between (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2016-10-12"
--- False (Uncurry (2017-04-11 <= 2016-10-12))
--- FalseT
---
-data Uncurry (p :: Type -> Type -> Type -> Type) q r
-
-instance (PP q x ~ (a,b)
-        , PP (p a b (PP r x)) x ~ PP (p (Fst Id) (Snd Id) (Thd Id)) (a, b, PP r x)
-        , P q x
-        , P r x
-        , P (p (Fst Id) (Snd Id) (Thd Id)) (a,b,PP r x)
-     ) => P (Uncurry p q r) x where
-  type PP (Uncurry p q r) x = PP (p (ExtractL1T (PP q x)) (ExtractL2T (PP q x)) (PP r x)) x
-  eval _ opts x = do
-    let msg0 = "Uncurry"
-    lr <- runPQ msg0 (Proxy @q) (Proxy @r) opts x []
-    case lr of
-      Left e -> pure e
-      Right ((q1,q2),r,qq,rr) -> do
-        let hhs0 = [hh qq, hh rr]
-        pp <- eval (Proxy @(p (Fst Id) (Snd Id) (Thd Id))) opts (q1,q2,r)
-        pure $ case getValueLR opts msg0 pp hhs0 of
-          Left e -> e
-          Right _ ->
-            let hhs = hhs0 ++ [hh pp]
-            in mkNode opts (_tBool pp) (msg0 <> litVerbose opts " " (topMessage pp)) hhs
-
 -- | like 'Predicate.Prelude.&&' but for a tuple
 --
 -- >>> pl @(SplitAt 4 "abcdefg" >> Len > 4 &* Len < 5) ()
@@ -13823,17 +13785,6 @@ infixr 3 &*
 instance P (AndAT p q) x => P (p &* q) x where
   type PP (p &* q) x = PP (AndAT p q) x
   eval _ = evalBool (Proxy @(AndAT p q))
-
-{-
-data p &&! q
-type AndAT' p q = (Fst Id >> p) && (Snd Id >> q)
-infixr 3 &&!
-
-instance (P (AndAT' p q) x
-        ) => P (p &&! q) x where
-  type PP (p &&! q) x = PP (AndAT' p q) x
-  eval _ = evalBool (Proxy @(AndAT' p q))
--}
 
 -- | like 'Predicate.Prelude.||' but for a tuple
 --
