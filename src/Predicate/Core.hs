@@ -481,6 +481,7 @@ instance GetOrdering cmp => P (cmp :: Ordering) a where
 --
 -- >>> pz @123 ()
 -- PresentT 123
+--
 instance KnownNat n => P (n :: Nat) a where
   type PP n a = Int
   eval _ opts _ =
