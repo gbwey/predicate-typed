@@ -153,7 +153,6 @@ module Predicate.Util (
 
  -- ** printing methods
   , prtTreePure
-  , prettyRational
   , formatOMsg
 
  -- ** boolean methods
@@ -189,7 +188,6 @@ module Predicate.Util (
 
     ) where
 import qualified GHC.TypeNats as GN
-import Data.Ratio
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
 import Control.Lens
@@ -371,7 +369,7 @@ fromTTH (Holder x) = fromTT x
 hh :: TT w -> Holder
 hh = Holder
 
--- | see 'getValueLRImpl' : add more detail to the tree if there are errors
+-- | add more detail to the tree if there are errors
 getValueLR :: POpts
            -> String
            -> TT a
@@ -413,6 +411,7 @@ type family HKD f a where
   HKD Identity a = a
   HKD f a = f a
 
+-- | final set of options using Identity
 type POpts = HOpts Identity
 
 -- | customizable options for running a typelevel expression
@@ -1112,6 +1111,7 @@ colorMe o b s =
   let (_, PColor f) = if oNoColor o then nocolor else oColor o
   in f b s
 
+-- | override PresentP case if there is no tree ie lite or zero mode
 fixLite :: forall a . Show a
    => POpts
    -> a
@@ -1121,6 +1121,7 @@ fixLite opts a t
   | hasNoTree opts = fixPresentP opts (t ^. root . pBool) a <> "\n"
   | otherwise = prtTreePure opts t
 
+-- | override PresentP case with long name
 fixPresentP :: Show a
   => POpts
   -> BoolP
@@ -1131,6 +1132,7 @@ fixPresentP opts bp a =
     PresentP -> colorMe opts PresentP "Present " <> show a
     _ -> colorBoolP opts bp
 
+-- | display tree
 prtTreePure ::
      POpts
   -> Tree PE
@@ -1139,10 +1141,11 @@ prtTreePure opts t
   | hasNoTree opts = colorBoolP opts (t ^. root . pBool)
   | otherwise = showImpl opts $ fmap (toNodeString opts) t
 
+-- | extract message part from tree
 topMessage :: TT a -> String
 topMessage pp =
   let s = pp ^. tString
-  in if null s then "" else "(" <> s <> ")"
+  in unlessNull s $ "(" <> s <> ")"
 
 showImpl :: POpts
          -> Tree String
@@ -1152,15 +1155,11 @@ showImpl o =
     Unicode -> TV.showTree
     Ansi -> drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
 
-prettyRational :: Rational -> String
-prettyRational (numerator &&& denominator -> (n,d)) =
-  if | n == 0 -> "0"
-     | d == 1 -> show n
-     | otherwise -> show n <> " / " <> show d
-
+-- | render numbered tree
 fixit :: ((Int, x), TT a) -> TT a
-fixit ((i, _), t) = prefixMsg ("i=" <> show i <> ":") t
+fixit ((i, _), t) = prefixMsg ("i=" <> show i <> ": ") t
 
+-- | prefix text in front of tString
 prefixMsg :: String -> TT a -> TT a
 prefixMsg msg t =
    t & tString %~ (msg <>)
@@ -1173,12 +1172,14 @@ showT = show (typeRep (Proxy @t))
 showTK :: forall r . Typeable r => String
 showTK = show (typeRep (Proxy @r))
 
+-- | pretty print 'Ordering'
 prettyOrd :: Ordering -> String
 prettyOrd = \case
               LT -> "<"
               EQ -> "="
               GT -> ">"
 
+-- | Repeat an expression n times
 type family RepeatT (n :: Nat) (p :: k) :: [k] where
   RepeatT 0 p = GL.TypeError ('GL.Text "RepeatT is not defined for zero")
   RepeatT 1 p = p ': '[]
@@ -1187,11 +1188,13 @@ type family RepeatT (n :: Nat) (p :: k) :: [k] where
 type s <%> t = GL.AppendSymbol s t
 infixr 7 <%>
 
+-- | Intersperse a symbol inside a list of symbols
 type family IntersperseT (s :: Symbol) (xs :: [Symbol]) :: Symbol where
   IntersperseT s '[] = ""
   IntersperseT s '[x] = x
   IntersperseT s (x ': y ': xs) = x <%> s <%> IntersperseT s (y ': xs)
 
+-- | length of a type level list
 type family LenT (xs :: [k]) :: Nat where
   LenT '[] = 0
   LenT (x ': xs) = 1 GN.+ LenT xs
@@ -1319,19 +1322,23 @@ type family (p :: k) %& (q :: k -> k1) :: k1 where
 
 infixr 9 %&
 
+-- | 'flip' at the type level
 type family FlipT (d :: k1 -> k -> k2) (p :: k) (q :: k1) :: k2 where
   FlipT d p q = d q p
 
+-- | 'if' at the type level
 type family IfT (b :: Bool) (t :: k) (f :: k) :: k where
   -- IfT b x x = x -- todo: benefit? now it needs to eval both sides
   IfT 'True t f = t
   IfT 'False t f = f
 
+-- | 'sum' at the type level for a list of 'Nat'
 type family SumT (ns :: [Nat]) :: Nat where
   SumT '[] = 0
   SumT (n ': ns) = n GL.+ SumT ns
 
 -- only works if you use ADTs not type synonyms
+-- | 'map' at the type level
 type family MapT (f :: k -> k1) (xs :: [k]) :: [k1] where
   MapT f '[] = '[]
   MapT f (x ': xs) = f x ': MapT f xs
@@ -1355,12 +1362,14 @@ class Monad m => MonadEval m where
   catchitNF :: (E.Exception e, NFData a) => a -> m (Either String a)
   liftEval :: m a -> IO a
 
+-- | 'Identity' instance for evaluating the expression
 instance MonadEval Identity where
   runIO _ = Identity Nothing
   catchit v = Identity $ unsafePerformIO $ catchit @IO @E.SomeException v
   catchitNF v = Identity $ unsafePerformIO $ catchitNF @IO @E.SomeException v
   liftEval = return . runIdentity
 
+-- | 'IO' instance for evaluating the expression
 instance MonadEval IO where
   runIO ioa = Just <$> ioa
   catchit v = E.evaluate (Right $! v) `E.catch` (\(E.SomeException e) -> pure $ Left ("IO e=" <> show e))
@@ -1388,6 +1397,7 @@ removeAnsiImpl =
 errorInProgram :: HasCallStack => String -> x
 errorInProgram s = error $ "programmer error:" <> s
 
+-- | read a field and value using 'ReadPrec' parser
 readField :: String -> ReadPrec a -> ReadPrec a
 readField fieldName readVal = do
         GR.expectP (L.Ident fieldName)
@@ -1466,6 +1476,7 @@ instance Show OptT where
 
 infixr 6 :#
 
+-- | extract options from the typelevel
 class OptTC (k :: OptT) where
    getOptT' :: POptsL
 instance KnownNat n => OptTC ('OWidth n) where
@@ -1542,6 +1553,7 @@ instance OptTC 'OUB where
 instance OptTC 'OUV where
    getOptT' = getOptT' @('OAV ':# 'OUnicode)
 
+-- | combinations of options
 type OZ = 'OAnsi ':# 'OColorOff ':# 'OZero
 type OL = 'OAnsi ':# 'OColorOff ':# 'OLite ':# 'OWidth 200
 type OAN = 'OAnsi ':# 'OColorOff ':# 'ONormal ':# 'OWidth 100
@@ -1573,26 +1585,36 @@ type OUV = 'OUnicode ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
 getOptT :: forall o . OptTC o => POpts
 getOptT = reifyOpts (getOptT' @o)
 
+-- | extract \'opts\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_1 x where
   T4_1 '(a,_,_,_) = a
+-- | extract \'ip\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_2 x where
   T4_2 '(_,b,_,_) = b
+-- | extract \'op\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_3 x where
   T4_3 '(_,_,c,_) = c
+-- | extract \'i\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_4 x where
   T4_4 '(_,_,_,d) = d
 
+-- | extract \'opts\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_1 x where
   T5_1 '(a,_,_,_,_) = a
+-- | extract \'ip\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_2 x where
   T5_2 '(_,b,_,_,_) = b
+-- | extract \'op\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_3 x where
   T5_3 '(_,_,c,_,_) = c
+-- | extract \'fmt\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_4 x where
   T5_4 '(_,_,_,d,_) = d
+-- | extract \'i\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_5 x where
   T5_5 '(_,_,_,_,e) = e
 
+-- | deal with possible recursion on a list
 chkSize :: Foldable t
    => POpts
    -> String
@@ -1605,18 +1627,21 @@ chkSize opts msg0 xs hhs =
     (_,[]) -> Right ()
     (_,_:_) -> Left $ mkNode opts (FailT (msg0 <> " list size exceeded")) ("max is " ++ show mx) hhs
 
+-- | pretty print a message
 formatOMsg :: POpts -> String -> String
 formatOMsg o suffix =
   case oMsg o of
     [] -> mempty
     s@(_:_) -> intercalate " | " (map (setOtherEffects o) s) <> suffix
 
+-- | override options for 'DZero' so we dont lose error information
 subopts :: POpts -> POpts
 subopts opts =
   case oDebug opts of
     DZero -> opts { oDebug = DLite }
     _ -> opts
 
+-- | render a string for messages using optional color and underline
 setOtherEffects :: POpts -> String -> String
 setOtherEffects o =
   if oNoColor o then id
@@ -1662,6 +1687,7 @@ type family OptTT (xs :: [OptT]) where
   OptTT '[] = 'OEmpty
   OptTT (x ': xs) = x ':# OptTT xs
 
+-- | convenience method for optional display
 unlessNull :: (Foldable t, Monoid m) => t a -> m -> m
 unlessNull t m | null t = mempty
                | otherwise = m

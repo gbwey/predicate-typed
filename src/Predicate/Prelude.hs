@@ -400,6 +400,8 @@ module Predicate.Prelude (
   , Thiss
   , Thats
   , Theses
+  , Theres
+  , Heres
   , This'
   , That'
   , These'
@@ -588,7 +590,8 @@ import Data.List.NonEmpty (NonEmpty(..))
 import qualified Numeric
 import Data.Char
 import Data.Function
-import Data.These (These(..))
+import Data.These (partitionThese, These(..))
+import qualified Data.These.Combinators as TheseC
 import Data.Ratio
 import Data.Time
 import Data.Coerce
@@ -607,6 +610,7 @@ import Data.Time.Calendar.WeekDate
 import qualified Data.Time.Clock.System as CP
 import qualified Data.Time.Clock.POSIX as P
 import qualified Data.Aeson as A
+import qualified Data.Aeson.Encode.Pretty as AP
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Text as T
@@ -681,17 +685,8 @@ instance P DescT' x => P Desc' x where
 -- >>> pz @(Between 5 8 Len) [1,2,3,4,5,5,7]
 -- TrueT
 --
--- >>> pz @(5 <..> 8) 6
--- TrueT
---
 -- >>> pl @(Between 5 8 Id) 9
 -- False (9 <= 8)
--- FalseT
---
--- >>> pz @(10 % 4 <..> 40 % 5) 4
--- TrueT
---
--- >>> pz @(10 % 4 <..> 40 % 5) 33
 -- FalseT
 --
 -- >>> pl @(Between (Fst Id >> Fst Id) (Fst Id >> Snd Id) (Snd Id)) ((1,4),3)
@@ -729,6 +724,17 @@ instance (Ord (PP p x)
                else mkNodeB opts False (showL opts r <> " <= " <> showL opts q) hhs
 
 
+-- | A operator predicate that determines if the value is between \'p\' and \'q\'
+--
+-- >>> pz @(5 <..> 8) 6
+-- TrueT
+--
+-- >>> pz @(10 % 4 <..> 40 % 5) 4
+-- TrueT
+--
+-- >>> pz @(10 % 4 <..> 40 % 5) 33
+-- FalseT
+--
 data p <..> q
 infix 4 <..>
 
@@ -810,7 +816,7 @@ instance (PP p x ~ (a,a')
 -- |
 -- +- P Id [1,5,11,5,3]
 -- |
--- +- False i=0:1 == 0
+-- +- False i=0: 1 == 0
 -- |  |
 -- |  +- P 1 `mod` 2 = 1
 -- |  |  |
@@ -820,7 +826,7 @@ instance (PP p x ~ (a,a')
 -- |  |
 -- |  `- P '0
 -- |
--- +- False i=1:1 == 0
+-- +- False i=1: 1 == 0
 -- |  |
 -- |  +- P 5 `mod` 2 = 1
 -- |  |  |
@@ -830,7 +836,7 @@ instance (PP p x ~ (a,a')
 -- |  |
 -- |  `- P '0
 -- |
--- +- False i=2:1 == 0
+-- +- False i=2: 1 == 0
 -- |  |
 -- |  +- P 11 `mod` 2 = 1
 -- |  |  |
@@ -840,7 +846,7 @@ instance (PP p x ~ (a,a')
 -- |  |
 -- |  `- P '0
 -- |
--- +- False i=3:1 == 0
+-- +- False i=3: 1 == 0
 -- |  |
 -- |  +- P 5 `mod` 2 = 1
 -- |  |  |
@@ -850,7 +856,7 @@ instance (PP p x ~ (a,a')
 -- |  |
 -- |  `- P '0
 -- |
--- `- False i=4:1 == 0
+-- `- False i=4: 1 == 0
 --    |
 --    +- P 3 `mod` 2 = 1
 --    |  |
@@ -5047,16 +5053,6 @@ instance AssocC These where
   unassoc (These a (These b c)) = These (These a b) c
   unassoc (These a (This b)) = This (These a b)
 
--- copied from Data.These
-partitionThese :: [These a b] -> ([a], [b], [(a, b)])
-partitionThese [] = ([], [], [])
-partitionThese (t:ts) = case t of
-    This x    -> (x : xs,     ys,         xys)
-    That y    -> (    xs, y : ys,         xys)
-    These x y -> (    xs,     ys, (x,y) : xys)
-  where
-    ~(xs,ys,xys) = partitionThese ts
-
 instance AssocC (,) where
   assoc ((a,b),c) = (a,(b,c))
   unassoc (a,(b,c)) = ((a,b),c)
@@ -7829,7 +7825,7 @@ instance ( Show a
         b = partitionThese as
     in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
 
--- | similar to 'catThis'
+-- | similar to 'TheseC.catThis'
 --
 -- >>> pz @(Thiss) [That 1, This 'a', These 'b' 33, This 'd', That 4]
 -- PresentT "ad"
@@ -7847,7 +7843,7 @@ instance P ThissT x => P Thiss x where
   type PP Thiss x = PP ThissT x
   eval _ = eval (Proxy @ThissT)
 
--- | similar to 'catThats'
+-- | similar to 'TheseC.catThat'
 --
 -- >>> pl @Thats [This 1, This 10,That 'x', This 99, That 'y']
 -- Present "xy" (Snd "xy" | ([1,10,99],"xy",[]))
@@ -7860,12 +7856,50 @@ instance P ThatsT x => P Thats x where
   type PP Thats x = PP ThatsT x
   eval _ = eval (Proxy @ThatsT)
 
+-- | similar to 'TheseC.catThese'
+--
+-- >>> pz @(ZipThese Id (Tail Id) >> Theses) [1..10]
+-- PresentT [(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,8),(8,9),(9,10)]
+--
 data Theses
 type ThesesT = Thd PartitionThese
 
 instance P ThesesT x => P Theses x where
   type PP Theses x = PP ThesesT x
   eval _ = eval (Proxy @ThesesT)
+
+-- | similar to 'TheseC.catHere'
+--
+-- >>> pz @(ZipThese Id (Tail Id) >> Heres) [1..10]
+-- PresentT [1,2,3,4,5,6,7,8,9,10]
+--
+data Heres
+
+instance ( Show a
+         , Show b
+         ) => P Heres [These a b] where
+  type PP Heres [These a b] = [a]
+  eval _ opts as =
+    let msg0 = "Heres"
+        b = TheseC.catHere as
+    in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
+
+-- | similar to 'TheseC.catThere'
+--
+-- >>> pz @(ZipThese Id (Tail Id) >> Theres) [1..10]
+-- PresentT [2,3,4,5,6,7,8,9,10]
+--
+data Theres
+
+instance ( Show a
+         , Show b
+         ) => P Theres [These a b] where
+  type PP Theres [These a b] = [b]
+  eval _ opts as =
+    let msg0 = "Theres"
+        b = TheseC.catThere as
+    in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
+
 
 -- want to pass Proxy b to q but then we have no way to calculate 'b'
 
@@ -8037,7 +8071,6 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 -- >>> pl @(Foldl (Fst Id) '() (EnumFromTo 1 9999)) ()
 -- Error Scanl list size exceeded (Last)
 -- FailT "Scanl list size exceeded"
---
 --
 -- >>> pl @(Foldl (Guard "someval" (Fst Id < Snd Id) >> Snd Id) (Head Id) (Tail Id)) [1,4,7,9,16]
 -- Present 16 (Last 16 | [1,4,7,9,16])
@@ -8499,35 +8532,35 @@ instance (P p x
 -- |
 -- +- P Id "hello    goodbye"
 -- |
--- +- False i=0:'h' == 'e'
+-- +- False i=0: 'h' == 'e'
 -- |
--- +- False i=1:'e' == 'l'
+-- +- False i=1: 'e' == 'l'
 -- |
--- +- True i=2:'l' == 'l'
+-- +- True i=2: 'l' == 'l'
 -- |
--- +- False i=3:'l' == 'o'
+-- +- False i=3: 'l' == 'o'
 -- |
--- +- False i=4:'o' == ' '
+-- +- False i=4: 'o' == ' '
 -- |
--- +- True i=5:' ' == ' '
+-- +- True i=5: ' ' == ' '
 -- |
--- +- True i=6:' ' == ' '
+-- +- True i=6: ' ' == ' '
 -- |
--- +- True i=7:' ' == ' '
+-- +- True i=7: ' ' == ' '
 -- |
--- +- False i=8:' ' == 'g'
+-- +- False i=8: ' ' == 'g'
 -- |
--- +- False i=9:'g' == 'o'
+-- +- False i=9: 'g' == 'o'
 -- |
--- +- True i=10:'o' == 'o'
+-- +- True i=10: 'o' == 'o'
 -- |
--- +- False i=11:'o' == 'd'
+-- +- False i=11: 'o' == 'd'
 -- |
--- +- False i=12:'d' == 'b'
+-- +- False i=12: 'd' == 'b'
 -- |
--- +- False i=13:'b' == 'y'
+-- +- False i=13: 'b' == 'y'
 -- |
--- `- False i=14:'y' == 'e'
+-- `- False i=14: 'y' == 'e'
 -- PresentT ["h","e","ll","o","    ","g","oo","d","b","y","e"]
 --
 data GroupBy p q
@@ -9039,6 +9072,29 @@ data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 --
 -- >>> pz @(Guards '[ '(PrintT "arg %d failed with value %d" Id,Gt 4), '(PrintT "%d %d" Id, Same 4)]) [17,3]
 -- FailT "1 3"
+--
+-- isbn 10 tests (dont need first guard as Zip enforces same length)
+-- >>> pz @(Guard "len must be 10!!" (Len == 10) >> Zip (1...10 >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 11) >> Guard (PrintT "sum=%d mod 11=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,9]
+-- FailT "sum=223 mod 11=3"
+--
+-- >>> pz @(Guard "len must be 10!!" (Len == 10) >> Zip (1...10 >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 11) >> Guard (PrintT "sum=%d mod 11=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,9,12]
+-- FailT "len must be 10!!"
+--
+-- >>> pz @(Guard "len must be 10!!" (Len == 10) >> Zip (1...10 >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 11) >> Guard (PrintT "sum=%d mod 11=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6]
+-- PresentT (220,0)
+--
+-- >>> pz @(Zip (1...10 >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 11) >> Guard (PrintT "sum=%d mod 11=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6,1]
+-- FailT "Zip(10,11) length mismatch"
+--
+-- isbn 13 tests
+-- >>> pz @(Zip (Cycle 13 [1,3] >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 13=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6,1]
+-- FailT "Zip(13,11) length mismatch"
+--
+-- >>> pz @(Zip (Cycle 13 [1,3]) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 13=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6,1,2,2]
+-- FailT "sum=97 mod 13=7"
+--
+-- >>> pz @(Zip (Cycle 13 [1,3]) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 13=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6,1,2,5]
+-- PresentT (100,0)
 --
 data Guards (ps :: [(k,k1)])
 
@@ -10973,7 +11029,7 @@ getValidBase n =
   in if n > len || n < 2 then errorInProgram $ "getValidBase: oops invalid base valid is 2 thru " ++ show len ++ " found " ++ show n
      else take n xs
 
--- | Display a number at base 2 to 36, similar to 'showIntAtBase' but supports signed numbers
+-- | Display a number at base 2 to 36, similar to 'Numeric.showIntAtBase' but supports signed numbers
 --
 -- >>> pz @(ShowBase 16 Id) 4077
 -- PresentT "fed"
@@ -11474,6 +11530,8 @@ instance (Show (f (t a))
          d = sequenceA tfa
      in pure $ mkNode opts (PresentT d) (msg <> " " <> showL opts d <> showVerbose opts " | " tfa) []
 
+-- | like 'traverse'
+--
 -- >>> pl @(Traverse (If (Gt 3) (Pure Maybe Id) (EmptyT Maybe Id)) Id) [1..5]
 -- Present Nothing ((>>) Nothing | {Sequence Nothing | [Nothing,Nothing,Nothing,Just 4,Just 5]})
 -- PresentT Nothing
@@ -11498,7 +11556,6 @@ instance (Show (f (t a))
 -- Present Nothing ((>>) Nothing | {Sequence Nothing | [Just 1,Just 2,Just 3,Nothing,Nothing]})
 -- PresentT Nothing
 --
-
 data Traverse p q
 type TraverseT p q = Map p q >> Sequence
 
@@ -12196,22 +12253,21 @@ instance (P p x
         let d = p <$ q
         in mkNode opts (PresentT d) (msg0 <> " " <> showL opts p) [hh pp, hh qq]
 
--- | similar to Applicative '<*'
+-- | similar to Applicative 'Control.Applicative.<*'
 --
 -- >>> pl @(Fst Id <* Snd Id) (Just 4,Just 'a')
 -- Present Just 4 ((<*) Just 4 | p=Just 4 | q=Just 'a')
 -- PresentT (Just 4)
 --
-data p <* q
-infixl 4 <*
-
--- | similar to 'Control.Applicative.<*'
---
 -- >>> pz @(Fst Id <* Snd Id) (Just "abc",Just 20)
 -- PresentT (Just "abc")
 --
+data p <* q
+infixl 4 <*
+
 type ArrowRT p q = q <* p
--- | similar to Applicative '*>'
+
+-- | similar to Applicative 'Control.Applicative.*>'
 --
 -- >>> pl @(Fst Id *> Snd Id) (Just 4,Just 'a')
 -- Present Just 'a' ((<*) Just 'a' | p=Just 'a' | q=Just 4)
@@ -13695,47 +13751,51 @@ instance P (ParseJsonFileT t p) x => P (ParseJsonFile t p) x where
   type PP (ParseJsonFile t p) x = PP (ParseJsonFileT t p) x
   eval _ = eval (Proxy @(ParseJsonFileT t p))
 
--- | encode json
+-- | encode json with pretty option
 --
--- >>> pl @(EncodeJson Id) (10,"def")
+-- >>> pl @(EncodeJson 'False Id) (10,"def")
 -- Present "[10,\"def\"]" (EncodeJson [10,"def"])
 -- PresentT "[10,\"def\"]"
 --
--- >>> pl @(EncodeJson Id >> ParseJson (Int,Bool) Id) (1,True)
+-- >>> pl @(EncodeJson 'False Id >> ParseJson (Int,Bool) Id) (1,True)
 -- Present (1,True) ((>>) (1,True) | {ParseJson (Int,Bool) (1,True)})
 -- PresentT (1,True)
 --
-data EncodeJson p
+data EncodeJson (pretty :: Bool) p
 
-instance ( A.ToJSON (PP p x)
+instance ( GetBool pretty
+         , A.ToJSON (PP p x)
          , P p x
-         ) => P (EncodeJson p) x where
-  type PP (EncodeJson p) x = BL8.ByteString
+         ) => P (EncodeJson pretty p) x where
+  type PP (EncodeJson pretty p) x = BL8.ByteString
   eval _ opts x = do
     let msg0 = "EncodeJson"
+        pretty = getBool @pretty
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let d = A.encode p
+        let d = (if pretty then AP.encodePretty else A.encode) p
         in mkNode opts (PresentT d) (msg0 <> " " <> litL opts (litBL opts d)) [hh pp]
 
--- | encode a json file
-data EncodeJsonFile p q
+-- | encode a json file with pretty option
+data EncodeJsonFile (pretty :: Bool) p q
 
-instance (PP p x ~ String
-        , P p x
-        , A.ToJSON (PP q x)
-        , P q x
-        ) => P (EncodeJsonFile p q) x where
-  type PP (EncodeJsonFile p q) x = ()
+instance ( GetBool pretty
+         , PP p x ~ String
+         , P p x
+         , A.ToJSON (PP q x)
+         , P q x
+         ) => P (EncodeJsonFile pretty p q) x where
+  type PP (EncodeJsonFile pretty p q) x = ()
   eval _ opts x = do
     let msg0 = "EncodeJsonFile"
+        pretty = getBool @pretty
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
-        let d = A.encode q
+        let d = (if pretty then AP.encodePretty else A.encode) q
             hhs = [hh pp, hh qq]
         mb <- runIO $ BL8.writeFile p d
         pure $ case mb of
@@ -13911,3 +13971,5 @@ type Tuple3 p = '(p !! 0, p !! 1, p !! 2)
 type Tuple4 p = '(p !! 0, p !! 1, p !! 2, p !! 3)
 type Tuple5 p = '(p !! 0, p !! 1, p !! 2, p !! 3, p !! 4)
 type Tuple6 p = '(p !! 0, p !! 1, p !! 2, p !! 3, p !! 4, p !! 5)
+
+

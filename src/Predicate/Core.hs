@@ -29,6 +29,7 @@ module Predicate.Core (
   , Msg
   , MsgI
   , Hide
+  , Width
 
   -- ** display evaluation tree
   , pan
@@ -199,6 +200,16 @@ instance P p x => P (Hide p) x where
   eval _ opts x = do
       tt <- eval (Proxy @p) opts x
       pure $ tt & tForest .~ []
+
+data Width (n :: Nat) p
+
+instance (KnownNat n
+        , P p a
+        ) => P (Width n p) a where
+  type PP (Width n p) a = PP p a
+  eval _ opts a = do
+    let opts' = opts { oWidth = nat @n }
+    eval (Proxy @p) opts' a
 
 -- | 'const' () function
 --

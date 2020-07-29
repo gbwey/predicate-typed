@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b23c17d670175fa49418b001f109498afb60400d33f40e80214596d2c51db03a
+-- hash: 78fd483d7742c94c5d2c9d6e2d4e3b50231f596847fa2d2062a9f241af172dbb
 
 name:           predicate-typed
 version:        0.7.2.0
@@ -48,6 +48,7 @@ library
   build-depends:
       QuickCheck
     , aeson
+    , aeson-pretty
     , base >=4.7 && <5
     , binary
     , bytestring
@@ -100,6 +101,7 @@ test-suite doctests
   build-depends:
       QuickCheck
     , aeson
+    , aeson-pretty
     , base
     , binary
     , bytestring
@@ -145,6 +147,7 @@ test-suite predicate-typed-test
   build-depends:
       QuickCheck
     , aeson
+    , aeson-pretty
     , base
     , binary
     , bytestring

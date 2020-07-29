@@ -14,6 +14,7 @@ dependencies:
 - base >= 4.7 && < 5
 - QuickCheck
 - aeson
+- aeson-pretty
 - binary
 - bytestring
 - comonad
