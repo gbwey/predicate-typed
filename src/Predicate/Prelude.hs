@@ -637,15 +637,9 @@ import qualified Data.Map.Strict as M
 -- >>> pz @Asc [1,2,3,4,5,5,7]
 -- TrueT
 --
--- >>> pz @Asc' [1,2,3,4,5,5,7]
--- FalseT
---
 -- >>> pz @Asc "axacdef"
 -- FalseT
 --
-
-
--- | a type level predicate for a monotonic increasing list
 data Asc
 type AscT = All (Fst Id <= Snd Id) Pairs
 
@@ -654,6 +648,10 @@ instance P AscT x => P Asc x where
   eval _ = evalBool (Proxy @AscT)
 
 -- | a type level predicate for a strictly increasing list
+--
+-- >>> pz @Asc' [1,2,3,4,5,5,7]
+-- FalseT
+--
 data Asc'
 type AscT' = All (Fst Id < Snd Id) Pairs
 
@@ -974,9 +972,6 @@ instance (P p a
 -- >>> pz @AllPositive [3,1,-5,10,2,3]
 -- FalseT
 --
--- >>> pz @AllNegative [-1,-5,-10,-2,-3]
--- TrueT
---
 data AllPositive
 type AllPositiveT = All Positive Id
 
@@ -985,6 +980,10 @@ instance P AllPositiveT x => P AllPositive x where
   eval _ = evalBool (Proxy @AllPositiveT)
 
 -- | a type level predicate for all negative elements in a list
+--
+-- >>> pz @AllNegative [-1,-5,-10,-2,-3]
+-- TrueT
+--
 data AllNegative
 type AllNegativeT = All Negative Id
 
@@ -1563,26 +1562,8 @@ instance (PP p x ~ ([String] -> String)
 
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
--- >>> pz @IsSpace '\t'
--- TrueT
---
--- >>> pz @IsSpace ' '
--- TrueT
---
--- >>> pz @IsSpace 'x'
--- FalseT
---
--- >>> pz @IsLower 'a'
--- TrueT
---
--- >>> pz @IsLower 'X'
--- FalseT
---
--- >>> pz @IsHexDigit 'A'
--- TrueT
---
--- >>> pz @IsHexDigit 'g'
--- FalseT
+-- >>> pz @(Map '(IsControl, IsLatin1, IsHexDigit, IsOctDigit, IsDigit, IsPunctuation, IsSeparator, IsSpace) Id) "abc134"
+-- PresentT [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
 --
 data IsCharSet (cs :: CharSet)
 
@@ -1596,16 +1577,16 @@ instance ( x ~ Char
         b = f c
     in pure $ mkNodeB opts b (msg0 <> showVerbose opts " | " [c]) []
 
--- | predicate for determining if a character is lowercase
+-- | predicate similar to 'Data.Char.isLower'
+--
+-- >>> pz @IsLower 'X'
+-- FalseT
 --
 -- >>> pz @IsLower '1'
 -- FalseT
 --
 -- >>> pz @IsLower 'a'
 -- TrueT
---
--- >>> pz @(Map '(IsControl, IsLatin1, IsHexDigit, IsOctDigit, IsDigit, IsPunctuation, IsSeparator, IsSpace) Id) "abc134"
--- PresentT [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
 --
 data IsLower
 type IsLowerT = IsCharSet 'CLower
@@ -1614,6 +1595,8 @@ instance P IsLowerT x => P IsLower x where
   type PP IsLower x = PP IsLowerT x
   eval _ = evalBool (Proxy @IsLowerT)
 
+-- | predicate similar to 'Data.Char.isUpper'
+--
 data IsUpper
 type IsUpperT = IsCharSet 'CUpper
 
@@ -1635,42 +1618,71 @@ instance P IsDigitT x => P IsDigit x where
   type PP IsDigit x = Bool
   eval _ = evalBool (Proxy @IsDigitT)
 
+-- | predicate similar to 'Data.Char.isSpace'
+--
+-- >>> pz @IsSpace '\t'
+-- TrueT
+--
+-- >>> pz @IsSpace ' '
+-- TrueT
+--
+-- >>> pz @IsSpace 'x'
+-- FalseT
+--
 data IsSpace
 type IsSpaceT = IsCharSet 'CSpace
 instance P IsSpaceT x => P IsSpace x where
   type PP IsSpace x = Bool
   eval _ = evalBool (Proxy @IsSpaceT)
 
+-- | predicate similar to 'Data.Char.isPunctuation'
+--
 data IsPunctuation
 type IsPunctuationT = IsCharSet 'CPunctuation
 instance P IsPunctuationT x => P IsPunctuation x where
   type PP IsPunctuation x = Bool
   eval _ = evalBool (Proxy @IsPunctuationT)
 
+-- | predicate similar to 'Data.Char.isControl'
+--
 data IsControl
 type IsControlT = IsCharSet 'CControl
 instance P IsControlT x => P IsControl x where
   type PP IsControl x = Bool
   eval _ = evalBool (Proxy @IsControlT)
 
+-- | predicate similar to 'Data.Char.isHexDigit'
+--
+-- >>> pz @IsHexDigit 'A'
+-- TrueT
+--
+-- >>> pz @IsHexDigit 'g'
+-- FalseT
+--
 data IsHexDigit
 type IsHexDigitT = IsCharSet 'CHexDigit
 instance P IsHexDigitT x => P IsHexDigit x where
   type PP IsHexDigit x = Bool
   eval _ = evalBool (Proxy @IsHexDigitT)
 
+-- | predicate similar to 'Data.Char.isOctDigit'
+--
 data IsOctDigit
 type IsOctDigitT = IsCharSet 'COctDigit
 instance P IsOctDigitT x => P IsOctDigit x where
   type PP IsOctDigit x = Bool
   eval _ = evalBool (Proxy @IsOctDigitT)
 
+-- | predicate similar to 'Data.Char.isSeparator'
+--
 data IsSeparator
 type IsSeparatorT = IsCharSet 'CSeparator
 instance P IsSeparatorT x => P IsSeparator x where
   type PP IsSeparator x = Bool
   eval _ = evalBool (Proxy @IsSeparatorT)
 
+-- | predicate similar to 'Data.Char.isLatin1'
+--
 data IsLatin1
 type IsLatin1T = IsCharSet 'CLatin1
 instance P IsLatin1T x => P IsLatin1 x where
@@ -1726,22 +1738,22 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- True ((>>) True | {True (&*) True})
 -- TrueT
 --
--- >>> pz @( '(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsDigitAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll ) ) "abc134"
+-- >>> pz @( '(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsDigitAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll)) "abc134"
 -- PresentT (False,True,True,False,False,False,False,False)
 --
--- >>> pl @(SplitAts [1,2,10] Id >> Para '[IsLowerAll, IsDigitAll, IsUpperAll ]) "abdefghi"
+-- >>> pl @(SplitAts [1,2,10] Id >> Para '[IsLowerAll, IsDigitAll, IsUpperAll]) "abdefghi"
 -- Present [True,False,False] ((>>) [True,False,False] | {Para(0) [True,False,False] | ["a","bd","efghi"]})
 -- PresentT [True,False,False]
 --
--- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll ]) "a98efghi"
+-- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll]) "a98efghi"
 -- False ((>>) False | {Bool(2) [] (IsUpperAll | "efghi")})
 -- FalseT
 --
--- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll ]) "a98efghi"
+-- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll]) "a98efghi"
 -- True ((>>) True | {Bools})
 -- TrueT
 --
--- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll ]) "a98efgHi"
+-- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll]) "a98efgHi"
 -- False ((>>) False | {Bool(2) [] (False || False | (IsUpperAll | "efgHi") || (IsLowerAll | "efgHi"))})
 -- FalseT
 --
@@ -3431,7 +3443,7 @@ instance P (FromRationalT t p) x => P (FromRational t p) x where
 -- >>> pz @(Truncate Int Id) (23 % 5)
 -- PresentT 4
 --
--- >>> pl @(Truncate' (Fst Id >> Unproxy ) (Snd Id)) (Proxy @Integer,2.3)
+-- >>> pl @(Truncate' (Fst Id >> Unproxy) (Snd Id)) (Proxy @Integer,2.3)
 -- Present 2 (Truncate 2 | 2.3)
 -- PresentT 2
 --
@@ -3571,7 +3583,7 @@ instance Show a => P MkProxy a where
 -- True ((>>) True | {Not (Id False)})
 -- TrueT
 --
--- >>> pl @(Do '[ W ('PresentT Id), W 'FalseT ]) True -- have to wrap them cos BoolT a vs BoolT Bool ie different types
+-- >>> pl @(Do '[W ('PresentT Id), W 'FalseT]) True -- have to wrap them cos BoolT a vs BoolT Bool ie different types
 -- False ((>>) False | {W 'FalseT})
 -- FalseT
 --
@@ -3957,7 +3969,7 @@ instance P (SecondT q) x => P (Second q) x where
 -- False ((|||) Right False | "someval")
 -- FalseT
 --
--- >>> pl @(ShowP (Succ Id) ||| ShowP Id ) (Left @_ @() 123)
+-- >>> pl @(ShowP (Succ Id) ||| ShowP Id) (Left @_ @() 123)
 -- Present "124" ((|||) Left "124" | 123)
 -- PresentT "124"
 --
@@ -4579,7 +4591,7 @@ instance (Integral (PP p x)
 
 -- | negate a ratio
 --
--- >>> pl @'[1 % 1 ,3 -% 2,3 -% 1 ] ()
+-- >>> pl @'[1 % 1 ,3 -% 2,3 -% 1] ()
 -- Present [1 % 1,(-3) % 2,(-3) % 1] ('[1 % 1,(-3) % 2,(-3) % 1] (1 % 1) | ())
 -- PresentT [1 % 1,(-3) % 2,(-3) % 1]
 --
@@ -4595,7 +4607,7 @@ instance (Integral (PP p x)
 -- Present [1,-4,5,-1] ((>>) [1,-4,5,-1] | {Map [1,-4,5,-1] | [1 % 1,(-33) % 7,21 % 4,(-1) % 1]})
 -- PresentT [1,-4,5,-1]
 --
--- >>> pl @(5 % 1 / 3 -% 1 ) 'x'
+-- >>> pl @(5 % 1 / 3 -% 1) 'x'
 -- Present (-5) % 3 (5 % 1 / (-3) % 1 = (-5) % 3)
 -- PresentT ((-5) % 3)
 --
@@ -5695,10 +5707,10 @@ instance Functor f => P FMapSnd (f (x,a)) where
 -- >>> pz @(HeadDef (MEmptyT _) Id) ([] :: [SG.Sum Int])
 -- PresentT (Sum {getSum = 0})
 --
--- >>> pz @(HeadDef (MEmptyT String) '[ "abc","def","asdfadf" ]) ()
+-- >>> pz @(HeadDef (MEmptyT String) '["abc","def","asdfadf"]) ()
 -- PresentT "abc"
 --
--- >>> pz @(HeadDef (MEmptyT _) (Snd Id)) (123,[ "abc","def","asdfadf" ])
+-- >>> pz @(HeadDef (MEmptyT _) (Snd Id)) (123,["abc","def","asdfadf"])
 -- PresentT "abc"
 --
 -- >>> pz @(HeadDef (MEmptyT _) (Snd Id)) (123,[])
@@ -5760,7 +5772,7 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 --
 -- see 'ConsT' for other supported types eg 'Seq.Seq'
 --
--- >>> pz @(HeadFail "dude" Id) [ "abc","def","asdfadf" ]
+-- >>> pz @(HeadFail "dude" Id) ["abc","def","asdfadf"]
 -- PresentT "abc"
 --
 -- >>> pz @(HeadFail "empty list" Id) []
@@ -6236,7 +6248,7 @@ type family TheseXT lr x p where
 -- Present 99 (MaybeIn(Nothing) 99 | Proxy)
 -- PresentT 99
 --
--- >>> pl @(MaybeIn (99 -% 1 ) Id) Nothing
+-- >>> pl @(MaybeIn (99 -% 1) Id) Nothing
 -- Present (-99) % 1 (MaybeIn(Nothing) (-99) % 1 | Proxy)
 -- PresentT ((-99) % 1)
 --
@@ -7223,11 +7235,11 @@ instance (P q a
 -- Present 3 (IxL('d') 3 | p=fromList [('a',0),('b',1),('c',2),('d',3)] | q='d')
 -- PresentT 3
 --
--- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd Id >> Gt 3 >> Coerce SG.Any) (IToList _ Id) >> MConcat Id) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
+-- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd Id >> Gt 3 >> Coerce SG.Any) (IToList _ Id) >> MConcat Id)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
 -- Present (3,Any {getAny = True}) (W '(3,Any {getAny = True}))
 -- PresentT (3,Any {getAny = True})
 --
--- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd Id >> Gt 3 >> Wrap SG.Any Id) (IToList _ Id) >> MConcat Id >> Unwrap Id) ) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
+-- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd Id >> Gt 3 >> Wrap SG.Any Id) (IToList _ Id) >> MConcat Id >> Unwrap Id)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
 -- Present (3,True) (W '(3,True))
 -- PresentT (3,True)
 --
@@ -7699,7 +7711,7 @@ instance P NullT a => P Null a where
 -- >>> pz @(EnumFromTo (Pred Id) (Succ Id)) (SG.Max 10)
 -- PresentT [Max {getMax = 9},Max {getMax = 10},Max {getMax = 11}]
 --
--- >>> pz @(EnumFromTo 1 20 >> Map '(Id, (If (Id `Mod` 3 == 0) "Fizz" "" <> If (Id `Mod` 5 == 0) "Buzz" "" )) Id) 123
+-- >>> pz @(EnumFromTo 1 20 >> Map '(Id, (If (Id `Mod` 3 == 0) "Fizz" "" <> If (Id `Mod` 5 == 0) "Buzz" "")) Id) 123
 -- PresentT [(1,""),(2,""),(3,"Fizz"),(4,""),(5,"Buzz"),(6,"Fizz"),(7,""),(8,""),(9,"Fizz"),(10,"Buzz"),(11,""),(12,"Fizz"),(13,""),(14,""),(15,"FizzBuzz"),(16,""),(17,""),(18,"Fizz"),(19,""),(20,"Buzz")]
 --
 -- >>> pl @(EnumFromTo (Pure SG.Min 9) (Pure _ 13)) ()
@@ -8080,11 +8092,11 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 -- Error 7 not less than 6 (Last)
 -- FailT "7 not less than 6"
 --
--- >>> pl @(Foldl (If ((Fst Id >> Fst Id) && (Snd Id > Snd (Fst Id))) '( 'True, Snd Id ) '( 'False, Snd (Fst Id) )) '( 'True, Head Id ) (Tail Id)) [1,4,7,9,16]
+-- >>> pl @(Foldl (If ((Fst Id >> Fst Id) && (Snd Id > Snd (Fst Id))) '( 'True, Snd Id) '( 'False, Snd (Fst Id))) '( 'True, Head Id) (Tail Id)) [1,4,7,9,16]
 -- Present (True,16) (Last (True,16) | [(True,1),(True,4),(True,7),(True,9),(True,16)])
 -- PresentT (True,16)
 --
--- >>> pl @(Foldl (If ((Fst Id >> Fst Id) && (Snd Id > Snd (Fst Id))) '( 'True, Snd Id ) '( 'False, Snd (Fst Id) )) '( 'True, Head Id ) (Tail Id)) [1,4,7,9,16,2]
+-- >>> pl @(Foldl (If ((Fst Id >> Fst Id) && (Snd Id > Snd (Fst Id))) '( 'True, Snd Id) '( 'False, Snd (Fst Id))) '( 'True, Head Id) (Tail Id)) [1,4,7,9,16,2]
 -- Present (False,16) (Last (False,16) | [(True,1),(True,4),(True,7),(True,9),(True,16),(False,16)])
 -- PresentT (False,16)
 --
@@ -8284,7 +8296,7 @@ instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
 
 -- | if p then run q else run r
 --
--- >>> pz @(If (Gt 4) "greater than 4" "less than or equal to 4" ) 10
+-- >>> pz @(If (Gt 4) "greater than 4" "less than or equal to 4") 10
 -- PresentT "greater than 4"
 --
 -- >>> pz @(If (Gt 4) "greater than 4" "less than or equal to 4") 0
@@ -8703,13 +8715,19 @@ instance P (SpanT p q) x => P (Span p q) x where
   type PP (Span p q) x = PP (SpanT p q) x
   eval _ = eval (Proxy @(SpanT p q))
 
--- | Fails the computation with a message
+-- | Fails the computation with a message but allows you to set the output type
 --
 -- >>> pz @(Failt Int (PrintF "value=%03d" Id)) 99
 -- FailT "value=099"
 --
--- >>> pz @(FailS (PrintT "value=%03d string=%s" Id)) (99,"somedata")
--- FailT "value=099 string=somedata"
+-- >>> pz @('False || (Fail 'True "failed")) (99,"somedata")
+-- FailT "failed"
+--
+-- >>> pz @('False || (Fail (Hole Bool) "failed")) (99,"somedata")
+-- FailT "failed"
+--
+-- >>> pz @('False || (Fail (Hole _) "failed")) (99,"somedata")
+-- FailT "failed"
 --
 data Fail t prt
 
@@ -8724,16 +8742,34 @@ instance (P prt a
       Left e -> e
       Right s -> mkNode opts (FailT s) (msg0 <> " " <> s) [hh pp | isVerbose opts]
 
+-- | Fails the computation with a message for simple failures: doesnt preserve types
+--
+-- >>> pz @(FailS (PrintT "value=%03d string=%s" Id)) (99,"somedata")
+-- FailT "value=099 string=somedata"
+--
 data FailS p
 instance P (Fail I p) x => P (FailS p) x where
   type PP (FailS p) x = PP (Fail I p) x
   eval _ = eval (Proxy @(Fail I p))
 
+-- | Fails the computation with a message (wraps the type in 'Hole')
+--
+-- >>> pz @(Failt Int (PrintF "value=%03d" Id)) 99
+-- FailT "value=099"
+--
 data Failt (t :: Type) p
 instance P (Fail (Hole t) p) x => P (Failt t p) x where
   type PP (Failt t p) x = PP (Fail (Hole t) p) x
   eval _ = eval (Proxy @(Fail (Hole t) p))
 
+-- | Fails the computation with a message where the input value is a Proxy (eg see 'Ix' 'SuccB' 'PredB' 'MaybeIn')
+--
+-- >>> pz @(Ix 3 (Failp "oops")) "abcd"
+-- PresentT 'd'
+--
+-- >>> pz @(Ix 3 (Failp "oops")) "abc"
+-- FailT "oops"
+--
 data Failp p
 instance P (Fail Unproxy p) x => P (Failp p) x where
   type PP (Failp p) x = PP (Fail Unproxy p) x
@@ -8752,6 +8788,7 @@ instance Typeable t => P (Hole t) a where
     let msg0 = "Hole(" <> showT @t <> ")"
     in pure $ mkNode opts (FailT msg0) "you probably meant to get access to the type of PP only and not evaluate" []
 
+-- | used for type inference
 data Unproxy
 
 instance Typeable a => P Unproxy (Proxy (a :: Type)) where
@@ -9096,6 +9133,12 @@ data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 -- >>> pz @(Zip (Cycle 13 [1,3]) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 13=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6,1,2,5]
 -- PresentT (100,0)
 --
+-- >>> pz @(Rescan "\\d+" Id >> ConcatMap (Fst Id) Id >> Zip (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id) >> Map (Fst Id * Snd Id) Id >> Sum >> GuardSimple ( Id `Mod` 10 == 0)) "978-0-7167-0344-0"
+-- PresentT 100
+--
+-- pz @(Do '[Rescan "\\d+" Id, ConcatMap (Fst Id) Id, Zip (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Map (Fst Id * Snd Id) Id, Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-1"
+-- FailT "101 is not evenly divisible by 10"
+--
 data Guards (ps :: [(k,k1)])
 
 instance ( [a] ~ x
@@ -9199,15 +9242,15 @@ instance (PP prt (Int, a) ~ String
 -- Error Guards:invalid length(5) expected 3
 -- FailT "Guards:invalid length(5) expected 3"
 --
--- >>> pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999]
+-- >>> pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[W 'True, Ge 12, W 'False, Lt 2]) [1,2,-99,-999]
 -- Error guard(1) err 002 (Guard(0) ok | rhs failed)
 -- FailT "guard(1) err 002"
 --
--- >>> pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
+-- >>> pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[W 'True, Ge 12, W 'False, Lt 2]) [1,2,-99]
 -- Error Guards:invalid length(3) expected 4
 -- FailT "Guards:invalid length(3) expected 4"
 --
--- >>> pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[ W 'True, Ge 12, W 'True, Lt 2 ]) [1,22,-99,-999,1,1,2]
+-- >>> pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[W 'True, Ge 12, W 'True, Lt 2]) [1,22,-99,-999,1,1,2]
 -- Error Guards:invalid length(7) expected 4
 -- FailT "Guards:invalid length(7) expected 4"
 --
@@ -9224,15 +9267,15 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 --
 -- pulls the top message from the tree if a predicate is false
 --
--- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ] ) [12,93,14]
+-- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ]) [12,93,14]
 -- False (Bool(1) [mm] (93 <= 59))
 -- FalseT
 --
--- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ] ) [12,13,94]
+-- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ]) [12,13,94]
 -- False (Bool(2) [<<<2 94>>>] (94 <= 59))
 -- FalseT
 --
--- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ] ) [12,13,14]
+-- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ]) [12,13,14]
 -- True (Bools)
 -- TrueT
 --
@@ -9248,15 +9291,15 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 -- False (Bool(2) [id=2 val=99] (99 <= 59))
 -- FalseT
 --
--- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id) ] ) [12,13,14]
+-- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id)]) [12,13,14]
 -- True (Bools)
 -- TrueT
 --
--- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id) ] ) [12,60,14]
+-- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id)]) [12,60,14]
 -- False (Bool(1) [minutes] (60 <= 59))
 -- FalseT
 --
--- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id) ] ) [12,60,14,20]
+-- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id)]) [12,60,14,20]
 -- False (Bools:invalid length(4) expected 3)
 -- FalseT
 --
@@ -9541,11 +9584,11 @@ data Guard prt p
 -- Present 3 ((>>) 3 | {Head 3 | [3]})
 -- PresentT 3
 --
--- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head Id >> Gt (20 -% 1 )) [3]
+-- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head Id >> Gt (20 -% 1)) [3]
 -- True ((>>) True | {3 % 1 > (-20) % 1})
 -- TrueT
 --
--- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head Id >> Gt (20 -% 1 )) [-23]
+-- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head Id >> Gt (20 -% 1)) [-23]
 -- False ((>>) False | {(-23) % 1 > (-20) % 1})
 -- FalseT
 --
@@ -10542,11 +10585,7 @@ type TheseIdT p q = TheseIn '(I, p) '(q, I) I
 instance P (TheseIdT p q) x => P (TheseId p q) x where
   type PP (TheseId p q) x = PP (TheseIdT p q) x
   eval _ = eval (Proxy @(TheseIdT p q))
--- | creates an empty list of the given type
---
--- >>> pz @(Id :+ EmptyList _) 99
--- PresentT [99]
---
+
 data EmptyList' t
 
 instance P (EmptyList' t) x where
@@ -10554,6 +10593,11 @@ instance P (EmptyList' t) x where
   eval _ opts _ =
     pure $ mkNode opts (PresentT []) "EmptyList" []
 
+-- | creates an empty list for the given type
+--
+-- >>> pz @(Id :+ EmptyList _) 99
+-- PresentT [99]
+--
 data EmptyList (t :: Type)
 type EmptyListT (t :: Type) = EmptyList' (Hole t)
 
@@ -10760,7 +10804,7 @@ instance (PP l a ~ x
 -- Present [(1,'a'),(2,'b'),(3,'c'),(4,'d'),(99,'e'),(99,'f'),(99,'g')] (ZipL [(1,'a'),(2,'b'),(3,'c'),(4,'d'),(99,'e'),(99,'f'),(99,'g')] | p=[1,2,3,4] | q="abcdefg")
 -- PresentT [(1,'a'),(2,'b'),(3,'c'),(4,'d'),(99,'e'),(99,'f'),(99,'g')]
 --
--- >>> pl @(ZipL (99 % 4) '[1 % 1 , 2 % 1 , 3 % 1 ] Id) "abcde"
+-- >>> pl @(ZipL (99 % 4) '[1 % 1 , 2 % 1 , 3 % 1] Id) "abcde"
 -- Present [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')] (ZipL [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')] | p=[1 % 1,2 % 1,3 % 1] | q="abcde")
 -- PresentT [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')]
 --
@@ -10937,6 +10981,38 @@ instance (PP p x ~ [Int]
         in if ret == 0 then mkNodeB opts True (msg0 <> " | " <> showL opts p) hhs
            else mkNodeB opts False (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " p) hhs
 
+
+-- supports negative numbers unlike readInt
+data ReadBase' t (n :: Nat) p
+
+instance (Typeable (PP t x)
+        , ZwischenT 2 36 n
+        , Show (PP t x)
+        , Num (PP t x)
+        , KnownNat n
+        , PP p x ~ String
+        , P p x
+        ) => P (ReadBase' t n p) x where
+  type PP (ReadBase' t n p) x = PP t x
+  eval _ opts x = do
+    let n = nat @n
+        xs = getValidBase n
+        msg0 = "ReadBase(" <> t <> "," <> show n <> ")"
+        t = showT @(PP t x)
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let (ff,p1) = case p of
+                        '-':q -> (negate,q)
+                        _ -> (id,p)
+        in case Numeric.readInt (fromIntegral n)
+            ((`elem` xs) . toLower)
+            (fromJust . (`elemIndex` xs) . toLower)
+            p1 of
+             [(b,"")] -> mkNode opts (PresentT (ff b)) (msg0 <> " " <> showL opts (ff b) <> showVerbose opts " | " p) [hh pp]
+             o -> mkNode opts (FailT ("invalid base " <> show n)) (msg0 <> " as=" <> p <> " err=" <> showL opts o) [hh pp]
+
 -- | Read a number using base 2 through a maximum of 36
 --
 -- >>> pz @(ReadBase Int 16 Id) "00feD"
@@ -10983,38 +11059,6 @@ instance (PP p x ~ [Int]
 -- Present 47 (ReadBase(Int,2) 47 | "101111")
 -- PresentT 47
 --
-
--- supports negative numbers unlike readInt
-data ReadBase' t (n :: Nat) p
-
-instance (Typeable (PP t x)
-        , ZwischenT 2 36 n
-        , Show (PP t x)
-        , Num (PP t x)
-        , KnownNat n
-        , PP p x ~ String
-        , P p x
-        ) => P (ReadBase' t n p) x where
-  type PP (ReadBase' t n p) x = PP t x
-  eval _ opts x = do
-    let n = nat @n
-        xs = getValidBase n
-        msg0 = "ReadBase(" <> t <> "," <> show n <> ")"
-        t = showT @(PP t x)
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let (ff,p1) = case p of
-                        '-':q -> (negate,q)
-                        _ -> (id,p)
-        in case Numeric.readInt (fromIntegral n)
-            ((`elem` xs) . toLower)
-            (fromJust . (`elemIndex` xs) . toLower)
-            p1 of
-             [(b,"")] -> mkNode opts (PresentT (ff b)) (msg0 <> " " <> showL opts (ff b) <> showVerbose opts " | " p) [hh pp]
-             o -> mkNode opts (FailT ("invalid base " <> show n)) (msg0 <> " as=" <> p <> " err=" <> showL opts o) [hh pp]
-
 data ReadBase (t :: Type) (n :: Nat) p
 type ReadBaseT (t :: Type) (n :: Nat) p = ReadBase' (Hole t) n p
 
@@ -11198,15 +11242,15 @@ data ParaImpl (n :: Nat) (os :: [k])
 -- >>> pz @(Para '[Id,Id + 1,Id * 4]) [10,20,30,40]
 -- FailT "Para:invalid length(4) expected 3"
 --
--- >>> pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999]
+-- >>> pl @(Para '[W 'True, Ge 12, W 'False, Lt 2]) [1,2,-99,-999]
 -- Present [True,False,False,True] (Para(0) [True,False,False,True] | [1,2,-99,-999])
 -- PresentT [True,False,False,True]
 --
--- >>> pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99]
+-- >>> pl @(Para '[W 'True, Ge 12, W 'False, Lt 2]) [1,2,-99]
 -- Error Para:invalid length(3) expected 4
 -- FailT "Para:invalid length(3) expected 4"
 --
--- >>> pl @(Para '[ W 'True, Ge 12, W 'False, Lt 2 ]) [1,2,-99,-999,1,1,2]
+-- >>> pl @(Para '[W 'True, Ge 12, W 'False, Lt 2]) [1,2,-99,-999,1,1,2]
 -- Error Para:invalid length(7) expected 4
 -- FailT "Para:invalid length(7) expected 4"
 --
@@ -11369,14 +11413,6 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- Error no match for 015 (Case(0) failed rhs)
 -- FailT "no match for 015"
 --
--- >>> pl @(Case'' (PrintF "no match for %03d" Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
--- Error no match for 015 (Case(0) failed rhs)
--- FailT "no match for 015"
---
--- >>> pl @(Case'' (PrintF "no match for %03d" Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
--- Error no match for 015 (Case(0) failed rhs)
--- FailT "no match for 015"
---
 -- >>> pl @(Case "other" '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Present "other" (Case(0) "other" | 15)
 -- PresentT "other"
@@ -11385,16 +11421,30 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- Present "151515" (Case(0) "151515" | 15)
 -- PresentT "151515"
 --
+data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
+
+-- | Case' but without a general error message
+--
 -- >>> pl @(Case' '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Error Case:no match (Case(0) failed rhs)
 -- FailT "Case:no match"
+--
+data Case' (ps :: [k]) (qs :: [k1]) (r :: k2)
+
+-- | Case'' with a specific error message
+--
+-- >>> pl @(Case'' (PrintF "no match for %03d" Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
+-- Error no match for 015 (Case(0) failed rhs)
+-- FailT "no match for 015"
+--
+-- >>> pl @(Case'' (PrintF "no match for %03d" Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
+-- Error no match for 015 (Case(0) failed rhs)
+-- FailT "no match for 015"
 --
 -- >>> pl @(Case'' (PrintF "no match for %04d" Id) '[Between 0 5 Id, Same 6, Between 7 10 Id] '[ 'LT, 'EQ, 'GT] Id) (-12)
 -- Error no match for -012 (Case(0) failed rhs)
 -- FailT "no match for -012"
 --
-data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
-data Case' (ps :: [k]) (qs :: [k1]) (r :: k2)
 data Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2)
 
 type CaseT' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd Id >> Failp "Case:no match") ps qs r
@@ -12001,6 +12051,12 @@ instance (Semigroup (PP p x)
         let d = p <> q
         in mkNode opts (PresentT d) (showL opts p <> " <> " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
 
+-- | semigroup append both sides of a tuple (ie uncurry (<>)) using 'Wrap'
+--
+-- >>> pl @(SapA' (SG.Sum _) >> Unwrap Id) (4,5)
+-- Present 9 ((>>) 9 | {getSum = 9})
+-- PresentT 9
+--
 data SapA' (t :: Type)
 type SapAT' (t :: Type) = Wrap t (Fst Id) <> Wrap t (Snd Id)
 
@@ -12010,9 +12066,8 @@ instance P (SapAT' t) x => P (SapA' t) x where
 
 -- | semigroup append both sides of a tuple (ie uncurry (<>))
 --
--- >>> pl @(SapA' (SG.Sum _) >> Unwrap Id) (4,5)
--- Present 9 ((>>) 9 | {getSum = 9})
--- PresentT 9
+-- >>> pz @(Snd Id >> SapA) (4,("abc","def"))
+-- PresentT "abcdef"
 --
 data SapA
 type SapAT = Fst Id <> Snd Id
@@ -12514,6 +12569,11 @@ instance (FailUnlessT (OrT l r)
             b =  (fl . fr) p
         in mkNode opts (PresentT (b ^. DTL.packed)) (msg0 <> litL opts b <> litVerbose opts " | " p) [hh pp]
 
+-- | similar to 'T.stripStart'
+--
+-- >>> pz @(TrimL (Snd Id)) (20," abc   ")
+-- PresentT "abc   "
+--
 data TrimL p
 type TrimLT p = TrimImpl 'True 'False p
 
@@ -12521,6 +12581,17 @@ instance P (TrimLT p) x => P (TrimL p) x where
   type PP (TrimL p) x = PP (TrimLT p) x
   eval _ = eval (Proxy @(TrimLT p))
 
+-- | similar to 'T.stripEnd'
+--
+-- >>> pz @(TrimR (Snd Id)) (20," abc   ")
+-- PresentT " abc"
+--
+-- >>> pz @(TrimR "  abc ") ()
+-- PresentT "  abc"
+--
+-- >>> pz @(TrimR "") ()
+-- PresentT ""
+--
 data TrimR p
 type TrimRT p = TrimImpl 'False 'True p
 
@@ -12528,6 +12599,20 @@ instance P (TrimRT p) x => P (TrimR p) x where
   type PP (TrimR p) x = PP (TrimRT p) x
   eval _ = eval (Proxy @(TrimRT p))
 
+-- | similar to 'T.strip'
+--
+-- >>> pz @(TrimBoth (Snd Id)) (20," abc   " :: String)
+-- PresentT "abc"
+--
+-- >>> pz @(TrimBoth (Snd Id)) (20,T.pack " abc   ")
+-- PresentT "abc"
+--
+-- >>> pz @(TrimBoth "         ") ()
+-- PresentT ""
+--
+-- >>> pz @(TrimBoth "") ()
+-- PresentT ""
+--
 data TrimBoth p
 type TrimBothT p = TrimImpl 'True 'True p
 
@@ -12535,29 +12620,6 @@ instance P (TrimBothT p) x => P (TrimBoth p) x where
   type PP (TrimBoth p) x = PP (TrimBothT p) x
   eval _ = eval (Proxy @(TrimBothT p))
 
--- | similar to 'T.stripLeft' 'T.stripRight'
---
--- >>> pz @(StripL "xyz" Id) ("xyzHello" :: String)
--- PresentT (Just "Hello")
---
--- >>> pz @(StripL "xyz" Id) (T.pack "xyzHello")
--- PresentT (Just "Hello")
---
--- >>> pz @(StripL "xyz" Id) "xywHello"
--- PresentT Nothing
---
--- >>> pz @(StripR "xyz" Id) "Hello xyz"
--- PresentT (Just "Hello ")
---
--- >>> pz @(StripR "xyz" Id) "xyzHelloxyw"
--- PresentT Nothing
---
--- >>> pz @(StripR "xyz" Id) ""
--- PresentT Nothing
---
--- >>> pz @(StripR "xyz" "xyz") ()
--- PresentT (Just "")
---
 data StripImpl(left :: Bool) p q
 
 instance (GetBool l
@@ -12582,6 +12644,17 @@ instance (GetBool l
                   in if after == p then Just before else Nothing
         in mkNode opts (PresentT (fmap (view DTL.packed) b)) (msg0 <> showL opts b <> litVerbose opts " | p=" p <> litVerbose opts " | q=" q) [hh pp, hh qq]
 
+-- | similar to 'T.stripLeft'
+--
+-- >>> pz @(StripL "xyz" Id) ("xyzHello" :: String)
+-- PresentT (Just "Hello")
+--
+-- >>> pz @(StripL "xyz" Id) (T.pack "xyzHello")
+-- PresentT (Just "Hello")
+--
+-- >>> pz @(StripL "xyz" Id) "xywHello"
+-- PresentT Nothing
+--
 data StripL p q
 type StripLT p q = StripImpl 'True p q
 
@@ -12589,6 +12662,20 @@ instance P (StripLT p q) x => P (StripL p q) x where
   type PP (StripL p q) x = PP (StripLT p q) x
   eval _ = eval (Proxy @(StripLT p q))
 
+-- | similar to 'T.stripRight'
+--
+-- >>> pz @(StripR "xyz" Id) "Hello xyz"
+-- PresentT (Just "Hello ")
+--
+-- >>> pz @(StripR "xyz" Id) "xyzHelloxyw"
+-- PresentT Nothing
+--
+-- >>> pz @(StripR "xyz" Id) ""
+-- PresentT Nothing
+--
+-- >>> pz @(StripR "xyz" "xyz") ()
+-- PresentT (Just "")
+--
 data StripR p q
 type StripRT p q = StripImpl 'False p q
 
@@ -12681,7 +12768,7 @@ instance P (DoNT n p) a => P (DoN n p) a where
 -- Present 99 (JustDef Nothing)
 -- PresentT 99
 --
--- >>> pl @(JustDef (99 -% 1 ) Id) Nothing
+-- >>> pl @(JustDef (99 -% 1) Id) Nothing
 -- Present (-99) % 1 (JustDef Nothing)
 -- PresentT ((-99) % 1)
 --
@@ -13658,28 +13745,6 @@ instance (Foldable t
                    as -> let n = length as
                          in mkNode opts (FailT (msg0 <> " " <> show n <> " elements")) "expected one element" [hh pp]
 
--- | parse json data
---
--- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\"]"
--- Present (10,"abc") (ParseJson (Int,[Char]) (10,"abc"))
--- PresentT (10,"abc")
---
--- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\",99]"
--- Error ParseJson (Int,[Char])([10,"abc",...) Error in $ (Error in $: cannot unpack array of length 3 into a tuple of length 2 | [10,"abc",99])
--- FailT "ParseJson (Int,[Char])([10,\"abc\",...) Error in $"
---
--- >>> pl @(ParseJson (Int,Bool) (FromString _ Id)) ("[1,true]" :: String)
--- Present (1,True) (ParseJson (Int,Bool) (1,True))
--- PresentT (1,True)
---
--- >>> pl @(ParseJson (Int,Bool) Id) (A.encode (1,True))
--- Present (1,True) (ParseJson (Int,Bool) (1,True))
--- PresentT (1,True)
---
--- >>> pl @(ParseJson () Id) "[1,true]"
--- Error ParseJson ()([1,true]) Error in $ (Error in $: parsing () failed, expected an empty array | [1,true])
--- FailT "ParseJson ()([1,true]) Error in $"
---
 data ParseJson' t p
 
 instance (P p x
@@ -13702,6 +13767,28 @@ instance (P p x
            Right b -> mkNode opts (PresentT b) (msg0 <> " " ++ showL opts { oWidth = oWidth opts `div` 2 } b) hhs
            Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e) ) (e <> " | " <> litBL opts s) hhs
 
+-- | parse json data
+--
+-- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\"]"
+-- Present (10,"abc") (ParseJson (Int,[Char]) (10,"abc"))
+-- PresentT (10,"abc")
+--
+-- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\",99]"
+-- Error ParseJson (Int,[Char])([10,"abc",...) Error in $ (Error in $: cannot unpack array of length 3 into a tuple of length 2 | [10,"abc",99])
+-- FailT "ParseJson (Int,[Char])([10,\"abc\",...) Error in $"
+--
+-- >>> pl @(ParseJson (Int,Bool) (FromString _ Id)) ("[1,true]" :: String)
+-- Present (1,True) (ParseJson (Int,Bool) (1,True))
+-- PresentT (1,True)
+--
+-- >>> pl @(ParseJson (Int,Bool) Id) (A.encode (1,True))
+-- Present (1,True) (ParseJson (Int,Bool) (1,True))
+-- PresentT (1,True)
+--
+-- >>> pl @(ParseJson () Id) "[1,true]"
+-- Error ParseJson ()([1,true]) Error in $ (Error in $: parsing () failed, expected an empty array | [1,true])
+-- FailT "ParseJson ()([1,true]) Error in $"
+--
 data ParseJson (t :: Type) p
 type ParseJsonT (t :: Type) p = ParseJson' (Hole t) p
 
@@ -13709,11 +13796,6 @@ instance P (ParseJsonT t p) x => P (ParseJson t p) x where
   type PP (ParseJson t p) x = PP (ParseJsonT t p) x
   eval _ = eval (Proxy @(ParseJsonT t p))
 
--- | parse a json file
---
--- >>> pz @(ParseJsonFile [A.Value] "test1.json" >> Id !! 2) ()
--- PresentT (Object (fromList [("lastName",String "Doe"),("age",Number 45.0),("firstName",String "John"),("likesPizza",Bool False)]))
---
 data ParseJsonFile' t p
 
 instance (P p x
@@ -13744,6 +13826,11 @@ instance (P p x
                Right b -> mkNode opts (PresentT b) (msg1 <> " " ++ showL opts b) hhs
                Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) (e <> " | " <> litBS opts s) hhs
 
+-- | parse a json file
+--
+-- >>> pz @(ParseJsonFile [A.Value] "test1.json" >> Id !! 2) ()
+-- PresentT (Object (fromList [("lastName",String "Doe"),("age",Number 45.0),("firstName",String "John"),("likesPizza",Bool False)]))
+--
 data ParseJsonFile (t :: Type) p
 type ParseJsonFileT (t :: Type) p = ParseJsonFile' (Hole t) p
 
@@ -13802,12 +13889,6 @@ instance ( GetBool pretty
           Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" hhs
           Just () -> mkNode opts (PresentT ()) (msg0 <> " " <> litL opts (litBL opts d)) hhs
 
--- | like 'Predicate.Prelude.&&' but for a tuple
---
--- >>> pl @(SplitAt 4 "abcdefg" >> Len > 4 &* Len < 5) ()
--- False ((>>) False | {False (&*) True | (4 > 4)})
--- FalseT
---
 data AndA p q r
 instance (PP r x ~ (a,b)
         , PP p a ~ Bool
@@ -13838,6 +13919,12 @@ instance (PP r x ~ (a,b)
                           (False, False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
                 in mkNodeB opts (p&&q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> (if null zz then zz else " | " <> zz)) [hh rr, hh pp, hh qq]
 
+-- | like 'Predicate.Prelude.&&' but for a tuple
+--
+-- >>> pl @(SplitAt 4 "abcdefg" >> Len > 4 &* Len < 5) ()
+-- False ((>>) False | {False (&*) True | (4 > 4)})
+-- FalseT
+--
 data p &* q
 type AndAT p q = AndA p q Id
 infixr 3 &*
@@ -13846,20 +13933,6 @@ instance P (AndAT p q) x => P (p &* q) x where
   type PP (p &* q) x = PP (AndAT p q) x
   eval _ = evalBool (Proxy @(AndAT p q))
 
--- | like 'Predicate.Prelude.||' but for a tuple
---
--- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,8,14,44],9)
--- True (True (|+) False)
--- TrueT
---
--- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,14],9)
--- False (False (|+) False | (32 > 44) (|+) (9 < 2))
--- FalseT
---
--- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,14],1)
--- True (False (|+) True)
--- TrueT
---
 data OrA p q r
 instance (PP r x ~ (a,b)
         , PP p a ~ Bool
@@ -13888,6 +13961,20 @@ instance (PP r x ~ (a,b)
                           _ -> ""
                 in mkNodeB opts (p||q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> (if null zz then zz else " | " <> zz)) [hh rr, hh pp, hh qq]
 
+-- | like 'Predicate.Prelude.||' but for a tuple
+--
+-- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,8,14,44],9)
+-- True (True (|+) False)
+-- TrueT
+--
+-- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,14],9)
+-- False (False (|+) False | (32 > 44) (|+) (9 < 2))
+-- FalseT
+--
+-- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,14],1)
+-- True (False (|+) True)
+-- TrueT
+--
 data p |+ q
 type OrAT p q = OrA p q Id
 infixr 3 |+
@@ -13958,18 +14045,36 @@ instance (PP p a ~ [b]
         in if n <= 0 then mkNode opts (FailT (msg0 <> " n<1")) "" hhs
            else let ret = unfoldr (\s -> if null s then Nothing else Just $ splitAt n s) p
                 in mkNode opts (PresentT ret) (show01' opts msg1 ret "n=" n <> showVerbose opts " | " p) hhs
-
+-- | rotate a list \'p\' \'n\' units
+--
+-- >>> pz @(Rotate 0 Id) [1,2,3,4]
+-- PresentT [1,2,3,4]
+--
+-- >>> pz @(Rotate (Negate 1) Id) [1,2,3,4]
+-- PresentT [4,1,2,3]
+--
+-- >>> pz @(Rotate 2 Id) [1,2,3,4]
+-- PresentT [3,4,1,2]
+--
+-- >>> pz @(Map (Rotate Id "abcd") Id) [-3..7]
+-- PresentT ["bcda","cdab","dabc","abcd","bcda","cdab","dabc","abcd","bcda","cdab","dabc"]
+--
 data Rotate n p
-type RotateT n p = SplitAt n p >> Swap >> First Reverse >> SapA
+type RotateT n p = SplitAt (n `Mod` Length p) p >> Swap >> SapA
 
 instance P (RotateT n p) x => P (Rotate n p) x where
   type PP (Rotate n p) x = PP (RotateT n p) x
   eval _ = eval (Proxy @(RotateT n p))
 
+-- | convert a list to a 2-tuple
 type Tuple2 p = '(p !! 0, p !! 1)
+-- | convert a list to a 3-tuple
 type Tuple3 p = '(p !! 0, p !! 1, p !! 2)
+-- | convert a list to a 4-tuple
 type Tuple4 p = '(p !! 0, p !! 1, p !! 2, p !! 3)
+-- | convert a list to a 5-tuple
 type Tuple5 p = '(p !! 0, p !! 1, p !! 2, p !! 3, p !! 4)
+-- | convert a list to a 6-tuple
 type Tuple6 p = '(p !! 0, p !! 1, p !! 2, p !! 3, p !! 4, p !! 5)
 
 

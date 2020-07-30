@@ -392,7 +392,7 @@ genRefined3P _ g =
           Just ppi -> do
              let lr = getValLRFromTT (runIdentity (eval @_ (Proxy @fmt) o ppi))
              case lr of
-               Left e -> error $ "formatting failed!! " ++ e
+               Left e -> error $ "genRefined3P: formatting failed!! " ++ e
                Right r -> pure $ unsafeRefined3 ppi r
   in f 0
 
