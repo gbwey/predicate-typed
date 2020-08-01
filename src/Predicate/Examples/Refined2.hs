@@ -62,6 +62,16 @@ module Predicate.Examples.Refined2 (
   , Ip6
   , Ip6R
 
+  -- ** isbn10
+  , isbn10
+  , Isbn10
+  , Isbn10R
+
+  -- ** isbn13
+  , isbn13
+  , Isbn13
+  , Isbn13R
+
  -- ** base n
   , BaseN
   , BaseN'
@@ -205,6 +215,35 @@ type Ip6 (opts :: OptT) = '(opts, Ip6ip, Ip6op, String) -- guards
 
 ip6 :: Proxy (Ip6 opts)
 ip6 = Proxy
+
+-- | validate isbn10
+--
+-- >>> newRefined2P (isbn10 @OZ) "0-306-40611-X"
+-- Right (Refined2 {r2In = ([0,3,0,6,4,0,6,1,1],10), r2Out = "0-306-40611-X"})
+--
+-- >>> newRefined2P (isbn10 @OZ) "0-306-40611-9"
+-- Left "Step 2. Failed Boolean Check(op) | mod 0 oops"
+--
+type Isbn10R (opts :: OptT) = MakeR2 (Isbn10 opts)
+type Isbn10 (opts :: OptT) = '(opts, Isbn10ip, Isbn10op, String) -- guards
+
+isbn10 :: Proxy (Isbn10 opts)
+isbn10 = Proxy
+
+-- | validate isbn13
+--
+-- >>> newRefined2P (isbn13 @OZ) "978-0-306-40615-7"
+-- Right (Refined2 {r2In = [9,7,8,0,3,0,6,4,0,6,1,5,7], r2Out = "978-0-306-40615-7"})
+--
+-- >>> newRefined2P (isbn13 @OZ) "978-0-306-40615-8"
+-- Left "Step 2. Failed Boolean Check(op) | sum=101 mod 10=1"
+--
+type Isbn13R (opts :: OptT) = MakeR2 (Isbn13 opts)
+type Isbn13 (opts :: OptT) = '(opts, Isbn13ip, Isbn13op, String) -- guards
+
+isbn13 :: Proxy (Isbn13 opts)
+isbn13 = Proxy
+
 
 
 cc11 :: Proxy (Ccn opts 11)

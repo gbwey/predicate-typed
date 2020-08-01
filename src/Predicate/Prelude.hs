@@ -9110,34 +9110,25 @@ data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 -- >>> pz @(Guards '[ '(PrintT "arg %d failed with value %d" Id,Gt 4), '(PrintT "%d %d" Id, Same 4)]) [17,3]
 -- FailT "1 3"
 --
--- isbn 10 tests (dont need first guard as Zip enforces same length)
--- >>> pz @(Guard "len must be 10!!" (Len == 10) >> Zip (1...10 >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 11) >> Guard (PrintT "sum=%d mod 11=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,9]
--- FailT "sum=223 mod 11=3"
+-- isbn 10 tests (dont need first guard as Zip enforces same length: handles case insensitive 'x' as check digit)
+-- >>> pz @(Resplit "-" Id >> Concat Id >> Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> Zip (1...10 >> Reverse) (Fst Id +: Snd Id) >> Map (Fst Id * Snd Id) Id >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40614-X"
+-- FailT "mod 0 oops"
 --
--- >>> pz @(Guard "len must be 10!!" (Len == 10) >> Zip (1...10 >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 11) >> Guard (PrintT "sum=%d mod 11=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,9,12]
--- FailT "len must be 10!!"
---
--- >>> pz @(Guard "len must be 10!!" (Len == 10) >> Zip (1...10 >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 11) >> Guard (PrintT "sum=%d mod 11=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6]
--- PresentT (220,0)
---
--- >>> pz @(Zip (1...10 >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 11) >> Guard (PrintT "sum=%d mod 11=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6,1]
--- FailT "Zip(10,11) length mismatch"
+-- >>> pz @(Resplit "-" Id >> Concat Id >> Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> Zip (1...10 >> Reverse) (Fst Id +: Snd Id) >> Map (Fst Id * Snd Id) Id >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40611-X"
+-- PresentT 132
 --
 -- isbn 13 tests
--- >>> pz @(Zip (Cycle 13 [1,3] >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 13=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6,1]
--- FailT "Zip(13,11) length mismatch"
---
--- >>> pz @(Zip (Cycle 13 [1,3]) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 13=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6,1,2,2]
--- FailT "sum=97 mod 13=7"
---
--- >>> pz @(Zip (Cycle 13 [1,3]) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 13=%d" Id) (Snd Id == 0)) [4,3,1,7,8,2,1,4,8,6,1,2,5]
+-- >>> pz @(Resplit "-" Id >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> Zip (Cycle 13 [1,3] >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-7"
 -- PresentT (100,0)
 --
--- >>> pz @(Rescan "\\d+" Id >> ConcatMap (Fst Id) Id >> Zip (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id) >> Map (Fst Id * Snd Id) Id >> Sum >> GuardSimple ( Id `Mod` 10 == 0)) "978-0-7167-0344-0"
--- PresentT 100
+-- >>> pz @(Resplit "-" Id >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> Zip (Cycle 13 [1,3] >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-8"
+-- FailT "sum=101 mod 10=1"
 --
--- pz @(Do '[Rescan "\\d+" Id, ConcatMap (Fst Id) Id, Zip (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Map (Fst Id * Snd Id) Id, Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-1"
--- FailT "101 is not evenly divisible by 10"
+-- >>> pz @(Do '[Resplit "-" Id, Concat Id, Zip (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Map (Fst Id * Snd Id) Id, Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-9"
+-- FailT "109 is not evenly divisible by 10"
+--
+-- >>> pz @(Do '[Resplit "-" Id, Concat Id, Zip (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Map (Fst Id * Snd Id) Id, Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-0"
+-- PresentT 100
 --
 data Guards (ps :: [(k,k1)])
 
