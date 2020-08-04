@@ -15,23 +15,17 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     extra promoted functions
 -}
 module Predicate.Data.Extra (
 
-    Pure
-  , Pure2
+    Pure2
   , type (<$)
   , type (<*)
   , type (*>)
@@ -502,53 +496,6 @@ data FMapSnd
 instance Functor f => P FMapSnd (f (x,a)) where
   type PP FMapSnd (f (x,a)) = f a
   eval _ opts mb = pure $ mkNode opts (PresentT (snd <$> mb)) "FMapSnd" []
-
--- | similar to 'pure'
---
--- >>> pz @(Pure Maybe Id) 4
--- PresentT (Just 4)
---
--- >>> pz @(Pure [] Id) 4
--- PresentT [4]
---
--- >>> pz @(Pure (Either String) (Fst Id)) (13,True)
--- PresentT (Right 13)
---
--- >>> pl @(Pure Maybe Id) 'x'
--- Present Just 'x' (Pure Just 'x' | 'x')
--- PresentT (Just 'x')
---
--- >>> pl @(Pure (Either _) Id) 'x'
--- Present Right 'x' (Pure Right 'x' | 'x')
--- PresentT (Right 'x')
---
--- >>> pl @(Pure (Either _) Id >> Swap) 'x'
--- Present Left 'x' ((>>) Left 'x' | {Swap Left 'x' | Right 'x'})
--- PresentT (Left 'x')
---
--- >>> pl @(Pure (Either ()) Id >> Swap) 'x'
--- Present Left 'x' ((>>) Left 'x' | {Swap Left 'x' | Right 'x'})
--- PresentT (Left 'x')
---
--- >>> pl @(Pure (Either String) Id >> Swap) 123
--- Present Left 123 ((>>) Left 123 | {Swap Left 123 | Right 123})
--- PresentT (Left 123)
---
-data Pure (t :: Type -> Type) p
-instance (P p x
-        , Show (PP p x)
-        , Show (t (PP p x))
-        , Applicative t
-        ) => P (Pure t p) x where
-  type PP (Pure t p) x = t (PP p x)
-  eval _ opts x = do
-    let msg0 = "Pure"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right a ->
-        let b = pure a
-        in mkNode opts (PresentT b) (show01 opts msg0 b a) [hh pp]
 
 -- | just run the effect but skip the value
 -- for example for use with Stdout so it doesnt interfere with the \'a\' on the rhs unless there is an failure

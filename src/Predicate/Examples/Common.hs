@@ -178,13 +178,13 @@ type Ip6fmt = PrintL 8 "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x" Id
 
 type Isbn10ip = Resplit "-" Id
              >> Concat Id
-             >> Just Unsnoc
+             >> 'Just Unsnoc
              >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id))
 
 type Isbn10op = GuardSimple (All (0 <..> 9) (Fst Id) && Between 0 10 (Snd Id))
              >> ZipWith (Fst Id * Snd Id) (1...10 >> Reverse) (Fst Id +: Snd Id)
              >> Sum
-             >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)
+             >> Guard "mod 0 oops" (Id `Mod` 11 == 0)
              >> 'True
 
 type Isbn10fmt = ConcatMap (ShowP Id) Id *** If (Id == 10) "X" (ShowP Id)
@@ -201,7 +201,7 @@ type Isbn13op = ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3] >> Reverse) Id
              >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)
              >> 'True
 
-type Isbn13fmt = Just Unsnoc >> ConcatMap (ShowP Id) (Fst Id) <> "-" <> ShowP (Snd Id)
+type Isbn13fmt = 'Just Unsnoc >> ConcatMap (ShowP Id) (Fst Id) <> "-" <> ShowP (Snd Id)
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
 type DateFmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]

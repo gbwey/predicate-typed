@@ -74,7 +74,6 @@ module Predicate.Core (
   , FailS
   , OneP
   , Between
-  , BetweenA
   , type (<..>)
   , All
   , Any
@@ -95,6 +94,7 @@ module Predicate.Core (
 
   , Swap
   , SwapC(..)
+  , Pure
 
   -- ** boolean expressions
   , type (&&)
@@ -630,31 +630,44 @@ instance (Show (PP p a)
             -- no gap between ' and ret!
             in mkNode opts (PresentT ret) ("'" <> showL opts ret <> litVerbose opts " " (topMessage pp) <> showVerbose opts " | " a) ([hh pp | isVerbose opts] <> [hh qq])
 
--- | extracts the \'a\' from type level \'Maybe a\' if the value exists
+-- | tries to extract @a@ from @Maybe a@ otherwise it fails
 --
--- >>> pz @('Just Id) (Just 123)
+-- >>> pz @('Just Id) (Just "abc")
+-- PresentT "abc"
+--
+-- >>> pl @('Just Id >> Id) (Just 123)
+-- Present 123 ((>>) 123 | {Id 123})
 -- PresentT 123
 --
--- >>> pz @('Just Id) (Just True)
--- PresentT True
+-- >>> pl @('Just Id) (Just [1,2,3])
+-- Present [1,2,3] ('Just [1,2,3] | Just [1,2,3])
+-- PresentT [1,2,3]
 --
--- >>> pz @('Just Id) Nothing
--- FailT "'Just found Nothing"
+-- >>> pl @('Just Id) (Just 10)
+-- Present 10 ('Just 10 | Just 10)
+-- PresentT 10
 --
-instance (Show (PP p a)
-        , P p a
-        , Show a
-        ) => P ('Just p) (Maybe a) where
-  type PP ('Just p) (Maybe a) = PP p a
-  eval _ opts ma = do
+-- >>> pl @('Just Id) Nothing
+-- Error 'Just(empty)
+-- FailT "'Just(empty)"
+--
+-- >>> pz @('Just (Fst Id)) (Just 123,'x')
+-- PresentT 123
+--
+instance (Show a
+        , PP p x ~ Maybe a
+        , P p x
+        ) => P ('Just p) x where
+  type PP ('Just p) x = MaybeT (PP p x)
+  eval _ opts x = do
     let msg0 = "'Just"
-    case ma of
-      Just a -> do
-        pp <- eval (Proxy @p) opts a
-        pure $ case getValueLR opts msg0 pp [] of
-          Left e -> e
-          Right b -> mkNode opts (PresentT b) (show01 opts msg0 b ma) [hh pp]
-      Nothing -> pure $ mkNode opts (FailT (msg0 <> " found Nothing")) "" []
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p of
+          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" [hh pp]
+          Just d -> mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
 
 -- | expects Nothing otherwise it fails
 -- if the value is Nothing then it returns \'Proxy a\' as this provides type information
@@ -677,6 +690,9 @@ instance P 'Nothing (Maybe a) where
 -- | extracts the \'a\' from type level \'Either a b\' if the value exists
 --
 -- >>> pz @('Left Id) (Left 123)
+-- PresentT 123
+--
+-- >>> pz @('Left (Snd Id)) (Left ('x',123))
 -- PresentT 123
 --
 -- >>> pz @('Left Id) (Right "aaa")
@@ -708,6 +724,9 @@ instance (Show a
 -- | extracts the \'b\' from type level \'Either a b\' if the value exists
 --
 -- >>> pz @('Right Id) (Right 123)
+-- PresentT 123
+--
+-- >>> pz @('Right (Snd Id)) (Right ('x',123))
 -- PresentT 123
 --
 -- >>> pz @('Right Id) (Left "aaa")
@@ -1367,6 +1386,8 @@ instance (Foldable t
                    as -> let n = length as
                          in mkNode opts (FailT (msg0 <> " " <> show n <> " elements")) "expected one element" [hh pp]
 
+--type OneP = Guard "expected list of length 1" (Len == 1) >> Head Id
+--type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
 
 -- | A predicate that determines if the value is between \'p\' and \'q\'
 --
@@ -1431,61 +1452,6 @@ type BetweenT p q = Between p q Id
 instance P (BetweenT p q) x => P (p <..> q) x where
   type PP (p <..> q) x = PP (BetweenT p q) x
   eval _ = evalBool (Proxy @(BetweenT p q))
-
--- | between for tuples
---
--- >>> pl @(BetweenA (Fst Id) (Snd Id)) ((1,4),8)
--- False (8 <= 4)
--- FalseT
---
--- >>> pl @(BetweenA (Fst Id) (Snd Id)) ((1,4),0)
--- False (1 <= 0)
--- FalseT
---
--- >>> pl @(BetweenA (Fst Id) (Snd Id)) ((1,4),3)
--- True (1 <= 3 <= 4)
--- TrueT
---
--- >>> pl @(BetweenA (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2018-10-12"
--- True (2017-04-11 <= 2018-10-12 <= 2018-12-30)
--- TrueT
---
--- >>> pl @(BetweenA (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2019-10-12"
--- False (2019-10-12 <= 2018-12-30)
--- FalseT
---
--- >>> pl @(BetweenA (ReadP (Day,Day) "(2017-04-11,2018-12-30)") (ReadP Day Id)) "2016-10-12"
--- False (2017-04-11 <= 2016-10-12)
--- FalseT
---
-
-{- too much data mitigated somewhat by Hide
-type BetweenAT p q = '(p,q) >> Between (Fst (Fst Id)) (Snd (Fst Id)) (Snd Id)
-
-instance P (BetweenAT p q) x => P (BetweenA p q) x where
-  type PP (BetweenA p q) x = PP (BetweenAT p q) x
-  eval _ = evalBool (Proxy @(BetweenAT p q))
--}
-data BetweenA p q
-
-instance (PP p x ~ (a,a')
-       , P q x
-       , PP q x ~ a
-       , Ord a
-       , a ~ a'
-       , Show a
-       , P p x
-       ) => P (BetweenA p q) x where
-  type PP (BetweenA p q) x = Bool
-  eval _ opts x = do
-    let msg0 = "BetweenA"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
-    pure $ case lr of
-      Left e -> e
-      Right ((p1,p2),q,pp,qq) ->
-        [hh pp, hh qq] & if p1 <= q && q <= p2 then mkNodeB opts True (showL opts p1 <> " <= " <> showL opts q <> " <= " <> showL opts p2)
-        else if p1 > q then mkNodeB opts False (showL opts p1 <> " <= " <> showL opts q)
-        else mkNodeB opts False (showL opts q <> " <= " <> showL opts p2)
 
 -- | similar to 'all'
 --
@@ -2365,4 +2331,51 @@ infixl 1 &
 instance P (p q) a => P (q & p) a where
   type PP (q & p) a = PP (p q) a
   eval _ = eval (Proxy @(p q))
+
+-- | similar to 'pure'
+--
+-- >>> pz @(Pure Maybe Id) 4
+-- PresentT (Just 4)
+--
+-- >>> pz @(Pure [] Id) 4
+-- PresentT [4]
+--
+-- >>> pz @(Pure (Either String) (Fst Id)) (13,True)
+-- PresentT (Right 13)
+--
+-- >>> pl @(Pure Maybe Id) 'x'
+-- Present Just 'x' (Pure Just 'x' | 'x')
+-- PresentT (Just 'x')
+--
+-- >>> pl @(Pure (Either _) Id) 'x'
+-- Present Right 'x' (Pure Right 'x' | 'x')
+-- PresentT (Right 'x')
+--
+-- >>> pl @(Pure (Either _) Id >> Swap) 'x'
+-- Present Left 'x' ((>>) Left 'x' | {Swap Left 'x' | Right 'x'})
+-- PresentT (Left 'x')
+--
+-- >>> pl @(Pure (Either ()) Id >> Swap) 'x'
+-- Present Left 'x' ((>>) Left 'x' | {Swap Left 'x' | Right 'x'})
+-- PresentT (Left 'x')
+--
+-- >>> pl @(Pure (Either String) Id >> Swap) 123
+-- Present Left 123 ((>>) Left 123 | {Swap Left 123 | Right 123})
+-- PresentT (Left 123)
+--
+data Pure (t :: Type -> Type) p
+instance (P p x
+        , Show (PP p x)
+        , Show (t (PP p x))
+        , Applicative t
+        ) => P (Pure t p) x where
+  type PP (Pure t p) x = t (PP p x)
+  eval _ opts x = do
+    let msg0 = "Pure"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right a ->
+        let b = pure a
+        in mkNode opts (PresentT b) (show01 opts msg0 b a) [hh pp]
 

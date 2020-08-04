@@ -15,22 +15,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted String functions
 -}
 module Predicate.Data.String (
-
-  -- ** string expressions
     TrimBoth
   , TrimL
   , TrimR
@@ -42,6 +36,7 @@ module Predicate.Data.String (
   , IsPrefixI
   , IsInfixI
   , IsSuffixI
+
   , ToString
   , FromString
   , FromString'

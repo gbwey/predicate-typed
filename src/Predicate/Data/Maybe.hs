@@ -15,18 +15,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted 'Maybe' functions
 -}
 module Predicate.Data.Maybe (
 
@@ -38,7 +33,6 @@ module Predicate.Data.Maybe (
   , IsJust
   , MapMaybe
   , CatMaybes
-  , Just
   , JustDef
   , JustFail
   , MaybeIn
@@ -49,8 +43,6 @@ import Predicate.Core
 import Predicate.Util
 import Predicate.Data.List (ConcatMap)
 import Predicate.Data.Monoid (MEmptyP)
-import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
-import qualified GHC.TypeLits as GL
 import Data.Proxy
 import Data.Kind (Type)
 
@@ -103,7 +95,6 @@ instance ( PP p x ~ a
         let d = Just p
         in mkNode opts (PresentT d) (msg0 <> " Just " <> showL opts p) [hh pp]
 
---type Just'  p = JustFail  "expected Just" p
 -- | similar to 'Data.Maybe.maybe'
 --
 -- provides a Proxy to the result of \'q\' but does not provide the surrounding context
@@ -288,13 +279,13 @@ instance ( P p x
 -- >>> pz @(IsNothing Id) Nothing
 -- TrueT
 --
--- >>> pl @(Not (IsNothing Id) &&& (Just Id >> Id + 12)) (Just 1)
+-- >>> pl @(Not (IsNothing Id) &&& ('Just Id >> Id + 12)) (Just 1)
 -- Present (True,13) (W '(True,13))
 -- PresentT (True,13)
 --
--- >>> pl @(Not (IsNothing Id) &&& (Just Id >> Id + 12)) Nothing
--- Error Just(empty) (W '(,))
--- FailT "Just(empty)"
+-- >>> pl @(Not (IsNothing Id) &&& ('Just Id >> Id + 12)) Nothing
+-- Error 'Just(empty) (W '(,))
+-- FailT "'Just(empty)"
 --
 data IsNothing p
 
@@ -439,13 +430,6 @@ instance ( PP p x ~ a
               Right b -> mkNode opts (PresentT b) (msg0 <> " Nothing") [hh qq, hh pp]
 
 
-type family MaybeT mb where
-  MaybeT (Maybe a) = a
-  MaybeT o = GL.TypeError (
-      'GL.Text "MaybeT: expected 'Maybe a' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
-
 -- | extract the value from a 'Maybe' or fail
 --
 -- >>> pz @(JustFail "nope" Id) (Just 99)
@@ -481,47 +465,3 @@ instance ( PP p x ~ String
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
               Right p -> mkNode opts (FailT p) (msg0 <> " Nothing") [hh qq, hh pp]
-
-
--- | tries to extract @a@ from @Maybe a@ otherwise it fails
---
--- >>> pz @(Just Id) (Just "abc")
--- PresentT "abc"
---
--- >>> pz @(Just Id) Nothing
--- FailT "Just(empty)"
---
--- >>> pl @(Just Id >> Id) (Just 123)
--- Present 123 ((>>) 123 | {Id 123})
--- PresentT 123
---
--- >>> pl @(Just Id) (Just [1,2,3])
--- Present [1,2,3] (Just [1,2,3] | Just [1,2,3])
--- PresentT [1,2,3]
---
--- >>> pl @(Just Id) (Just 10)
--- Present 10 (Just 10 | Just 10)
--- PresentT 10
---
--- >>> pl @(Just Id) (Nothing @[Int])
--- Error Just(empty) (found Nothing)
--- FailT "Just(empty)"
---
-
-data Just p
-
-instance (Show a
-        , PP p x ~ Maybe a
-        , P p x
-        ) => P (Just p) x where
-  type PP (Just p) x = MaybeT (PP p x)
-  eval _ opts x = do
-    let msg0 = "Just"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        case p of
-          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "found Nothing" [hh pp]
-          Just d -> mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
-

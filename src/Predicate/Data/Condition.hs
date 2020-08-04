@@ -15,18 +15,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted conditional functions
 -}
 module Predicate.Data.Condition (
   -- ** conditional expressions
@@ -76,7 +71,7 @@ import qualified Data.Type.Equality as DE
 -- >>> import Data.These
 
 
--- | if p then run q else run r
+-- | similar to an if statement: if \'p\' then run \'q\' else run \'r\'
 --
 -- >>> pz @(If (Gt 4) "greater than 4" "less than or equal to 4") 10
 -- PresentT "greater than 4"
@@ -154,7 +149,6 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
   ToGuardsT prt '[] = GL.TypeError ('GL.Text "ToGuardsT cannot be empty")
   ToGuardsT prt '[p] = '(prt,p) : '[]
   ToGuardsT prt (p ': ps) = '(prt,p) ': ToGuardsT prt ps
-
 
 -- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
 --
@@ -935,6 +929,4 @@ instance (Show a
       Right True ->
         mkNode opts (PresentT a) (msg0 <> "(ok) | " <> showL opts a) [hh pp]
 
---type OneP = Guard "expected list of length 1" (Len == 1) >> Head Id
---type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
 

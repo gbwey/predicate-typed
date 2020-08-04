@@ -15,18 +15,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted indexing functions
 -}
 module Predicate.Data.Index (
   -- ** indexing expressions
@@ -41,7 +36,7 @@ module Predicate.Data.Index (
   , LookupFail
   , LookupFail'
 
-  -- ** tuples
+  -- ** list to tuples
   , Tuple2
   , Tuple3
   , Tuple4

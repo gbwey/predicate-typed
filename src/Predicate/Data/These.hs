@@ -15,18 +15,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted 'These' functions
 -}
 module Predicate.Data.These (
  -- ** these expressions
@@ -798,7 +793,7 @@ instance ( PP q x ~ These a b
 -- FailT ""
 --
 -- >>> pl @(ThisFail "sdf" Id) (This @_ @() (SG.Sum 12))
--- Present Sum {getSum = 12} (ThisFail This)
+-- Present Sum {getSum = 12} (This)
 -- PresentT (Sum {getSum = 12})
 --
 -- >>> pl @(ThisFail "sdf" Id) (That @() (SG.Sum 12))
@@ -824,7 +819,7 @@ instance ( PP p x ~ String
       Left e -> pure e
       Right q ->
         case q of
-          This a -> pure $ mkNode opts (PresentT a) (msg0 <> " This") [hh qq]
+          This a -> pure $ mkNode opts (PresentT a) "This" [hh qq]
           _ -> do
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR opts msg0 pp [hh qq] of
@@ -863,7 +858,7 @@ instance ( PP p x ~ String
       Left e -> pure e
       Right q ->
         case q of
-          That a -> pure $ mkNode opts (PresentT a) (msg0 <> " That") [hh qq]
+          That a -> pure $ mkNode opts (PresentT a) "That" [hh qq]
           _ -> do
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR opts msg0 pp [hh qq] of
@@ -904,7 +899,7 @@ instance ( PP p x ~ String
       Left e -> pure e
       Right q ->
         case q of
-          These a b -> pure $ mkNode opts (PresentT (a,b)) (msg0 <> " These") [hh qq]
+          These a b -> pure $ mkNode opts (PresentT (a,b)) "These" [hh qq]
           _ -> do
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR opts msg0 pp [hh qq] of

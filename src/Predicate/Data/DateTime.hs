@@ -15,7 +15,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
@@ -24,31 +23,33 @@
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted date time functions
 -}
 module Predicate.Data.DateTime (
 
-  -- ** datetime expressions
+  -- ** format
     FormatTimeP
+
+  -- ** constructors
   , ParseTimeP
   , ParseTimeP'
   , ParseTimes
   , ParseTimes'
   , MkDay
   , MkDay'
-  , UnMkDay
   , MkDayExtra
   , MkDayExtra'
+  , MkTime
+  , MkTime'
+  , PosixToUTCTime
+
+ -- ** destructors
+  , UnMkDay
   , ToWeekDate
   , ToWeekYear
   , ToDay
   , ToTime
-  , MkTime
-  , MkTime'
   , UnMkTime
-  , PosixToUTCTime
   , UTCTimeToPosix
 
  ) where
@@ -207,7 +208,7 @@ instance P (ParseTimesT t p q) x => P (ParseTimes t p q) x where
 
 -- | create a 'Day' from three int values passed in as year month and day
 --
--- >>> pz @(MkDay '(1,2,3) >> Just Id) ()
+-- >>> pz @(MkDay '(1,2,3) >> 'Just Id) ()
 -- PresentT 0001-02-03
 --
 -- >>> pz @(Just (MkDay '(1,2,3))) 1
@@ -277,7 +278,7 @@ instance ( PP p x ~ Day
 
 -- | create a 'Day' + Week + Day of Week from three int values passed in as year month and day
 --
--- >>> pz @(MkDayExtra '(1,2,3) >> Just Id >> Fst Id) ()
+-- >>> pz @(MkDayExtra '(1,2,3) >> 'Just Id >> Fst Id) ()
 -- PresentT 0001-02-03
 --
 -- >>> pz @(Fst (Just (MkDayExtra '(1,2,3)))) 1

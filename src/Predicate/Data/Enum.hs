@@ -15,32 +15,23 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted enum functions
 -}
 module Predicate.Data.Enum (
 
-  -- ** enum expressions
-    Succ
-  , SuccN
-  , Pred
-  , FromEnum
-  , ToEnum
-  , ToEnum'
+  -- *** constructors
+    type (...)
   , EnumFromTo
-  , type (...)
   , EnumFromThenTo
-  -- *** bounded enum expressions
+  , FromEnum
+
+  -- ** bounded enums
   , SuccB
   , SuccB'
   , PredB
@@ -48,6 +39,13 @@ module Predicate.Data.Enum (
   , ToEnumBDef
   , ToEnumBDef'
   , ToEnumBFail
+
+  -- ** unsafe enum expressions
+  , Succ
+  , SuccN
+  , Pred
+  , ToEnum
+  , ToEnum'
 
  ) where
 import Predicate.Core

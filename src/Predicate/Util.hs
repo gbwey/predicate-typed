@@ -16,9 +16,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -140,6 +138,9 @@ module Predicate.Util (
   , AnyT
   , ExtractAFromList
   , ExtractAFromTA
+  , MaybeT
+  , LeftT
+  , RightT
 
  -- ** extract values from the type level
   , nat
@@ -1718,4 +1719,26 @@ badLength :: ( Foldable t
                -> n
                -> String
 badLength as n = ":invalid length(" <> show (length as) <> ") expected " ++ show (n+0)
+
+type family MaybeT mb where
+  MaybeT (Maybe a) = a
+  MaybeT o = GL.TypeError (
+      'GL.Text "MaybeT: expected 'Maybe a' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+
+type family LeftT lr where
+  LeftT (Either a b) = a
+  LeftT o = GL.TypeError (
+      'GL.Text "LeftT: expected 'Either a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+type family RightT lr where
+  RightT (Either a b) = b
+  RightT o = GL.TypeError (
+      'GL.Text "RightT: expected 'Either a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
 

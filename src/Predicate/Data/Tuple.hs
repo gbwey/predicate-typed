@@ -15,34 +15,27 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted tuple functions
 -}
 module Predicate.Data.Tuple (
 
-  -- ** tuple expressions
     Dup
-  , Pairs
   , First
   , Second
   , type (&&&)
   , type (***)
+  , Pairs
 
   , AndA
   , type (&*)
   , OrA
   , type (|+)
-
 
  ) where
 import Predicate.Core

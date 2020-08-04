@@ -24,15 +24,14 @@
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted list functions
 -}
 module Predicate.Data.List (
- -- ** cons / uncons expressions
+
     type (:+)
   , type (+:)
   , type (++)
+
   , Uncons
   , Unsnoc
   , Head
@@ -72,12 +71,10 @@ module Predicate.Data.List (
   , ReverseL
   , Singleton
 
-  -- ** sort expressions
   , SortBy
   , SortOn
   , SortOnDesc
 
-  -- ** zip expressions
   , ZipL
   , ZipR
   , Zip
@@ -538,7 +535,7 @@ instance (Show x
       Right q ->
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
-          Right () -> do
+          Right () ->
              case q of
                [] -> pure $ mkNode opts (PresentT []) (show01' opts msg0 q "s=" q) [hh qq]
                [_] -> pure $ mkNode opts (PresentT [q]) (show01' opts msg0 [q] "s=" q) [hh qq]

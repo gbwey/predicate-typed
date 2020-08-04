@@ -15,26 +15,19 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted read/show/printf functions
 -}
 module Predicate.Data.ReadShow (
 
     ShowP
   , ReadP
   , ReadP'
---  , ReadQ
---  , ReadQ'
   , ReadMaybe
   , ReadMaybe'
 
@@ -170,9 +163,6 @@ instance P (ReadPT t p) x => P (ReadP t p) x where
 --
 data ReadMaybe' t p
 
--- not as good as ReadQ
--- type ReadZ' t p = ReadMaybe' t p >> JustFail "read failed" Id >> (Guard "oops" (Snd Id >> Null) >> Fst Id)
-
 instance (P p x
         , PP p x ~ String
         , Typeable (PP t x)
@@ -199,23 +189,6 @@ type ReadMaybeT (t :: Type) p = ReadMaybe' (Hole t) p
 instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
   type PP (ReadMaybe t p) x = PP (ReadMaybeT t p) x
   eval _ = eval (Proxy @(ReadMaybeT t p))
-{-
--- | emulates ReadP
-data ReadQ' t p
-type ReadQT' t p = ReadMaybe' t p >> MaybeIn (Failp "read failed") (Guard "oops" (Snd Id >> Null) >> Fst Id)
-
-instance P (ReadQT' t p) x => P (ReadQ' t p) x where
-  type PP (ReadQ' t p) x = PP (ReadQT' t p) x
-  eval _ = eval (Proxy @(ReadQT' t p))
-
-data ReadQ (t :: Type) p
-type ReadQT (t :: Type) p = ReadQ' (Hole t) p
-
-instance P (ReadQT t p) x => P (ReadQ t p) x where
-  type PP (ReadQ t p) x = PP (ReadQT t p) x
-  eval _ = eval (Proxy @(ReadQT t p))
--}
-
 
 -- | uses PrintF (unsafe) to format output for a single value
 --

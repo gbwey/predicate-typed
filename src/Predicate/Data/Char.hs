@@ -15,21 +15,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted character functions
 -}
 module Predicate.Data.Char (
-
+ -- ** constructor
     Char1
 
  -- ** character predicates
@@ -44,6 +39,7 @@ module Predicate.Data.Char (
   , IsSeparator
   , IsLatin1
 
+ -- ** string predicates
   , IsLowerAll
   , IsUpperAll
   , IsDigitAll
@@ -54,7 +50,7 @@ module Predicate.Data.Char (
   , IsOctDigitAll
   , IsSeparatorAll
   , IsLatin1All
-
+ -- ** change case
   , ToTitle
   , ToUpper
   , ToLower

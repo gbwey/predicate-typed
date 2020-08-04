@@ -15,22 +15,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     Dsl for evaluating and displaying type level expressions
-
-     Contains instances of the class 'P' for evaluating expressions at the type level.
+     promoted 'Either' functions
 -}
 module Predicate.Data.Either (
 
- -- ** either expressions
     PartitionEithers
   , IsLeft
   , IsRight
@@ -470,20 +464,6 @@ instance ( PP q x ~ Either a b
               Left e -> e
               Right p -> mkNode opts (PresentT p) (msg0 <> " Right") [hh qq, hh pp]
 
-type family LeftT lr where
-  LeftT (Either a b) = a
-  LeftT o = GL.TypeError (
-      'GL.Text "LeftT: expected 'Either a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
-
-type family RightT lr where
-  RightT (Either a b) = b
-  RightT o = GL.TypeError (
-      'GL.Text "RightT: expected 'Either a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
-
 -- | extract the Right value from an 'Either'
 --
 -- if there is no Right value then \p\ is passed the Left value and the whole context
@@ -559,7 +539,7 @@ instance ( PP q x ~ Either a b
 -- FailT "found rhs=23"
 --
 -- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd (Snd (Snd Id)))) (Fst (Snd Id))) ('x',(Left @_ @() "abc",23::Int))
--- Present "abc" (LeftFail Left)
+-- Present "abc" (Left)
 -- PresentT "abc"
 --
 
@@ -578,7 +558,7 @@ instance ( PP p (b,x) ~ String
       Left e -> pure e
       Right q ->
         case q of
-          Left a -> pure $ mkNode opts (PresentT a) (msg0 <> " Left") [hh qq]
+          Left a -> pure $ mkNode opts (PresentT a) "Left" [hh qq]
           Right b -> do
             pp <- eval (Proxy @p) opts (b,x)
             pure $ case getValueLR opts msg0 pp [hh qq] of
@@ -617,7 +597,7 @@ instance ( PP p (a,x) ~ String
       Left e -> pure e
       Right q ->
         case q of
-          Right b -> pure $ mkNode opts (PresentT b) (msg0 <> " Right") [hh qq]
+          Right b -> pure $ mkNode opts (PresentT b) "Right" [hh qq]
           Left a -> do
             pp <- eval (Proxy @p) opts (a,x)
             pure $ case getValueLR opts msg0 pp [hh qq] of

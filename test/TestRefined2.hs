@@ -337,6 +337,6 @@ test2c = newRefined2 "200.2.3.4"
 
 test2d :: Either String (Refined2 OU
     TimeUtc
-    (ToDay Id > Just (MkDay '(2020,05,31)))
+    (ToDay Id > 'Just (MkDay '(2020,05,31)))
     ())
 test2d = newRefined2P Proxy ()

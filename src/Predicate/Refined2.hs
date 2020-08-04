@@ -498,13 +498,13 @@ newRefined2P _ x =
 
 -- | create a wrapped 'Refined2' type
 --
--- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Thd Id == 5) (2019,11,1)
 -- Refined2 {r2In = (2019-11-01,44,5), r2Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> Just Id) @(Thd Id == 5) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Thd Id == 5) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
 --
 -- >>> prtRefinedTIO $ newRefined2TIO @OL @(Hide (Rescan "(\\d+)" Id >> ConcatMap (Snd Id) Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff) Id) "|23|99|255|254.911."
