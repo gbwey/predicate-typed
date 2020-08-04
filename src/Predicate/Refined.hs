@@ -67,7 +67,7 @@ import Predicate.Util
 import Control.Lens
 import Data.Functor.Identity (Identity(..))
 import Data.Proxy
-import Control.Monad.Except
+import Control.Monad.Except -- (MonadError, ExceptT(..), runExceptT, throwError, catchError)
 import Control.Monad.Writer (WriterT(..), runWriterT, MonadWriter, tell)
 import Control.Monad.Cont
 import Data.Aeson (ToJSON(..), FromJSON(..))

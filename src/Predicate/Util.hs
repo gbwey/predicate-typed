@@ -138,6 +138,8 @@ module Predicate.Util (
   , type (%&)
   , type (<%>)
   , AnyT
+  , ExtractAFromList
+  , ExtractAFromTA
 
  -- ** extract values from the type level
   , nat
@@ -185,6 +187,7 @@ module Predicate.Util (
   , pureTryTestPred
   , isPrime
   , unlessNull
+  , badLength
 
     ) where
 import qualified GHC.TypeNats as GN
@@ -1199,7 +1202,7 @@ type family LenT (xs :: [k]) :: Nat where
   LenT '[] = 0
   LenT (x ': xs) = 1 GN.+ LenT xs
 
--- | takes a flat n-tuple and creates a reversed inductive tuple. see 'Predicate.Prelude.PrintT'
+-- | takes a flat n-tuple and creates a reversed inductive tuple. see 'Predicate.Data.ReadShow.PrintT'
 --
 -- >>> inductTupleC (123,'x',False,"abc")
 -- ("abc",(False,('x',(123,()))))
@@ -1247,7 +1250,7 @@ instance InductTupleC (a,b,c,d,e,f,g,h,i,j,k,l) where
   type InductTupleP (a,b,c,d,e,f,g,h,i,j,k,l) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
   inductTupleC (a,b,c,d,e,f,g,h,i,j,k,l) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
 
--- | takes a list and converts to a reversed inductive tuple. see 'Predicate.Prelude.PrintL'
+-- | takes a list and converts to a reversed inductive tuple. see 'Predicate.Data.ReadShow.PrintL'
 --
 -- >>> inductListC @4 [10,12,13,1]
 -- (1,(13,(12,(10,()))))
@@ -1691,4 +1694,28 @@ type family OptTT (xs :: [OptT]) where
 unlessNull :: (Foldable t, Monoid m) => t a -> m -> m
 unlessNull t m | null t = mempty
                | otherwise = m
+
+type family ExtractAFromTA (ta :: Type) :: Type where
+  ExtractAFromTA (t a) = a
+  ExtractAFromTA z = GL.TypeError (
+      'GL.Text "ExtractAFromTA: expected (t a) but found something else"
+      ':$$: 'GL.Text "t a = "
+      ':<>: 'GL.ShowType z)
+
+-- todo: get ExtractAFromList failure to fire if wrong Type
+-- | extract \'a\' from \'[a]\' which I need for type PP
+type family ExtractAFromList (as :: Type) :: Type where
+  ExtractAFromList [a] = a
+  ExtractAFromList z = GL.TypeError (
+      'GL.Text "ExtractAFromList: expected [a] but found something else"
+      ':$$: 'GL.Text "as = "
+      ':<>: 'GL.ShowType z)
+
+badLength :: ( Foldable t
+             , Show n
+             , Num n
+             ) => t a
+               -> n
+               -> String
+badLength as n = ":invalid length(" <> show (length as) <> ") expected " ++ show (n+0)
 

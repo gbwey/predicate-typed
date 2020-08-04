@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 78fd483d7742c94c5d2c9d6e2d4e3b50231f596847fa2d2062a9f241af172dbb
+-- hash: bc4843ded51fc9839fcd36f24a2404a7f06c0381574b1eb4503870e7ecb4352e
 
 name:           predicate-typed
 version:        0.7.2.0
@@ -28,6 +28,26 @@ library
   exposed-modules:
       Predicate
       Predicate.Core
+      Predicate.Data.Char
+      Predicate.Data.Condition
+      Predicate.Data.DateTime
+      Predicate.Data.Either
+      Predicate.Data.Enum
+      Predicate.Data.Extra
+      Predicate.Data.Hof
+      Predicate.Data.Index
+      Predicate.Data.IO
+      Predicate.Data.Json
+      Predicate.Data.List
+      Predicate.Data.Maybe
+      Predicate.Data.Monoid
+      Predicate.Data.Numeric
+      Predicate.Data.Ordering
+      Predicate.Data.ReadShow
+      Predicate.Data.Regex
+      Predicate.Data.String
+      Predicate.Data.These
+      Predicate.Data.Tuple
       Predicate.Examples.Common
       Predicate.Examples.Refined1
       Predicate.Examples.Refined2
@@ -81,6 +101,26 @@ test-suite doctests
   other-modules:
       Predicate
       Predicate.Core
+      Predicate.Data.Char
+      Predicate.Data.Condition
+      Predicate.Data.DateTime
+      Predicate.Data.Either
+      Predicate.Data.Enum
+      Predicate.Data.Extra
+      Predicate.Data.Hof
+      Predicate.Data.Index
+      Predicate.Data.IO
+      Predicate.Data.Json
+      Predicate.Data.List
+      Predicate.Data.Maybe
+      Predicate.Data.Monoid
+      Predicate.Data.Numeric
+      Predicate.Data.Ordering
+      Predicate.Data.ReadShow
+      Predicate.Data.Regex
+      Predicate.Data.String
+      Predicate.Data.These
+      Predicate.Data.Tuple
       Predicate.Examples.Common
       Predicate.Examples.Refined1
       Predicate.Examples.Refined2

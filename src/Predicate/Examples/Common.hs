@@ -79,9 +79,7 @@ module Predicate.Examples.Common (
   , Isbn13fmt
 
    ) where
-import Predicate.Core
 import Predicate.Prelude
-import Predicate.Util
 import GHC.TypeLits (Nat)
 import Data.Time
 
@@ -184,8 +182,7 @@ type Isbn10ip = Resplit "-" Id
              >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id))
 
 type Isbn10op = GuardSimple (All (0 <..> 9) (Fst Id) && Between 0 10 (Snd Id))
-             >> Zip (1...10 >> Reverse) (Fst Id +: Snd Id)
-             >> Map (Fst Id * Snd Id) Id
+             >> ZipWith (Fst Id * Snd Id) (1...10 >> Reverse) (Fst Id +: Snd Id)
              >> Sum
              >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)
              >> 'True
@@ -198,8 +195,7 @@ type Isbn13ip = Resplit "-" Id
              >> Concat Id
              >> Map (ReadP Int (Singleton Id)) Id
 
-type Isbn13op = Zip (Cycle 13 [1,3] >> Reverse) Id
-             >> Map (Fst Id * Snd Id) Id
+type Isbn13op = ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3] >> Reverse) Id
              >> Sum
              >> '(Id,Id `Mod` 10)
              >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)
