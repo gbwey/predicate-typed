@@ -63,14 +63,9 @@ import qualified Data.Text.Lazy as TL
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
 -- >>> import qualified Data.Text as T
--- >>> import Safe (readNote)
 -- >>> import Predicate.Prelude
--- >>> import qualified Data.Semigroup as SG
 -- >>> import qualified Data.Sequence as Seq
-
 
 -- | similar to 'T.strip' 'T.stripStart' 'T.stripEnd'
 --

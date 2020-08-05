@@ -58,10 +58,6 @@ import Data.List.NonEmpty (NonEmpty(..))
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
--- >>> import qualified Data.Text as T
--- >>> import Safe (readNote)
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Functor.Identity
@@ -249,11 +245,11 @@ instance ( Show (PP t a)
 -- >>> pz @(MEmptyT (SG.Sum Int)) ()
 -- PresentT (Sum {getSum = 0})
 --
--- >>> pl @(MEmptyT _ ||| Ones Id) (Right @() "abc")
+-- >>> pl @(MEmptyT _ ||| Ones Id) (Right "abc")
 -- Present ["a","b","c"] ((|||) Right ["a","b","c"] | "abc")
 -- PresentT ["a","b","c"]
 --
--- >>> pl @(MEmptyT _ ||| Ones Id) (Left @_ @[String] ["ab"])
+-- >>> pl @(MEmptyT _ ||| Ones Id) (Left ["ab"])
 -- Present [] ((|||) Left [] | ["ab"])
 -- PresentT []
 --

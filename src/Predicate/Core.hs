@@ -108,6 +108,15 @@ module Predicate.Core (
   , type ($)
   , type (&)
 
+  , This'
+  , That'
+  , These'
+
+  , Left'
+  , Right'
+
+  , Just'
+
   ) where
 import Predicate.Util
 import qualified GHC.TypeLits as GL
@@ -669,6 +678,25 @@ instance (Show a
           Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" [hh pp]
           Just d -> mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
 
+-- | similar to 'fromJust'
+--
+-- >>> pz @(Just' >> Succ Id) (Just 20)
+-- PresentT 21
+--
+-- pz @(Just' >> Succ Id) Nothing
+-- FailT "Just' found Nothing"
+--
+data Just'
+instance (Show a
+        ) => P Just' (Maybe a) where
+  type PP Just' (Maybe a) = a
+  eval _ opts lr =
+    let msg0 = "Just'"
+    in pure $ case lr of
+         Nothing -> mkNode opts (FailT (msg0 <> " found Nothing")) "" []
+         Just a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+
+
 -- | expects Nothing otherwise it fails
 -- if the value is Nothing then it returns \'Proxy a\' as this provides type information
 --
@@ -692,75 +720,170 @@ instance P 'Nothing (Maybe a) where
 -- >>> pz @('Left Id) (Left 123)
 -- PresentT 123
 --
--- >>> pz @('Left (Snd Id)) (Left ('x',123))
+-- >>> pz @('Left (Snd Id)) ('x', Left 123)
 -- PresentT 123
 --
 -- >>> pz @('Left Id) (Right "aaa")
 -- FailT "'Left found Right"
 --
 -- >>> pl @('Left Id) (Left 123)
--- Present 123 ('Left 123 | Left 123)
+-- Present 123 (Left)
 -- PresentT 123
 --
--- >>> pl @('Left Id) (Right @() 123)
+-- >>> pl @('Left Id) (Right 123)
 -- Error 'Left found Right
 -- FailT "'Left found Right"
 --
-instance (Show a
-        , Show (PP p a)
-        , P p a
-        ) => P ('Left p) (Either a x) where
-  type PP ('Left p) (Either a x) = PP p a
-  eval _ opts lr =
+
+instance ( PP p x ~ Either a b
+         , P p x)
+    => P ('Left p) x where
+  type PP ('Left p) x = LeftT (PP p x)
+  eval _ opts x = do
     let msg0 = "'Left"
-    in case lr of
-         Right _ -> pure $ mkNode opts (FailT (msg0 <> " found Right")) "" []
-         Left a -> do
-            pp <- eval (Proxy @p) opts a
-            pure $ case getValueLR opts msg0 pp [] of
-                 Left e -> e
-                 Right b -> mkNode opts (_tBool pp) (show01' opts msg0 b "Left " a) [hh pp]
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p of
+          Left a -> mkNode opts (PresentT a) "Left" [hh pp]
+          Right _b -> mkNode opts (FailT (msg0 <> " found Right")) "" [hh pp]
+
+-- | extracts the left value from an 'Either'
+--
+-- >>> pz @(Left' >> Succ Id) (Left 20)
+-- PresentT 21
+--
+-- pz @(Left' >> Succ Id) (Right 'a')
+-- FailT "Left' found Right"
+--
+data Left'
+instance (Show a
+        ) => P Left' (Either a x) where
+  type PP Left' (Either a x) = a
+  eval _ opts lr =
+    let msg0 = "Left'"
+    in pure $ case lr of
+         Right _ -> mkNode opts (FailT (msg0 <> " found Right")) "" []
+         Left a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+
+-- | extracts the right value from an 'Either'
+--
+-- >>> pz @(Right' >> Succ Id) (Right 20)
+-- PresentT 21
+--
+-- pz @(Right' >> Succ Id) (Left 'a')
+-- FailT "Right' found Left"
+--
+data Right'
+instance (Show a
+        ) => P Right' (Either x a) where
+  type PP Right' (Either x a) = a
+  eval _ opts lr =
+    let msg0 = "Right'"
+    in pure $ case lr of
+         Left _ -> mkNode opts (FailT (msg0 <> " found Left")) "" []
+         Right a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+
+-- | extracts the "this" value from a 'These'
+--
+-- >>> pz @(This' >> Succ Id) (This 20)
+-- PresentT 21
+--
+-- pz @(This' >> Succ Id) (That 'a')
+-- FailT "This' found That"
+--
+data This'
+instance (Show a
+        ) => P This' (These a x) where
+  type PP This' (These a x) = a
+  eval _ opts lr =
+    let msg0 = "This'"
+    in pure $ case lr of
+         These _ _ -> mkNode opts (FailT (msg0 <> " found These")) "" []
+         That _ -> mkNode opts (FailT (msg0 <> " found That")) "" []
+         This a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+
+-- | extracts the "that" value from a 'These'
+--
+-- >>> pz @(That' >> Succ Id) (That 20)
+-- PresentT 21
+--
+-- pz @(That' >> Succ Id) (This 'a')
+-- FailT "That' found This"
+--
+data That'
+instance (Show a
+        ) => P That' (These x a) where
+  type PP That' (These x a) = a
+  eval _ opts lr =
+    let msg0 = "That'"
+    in pure $ case lr of
+         These _ _ -> mkNode opts (FailT (msg0 <> " found These")) "" []
+         This _ -> mkNode opts (FailT (msg0 <> " found This")) "" []
+         That a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+
+-- | extracts the "these" value from a 'These'
+--
+-- >>> pz @(These' >> Second (Succ Id)) (These 1 'a')
+-- PresentT (1,'b')
+--
+-- >>> pz @(That' >> Succ Id) (This 'a')
+-- FailT "That' found This"
+--
+-- >>> pz @(These' >> Second (Succ Id)) (That 8)
+-- FailT "These' found That"
+--
+data These'
+instance (Show a, Show b
+        ) => P These' (These a b) where
+  type PP These' (These a b) = (a,b)
+  eval _ opts lr =
+    let msg0 = "These'"
+    in pure $ case lr of
+         This _ -> mkNode opts (FailT (msg0 <> " found This")) "" []
+         That _ -> mkNode opts (FailT (msg0 <> " found That")) "" []
+         These a b -> mkNode opts (PresentT (a,b)) (msg0 <> " " <> showL opts (a,b)) []
+
 
 -- | extracts the \'b\' from type level \'Either a b\' if the value exists
 --
--- >>> pz @('Right Id) (Right 123)
+-- >>> pl @('Right Id) (Right 123)
+-- Present 123 (Right)
 -- PresentT 123
 --
--- >>> pz @('Right (Snd Id)) (Right ('x',123))
+-- >>> pz @('Right Id >> Snd Id) (Right ('x',123))
 -- PresentT 123
 --
 -- >>> pz @('Right Id) (Left "aaa")
 -- FailT "'Right found Left"
 --
--- >>> pl @('Right Id) (Right 123)
--- Present 123 ('Right 123 | Right 123)
--- PresentT 123
---
--- >>> pl @('Right Id) (Left @_ @() 123)
+-- >>> pl @('Right Id) (Left 123)
 -- Error 'Right found Left
 -- FailT "'Right found Left"
 --
-instance (Show a
-        , Show (PP p a)
-        , P p a
-        ) => P ('Right p) (Either x a) where
-  type PP ('Right p) (Either x a) = PP p a
-  eval _ opts lr = do
+instance ( PP p x ~ Either a b
+         , P p x)
+    => P ('Right p) x where
+  type PP ('Right p) x = RightT (PP p x)
+  eval _ opts x = do
     let msg0 = "'Right"
-    case lr of
-         Left _ -> pure $ mkNode opts (FailT (msg0 <> " found Left")) "" []
-         Right a -> do
-            pp <- eval (Proxy @p) opts a
-            pure $ case getValueLR opts msg0 pp [] of
-                 Left e -> e
-                 Right b -> mkNode opts (_tBool pp) (show01' opts msg0 b "Right " a) [hh pp]
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p of
+          Left _a -> mkNode opts (FailT (msg0 <> " found Left")) "" [hh pp]
+          Right b -> mkNode opts (PresentT b) "Right" [hh pp]
+
 
 -- removed Show x: else ambiguity errors in TestPredicate
 
 -- | extracts the \'a\' from type level \'These a b\' if the value exists
 --
--- >>> pz @('This Id) (This 123)
--- PresentT 123
+-- >>> pl @('This Id) (This 12)
+-- Present 12 (This)
+-- PresentT 12
 --
 -- >>> pz @('This Id) (That "aaa")
 -- FailT "'This found That"
@@ -768,28 +891,25 @@ instance (Show a
 -- >>> pz @('This Id) (These 999 "aaa")
 -- FailT "'This found These"
 --
--- >>> pl @('This Id) (This 12)
--- Present 12 ('This 12 | This 12)
--- PresentT 12
---
--- >>> pl @('This Id) (That @() 12)
+-- >>> pl @('This Id) (That 12)
 -- Error 'This found That
 -- FailT "'This found That"
 --
-instance (Show a
-        , Show (PP p a)
-        , P p a
-        ) => P ('This p) (These a x) where
-  type PP ('This p) (These a x) = PP p a
-  eval _ opts th = do
+
+instance ( PP p x ~ These a b
+         , P p x)
+    => P ('This p) x where
+  type PP ('This p) x = ThisT (PP p x)
+  eval _ opts x = do
     let msg0 = "'This"
-    case th of
-         This a -> do
-            pp <- eval (Proxy @p) opts a
-            pure $ case getValueLR opts msg0 pp [] of
-                 Left e -> e
-                 Right b -> mkNode opts (_tBool pp) (show01' opts msg0 b "This " a) [hh pp]
-         _ -> pure $ mkNode opts (FailT (msg0 <> " found " <> showThese th)) "" []
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p of
+          This a -> mkNode opts (PresentT a) "This" [hh pp]
+          That _b -> mkNode opts (FailT (msg0 <> " found That")) "" [hh pp]
+          These _a _b -> mkNode opts (FailT (msg0 <> " found These")) "" [hh pp]
 
 -- | extracts the \'b\' from type level \'These a b\' if the value exists
 --
@@ -802,20 +922,21 @@ instance (Show a
 -- >>> pz @('That Id) (These 44 "aaa")
 -- FailT "'That found These"
 --
-instance (Show a
-        , Show (PP p a)
-        , P p a
-        ) => P ('That p) (These x a) where
-  type PP ('That p) (These x a) = PP p a
-  eval _ opts th = do
+
+instance ( PP p x ~ These a b
+         , P p x)
+    => P ('That p) x where
+  type PP ('That p) x = ThatT (PP p x)
+  eval _ opts x = do
     let msg0 = "'That"
-    case th of
-         That a -> do
-            pp <- eval (Proxy @p) opts a
-            pure $ case getValueLR opts msg0 pp [] of
-                 Left e -> e
-                 Right b -> mkNode opts (_tBool pp) (show01' opts msg0 b "That " a) [hh pp]
-         _ -> pure $ mkNode opts (FailT (msg0 <> " found " <> showThese th)) "" []
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p of
+          This _a -> mkNode opts (FailT (msg0 <> " found This")) "" [hh pp]
+          That b -> mkNode opts (PresentT b) "That" [hh pp]
+          These _a _b -> mkNode opts (FailT (msg0 <> " found These")) "" [hh pp]
 
 
 -- | extracts the (a,b) from type level 'These a b' if the value exists
@@ -1119,9 +1240,6 @@ instance (Show (PP p x)
 
 -- | wraps a value (see '_Wrapped'' and '_Unwrapped'')
 --
--- >>> import Predicate.Data.Numeric
--- >>> import Predicate.Data.Ordering
---
 -- >>> pz @(Wrap (SG.Sum _) Id) (-13)
 -- PresentT (Sum {getSum = -13})
 --
@@ -1188,7 +1306,7 @@ instance ( Show a
 -- >>> pz @(Length Id) (Right "aa")
 -- PresentT 1
 --
--- >>> pz @(Length (Right' Id)) (Right "abcd")
+-- >>> pz @(Length Right') (Right "abcd")
 -- PresentT 4
 --
 -- >>> pz @(Length (Thd (Snd Id))) (True,(23,'x',[10,9,1,3,4,2]))
@@ -2253,7 +2371,7 @@ instance (P p a
 -- >>> pz @Swap (Right 123)
 -- PresentT (Left 123)
 --
--- >>> pl @Swap (Right @() "asfd") -- @() else breaks: ok in ghci
+-- >>> pl @Swap (Right "asfd")
 -- Present Left "asfd" (Swap Left "asfd" | Right "asfd")
 -- PresentT (Left "asfd")
 --
@@ -2378,4 +2496,5 @@ instance (P p x
       Right a ->
         let b = pure a
         in mkNode opts (PresentT b) (show01 opts msg0 b a) [hh pp]
+
 

@@ -41,7 +41,7 @@ module Predicate.Data.Maybe (
  ) where
 import Predicate.Core
 import Predicate.Util
-import Predicate.Data.List (ConcatMap)
+import Predicate.Data.Foldable (ConcatMap)
 import Predicate.Data.Monoid (MEmptyP)
 import Data.Proxy
 import Data.Kind (Type)
@@ -53,9 +53,6 @@ import Data.Kind (Type)
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
 -- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
--- >>> import qualified Data.Text as T
--- >>> import Safe (readNote)
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
 

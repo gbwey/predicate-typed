@@ -68,7 +68,7 @@ allTests =
   , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id) >> Ddmmyyyyop) "31-11-1999"
   , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:59"
   , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:60"
-  , expectPE (PresentT (124,["1","2","2"])) $ pl @('Left Id >> (Succ Id &&& (Pred Id >> ShowP Id >> Ones Id))) (Left 123)
+  , expectPE (PresentT (124,["1","2","2"])) $ pl @(Left' >> (Succ Id &&& (Pred Id >> ShowP Id >> Ones Id))) (Left 123)
   , expectPE (PresentT (1,("asdf",True))) $ pl @'(1,'("asdf",'True)) ()
   , expectPE (PresentT (12, False)) $ pl @('These Id (Not Id)) (These 12 True)
     --- have to wrap with W cos different kinds
@@ -122,8 +122,6 @@ allTests =
   , expectPE (PresentT ("abc",9)) $ pl @(9 $& "abc" $& I) (,)
   , expectPE (PresentT "28") $ pl @(Fst Id $$ Snd Id) (show . (7*),4)
   , expectPE (PresentT (12,"12")) $ pl @(Fst Id $$ Snd Id $$ ShowP (Snd Id)) ((,),12)
---  , expectPE (PresentT (Just (This [1,2,3,4]))) $ pl @(ZipTheseF (Fst Id) (Snd Id)) (Just [1..4],Nothing @())
---  , expectPE (PresentT [These 1 'a',These 2 'b',These 3 'c',This 4]) $ pl @(ZipTheseF (Fst Id) (Snd Id)) ([1..4],['a'..'c'])
   , expectPE (PresentT (4,("aa",'x'))) $ pl @'(4,'(Fst Id,Snd Id)) ("aa",'x')
   , expectPE (PresentT (4,"aa",'x')) $ pl @'(4,Fst Id,Snd Id) ("aa",'x')
   , expectPE (PresentT (map ModifiedJulianDay [0,1,2,3,4,5])) $ pl @(EnumFromTo (Fst Id) (Snd Id)) (ModifiedJulianDay 0, ModifiedJulianDay 5)

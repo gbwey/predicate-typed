@@ -70,13 +70,8 @@ import Data.Char
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
 -- >>> import qualified Data.Text as T
--- >>> import Safe (readNote)
 -- >>> import Predicate.Prelude
--- >>> import qualified Data.Semigroup as SG
-
 
 -- | extracts the first character from a non empty 'GHC.TypeLits.Symbol'
 --
@@ -94,7 +89,7 @@ instance ( KnownSymbol s
        c:_ -> pure $ mkNode opts (PresentT c) ("Char1 " <> showL opts c) []
 
 
--- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
+-- | a predicate for determining if a character belongs to the given character set
 --
 -- >>> pz @(Map '(IsControl, IsLatin1, IsHexDigit, IsOctDigit, IsDigit, IsPunctuation, IsSeparator, IsSpace) Id) "abc134"
 -- PresentT [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
@@ -122,6 +117,7 @@ instance ( x ~ Char
 -- >>> pz @IsLower 'a'
 -- TrueT
 --
+
 data IsLower
 type IsLowerT = IsCharSet 'CLower
 
@@ -138,7 +134,7 @@ instance P IsUpperT x => P IsUpper x where
   type PP IsUpper x = PP IsUpperT x
   eval _ = evalBool (Proxy @IsUpperT)
 
--- | predicate for determining if the character is a digit
+-- | predicate similar to 'Data.Char.isDigit'
 --
 -- >>> pz @IsDigit 'g'
 -- FalseT
@@ -224,37 +220,7 @@ instance P IsLatin1T x => P IsLatin1 x where
   eval _ = evalBool (Proxy @IsLatin1T)
 
 
-
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
---
--- >>> pz @IsLowerAll "abc"
--- TrueT
---
--- >>> pz @IsLowerAll "abcX"
--- FalseT
---
--- >>> pz @IsLowerAll (T.pack "abcX")
--- FalseT
---
--- >>> pz @IsHexDigitAll "01efA"
--- TrueT
---
--- >>> pz @IsHexDigitAll "01egfA"
--- FalseT
---
--- | predicate for determining if a string is all lowercase
---
--- >>> pz @IsLowerAll "abcdef213"
--- FalseT
---
--- >>> pz @IsLowerAll "abcdef"
--- TrueT
---
--- >>> pz @IsLowerAll ""
--- TrueT
---
--- >>> pz @IsLowerAll "abcdefG"
--- FalseT
 --
 -- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "AbcdE"
 -- False ((>>) False | {True (&*) False | (IsLowerAll | "bcdE")})
@@ -339,6 +305,23 @@ instance GetCharSet 'CSeparator where
 instance GetCharSet 'CLatin1 where
   getCharSet = (CLatin1, isLatin1)
 
+-- | predicate for determining if a string is all lowercase
+--
+-- >>> pz @IsLowerAll "abc"
+-- TrueT
+--
+-- >>> pz @IsLowerAll "abcX"
+-- FalseT
+--
+-- >>> pz @IsLowerAll (T.pack "abcX")
+-- FalseT
+--
+-- >>> pz @IsLowerAll "abcdef213"
+-- FalseT
+--
+-- >>> pz @IsLowerAll ""
+-- TrueT
+--
 data IsLowerAll
 type IsLowerAllT = IsCharSetAll 'CLower
 
@@ -396,6 +379,14 @@ instance P IsControlAllT x => P IsControlAll x where
   type PP IsControlAll x = Bool
   eval _ = evalBool (Proxy @IsControlAllT)
 
+-- | predicate for determining if the string is all hex digits
+--
+-- >>> pz @IsHexDigitAll "01efA"
+-- TrueT
+--
+-- >>> pz @IsHexDigitAll "01egfA"
+-- FalseT
+--
 data IsHexDigitAll
 type IsHexDigitAllT = IsCharSetAll 'CHexDigit
 instance P IsHexDigitAllT x => P IsHexDigitAll x where

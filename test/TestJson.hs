@@ -85,7 +85,7 @@ type Name1 = Msg "invalid name:" (Re "^[A-Z][a-z']+$" Id)
 type NameR2 (opts :: OptT) = R.Refined opts (Name2 >> 'True) String
 type Name2 =
           Uncons
-       >> 'Just Id
+       >> Just'
        >> Guard (PrintF "not upper first(%c)" Id) IsUpper
       *** Guard (PrintF "not lower rest(%s)" Id) IsLowerAll
 

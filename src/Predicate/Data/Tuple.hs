@@ -48,12 +48,7 @@ import Data.Proxy
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
--- >>> import qualified Data.Text as T
--- >>> import Safe (readNote)
 -- >>> import Predicate.Prelude
--- >>> import qualified Data.Semigroup as SG
 
 -- | duplicate a value into a tuple
 --

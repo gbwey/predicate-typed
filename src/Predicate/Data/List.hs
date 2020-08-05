@@ -38,8 +38,6 @@ module Predicate.Data.List (
   , Tail
   , Init
   , Last
-  , Concat
-  , ConcatMap
   , Partition
   , PartitionBy
   , GroupBy
@@ -55,7 +53,6 @@ module Predicate.Data.List (
   , Length
   , PadL
   , PadR
-  , Cycle
   , SplitAts
   , SplitAt
   , ChunksOf
@@ -66,7 +63,6 @@ module Predicate.Data.List (
   , Keep
   , Unzip
   , Unzip3
-  , FoldMap
   , Reverse
   , ReverseL
   , Singleton
@@ -80,29 +76,24 @@ module Predicate.Data.List (
   , Zip
   , ZipWith
 
-  , Null
-  , Null'
-  , ToList
-  , ToList'
-  , EmptyList
-  , EmptyList'
-
+  , EmptyT
  ) where
 import Predicate.Core
 import Predicate.Util
 import Predicate.Data.Ordering (type (==), OrdA)
 import Predicate.Data.Numeric (Mod)
-import Predicate.Data.Monoid (type (<>), MConcat)
+import Predicate.Data.Monoid (type (<>))
 import Control.Lens hiding (iall)
 import Data.List
 import Data.Proxy
 import Control.Monad
 import Data.Kind (Type)
-import Data.Foldable
+import Data.Foldable (toList)
 import Control.Arrow
 import qualified Data.Sequence as Seq
 import Data.Bool
 import qualified Data.Map.Strict as M
+import Control.Applicative
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -111,12 +102,9 @@ import qualified Data.Map.Strict as M
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
 -- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
 -- >>> import qualified Data.Text as T
 -- >>> import Data.These
--- >>> import Safe (readNote)
 -- >>> import Predicate.Prelude
--- >>> import qualified Data.Semigroup as SG
 
 -- | similar to (++)
 --
@@ -746,13 +734,6 @@ instance ([PP p a] ~ PP q a
         let b = p `elem` q
         in mkNodeB opts b (showL opts p <> " `elem` " <> showL opts q) [hh pp, hh qq]
 
-data ConcatMap p q
-type ConcatMapT p q = Concat (Map p q)
-
-instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
-  type PP (ConcatMap p q) x = PP (ConcatMapT p q) x
-  eval _ = eval (Proxy @(ConcatMapT p q))
-
 -- | similar to 'Data.List.inits'
 --
 -- >>> pz @Inits [4,8,3,9]
@@ -999,32 +980,6 @@ instance P (DropT n p) x => P (Drop n p) x where
   type PP (Drop n p) x = PP (DropT n p) x
   eval _ = eval (Proxy @(DropT n p))
 
--- | similar to 'concat'
---
--- >>> pz @(Concat Id) ["abc","D","eF","","G"]
--- PresentT "abcDeFG"
---
--- >>> pz @(Concat (Snd Id)) ('x',["abc","D","eF","","G"])
--- PresentT "abcDeFG"
---
-data Concat p
-
-instance (Show a
-        , Show (t [a])
-        , PP p x ~ t [a]
-        , P p x
-        , Foldable t
-        ) => P (Concat p) x where
-  type PP (Concat p) x = ExtractAFromTA (PP p x)
-  eval _ opts x = do
-    let msg0 = "Concat"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = concat p
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
-
 -- | splits a list pointed to by \'p\' into lists of size \'n\'
 --
 -- >>> pz @(ChunksOf 2 Id) "abcdef"
@@ -1059,36 +1014,6 @@ instance (PP p a ~ [b]
         in if n <= 0 then mkNode opts (FailT (msg0 <> " n<1")) "" hhs
            else let ret = unfoldr (\s -> if null s then Nothing else Just $ splitAt n s) p
                 in mkNode opts (PresentT ret) (show01' opts msg1 ret "n=" n <> showVerbose opts " | " p) hhs
-
--- | similar to 'cycle' but for a fixed number \'n\'
---
--- >>> pz @(Cycle 5 Id) [1,2]
--- PresentT [1,2,1,2,1]
---
-data Cycle n p
-
-instance (Show a
-        , Show (t a)
-        , PP p x ~ t a
-        , P p x
-        , Integral (PP n x)
-        , P n x
-        , Foldable t
-        ) => P (Cycle n p) x where
-  type PP (Cycle n p) x = [ExtractAFromTA (PP p x)]
-  eval _ opts x = do
-    let msg0 = "Cycle"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts x []
-    pure $ case lr of
-      Left e -> e
-      Right (fromIntegral -> n,p,nn,pp) ->
-        let hhs = [hh nn, hh pp]
-        in case chkSize opts msg0 p hhs of
-            Left e ->  e
-            Right () ->
-              let msg1 = msg0 <> "(" <> show n <> ")"
-                  d = take n (cycle (toList p))
-              in mkNode opts (PresentT d) (show01 opts msg1 d p) hhs
 
 -- empty lists at the type level wont work here
 
@@ -1464,95 +1389,6 @@ instance P (SortOnDescT p q) x => P (SortOnDesc p q) x where
   type PP (SortOnDesc p q) x = PP (SortOnDescT p q) x
   eval _ = eval (Proxy @(SortOnDescT p q))
 
--- | similar to a limited form of 'foldMap'
---
--- >>> pz @(FoldMap (SG.Sum _) Id) [44, 12, 3]
--- PresentT 59
---
--- >>> pz @(FoldMap (SG.Product _) Id) [44, 12, 3]
--- PresentT 1584
---
--- >>> type Ands' p = FoldMap SG.All p
--- >>> pz @(Ands' Id) [True,False,True,True]
--- PresentT False
---
--- >>> pz @(Ands' Id) [True,True,True]
--- PresentT True
---
--- >>> pz @(Ands' Id) []
--- PresentT True
---
--- >>> type Ors' p = FoldMap SG.Any p
--- >>> pz @(Ors' Id) [False,False,False]
--- PresentT False
---
--- >>> pz @(Ors' Id) []
--- PresentT False
---
--- >>> pz @(Ors' Id) [False,False,False,True]
--- PresentT True
---
--- >>> type AllPositive' = FoldMap SG.All (Map Positive Id)
--- >>> pz @AllPositive' [3,1,-5,10,2,3]
--- PresentT False
---
--- >>> type AllNegative' = FoldMap SG.All (Map Negative Id)
--- >>> pz @AllNegative' [-1,-5,-10,-2,-3]
--- PresentT True
---
--- >>> :set -XKindSignatures
--- >>> type Max' (t :: Type) = FoldMap (SG.Max t) Id -- requires t be Bounded for monoid instance
--- >>> pz @(Max' Int) [10,4,5,12,3,4]
--- PresentT 12
---
--- >>> pl @(FoldMap (SG.Sum _) Id) [14,8,17,13]
--- Present 52 ((>>) 52 | {getSum = 52})
--- PresentT 52
---
--- >>> pl @(FoldMap (SG.Max _) Id) [14 :: Int,8,17,13] -- cos Bounded!
--- Present 17 ((>>) 17 | {getMax = 17})
--- PresentT 17
---
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) [1..20]
--- True (False || True)
--- TrueT
---
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) [1..19]
--- False (False || False | ((>>) False | {1 == 0})}) || ((>>) False | {190 > 200}))
--- FalseT
---
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) []
--- True (True || False)
--- TrueT
---
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) &&& FoldMap (SG.Sum _) Id) [1..20]
--- Present (False,210) (W '(False,210))
--- PresentT (False,210)
---
--- >>> pl @(FoldMap SG.Any Id) [False,False,True,False]
--- Present True ((>>) True | {getAny = True})
--- PresentT True
---
--- >>> pl @(FoldMap SG.All Id) [False,False,True,False]
--- Present False ((>>) False | {getAll = False})
--- PresentT False
---
--- >>> pl @(FoldMap (SG.Sum _) Id) (Just 13)
--- Present 13 ((>>) 13 | {getSum = 13})
--- PresentT 13
---
--- >>> pl @(FoldMap (SG.Sum _) Id) [1..10]
--- Present 55 ((>>) 55 | {getSum = 55})
--- PresentT 55
---
-
-data FoldMap (t :: Type) p
-type FoldMapT (t :: Type) p = Map (Wrap t Id) p >> Unwrap (MConcat Id)
-
-instance P (FoldMapT t p) x => P (FoldMap t p) x where
-  type PP (FoldMap t p) x = PP (FoldMapT t p) x
-  eval _ = eval (Proxy @(FoldMapT t p))
-
 -- | similar to 'reverse'
 --
 -- >>> pz @Reverse [1,2,4]
@@ -1898,132 +1734,35 @@ instance (PP p a ~ [x]
                  _ -> let msg1 = msg0 ++ show lls
                       in mkNode opts (FailT (msg1 <> " length mismatch")) (showVerbose opts "p=" p <> showVerbose opts " | q=" q) hhs
 
--- | similar to 'toList'
+-- | similar to 'empty'
 --
--- >>> pz @ToList "aBc"
--- PresentT "aBc"
+-- >>> pz @(EmptyT Maybe Id) ()
+-- PresentT Nothing
 --
--- >>> pz @ToList (Just 14)
--- PresentT [14]
---
--- >>> pz @ToList Nothing
+-- >>> pz @(EmptyT [] Id) ()
 -- PresentT []
 --
--- >>> pz @ToList (Left "xx")
--- PresentT []
+-- >>> pz @(EmptyT [] (Char1 "x")) (13,True)
+-- PresentT ""
 --
--- >>> pz @ToList (These 12 "xx")
--- PresentT ["xx"]
+-- >>> pz @(EmptyT (Either String) (Fst Id)) (13,True)
+-- PresentT (Left "")
 --
--- >>> pl @ToList (M.fromList $ zip [0..] "abcd")
--- Present "abcd" (ToList fromList [(0,'a'),(1,'b'),(2,'c'),(3,'d')])
--- PresentT "abcd"
---
--- >>> pl @ToList (Just 123)
--- Present [123] (ToList Just 123)
--- PresentT [123]
---
--- >>> pl @ToList (M.fromList (zip ['a'..] [9,2,7,4]))
--- Present [9,2,7,4] (ToList fromList [('a',9),('b',2),('c',7),('d',4)])
--- PresentT [9,2,7,4]
---
+data EmptyT (t :: Type -> Type) p
 
-data ToList
-instance (Show (t a)
-        , Foldable t
-        ) => P ToList (t a) where
-  type PP ToList (t a) = [a]
-  eval _ opts as =
-    let msg0 = "ToList"
-        z = toList as
-    in pure $ mkNode opts (PresentT z) (msg0 <> showVerbose opts " " as) []
-
--- | similar to 'toList'
---
--- >>> pz @(ToList' Id) ("aBc" :: String)
--- PresentT "aBc"
---
--- >>> pz @(ToList' Id) (Just 14)
--- PresentT [14]
---
--- >>> pz @(ToList' Id) Nothing
--- PresentT []
---
--- >>> pz @(ToList' Id) (Left ("xx" :: String))
--- PresentT []
---
--- >>> pz @(ToList' Id) (These 12 ("xx" :: String))
--- PresentT ["xx"]
---
-data ToList' p
-
-instance (PP p x ~ t a
-        , P p x
+instance (P p x
+        , PP p x ~ a
         , Show (t a)
-        , Foldable t
         , Show a
-        ) => P (ToList' p) x where
-  type PP (ToList' p) x = [ExtractAFromTA (PP p x)] -- extra layer of indirection means pan (ToList' Id) "abc" won't work without setting the type of "abc" unlike ToList
+        , Alternative t
+        ) => P (EmptyT t p) x where
+  type PP (EmptyT t p) x = t (PP p x)
   eval _ opts x = do
-    let msg0 = "ToList'"
+    let msg0 = "EmptyT"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let hhs = [hh pp]
-            b = toList p
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) hhs
-
-data Null' p
-
-instance (Show (t a)
-        , Foldable t
-        , t a ~ PP p x
-        , P p x
-        ) => P (Null' p) x where
-  type PP (Null' p) x = Bool
-  eval _ opts x = do
-    let msg0 = "Null"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = null p
-        in mkNodeB opts b ("Null" <> showVerbose opts " | " p) [hh pp]
-
--- | similar to 'null' using 'Foldable'
---
--- >>> pz @Null [1,2,3,4]
--- FalseT
---
--- >>> pz @Null []
--- TrueT
---
--- >>> pz @Null Nothing
--- TrueT
---
-data Null
-type NullT = Null' Id
-instance P NullT a => P Null a where
-  type PP Null a = Bool
-  eval _ = evalBool (Proxy @NullT)
-
-data EmptyList' t
-
-instance P (EmptyList' t) x where
-  type PP (EmptyList' t) x = [PP t x]
-  eval _ opts _ =
-    pure $ mkNode opts (PresentT []) "EmptyList" []
-
--- | creates an empty list for the given type
---
--- >>> pz @(Id :+ EmptyList _) 99
--- PresentT [99]
---
-data EmptyList (t :: Type)
-type EmptyListT (t :: Type) = EmptyList' (Hole t)
-
-instance P (EmptyList t) x where
-  type PP (EmptyList t) x = PP (EmptyListT t) x
-  eval _ = eval (Proxy @(EmptyListT t))
+        let b = empty @t
+        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 

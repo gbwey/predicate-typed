@@ -62,13 +62,7 @@ import qualified Data.Type.Equality as DE
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
 -- >>> :set -XFlexibleContexts
--- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
 -- >>> import qualified Data.Text as T
--- >>> import Safe (readNote)
--- >>> import qualified Data.Semigroup as SG
--- >>> import Data.Time
--- >>> import Data.These
 
 
 -- | similar to an if statement: if \'p\' then run \'q\' else run \'r\'

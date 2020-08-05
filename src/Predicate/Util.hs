@@ -141,6 +141,9 @@ module Predicate.Util (
   , MaybeT
   , LeftT
   , RightT
+  , ThisT
+  , ThatT
+  , TheseT
 
  -- ** extract values from the type level
   , nat
@@ -1729,7 +1732,7 @@ type family MaybeT mb where
 
 
 type family LeftT lr where
-  LeftT (Either a b) = a
+  LeftT (Either a _) = a
   LeftT o = GL.TypeError (
       'GL.Text "LeftT: expected 'Either a b' "
       ':$$: 'GL.Text "o = "
@@ -1739,6 +1742,27 @@ type family RightT lr where
   RightT (Either a b) = b
   RightT o = GL.TypeError (
       'GL.Text "RightT: expected 'Either a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+type family ThisT lr where
+  ThisT (These a b) = a
+  ThisT o = GL.TypeError (
+      'GL.Text "ThisT: expected 'These a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+type family ThatT lr where
+  ThatT (These a b) = b
+  ThatT o = GL.TypeError (
+      'GL.Text "ThatT: expected 'These a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+type family TheseT lr where
+  TheseT (These a b) = (a,b)
+  TheseT o = GL.TypeError (
+      'GL.Text "TheseT: expected 'These a b' "
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 

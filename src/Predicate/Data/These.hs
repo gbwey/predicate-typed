@@ -31,9 +31,6 @@ module Predicate.Data.These (
   , Theses
   , Theres
   , Heres
-  , This'
-  , That'
-  , These'
   , IsThis
   , IsThat
   , IsThese
@@ -56,8 +53,6 @@ module Predicate.Data.These (
  ) where
 import Predicate.Core
 import Predicate.Util
-import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
-import qualified GHC.TypeLits as GL
 import Data.Proxy
 import Data.Kind (Type)
 import Data.These (partitionThese, These(..))
@@ -69,10 +64,6 @@ import qualified Data.These.Combinators as TheseC
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
--- >>> import qualified Data.Text as T
--- >>> import Safe (readNote)
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
 
@@ -174,27 +165,6 @@ instance ( Show a
     let msg0 = "Theres"
         b = TheseC.catThere as
     in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
-
-data This'  p
-type ThisT'  p = ThisFail  "expected This"  p
-
-instance P (ThisT' p) x => P (This' p) x where
-  type PP (This' p) x = PP (ThisT' p) x
-  eval _ = eval (Proxy @(ThisT' p))
-
-data That'  p
-type ThatT'  p = ThatFail  "expected That"  p
-
-instance P (ThatT' p) x => P (That' p) x where
-  type PP (That' p) x = PP (ThatT' p) x
-  eval _ = eval (Proxy @(ThatT' p))
-
-data These' p
-type TheseT' p = TheseFail "expected These" p
-
-instance P (TheseT' p) x => P (These' p) x where
-  type PP (These' p) x = PP (TheseT' p) x
-  eval _ = eval (Proxy @(TheseT' p))
 
 -- | similar to 'Data.These.mergeTheseWith' but additionally provides \'p\', '\q'\ and \'r\' the original input as the first element in the tuple
 --
@@ -391,7 +361,7 @@ instance (P p a
 -- True (IsThese | These 'x' 12)
 -- TrueT
 --
--- >>> pl @(IsThese Id) (That @() (SG.Sum 12))
+-- >>> pl @(IsThese Id) (That (SG.Sum 12))
 -- False (IsThese | That (Sum {getSum = 12}))
 -- FalseT
 --
@@ -461,7 +431,7 @@ instance P (IsTheseT p) x => P (IsThese p) x where
 -- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 100 "this is a long string")
 -- PresentT (Left 100)
 --
--- >>> pl @(TheseIn "this" "that" "these") (This @_ @() (SG.Sum 12))
+-- >>> pl @(TheseIn "this" "that" "these") (This (SG.Sum 12))
 -- Present "this" (TheseIn "this" | This Sum {getSum = 12})
 -- PresentT "this"
 --
@@ -598,8 +568,6 @@ simpleAlign [] bs = map That bs
 simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
 
 
-
-
 -- | extract the This value from an 'These' otherwise use the default value
 --
 -- if there is no This value then \p\ is passed the whole context only
@@ -622,7 +590,7 @@ simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
 -- >>> pz @(ThisDef (MEmptyT (SG.Sum _)) Id) (These 222 'x')
 -- PresentT (Sum {getSum = 0})
 --
--- >>> pl @(ThisDef (MEmptyT _) Id) (This @_ @() (SG.Sum 12))
+-- >>> pl @(ThisDef (MEmptyT _) Id) (This (SG.Sum 12))
 -- Present Sum {getSum = 12} (ThisDef This)
 -- PresentT (Sum {getSum = 12})
 --
@@ -652,27 +620,6 @@ instance ( PP q x ~ These a b
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
               Right p -> mkNode opts (PresentT p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
-
-type family ThisT lr where
-  ThisT (These a b) = a
-  ThisT o = GL.TypeError (
-      'GL.Text "ThisT: expected 'These a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
-
-type family ThatT lr where
-  ThatT (These a b) = b
-  ThatT o = GL.TypeError (
-      'GL.Text "ThatT: expected 'These a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
-
-type family TheseT lr where
-  TheseT (These a b) = (a,b)
-  TheseT o = GL.TypeError (
-      'GL.Text "TheseT: expected 'These a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
 
 
 -- | extract the That value from an 'These' otherwise use the default value
@@ -792,15 +739,15 @@ instance ( PP q x ~ These a b
 -- >>> pz @(ThisFail (MEmptyT _) Id) (That 222)
 -- FailT ""
 --
--- >>> pl @(ThisFail "sdf" Id) (This @_ @() (SG.Sum 12))
+-- >>> pl @(ThisFail "sdf" Id) (This (SG.Sum 12))
 -- Present Sum {getSum = 12} (This)
 -- PresentT (Sum {getSum = 12})
 --
--- >>> pl @(ThisFail "sdf" Id) (That @() (SG.Sum 12))
+-- >>> pl @(ThisFail "sdf" Id) (That (SG.Sum 12))
 -- Error sdf (ThisFail That)
 -- FailT "sdf"
 --
--- >>> pl @(ThisFail "sdf" Id) (That @Int 12)
+-- >>> pl @(ThisFail "sdf" Id) (That 12)
 -- Error sdf (ThisFail That)
 -- FailT "sdf"
 --
@@ -906,4 +853,11 @@ instance ( PP p x ~ String
               Left e -> e
               Right p -> mkNode opts (FailT p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
 
+{-
+data These' p
+type TheseT' p = TheseFail "expected These" p
 
+instance P (TheseT' p) x => P (These' p) x where
+  type PP (These' p) x = PP (TheseT' p) x
+  eval _ = eval (Proxy @(TheseT' p))
+-}

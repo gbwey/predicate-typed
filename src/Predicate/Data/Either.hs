@@ -32,8 +32,6 @@ module Predicate.Data.Either (
   , MkLeft'
   , MkRight
   , MkRight'
-  , Left'
-  , Right'
   , LeftDef
   , LeftFail
   , RightDef
@@ -58,10 +56,7 @@ import Data.Either
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
 -- >>> import qualified Data.Text as T
--- >>> import Safe (readNote)
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
 
@@ -73,27 +68,27 @@ import Data.Either
 -- >>> pz @(ShowP Id ||| Id) (Right "hello")
 -- PresentT "hello"
 --
--- >>> pl @('True ||| 'False) (Left @_ @() "someval")
+-- >>> pl @('True ||| 'False) (Left "someval")
 -- True ((|||) Left True | "someval")
 -- TrueT
 --
--- >>> pl @('True ||| 'False) (Right @() "someval")
+-- >>> pl @('True ||| 'False) (Right "someval")
 -- False ((|||) Right False | "someval")
 -- FalseT
 --
--- >>> pl @(ShowP (Succ Id) ||| ShowP Id) (Left @_ @() 123)
+-- >>> pl @(ShowP (Succ Id) ||| ShowP Id) (Left 123)
 -- Present "124" ((|||) Left "124" | 123)
 -- PresentT "124"
 --
--- >>> pl @(ShowP (Succ Id) ||| ShowP Id) (Right @Int True)
+-- >>> pl @(ShowP (Succ Id) ||| ShowP Id) (Right True)
 -- Present "True" ((|||) Right "True" | True)
 -- PresentT "True"
 --
--- >>> pl @(EitherIn (Not Id) Id) (Right @Bool True)
+-- >>> pl @(EitherIn (Not Id) Id) (Right True)
 -- Present True ((|||) Right True | True)
 -- PresentT True
 --
--- >>> pl @(EitherIn (Not Id) Id) (Left @_ @Bool True)
+-- >>> pl @(EitherIn (Not Id) Id) (Left True)
 -- False ((|||) Left False | True)
 -- FalseT
 --
@@ -186,7 +181,7 @@ instance ( P p x
 -- Present Right 1 ((+++) Right 1 | 1)
 -- PresentT (Right 1)
 --
--- >>> pl @(HeadDef 'False Id +++ Id) (Left @_ @Int [True,False]) -- need @[Bool] cos we said 'False!
+-- >>> pl @(HeadDef 'False Id +++ Id) (Left [True,False]) -- need @[Bool] cos we said 'False!
 -- Present Left True ((+++) Left True | [True,False])
 -- PresentT (Left True)
 --
@@ -534,11 +529,11 @@ instance ( PP q x ~ Either a b
 -- Error found rhs=10 (LeftFail Right)
 -- FailT "found rhs=10"
 --
--- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd Id >> Snd Id >> Snd Id)) (Snd Id >> Fst Id)) ('x',(Right @() 10,23::Int))
+-- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd Id >> Snd Id >> Snd Id)) (Snd Id >> Fst Id)) ('x',(Right 10,23::Int))
 -- Error found rhs=23 (LeftFail Right)
 -- FailT "found rhs=23"
 --
--- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd (Snd (Snd Id)))) (Fst (Snd Id))) ('x',(Left @_ @() "abc",23::Int))
+-- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd (Snd (Snd Id)))) (Fst (Snd Id))) ('x',(Left "abc",23::Int))
 -- Present "abc" (Left)
 -- PresentT "abc"
 --
@@ -603,18 +598,3 @@ instance ( PP p (a,x) ~ String
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
               Right p -> mkNode opts (FailT p) (msg0 <> " Left") [hh qq, hh pp]
-
-data Left' p
-type LeftT' p = LeftFail "expected Left"  p
-
-instance P (LeftT' p) x => P (Left' p) x where
-  type PP (Left' p) x = PP (LeftT' p) x
-  eval _ = eval (Proxy @(LeftT' p))
-
-data Right' p
-type RightT' p = RightFail "expected Right" p
-
-instance P (RightT' p) x => P (Right' p) x where
-  type PP (Right' p) x = PP (RightT' p) x
-  eval _ = eval (Proxy @(RightT' p))
-

@@ -11,6 +11,7 @@ module Predicate.Prelude (
   , module Predicate.Data.Either
   , module Predicate.Data.Enum
   , module Predicate.Data.Extra
+  , module Predicate.Data.Foldable
   , module Predicate.Data.Hof
   , module Predicate.Data.Index
   , module Predicate.Data.IO
@@ -34,6 +35,7 @@ import Predicate.Data.DateTime
 import Predicate.Data.Either
 import Predicate.Data.Enum
 import Predicate.Data.Extra
+import Predicate.Data.Foldable
 import Predicate.Data.Hof
 import Predicate.Data.Index
 import Predicate.Data.IO

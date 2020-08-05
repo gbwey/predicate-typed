@@ -60,7 +60,6 @@ import Data.Proxy
 -- >>> import qualified Data.Map.Strict as M
 -- >>> import qualified Data.Set as Set
 -- >>> import qualified Data.Text as T
--- >>> import Safe (readNote)
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
 
@@ -318,7 +317,6 @@ instance (P q a
 -- >>> pz @(Id !! 20) ["abc","D","eF","","G"]
 -- FailT "(!!) index not found"
 --
--- >>> import qualified Data.Map.Strict as M
 -- >>> pz @(Id !! "eF") (M.fromList (flip zip [0..] ["abc","D","eF","","G"]))
 -- PresentT 2
 --

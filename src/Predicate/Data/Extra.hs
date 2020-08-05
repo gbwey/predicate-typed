@@ -91,11 +91,8 @@ import Control.Lens hiding (iall)
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
--- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
 -- >>> import qualified Data.Text as T
 -- >>> import qualified Data.Sequence as Seq
--- >>> import Safe (readNote)
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Functor.Identity
@@ -136,7 +133,7 @@ instance (Show (f (t a))
 -- Present These "xxx" 4 ((<$) 4)
 -- PresentT (These "xxx" 4)
 --
--- >>> pl @(Fst Id <$ Snd Id) (4,This @_ @String 'a')
+-- >>> pl @(Fst Id <$ Snd Id) (4,This 'a')
 -- Present This 'a' ((<$) 4)
 -- PresentT (This 'a')
 --
@@ -482,7 +479,7 @@ instance Functor f => P FMapFst (f (a,x)) where
 -- Present Nothing (FMapSnd)
 -- PresentT Nothing
 --
--- >>> pl @FMapSnd (Right @() (1,'x'))
+-- >>> pl @FMapSnd (Right (1,'x'))
 -- Present Right 'x' (FMapSnd)
 -- PresentT (Right 'x')
 --

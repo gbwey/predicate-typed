@@ -46,20 +46,6 @@ module Predicate.Data.Hof (
   , type (>>>)
   , DoN
 
-  -- ** miscellaneous
-  , IsEmpty
-
-  , IToList
-  , IToList'
-  , ToNEList
-
-  , EmptyT
-
- -- *** overloaded list expressions
-  , ToListExt
-  , FromList
-  , FromListExt
-
 
  ) where
 import Predicate.Core
@@ -73,16 +59,9 @@ import GHC.TypeLits (Nat, KnownNat)
 import qualified GHC.TypeLits as GL
 import Control.Lens hiding (iall)
 import Data.Proxy
-import Control.Applicative
-import Data.Typeable
-import Data.Kind (Type)
-import Data.Foldable
 import Data.Maybe
 import Control.Arrow
-import qualified Data.List.NonEmpty as N
-import Data.List.NonEmpty (NonEmpty(..))
 import Data.Void
-import qualified GHC.Exts as GE
 
 -- $setup
 -- >>> import Predicate.Prelude
@@ -93,13 +72,18 @@ import qualified GHC.Exts as GE
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
 -- >>> :set -XFlexibleContexts
--- >>> import qualified Data.Map.Strict as M
--- >>> import qualified Data.Set as Set
--- >>> import qualified Data.Text as T
--- >>> import Safe (readNote)
--- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Time
--- >>> import Data.These
+
+data p << q
+type LeftArrowsT p q = q >> p
+infixr 1 <<
+
+instance P (LeftArrowsT p q) x => P (p << q) x where
+  type PP (p << q) x = PP (LeftArrowsT p q) x
+  eval _ = eval (Proxy @(LeftArrowsT p q))
+
+type p >>> q = p >> q
+infixl 1 >>>
 
 -- want to pass Proxy b to q but then we have no way to calculate 'b'
 
@@ -624,238 +608,4 @@ type DoNT (n :: Nat) p = Do (RepeatT n p)
 instance P (DoNT n p) a => P (DoN n p) a where
   type PP (DoN n p) a = PP (DoNT n p) a
   eval _ = eval (Proxy @(DoNT n p))
-
--- | similar to 'empty'
---
--- >>> pz @(EmptyT Maybe Id) ()
--- PresentT Nothing
---
--- >>> pz @(EmptyT [] Id) ()
--- PresentT []
---
--- >>> pz @(EmptyT [] (Char1 "x")) (13,True)
--- PresentT ""
---
--- >>> pz @(EmptyT (Either String) (Fst Id)) (13,True)
--- PresentT (Left "")
---
-data EmptyT (t :: Type -> Type) p
-
-instance (P p x
-        , PP p x ~ a
-        , Show (t a)
-        , Show a
-        , Alternative t
-        ) => P (EmptyT t p) x where
-  type PP (EmptyT t p) x = t (PP p x)
-  eval _ opts x = do
-    let msg0 = "EmptyT"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = empty @t
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
-
--- | create a 'NonEmpty' list from a 'Foldable'
---
--- >>> pz @ToNEList []
--- FailT "empty list"
---
--- >>> pz @ToNEList [1,2,3,4,5]
--- PresentT (1 :| [2,3,4,5])
---
-data ToNEList
-instance (Show (t a)
-        , Foldable t
-        ) => P ToNEList (t a) where
-  type PP ToNEList (t a) = NonEmpty a
-  eval _ opts as =
-    let msg0 = "ToNEList"
-    in pure $ case toList as of
-         [] -> mkNode opts (FailT "empty list") msg0 []
-         x:xs -> mkNode opts (PresentT (x N.:| xs)) (msg0 <> showVerbose opts " " as) []
-
-
--- cant directly create a singleton type using '[] since the type of '[] is unknown. instead use 'Singleton' or 'EmptyT'
-
--- | similar to 'null' using 'AsEmpty'
---
--- >>> pz @IsEmpty [1,2,3,4]
--- FalseT
---
--- >>> pz @IsEmpty []
--- TrueT
---
--- >>> pz @IsEmpty LT
--- FalseT
---
--- >>> pz @IsEmpty EQ
--- TrueT
---
--- >>> pl @IsEmpty ("failed11" :: T.Text)
--- False (IsEmpty | "failed11")
--- FalseT
---
--- >>> pl @IsEmpty ("" :: T.Text)
--- True (IsEmpty | "")
--- TrueT
---
-
-data IsEmpty
-
-instance ( Show as
-         , AsEmpty as
-         ) => P IsEmpty as where
-  type PP IsEmpty as = Bool
-  eval _ opts as =
-    let b = has _Empty as
-    in pure $ mkNodeB opts b ("IsEmpty" <> showVerbose opts " | " as) []
-
-
-data p << q
-type LeftArrowsT p q = q >> p
-infixr 1 <<
-
-instance P (LeftArrowsT p q) x => P (p << q) x where
-  type PP (p << q) x = PP (LeftArrowsT p q) x
-  eval _ = eval (Proxy @(LeftArrowsT p q))
-
-type p >>> q = p >> q
-infixl 1 >>>
-
-
--- | similar to 'Control.Lens.itoList'
---
--- >>> pz @(IToList _ Id) ("aBc" :: String)
--- PresentT [(0,'a'),(1,'B'),(2,'c')]
---
--- >>> pl @(IToList _ Id) ("abcd" :: String)
--- Present [(0,'a'),(1,'b'),(2,'c'),(3,'d')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c'),(3,'d')] | "abcd")
--- PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]
---
--- >>> pl @(IToList _ Id) (M.fromList $ itoList ("abcd" :: String))
--- Present [(0,'a'),(1,'b'),(2,'c'),(3,'d')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c'),(3,'d')] | fromList [(0,'a'),(1,'b'),(2,'c'),(3,'d')])
--- PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]
---
--- >>> pl @(IToList _ Id) [9,2,7,4]
--- Present [(0,9),(1,2),(2,7),(3,4)] (IToList(Int) [(0,9),(1,2),(2,7),(3,4)] | [9,2,7,4])
--- PresentT [(0,9),(1,2),(2,7),(3,4)]
---
--- >>> pl @(IToList _ Id) (M.fromList (zip ['a'..] [9,2,7,4]))
--- Present [('a',9),('b',2),('c',7),('d',4)] (IToList(Char) [('a',9),('b',2),('c',7),('d',4)] | fromList [('a',9),('b',2),('c',7),('d',4)])
--- PresentT [('a',9),('b',2),('c',7),('d',4)]
---
--- >>> pl @(IToList _ Id) (Just 234)
--- Present [((),234)] (IToList(()) [((),234)] | Just 234)
--- PresentT [((),234)]
---
--- >>> pl @(IToList _ Id) (Nothing @Double)
--- Present [] (IToList(()) [] | Nothing)
--- PresentT []
---
--- >>> pl @(IToList _ Id) [1..5]
--- Present [(0,1),(1,2),(2,3),(3,4),(4,5)] (IToList(Int) [(0,1),(1,2),(2,3),(3,4),(4,5)] | [1,2,3,4,5])
--- PresentT [(0,1),(1,2),(2,3),(3,4),(4,5)]
---
--- >>> pl @(IToList _ Id) ['a','b','c']
--- Present [(0,'a'),(1,'b'),(2,'c')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c')] | "abc")
--- PresentT [(0,'a'),(1,'b'),(2,'c')]
---
-
-data IToList' t p
-
-instance (Show x
-        , P p x
-        , Typeable (PP t (PP p x))
-        , Show (PP t (PP p x))
-        , FoldableWithIndex (PP t (PP p x)) f
-        , PP p x ~ f a
-        , Show a
-        ) => P (IToList' t p) x where
-  type PP (IToList' t p) x = [(PP t (PP p x), ExtractAFromTA (PP p x))]
-  eval _ opts x = do
-    let msg0 = "IToList"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = itoList p
-            t = showT @(PP t (PP p x))
-        in mkNode opts (PresentT b) (msg0 <> "(" <> t <> ") " <> showL opts b <> showVerbose opts " | " x) [hh pp]
-
-data IToList (t :: Type) p
-type IToListT (t :: Type) p = IToList' (Hole t) p
-
-instance P (IToListT t p) x => P (IToList t p) x where
-  type PP (IToList t p) x = PP (IToListT t p) x
-  eval _ = eval (Proxy @(IToListT t p))
-
--- | invokes 'GE.toList'
---
--- >>> pz @ToListExt (M.fromList [(1,'x'),(4,'y')])
--- PresentT [(1,'x'),(4,'y')]
---
--- >>> pz @ToListExt (T.pack "abc")
--- PresentT "abc"
---
-data ToListExt
-
-instance (Show l
-        , GE.IsList l
-        , Show (GE.Item l)
-        ) => P ToListExt l where
-  type PP ToListExt l = [GE.Item l]
-  eval _ opts as =
-    let msg0 = "ToListExt"
-        z = GE.toList as
-    in pure $ mkNode opts (PresentT z) (show01 opts msg0 z as) []
-
--- | invokes 'GE.fromList'
---
--- >>> run @('OMsg "Fred" ':# 'OLite ':# 'OColorOff) @(FromList (Set.Set Int) << '[2,1,5,5,2,5,2]) ()
--- Fred >>> Present fromList [1,2,5] ((>>) fromList [1,2,5] | {FromList fromList [1,2,5]})
--- PresentT (fromList [1,2,5])
---
--- >>> pl @(FromList (M.Map _ _) >> I !! Char1 "y") [('x',True),('y',False)]
--- Present False ((>>) False | {IxL('y') False | p=fromList [('x',True),('y',False)] | q='y'})
--- PresentT False
---
--- >>> pl @(FromList (M.Map _ _) >> Id !! Char1 "z") [('x',True),('y',False)]
--- Error (!!) index not found (fromList [('x',True),('y',False)] (>>) rhs failed)
--- FailT "(!!) index not found"
---
-
-data FromList (t :: Type) -- doesnt work with OverloadedLists unless you cast to [a] explicitly
-
-instance (a ~ GE.Item t
-        , Show t
-        , GE.IsList t
-        , [a] ~ x
-        ) => P (FromList t) x where
-  type PP (FromList t) x = t
-  eval _ opts as =
-    let msg0 = "FromList"
-        z = GE.fromList (as :: [GE.Item t]) :: t
-    in pure $ mkNode opts (PresentT z) (msg0 <> " " <> showL opts z) []
-
--- | invokes 'GE.fromList'
---
--- requires the OverloadedLists extension
---
--- >>> :set -XOverloadedLists
--- >>> pz @(FromListExt (M.Map _ _)) [(4,"x"),(5,"dd")]
--- PresentT (fromList [(4,"x"),(5,"dd")])
---
-data FromListExt (t :: Type)
--- l ~ l' is key
-instance (Show l
-        , GE.IsList l
-        , l ~ l'
-        ) => P (FromListExt l') l where
-  type PP (FromListExt l') l = l'
-  eval _ opts as =
-    let msg0 = "FromListExt"
-        z = GE.fromList (GE.toList @l as)
-    in pure $ mkNode opts (PresentT z) (msg0 <> " " <> showL opts z) []
 
