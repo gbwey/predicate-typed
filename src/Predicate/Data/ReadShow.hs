@@ -21,7 +21,7 @@
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     promoted read/show/printf functions
+     promoted read, show, and printf functions
 -}
 module Predicate.Data.ReadShow (
 

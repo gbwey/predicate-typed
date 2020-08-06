@@ -274,7 +274,7 @@ instance (GetBool ignore
             Left e -> e
             Right s1 -> mkNodeB opts (on ff lwr s0 s1) (msg1 <> " " <> litL opts s1) [hh pp, hh qq]
 
--- | IsPrefix
+-- | similar to 'isPrefixOf' for strings
 --
 -- >>> pl @(IsPrefix "xy" Id) "xyzabw"
 -- True (IsPrefix(xy) xyzabw)
@@ -291,7 +291,7 @@ instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
   type PP (IsPrefix p q) x = PP (IsPrefixT p q) x
   eval _ = evalBool (Proxy @(IsPrefixT p q))
 
--- | IsInfix
+-- | similar to 'isInfixOf' for strings
 --
 -- >>> pl @(IsInfix "ab" Id) "xyzabw"
 -- True (IsInfix(ab) xyzabw)
@@ -317,7 +317,7 @@ instance P (IsInfixT p q) x => P (IsInfix p q) x where
   type PP (IsInfix p q) x = PP (IsInfixT p q) x
   eval _ = evalBool (Proxy @(IsInfixT p q))
 
--- | IsSuffix
+-- | similar to 'isSuffixOf' for strings
 --
 -- >>> pl @(IsSuffix "bw" Id) "xyzabw"
 -- True (IsSuffix(bw) xyzabw)
@@ -334,6 +334,8 @@ instance P (IsSuffixT p q) x => P (IsSuffix p q) x where
   type PP (IsSuffix p q) x = PP (IsSuffixT p q) x
   eval _ = evalBool (Proxy @(IsSuffixT p q))
 
+-- | similar to case insensitive 'isPrefixOf' for strings
+--
 data IsPrefixI p q
 type IsPrefixIT p q = IsFixImpl 'LT 'True p q
 
@@ -341,13 +343,12 @@ instance P (IsPrefixIT p q) x => P (IsPrefixI p q) x where
   type PP (IsPrefixI p q) x = PP (IsPrefixIT p q) x
   eval _ = evalBool (Proxy @(IsPrefixIT p q))
 
--- | IsInfixI
+-- | similar to case insensitive 'isInfixOf' for strings
 --
 -- >>> pl @(IsInfixI "aB" Id) "xyzAbw"
 -- True (IsInfixI(aB) xyzAbw)
 -- TrueT
 --
-
 data IsInfixI p q
 type IsInfixIT p q = IsFixImpl 'EQ 'True p q
 
@@ -355,6 +356,8 @@ instance P (IsInfixIT p q) x => P (IsInfixI p q) x where
   type PP (IsInfixI p q) x = PP (IsInfixIT p q) x
   eval _ = evalBool (Proxy @(IsInfixIT p q))
 
+-- | similar to case insensitive 'isSuffixOf' for strings
+--
 data IsSuffixI p q
 type IsSuffixIT p q = IsFixImpl 'GT 'True p q
 
@@ -392,12 +395,12 @@ instance ToStringC BS8.ByteString where
 
 -- | 'fromString' function where you need to provide the type \'t\' of the result
 --
--- >>> :set -XFlexibleContexts
 -- >>> pz @(FromString (Identity _) Id) "abc"
 -- PresentT (Identity "abc")
 --
 -- >>> pz @(FromString (Seq.Seq Char) Id) "abc"
 -- PresentT (fromList "abc")
+--
 data FromString' t s
 
 instance (P s a

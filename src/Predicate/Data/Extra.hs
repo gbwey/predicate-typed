@@ -552,7 +552,6 @@ instance P (SkipBothT p q) x => P (p >|> q) x where
 -- >>> pz @(HeadDef (Char1 "w") Id) Seq.empty
 -- PresentT 'w'
 --
--- >>> :set -XFlexibleContexts
 -- >>> pz @(HeadDef (MEmptyT _) Id) ([] :: [SG.Sum Int])
 -- PresentT (Sum {getSum = 0})
 --

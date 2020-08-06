@@ -138,7 +138,7 @@ instance (ParseTime (PP t a)
         in case parseTimeM @Maybe @(PP t a) True defaultTimeLocale p q of
              Just b -> mkNode opts (PresentT b) (lit01 opts msg1 b "fmt=" p <> showVerbose opts " | " q) hhs
              Nothing -> mkNode opts (FailT (msg1 <> " failed to parse")) "" hhs
--- | parse time
+-- | similar to 'Date.Time.parseTimeM'
 --
 -- >>> pl @(ParseTimeP TimeOfDay "%H:%M%S" Id) "14:04:61"
 -- Error ParseTimeP TimeOfDay (%H:%M%S) failed to parse

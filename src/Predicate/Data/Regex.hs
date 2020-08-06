@@ -63,7 +63,7 @@ import qualified Text.Regex.PCRE.Heavy as RH
 -- >>> import Predicate.Prelude
 -- >>> import Data.Time
 
--- | runs a regular expression with given regex options and returns a boolean
+-- | runs a regular expression with given regex options and returns a boolean: see 'RH.=~'
 --
 -- >>> pl @(Re' '[ 'Caseless, 'Dotall ] "ab" Id) "aB"
 -- True (Re' ['Caseless, 'Dotall] (ab) | aB)
@@ -81,7 +81,7 @@ import qualified Text.Regex.PCRE.Heavy as RH
 --
 data Re' (rs :: [ROpt]) p q
 
--- | runs a regular expression and returns a boolean
+-- | runs a regular expression and returns a boolean: see 'RH.=~'
 --
 -- >>> pz @(Re "^\\d{2}:\\d{2}:\\d{2}$" Id) "13:05:25"
 -- TrueT
@@ -177,7 +177,7 @@ instance P (ReT p q) x => P (Re p q) x where
 --  anchored means it has to start at the beginning: can have junk on the end which we cant detect but at least we know it starts at beginning
 
 
--- | runs a regex matcher returning the original values and optionally any groups
+-- | runs a regex matcher returning the original values and optionally any groups: see 'RH.scan'
 --
 -- >>> pl @(Rescan' '[ 'Anchored ] "([[:xdigit:]]{2})" Id) "wfeb12az"
 -- Error Regex no results (Rescan' ['Anchored] (([[:xdigit:]]{2})) | "wfeb12az")
@@ -210,7 +210,7 @@ instance (GetROpts rs
                          mkNode opts (FailT "Regex no results") (msg1 <> showVerbose opts " | " q) [hh pp, hh qq]
               (b, _) -> mkNode opts (PresentT b) (lit01 opts msg1 b "" q) [hh pp, hh qq]
 
--- | Rescan
+-- | see 'RH.scan'
 --
 -- >>> pz @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
 -- PresentT [("13:05:25",["13","05","25"])]
@@ -277,7 +277,7 @@ instance P (RescanT p q) x => P (Rescan p q) x where
   eval _ = eval (Proxy @(RescanT p q))
 
 
--- | similar to 'Rescan' but gives the column start and ending positions instead of values
+-- | see 'RH.scanRanges'
 --
 -- >>> pz @(RescanRanges "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
 -- PresentT [((0,8),[(0,2),(3,5),(6,8)])]
@@ -316,7 +316,7 @@ instance P (RescanRangesT p q) x => P (RescanRanges p q) x where
   type PP (RescanRanges p q) x = PP (RescanRangesT p q) x
   eval _ = eval (Proxy @(RescanRangesT p q))
 
--- | splits a string on a regex delimiter
+-- | splits a string on a regex delimiter: see 'RH.split'
 --
 -- >>> pl @(Resplit' '[ 'Caseless ] "aBc" Id) "123AbC456abc"
 -- Present ["123","456",""] (Resplit' ['Caseless] (aBc) ["123","456",""] | 123AbC456abc)
@@ -349,7 +349,7 @@ instance (GetROpts rs
                          mkNode opts (FailT "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
               (b, _) -> mkNode opts (PresentT b) (lit01 opts msg1 b "" q) hhs
 
--- | splits a string on a regex delimiter
+-- | splits a string on a regex delimiter: see 'RH.split'
 --
 -- >>> pz @(Resplit "\\." Id) "141.201.1.22"
 -- PresentT ["141","201","1","22"]
@@ -380,7 +380,7 @@ instance P (ResplitT p q) x => P (Resplit p q) x where
   type PP (Resplit p q) x = PP (ResplitT p q) x
   eval _ = eval (Proxy @(ResplitT p q))
 
--- | replaces regex \'s\' with a string \'s1\' inside the value
+-- | replaces regex \'s\' with a string \'s1\' inside the value: see 'RH.sub' and 'RH.gsub'
 --
 -- >>> pz @(ReplaceAllString 'ROverWrite "\\." ":" Id) "141.201.1.22"
 -- PresentT "141:201:1:22"

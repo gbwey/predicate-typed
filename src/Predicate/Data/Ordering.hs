@@ -82,7 +82,7 @@ import Data.List (findIndex)
 -- >>> :set -XNoOverloadedLists
 -- >>> import Predicate.Prelude
 
--- | greater than
+-- | compare if expression "p" is greater than "q"
 --
 -- >>> pl @(Gt 4) 5
 -- True (5 > 4)
@@ -95,14 +95,7 @@ type Le n = I <= n
 type Lt n = I < n
 type Ne n = I /= n
 
---type p >~ q = CmpI 'CGt p q
---type p >=~ q = CmpI 'CGe p q
---type p ==~ q = CmpI 'CEq p q
---type p <=~ q = CmpI 'CLe p q
---type p <~ q = CmpI 'CLt p q
---type p /=~ q = CmpI 'CNe p q
-
--- | greater than
+-- | compare if expression "p" is greater than "q"
 --
 -- >>> pl @(Id > "xx") "abc"
 -- False ("abc" > "xx")
@@ -123,6 +116,7 @@ instance P (Cmp 'CGt p q) x => P (p > q) x where
   type PP (p > q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CGt p q))
 
+-- | compare if expression "p" is greater than or equal to "q"
 data p >= q
 infix 4 >=
 
@@ -130,7 +124,7 @@ instance P (Cmp 'CGe p q) x => P (p >= q) x where
   type PP (p >= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CGe p q))
 
--- | equal
+-- | compare if expression "p" is equal to "q"
 --
 -- >>> pl @(Fst Id == Snd Id) ("ab","xyzabw")
 -- False ("ab" == "xyzabw")
@@ -162,7 +156,7 @@ instance P (Cmp 'CEq p q) x => P (p == q) x where
   type PP (p == q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CEq p q))
 
--- | less than or equal to
+-- | compare if expression "p" is less than or equal to "q"
 --
 -- >>> pl @(Not (Fst Id >> Len <= 6)) ([2..7],True)
 -- False (Not ((>>) True | {6 <= 6}))
@@ -187,6 +181,7 @@ instance P (Cmp 'CLe p q) x => P (p <= q) x where
   type PP (p <= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CLe p q))
 
+-- | compare if expression "p" is less than "q"
 data p < q
 infix 4 <
 
@@ -194,7 +189,7 @@ instance P (Cmp 'CLt p q) x => P (p < q) x where
   type PP (p < q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CLt p q))
 
--- | not equal
+-- | compare if expression "p" is not equal to "q"
 --
 -- >>> pl @(Fst Id /= Snd Id) ("ab","xyzabw")
 -- True ("ab" /= "xyzabw")
@@ -207,6 +202,8 @@ instance P (Cmp 'CNe p q) x => P (p /= q) x where
   type PP (p /= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CNe p q))
 
+-- | case-insensitive compare if string expression "p" is greater than "q"
+--
 data p >~ q
 infix 4 >~
 
@@ -214,6 +211,7 @@ instance P (CmpI 'CGt p q) x => P (p >~ q) x where
   type PP (p >~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CGt p q))
 
+-- | case-insensitive compare if string expression "p" is greater than or equal to "q"
 data p >=~ q
 infix 4 >=~
 
@@ -221,6 +219,7 @@ instance P (CmpI 'CGe p q) x => P (p >=~ q) x where
   type PP (p >=~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CGe p q))
 
+-- | case-insensitive compare if string expression "p" is equal to "q"
 data p ==~ q
 infix 4 ==~
 
@@ -228,6 +227,7 @@ instance P (CmpI 'CEq p q) x => P (p ==~ q) x where
   type PP (p ==~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CEq p q))
 
+-- | case-insensitive compare if string expression "p" is less than or equal to "q"
 data p <=~ q
 infix 4 <=~
 
@@ -235,6 +235,7 @@ instance P (CmpI 'CLe p q) x => P (p <=~ q) x where
   type PP (p <=~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CLe p q))
 
+-- | case-insensitive compare if string expression "p" is less than "q"
 data p <~ q
 infix 4 <~
 
@@ -242,6 +243,7 @@ instance P (CmpI 'CLt p q) x => P (p <~ q) x where
   type PP (p <~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CLt p q))
 
+-- | case-insensitive compare if string expression "p" is not equal to "q"
 data p /=~ q
 infix 4 /=~
 
@@ -317,6 +319,7 @@ instance (Ord (PP p a)
         let d = compare p q
         in mkNode opts (PresentT d) (msg0 <> " " <> showL opts p <> " " <> prettyOrd d <> " " <> showL opts q) [hh pp, hh qq]
 
+-- | similar to 'compare' but using a tuple as input
 data OrdA p
 
 instance P (OrdA' p p) x => P (OrdA p) x where
@@ -330,7 +333,7 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
   type PP (OrdA' p q) x = PP (OrdAT' p q) x
   eval _ = eval (Proxy @(OrdAT' p q))
 
--- | compare two strings ignoring case
+-- | compare two strings ignoring case and return an ordering
 --
 -- >>> pz @(Fst Id ===~ Snd Id) ("abC","aBc")
 -- PresentT EQ
@@ -353,11 +356,11 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 --
 --
 -- >>> pl @("Abc" ==~ Id) "abc"
--- True (CmpI Abc == abc)
+-- True (Abc ==~ abc)
 -- TrueT
 --
 -- >>> pl @(Fst Id ==~ Snd Id) ("aBc","AbC")
--- True (CmpI aBc == AbC)
+-- True (aBc ==~ AbC)
 -- TrueT
 --
 -- >>> pl @(Fst Id ==~ Snd Id && Fst Id == Snd Id) ("Abc","Abc")
@@ -438,7 +441,7 @@ instance (PP p a ~ String
       Left e -> e
       Right (p,q,pp,qq) ->
         let b = on fn (map toLower) p q
-        in mkNodeB opts b ("CmpI " <> p <> " " <> sfn <> " " <> q) [hh pp, hh qq]
+        in mkNodeB opts b (p <> " " <> sfn <> "~ " <> q) [hh pp, hh qq]
 
 
 -- | a type level predicate for a monotonic increasing list

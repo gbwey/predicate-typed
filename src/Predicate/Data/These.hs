@@ -254,7 +254,7 @@ instance ( Show (PP p x)
         let d = This p
         in mkNode opts (PresentT d) (msg0 <> " This " <> showL opts p) [hh pp]
 
--- | MkThis
+-- | 'Data.These.This' constructor
 --
 -- >>> pl @(MkThis () Id) 'x'
 -- Present This 'x' (MkThis This 'x')
@@ -486,7 +486,7 @@ instance (Show a
                Left e -> e
                Right c -> mkNode opts (PresentT c) (show01 opts msg0 c (These a b)) [hh rr]
 
--- | TheseId
+-- | TheseId: returns a tuple so you need to provide a value for rhs in the This case and lhs for the That case
 --
 -- >>> pl @(TheseId 'True "xyz") (This "abc")
 -- Present ("abc",True) (TheseIn ("abc",True) | This "abc")
