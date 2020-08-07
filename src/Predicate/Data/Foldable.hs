@@ -30,29 +30,21 @@ module Predicate.Data.Foldable (
   , Cycle
   , FoldMap
 
- -- *** overloaded list expressions
   , ToListExt
   , FromList
   , FromListExt
 
- -- *** list expressions
   , ToList
   , ToList'
 
- -- *** indexed list expressions
   , IToList
   , IToList'
 
- -- *** miscellaneous expressions
   , ToNEList
 
   , Null
   , Null'
-
   , IsEmpty
-
-  , EmptyList
-  , EmptyList'
 
  ) where
 import Predicate.Core
@@ -298,6 +290,7 @@ instance (Show a
         let b = concat p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
+-- | similar to 'concatMap'
 data ConcatMap p q
 type ConcatMapT p q = Concat (Map p q)
 
@@ -446,26 +439,6 @@ type NullT = Null' Id
 instance P NullT a => P Null a where
   type PP Null a = Bool
   eval _ = evalBool (Proxy @NullT)
-
-
-data EmptyList' t
-
-instance P (EmptyList' t) x where
-  type PP (EmptyList' t) x = [PP t x]
-  eval _ opts _ =
-    pure $ mkNode opts (PresentT []) "EmptyList" []
-
--- | creates an empty list for the given type
---
--- >>> pz @(Id :+ EmptyList _) 99
--- PresentT [99]
---
-data EmptyList (t :: Type)
-type EmptyListT (t :: Type) = EmptyList' (Hole t)
-
-instance P (EmptyList t) x where
-  type PP (EmptyList t) x = PP (EmptyListT t) x
-  eval _ = eval (Proxy @(EmptyListT t))
 
 -- | similar to a limited form of 'foldMap'
 --

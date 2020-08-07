@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 313a9112ebd6f3eef3246fe9af8cb181a3668126b9ef6c9947125fa1fd2611ab
+-- hash: aa2ab78d68dcddef601cdef424ad1d3c3bb857cb5afc594647e650913558a4a1
 
 name:           predicate-typed
-version:        0.7.2.0
+version:        0.7.3.0
 synopsis:       Predicates, Refinement types and Dsl
 description:    Please see the README on GitHub at <https://github.com/gbwey/predicate-typed#readme>
 category:       Data
@@ -35,9 +35,9 @@ library
       Predicate.Data.Enum
       Predicate.Data.Extra
       Predicate.Data.Foldable
-      Predicate.Data.Hof
       Predicate.Data.Index
       Predicate.Data.IO
+      Predicate.Data.Iterator
       Predicate.Data.Json
       Predicate.Data.List
       Predicate.Data.Maybe
@@ -109,9 +109,9 @@ test-suite doctests
       Predicate.Data.Enum
       Predicate.Data.Extra
       Predicate.Data.Foldable
-      Predicate.Data.Hof
       Predicate.Data.Index
       Predicate.Data.IO
+      Predicate.Data.Iterator
       Predicate.Data.Json
       Predicate.Data.List
       Predicate.Data.Maybe

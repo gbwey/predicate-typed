@@ -21,10 +21,9 @@
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     promoted higher order functions
+     promoted iterator functions
 -}
-module Predicate.Data.Hof (
- -- ** fold / unfold expressions
+module Predicate.Data.Iterator (
     Scanl
   , ScanN
   , ScanNA
@@ -36,16 +35,11 @@ module Predicate.Data.Hof (
   , IterateNWhile
   , IterateNUntil
 
-  -- *** parallel expressions
   , Para
   , ParaN
-  , Repeat
 
-  -- ** expression combinators
-  , type (<<)
-  , type (>>>)
   , DoN
-
+  , Repeat
 
  ) where
 import Predicate.Core
@@ -73,17 +67,6 @@ import Data.Void
 -- >>> :set -XNoOverloadedLists
 -- >>> :set -XFlexibleContexts
 -- >>> import Data.Time
-
-data p << q
-type LeftArrowsT p q = q >> p
-infixr 1 <<
-
-instance P (LeftArrowsT p q) x => P (p << q) x where
-  type PP (p << q) x = PP (LeftArrowsT p q) x
-  eval _ = eval (Proxy @(LeftArrowsT p q))
-
-type p >>> q = p >> q
-infixl 1 >>>
 
 -- want to pass Proxy b to q but then we have no way to calculate 'b'
 
@@ -178,7 +161,7 @@ instance P (ScanNT n p q) x => P (ScanN n p q) x where
   type PP (ScanN n p q) x = PP (ScanNT n p q) x
   eval _ = eval (Proxy @(ScanNT n p q))
 
--- | ScanNA
+-- | tuple version of 'ScanN'
 --
 -- >>> pl @(ScanNA (Succ Id)) (4,'a')
 -- Present "abcde" (Scanl "abcde" | b='a' | as=[1,2,3,4])
@@ -366,7 +349,7 @@ instance (PP q a ~ s
 type family UnfoldT mbs where
   UnfoldT (Maybe (b,s)) = b
 
--- | IterateUntil
+-- | unfolds a value applying \'f\' until the condition \'p\' is true
 --
 -- >>> pl @(IterateUntil (Id < 90) (Pred Id)) 94
 -- Present [94,93,92,91,90] (Unfoldr 94 [94,93,92,91,90] | s=94)
@@ -379,7 +362,7 @@ instance P (IterateUntilT p f) x => P (IterateUntil p f) x where
   type PP (IterateUntil p f) x = PP (IterateUntilT p f) x
   eval _ = eval (Proxy @(IterateUntilT p f))
 
--- | IterateWhile
+-- | unfolds a value applying \'f\' while the condition \'p\' is true
 --
 -- >>> pl @(IterateWhile (Id > 90) (Pred Id)) 94
 -- Present [94,93,92,91] (Unfoldr 94 [94,93,92,91] | s=94)
@@ -392,7 +375,7 @@ instance P (IterateWhileT p f) x => P (IterateWhile p f) x where
   type PP (IterateWhile p f) x = PP (IterateWhileT p f) x
   eval _ = eval (Proxy @(IterateWhileT p f))
 
--- | IterateNWhile
+-- | unfolds a value applying \'f\' while the condition \'p\' is true or \'n\' times
 --
 -- >>> pl @(IterateNWhile 10 (Id > 90) (Pred Id)) 95
 -- Present [95,94,93,92,91] ((>>) [95,94,93,92,91] | {Map [95,94,93,92,91] | [(10,95),(9,94),(8,93),(7,92),(6,91)]})
@@ -409,7 +392,7 @@ instance P (IterateNWhileT n p f) x => P (IterateNWhile n p f) x where
   type PP (IterateNWhile n p f) x = PP (IterateNWhileT n p f) x
   eval _ = eval (Proxy @(IterateNWhileT n p f))
 
--- | IterateNUntil
+-- | unfolds a value applying \'f\' until the condition \'p\' is true or \'n\' times
 --
 -- >>> pl @(IterateNUntil 10 (Id <= 90) (Pred Id)) 95
 -- Present [95,94,93,92,91] ((>>) [95,94,93,92,91] | {Map [95,94,93,92,91] | [(10,95),(9,94),(8,93),(7,92),(6,91)]})

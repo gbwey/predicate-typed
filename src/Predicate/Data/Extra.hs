@@ -54,7 +54,6 @@ module Predicate.Data.Extra (
   , InitDef
   , InitFail
 
-  , Coerce
   , Coerce2
 
   , ProxyT
@@ -64,8 +63,6 @@ module Predicate.Data.Extra (
   , PrimeNext
   , Luhn
 
-  , Assoc
-  , Unassoc
   , Catch
   , Catch'
   , Dot
@@ -83,7 +80,6 @@ import Control.Applicative
 import Control.Monad (join)
 import Data.Kind (Type)
 import Control.Comonad
-import Data.These
 import Data.Coerce
 import Control.Lens hiding (iall)
 
@@ -858,136 +854,7 @@ instance (PP p x ~ [Int]
         in if ret == 0 then mkNodeB opts True (msg0 <> " | " <> showL opts p) hhs
            else mkNodeB opts False (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " p) hhs
 
-
--- | assoc using 'AssocC'
---
--- >>> pz @Assoc (This (These 123 'x'))
--- PresentT (These 123 (This 'x'))
---
--- >>> pz @Assoc ((99,'a'),True)
--- PresentT (99,('a',True))
---
--- >>> pz @Assoc ((99,'a'),True)
--- PresentT (99,('a',True))
---
--- >>> pz @Assoc (Right "Abc" :: Either (Either () ()) String)
--- PresentT (Right (Right "Abc"))
---
--- >>> pz @Assoc (Left (Left 'x'))
--- PresentT (Left 'x')
---
--- >>> pl @Assoc ((10,'c'),True)
--- Present (10,('c',True)) (Assoc (10,('c',True)) | ((10,'c'),True))
--- PresentT (10,('c',True))
---
--- >>> pl @(Assoc >> Unassoc) ((10,'c'),True)
--- Present ((10,'c'),True) ((>>) ((10,'c'),True) | {Unassoc ((10,'c'),True) | (10,('c',True))})
--- PresentT ((10,'c'),True)
---
-data Assoc
-
-class AssocC p where
-  assoc :: p (p a b) c -> p a (p b c)
-  unassoc :: p a (p b c) -> p (p a b) c
-instance AssocC Either where
-  assoc (Left (Left a)) = Left a
-  assoc (Left (Right b)) = Right (Left b)
-  assoc (Right b) = Right (Right b)
-  unassoc (Left a) = Left (Left a)
-  unassoc (Right (Left b)) = Left (Right b)
-  unassoc (Right (Right b)) = Right b
-instance AssocC These where
-  assoc (This (This a)) = This a
-  assoc (This (That b)) = That (This b)
-  assoc (That b) = That (That b)
-  assoc (These (This a) c) = These a (That c)
-  assoc (These (That b) c) = That (These b c)
-  assoc (These (These a b) c) = These a (These b c)
-  assoc (This (These a b)) = These a (This b)
-  unassoc (This a) = This (This a)
-  unassoc (That (This b)) = This (That b)
-  unassoc (That (That b)) = That b
-  unassoc (These a (That c)) = These (This a) c
-  unassoc (That (These b c)) = These (That b) c
-  unassoc (These a (These b c)) = These (These a b) c
-  unassoc (These a (This b)) = This (These a b)
-
-instance AssocC (,) where
-  assoc ((a,b),c) = (a,(b,c))
-  unassoc (a,(b,c)) = ((a,b),c)
-
-instance (Show (p (p a b) c)
-        , Show (p a (p b c))
-        , AssocC p
-        ) => P Assoc (p (p a b) c) where
-  type PP Assoc (p (p a b) c) = p a (p b c)
-  eval _ opts pabc =
-    let msg0 = "Assoc"
-        d = assoc pabc
-    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d pabc) []
-
--- | unassoc using 'AssocC'
---
--- >>> pz @Unassoc (These 123 (This 'x'))
--- PresentT (This (These 123 'x'))
---
--- >>> pz @Unassoc (99,('a',True))
--- PresentT ((99,'a'),True)
---
--- >>> pz @Unassoc (This 10 :: These Int (These Bool ()))
--- PresentT (This (This 10))
---
--- >>> pz @Unassoc (Right (Right 123))
--- PresentT (Right 123)
---
--- >>> pz @Unassoc (Left 'x' :: Either Char (Either Bool Double))
--- PresentT (Left (Left 'x'))
---
--- >>> pl @Unassoc (10,('c',True))
--- Present ((10,'c'),True) (Unassoc ((10,'c'),True) | (10,('c',True)))
--- PresentT ((10,'c'),True)
---
-data Unassoc
-
-instance (Show (p (p a b) c)
-        , Show (p a (p b c))
-        , AssocC p
-        ) => P Unassoc (p a (p b c)) where
-  type PP Unassoc (p a (p b c)) = p (p a b) c
-  eval _ opts pabc =
-    let msg0 = "Unassoc"
-        d = unassoc pabc
-    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d pabc) []
-
-
--- | similar to 'coerce'
---
--- >>> pz @(Coerce (SG.Sum Integer)) (Identity (-13))
--- PresentT (Sum {getSum = -13})
---
--- >>> pl @(Coerce SG.Any) True
--- Present Any {getAny = True} (Coerce Any {getAny = True} | True)
--- PresentT (Any {getAny = True})
---
--- >>> pl @(Coerce Bool) (SG.Any True)
--- Present True (Coerce True | Any {getAny = True})
--- PresentT True
---
-data Coerce (t :: k)
-
-instance (Show a
-        , Show t
-        , Coercible t a
-        ) => P (Coerce t) a where
-  type PP (Coerce t) a = t
-  eval _ opts a =
-    let msg0 = "Coerce"
-        d = a ^. coerced
-    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d a) []
-
--- can coerce over a functor: but need to provide type of 'a' and 't' explicitly
-
--- | see 'Coerce': coerce over a functor
+-- | coerce over a functor
 --
 -- >>> pz @(Coerce2 (SG.Sum Integer)) [Identity (-13), Identity 4, Identity 99]
 -- PresentT [Sum {getSum = -13},Sum {getSum = 4},Sum {getSum = 99}]
@@ -1034,7 +901,7 @@ instance P (ProxyT t) x where
 -- now takes the FailT string and x so you can print more detail if you want
 -- need the proxy so we can fail without having to explicitly specify a type
 
--- | catch a failure
+-- | run an expression \'p\' and on failure run \'q\'
 --
 -- >>> pz @(Catch (Succ Id) (Fst Id >> Second (ShowP Id) >> PrintT "%s %s" Id >> 'LT)) GT
 -- PresentT LT
@@ -1066,9 +933,9 @@ instance P (ProxyT t) x where
 -- True (Catch caught exception[OneP empty])
 -- TrueT
 --
-data Catch p q -- catch p and if fails runs q only on failt
+data Catch p q
 
--- | Catch'
+-- | run an expression \'p\' and on failure print a custom error \'s\' using the error string and the input value
 --
 -- >>> pz @(Catch' (Succ Id) (Second (ShowP Id) >> PrintT "%s %s" Id)) GT
 -- FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument GT"
@@ -1181,4 +1048,6 @@ instance P p a => P (K p q) a where
 
 -- k or prt has access to (Int,a) where Int is the current guard position: hence need to use PrintT
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out)
+
+
 

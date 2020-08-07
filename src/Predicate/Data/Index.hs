@@ -450,13 +450,6 @@ instance P (BangBangT p q) a => P (p !! q) a where
 -- >>> pz @(Lookup Id 20) ["abc","D","eF","","G"]
 -- PresentT Nothing
 --
--- >>> pl @((Id !!? Char1 "d") > MkJust 99 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
--- False (False || False | (Just 4 > Just 99) || (4 <= 3))
--- FalseT
---
--- >>> pz @((Id !!? Char1 "d") > MkJust 2 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
--- TrueT
---
 -- >>> pl @(FromList (M.Map _ _) >> Lookup Id (Char1 "y")) [('x',True),('y',False)]
 -- Present Just False ((>>) Just False | {Lookup('y') False | p=fromList [('x',True),('y',False)] | q='y'})
 -- PresentT (Just False)
@@ -513,6 +506,15 @@ instance (P q a
              Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " not found") hhs
              Just ret -> mkNode opts (PresentT (Just ret)) (show01' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) hhs
 
+-- | type operator version of 'Lookup'
+--
+-- >>> pl @((Id !!? Char1 "d") > MkJust 99 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
+-- False (False || False | (Just 4 > Just 99) || (4 <= 3))
+-- FalseT
+--
+-- >>> pz @((Id !!? Char1 "d") > MkJust 2 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
+-- TrueT
+--
 data p !!? q
 type BangBangQT p q = Lookup p q
 

@@ -160,6 +160,7 @@ module Predicate.Util (
  -- ** printing methods
   , prtTreePure
   , formatOMsg
+  , prtTree
 
  -- ** boolean methods
   , (~>)
@@ -192,6 +193,7 @@ module Predicate.Util (
   , isPrime
   , unlessNull
   , badLength
+  , showIndex
 
     ) where
 import qualified GHC.TypeNats as GN
@@ -1767,3 +1769,19 @@ type family TheseT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+prtTree :: Show x => POpts -> TT x -> String
+prtTree opts pp =
+  let r = pp ^. tBool
+  in case oDebug opts of
+       DZero -> ""
+       DLite ->
+             formatOMsg opts " >>> "
+          <> colorBoolT opts r
+          <> " "
+          <> topMessage pp
+          <> "\n"
+       _ -> formatOMsg opts "\n"
+         <> prtTreePure opts (fromTT pp)
+
+showIndex :: (Show i, Num i) => i -> String
+showIndex i = show (i+0)

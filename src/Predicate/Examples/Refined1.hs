@@ -40,10 +40,10 @@ import Data.Time
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XTemplateHaskell
-
--- | tests
---
 -- >>> :m + Data.Ratio
+
+-- | refined1 tests
+--
 -- >>> newRefined1P (readshow @OZ @Rational) "13 % 3"
 -- Right (Refined1 (13 % 3))
 --

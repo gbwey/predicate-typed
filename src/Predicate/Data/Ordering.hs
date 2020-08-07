@@ -529,7 +529,7 @@ type Positive = Gt 0
 
 type Negative = Lt 0
 
--- | 'Data.Foldable.and'
+-- | similar to 'Data.Foldable.and'
 --
 -- >>> pz @(Ands Id) [True,True,True]
 -- TrueT
@@ -562,7 +562,7 @@ instance (PP p x ~ t a
                   Just i -> " i="++show i
         in mkNodeB opts (and p) (msg1 <> w <> showVerbose opts " | " p) [hh pp]
 
--- | 'Data.Foldable.or'
+-- | similar to 'Data.Foldable.or'
 --
 -- >>> pz @(Ors Id) [False,False,False]
 -- FalseT

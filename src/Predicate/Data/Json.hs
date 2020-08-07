@@ -50,7 +50,7 @@ import System.Directory (doesFileExist)
 -- >>> :set -XNoOverloadedLists
 -- >>> import Predicate.Prelude
 
--- | parse json data
+-- | parse json data using the type \'t\'
 data ParseJson' t p
 
 instance (P p x
@@ -73,7 +73,7 @@ instance (P p x
            Right b -> mkNode opts (PresentT b) (msg0 <> " " ++ showL opts { oWidth = oWidth opts `div` 2 } b) hhs
            Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e) ) (e <> " | " <> litBL opts s) hhs
 
--- | parse json data
+-- | parse json data using the type \'t\'
 --
 -- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\"]"
 -- Present (10,"abc") (ParseJson (Int,[Char]) (10,"abc"))
@@ -102,7 +102,7 @@ instance P (ParseJsonT t p) x => P (ParseJson t p) x where
   type PP (ParseJson t p) x = PP (ParseJsonT t p) x
   eval _ = eval (Proxy @(ParseJsonT t p))
 
--- | parse json file
+-- | parse json file \'p\' using the type \'t\'
 data ParseJsonFile' t p
 
 instance (P p x
@@ -133,7 +133,7 @@ instance (P p x
                Right b -> mkNode opts (PresentT b) (msg1 <> " " ++ showL opts b) hhs
                Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) (e <> " | " <> litBS opts s) hhs
 
--- | parse a json file
+-- | parse a json file \'p\' using the type \'t\'
 --
 -- >>> pz @(ParseJsonFile [A.Value] "test1.json" >> Id !! 2) ()
 -- PresentT (Object (fromList [("lastName",String "Doe"),("age",Number 45.0),("firstName",String "John"),("likesPizza",Bool False)]))

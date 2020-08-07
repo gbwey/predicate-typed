@@ -81,7 +81,7 @@ import Data.Maybe
 import qualified Numeric
 import Data.Char
 import Data.Ratio
-
+import GHC.Real (Ratio((:%)))
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -599,9 +599,10 @@ instance (Integral (PP p x)
          | q == 0 -> let msg1 = msg0 <> " zero denominator"
                      in mkNode opts (FailT msg1) "" [hh pp, hh qq]
          | otherwise ->
-            let d = fromIntegral p % fromIntegral q
-                zz= if numerator d == fromIntegral p && denominator d == fromIntegral q then ""
-                    else litVerbose opts " | " (show p <> " % " <> show q)
+            let z@(p1,q1) = (fromIntegral p, fromIntegral q)
+                d@(dn :% dd) = uncurry (%) z
+                zz = if dn == p1 && dd == q1 then ""
+                     else litVerbose opts " | " (show p <> " % " <> show q)
             in mkNode opts (PresentT d) (showL opts d <> zz) [hh pp, hh qq]
 
 -- | negate a ratio

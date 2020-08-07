@@ -25,22 +25,31 @@
 -}
 module Predicate.Data.Either (
 
-    PartitionEithers
-  , IsLeft
+ -- ** boolean predicates
+    IsLeft
   , IsRight
+
+ -- ** constructors
   , MkLeft
   , MkLeft'
   , MkRight
   , MkRight'
+
+ -- ** get rid of Either
+  , Left'
+  , Right'
   , LeftDef
   , LeftFail
   , RightDef
   , RightFail
   , EitherBool
   , EitherIn
+  , PartitionEithers
 
+ -- ** miscellaneous
   , type (|||)
   , type (+++)
+
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -59,6 +68,42 @@ import Data.Either
 -- >>> import qualified Data.Text as T
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
+
+-- | extracts the left value from an 'Either'
+--
+-- >>> pz @(Left' >> Succ Id) (Left 20)
+-- PresentT 21
+--
+-- >>> pz @(Left' >> Succ Id) (Right 'a')
+-- FailT "Left' found Right"
+--
+data Left'
+instance (Show a
+        ) => P Left' (Either a x) where
+  type PP Left' (Either a x) = a
+  eval _ opts lr =
+    let msg0 = "Left'"
+    in pure $ case lr of
+         Right _ -> mkNode opts (FailT (msg0 <> " found Right")) "" []
+         Left a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+
+-- | extracts the right value from an 'Either'
+--
+-- >>> pz @(Right' >> Succ Id) (Right 20)
+-- PresentT 21
+--
+-- >>> pz @(Right' >> Succ Id) (Left 'a')
+-- FailT "Right' found Left"
+--
+data Right'
+instance (Show a
+        ) => P Right' (Either x a) where
+  type PP Right' (Either x a) = a
+  eval _ opts lr =
+    let msg0 = "Right'"
+    in pure $ case lr of
+         Left _ -> mkNode opts (FailT (msg0 <> " found Left")) "" []
+         Right a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
 
 -- | similar 'Control.Arrow.|||'
 --
@@ -152,7 +197,6 @@ instance ( P p x
 -- >>> pz @(IsRight Id) (Left "aa")
 -- FalseT
 --
-
 data IsRight p
 
 instance ( P p x
@@ -205,7 +249,6 @@ instance ( P p x
 -- Present Right 12 ((+++) Right 12 | 12)
 -- PresentT (Right 12)
 --
-
 data p +++ q
 infixr 2 +++
 
@@ -365,10 +408,6 @@ type family EitherXT lr x p where
       ':<>: 'GL.ShowType o)
 
 -- | 'Data.Either.Left' constructor
---
--- >>> pz @(MkLeft _ Id) 44
--- PresentT (Left 44)
---
 data MkLeft' t p
 
 instance ( Show (PP p x)
@@ -384,6 +423,11 @@ instance ( Show (PP p x)
         let d = Left p
         in mkNode opts (PresentT d) (msg0 <> " Left " <> showL opts p) [hh pp]
 
+-- | 'Data.Either.Left' constructor
+--
+-- >>> pz @(MkLeft _ Id) 44
+-- PresentT (Left 44)
+--
 data MkLeft (t :: Type) p
 type MkLeftT (t :: Type) p = MkLeft' (Hole t) p
 
@@ -392,10 +436,6 @@ instance P (MkLeftT t p) x => P (MkLeft t p) x where
   eval _ = eval (Proxy @(MkLeftT t p))
 
 -- | 'Data.Either.Right' constructor
---
--- >>> pz @(MkRight _ Id) 44
--- PresentT (Right 44)
---
 data MkRight' t p
 
 instance ( Show (PP p x)
@@ -411,6 +451,11 @@ instance ( Show (PP p x)
         let d = Right p
         in mkNode opts (PresentT d) (msg0 <> " Right " <> showL opts p) [hh pp]
 
+-- | 'Data.Either.Right' constructor
+--
+-- >>> pz @(MkRight _ Id) 44
+-- PresentT (Right 44)
+--
 data MkRight (t :: Type) p
 type MkRightT (t :: Type) p = MkRight' (Hole t) p
 
@@ -418,7 +463,7 @@ instance P (MkRightT t p) x => P (MkRight t p) x where
   type PP (MkRight t p) x = PP (MkRightT t p) x
   eval _ = eval (Proxy @(MkRightT t p))
 
--- | extract the Left value from an 'Either' otherwise use the default value
+-- | extract the Left value from an 'Either' otherwise use the default value: similar to 'Data.Either.fromLeft'
 --
 -- if there is no Left value then \p\ is passed the Right value and the whole context
 --
@@ -459,7 +504,7 @@ instance ( PP q x ~ Either a b
               Left e -> e
               Right p -> mkNode opts (PresentT p) (msg0 <> " Right") [hh qq, hh pp]
 
--- | extract the Right value from an 'Either'
+-- | extract the Right value from an 'Either': similar to 'Data.Either.fromRight'
 --
 -- if there is no Right value then \p\ is passed the Left value and the whole context
 --
@@ -537,7 +582,6 @@ instance ( PP q x ~ Either a b
 -- Present "abc" (Left)
 -- PresentT "abc"
 --
-
 data LeftFail p q
 
 instance ( PP p (b,x) ~ String

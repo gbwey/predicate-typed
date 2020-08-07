@@ -30,6 +30,7 @@ module Predicate.Data.String (
   , TrimR
   , StripR
   , StripL
+
   , IsPrefix
   , IsInfix
   , IsSuffix

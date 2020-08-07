@@ -25,16 +25,21 @@
 -}
 module Predicate.Data.Maybe (
 
- -- ** maybe expressions
-    MkNothing
+ -- ** boolean predicates
+    IsNothing
+  , IsJust
+
+ -- ** constructors
+  , MkNothing
   , MkNothing'
   , MkJust
-  , IsNothing
-  , IsJust
-  , MapMaybe
-  , CatMaybes
+
+ -- ** get rid of Maybe
+  , Just'
   , JustDef
   , JustFail
+  , MapMaybe
+  , CatMaybes
   , MaybeIn
   , MaybeBool
 
@@ -55,6 +60,24 @@ import Data.Kind (Type)
 -- >>> import qualified Data.Map.Strict as M
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
+
+-- | similar to 'Data.Maybe.fromJust'
+--
+-- >>> pz @(Just' >> Succ Id) (Just 20)
+-- PresentT 21
+--
+-- >>> pz @(Just' >> Succ Id) Nothing
+-- FailT "Just' found Nothing"
+--
+data Just'
+instance (Show a
+        ) => P Just' (Maybe a) where
+  type PP Just' (Maybe a) = a
+  eval _ opts lr =
+    let msg0 = "Just'"
+    in pure $ case lr of
+         Nothing -> mkNode opts (FailT (msg0 <> " found Nothing")) "" []
+         Just a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
 
 -- | constructs a Nothing for a given type
 data MkNothing' t -- works always! MaybeBool is a good alternative and then dont need the extra 't'

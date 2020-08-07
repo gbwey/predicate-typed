@@ -28,16 +28,37 @@
 -}
 module Predicate.Data.List (
 
+ -- ** constructors
     type (:+)
   , type (+:)
   , type (++)
+  , Singleton
+  , EmptyT
+  , EmptyList
+  , EmptyList'
 
+ -- ** destructors
   , Uncons
   , Unsnoc
   , Head
   , Tail
   , Init
   , Last
+
+ -- ** sort
+  , SortBy
+  , SortOn
+  , SortOnDesc
+
+ -- ** zip related
+  , Unzip
+  , Unzip3
+  , ZipL
+  , ZipR
+  , Zip
+  , ZipWith
+
+ -- ** higher order methods
   , Partition
   , PartitionBy
   , GroupBy
@@ -45,12 +66,14 @@ module Predicate.Data.List (
   , Break
   , Span
   , Intercalate
+
+ -- ** miscellaneous
+  , Len
+  , Length
   , Elem
   , Inits
   , Tails
   , Ones
-  , Len
-  , Length
   , PadL
   , PadR
   , SplitAts
@@ -61,22 +84,14 @@ module Predicate.Data.List (
   , Drop
   , Remove
   , Keep
-  , Unzip
-  , Unzip3
   , Reverse
   , ReverseL
-  , Singleton
 
-  , SortBy
-  , SortOn
-  , SortOnDesc
+  , Sum
+  , Product
+  , Min
+  , Max
 
-  , ZipL
-  , ZipR
-  , Zip
-  , ZipWith
-
-  , EmptyT
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -239,7 +254,7 @@ instance (P p x
         let b = p `snoc` q
         in mkNode opts (PresentT b) (show01' opts msg0 b "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
--- | 'Control.Lens.uncons'
+-- | similar to 'Control.Lens.uncons'
 --
 -- >>> pz @Uncons [1,2,3,4]
 -- PresentT (Just (1,[2,3,4]))
@@ -278,7 +293,7 @@ instance (Show (ConsT s)
         b = as ^? _Cons
     in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
 
--- | 'Control.Lens.unsnoc'
+-- | similar to 'Control.Lens.unsnoc'
 --
 -- >>> pz @Unsnoc [1,2,3,4]
 -- PresentT (Just ([1,2,3],4))
@@ -1452,6 +1467,25 @@ instance P p x => P (Singleton p) x where
       Left e -> e
       Right p -> mkNode opts (PresentT [p]) msg0 [hh pp]
 
+data EmptyList' t
+
+instance P (EmptyList' t) x where
+  type PP (EmptyList' t) x = [PP t x]
+  eval _ opts _ =
+    pure $ mkNode opts (PresentT []) "EmptyList" []
+
+-- | creates an empty list for the given type
+--
+-- >>> pz @(Id :+ EmptyList _) 99
+-- PresentT [99]
+--
+data EmptyList (t :: Type)
+type EmptyListT (t :: Type) = EmptyList' (Hole t)
+
+instance P (EmptyList t) x where
+  type PP (EmptyList t) x = PP (EmptyListT t) x
+  eval _ = eval (Proxy @(EmptyListT t))
+
 
 -- | like 'zipWith'
 --
@@ -1764,4 +1798,88 @@ instance (P p x
       Right p ->
         let b = empty @t
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+
+
+-- | similar to 'sum'
+--
+-- >>> pz @Sum [10,4,5,12,3,4]
+-- PresentT 38
+--
+-- >>> pz @Sum []
+-- PresentT 0
+--
+data Sum
+
+instance ( Num a
+         , Show a
+         ) => P Sum [a] where
+  type PP Sum [a] = a
+  eval _ opts as =
+    let msg0 = "Sum"
+        v = sum as
+    in pure $ mkNode opts (PresentT v) (show01 opts msg0 v as) []
+
+-- | similar to 'product'
+--
+-- >>> pz @Product [10,4,5,12,3,4]
+-- PresentT 28800
+--
+-- >>> pz @Product []
+-- PresentT 1
+--
+data Product
+
+instance ( Num a
+         , Show a
+         ) => P Product [a] where
+  type PP Product [a] = a
+  eval _ opts as =
+    let msg0 = "Product"
+        v = product as
+    in pure $ mkNode opts (PresentT v) (show01 opts msg0 v as) []
+
+-- | similar to 'minimum'
+--
+-- >>> pz @Min [10,4,5,12,3,4]
+-- PresentT 3
+--
+-- >>> pz @Min []
+-- FailT "empty list"
+--
+data Min
+
+instance ( Ord a
+         , Show a
+         ) => P Min [a] where
+  type PP Min [a] = a
+  eval _ opts as' = do
+    let msg0 = "Min"
+    pure $ case as' of
+     [] -> mkNode opts (FailT "empty list") msg0 []
+     as@(_:_) ->
+       let v = minimum as
+       in mkNode opts (PresentT v) (show01 opts msg0 v as) []
+
+-- | similar to 'maximum'
+--
+-- >>> pz @Max [10,4,5,12,3,4]
+-- PresentT 12
+--
+-- >>> pz @Max []
+-- FailT "empty list"
+--
+
+data Max
+
+instance ( Ord a
+         , Show a
+         ) => P Max [a] where
+  type PP Max [a] = a
+  eval _ opts as' = do
+    let msg0 = "Max"
+    pure $ case as' of
+      [] -> mkNode opts (FailT "empty list") msg0 []
+      as@(_:_) ->
+        let v = maximum as
+        in mkNode opts (PresentT v) (show01 opts msg0 v as) []
 

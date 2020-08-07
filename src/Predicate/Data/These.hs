@@ -24,31 +24,42 @@
      promoted 'These' functions
 -}
 module Predicate.Data.These (
- -- ** these expressions
-    PartitionThese
-  , Thiss
-  , Thats
-  , Theses
-  , Theres
-  , Heres
-  , IsThis
+ -- ** boolean predicates
+    IsThis
   , IsThat
   , IsThese
+
+ -- ** constructors
   , MkThis
   , MkThis'
   , MkThat
   , MkThat'
   , MkThese
+
+ -- ** get rid of These
+  , This'
+  , That'
+  , These'
   , ThisDef
   , ThisFail
   , ThatDef
   , ThatFail
   , TheseDef
   , TheseFail
+  , Thiss
+  , Thats
+  , Theses
+  , Theres
+  , Heres
   , TheseIn
   , TheseId
+  , PartitionThese
   , TheseX
+
+ -- ** miscellaneous
   , ZipThese
+  , Assoc
+  , Unassoc
 
  ) where
 import Predicate.Core
@@ -852,3 +863,167 @@ instance ( PP p x ~ String
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
               Right p -> mkNode opts (FailT p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
+
+
+-- | assoc using 'AssocC'
+--
+-- >>> pz @Assoc (This (These 123 'x'))
+-- PresentT (These 123 (This 'x'))
+--
+-- >>> pz @Assoc ((99,'a'),True)
+-- PresentT (99,('a',True))
+--
+-- >>> pz @Assoc ((99,'a'),True)
+-- PresentT (99,('a',True))
+--
+-- >>> pz @Assoc (Right "Abc" :: Either (Either () ()) String)
+-- PresentT (Right (Right "Abc"))
+--
+-- >>> pz @Assoc (Left (Left 'x'))
+-- PresentT (Left 'x')
+--
+-- >>> pl @Assoc ((10,'c'),True)
+-- Present (10,('c',True)) (Assoc (10,('c',True)) | ((10,'c'),True))
+-- PresentT (10,('c',True))
+--
+-- >>> pl @(Assoc >> Unassoc) ((10,'c'),True)
+-- Present ((10,'c'),True) ((>>) ((10,'c'),True) | {Unassoc ((10,'c'),True) | (10,('c',True))})
+-- PresentT ((10,'c'),True)
+--
+data Assoc
+
+class AssocC p where
+  assoc :: p (p a b) c -> p a (p b c)
+  unassoc :: p a (p b c) -> p (p a b) c
+instance AssocC Either where
+  assoc (Left (Left a)) = Left a
+  assoc (Left (Right b)) = Right (Left b)
+  assoc (Right b) = Right (Right b)
+  unassoc (Left a) = Left (Left a)
+  unassoc (Right (Left b)) = Left (Right b)
+  unassoc (Right (Right b)) = Right b
+instance AssocC These where
+  assoc (This (This a)) = This a
+  assoc (This (That b)) = That (This b)
+  assoc (That b) = That (That b)
+  assoc (These (This a) c) = These a (That c)
+  assoc (These (That b) c) = That (These b c)
+  assoc (These (These a b) c) = These a (These b c)
+  assoc (This (These a b)) = These a (This b)
+  unassoc (This a) = This (This a)
+  unassoc (That (This b)) = This (That b)
+  unassoc (That (That b)) = That b
+  unassoc (These a (That c)) = These (This a) c
+  unassoc (That (These b c)) = These (That b) c
+  unassoc (These a (These b c)) = These (These a b) c
+  unassoc (These a (This b)) = This (These a b)
+
+instance AssocC (,) where
+  assoc ((a,b),c) = (a,(b,c))
+  unassoc (a,(b,c)) = ((a,b),c)
+
+instance (Show (p (p a b) c)
+        , Show (p a (p b c))
+        , AssocC p
+        ) => P Assoc (p (p a b) c) where
+  type PP Assoc (p (p a b) c) = p a (p b c)
+  eval _ opts pabc =
+    let msg0 = "Assoc"
+        d = assoc pabc
+    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d pabc) []
+
+-- | unassoc using 'AssocC'
+--
+-- >>> pz @Unassoc (These 123 (This 'x'))
+-- PresentT (This (These 123 'x'))
+--
+-- >>> pz @Unassoc (99,('a',True))
+-- PresentT ((99,'a'),True)
+--
+-- >>> pz @Unassoc (This 10 :: These Int (These Bool ()))
+-- PresentT (This (This 10))
+--
+-- >>> pz @Unassoc (Right (Right 123))
+-- PresentT (Right 123)
+--
+-- >>> pz @Unassoc (Left 'x' :: Either Char (Either Bool Double))
+-- PresentT (Left (Left 'x'))
+--
+-- >>> pl @Unassoc (10,('c',True))
+-- Present ((10,'c'),True) (Unassoc ((10,'c'),True) | (10,('c',True)))
+-- PresentT ((10,'c'),True)
+--
+data Unassoc
+
+instance (Show (p (p a b) c)
+        , Show (p a (p b c))
+        , AssocC p
+        ) => P Unassoc (p a (p b c)) where
+  type PP Unassoc (p a (p b c)) = p (p a b) c
+  eval _ opts pabc =
+    let msg0 = "Unassoc"
+        d = unassoc pabc
+    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d pabc) []
+
+
+-- | tries to extract a value from the 'Data.These.This' constructor
+--
+-- >>> pz @(This' >> Succ Id) (This 20)
+-- PresentT 21
+--
+-- >>> pz @(This' >> Succ Id) (That 'a')
+-- FailT "This' found That"
+--
+data This'
+instance (Show a
+        ) => P This' (These a x) where
+  type PP This' (These a x) = a
+  eval _ opts lr =
+    let msg0 = "This'"
+    in pure $ case lr of
+         These _ _ -> mkNode opts (FailT (msg0 <> " found These")) "" []
+         That _ -> mkNode opts (FailT (msg0 <> " found That")) "" []
+         This a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+
+-- | tries to extract a value from the 'Data.These.That' constructor
+--
+-- >>> pz @(That' >> Succ Id) (That 20)
+-- PresentT 21
+--
+-- >>> pz @(That' >> Succ Id) (This 'a')
+-- FailT "That' found This"
+--
+data That'
+instance (Show a
+        ) => P That' (These x a) where
+  type PP That' (These x a) = a
+  eval _ opts lr =
+    let msg0 = "That'"
+    in pure $ case lr of
+         These _ _ -> mkNode opts (FailT (msg0 <> " found These")) "" []
+         This _ -> mkNode opts (FailT (msg0 <> " found This")) "" []
+         That a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+
+-- | tries to extract the values from the 'Data.These.These' constructor
+--
+-- >>> pz @(These' >> Second (Succ Id)) (These 1 'a')
+-- PresentT (1,'b')
+--
+-- >>> pz @(That' >> Succ Id) (This 'a')
+-- FailT "That' found This"
+--
+-- >>> pz @(These' >> Second (Succ Id)) (That 8)
+-- FailT "These' found That"
+--
+data These'
+instance (Show a, Show b
+        ) => P These' (These a b) where
+  type PP These' (These a b) = (a,b)
+  eval _ opts lr =
+    let msg0 = "These'"
+    in pure $ case lr of
+         This _ -> mkNode opts (FailT (msg0 <> " found This")) "" []
+         That _ -> mkNode opts (FailT (msg0 <> " found That")) "" []
+         These a b -> mkNode opts (PresentT (a,b)) (msg0 <> " " <> showL opts (a,b)) []
+
+

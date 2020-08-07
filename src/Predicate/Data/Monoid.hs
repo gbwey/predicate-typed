@@ -39,11 +39,6 @@ module Predicate.Data.Monoid (
   , MEmpty2
   , MEmpty2'
 
-  , Sum
-  , Product
-  , Min
-  , Max
-
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -262,7 +257,7 @@ instance P (MEmptyTT t) x => P (MEmptyT t) x where
   type PP (MEmptyT t) x = PP (MEmptyTT t) x
   eval _ = eval (Proxy @(MEmptyTT t))
 
--- | MEmptyP
+-- | creates a mempty value for the proxy
 --
 -- >>> pl @('Proxy >> MEmptyP) "abc"
 -- Present "" ((>>) "" | {MEmptyT ""})
@@ -317,87 +312,3 @@ instance (P n a
         let msg1 = msg0 <> " " <> showL opts n <> " p=" <> show p
             b = SG.stimes n p
             in mkNode opts (PresentT b) (show01' opts msg1 b "n=" n <> showVerbose opts " | " p) [hh pp, hh qq]
-
--- | similar to 'sum'
---
--- >>> pz @Sum [10,4,5,12,3,4]
--- PresentT 38
---
--- >>> pz @Sum []
--- PresentT 0
---
-data Sum
-
-instance ( Num a
-         , Show a
-         ) => P Sum [a] where
-  type PP Sum [a] = a
-  eval _ opts as =
-    let msg0 = "Sum"
-        v = sum as
-    in pure $ mkNode opts (PresentT v) (show01 opts msg0 v as) []
-
--- | similar to 'product'
---
--- >>> pz @Product [10,4,5,12,3,4]
--- PresentT 28800
---
--- >>> pz @Product []
--- PresentT 1
---
-data Product
-
-instance ( Num a
-         , Show a
-         ) => P Product [a] where
-  type PP Product [a] = a
-  eval _ opts as =
-    let msg0 = "Product"
-        v = product as
-    in pure $ mkNode opts (PresentT v) (show01 opts msg0 v as) []
-
--- | similar to 'minimum'
---
--- >>> pz @Min [10,4,5,12,3,4]
--- PresentT 3
---
--- >>> pz @Min []
--- FailT "empty list"
---
-data Min
-
-instance ( Ord a
-         , Show a
-         ) => P Min [a] where
-  type PP Min [a] = a
-  eval _ opts as' = do
-    let msg0 = "Min"
-    pure $ case as' of
-     [] -> mkNode opts (FailT "empty list") msg0 []
-     as@(_:_) ->
-       let v = minimum as
-       in mkNode opts (PresentT v) (show01 opts msg0 v as) []
-
--- | similar to 'maximum'
---
--- >>> pz @Max [10,4,5,12,3,4]
--- PresentT 12
---
--- >>> pz @Max []
--- FailT "empty list"
---
-
-data Max
-
-instance ( Ord a
-         , Show a
-         ) => P Max [a] where
-  type PP Max [a] = a
-  eval _ opts as' = do
-    let msg0 = "Max"
-    pure $ case as' of
-      [] -> mkNode opts (FailT "empty list") msg0 []
-      as@(_:_) ->
-        let v = maximum as
-        in mkNode opts (PresentT v) (show01 opts msg0 v as) []
-

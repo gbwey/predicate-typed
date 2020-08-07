@@ -32,8 +32,17 @@ module Predicate.Core (
   , Hide
   , Width
   , Hole
+  , Unproxy
+  , Len
+  , Length
+  , Map
+  , Do
+  , Pure
+  , Coerce
+  , OneP
+  , type (>>)
 
-  -- ** display evaluation tree
+  -- ** tree evaluation
   , pan
   , panv
   , pa
@@ -56,29 +65,19 @@ module Predicate.Core (
   , evalBoolHide
   , evalHide
   , evalQuick
-  , prtTree
 
- -- ** wrap / unwrap expressions
+ -- ** wrap, unwrap expressions
   , Unwrap
   , Wrap
   , Wrap'
 
-  , Unproxy
-  , Len
-  , Length
-  , IdBool
-  , Not
+ -- ** failure expressions
   , Fail
   , Failp
   , Failt
   , FailS
-  , OneP
-  , Between
-  , type (<..>)
-  , All
-  , Any
-  , type (>>)
 
+ -- ** tuple expressions
   , Fst
   , Snd
   , Thd
@@ -89,33 +88,25 @@ module Predicate.Core (
   , L5
   , L6
 
-  , Map
-  , Do
-
-  , Swap
-  , SwapC(..)
-  , Pure
-
   -- ** boolean expressions
   , type (&&)
   , type (&&~)
   , type (||)
   , type (||~)
   , type (~>)
+  , Not
+  , Between
+  , All
+  , Any
+  , IdBool
 
-  , showIndex
-
+ -- ** miscellaneous
+  , type (<..>)
+  , type (<<)
+  , Swap
+  , SwapC(..)
   , type ($)
   , type (&)
-
-  , This'
-  , That'
-  , These'
-
-  , Left'
-  , Right'
-
-  , Just'
 
   ) where
 import Predicate.Util
@@ -129,6 +120,7 @@ import Data.Kind (Type)
 import Data.These (These(..))
 import Control.Monad
 import Data.List
+import Data.Coerce
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -159,7 +151,7 @@ evalBool p opts a = fixBoolT <$> eval p opts a
 evalQuick :: forall p i . P p i => i -> Either String (PP p i)
 evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) (getOptT @OL) i))
 
--- | identity function without show instance
+-- | identity function without show instance of 'Id'
 --
 -- >>> pz @I 23
 -- PresentT 23
@@ -172,9 +164,7 @@ instance P I a where
     in pure $ mkNode opts (PresentT a) msg0 []
 
 
--- | identity function that displays the input unlike 'I'
---
--- even more constraints than 'I' so we might need to add explicit type signatures
+-- | identity function
 --
 -- >>> pz @Id 23
 -- PresentT 23
@@ -186,8 +176,6 @@ instance Show a => P Id a where
     let msg0 = "Id"
     in pure $ mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
 
-
--- even more constraints than 'Id' so we might need to explicitly add types (Typeable)
 -- | identity function that also displays the type information for debugging
 --
 -- >>> pz @IdT 23
@@ -642,7 +630,7 @@ instance (Show (PP p a)
             -- no gap between ' and ret!
             in mkNode opts (PresentT ret) ("'" <> showL opts ret <> litVerbose opts " " (topMessage pp) <> showVerbose opts " | " a) ([hh pp | isVerbose opts] <> [hh qq])
 
--- | tries to extract @a@ from @Maybe a@ otherwise it fails
+-- | tries to extract @a@ from @Maybe a@ otherwise it fails: similar to 'Data.Maybe.fromJust'
 --
 -- >>> pz @('Just Id) (Just "abc")
 -- PresentT "abc"
@@ -681,27 +669,8 @@ instance (Show a
           Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" [hh pp]
           Just d -> mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
 
--- | similar to 'Data.Maybe.fromJust'
---
--- >>> pz @(Just' >> Succ Id) (Just 20)
--- PresentT 21
---
--- >>> pz @(Just' >> Succ Id) Nothing
--- FailT "Just' found Nothing"
---
-data Just'
-instance (Show a
-        ) => P Just' (Maybe a) where
-  type PP Just' (Maybe a) = a
-  eval _ opts lr =
-    let msg0 = "Just'"
-    in pure $ case lr of
-         Nothing -> mkNode opts (FailT (msg0 <> " found Nothing")) "" []
-         Just a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
-
-
 -- | expects Nothing otherwise it fails
--- if the value is Nothing then it returns \'Proxy a\' as this provides type information
+--   if the value is Nothing then it returns \'Proxy a\' as this provides type information
 --
 -- >>> pz @'Nothing Nothing
 -- PresentT Proxy
@@ -751,103 +720,6 @@ instance ( PP p x ~ Either a b
         case p of
           Left a -> mkNode opts (PresentT a) "Left" [hh pp]
           Right _b -> mkNode opts (FailT (msg0 <> " found Right")) "" [hh pp]
-
--- | extracts the left value from an 'Either'
---
--- >>> pz @(Left' >> Succ Id) (Left 20)
--- PresentT 21
---
--- >>> pz @(Left' >> Succ Id) (Right 'a')
--- FailT "Left' found Right"
---
-data Left'
-instance (Show a
-        ) => P Left' (Either a x) where
-  type PP Left' (Either a x) = a
-  eval _ opts lr =
-    let msg0 = "Left'"
-    in pure $ case lr of
-         Right _ -> mkNode opts (FailT (msg0 <> " found Right")) "" []
-         Left a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
-
--- | extracts the right value from an 'Either'
---
--- >>> pz @(Right' >> Succ Id) (Right 20)
--- PresentT 21
---
--- >>> pz @(Right' >> Succ Id) (Left 'a')
--- FailT "Right' found Left"
---
-data Right'
-instance (Show a
-        ) => P Right' (Either x a) where
-  type PP Right' (Either x a) = a
-  eval _ opts lr =
-    let msg0 = "Right'"
-    in pure $ case lr of
-         Left _ -> mkNode opts (FailT (msg0 <> " found Left")) "" []
-         Right a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
-
--- | extracts the \'this\' value from a 'These'
---
--- >>> pz @(This' >> Succ Id) (This 20)
--- PresentT 21
---
--- >>> pz @(This' >> Succ Id) (That 'a')
--- FailT "This' found That"
---
-data This'
-instance (Show a
-        ) => P This' (These a x) where
-  type PP This' (These a x) = a
-  eval _ opts lr =
-    let msg0 = "This'"
-    in pure $ case lr of
-         These _ _ -> mkNode opts (FailT (msg0 <> " found These")) "" []
-         That _ -> mkNode opts (FailT (msg0 <> " found That")) "" []
-         This a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
-
--- | extracts the \'that\' value from a 'These'
---
--- >>> pz @(That' >> Succ Id) (That 20)
--- PresentT 21
---
--- >>> pz @(That' >> Succ Id) (This 'a')
--- FailT "That' found This"
---
-data That'
-instance (Show a
-        ) => P That' (These x a) where
-  type PP That' (These x a) = a
-  eval _ opts lr =
-    let msg0 = "That'"
-    in pure $ case lr of
-         These _ _ -> mkNode opts (FailT (msg0 <> " found These")) "" []
-         This _ -> mkNode opts (FailT (msg0 <> " found This")) "" []
-         That a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
-
--- | extracts the \'these\' value from a 'These'
---
--- >>> pz @(These' >> Second (Succ Id)) (These 1 'a')
--- PresentT (1,'b')
---
--- >>> pz @(That' >> Succ Id) (This 'a')
--- FailT "That' found This"
---
--- >>> pz @(These' >> Second (Succ Id)) (That 8)
--- FailT "These' found That"
---
-data These'
-instance (Show a, Show b
-        ) => P These' (These a b) where
-  type PP These' (These a b) = (a,b)
-  eval _ opts lr =
-    let msg0 = "These'"
-    in pure $ case lr of
-         This _ -> mkNode opts (FailT (msg0 <> " found This")) "" []
-         That _ -> mkNode opts (FailT (msg0 <> " found That")) "" []
-         These a b -> mkNode opts (PresentT (a,b)) (msg0 <> " " <> showL opts (a,b)) []
-
 
 -- | extracts the \'b\' from type level \'Either a b\' if the value exists
 --
@@ -1088,21 +960,7 @@ runs :: forall optss p a
         -> IO (BoolT (PP p a))
 runs = run @(OptTT optss) @p
 
-
-prtTree :: Show x => POpts -> TT x -> String
-prtTree opts pp =
-  let r = pp ^. tBool
-  in case oDebug opts of
-       DZero -> ""
-       DLite ->
-             formatOMsg opts " >>> "
-          <> colorBoolT opts r
-          <> " "
-          <> topMessage pp
-          <> "\n"
-       _ -> formatOMsg opts "\n"
-         <> prtTreePure opts (fromTT pp)
-
+-- | convenience method to evaluate two expressions using the same input and return the results
 runPQ :: ( P p a
          , P q a
          , MonadEval m)
@@ -1123,6 +981,7 @@ runPQ msg0 proxyp proxyq opts a hhs = do
            Left e -> Left e
            Right q -> Right (p, q, pp, qq)
 
+-- | convenience method to evaluate two boolean expressions using the same input and return the results
 runPQBool :: ( P p a
              , PP p a ~ Bool
              , P q a
@@ -1144,6 +1003,7 @@ runPQBool msg0 proxyp proxyq opts a hhs = do
            Left e -> Left e
            Right q -> Right (p, q, pp, qq)
 
+-- | evaluate a boolean expressions but hide the results unless verbose
 evalBoolHide :: forall p a m
   . (MonadEval m, P p a, PP p a ~ Bool)
   => POpts
@@ -1153,6 +1013,7 @@ evalBoolHide opts =
   if isVerbose opts then evalBool (Proxy @p) opts
   else evalBool (Proxy @(Hide p)) opts
 
+-- | evaluate a expressions but hide the results unless verbose
 evalHide :: forall p a m
   . (MonadEval m, P p a)
   => POpts
@@ -1190,6 +1051,15 @@ instance (Show (PP p a)
           Left e -> e
           Right q -> mkNode opts (_tBool qq) (lit01 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
 
+-- | flipped version of 'Predicate.Core.>>'
+data p << q
+type LeftArrowsT p q = q >> p
+infixr 1 <<
+
+instance P (LeftArrowsT p q) x => P (p << q) x where
+  type PP (p << q) x = PP (LeftArrowsT p q) x
+  eval _ = eval (Proxy @(LeftArrowsT p q))
+
 -- bearbeiten! only used by >>
 topMessageEgregious :: TT a -> String
 topMessageEgregious pp = innermost (pp ^. tString)
@@ -1204,7 +1074,6 @@ topMessageEgregious pp = innermost (pp ^. tString)
 -- Present (13,True) ((>>) (13,True) | {'(13,True)})
 -- PresentT (13,True)
 --
-
 data Unwrap p
 
 instance (PP p x ~ s
@@ -1680,8 +1549,6 @@ instance (P p a
                         Just (_,(i,_),tt) ->
                           mkNodeB opts False (msg1 <> " i=" ++ showIndex i ++ " " <> topMessage tt) hhs
 
-showIndex :: (Show i, Num i) => i -> String
-showIndex i = show (i+0)
 -- | similar to 'any'
 --
 -- >>> pl @(Any Even Id) [1,5,11,5,3]
@@ -2313,7 +2180,7 @@ instance (P p a
       Right True ->
         pure $ mkNodeB opts True ("True " <> msg0 <> " _" <> litVerbose opts " | " (topMessage pp)) [hh pp]
 
--- | implication
+-- | boolean implication
 --
 -- >>> pz @(Fst Id ~> (Length (Snd Id) >= 4)) (True,[11,12,13,14])
 -- TrueT
@@ -2499,5 +2366,30 @@ instance (P p x
       Right a ->
         let b = pure a
         in mkNode opts (PresentT b) (show01 opts msg0 b a) [hh pp]
+
+-- | similar to 'coerce'
+--
+-- >>> pz @(Coerce (SG.Sum Integer)) (Identity (-13))
+-- PresentT (Sum {getSum = -13})
+--
+-- >>> pl @(Coerce SG.Any) True
+-- Present Any {getAny = True} (Coerce Any {getAny = True} | True)
+-- PresentT (Any {getAny = True})
+--
+-- >>> pl @(Coerce Bool) (SG.Any True)
+-- Present True (Coerce True | Any {getAny = True})
+-- PresentT True
+--
+data Coerce (t :: k)
+
+instance (Show a
+        , Show t
+        , Coercible t a
+        ) => P (Coerce t) a where
+  type PP (Coerce t) a = t
+  eval _ opts a =
+    let msg0 = "Coerce"
+        d = a ^. coerced
+    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d a) []
 
 
