@@ -686,7 +686,7 @@ instance (Show a
 -- >>> pz @(Just' >> Succ Id) (Just 20)
 -- PresentT 21
 --
--- pz @(Just' >> Succ Id) Nothing
+-- >>> pz @(Just' >> Succ Id) Nothing
 -- FailT "Just' found Nothing"
 --
 data Just'
@@ -757,7 +757,7 @@ instance ( PP p x ~ Either a b
 -- >>> pz @(Left' >> Succ Id) (Left 20)
 -- PresentT 21
 --
--- pz @(Left' >> Succ Id) (Right 'a')
+-- >>> pz @(Left' >> Succ Id) (Right 'a')
 -- FailT "Left' found Right"
 --
 data Left'
@@ -775,7 +775,7 @@ instance (Show a
 -- >>> pz @(Right' >> Succ Id) (Right 20)
 -- PresentT 21
 --
--- pz @(Right' >> Succ Id) (Left 'a')
+-- >>> pz @(Right' >> Succ Id) (Left 'a')
 -- FailT "Right' found Left"
 --
 data Right'
@@ -793,7 +793,7 @@ instance (Show a
 -- >>> pz @(This' >> Succ Id) (This 20)
 -- PresentT 21
 --
--- pz @(This' >> Succ Id) (That 'a')
+-- >>> pz @(This' >> Succ Id) (That 'a')
 -- FailT "This' found That"
 --
 data This'
@@ -812,7 +812,7 @@ instance (Show a
 -- >>> pz @(That' >> Succ Id) (That 20)
 -- PresentT 21
 --
--- pz @(That' >> Succ Id) (This 'a')
+-- >>> pz @(That' >> Succ Id) (This 'a')
 -- FailT "That' found This"
 --
 data That'

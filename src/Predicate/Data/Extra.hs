@@ -325,10 +325,11 @@ instance (Show (t (t a))
 
 -- | function application for expressions: similar to 'GHC.Base.$'
 --
--- pz @(Fst Id $$ Snd Id) ((*16),4)
+-- >>> :m + Text.Show.Functions
+-- >>> pz @(Fst Id $$ Snd Id) ((*16),4)
 -- PresentT 64
 --
--- pz @(Id $$ "def") ("abc"<>)
+-- >>> pz @(Id $$ "def") ("abc"<>)
 -- PresentT "abcdef"
 --
 data p $$ q
@@ -356,10 +357,11 @@ instance (P p x
 
 -- | flipped function application for expressions: similar to 'Control.Lens.&'
 --
--- pz @(Snd Id $& Fst Id) ((*16),4)
+-- >>> :m + Text.Show.Functions
+-- >>> pz @(Snd Id $& Fst Id) ((*16),4)
 -- PresentT 64
 --
--- pz @("def" $& Id) ("abc"<>)
+-- >>> pz @("def" $& Id) ("abc"<>)
 -- PresentT "abcdef"
 --
 data q $& p -- flips the args eg a & b & (,) = (b,a)
