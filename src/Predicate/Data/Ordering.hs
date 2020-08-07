@@ -82,7 +82,7 @@ import Data.List (findIndex)
 -- >>> :set -XNoOverloadedLists
 -- >>> import Predicate.Prelude
 
--- | compare if expression "p" is greater than "q"
+-- | compare if expression \'p\' is greater than \'q\'
 --
 -- >>> pl @(Gt 4) 5
 -- True (5 > 4)
@@ -95,7 +95,7 @@ type Le n = I <= n
 type Lt n = I < n
 type Ne n = I /= n
 
--- | compare if expression "p" is greater than "q"
+-- | compare if expression \'p\' is greater than \'q\'
 --
 -- >>> pl @(Id > "xx") "abc"
 -- False ("abc" > "xx")
@@ -116,7 +116,7 @@ instance P (Cmp 'CGt p q) x => P (p > q) x where
   type PP (p > q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CGt p q))
 
--- | compare if expression "p" is greater than or equal to "q"
+-- | compare if expression \'p\' is greater than or equal to \'q\'
 data p >= q
 infix 4 >=
 
@@ -124,7 +124,7 @@ instance P (Cmp 'CGe p q) x => P (p >= q) x where
   type PP (p >= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CGe p q))
 
--- | compare if expression "p" is equal to "q"
+-- | compare if expression \'p\' is equal to \'q\'
 --
 -- >>> pl @(Fst Id == Snd Id) ("ab","xyzabw")
 -- False ("ab" == "xyzabw")
@@ -156,7 +156,7 @@ instance P (Cmp 'CEq p q) x => P (p == q) x where
   type PP (p == q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CEq p q))
 
--- | compare if expression "p" is less than or equal to "q"
+-- | compare if expression \'p\' is less than or equal to \'q\'
 --
 -- >>> pl @(Not (Fst Id >> Len <= 6)) ([2..7],True)
 -- False (Not ((>>) True | {6 <= 6}))
@@ -181,7 +181,7 @@ instance P (Cmp 'CLe p q) x => P (p <= q) x where
   type PP (p <= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CLe p q))
 
--- | compare if expression "p" is less than "q"
+-- | compare if expression \'p\' is less than \'q\'
 data p < q
 infix 4 <
 
@@ -189,7 +189,7 @@ instance P (Cmp 'CLt p q) x => P (p < q) x where
   type PP (p < q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CLt p q))
 
--- | compare if expression "p" is not equal to "q"
+-- | compare if expression \'p\' is not equal to \'q\'
 --
 -- >>> pl @(Fst Id /= Snd Id) ("ab","xyzabw")
 -- True ("ab" /= "xyzabw")
@@ -202,7 +202,7 @@ instance P (Cmp 'CNe p q) x => P (p /= q) x where
   type PP (p /= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CNe p q))
 
--- | case-insensitive compare if string expression "p" is greater than "q"
+-- | case-insensitive compare if string expression \'p\' is greater than \'q\'
 --
 data p >~ q
 infix 4 >~
@@ -211,7 +211,7 @@ instance P (CmpI 'CGt p q) x => P (p >~ q) x where
   type PP (p >~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CGt p q))
 
--- | case-insensitive compare if string expression "p" is greater than or equal to "q"
+-- | case-insensitive compare if string expression \'p\' is greater than or equal to \'q\'
 data p >=~ q
 infix 4 >=~
 
@@ -219,7 +219,7 @@ instance P (CmpI 'CGe p q) x => P (p >=~ q) x where
   type PP (p >=~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CGe p q))
 
--- | case-insensitive compare if string expression "p" is equal to "q"
+-- | case-insensitive compare if string expression \'p\' is equal to \'q\'
 data p ==~ q
 infix 4 ==~
 
@@ -227,7 +227,7 @@ instance P (CmpI 'CEq p q) x => P (p ==~ q) x where
   type PP (p ==~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CEq p q))
 
--- | case-insensitive compare if string expression "p" is less than or equal to "q"
+-- | case-insensitive compare if string expression \'p\' is less than or equal to \'q\'
 data p <=~ q
 infix 4 <=~
 
@@ -235,7 +235,7 @@ instance P (CmpI 'CLe p q) x => P (p <=~ q) x where
   type PP (p <=~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CLe p q))
 
--- | case-insensitive compare if string expression "p" is less than "q"
+-- | case-insensitive compare if string expression \'p\' is less than \'q\'
 data p <~ q
 infix 4 <~
 
@@ -243,7 +243,7 @@ instance P (CmpI 'CLt p q) x => P (p <~ q) x where
   type PP (p <~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CLt p q))
 
--- | case-insensitive compare if string expression "p" is not equal to "q"
+-- | case-insensitive compare if string expression \'p\' is not equal to \'q\'
 data p /=~ q
 infix 4 /=~
 

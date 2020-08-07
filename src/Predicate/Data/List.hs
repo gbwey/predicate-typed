@@ -834,7 +834,7 @@ instance (P n a
                      else q <> replicate diff p
             in mkNode opts (PresentT bs) (show01 opts msg1 bs q) (hhs <> [hh qq])
 
--- | left pad \'q\' with '\n'\ values from '\p'\
+-- | left pad \'q\' with \'n\' values from \'p\'
 --
 -- >>> pl @(PadL 5 0 Id) [1..3]
 -- Present [0,0,1,2,3] (PadL 5 pad=0 [0,0,1,2,3] | [1,2,3])
@@ -860,7 +860,7 @@ instance P (PadLT n p q) x => P (PadL n p q) x where
   type PP (PadL n p q) x = PP (PadLT n p q) x
   eval _ = eval (Proxy @(PadLT n p q))
 
--- | right pad \'q\' with '\n'\ values from '\p'\
+-- | right pad \'q\' with \'n\' values from \'p\'
 --
 -- >>> pl @(PadR 5 8 Id) [1..3]
 -- Present [1,2,3,8,8] (PadR 5 pad=8 [1,2,3,8,8] | [1,2,3])
@@ -1080,7 +1080,7 @@ instance P (RemoveT p q) x => P (Remove p q) x where
   type PP (Remove p q) x = PP (RemoveT p q) x
   eval _ = eval (Proxy @(RemoveT p q))
 
--- | takes the head of a list like container
+-- | takes the head of a list-like container: similar to 'head'
 --
 -- >>> pz @(Head Id) "abcd"
 -- PresentT 'a'
@@ -1124,7 +1124,7 @@ instance (Show (ConsT s)
           Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" [hh pp]
           Just (a,_) -> mkNode opts (PresentT a) (show01 opts msg0 a p) [hh pp]
 
--- | takes the tail of a list like container
+-- | takes the tail of a list-like container: similar to 'tail'
 --
 -- >>> pz @(Tail Id) "abcd"
 -- PresentT "bcd"
@@ -1157,7 +1157,7 @@ instance (Show s
           Just (_,as) -> mkNode opts (PresentT as) (show01 opts msg0 as p) [hh pp]
 
 
--- | takes the last of a list like container
+-- | takes the last of a list-like container: similar to 'last'
 --
 -- >>> pz @(Last Id) "abcd"
 -- PresentT 'd'
@@ -1189,7 +1189,7 @@ instance (Show (ConsT s)
           Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" [hh pp]
           Just (_,a) -> mkNode opts (PresentT a) (show01 opts msg0 a p) [hh pp]
 
--- | takes the init of a list like container
+-- | takes the init of a list-like container: similar to 'init'
 --
 -- >>> pz @(Init Id) "abcd"
 -- PresentT "abc"
@@ -1208,7 +1208,6 @@ instance (Show (ConsT s)
 -- Error Init(empty)
 -- FailT "Init(empty)"
 --
-
 data Init p
 
 instance (Show s
@@ -1331,7 +1330,7 @@ instance (P p (a,a)
           Left _e -> ret -- dont rewrap else will double up messages: already handled
           Right xs -> mkNode opts (_tBool ret) (msg0 <> " " <> showL opts xs) [hh qq, hh ret]
 
--- | SortOn
+-- | similar to 'sortOn'
 --
 -- >>> pl @(SortOn Id Id) [10,4,2,12,14]
 -- Present [2,4,10,12,14] (SortBy [2,4,10,12,14])
@@ -1372,7 +1371,7 @@ instance P (SortOnT p q) x => P (SortOn p q) x where
   type PP (SortOn p q) x = PP (SortOnT p q) x
   eval _ = eval (Proxy @(SortOnT p q))
 
--- | SortOnDesc
+-- | 'SortOn' but descending order
 --
 -- >>> pl @(SortOnDesc Id Id) [10,4,2,12,14]
 -- Present [14,12,10,4,2] (SortBy [14,12,10,4,2])
@@ -1508,7 +1507,7 @@ instance (PP q a ~ [x]
                    let msg1 = msg0 ++ show lls
                    pure $ mkNode opts (FailT (msg1 <> " length mismatch")) (showVerbose opts "q=" q <> showVerbose opts " | r=" r) hhs
 
--- | Zip two lists to their maximum length using padding if needed
+-- | Zip two lists to their maximum length using optional padding
 --
 -- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("abc", [1..5])
 -- PresentT [('a',1),('b',2),('c',3),('Z',4),('Z',5)]
@@ -1570,7 +1569,7 @@ instance (PP l a ~ x
                 in pure $ mkNode opts (PresentT d) (show01' opts (msg0 <> " No pad") d "p=" p <> showVerbose opts " | q=" q) hhs
 
 
--- | zip two lists padding the left hand side if needed
+-- | zip two lists optionally padding the left hand side
 --
 -- >>> pl @(ZipL 99 '[1,2,3] "abc") ()
 -- Present [(1,'a'),(2,'b'),(3,'c')] (ZipL [(1,'a'),(2,'b'),(3,'c')] | p=[1,2,3] | q="abc")
@@ -1634,7 +1633,7 @@ instance (PP l a ~ x
                                let d = zip (p ++ repeat l) q
                                in mkNode opts (PresentT d) (show01' opts msg0 d "p=" p <> showVerbose opts " | q=" q) (hhs ++ [hh ll])
 
--- | zip two lists padding the right hand side if needed
+-- | zip two lists optionally padding the right hand side
 --
 -- >>> pl @(ZipR (Char1 "Z") '[1,2,3] "abc") ()
 -- Present [(1,'a'),(2,'b'),(3,'c')] (ZipR [(1,'a'),(2,'b'),(3,'c')] | p=[1,2,3] | q="abc")

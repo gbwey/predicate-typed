@@ -50,6 +50,7 @@ import System.Directory (doesFileExist)
 -- >>> :set -XNoOverloadedLists
 -- >>> import Predicate.Prelude
 
+-- | parse json data
 data ParseJson' t p
 
 instance (P p x
@@ -101,6 +102,7 @@ instance P (ParseJsonT t p) x => P (ParseJson t p) x where
   type PP (ParseJson t p) x = PP (ParseJsonT t p) x
   eval _ = eval (Proxy @(ParseJsonT t p))
 
+-- | parse json file
 data ParseJsonFile' t p
 
 instance (P p x

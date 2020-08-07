@@ -23,9 +23,9 @@
 module Predicate.Core (
 
  -- ** basic types
-    I
-  , Id
+    Id
   , IdT
+  , I
   , W
   , Msg
   , MsgI
@@ -159,10 +159,11 @@ evalBool p opts a = fixBoolT <$> eval p opts a
 evalQuick :: forall p i . P p i => i -> Either String (PP p i)
 evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) (getOptT @OL) i))
 
--- | identity function
+-- | identity function without show instance
 --
 -- >>> pz @I 23
 -- PresentT 23
+--
 data I
 instance P I a where
   type PP I a = a
@@ -177,6 +178,7 @@ instance P I a where
 --
 -- >>> pz @Id 23
 -- PresentT 23
+--
 data Id
 instance Show a => P Id a where
   type PP Id a = a
@@ -281,6 +283,7 @@ instance Typeable t => P (Hole t) a where
     let msg0 = "Hole(" <> showT @t <> ")"
     in pure $ mkNode opts (FailT msg0) "you probably meant to get access to the type of PP only and not evaluate" []
 
+-- | override the display width for the expression \'p\'
 data Width (n :: Nat) p
 
 instance (KnownNat n
@@ -678,7 +681,7 @@ instance (Show a
           Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" [hh pp]
           Just d -> mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
 
--- | similar to 'fromJust'
+-- | similar to 'Data.Maybe.fromJust'
 --
 -- >>> pz @(Just' >> Succ Id) (Just 20)
 -- PresentT 21
@@ -785,7 +788,7 @@ instance (Show a
          Left _ -> mkNode opts (FailT (msg0 <> " found Left")) "" []
          Right a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
 
--- | extracts the "this" value from a 'These'
+-- | extracts the \'this\' value from a 'These'
 --
 -- >>> pz @(This' >> Succ Id) (This 20)
 -- PresentT 21
@@ -804,7 +807,7 @@ instance (Show a
          That _ -> mkNode opts (FailT (msg0 <> " found That")) "" []
          This a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
 
--- | extracts the "that" value from a 'These'
+-- | extracts the \'that\' value from a 'These'
 --
 -- >>> pz @(That' >> Succ Id) (That 20)
 -- PresentT 21
@@ -823,7 +826,7 @@ instance (Show a
          This _ -> mkNode opts (FailT (msg0 <> " found This")) "" []
          That a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
 
--- | extracts the "these" value from a 'These'
+-- | extracts the \'these\' value from a 'These'
 --
 -- >>> pz @(These' >> Second (Succ Id)) (These 1 'a')
 -- PresentT (1,'b')

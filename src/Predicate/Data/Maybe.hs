@@ -56,6 +56,7 @@ import Data.Kind (Type)
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
 
+-- | constructs a Nothing for a given type
 data MkNothing' t -- works always! MaybeBool is a good alternative and then dont need the extra 't'
 
 -- for this to be useful has to have 't' else we end up with tons of problems
@@ -65,6 +66,7 @@ instance P (MkNothing' t) a where
     let msg0 = "MkNothing"
     in pure $ mkNode opts (PresentT Nothing) msg0 []
 
+-- | constructs a Nothing for a given type
 data MkNothing (t :: Type)
 type MkNothingT (t :: Type) = MkNothing' (Hole t)
 
@@ -218,7 +220,6 @@ instance ( PP p x ~ a
 -- Present [] (MaybeIn(Nothing) [] | Proxy)
 -- PresentT []
 --
-
 data MaybeIn p q
 
 -- tricky: the nothing case is the proxy of PP q a: ie proxy of the final result
@@ -329,8 +330,8 @@ instance P (CatMaybesT q) x => P (CatMaybes q) x where
   type PP (CatMaybes q) x = PP (CatMaybesT q) x
   eval _ = eval (Proxy @(CatMaybesT q))
 
--- | Convenient method to convert a value \'p\' to a 'Maybe' based on a predicate '\b\'
--- if '\b\' then Just \'p'\ else Nothing
+-- | Convenient method to convert a value \'p\' to a 'Maybe' based on a predicate \'b\'
+-- if \'b\' then Just \'p\' else Nothing
 --
 -- >>> pz @(MaybeBool (Id > 4) Id) 24
 -- PresentT (Just 24)
@@ -358,7 +359,7 @@ instance (Show (PP p a)
           Right p -> mkNode opts (PresentT (Just p)) (msg0 <> "(False) Just " <> showL opts p) [hh bb, hh pp]
       Right False -> pure $ mkNode opts (PresentT Nothing) (msg0 <> "(True)") [hh bb]
 
--- | extract the value from a 'Maybe' otherwise use the default value
+-- | extract the value from a 'Maybe' otherwise use the default value: similar to 'Data.Maybe.fromMaybe'
 --
 -- >>> pz @(JustDef (1 % 4) Id) (Just 20.4)
 -- PresentT (102 % 5)
@@ -403,7 +404,6 @@ instance (Show (PP p a)
 -- Present Sum {getSum = 0} (JustDef Nothing)
 -- PresentT (Sum {getSum = 0})
 --
-
 data JustDef p q
 
 instance ( PP p x ~ a
@@ -427,7 +427,7 @@ instance ( PP p x ~ a
               Right b -> mkNode opts (PresentT b) (msg0 <> " Nothing") [hh qq, hh pp]
 
 
--- | extract the value from a 'Maybe' or fail
+-- | extract the value from a 'Maybe' or fail with the given message
 --
 -- >>> pz @(JustFail "nope" Id) (Just 99)
 -- PresentT 99

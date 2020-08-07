@@ -63,7 +63,7 @@ import Data.Proxy
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
 
--- | LookupDef'
+-- | index a value in an 'Ixed' container and if not found return the given default value
 --
 -- >>> pl @(LookupDef' (Fst Id) (Snd Id) (Char1 "xx") Id) (['a'..'e'],2)
 -- Present 'c' (JustDef Just)
@@ -96,14 +96,7 @@ instance P (LookupDefT' v w p q) x => P (LookupDef' v w p q) x where
   type PP (LookupDef' v w p q) x = PP (LookupDefT' v w p q) x
   eval _ = eval (Proxy @(LookupDefT' v w p q))
 
-data LookupFail' msg v w q
-type LookupFailT' msg v w q = JustFail msg (q >> Lookup v w)
-
-instance P (LookupFailT' msg v w q) x => P (LookupFail' msg v w q) x where
-  type PP (LookupFail' msg v w q) x = PP (LookupFailT' msg v w q) x
-  eval _ = eval (Proxy @(LookupFailT' msg v w q))
-
--- | LookupDef
+-- | index a value in an 'Ixed' container and if not found return the given default value
 --
 -- >>> pl @(LookupDef '[1,2,3,4,5,6] 4 Id) 23
 -- Present 5 (JustDef Just)
@@ -144,8 +137,15 @@ instance P (LookupDefT v w p) x => P (LookupDef v w p) x where
   type PP (LookupDef v w p) x = PP (LookupDefT v w p) x
   eval _ = eval (Proxy @(LookupDefT v w p))
 
+-- | index a value in an 'Ixed' container and if not found fail with the given message
+data LookupFail' msg v w q
+type LookupFailT' msg v w q = JustFail msg (q >> Lookup v w)
 
--- | LookupFail
+instance P (LookupFailT' msg v w q) x => P (LookupFail' msg v w q) x where
+  type PP (LookupFail' msg v w q) x = PP (LookupFailT' msg v w q) x
+  eval _ = eval (Proxy @(LookupFailT' msg v w q))
+
+-- | index a value in an 'Ixed' container and if not found fail with the given message
 --
 -- >>> pl @(LookupFail "someval" (Fst Id) 999) (map SG.Min [1::Int .. 10],'x')
 -- Error someval (JustFail Nothing)
@@ -162,8 +162,7 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
   type PP (LookupFail msg v w) x = PP (LookupFailT msg v w) x
   eval _ = eval (Proxy @(LookupFailT msg v w))
 
-
--- | similar to 'Data.List.!!'
+-- | similar to 'Data.List.!!' using an 'Ixed' container
 --
 -- >>> pz @(Ix 4 "not found") ["abc","D","eF","","G"]
 -- PresentT "G"
@@ -235,7 +234,6 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- True ((>>) True | {2 == 2})
 -- TrueT
 --
-
 data Ix (n :: Nat) def
 
 instance (P def (Proxy a)

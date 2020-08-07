@@ -394,13 +394,6 @@ instance ToStringC BS8.ByteString where
   toStringC = BS8.unpack
 
 -- | 'fromString' function where you need to provide the type \'t\' of the result
---
--- >>> pz @(FromString (Identity _) Id) "abc"
--- PresentT (Identity "abc")
---
--- >>> pz @(FromString (Seq.Seq Char) Id) "abc"
--- PresentT (fromList "abc")
---
 data FromString' t s
 
 instance (P s a
@@ -418,6 +411,14 @@ instance (P s a
         let b = fromString @(PP t a) s
         in mkNode opts (PresentT b) (msg0 <> " " <> showL opts b) [hh ss]
 
+-- | 'fromString' function where you need to provide the type \'t\' of the result
+--
+-- >>> pz @(FromString (Identity _) Id) "abc"
+-- PresentT (Identity "abc")
+--
+-- >>> pz @(FromString (Seq.Seq Char) Id) "abc"
+-- PresentT (fromList "abc")
+--
 data FromString (t :: Type) p
 type FromStringPT (t :: Type) p = FromString' (Hole t) p
 

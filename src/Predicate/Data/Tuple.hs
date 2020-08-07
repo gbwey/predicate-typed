@@ -193,7 +193,7 @@ instance (Show (PP p a)
           Left e -> e
           Right b1 -> mkNode opts (PresentT (a1,b1)) (msg0 <> " " <> showL opts (a1,b1) <> showVerbose opts " | " (a,b)) [hh pp, hh qq]
 
--- | applies a function against the first part of a tuple
+-- | applies a function against the first part of a tuple: similar to 'Control.Arrow.first'
 --
 -- >>> pz @(First (Succ Id)) (12,True)
 -- PresentT (13,True)
@@ -205,7 +205,7 @@ instance P (FirstT p) x => P (First p) x where
   type PP (First p) x = PP (FirstT p) x
   eval _ = eval (Proxy @(FirstT p))
 
--- | applies a function against the second part of a tuple
+-- | applies a function against the second part of a tuple: similar to 'Control.Arrow.second'
 --
 -- >>> pz @(Second (Succ Id)) (12,False)
 -- PresentT (12,True)
@@ -217,7 +217,7 @@ instance P (SecondT q) x => P (Second q) x where
   type PP (Second q) x = PP (SecondT q) x
   eval _ = eval (Proxy @(SecondT q))
 
--- | applies "p" to lhs of the tuple and "q" to the rhs and then "Ands" them together
+-- | applies \'p\' to lhs of the tuple and \'q\' to the rhs and then \'Ands\' them together
 --
 -- >>> pl @(AndA (Gt 3) (Lt 10) Id) (1,2)
 -- False (False (&*) True | (1 > 3))
@@ -253,7 +253,7 @@ instance (PP r x ~ (a,b)
                           (False, False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
                 in mkNodeB opts (p&&q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> (if null zz then zz else " | " <> zz)) [hh rr, hh pp, hh qq]
 
--- | applies "p" to lhs of the tuple and "q" to the rhs and then "Ands" them together
+-- | applies \'p\' to lhs of the tuple and \'q\' to the rhs and then \'Ands\' them together
 --
 -- >>> pl @(SplitAt 4 "abcdefg" >> Len > 4 &* Len < 5) ()
 -- False ((>>) False | {False (&*) True | (4 > 4)})
@@ -267,7 +267,7 @@ instance P (AndAT p q) x => P (p &* q) x where
   type PP (p &* q) x = PP (AndAT p q) x
   eval _ = evalBool (Proxy @(AndAT p q))
 
--- | applies "p" to lhs of the tuple and "q" to the rhs and then "Ors" them together
+-- | applies \'p\' to lhs of the tuple and \'q\' to the rhs and then \'Ors\' them together
 --
 -- >>> pl @(OrA (Gt 3) (Lt 10) Id) (1,2)
 -- True (False (|+) True)
@@ -301,7 +301,7 @@ instance (PP r x ~ (a,b)
                           _ -> ""
                 in mkNodeB opts (p||q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> (if null zz then zz else " | " <> zz)) [hh rr, hh pp, hh qq]
 
--- | applies "p" to lhs of the tuple and "q" to the rhs and then "Ors" them together
+-- | applies \'p\' to lhs of the tuple and \'q\' to the rhs and then \'Ors\' them together
 --
 -- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,8,14,44],9)
 -- True (True (|+) False)

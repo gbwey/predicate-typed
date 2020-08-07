@@ -494,7 +494,7 @@ instance Functor f => P FMapSnd (f (x,a)) where
   type PP FMapSnd (f (x,a)) = f a
   eval _ opts mb = pure $ mkNode opts (PresentT (snd <$> mb)) "FMapSnd" []
 
--- | just run the effect but skip the value
+-- | just run the effect ignoring the result passing the original value through
 -- for example for use with Stdout so it doesnt interfere with the \'a\' on the rhs unless there is an failure
 data Skip p
 
@@ -509,6 +509,7 @@ instance ( Show (PP p a)
       Left e -> e
       Right p -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts p) [hh pp]
 
+-- | run \'p\' for the effect and then run \'q\' using that original value
 data p |> q
 type SkipLT p q = Skip p >> q
 infixr 1 |>
@@ -517,6 +518,7 @@ instance P (SkipLT p q) x => P (p |> q) x where
   type PP (p |> q) x = PP (SkipLT p q) x
   eval _ = eval (Proxy @(SkipLT p q))
 
+-- | run run \'p\' and then \'q\' for the effect but using the result from \'p\'
 data p >| q
 type SkipRT p q = p >> Skip q
 infixr 1 >|
@@ -525,6 +527,7 @@ instance P (SkipRT p q) x => P (p >| q) x where
   type PP (p >| q) x = PP (SkipRT p q) x
   eval _ = eval (Proxy @(SkipRT p q))
 
+-- | run both \'p\' and \'q\' for their effects but ignoring the results
 data p >|> q
 type SkipBothT p q = Skip p >> Skip q
 infixr 1 >|>
@@ -533,7 +536,7 @@ instance P (SkipBothT p q) x => P (p >|> q) x where
   type PP (p >|> q) x = PP (SkipBothT p q) x
   eval _ = eval (Proxy @(SkipBothT p q))
 
--- | takes the head or default of a list-like object
+-- | takes the head of a list-like object or uses the given default value
 --
 -- see 'ConsT' for other supported types eg 'Seq.Seq'
 --
@@ -616,7 +619,7 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
   eval _ = eval (Proxy @(HeadDefT p q))
 
 
--- | takes the head of a list or fail
+-- | takes the head of a list or fails with the given message
 --
 -- see 'ConsT' for other supported types eg 'Seq.Seq'
 --
@@ -654,7 +657,7 @@ instance P (HeadFailT msg q) x => P (HeadFail msg q) x where
   type PP (HeadFail msg q) x = PP (HeadFailT msg q) x
   eval _ = eval (Proxy @(HeadFailT msg q))
 
--- | TailDef
+-- | takes the tail of a list-like object or uses the given default value
 --
 -- >>> pl @(TailDef '[9,7] (Fst Id)) ([],True)
 -- Present [9,7] (JustDef Nothing)
@@ -677,7 +680,7 @@ instance P (TailDefT p q) x => P (TailDef p q) x where
   eval _ = eval (Proxy @(TailDefT p q))
 
 
--- | TailFail
+-- | takes the tail of a list-like object or fails with the given message
 --
 -- >>> pl @(TailFail (PrintT "a=%d b=%s" (Snd Id)) (Fst Id)) ([]::[()],(4::Int,"someval" :: String))
 -- Error a=4 b=someval (JustFail Nothing)
@@ -691,7 +694,7 @@ instance P (TailFailT msg q) x => P (TailFail msg q) x where
   type PP (TailFail msg q) x = PP (TailFailT msg q) x
   eval _ = eval (Proxy @(TailFailT msg q))
 
--- | LastDef
+-- | takes the last value of a list-like object or a default value
 --
 -- >>> pl @(LastDef 9 (Fst Id)) ([],True)
 -- Present 9 (JustDef Nothing)
@@ -721,6 +724,7 @@ instance P (LastDefT p q) x => P (LastDef p q) x where
   type PP (LastDef p q) x = PP (LastDefT p q) x
   eval _ = eval (Proxy @(LastDefT p q))
 
+-- | takes the init of a list-like object or fails with the given message
 data LastFail msg q
 type LastFailT msg q = JustFail msg (q >> Unsnoc >> FMapSnd)
 
@@ -728,7 +732,7 @@ instance P (LastFailT msg q) x => P (LastFail msg q) x where
   type PP (LastFail msg q) x = PP (LastFailT msg q) x
   eval _ = eval (Proxy @(LastFailT msg q))
 
--- | InitDef
+-- | takes the init of a list-like object or uses the given default value
 --
 -- >>> pl @(InitDef '[9,7] (Fst Id)) ([],True)
 -- Present [9,7] (JustDef Nothing)
@@ -749,6 +753,7 @@ instance P (InitDefT p q) x => P (InitDef p q) x where
   type PP (InitDef p q) x = PP (InitDefT p q) x
   eval _ = eval (Proxy @(InitDefT p q))
 
+-- | takes the init of a list-like object or fails with the given message
 data InitFail msg q
 type InitFailT msg q = JustFail msg (q >> Unsnoc >> FMapFst)
 
@@ -1129,7 +1134,7 @@ type family DotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
   DotExpandT '[p] q = p $ q
   DotExpandT (p ': p1 ': ps) q = p $ DotExpandT (p1 ': ps) q
 
--- | reversed dot
+-- | reversed version of 'Dot'
 --
 -- >>> pl @(RDot '[Fst,Snd,Thd] Id) ((1,(2,9,10)),(3,4))
 -- Present 10 (Thd 10 | (2,9,10))

@@ -172,11 +172,11 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 --
 data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- ps = conditions
--- qs = what to do [one to one
+-- qs = what to do [one to one with ps]
 -- r = the value
 -- e = otherwise  -- leave til later
 
--- | Case
+-- | tries to match the value \'r\' with a condition in \'ps\' and if there is a match calls the associated \'qs\' entry else run \'e\'
 --
 -- >>> pl @(Case (Snd Id >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 15
 -- Present "gt3" (Case(0 of 3) "gt3" | 15)
@@ -208,7 +208,7 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 --
 data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 
--- | Case' but without a general error message
+-- | like 'Case' but uses a generic error message (skips the \'e\' parameter)
 --
 -- >>> pl @(Case' '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Error Case:no match (Case(0) failed rhs)
@@ -216,7 +216,7 @@ data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 --
 data Case' (ps :: [k]) (qs :: [k1]) (r :: k2)
 
--- | Case'' with a specific error message
+-- | like 'Case' but allows you to use the value in the error message
 --
 -- >>> pl @(Case'' (PrintF "no match for %03d" Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Error no match for 015 (Case(0) failed rhs)
@@ -347,8 +347,11 @@ instance (KnownNat n
 
 data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 
+-- isbn 10 tests (dont need first guard as Zip enforces same length: handles case insensitive \'x\' as check digit)
+
+
 -- | Guards contain a type level list of tuples the action to run on failure of the predicate and the predicate itself
--- Each tuple validating against the corresponding value in a value list
+--   Each tuple validating against the corresponding value in a value list
 --
 -- \'prt\' receives (Int,a) as input which is the position and value if there is a failure
 --
@@ -364,17 +367,13 @@ data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 -- >>> pz @(Guards '[ '(PrintT "arg %d failed with value %d" Id,Gt 4), '(PrintT "%d %d" Id, Same 4)]) [17,3]
 -- FailT "1 3"
 --
-
--- isbn 10 tests (dont need first guard as Zip enforces same length: handles case insensitive \'x\' as check digit)
-
--- >>> pz @(Resplit "-" Id >> Concat Id >> Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> Zip (1...10 >> Reverse) (Fst Id +: Snd Id) >> Map (Fst Id * Snd Id) Id >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40614-X"
+-- >>> pz @(Msg "isbn10" (Resplit "-" Id) >> Concat Id >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> Zip (1...10 >> Reverse) (Fst Id +: Snd Id) >> Map (Fst Id * Snd Id) Id >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40614-X"
 -- FailT "mod 0 oops"
 --
--- >>> pz @(Resplit "-" Id >> Concat Id >> Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> Zip (1...10 >> Reverse) (Fst Id +: Snd Id) >> Map (Fst Id * Snd Id) Id >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40611-X"
+-- >>> pz @(Resplit "-" Id >> Concat Id >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> Zip (1...10 >> Reverse) (Fst Id +: Snd Id) >> Map (Fst Id * Snd Id) Id >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40611-X"
 -- PresentT 132
 --
--- isbn 13 tests
--- >>> pz @(Resplit "-" Id >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> Zip (Cycle 13 [1,3] >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-7"
+-- >>> pz @(Msg "isbn13" (Resplit "-" Id) >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> Zip (Cycle 13 [1,3] >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-7"
 -- PresentT (100,0)
 --
 -- >>> pz @(Resplit "-" Id >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> Zip (Cycle 13 [1,3] >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-8"
@@ -500,11 +499,10 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
   type PP (GuardsQuick prt ps) x = PP (GuardsQuickT prt ps) x
   eval _ = eval (Proxy @(GuardsQuickT prt ps))
 
--- | boolean guard which checks a given a list of predicates against the list of values
---
 -- prefer 'Bools' as 'BoolsQuick' doesnt give much added value: passes in the index and the value to prt but you already have the index in the message
---
 -- pulls the top message from the tree if a predicate is false
+
+-- | boolean guard which checks a given a list of predicates against the list of values
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ]) [12,93,14]
 -- False (Bool(1) [mm] (93 <= 59))
@@ -801,7 +799,27 @@ instance ( x ~ [a]
 --
 data Guard prt p
 
--- | ExitWhen
+
+instance (Show a
+        , P prt a
+        , PP prt a ~ String
+        , P p a
+        , PP p a ~ Bool
+        ) => P (Guard prt p) a where
+  type PP (Guard prt p) a = a
+  eval _ opts a = do
+    let msg0 = "Guard"
+    pp <- evalBool (Proxy @p) opts a
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right False -> do
+        qq <- eval (Proxy @prt) opts a
+        pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
+          Left e -> e
+          Right ee -> mkNode opts (FailT ee) (msg0 <> " | " <> showL opts a) (hh pp : [hh qq | isVerbose opts])
+      Right True -> pure $ mkNode opts (PresentT a) (msg0 <> "(ok) | " <> showL opts a) [hh pp]  -- dont show the guard message if successful
+
+-- | uses 'Guard' but negates \'p\'
 --
 -- >>> pl @(HeadFail "failedn" Id &&& (Len == 1 >> ExitWhen "ExitWhen" Id) >> Fst Id) [3]
 -- Error ExitWhen ((>>) lhs failed)
@@ -851,26 +869,6 @@ instance P (ExitWhenT prt p) x => P (ExitWhen prt p) x where
   type PP (ExitWhen prt p) x = PP (ExitWhenT prt p) x
   eval _ = eval (Proxy @(ExitWhenT prt p))
 
-instance (Show a
-        , P prt a
-        , PP prt a ~ String
-        , P p a
-        , PP p a ~ Bool
-        ) => P (Guard prt p) a where
-  type PP (Guard prt p) a = a
-  eval _ opts a = do
-    let msg0 = "Guard"
-    pp <- evalBool (Proxy @p) opts a
-    case getValueLR opts msg0 pp [] of
-      Left e -> pure e
-      Right False -> do
-        qq <- eval (Proxy @prt) opts a
-        pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
-          Left e -> e
-          Right ee -> mkNode opts (FailT ee) (msg0 <> " | " <> showL opts a) (hh pp : [hh qq | isVerbose opts])
-      Right True -> pure $ mkNode opts (PresentT a) (msg0 <> "(ok) | " <> showL opts a) [hh pp]  -- dont show the guard message if successful
-
-
 -- | similar to 'Guard' but uses the root message of the False predicate case as the failure message
 --
 -- most uses of GuardSimple can be replaced by a boolean predicate unless you require a failure message instead of true/false
@@ -904,7 +902,6 @@ instance (Show a
 -- Present [True,True,True,True,True,True,True,True,True,True] (Map [True,True,True,True,True,True,True,True,True,True] | [1,2,3,4,5,6,7,8,9,10])
 -- PresentT [True,True,True,True,True,True,True,True,True,True]
 --
-
 data GuardSimple p
 
 instance (Show a
@@ -922,5 +919,3 @@ instance (Show a
         in mkNode opts (FailT msgx) (msg0 <> " | " <> showL opts a) [hh pp]
       Right True ->
         mkNode opts (PresentT a) (msg0 <> "(ok) | " <> showL opts a) [hh pp]
-
-

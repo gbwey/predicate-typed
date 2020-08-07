@@ -268,8 +268,8 @@ instance ( Show a
         b = partitionEithers as
     in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
 
--- | Convenient method to convert a \'p\' or '\q'\ to a 'Either' based on a predicate '\b\'
--- if \'b\' then Right \'p\' else Left '\q\'
+-- | Convenient method to convert a \'p\' or \'q\' to a 'Either' based on a predicate \'b\'
+--   if \'b\' then Right \'p\' else Left \'q\'
 --
 -- >>> pz @(EitherBool (Fst Id > 4) (Snd Id >> Fst Id) (Snd Id >> Snd Id)) (24,(-1,999))
 -- PresentT (Right 999)

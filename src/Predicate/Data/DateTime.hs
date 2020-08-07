@@ -156,22 +156,7 @@ instance P (ParseTimePT t p q) x => P (ParseTimeP t p q) x where
   type PP (ParseTimeP t p q) x = PP (ParseTimePT t p q) x
   eval _ = eval (Proxy @(ParseTimePT t p q))
 
--- | A convenience method to match against many different datetime formats to find a match
---
--- >>> pz @(ParseTimes LocalTime '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"] "03/11/19 01:22:33") ()
--- PresentT 2019-03-11 01:22:33
---
--- >>> pz @(ParseTimes LocalTime (Fst Id) (Snd Id)) (["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"], "03/11/19 01:22:33")
--- PresentT 2019-03-11 01:22:33
---
--- >>> pl @(Map (ParseTimes Day '["%Y-%m-%d", "%m/%d/%y", "%b %d %Y"] Id) Id) ["2001-01-01", "Jan 24 2009", "03/29/0x7"]
--- Error no match on (03/29/0x7) (Map(i=2, a="03/29/0x7") excnt=1)
--- FailT "no match on (03/29/0x7)"
---
--- >>> pl @(Map (ParseTimes Day '["%Y-%m-%d", "%m/%d/%y", "%b %d %Y"] Id) Id) ["2001-01-01", "Jan 24 2009", "03/29/07"]
--- Present [2001-01-01,2009-01-24,2007-03-29] (Map [2001-01-01,2009-01-24,2007-03-29] | ["2001-01-01","Jan 24 2009","03/29/07"])
--- PresentT [2001-01-01,2009-01-24,2007-03-29]
---
+-- | A convenience method to match against many different datetime formats to find the first match
 data ParseTimes' t p q
 
 instance (ParseTime (PP t a)
@@ -196,6 +181,22 @@ instance (ParseTime (PP t a)
              [] -> mkNode opts (FailT ("no match on (" ++ q ++ ")")) msg0 hhs
              (d,b):_ -> mkNode opts (PresentT b) (lit01 opts msg0 b "fmt=" d <> showVerbose opts " | " q) hhs
 
+-- | A convenience method to match against many different datetime formats to find the first match
+--
+-- >>> pz @(ParseTimes LocalTime '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"] "03/11/19 01:22:33") ()
+-- PresentT 2019-03-11 01:22:33
+--
+-- >>> pz @(ParseTimes LocalTime (Fst Id) (Snd Id)) (["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"], "03/11/19 01:22:33")
+-- PresentT 2019-03-11 01:22:33
+--
+-- >>> pl @(Map (ParseTimes Day '["%Y-%m-%d", "%m/%d/%y", "%b %d %Y"] Id) Id) ["2001-01-01", "Jan 24 2009", "03/29/0x7"]
+-- Error no match on (03/29/0x7) (Map(i=2, a="03/29/0x7") excnt=1)
+-- FailT "no match on (03/29/0x7)"
+--
+-- >>> pl @(Map (ParseTimes Day '["%Y-%m-%d", "%m/%d/%y", "%b %d %Y"] Id) Id) ["2001-01-01", "Jan 24 2009", "03/29/07"]
+-- Present [2001-01-01,2009-01-24,2007-03-29] (Map [2001-01-01,2009-01-24,2007-03-29] | ["2001-01-01","Jan 24 2009","03/29/07"])
+-- PresentT [2001-01-01,2009-01-24,2007-03-29]
+--
 data ParseTimes (t :: Type) p q
 type ParseTimesT (t :: Type) p q = ParseTimes' (Hole t) p q
 
@@ -205,20 +206,8 @@ instance P (ParseTimesT t p q) x => P (ParseTimes t p q) x where
 
 -- | create a 'Day' from three int values passed in as year month and day
 --
--- >>> pz @(MkDay '(1,2,3) >> 'Just Id) ()
--- PresentT 0001-02-03
---
--- >>> pz @(Just (MkDay '(1,2,3))) 1
--- PresentT 0001-02-03
---
--- >>> pz @(MkDay Id) (2019,12,30)
--- PresentT (Just 2019-12-30)
---
 -- >>> pz @(MkDay' (Fst Id) (Snd Id) (Thd Id)) (2019,99,99999)
 -- PresentT Nothing
---
--- >>> pz @(MkDay Id) (1999,3,13)
--- PresentT (Just 1999-03-13)
 --
 data MkDay' p q r
 
@@ -244,6 +233,20 @@ instance (P p x
             let mday = fromGregorianValid (fromIntegral p) q r
             in mkNode opts (PresentT mday) (show01' opts msg0 mday "(y,m,d)=" (p,q,r)) (hhs <> [hh rr])
 
+-- | create a 'Day' from three int values passed in as year month and day
+--
+-- >>> pz @(MkDay '(1,2,3) >> 'Just Id) ()
+-- PresentT 0001-02-03
+--
+-- >>> pz @(Just (MkDay '(1,2,3))) 1
+-- PresentT 0001-02-03
+--
+-- >>> pz @(MkDay Id) (2019,12,30)
+-- PresentT (Just 2019-12-30)
+--
+-- >>> pz @(MkDay Id) (1999,3,13)
+-- PresentT (Just 1999-03-13)
+--
 data MkDay p
 type MkDayT p = MkDay' (Fst p) (Snd p) (Thd p)
 
@@ -273,22 +276,10 @@ instance ( PP p x ~ Day
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
 
--- | create a 'Day' + Week + Day of Week from three int values passed in as year month and day
---
--- >>> pz @(MkDayExtra '(1,2,3) >> 'Just Id >> Fst Id) ()
--- PresentT 0001-02-03
---
--- >>> pz @(Fst (Just (MkDayExtra '(1,2,3)))) 1
--- PresentT 0001-02-03
---
--- >>> pz @(MkDayExtra Id) (2019,12,30)
--- PresentT (Just (2019-12-30,1,1))
+-- | create a 'Day', week number, and the day of the week from three numbers passed in as year month and day
 --
 -- >>> pz @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id)) (2019,99,99999)
 -- PresentT Nothing
---
--- >>> pz @(MkDayExtra Id) (1999,3,13)
--- PresentT (Just (1999-03-13,10,6))
 --
 data MkDayExtra' p q r
 
@@ -317,6 +308,20 @@ instance (P p x
                       in (day, week, dow)
             in mkNode opts (PresentT b) (show01' opts msg0 b "(y,m,d)=" (p,q,r)) (hhs <> [hh rr])
 
+-- | create a 'Day', week number, and the day of the week from three numbers passed in as year month and day
+--
+-- >>> pz @(MkDayExtra '(1,2,3) >> 'Just Id >> Fst Id) ()
+-- PresentT 0001-02-03
+--
+-- >>> pz @(Fst (Just (MkDayExtra '(1,2,3)))) 1
+-- PresentT 0001-02-03
+--
+-- >>> pz @(MkDayExtra Id) (2019,12,30)
+-- PresentT (Just (2019-12-30,1,1))
+--
+-- >>> pz @(MkDayExtra Id) (1999,3,13)
+-- PresentT (Just (1999-03-13,10,6))
+--
 data MkDayExtra p
 type MkDayExtraT p = MkDayExtra' (Fst p) (Snd p) (Thd p)
 
@@ -324,7 +329,7 @@ instance P (MkDayExtraT p) x => P (MkDayExtra p) x where
   type PP (MkDayExtra p) x = PP (MkDayExtraT p) x
   eval _ = eval (Proxy @(MkDayExtraT p))
 
--- | get day of week
+-- | get the day of the week
 --
 -- >>> pz @(Just (MkDay '(2020,7,11)) >> '(UnMkDay Id, ToWeekYear Id,ToWeekDate Id)) ()
 -- PresentT ((2020,7,11),28,(6,"Saturday"))

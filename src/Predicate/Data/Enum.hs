@@ -425,12 +425,6 @@ instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
 
 -- | similar to 'enumFromTo'
 --
--- >>> pz @(2 ... 5) ()
--- PresentT [2,3,4,5]
---
--- >>> pz @('LT ... 'GT) ()
--- PresentT [LT,EQ,GT]
---
 -- >>> pz @(EnumFromTo 'GT 'LT) ()
 -- PresentT []
 --
@@ -448,8 +442,19 @@ instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
 -- Present [Min {getMin = 9},Min {getMin = 10},Min {getMin = 11},Min {getMin = 12},Min {getMin = 13}] (Min {getMin = 9} ... Min {getMin = 13})
 -- PresentT [Min {getMin = 9},Min {getMin = 10},Min {getMin = 11},Min {getMin = 12},Min {getMin = 13}]
 --
-
 data EnumFromTo p q
+
+-- | similar to 'enumFromTo'
+--
+-- >>> pz @(2 ... 5) ()
+-- PresentT [2,3,4,5]
+--
+-- >>> pz @('LT ... 'GT) ()
+-- PresentT [LT,EQ,GT]
+--
+-- >>> pz @('Just (MkDay '(2020, 1, 2)) ... 'Just (MkDay '(2020, 1, 7))) ()
+-- PresentT [2020-01-02,2020-01-03,2020-01-04,2020-01-05,2020-01-06,2020-01-07]
+--
 data p ... q
 infix 4 ...
 
@@ -505,6 +510,3 @@ instance (P p x
           Left e -> e
           Right r ->
             mkNode opts (PresentT (enumFromThenTo p q r)) (msg0 <> " [" <> showL opts p <> ", " <> showL opts q <> " .. " <> showL opts r <> "]") [hh pp, hh qq, hh rr]
-
-
-

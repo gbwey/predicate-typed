@@ -703,9 +703,6 @@ instance ( Show (PP p x)
         let d = abs p
         in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
 
---type Div' p q = Fst (DivMod p q)
---type Mod' p q = Snd (DivMod p q)
-
 -- | similar to 'div'
 --
 -- >>> pz @(Div (Fst Id) (Snd Id)) (10,4)

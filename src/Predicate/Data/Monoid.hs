@@ -216,8 +216,6 @@ instance P (MEmpty2T t) x => P (MEmpty2 t) x where
   type PP (MEmpty2 t) x = PP (MEmpty2T t) x
   eval _ = eval (Proxy @(MEmpty2T t))
 
--- type PMEmpty = MEmptyT' 'Proxy  -- lifts 'a' to 'Proxy a' then we can use it with MEmptyP
-
 -- | similar to 'mempty'
 --
 -- >>> pl @(MEmptyT' Id) (Just (SG.Sum 12))

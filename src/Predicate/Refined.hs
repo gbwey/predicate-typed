@@ -199,7 +199,6 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 
 -- | 'FromJSON' instance for 'Refined'
 --
--- >>> :set -XOverloadedStrings
 -- >>> import qualified Data.Aeson as A
 -- >>> A.eitherDecode' @(Refined OZ (Between 10 14 Id) Int) "13"
 -- Right (Refined 13)

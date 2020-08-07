@@ -166,7 +166,7 @@ instance ( Show a
         b = TheseC.catThere as
     in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
 
--- | similar to 'Data.These.mergeTheseWith' but additionally provides \'p\', '\q'\ and \'r\' the original input as the first element in the tuple
+-- | similar to 'Data.These.mergeTheseWith' but additionally provides \'p\', \'q\' and \'r\' the original input as the first element in the tuple
 --
 -- >>> pz @(TheseX ((Fst (Fst Id) + Snd Id) >> ShowP Id) (ShowP Id) (Snd (Snd Id)) (Snd Id)) (9,This 123)
 -- PresentT "132"
@@ -852,12 +852,3 @@ instance ( PP p x ~ String
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
               Right p -> mkNode opts (FailT p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
-
-{-
-data These' p
-type TheseT' p = TheseFail "expected These" p
-
-instance P (TheseT' p) x => P (These' p) x where
-  type PP (These' p) x = PP (TheseT' p) x
-  eval _ = eval (Proxy @(TheseT' p))
--}

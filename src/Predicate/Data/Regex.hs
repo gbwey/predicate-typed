@@ -448,7 +448,7 @@ instance P (ReplaceOneT' rs p q r) x => P (ReplaceOne' rs p q r) x where
   type PP (ReplaceOne' rs p q r) x = PP (ReplaceOneT' rs p q r) x
   eval _ = eval (Proxy @(ReplaceOneT' rs p q r))
 
--- | replace first occurrence of string \'p\' with '\q'\ in \'r\'
+-- | replace first occurrence of string \'p\' with \'q\' in \'r\'
 --
 -- >>> pl @(ReplaceOneString 'ROverWrite "abc" "def" Id) "123abc456abc"
 -- Present "123def456abc" (ReplaceOne (abc) 123abc456abc | 123def456abc)
@@ -470,7 +470,7 @@ instance P (ReplaceOneT p q r) x => P (ReplaceOne p q r) x where
   type PP (ReplaceOne p q r) x = PP (ReplaceOneT p q r) x
   eval _ = eval (Proxy @(ReplaceOneT p q r))
 
--- | replace all occurrences of string \'p\' with '\q'\ in \'r\'
+-- | replace all occurrences of string \'p\' with \'q\' in \'r\'
 --
 -- >>> pl @(ReplaceAllString 'ROverWrite "abc" "def" Id) "123abc456abc"
 -- Present "123def456def" (ReplaceAll (abc) 123abc456abc | 123def456def)

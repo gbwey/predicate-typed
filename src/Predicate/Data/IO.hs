@@ -78,9 +78,10 @@ import System.Environment
 -- False (IsJust)
 -- FalseT
 --
-
 data ReadFile p
 
+
+-- | similar to 'doesFileExist'
 data FileExists p
 type FileExistsT p = IsJust (ReadFile p)
 
@@ -108,7 +109,7 @@ instance ( PP p x ~ String
           Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> litL opts b) [hh pp]
 
--- | does the directory exists
+-- | similar to 'doesDirectoryExist'
 --
 -- >>> pz @(DirExists ".") ()
 -- TrueT
@@ -121,8 +122,6 @@ instance ( PP p x ~ String
 -- False (IsJust)
 -- FalseT
 --
-
-data ReadDir p
 data DirExists p
 type DirExistsT p = IsJust (ReadDir p)
 
@@ -130,7 +129,8 @@ instance P (DirExistsT p) x => P (DirExists p) x where
   type PP (DirExists p) x = PP (DirExistsT p) x
   eval _ = evalBool (Proxy @(DirExistsT p))
 
-
+-- | similar to 'listDirectory'
+data ReadDir p
 instance ( PP p x ~ String
          , P p x
          ) => P (ReadDir p) x where
@@ -151,7 +151,7 @@ instance ( PP p x ~ String
           Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> showL opts b) [hh pp]
 
--- | read an environment variable
+-- | read an environment variable: similar to 'getEnv'
 --
 -- >>> pz @(ReadEnv "PATH" >> 'Just Id >> 'True) ()
 -- TrueT
@@ -175,7 +175,7 @@ instance ( PP p x ~ String
           Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just v) -> mkNode opts (PresentT (Just v)) (msg1 <> " " <> litL opts v) [hh pp]
 
--- | read all the environment variables as key value pairs
+-- | read all the environment variables as key value pairs: similar to 'getEnvironment'
 data ReadEnvAll
 
 instance P ReadEnvAll a where

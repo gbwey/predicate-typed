@@ -222,19 +222,19 @@ instance P IsLatin1T x => P IsLatin1 x where
 
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
--- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "AbcdE"
+-- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "AbcdE"
 -- False ((>>) False | {True (&*) False | (IsLowerAll | "bcdE")})
 -- FalseT
 --
--- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "Abcde"
+-- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "Abcde"
 -- True ((>>) True | {True (&*) True})
 -- TrueT
 --
--- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "xbcde"
+-- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "xbcde"
 -- False ((>>) False | {False (&*) True | (IsUpper | "x")})
 -- FalseT
 --
--- >>> pl @(Just Uncons >> IsUpper &* IsLowerAll) "X"
+-- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "X"
 -- True ((>>) True | {True (&*) True})
 -- TrueT
 --

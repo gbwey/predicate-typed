@@ -1350,7 +1350,7 @@ type family MapT (f :: k -> k1) (xs :: [k]) :: [k1] where
   MapT f '[] = '[]
   MapT f (x ': xs) = f x ': MapT f xs
 
--- | Extract \'a\' from a list like container
+-- | Extract \'a\' from a list-like container
 type family ConsT s where
   ConsT [a] = a
   ConsT (ZipList a) = a
@@ -1594,32 +1594,32 @@ getOptT = reifyOpts (getOptT' @o)
 
 -- | extract \'opts\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_1 x where
-  T4_1 '(a,_,_,_) = a
+  T4_1 '(opts,_,_,_) = opts
 -- | extract \'ip\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_2 x where
-  T4_2 '(_,b,_,_) = b
+  T4_2 '(_,ip,_,_) = ip
 -- | extract \'op\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_3 x where
-  T4_3 '(_,_,c,_) = c
+  T4_3 '(_,_,op,_) = op
 -- | extract \'i\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_4 x where
-  T4_4 '(_,_,_,d) = d
+  T4_4 '(_,_,_,i) = i
 
 -- | extract \'opts\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_1 x where
-  T5_1 '(a,_,_,_,_) = a
+  T5_1 '(opts,_,_,_,_) = opts
 -- | extract \'ip\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_2 x where
-  T5_2 '(_,b,_,_,_) = b
+  T5_2 '(_,ip,_,_,_) = ip
 -- | extract \'op\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_3 x where
-  T5_3 '(_,_,c,_,_) = c
+  T5_3 '(_,_,op,_,_) = op
 -- | extract \'fmt\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_4 x where
-  T5_4 '(_,_,_,d,_) = d
+  T5_4 '(_,_,_,fmt,_) = fmt
 -- | extract \'i\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_5 x where
-  T5_5 '(_,_,_,_,e) = e
+  T5_5 '(_,_,_,_,i) = i
 
 -- | deal with possible recursion on a list
 chkSize :: Foldable t
@@ -1680,9 +1680,10 @@ pureTryTestPred p a = do
 isPrime :: Int -> Bool
 isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
 
+-- | represents any kind
 type family AnyT :: k where {}
 
--- | mconcat  options at the type level
+-- | mconcat 'OptT' options at the type level
 --
 -- >>> x = getOptT @(OptTT '[ 'OMsg "test", 'ORecursion 123, OU, OL, 'OMsg "field2"])
 -- >>> oMsg x
@@ -1699,6 +1700,14 @@ unlessNull :: (Foldable t, Monoid m) => t a -> m -> m
 unlessNull t m | null t = mempty
                | otherwise = m
 
+-- | message to display when the length of a foldable is exceeded
+badLength :: Foldable t
+          => t a
+          -> Int
+          -> String
+badLength as n = ":invalid length(" <> show (length as) <> ") expected " ++ show n
+
+-- | type family to extract \'a\' from \'t a\'
 type family ExtractAFromTA (ta :: Type) :: Type where
   ExtractAFromTA (t a) = a
   ExtractAFromTA z = GL.TypeError (
@@ -1707,21 +1716,13 @@ type family ExtractAFromTA (ta :: Type) :: Type where
       ':<>: 'GL.ShowType z)
 
 -- todo: get ExtractAFromList failure to fire if wrong Type
--- | extract \'a\' from \'[a]\' which I need for type PP
+-- | type family to extract \'a\' from \'[a]\'
 type family ExtractAFromList (as :: Type) :: Type where
   ExtractAFromList [a] = a
   ExtractAFromList z = GL.TypeError (
       'GL.Text "ExtractAFromList: expected [a] but found something else"
       ':$$: 'GL.Text "as = "
       ':<>: 'GL.ShowType z)
-
-badLength :: ( Foldable t
-             , Show n
-             , Num n
-             ) => t a
-               -> n
-               -> String
-badLength as n = ":invalid length(" <> show (length as) <> ") expected " ++ show (n+0)
 
 type family MaybeT mb where
   MaybeT (Maybe a) = a

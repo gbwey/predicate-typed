@@ -127,7 +127,6 @@ instance (Show (t a)
 -- True (IsEmpty | "")
 -- TrueT
 --
-
 data IsEmpty
 
 instance ( Show as
