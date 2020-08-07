@@ -21,7 +21,7 @@
 {-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
-     promoted json encoding/decoding functions
+     promoted json encoding and decoding functions
 -}
 module Predicate.Data.Json (
 

@@ -36,7 +36,6 @@ module Predicate.Examples.Refined3 (
   , Hms
   , HmsR
 
---  , hms'
   , Hms'
   , HmsR'
 

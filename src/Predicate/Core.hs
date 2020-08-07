@@ -942,7 +942,7 @@ instance ( PP p x ~ These a b
           These _a _b -> mkNode opts (FailT (msg0 <> " found These")) "" [hh pp]
 
 
--- | extracts the (a,b) from type level 'These a b' if the value exists
+-- | extracts the (a,b) from type level \'These a b\' if the value exists
 --
 -- >>> pz @('These Id Id) (These 123 "abc")
 -- PresentT (123,"abc")

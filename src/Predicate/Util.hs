@@ -271,7 +271,7 @@ instance Semigroup (BoolT a) where
 deriving instance Show a => Show (BoolT a)
 deriving instance Eq a => Eq (BoolT a)
 
--- | extracts the 'BoolT a' constructors from the typelevel
+-- | extracts the \'BoolT a\' constructors from the typelevel
 class GetBoolT a (x :: BoolT a) | x -> a where
   getBoolT :: Either Bool Bool
 instance GetBoolT Bool 'TrueT where
@@ -1716,7 +1716,7 @@ type family ExtractAFromTA (ta :: Type) :: Type where
       ':<>: 'GL.ShowType z)
 
 -- todo: get ExtractAFromList failure to fire if wrong Type
--- | type family to extract \'a\' from \'[a]\'
+-- | type family to extract \'a\' from a list of \'a\'
 type family ExtractAFromList (as :: Type) :: Type where
   ExtractAFromList [a] = a
   ExtractAFromList z = GL.TypeError (
