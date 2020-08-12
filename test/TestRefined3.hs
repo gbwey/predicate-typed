@@ -22,13 +22,9 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
 import Predicate
---import TestRefined hiding (namedTests,unnamedTests,allProps)
---import Predicate.Refined
 import Predicate.Refined3
 import Predicate.Examples.Refined3
 import Predicate.Examples.Common
-import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
-
 import Data.Ratio
 import Data.Typeable
 import Control.Lens

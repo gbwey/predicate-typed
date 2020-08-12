@@ -1009,6 +1009,12 @@ instance P (DropT n p) x => P (Drop n p) x where
 -- >>> pz @(ChunksOf 2 Id) "a"
 -- PresentT ["a"]
 --
+-- >>> pz @(PadR (Len + RoundUp 5 Len) 999 Id >> ChunksOf 5 Id) [1..17]
+-- PresentT [[1,2,3,4,5],[6,7,8,9,10],[11,12,13,14,15],[16,17,999,999,999]]
+--
+-- >>> pz @(PadR (Len + RoundUp 5 Len) 999 Id >> ChunksOf 5 Id) [1..15]
+-- PresentT [[1,2,3,4,5],[6,7,8,9,10],[11,12,13,14,15]]
+--
 data ChunksOf n p
 
 instance (PP p a ~ [b]

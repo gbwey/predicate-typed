@@ -46,7 +46,6 @@ module Predicate.Examples.Common (
   , Luhn'
   , Luhnop'
   , Luhn''
---  , Luhnfmt
 
   -- ** ssn
   , Ssnip

@@ -1,3 +1,4 @@
+-- need to remove some show instances: could have runQ which doesnt require show
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -52,9 +53,11 @@ module Predicate.Core (
   , pav
   , puv
   , pl
-  , pz
   , run
   , runs
+
+  , pz
+  , runZ
 
   , P(..)
 
@@ -107,6 +110,9 @@ module Predicate.Core (
   , SwapC(..)
   , type ($)
   , type (&)
+  , Apply1
+--  , Apply1Z
+  , Apply2
 
   ) where
 import Predicate.Util
@@ -886,14 +892,19 @@ instance GetBoolT x b => P (b :: BoolT x) a where
       Right True -> mkNode opts (PresentT False) "'PresentT _" []
       Right False -> mkNode opts (FailT "'FailT _") "BoolT" []
 
-pan, panv, pa, pu, pl, pz, pab, pub, pav, puv
+-- | skips the evaluation tree and just displays the end result
+pz :: forall p a
+      . P p a
+     => a
+     -> IO (BoolT (PP p a))
+pz = runZ @OZ @p
+
+pan, panv, pa, pu, pl, pab, pub, pav, puv
   :: forall p a
   . ( Show (PP p a)
     , P p a
     ) => a
       -> IO (BoolT (PP p a))
--- | skips the evaluation tree and just displays the end result
-pz = run @OZ @p
 -- | same as 'pz' but adds context to the end result
 pl = run @OL @p
 -- | displays the evaluation tree in plain text without colors
@@ -941,6 +952,16 @@ run a = do
   let r = pp ^. tBool
   putStr $ prtTree opts pp
   return r
+
+runZ :: forall opts p a
+        . ( OptTC opts
+          , P p a)
+        => a
+        -> IO (BoolT (PP p a))
+runZ a = do
+  let opts = getOptT @opts
+  pp <- eval (Proxy @p) opts a
+  return $ pp ^. tBool
 
 -- | run expression with multiple options in a list
 --
@@ -1236,33 +1257,20 @@ instance ( PP p x ~ Bool
 
 -- | 'id' function on a boolean
 --
--- >>> pz @(IdBool Id) False
--- FalseT
---
--- >>> pz @(IdBool Id) True
+-- >>> pz @(Head '[ 'True] >> IdB) ()
 -- TrueT
 --
--- >>> pz @(IdBool (Fst Id)) (True,22)
--- TrueT
---
--- >>> pl @(IdBool (Lt 3)) 13
--- False (IdBool (13 < 3))
+-- >>> pz @(Fst Id >> IdBool) (False,22)
 -- FalseT
 --
-data IdBool p
+data IdBool
 
-instance ( PP p x ~ Bool
-         , P p x
-         ) => P (IdBool p) x where
-  type PP (IdBool p) x = Bool
-  eval _ opts x = do
+instance x ~ Bool
+        => P IdBool x where
+  type PP IdBool x = Bool
+  eval _ opts x =
     let msg0 = "IdBool"
-    pp <- evalBool (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = p
-        in mkNodeB opts b (msg0 <> litVerbose opts " " (topMessage pp)) [hh pp]
+    in pure $ mkNodeB opts x msg0 []
 
 -- | Fails the computation with a message but allows you to set the output type
 --
@@ -2392,4 +2400,60 @@ instance (Show a
         d = a ^. coerced
     in pure $ mkNode opts (PresentT d) (show01 opts msg0 d a) []
 
+-- | application using a Proxy: \'q\' must be of kind Type else ambiguous k0 error
+--
+-- >>> pl @(Apply1 (MsgI "hello ")) (Proxy @(W "there"),()) -- have to wrap Symbol
+-- Present "there" (hello W '"there")
+-- PresentT "there"
+--
+-- >>> pl @(Apply1 Length) (Proxy @(Snd Id),(True,"abcdef"))
+-- Present 6 (Length 6 | "abcdef")
+-- PresentT 6
+--
+-- >>> pl @(Apply1 ((+) 4)) (Proxy @(Fst Id),(5,"abcdef"))
+-- Present 9 (4 + 5 = 9)
+-- PresentT 9
+--
+-- >>> pl @(Apply1 Fst) (Proxy @Id, (123,"asfd"))
+-- Present 123 (Fst 123 | (123,"asfd"))
+-- PresentT 123
+--
+data Apply1 (p :: Type -> Type) -- will not work unless p :: Type -> Type: cant be polymorphic k
+instance forall p q x . (P (p q) x)
+   => P (Apply1 p) (Proxy q, x) where
+  type PP (Apply1 p) (Proxy q, x) = PP (p q) x
+  eval _ opts (Proxy, x) =
+    eval (Proxy @(p q)) opts x
+{-
+-- how do we say that the k in p is the same as Apply1Z as we dont
+-- know until we apply it
+-- k is polymorphic: can use Nat Symbol or Type but we have to fix it
+-- unless we pass something to p to tell it what k is which misses the whole point of partial application
+data Apply1Z (p :: k -> Type) :: Type
+instance forall k (p :: k -> Type) (q :: k) x . (P (p q) x)
+   => P (Apply1Z p) (Proxy q, x) where
+  type PP (Apply1Z p) (Proxy q, x) = PP (p q) x
+  eval _ opts (Proxy, x) =
+    eval (Proxy @(p q)) opts x
+-}
+-- | application using a Proxy: \'q\' and \'r\' must be of kind Type else ambiguous k0 error
+--
+-- >>> pl @(Apply2 (+)) ((Proxy @(Fst Id),Proxy @(Length (Snd Id))),(5,"abcdef"))
+-- Present 11 (5 + 6 = 11)
+-- PresentT 11
+--
+-- >>> pl @(Apply2 (+)) ((Proxy @(W 3),Proxy @(W 7)),())
+-- Present 10 (3 + 7 = 10)
+-- PresentT 10
+--
+-- >>> pl @(Apply2 (&&&)) ((Proxy @(W "abc"),Proxy @(W 13)), ())
+-- Present ("abc",13) (W '("abc",13))
+-- PresentT ("abc",13)
+--
+data Apply2 (p :: Type -> Type -> Type)
+instance forall p (q :: Type) (r :: Type) x . (P (p q r) x)
+   => P (Apply2 p) ((Proxy q,Proxy r), x) where
+  type PP (Apply2 p) ((Proxy q,Proxy r), x) = PP (p q r) x
+  eval _ opts ((Proxy, Proxy), x) =
+    eval (Proxy @(p q r)) opts x
 

@@ -114,11 +114,7 @@ module Predicate.Examples.Refined3 (
 import Predicate.Examples.Common
 import Predicate.Refined
 import Predicate.Refined3
-import Predicate.Core
-import Predicate.Prelude
-import Predicate.Util
-import Predicate.Util_TH
-import Predicate.TH_Orphans ()
+import Predicate
 import Data.Proxy
 import GHC.TypeLits (KnownNat, Nat)
 import Data.Kind (Type)

@@ -24,7 +24,6 @@ import Predicate
 import Predicate.Refined2
 import Predicate.Examples.Refined2
 import Predicate.Examples.Common
-import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
 
 import Data.Ratio
 import Data.Typeable

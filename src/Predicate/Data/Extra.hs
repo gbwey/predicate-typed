@@ -1046,8 +1046,3 @@ instance P p a => P (K p q) a where
   type PP (K p q) a = PP p a
   eval _ = eval (Proxy @(MsgI "K " p))
 
--- k or prt has access to (Int,a) where Int is the current guard position: hence need to use PrintT
--- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out)
-
-
-

@@ -571,7 +571,7 @@ unsafeRefined' a =
   in case getValueLR o "" tt [] of
        Right True -> Refined a
        _ -> let s = prtTree o tt
-                bp = colorBoolT' o (view tBool tt)
+                bp = colorBoolT' o (tt ^. tBool)
             in case oDebug o of
                  DZero -> error bp
                  DLite -> error $ bp ++ "\n" ++ s

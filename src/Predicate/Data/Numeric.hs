@@ -54,6 +54,7 @@ module Predicate.Data.Numeric (
   , LogBase
   , type (^)
   , type (**)
+  , RoundUp
 
   -- *** rational numbers
   , type (%)
@@ -67,6 +68,8 @@ module Predicate.Data.Numeric (
   , ReadBase'
   , ShowBase
 
+  , RoundUpX
+--  , RoundUpY
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -82,6 +85,7 @@ import qualified Numeric
 import Data.Char
 import Data.Ratio
 import GHC.Real (Ratio((:%)))
+import Control.Lens ((&))
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -1066,3 +1070,110 @@ instance (PP p x ~ a
         let (ff,a') = if p < 0 then (('-':), abs p) else (id,p)
             b = Numeric.showIntAtBase (fromIntegral n) (xs !!) a' ""
         in mkNode opts (PresentT (ff b)) (msg0 <> " " <> litL opts (ff b) <> showVerbose opts " | " p) [hh pp]
+
+-- | calculate the amount to roundup to next n
+--
+-- >>> pl @(RoundUp (Fst Id) (Snd Id)) (3,9)
+-- Present 0 (RoundUp 3 `mod` 3 = 0)
+-- PresentT 0
+--
+-- >>> pl @(RoundUp (Fst Id) (Snd Id)) (3,10)
+-- Present 2 (RoundUp 2 `mod` 3 = 2)
+-- PresentT 2
+--
+-- >>> pl @(RoundUp (Fst Id) (Snd Id)) (3,11)
+-- Present 1 (RoundUp 1 `mod` 3 = 1)
+-- PresentT 1
+--
+-- >>> pl @(RoundUp (Fst Id) (Snd Id)) (3,12)
+-- Present 0 (RoundUp 3 `mod` 3 = 0)
+-- PresentT 0
+--
+-- >>> pl @(RoundUp 3 0) ()
+-- Present 0 (RoundUp 3 `mod` 3 = 0)
+-- PresentT 0
+--
+-- >>> pl @(RoundUp 0 10) ()
+-- Error Mod zero denominator (RoundUp Mod)
+-- FailT "Mod zero denominator"
+--
+data RoundUp n p
+type RoundUpT n p = (n - p `Mod` n) `Mod` n
+
+instance P (RoundUpT n p) x => P (RoundUp n p) x where
+  type PP (RoundUp n p) x = PP (RoundUpT n p) x
+  eval _ opts =
+    opts & if isVerbose opts
+           then eval (Proxy @(MsgI "RoundUp " (RoundUpT n p)))
+           else eval (Proxy @(MsgI "RoundUp " (Hide (RoundUpT n p))))
+
+data RoundUpX n p
+
+instance P (RoundUpT n p) x
+      => P (RoundUpX n p) x where
+  type PP (RoundUpX n p) x = PP (RoundUpT n p) x
+  eval _ opts x = do
+    let p = Proxy @(Apply1 (MsgI "RoundUpX "))
+    let q = Proxy @(RoundUpT n p)
+    let q1 = Proxy @(Hide (RoundUpT n p))
+    if isVerbose opts
+    then eval p opts (q,x)
+    else eval p opts (q1,x)
+{-
+data RoundUpY n p
+
+instance P (RoundUpT n p) x
+      => P (RoundUpY n p) x where
+  type PP (RoundUpY n p) x = PP (RoundUpT n p) x
+  eval _ opts x = do
+    let z :: Proxy Apply1X
+        z = Proxy
+    let p :: Proxy (MsgI "RoundUpY " :: Type -> Type) -- absolutely need kind signatur
+        p = Proxy
+    let q :: Proxy (RoundUpT n p)
+        q = Proxy
+    let q1 :: Proxy (Hide (RoundUpT n p))
+        q1 = Proxy
+    if isVerbose opts
+    then eval z opts ((p,q),x)
+    else eval z opts ((p,q1),x)
+-}
+{- need to explicitly set kind signature for first proxy p
+C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:1133:10-45: error:
+    • Could not deduce (P Apply1X
+                          ((Proxy (MsgI "RoundUpY "), Proxy (RoundUpT n p)), x))
+        arising from a use of ‘eval’
+      from the context: P (RoundUpT n p) x
+        bound by the instance declaration
+        at C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:(1124,10)-(1125,27)
+      or from: MonadEval m
+        bound by the type signature for:
+                   eval :: forall (m :: * -> *) (proxy :: * -> *).
+                           MonadEval m =>
+                           proxy (RoundUpY n p) -> POpts -> x -> m (TT (PP (RoundUpY n
+p) x))
+        at C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:1127:3-6
+      The type variable ‘k0’ is ambiguous
+      Relevant bindings include
+        q1 :: Proxy (Hide (RoundUpT n p))
+          (bound at C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:1131:9)
+        q :: Proxy (RoundUpT n p)
+          (bound at C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:1130:9)
+        x :: x
+          (bound at C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:1127:15)
+        eval :: proxy (RoundUpY n p)
+                -> POpts -> x -> m (TT (PP (RoundUpY n p) x))
+          (bound at C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:1127:3)
+      These potential instance exist:
+        one instance involving out-of-scope types
+        (use -fprint-potential-instances to see them all)
+    • In a stmt of a 'do' block:
+        z <- eval (Proxy @Apply1X) opts ((p, q), x)
+      In the expression:
+        do let z = Proxy @Apply1X
+           let p = Proxy @(MsgI "RoundUpY ")
+           let q = Proxy @(RoundUpT n p)
+           let q1 = Proxy @(Hide (RoundUpT n p))
+           ....
+      In an equation for ‘eval’:
+-}

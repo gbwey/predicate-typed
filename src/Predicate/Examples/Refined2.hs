@@ -79,14 +79,10 @@ module Predicate.Examples.Refined2 (
   , BaseIJ'
   , BaseIJip
    ) where
-import Predicate.Core
 import Predicate.Refined
 import Predicate.Refined2
 import Predicate.Examples.Common
-import Predicate.Prelude
-import Predicate.Util
-import Predicate.Util_TH
-import Predicate.TH_Orphans ()
+import Predicate
 import GHC.TypeLits (Nat)
 import Data.Time
 import Data.Kind

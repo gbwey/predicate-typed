@@ -21,8 +21,6 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
 import Predicate
-import Predicate.TH_Orphans () -- need this else refined*TH' fails for dates
-
 import Control.Lens
 import Data.Aeson
 import Control.Monad.IO.Class (MonadIO)
