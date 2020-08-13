@@ -62,8 +62,6 @@ module Predicate.Data.Ordering (
   , AllNegative
   , Negative
 
-  , Ands
-  , Ors
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -71,8 +69,6 @@ import Predicate.Data.Tuple (Pairs)
 import Data.Proxy
 import Data.Char
 import Data.Function
-import Data.Foldable (toList)
-import Data.List (findIndex)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -528,71 +524,4 @@ instance P AllNegativeT x => P AllNegative x where
 type Positive = Gt 0
 
 type Negative = Lt 0
-
--- | similar to 'Data.Foldable.and'
---
--- >>> pz @(Ands Id) [True,True,True]
--- TrueT
---
--- >>> pl @(Ands Id) [True,True,True,False]
--- False (Ands(4) i=3 | [True,True,True,False])
--- FalseT
---
--- >>> pz @(Ands Id) []
--- TrueT
---
-data Ands p
-
-instance (PP p x ~ t a
-        , P p x
-        , Show (t a)
-        , Foldable t
-        , a ~ Bool
-        ) => P (Ands p) x where
-  type PP (Ands p) x = Bool
-  eval _ opts x = do
-    let msg0 = "Ands"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let msg1 = msg0 ++ "(" ++ show (length p) ++ ")"
-            w = case findIndex not (toList p) of
-                  Nothing -> ""
-                  Just i -> " i="++show i
-        in mkNodeB opts (and p) (msg1 <> w <> showVerbose opts " | " p) [hh pp]
-
--- | similar to 'Data.Foldable.or'
---
--- >>> pz @(Ors Id) [False,False,False]
--- FalseT
---
--- >>> pl @(Ors Id) [True,True,True,False]
--- True (Ors(4) i=0 | [True,True,True,False])
--- TrueT
---
--- >>> pl @(Ors Id) []
--- False (Ors(0) | [])
--- FalseT
---
-data Ors p
-
-instance (PP p x ~ t a
-        , P p x
-        , Show (t a)
-        , Foldable t
-        , a ~ Bool
-        ) => P (Ors p) x where
-  type PP (Ors p) x = Bool
-  eval _ opts x = do
-    let msg0 = "Ors"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let msg1 = msg0 ++ "(" ++ show (length p) ++ ")"
-            w = case findIndex id (toList p) of
-                  Nothing -> ""
-                  Just i -> " i="++show i
-        in mkNodeB opts (or p) (msg1 <> w <> showVerbose opts " | " p) [hh pp]
 

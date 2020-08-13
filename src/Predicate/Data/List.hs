@@ -356,7 +356,7 @@ instance P (RotateT n p) x => P (Rotate n p) x where
 -- >>> pz @(Partition (Ge 3) Id) [10,4,1,7,3,1,3,5]
 -- PresentT ([10,4,7,3,3,5],[1,1])
 --
--- >>> pz @(Partition (Prime Id) Id) [10,4,1,7,3,1,3,5]
+-- >>> pz @(Partition (IsPrime Id) Id) [10,4,1,7,3,1,3,5]
 -- PresentT ([7,3,3,5],[10,4,1,1])
 --
 -- >>> pz @(Partition (Ge 300) Id) [10,4,1,7,3,1,3,5]
@@ -385,7 +385,7 @@ instance P (RotateT n p) x => P (Rotate n p) x where
 -- Error ExitWhen (Partition(i=10, a=11) excnt=1)
 -- FailT "ExitWhen"
 --
--- >>> pl @(Partition (Prime Id) Id) [1..15]
+-- >>> pl @(Partition (IsPrime Id) Id) [1..15]
 -- Present ([2,3,5,7,11,13],[1,4,6,8,9,10,12,14,15]) (Partition ([2,3,5,7,11,13],[1,4,6,8,9,10,12,14,15]) | s=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
 -- PresentT ([2,3,5,7,11,13],[1,4,6,8,9,10,12,14,15])
 --

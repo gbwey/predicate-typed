@@ -416,7 +416,7 @@ instance (P p a
 -- >>> pz @(Fst Id ** Snd Id) (10,4)
 -- PresentT 10000.0
 --
--- >>> pz @'(Prime Id,Id ^ 3,(FromIntegral _ Id) ** (FromRational _ (1 % 2))) 4
+-- >>> pz @'(IsPrime Id,Id ^ 3,(FromIntegral _ Id) ** (FromRational _ (1 % 2))) 4
 -- PresentT (False,64,2.0)
 --
 data p ** q

@@ -59,7 +59,7 @@ module Predicate.Data.Extra (
   , ProxyT
   , ProxyT'
 
-  , Prime
+  , IsPrime
   , PrimeNext
   , Luhn
 
@@ -771,22 +771,22 @@ type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
 
 -- | a predicate on prime numbers
 --
--- >>> pz @(Prime Id) 2
+-- >>> pz @(IsPrime Id) 2
 -- TrueT
 --
--- >>> pz @(Map '(Id,Prime Id) Id) [0..12]
+-- >>> pz @(Map '(Id,IsPrime Id) Id) [0..12]
 -- PresentT [(0,False),(1,False),(2,True),(3,True),(4,False),(5,True),(6,False),(7,True),(8,False),(9,False),(10,False),(11,True),(12,False)]
 --
-data Prime p
+data IsPrime p
 
 instance (PP p x ~ a
         , P p x
         , Show a
         , Integral a
-        ) => P (Prime p) x where
-  type PP (Prime p) x = Bool
+        ) => P (IsPrime p) x where
+  type PP (IsPrime p) x = Bool
   eval _ opts x = do
-    let msg0 = "Prime"
+    let msg0 = "IsPrime"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e

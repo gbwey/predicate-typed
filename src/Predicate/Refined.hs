@@ -123,10 +123,10 @@ import Data.Maybe (fromMaybe)
 -- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12340"
 -- Left FalseT
 --
--- >>> prtRefinedIO @OZ @(Any (Prime Id) Id) [11,13,17,18]
+-- >>> prtRefinedIO @OZ @(Any (IsPrime Id) Id) [11,13,17,18]
 -- Right (Refined [11,13,17,18])
 --
--- >>> prtRefinedIO @OZ @(All (Prime Id) Id) [11,13,17,18]
+-- >>> prtRefinedIO @OZ @(All (IsPrime Id) Id) [11,13,17,18]
 -- Left FalseT
 --
 -- >>> prtRefinedIO @OZ @(Snd Id !! Fst Id >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
@@ -271,7 +271,7 @@ instance ( RefinedC opts p a
 -- >>> all ((/=0) . unRefined) xs
 -- True
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined OU (Prime Id) Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined OU (IsPrime Id) Int)))
 -- >>> all (isPrime . unRefined) xs
 -- True
 --
@@ -332,13 +332,13 @@ genRefined g =
 -- <BLANKLINE>
 -- Refined 9
 --
--- >>> x = newRefinedT @OAN @(Prime Id || Id < 3) 3
--- >>> y = newRefinedT @OAN @(Prime Id || Id < 3) 5
+-- >>> x = newRefinedT @OAN @(IsPrime Id || Id < 3) 3
+-- >>> y = newRefinedT @OAN @(IsPrime Id || Id < 3) 5
 -- >>> prtRefinedTIO (rapply (+) x y)
 -- === a ===
 -- True True || False
 -- |
--- +- True Prime
+-- +- True IsPrime
 -- |  |
 -- |  `- P Id 3
 -- |
@@ -351,7 +351,7 @@ genRefined g =
 -- === b ===
 -- True True || False
 -- |
--- +- True Prime
+-- +- True IsPrime
 -- |  |
 -- |  `- P Id 5
 -- |
@@ -362,9 +362,9 @@ genRefined g =
 --    `- P '3
 -- <BLANKLINE>
 -- === a `op` b ===
--- False False || False | (Prime) || (8 < 3)
+-- False False || False | (IsPrime) || (8 < 3)
 -- |
--- +- False Prime
+-- +- False IsPrime
 -- |  |
 -- |  `- P Id 8
 -- |

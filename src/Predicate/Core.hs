@@ -127,12 +127,12 @@ import Data.These (These(..))
 import Control.Monad
 import Data.List
 import Data.Coerce
+import qualified Data.Semigroup as SG
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> import Predicate.Prelude
--- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Time
 
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Predicate.Core.>>'
@@ -1257,7 +1257,7 @@ instance ( PP p x ~ Bool
 
 -- | 'id' function on a boolean
 --
--- >>> pz @(Head '[ 'True] >> IdB) ()
+-- >>> pz @(Head '[ 'True] >> IdBool) ()
 -- TrueT
 --
 -- >>> pz @(Fst Id >> IdBool) (False,22)
@@ -2257,10 +2257,12 @@ instance (P p a
 -- Present ("asfd",12) (Swap ("asfd",12) | (12,"asfd"))
 -- PresentT ("asfd",12)
 --
-
+-- >>> pz @Swap (True,12,"asfd")
+-- PresentT (True,"asfd",12)
+--
 data Swap
 
-class Bifunctor p => SwapC p where -- (p :: Type -> Type -> Type) where
+class Bifunctor p => SwapC p where
   swapC :: p a b -> p b a
 instance SwapC Either where
   swapC (Left a) = Right a
@@ -2269,8 +2271,18 @@ instance SwapC These where
   swapC (This a) = That a
   swapC (That b) = This b
   swapC (These a b) = These b a
+instance SwapC SG.Arg where
+  swapC (SG.Arg a b) = SG.Arg b a
 instance SwapC (,) where
   swapC (a,b) = (b,a)
+instance SwapC ((,,) a) where
+  swapC (a,b,c) = (a,c,b)
+instance SwapC ((,,,) a b) where
+  swapC (a,b,c,d) = (a,b,d,c)
+instance SwapC ((,,,,) a b c) where
+  swapC (a,b,c,d,e) = (a,b,c,e,d)
+instance SwapC ((,,,,,) a b c d) where
+  swapC (a,b,c,d,e,f) = (a,b,c,d,f,e)
 
 instance (Show (p a b)
         , SwapC p
@@ -2418,7 +2430,16 @@ instance (Show a
 -- Present 123 (Fst 123 | (123,"asfd"))
 -- PresentT 123
 --
-data Apply1 (p :: Type -> Type) -- will not work unless p :: Type -> Type: cant be polymorphic k
+-- >>> pz @('(Proxy (W 12),9) >> Apply1 ((+) Id)) ()
+-- PresentT 21
+--
+-- >>> pz @('(Proxy (W 5),()) >> Apply1 Succ) ()
+-- PresentT 6
+--
+-- >>> pz @('(Proxy (W 12),Id) >> Apply1 ((+) Id)) 9
+-- PresentT 21
+--
+data Apply1 (p :: Type -> Type) -- will not work unless p :: Type -> Type: cant be polymorphic in k
 instance forall p q x . (P (p q) x)
    => P (Apply1 p) (Proxy q, x) where
   type PP (Apply1 p) (Proxy q, x) = PP (p q) x

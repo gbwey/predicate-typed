@@ -231,22 +231,6 @@ instance P (StripRT p q) x => P (StripR p q) x where
   type PP (StripR p q) x = PP (StripRT p q) x
   eval _ = eval (Proxy @(StripRT p q))
 
--- | similar to 'isInfixOf' 'isPrefixOf' 'isSuffixOf' for strings only.
---
--- The \'I\' suffixed versions work are case insensitive.
---
--- >>> pz @(IsInfixI "abc" "axAbCd") ()
--- TrueT
---
--- >>> pz @(IsPrefixI "abc" "aBcbCd") ()
--- TrueT
---
--- >>> pz @(IsPrefix "abc" "aBcbCd") ()
--- FalseT
---
--- >>> pz @(IsSuffix "bCd" "aBcbCd") ()
--- TrueT
---
 data IsFixImpl (cmp :: Ordering) (ignore :: Bool) p q
 
 instance (GetBool ignore
@@ -283,6 +267,9 @@ instance (GetBool ignore
 --
 -- >>> pl @(IsPrefix "ab" Id) "xyzbaw"
 -- False (IsPrefix(ab) xyzbaw)
+-- FalseT
+--
+-- >>> pz @(IsPrefix "abc" "aBcbCd") ()
 -- FalseT
 --
 data IsPrefix p q
@@ -328,6 +315,9 @@ instance P (IsInfixT p q) x => P (IsInfix p q) x where
 -- False (IsSuffix(bw) xyzbaw)
 -- FalseT
 --
+-- >>> pz @(IsSuffix "bCd" "aBcbCd") ()
+-- TrueT
+--
 data IsSuffix p q
 type IsSuffixT p q = IsFixImpl 'GT 'False p q
 
@@ -336,6 +326,9 @@ instance P (IsSuffixT p q) x => P (IsSuffix p q) x where
   eval _ = evalBool (Proxy @(IsSuffixT p q))
 
 -- | similar to case insensitive 'isPrefixOf' for strings
+--
+-- >>> pz @(IsPrefixI "abc" "aBcbCd") ()
+-- TrueT
 --
 data IsPrefixI p q
 type IsPrefixIT p q = IsFixImpl 'LT 'True p q
@@ -348,6 +341,9 @@ instance P (IsPrefixIT p q) x => P (IsPrefixI p q) x where
 --
 -- >>> pl @(IsInfixI "aB" Id) "xyzAbw"
 -- True (IsInfixI(aB) xyzAbw)
+-- TrueT
+--
+-- >>> pz @(IsInfixI "abc" "axAbCd") ()
 -- TrueT
 --
 data IsInfixI p q
