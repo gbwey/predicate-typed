@@ -92,6 +92,10 @@ module Predicate.Data.List (
   , Min
   , Max
 
+  , IsPrefix
+  , IsInfix
+  , IsSuffix
+
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -1888,4 +1892,82 @@ instance ( Ord a
       as@(_:_) ->
         let v = maximum as
         in mkNode opts (PresentT v) (show01 opts msg0 v as) []
+
+data IsFixImpl (cmp :: Ordering) p q
+
+instance ( P p x
+         , P q x
+         , Show a
+         , Eq a
+         , PP p x ~ [a]
+         , PP q x ~ [a]
+         , GetOrdering cmp
+         ) => P (IsFixImpl cmp p q) x where
+  type PP (IsFixImpl cmp p q) x = Bool
+  eval _ opts x = do
+    let cmp = getOrdering @cmp
+        (ff,msg0) = case cmp of
+                    LT -> (isPrefixOf, "IsPrefix")
+                    EQ -> (isInfixOf, "IsInfix")
+                    GT -> (isSuffixOf, "IsSuffix")
+    pp <- eval (Proxy @p) opts x
+    case getValueLR opts msg0 pp [] of
+        Left e -> pure e
+        Right s0 -> do
+          let msg1 = msg0 <> " | " <> show s0
+          qq <- eval (Proxy @q) opts x
+          pure $ case getValueLR opts (msg1 <> " q failed") qq [hh pp] of
+            Left e -> e
+            Right s1 -> mkNodeB opts (ff s0 s1) (msg1 <> " " <> showL opts s1) [hh pp, hh qq]
+
+-- | similar to 'isPrefixOf' 
+--
+-- >>> pl @(IsPrefix '[2,3] Id) [2,3,4]
+-- True (IsPrefix | [2,3] [2,3,4])
+-- TrueT
+--
+-- >>> pl @(IsPrefix '[2,3] Id) [1,2,3]
+-- False (IsPrefix | [2,3] [1,2,3])
+-- FalseT
+--
+data IsPrefix p q
+type IsPrefixT p q = IsFixImpl 'LT p q
+
+instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
+  type PP (IsPrefix p q) x = PP (IsPrefixT p q) x
+  eval _ = evalBool (Proxy @(IsPrefixT p q))
+
+-- | similar to 'isInfixOf' 
+--
+-- >>> pl @(IsInfix '[2,3] Id) [1,2,3]
+-- True (IsInfix | [2,3] [1,2,3])
+-- TrueT
+-- 
+-- >>> pl @(IsInfix '[2,3] Id) [1,2,1,3]
+-- False (IsInfix | [2,3] [1,2,1,3])
+-- FalseT
+--
+data IsInfix p q
+type IsInfixT p q = IsFixImpl 'EQ p q
+
+instance P (IsInfixT p q) x => P (IsInfix p q) x where
+  type PP (IsInfix p q) x = PP (IsInfixT p q) x
+  eval _ = evalBool (Proxy @(IsInfixT p q))
+
+-- | similar to 'isSuffixOf' 
+--
+-- >>> pl @(IsSuffix '[2,3] Id) [1,2,3]
+-- True (IsSuffix | [2,3] [1,2,3])
+-- TrueT
+-- 
+-- >>> pl @(IsSuffix '[2,3] Id) [2,3,4]
+-- False (IsSuffix | [2,3] [2,3,4])
+-- FalseT
+--
+data IsSuffix p q
+type IsSuffixT p q = IsFixImpl 'GT p q
+
+instance P (IsSuffixT p q) x => P (IsSuffix p q) x where
+  type PP (IsSuffix p q) x = PP (IsSuffixT p q) x
+  eval _ = evalBool (Proxy @(IsSuffixT p q))
 

@@ -31,12 +31,12 @@ module Predicate.Data.String (
   , StripR
   , StripL
 
-  , IsPrefix
-  , IsInfix
-  , IsSuffix
-  , IsPrefixI
-  , IsInfixI
-  , IsSuffixI
+  , IsPrefixC
+  , IsInfixC
+  , IsSuffixC
+  , IsPrefixCI
+  , IsInfixCI
+  , IsSuffixCI
 
   , ToString
   , FromString
@@ -231,7 +231,7 @@ instance P (StripRT p q) x => P (StripR p q) x where
   type PP (StripR p q) x = PP (StripRT p q) x
   eval _ = eval (Proxy @(StripRT p q))
 
-data IsFixImpl (cmp :: Ordering) (ignore :: Bool) p q
+data IsFixImplC (cmp :: Ordering) (ignore :: Bool) p q
 
 instance (GetBool ignore
         , P p x
@@ -239,21 +239,21 @@ instance (GetBool ignore
         , PP p x ~ String
         , PP q x ~ String
         , GetOrdering cmp
-        ) => P (IsFixImpl cmp ignore p q) x where
-  type PP (IsFixImpl cmp ignore p q) x = Bool
+        ) => P (IsFixImplC cmp ignore p q) x where
+  type PP (IsFixImplC cmp ignore p q) x = Bool
   eval _ opts x = do
     let cmp = getOrdering @cmp
         ignore = getBool @ignore
         lwr = if ignore then map toLower else id
         (ff,msg0) = case cmp of
-                    LT -> (isPrefixOf, "IsPrefix")
-                    EQ -> (isInfixOf, "IsInfix")
-                    GT -> (isSuffixOf, "IsSuffix")
+                    LT -> (isPrefixOf, "IsPrefixC")
+                    EQ -> (isInfixOf, "IsInfixC")
+                    GT -> (isSuffixOf, "IsSuffixC")
     pp <- eval (Proxy @p) opts x
     case getValueLR opts msg0 pp [] of
         Left e -> pure e
         Right s0 -> do
-          let msg1 = msg0 <> (if ignore then "I" else "") <> "(" <> s0 <> ")"
+          let msg1 = msg0 <> (if ignore then "I" else "") <> " | " <> s0
           qq <- eval (Proxy @q) opts x
           pure $ case getValueLR opts (msg1 <> " q failed") qq [hh pp] of
             Left e -> e
@@ -261,106 +261,106 @@ instance (GetBool ignore
 
 -- | similar to 'isPrefixOf' for strings
 --
--- >>> pl @(IsPrefix "xy" Id) "xyzabw"
--- True (IsPrefix(xy) xyzabw)
+-- >>> pl @(IsPrefixC "xy" Id) "xyzabw"
+-- True (IsPrefixC | xy xyzabw)
 -- TrueT
 --
--- >>> pl @(IsPrefix "ab" Id) "xyzbaw"
--- False (IsPrefix(ab) xyzbaw)
+-- >>> pl @(IsPrefixC "ab" Id) "xyzbaw"
+-- False (IsPrefixC | ab xyzbaw)
 -- FalseT
 --
--- >>> pz @(IsPrefix "abc" "aBcbCd") ()
+-- >>> pz @(IsPrefixC "abc" "aBcbCd") ()
 -- FalseT
 --
-data IsPrefix p q
-type IsPrefixT p q = IsFixImpl 'LT 'False p q
+data IsPrefixC p q
+type IsPrefixCT p q = IsFixImplC 'LT 'False p q
 
-instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
-  type PP (IsPrefix p q) x = PP (IsPrefixT p q) x
-  eval _ = evalBool (Proxy @(IsPrefixT p q))
+instance P (IsPrefixCT p q) x => P (IsPrefixC p q) x where
+  type PP (IsPrefixC p q) x = PP (IsPrefixCT p q) x
+  eval _ = evalBool (Proxy @(IsPrefixCT p q))
 
 -- | similar to 'isInfixOf' for strings
 --
--- >>> pl @(IsInfix "ab" Id) "xyzabw"
--- True (IsInfix(ab) xyzabw)
+-- >>> pl @(IsInfixC "ab" Id) "xyzabw"
+-- True (IsInfixC | ab xyzabw)
 -- TrueT
 --
--- >>> pl @(IsInfix "aB" Id) "xyzAbw"
--- False (IsInfix(aB) xyzAbw)
+-- >>> pl @(IsInfixC "aB" Id) "xyzAbw"
+-- False (IsInfixC | aB xyzAbw)
 -- FalseT
 --
--- >>> pl @(IsInfix "ab" Id) "xyzbaw"
--- False (IsInfix(ab) xyzbaw)
+-- >>> pl @(IsInfixC "ab" Id) "xyzbaw"
+-- False (IsInfixC | ab xyzbaw)
 -- FalseT
 --
--- >>> pl @(IsInfix (Fst Id) (Snd Id)) ("ab","xyzabw")
--- True (IsInfix(ab) xyzabw)
+-- >>> pl @(IsInfixC (Fst Id) (Snd Id)) ("ab","xyzabw")
+-- True (IsInfixC | ab xyzabw)
 -- TrueT
 --
 
-data IsInfix p q
-type IsInfixT p q = IsFixImpl 'EQ 'False p q
+data IsInfixC p q
+type IsInfixCT p q = IsFixImplC 'EQ 'False p q
 
-instance P (IsInfixT p q) x => P (IsInfix p q) x where
-  type PP (IsInfix p q) x = PP (IsInfixT p q) x
-  eval _ = evalBool (Proxy @(IsInfixT p q))
+instance P (IsInfixCT p q) x => P (IsInfixC p q) x where
+  type PP (IsInfixC p q) x = PP (IsInfixCT p q) x
+  eval _ = evalBool (Proxy @(IsInfixCT p q))
 
 -- | similar to 'isSuffixOf' for strings
 --
--- >>> pl @(IsSuffix "bw" Id) "xyzabw"
--- True (IsSuffix(bw) xyzabw)
+-- >>> pl @(IsSuffixC "bw" Id) "xyzabw"
+-- True (IsSuffixC | bw xyzabw)
 -- TrueT
 --
--- >>> pl @(IsSuffix "bw" Id) "xyzbaw"
--- False (IsSuffix(bw) xyzbaw)
+-- >>> pl @(IsSuffixC "bw" Id) "xyzbaw"
+-- False (IsSuffixC | bw xyzbaw)
 -- FalseT
 --
--- >>> pz @(IsSuffix "bCd" "aBcbCd") ()
+-- >>> pz @(IsSuffixC "bCd" "aBcbCd") ()
 -- TrueT
 --
-data IsSuffix p q
-type IsSuffixT p q = IsFixImpl 'GT 'False p q
+data IsSuffixC p q
+type IsSuffixCT p q = IsFixImplC 'GT 'False p q
 
-instance P (IsSuffixT p q) x => P (IsSuffix p q) x where
-  type PP (IsSuffix p q) x = PP (IsSuffixT p q) x
-  eval _ = evalBool (Proxy @(IsSuffixT p q))
+instance P (IsSuffixCT p q) x => P (IsSuffixC p q) x where
+  type PP (IsSuffixC p q) x = PP (IsSuffixCT p q) x
+  eval _ = evalBool (Proxy @(IsSuffixCT p q))
 
 -- | similar to case insensitive 'isPrefixOf' for strings
 --
--- >>> pz @(IsPrefixI "abc" "aBcbCd") ()
+-- >>> pz @(IsPrefixCI "abc" "aBcbCd") ()
 -- TrueT
 --
-data IsPrefixI p q
-type IsPrefixIT p q = IsFixImpl 'LT 'True p q
+data IsPrefixCI p q
+type IsPrefixCIT p q = IsFixImplC 'LT 'True p q
 
-instance P (IsPrefixIT p q) x => P (IsPrefixI p q) x where
-  type PP (IsPrefixI p q) x = PP (IsPrefixIT p q) x
-  eval _ = evalBool (Proxy @(IsPrefixIT p q))
+instance P (IsPrefixCIT p q) x => P (IsPrefixCI p q) x where
+  type PP (IsPrefixCI p q) x = PP (IsPrefixCIT p q) x
+  eval _ = evalBool (Proxy @(IsPrefixCIT p q))
 
 -- | similar to case insensitive 'isInfixOf' for strings
 --
--- >>> pl @(IsInfixI "aB" Id) "xyzAbw"
--- True (IsInfixI(aB) xyzAbw)
+-- >>> pl @(IsInfixCI "aB" Id) "xyzAbw"
+-- True (IsInfixCI | aB xyzAbw)
 -- TrueT
 --
--- >>> pz @(IsInfixI "abc" "axAbCd") ()
+-- >>> pz @(IsInfixCI "abc" "axAbCd") ()
 -- TrueT
 --
-data IsInfixI p q
-type IsInfixIT p q = IsFixImpl 'EQ 'True p q
+data IsInfixCI p q
+type IsInfixCIT p q = IsFixImplC 'EQ 'True p q
 
-instance P (IsInfixIT p q) x => P (IsInfixI p q) x where
-  type PP (IsInfixI p q) x = PP (IsInfixIT p q) x
-  eval _ = evalBool (Proxy @(IsInfixIT p q))
+instance P (IsInfixCIT p q) x => P (IsInfixCI p q) x where
+  type PP (IsInfixCI p q) x = PP (IsInfixCIT p q) x
+  eval _ = evalBool (Proxy @(IsInfixCIT p q))
 
 -- | similar to case insensitive 'isSuffixOf' for strings
 --
-data IsSuffixI p q
-type IsSuffixIT p q = IsFixImpl 'GT 'True p q
+data IsSuffixCI p q
+type IsSuffixCIT p q = IsFixImplC 'GT 'True p q
 
-instance P (IsSuffixIT p q) x => P (IsSuffixI p q) x where
-  type PP (IsSuffixI p q) x = PP (IsSuffixIT p q) x
-  eval _ = evalBool (Proxy @(IsSuffixIT p q))
+instance P (IsSuffixCIT p q) x => P (IsSuffixCI p q) x where
+  type PP (IsSuffixCI p q) x = PP (IsSuffixCIT p q) x
+  eval _ = evalBool (Proxy @(IsSuffixCIT p q))
 
 -- | very simple conversion to a string
 data ToString p

@@ -26,6 +26,7 @@
 module Predicate.Data.IO (
 
     ReadFile
+  , ReadFileBinary
   , FileExists
   , ReadDir
   , DirExists
@@ -57,6 +58,7 @@ import Data.Time
 import System.Directory
 import System.IO
 import System.Environment
+import qualified Data.ByteString.Char8 as BS8
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -80,15 +82,6 @@ import System.Environment
 --
 data ReadFile p
 
-
--- | similar to 'doesFileExist'
-data FileExists p
-type FileExistsT p = IsJust (ReadFile p)
-
-instance P (FileExistsT p) x => P (FileExists p) x where
-  type PP (FileExists p) x = PP (FileExistsT p) x
-  eval _ = evalBool (Proxy @(FileExistsT p))
-
 instance ( PP p x ~ String
          , P p x
          ) => P (ReadFile p) x where
@@ -108,6 +101,36 @@ instance ( PP p x ~ String
           Nothing -> mkNode opts (FailT msg1) "" [hh pp]
           Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> litL opts b) [hh pp]
+
+data ReadFileBinary p
+
+instance ( PP p x ~ String
+         , P p x
+         ) => P (ReadFileBinary p) x where
+  type PP (ReadFileBinary p) x = Maybe BS8.ByteString
+  eval _ opts x = do
+    let msg0 = "ReadFileBinary"
+    pp <- eval (Proxy @p) opts x
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right p -> do
+        let msg1 = msg0 <> "[" <> p <> "]"
+        mb <- runIO $ do
+                b <- doesFileExist p
+                if b then Just <$> BS8.readFile p
+                else pure Nothing
+        pure $ case mb of
+          Nothing -> mkNode opts (FailT msg1) "" [hh pp]
+          Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
+          Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (BS8.length b) <> " Just " <> litBS opts b) [hh pp]
+
+instance P (FileExistsT p) x => P (FileExists p) x where
+  type PP (FileExists p) x = PP (FileExistsT p) x
+  eval _ = evalBool (Proxy @(FileExistsT p))
+
+-- | similar to 'doesFileExist'
+data FileExists p
+type FileExistsT p = IsJust (ReadFile p)
 
 -- | similar to 'doesDirectoryExist'
 --
