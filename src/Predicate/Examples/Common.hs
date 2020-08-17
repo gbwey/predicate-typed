@@ -86,14 +86,14 @@ import Data.Time
 type Ccip = Map (ReadP Int Id) (Ones (Remove "-" Id))
 
 -- | \'op\' type for validating a credit card number by check digit
-type Ccop (n :: Nat) = Guard (PrintT "expected %d digits but found %d" '(n,Len)) (Len == n) >> Luhn Id
+type Ccop (n :: Nat) = Guard (PrintT "expected %d digits but found %d" '(n,Len)) (Len == n) >> IsLuhn Id
 
 -- | \'fmt\' type for formatting a credit card using \'ns\' as the format
 type Ccfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
 
--- | uses builtin 'Luhn'
+-- | uses builtin 'IsLuhn'
 type Luhnip = Map (ReadP Int Id) (Ones Id)
-type Luhnop (n :: Nat) = Msg "incorrect number of digits:" (Len == n) && Luhn Id
+type Luhnop (n :: Nat) = Msg "incorrect number of digits:" (Len == n) && IsLuhn Id
 
 -- now that time is actually validated we dont need Dtop*
 -- | \'ip\' type for reading in a date time

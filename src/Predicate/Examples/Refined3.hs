@@ -363,14 +363,14 @@ type LuhnR (opts :: OptT) (n :: Nat) = MakeR3 (LuhnT opts n)
 -- Right (Refined3 {r3In = [1,2,3,0], r3Out = "1230"})
 --
 -- >>> newRefined3P (Proxy @(LuhnT OL 4)) "1234"
--- Left "Step 2. False Boolean Check(op) | {True && False | (Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}"
+-- Left "Step 2. False Boolean Check(op) | {True && False | (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}"
 --
--- | uses builtin 'Luhn'
+-- | uses builtin 'IsLuhn'
 type LuhnT (opts :: OptT) (n :: Nat) =
    '(opts
     , Map (ReadP Int Id) (Ones Id)
     , Msg "incorrect number of digits:"
-          (Len == n) && Luhn Id
+          (Len == n) && IsLuhn Id
     , ConcatMap (ShowP Id) Id
     , String)
 

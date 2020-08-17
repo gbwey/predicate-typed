@@ -61,7 +61,7 @@ module Predicate.Data.Extra (
 
   , IsPrime
   , PrimeNext
-  , Luhn
+  , IsLuhn
 
   , Catch
   , Catch'
@@ -819,29 +819,29 @@ instance (PP p x ~ a
         let ret = head $ dropWhile (not . isPrime) [max 0 (fromIntegral p + 1) ..]
         in mkNode opts (PresentT ret) (msg0 <> showVerbose opts " | " p) [hh pp]
 
--- | Luhn predicate check on last digit
+-- | IsLuhn predicate check on last digit
 --
--- >>> pz @(Luhn Id) [1,2,3,0]
+-- >>> pz @(IsLuhn Id) [1,2,3,0]
 -- TrueT
 --
--- >>> pz @(Luhn Id) [1,2,3,4]
+-- >>> pz @(IsLuhn Id) [1,2,3,4]
 -- FalseT
 --
--- >>> pz @(GuardSimple (Luhn Id)) [15,4,3,1,99]
--- FailT "(Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])"
+-- >>> pz @(GuardSimple (IsLuhn Id)) [15,4,3,1,99]
+-- FailT "(IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])"
 --
--- >>> pl @(Luhn Id) [15,4,3,1,99]
--- False (Luhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])
+-- >>> pl @(IsLuhn Id) [15,4,3,1,99]
+-- False (IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])
 -- FalseT
 --
-data Luhn p
+data IsLuhn p
 
 instance (PP p x ~ [Int]
         , P p x
-        ) => P (Luhn p) x where
-  type PP (Luhn p) x = Bool
+        ) => P (IsLuhn p) x where
+  type PP (IsLuhn p) x = Bool
   eval _ opts x = do
-    let msg0 = "Luhn"
+    let msg0 = "IsLuhn"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e

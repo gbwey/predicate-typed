@@ -269,9 +269,9 @@ type BaseN' (opts :: OptT) (n :: Nat) p = '(opts,ReadBase Int n Id, p, String)
 -- Right (Refined2 {r2In = [1,2,3,0], r2Out = "1230"})
 --
 -- >>> newRefined2 @OL @Luhnip @(Luhnop 4) "1234"
--- Left "Step 2. False Boolean Check(op) | {True && False | (Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}"
+-- Left "Step 2. False Boolean Check(op) | {True && False | (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}"
 --
--- | uses builtin 'Luhn'
+-- | uses builtin 'IsLuhn'
 
 -- | convert a string from a given base \'i\' and store it internally as a base \'j\' string
 --

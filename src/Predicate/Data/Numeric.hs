@@ -68,8 +68,6 @@ module Predicate.Data.Numeric (
   , ReadBase'
   , ShowBase
 
-  , RoundUpX
---  , RoundUpY
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -1106,7 +1104,7 @@ instance P (RoundUpT n p) x => P (RoundUp n p) x where
     opts & if isVerbose opts
            then eval (Proxy @(MsgI "RoundUp " (RoundUpT n p)))
            else eval (Proxy @(MsgI "RoundUp " (Hide (RoundUpT n p))))
-
+{-
 data RoundUpX n p
 
 instance P (RoundUpT n p) x
@@ -1119,7 +1117,7 @@ instance P (RoundUpT n p) x
     if isVerbose opts
     then eval p opts (q,x)
     else eval p opts (q1,x)
-{-
+
 data RoundUpY n p
 
 instance P (RoundUpT n p) x

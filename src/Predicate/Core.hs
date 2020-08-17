@@ -111,7 +111,6 @@ module Predicate.Core (
   , type ($)
   , type (&)
   , Apply1
---  , Apply1Z
   , Apply2
 
   ) where

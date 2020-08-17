@@ -117,10 +117,10 @@ import Data.Maybe (fromMaybe)
 -- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id) >> 'True) "141.213.1x34.444"
 -- Left (FailT "ReadP Int (1x34)")
 --
--- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12344"
+-- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn Id) "12344"
 -- Right (Refined "12344")
 --
--- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> Luhn Id) "12340"
+-- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn Id) "12340"
 -- Left FalseT
 --
 -- >>> prtRefinedIO @OZ @(Any (IsPrime Id) Id) [11,13,17,18]

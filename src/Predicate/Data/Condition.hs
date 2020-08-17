@@ -873,14 +873,14 @@ instance P (ExitWhenT prt p) x => P (ExitWhen prt p) x where
 --
 -- most uses of GuardSimple can be replaced by a boolean predicate unless you require a failure message instead of true/false
 --
--- >>> pz @(GuardSimple (Luhn Id)) [1..4]
--- FailT "(Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])"
+-- >>> pz @(GuardSimple (IsLuhn Id)) [1..4]
+-- FailT "(IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])"
 --
--- >>> pl @(Luhn Id) [1..4]
--- False (Luhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])
+-- >>> pl @(IsLuhn Id) [1..4]
+-- False (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])
 -- FalseT
 --
--- >>> pz @(GuardSimple (Luhn Id)) [1,2,3,0]
+-- >>> pz @(GuardSimple (IsLuhn Id)) [1,2,3,0]
 -- PresentT [1,2,3,0]
 --
 -- >>> pz @(GuardSimple (Len > 30)) [1,2,3,0]
