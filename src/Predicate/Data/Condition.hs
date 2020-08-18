@@ -77,7 +77,7 @@ import qualified Data.Type.Equality as DE
 -- PresentT ("yyy",106)
 --
 -- >>> pl @(If (Len > 2) (Map (Succ Id) Id) (FailS "someval")) [12,15,16]
--- Present [13,16,17] (If (true cond))
+-- Present [13,16,17] (If 'True [13,16,17])
 -- PresentT [13,16,17]
 --
 -- >>> pl @(Map (If (Lt 3) 'True (Failt _ "err")) Id) [1..10]
@@ -97,11 +97,11 @@ import qualified Data.Type.Equality as DE
 -- FailT "failing with 45"
 --
 -- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (Id * 7)) 3
--- Present 21 (If (false cond) 21)
+-- Present 21 (If 'False 21)
 -- PresentT 21
 --
 -- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (Id * 7 >> ShowP Id >> Ones Id)) 3
--- Present ["2","1"] (If (false cond) ["2","1"])
+-- Present ["2","1"] (If 'False ["2","1"])
 -- PresentT ["2","1"]
 --
 -- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (ShowP (Id * 7) >> Ones Id)) 19
@@ -129,7 +129,7 @@ instance (Show (PP r a)
               else eval (Proxy @r) opts a
         pure $ case getValueLR opts (msg0 <> " [" <> show b <> "]") qqrr [hh pp, hh qqrr] of
           Left e -> e
-          Right ret -> mkNode opts (_tBool qqrr) (msg0 <> " " <> if b then "(true cond)" else "(false cond) " <> showL opts ret) [hh pp, hh qqrr]
+          Right ret -> mkNode opts (_tBool qqrr) (msg0 <> " " <> (if b then "'True " else "'False ") <> showL opts ret) [hh pp, hh qqrr]
 
 type family GuardsT (ps :: [k]) where
   GuardsT '[] = '[]
@@ -367,22 +367,22 @@ data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 -- >>> pz @(Guards '[ '(PrintT "arg %d failed with value %d" Id,Gt 4), '(PrintT "%d %d" Id, Same 4)]) [17,3]
 -- FailT "1 3"
 --
--- >>> pz @(Msg "isbn10" (Resplit "-" Id) >> Concat Id >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> Zip (1...10 >> Reverse) (Fst Id +: Snd Id) >> Map (Fst Id * Snd Id) Id >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40614-X"
+-- >>> pz @(Msg "isbn10" (Resplit "-" Id) >> Concat Id >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> ZipWith (Fst Id * Snd Id) (1...10 >> Reverse) (Fst Id +: Snd Id) >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40614-X"
 -- FailT "mod 0 oops"
 --
--- >>> pz @(Resplit "-" Id >> Concat Id >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> Zip (1...10 >> Reverse) (Fst Id +: Snd Id) >> Map (Fst Id * Snd Id) Id >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40611-X"
+-- >>> pz @(Resplit "-" Id >> Concat Id >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> ZipWith (Fst Id * Snd Id) (1...10 >> Reverse) (Fst Id +: Snd Id) >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40611-X"
 -- PresentT 132
 --
--- >>> pz @(Msg "isbn13" (Resplit "-" Id) >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> Zip (Cycle 13 [1,3] >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-7"
+-- >>> pz @(Msg "isbn13" (Resplit "-" Id) >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3] >> Reverse) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-7"
 -- PresentT (100,0)
 --
--- >>> pz @(Resplit "-" Id >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> Zip (Cycle 13 [1,3] >> Reverse) Id >> Map (Fst Id * Snd Id) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-8"
+-- >>> pz @(Resplit "-" Id >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3] >> Reverse) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-8"
 -- FailT "sum=101 mod 10=1"
 --
--- >>> pz @(Do '[Resplit "-" Id, Concat Id, Zip (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Map (Fst Id * Snd Id) Id, Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-9"
+-- >>> pz @(Do '[Resplit "-" Id, Concat Id, ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-9"
 -- FailT "109 is not evenly divisible by 10"
 --
--- >>> pz @(Do '[Resplit "-" Id, Concat Id, Zip (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Map (Fst Id * Snd Id) Id, Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-0"
+-- >>> pz @(Do '[Resplit "-" Id, Concat Id, ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-0"
 -- PresentT 100
 --
 data Guards (ps :: [(k,k1)])

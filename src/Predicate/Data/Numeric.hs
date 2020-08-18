@@ -5,6 +5,7 @@
 {-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -67,6 +68,9 @@ module Predicate.Data.Numeric (
   , ReadBase
   , ReadBase'
   , ShowBase
+  , ShowBaseN
+  , UnShowBaseN
+  , Bits
 
  ) where
 import Predicate.Core
@@ -1019,7 +1023,7 @@ getValidBase n =
   in if n > len || n < 2 then errorInProgram $ "getValidBase: oops invalid base valid is 2 thru " ++ show len ++ " found " ++ show n
      else take n xs
 
--- | Display a number at base 2 to 36, similar to 'Numeric.showIntAtBase' but supports signed numbers
+-- | Display a number at base 2 to 36, similar to 'Numeric.showIntAtBase' but passes the sign through
 --
 -- >>> pz @(ShowBase 16 Id) 4077
 -- PresentT "fed"
@@ -1050,7 +1054,6 @@ data ShowBase (n :: Nat) p
 
 instance (PP p x ~ a
         , P p x
-        , Show a
         , 2 GL.<= n
         , n GL.<= 36
         , KnownNat n
@@ -1064,10 +1067,90 @@ instance (PP p x ~ a
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right p ->
+      Right (fromIntegral -> p :: Integer) ->
         let (ff,a') = if p < 0 then (('-':), abs p) else (id,p)
             b = Numeric.showIntAtBase (fromIntegral n) (xs !!) a' ""
         in mkNode opts (PresentT (ff b)) (msg0 <> " " <> litL opts (ff b) <> showVerbose opts " | " p) [hh pp]
+
+-- | Display a number at base >= 2 but just show as a list of ints: ignores the sign
+--
+-- >>> pl @(ShowBaseN 16 Id) (256*256*2+256*14+16*7+11)
+-- Present [2,0,14,7,11] (ShowBaseN | 16 | 134779)
+-- PresentT [2,0,14,7,11]
+--
+data ShowBaseN n p
+
+instance (PP p x ~ a
+        , P p x
+        , PP n x ~ b
+        , P n x
+        , Integral a
+        , Integral b
+        ) => P (ShowBaseN n p) x where
+  type PP (ShowBaseN n p) x = [Int]
+  eval _ opts x = do
+    let msg0 = "ShowBaseN"
+    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right (fromIntegral -> n,fromIntegral -> p,nn,pp) ->
+         let hhs = [hh nn, hh pp]
+         in if n < 2 then mkNode opts (FailT (msg0 <> " base must be greater than 1")) "" hhs
+            else let xs = reverse $ unfoldr (\s -> if s<1 then Nothing else Just (swapC (divMod s n))) (abs p)
+                 in mkNode opts (PresentT xs) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " p) hhs
+
+-- | convert to bits
+--
+-- >>> pl @(Bits 123 >> UnShowBaseN 2 Id) ()
+-- Present 123 ((>>) 123 | {UnShowBaseN | 2 | [1,1,1,1,0,1,1]})
+-- PresentT 123
+--
+data Bits p
+type BitsT p = ShowBaseN 2 p
+
+instance P (BitsT p) x => P (Bits p) x where
+  type PP (Bits p) x = PP (BitsT p) x
+  eval _ = eval (Proxy @(BitsT p))
+
+
+-- | reverse 'ShowBaseN'
+--
+-- >>> pz @(UnShowBaseN 2 Id) [1,0,0,1,0]
+-- PresentT 18
+--
+-- >>> pz @(UnShowBaseN 2 Id) [1,1,1]
+-- PresentT 7
+--
+-- >>> pz @(UnShowBaseN 16 Id) [7,0,3,1]
+-- PresentT 28721
+--
+-- >>> pz @(UnShowBaseN 16 Id) [0]
+-- PresentT 0
+--
+-- >>> pz @(UnShowBaseN 16 Id) []
+-- PresentT 0
+--
+data UnShowBaseN n p
+
+instance (PP p x ~ [a]
+        , P p x
+        , PP n x ~ b
+        , P n x
+        , Integral a
+        , Integral b
+        ) => P (UnShowBaseN n p) x where
+  type PP (UnShowBaseN n p) x = Integer
+  eval _ opts x = do
+    let msg0 = "UnShowBaseN"
+    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right (fromIntegral -> n,map fromIntegral -> p,nn,pp) ->
+         let hhs = [hh nn, hh pp]
+         in if n < 2 then mkNode opts (FailT (msg0 <> " base must be greater than 1")) "" hhs
+            else let b = snd $ foldr (\a (m,tot) -> (m*n, a*m+tot)) (1,0) p
+                 in mkNode opts (PresentT b) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " p) hhs
+
 
 -- | calculate the amount to roundup to next n
 --

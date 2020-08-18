@@ -91,7 +91,7 @@ allTests =
   , expectPE (FailT "notallmatched") $ pl @(((Rescan "([[:xdigit:]])" Id >> Map (Snd Id >> OneP Id >> ReadBase Int 16 Id) Id) &&& Id) >> Guard "notallmatched" ((Len *** Len) >> Fst Id == Snd Id) >> Fst Id) "134g"
   , expectPE TrueT $ pl @(Map (ReadP _ Id) (Ones Id) >> IsLuhn Id) "12345678903"
   , expectPE FalseT $ pl @(Map (ReadP _ Id) (Ones Id) >> IsLuhn Id) "12345678904"
-  , expectPE (FailT "incorrect number of digits found 10 but expected 11 in [1234567890]") $ pl @(Luhn' 11) "1234567890"
+  , expectPE (FailT "incorrect length: found 10 but expected 11 in [1234567890]") $ pl @(Luhn' 11) "1234567890"
   , (@?=) (Just "abc") ((_FailT # "abc") ^? _FailT)
   , (@?=) (Just ()) ((_TrueT # ()) ^? _TrueT)
   , (@?=) (Just ()) ((_FalseT # ()) ^? _FalseT)

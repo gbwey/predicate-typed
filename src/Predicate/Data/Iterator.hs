@@ -308,7 +308,22 @@ instance P (FoldLT p q r) x => P (Foldl p q r) x where
 -- Present [1,2,3,4,5,6,7,8,9,10] (Unfoldr [1,2,3,4,5,6,7,8,9,10] [1,2,3,4,5,6,7,8,9,10] | s=[1,2,3,4,5,6,7,8,9,10])
 -- PresentT [1,2,3,4,5,6,7,8,9,10]
 --
-
+-- >>> pan @(Unfoldr (If (Id < 1) (MkNothing _) (MkJust (DivMod Id 2 >> Swap))) Id) 8
+-- P Unfoldr 8 [0,0,0,1]
+-- |
+-- +- P Id 8
+-- |
+-- +- P i=1: If 'False Just (0,4)
+-- |
+-- +- P i=2: If 'False Just (0,2)
+-- |
+-- +- P i=3: If 'False Just (0,1)
+-- |
+-- +- P i=4: If 'False Just (1,0)
+-- |
+-- `- P i=5: If 'True Nothing
+-- PresentT [0,0,0,1]
+--
 data Unfoldr p q
 
 instance (PP q a ~ s
@@ -319,7 +334,7 @@ instance (PP q a ~ s
         , Show b
           )
      => P (Unfoldr p q) a where
-  type PP (Unfoldr p q) a = [UnfoldT (PP p (PP q a))]
+  type PP (Unfoldr p q) a = [UnfoldrT (PP p (PP q a))]
   eval _ opts z = do
     let msg0 = "Unfoldr"
     qq <- eval (Proxy @q) opts z
@@ -332,7 +347,7 @@ instance (PP q a ~ s
                               pp :: TT (PP p s) <- evalHide @p opts s
                               case getValueLR opts (msg1 <> " i=" <> showIndex i <> " s=" <> show s) pp [] of
                                    Left e  -> pure (rs, Left e)
-                                   Right Nothing -> pure (rs, Right ())
+                                   Right Nothing -> pure (rs ++ [((i,Nothing), pp)], Right ())
                                    Right w@(Just (_b,s')) -> ff (i+1) s' (rs ++ [((i,w), pp)])
         (ts,lr) :: ([((Int, PP p s), TT (PP p s))], Either (TT [b]) ()) <- ff 1 q []
         pure $ case splitAndAlign opts msg1 ts of
@@ -346,8 +361,8 @@ instance (PP q a ~ s
                      let ret = fst <$> catMaybes vals
                      in mkNode opts (PresentT ret) (show01' opts msg1 ret "s=" q ) (hh qq : map (hh . fixit) itts)
 
-type family UnfoldT mbs where
-  UnfoldT (Maybe (b,s)) = b
+type family UnfoldrT mbs where
+  UnfoldrT (Maybe (b,s)) = b
 
 -- | unfolds a value applying \'f\' until the condition \'p\' is true
 --

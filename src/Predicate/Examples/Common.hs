@@ -230,8 +230,7 @@ type Luhnop' (n :: Nat) =
          Guard (PrintT "incorrect number of digits found %d but expected %d in [%s]" '(Len, n, ShowP Id)) (Len == n)
       >> Do '[
               Reverse
-             ,Zip (Cycle n [1,2]) Id
-             ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
+             ,ZipWith (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) (Cycle n [1,2]) Id
              ,Sum
              ]
         >> Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
@@ -240,13 +239,12 @@ type Luhn'' (n :: Nat) = Luhnip >> Luhnop' n
 
 type Luhn' (n :: Nat) =
        Msg "Luhn'" (Do
-       '[Guard (PrintT "incorrect number of digits found %d but expected %d in [%s]" '(Len, n, Id)) (Len == n)
+       '[Guard (PrintT "incorrect length: found %d but expected %d in [%s]" '(Len, n, Id)) (Len == n)
         ,Do
             '[Ones Id
             ,Map (ReadP Int Id) Id
             ,Reverse
-            ,Zip (Cycle n [1,2]) Id
-            ,Map (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) Id
+            ,ZipWith (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) (Cycle n [1,2]) Id
             ,Sum
            ]
         ,Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
