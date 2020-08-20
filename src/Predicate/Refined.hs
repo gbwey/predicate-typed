@@ -138,10 +138,10 @@ import Data.Maybe (fromMaybe)
 -- >>> prtRefinedIO @OZ @(Snd Id !! Fst Id >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Left FalseT
 --
-newtype Refined (opts :: OptT) p a = Refined a deriving (Show, Eq, Generic, TH.Lift)
+newtype Refined (opts :: Opt) p a = Refined a deriving (Show, Eq, Generic, TH.Lift)
 
 -- | extract the value from Refined
-unRefined :: forall k (opts :: OptT) (p :: k) a. Refined opts p a -> a
+unRefined :: forall k (opts :: Opt) (p :: k) a. Refined opts p a -> a
 unRefined (Refined a) = a
 
 type role Refined nominal nominal nominal
@@ -157,7 +157,7 @@ type role Refined nominal nominal nominal
 instance RefinedC opts p String => IsString (Refined opts p String) where
   fromString s =
     let (w,mr) = runIdentity $ newRefinedM @opts @p s
-    in fromMaybe (error $ "Refined(fromString):" ++ errorDisplay (getOptT @opts) w) mr
+    in fromMaybe (error $ "Refined(fromString):" ++ errorDisplay (getOpt @opts) w) mr
 
 errorDisplay :: POpts -> (String,(String,String)) -> String
 errorDisplay o (bp,(top,e)) =
@@ -191,7 +191,7 @@ instance (RefinedC opts p a, Read a) => Read (Refined opts p a) where
   readListPrec = GR.readListPrecDefault
 
 -- | the constraints that 'Refined' must adhere to
-type RefinedC opts p a = (OptTC opts, PP p a ~ Bool, P p a)
+type RefinedC opts p a = (OptC opts, PP p a ~ Bool, P p a)
 
 -- | 'ToJSON' instance for 'Refined'
 instance ToJSON a => ToJSON (Refined opts p a) where
@@ -219,7 +219,7 @@ instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
     a <- parseJSON z
     let (w,mr) = runIdentity $ newRefinedM @opts @p a
     case mr of
-      Nothing -> fail $ "Refined(FromJSON:parseJSON):" ++ errorDisplay (getOptT @opts) w
+      Nothing -> fail $ "Refined(FromJSON:parseJSON):" ++ errorDisplay (getOpt @opts) w
       Just r -> return r
 
 -- | 'Binary' instance for 'Refined'
@@ -255,7 +255,7 @@ instance (RefinedC opts p a, Binary a) => Binary (Refined opts p a) where
     fld0 <- B.get @a
     let (w,mr) = runIdentity $ newRefinedM @opts @p fld0
     case mr of
-      Nothing -> fail $ "Refined(Binary:get):" ++ errorDisplay (getOptT @opts) w
+      Nothing -> fail $ "Refined(Binary:get):" ++ errorDisplay (getOpt @opts) w
       Just r -> return r
   put (Refined r) = B.put @a r
 
@@ -287,7 +287,7 @@ genRefined :: forall opts p a .
    => Gen a
    -> Gen (Refined opts p a)
 genRefined g =
-  let o = getOptT @opts
+  let o = getOpt @opts
       f !cnt = do
         ma <- suchThatMaybe g (\a -> getValLRFromTT (runIdentity (eval @_ (Proxy @p) o a)) == Right True)
         case ma of
@@ -376,19 +376,19 @@ genRefined g =
 -- <BLANKLINE>
 -- failure msg[FalseT]
 --
-rapply :: forall opts p a opts1 z m . (z ~ (opts ':# opts1), OptTC opts1, RefinedC opts p a, Monad m)
+rapply :: forall opts p a opts1 z m . (z ~ (opts ':# opts1), OptC opts1, RefinedC opts p a, Monad m)
   => (a -> a -> a)
   -> RefinedT m (Refined opts p a)
   -> RefinedT m (Refined opts1 p a)
   -> RefinedT m (Refined z p a)
 rapply f ma mb = do
-  let opts = getOptT @opts
+  let opts = getOpt @opts
   tell [setOtherEffects opts "=== a ==="]
   Refined x <- ma
-  let opts1 = getOptT @opts1
+  let opts1 = getOpt @opts1
   tell [setOtherEffects opts1 "=== b ==="]
   Refined y <- mb
-  let opts2 = getOptT @z
+  let opts2 = getOpt @z
   tell [setOtherEffects opts2 "=== a `op` b ==="]
   newRefinedT @_ @p (f x y)
 
@@ -438,7 +438,7 @@ prtRefinedIO :: forall opts p a
    => a
    -> IO (Either (BoolT Bool) (Refined opts p a))
 prtRefinedIO a = do
-  let o = getOptT @opts
+  let o = getOpt @opts
   tt <- evalBool (Proxy @p) o a
   let r = _tBool tt
   case oDebug o of
@@ -464,7 +464,7 @@ newRefined :: forall opts p a
 newRefined a =
   let ((bp,(top,e)),mr) = runIdentity $ newRefinedM @opts @p a
   in case mr of
-       Nothing -> case oDebug (getOptT @opts) of
+       Nothing -> case oDebug (getOpt @opts) of
                     DZero -> Left bp
                     DLite -> Left (bp <> (if null top then "" else " " <> top))
                     _ -> Left e
@@ -477,7 +477,7 @@ newRefinedM :: forall opts p a m
    => a
    -> m ((String, (String, String)), Maybe (Refined opts p a))
 newRefinedM a = do
-  let o = getOptT @opts
+  let o = getOpt @opts
   pp <- evalBool (Proxy @p) o a
   let r = colorBoolT' o (_tBool pp)
       s = prtTree o pp
@@ -494,7 +494,7 @@ newRefinedTImpl :: forall opts p a n m
   -> a
   -> RefinedT m (Refined opts p a)
 newRefinedTImpl f a = do
-  let o = getOptT @opts
+  let o = getOpt @opts
   tt <- f $ evalBool (Proxy @p) o a
   let msg = prtTree o tt
   tell [msg]
@@ -566,7 +566,7 @@ unsafeRefined' :: forall opts p a
     , HasCallStack
     ) => a -> Refined opts p a
 unsafeRefined' a =
-  let o = getOptT @opts
+  let o = getOpt @opts
       tt = runIdentity $ evalBool (Proxy @p) o a
   in case getValueLR o "" tt [] of
        Right True -> Refined a
@@ -577,8 +577,8 @@ unsafeRefined' a =
                  DLite -> error $ bp ++ "\n" ++ s
                  _ -> error $ bp ++ "\n" ++ s
 
-type family ReplaceOptT (o :: OptT) t where
+type family ReplaceOptT (o :: Opt) t where
   ReplaceOptT o (Refined _ p a) = Refined o p a
 
-type family AppendOptT (o :: OptT) t where
+type family AppendOptT (o :: Opt) t where
   AppendOptT o (Refined o' p a) = Refined (o' ':# o) p a

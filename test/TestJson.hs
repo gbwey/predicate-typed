@@ -51,7 +51,7 @@ suite = testGroup "testjson"
 testPerson :: IO (Either String [Person])
 testPerson = eitherDecodeStrict' <$> BS.readFile "test1.json"
 
-testPerson1 :: forall opts . OptTC opts => Int -> IO (Either String [Person1 opts])
+testPerson1 :: forall opts . OptC opts => Int -> IO (Either String [Person1 opts])
 testPerson1 i = do
   let fn = "test" ++ show i ++ ".json"
   eitherDecodeStrict' <$> BS.readFile fn
@@ -66,7 +66,7 @@ data Person = Person {
 instance ToJSON Person
 instance FromJSON Person
 
-data Person1 (opts :: OptT) = Person1 {
+data Person1 (opts :: Opt) = Person1 {
        firstName1 :: NameR2 (opts ':# 'OMsg "person1 firstname1")
      , lastName1 :: NameR1 (opts ':# 'OMsg "person1 lastname1")
      , age1 :: AgeR (opts ':# 'OMsg "age1 errors")
@@ -75,20 +75,20 @@ data Person1 (opts :: OptT) = Person1 {
      , ipaddress1 :: R3.Ip4R (opts ':# 'OMsg "ipaddress1 errors")
      } deriving (Show,Generic,Eq)
 
-instance OptTC opts => ToJSON (Person1 opts)
-instance OptTC opts => FromJSON (Person1 opts)
+instance OptC opts => ToJSON (Person1 opts)
+instance OptC opts => FromJSON (Person1 opts)
 
-type NameR1 (opts :: OptT) = R.Refined opts Name1 String
+type NameR1 (opts :: Opt) = R.Refined opts Name1 String
 type Name1 = Msg "invalid name:" (Re "^[A-Z][a-z']+$" Id)
 
 -- more specific messages
-type NameR2 (opts :: OptT) = R.Refined opts (Name2 >> 'True) String
+type NameR2 (opts :: Opt) = R.Refined opts (Name2 >> 'True) String
 type Name2 =
           Uncons
        >> Just'
        >> Guard (PrintF "not upper first(%c)" Id) IsUpper
       *** Guard (PrintF "not lower rest(%s)" Id) IsLowerAll
 
-type AgeR (opts :: OptT) = R.Refined opts (Between 10 60 Id) Int
+type AgeR (opts :: Opt) = R.Refined opts (Between 10 60 Id) Int
 
 

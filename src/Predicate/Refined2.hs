@@ -145,7 +145,7 @@ import Test.QuickCheck
 -- >>> newRefined2 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,12)
 -- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
 --
-data Refined2 (opts :: OptT) ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: !i }
+data Refined2 (opts :: Opt) ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: !i }
 
 type role Refined2 nominal nominal nominal nominal
 
@@ -159,7 +159,7 @@ unsafeRefined2' :: forall opts ip op i
                 -> Refined2 opts ip op i
 unsafeRefined2' i =
   let (ret,mr) = eval2 @opts @ip @op i
-  in fromMaybe (error $ show (prt2Impl (getOptT @opts) ret)) mr
+  in fromMaybe (error $ show (prt2Impl (getOpt @opts) ret)) mr
 
 -- | directly load values into 'Refined2' without any checking
 unsafeRefined2 :: forall opts ip op i
@@ -170,7 +170,7 @@ unsafeRefined2 = Refined2
 
 -- | Provides the constraints on Refined2
 type Refined2C opts ip op i =
-       ( OptTC opts
+       ( OptC opts
        , P ip i
        , P op (PP ip i)
        , PP op (PP ip i) ~ Bool   -- the internal value needs to pass the predicate check
@@ -194,7 +194,7 @@ instance ( s ~ String
          ) => IsString (Refined2 opts ip op s) where
   fromString s =
     let (ret,mr) = eval2 @opts @ip @op s
-    in fromMaybe (error $ "Refined2(fromString):" ++ show (prt2Impl (getOptT @opts) ret)) mr
+    in fromMaybe (error $ "Refined2(fromString):" ++ show (prt2Impl (getOpt @opts) ret)) mr
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined2'
@@ -231,7 +231,7 @@ instance ( Eq i
                                "r2Out" (PCR.reset GR.readPrec)
                  GR.expectP (RL.Punc "}")
 
-                 let lr = getValLRFromTT $ runIdentity $ evalBool (Proxy @op) (getOptT @opts) fld1
+                 let lr = getValLRFromTT $ runIdentity $ evalBool (Proxy @op) (getOpt @opts) fld1
                  case lr of
                    Left {} -> fail ""
                    Right True -> pure (Refined2 fld1 fld2)
@@ -294,7 +294,7 @@ instance ( Show i
                   i <- parseJSON @i z
                   let (ret,mr) = eval2 @opts @ip @op i
                   case mr of
-                    Nothing -> fail $ "Refined2:" ++ show (prt2Impl (getOptT @opts) ret)
+                    Nothing -> fail $ "Refined2:" ++ show (prt2Impl (getOpt @opts) ret)
                     Just r -> return r
 
 -- | 'Arbitrary' instance for 'Refined2'
@@ -337,7 +337,7 @@ genRefined2P ::
   -> Gen i
   -> Gen (Refined2 opts ip op i)
 genRefined2P _ g =
-  let o = getOptT @opts
+  let o = getOpt @opts
       f !cnt = do
         mi <- suchThatMaybe g (isJust . snd . eval2 @opts @ip @op)
         case mi of
@@ -395,7 +395,7 @@ instance ( Show i
           i <- B.get @i
           let (ret,mr) = eval2 @opts @ip @op i
           case mr of
-            Nothing -> fail $ "Refined2:" ++ show (prt2Impl (getOptT @opts) ret)
+            Nothing -> fail $ "Refined2:" ++ show (prt2Impl (getOpt @opts) ret)
             Just r -> return r
   put (Refined2 _ r) = B.put @i r
 
@@ -547,7 +547,7 @@ newRefined2TImpl :: forall n m opts ip op i
    -> RefinedT m (Refined2 opts ip op i)
 newRefined2TImpl f i = do
   (ret,mr) <- f $ eval2M i
-  let m2 = prt2Impl (getOptT @opts) ret
+  let m2 = prt2Impl (getOpt @opts) ret
   tell [m2Long m2]
   case mr of
     Nothing -> throwError $ m2Desc m2 <> " | " <> m2Short m2
@@ -595,7 +595,7 @@ prtEval2P :: forall opts ip op i
     -> Either Msg2 (Refined2 opts ip op i)
 prtEval2P _ i =
   let (ret,mr) = eval2 i
-  in maybe (Left $ prt2Impl (getOptT @opts) ret) Right mr
+  in maybe (Left $ prt2Impl (getOpt @opts) ret) Right mr
 
 eval2P :: forall opts ip op i
   . ( Refined2C opts ip op i
@@ -619,7 +619,7 @@ eval2M :: forall opts ip op i m
   => i
   -> m (RResults2 (PP ip i), Maybe (Refined2 opts ip op i))
 eval2M i = do
-  let o = getOptT @opts
+  let o = getOpt @opts
   ll <- eval (Proxy @ip) o i
   case getValAndPE ll of
    (Right a, t1) -> do
@@ -630,10 +630,10 @@ eval2M i = do
       (Left e,t2) -> (RTF a t1 e t2, Nothing)
    (Left e,t1) -> pure (RF e t1, Nothing)
 
-prt2IO :: forall opts a r . (OptTC opts, Show a) => (RResults2 a, Maybe r) -> IO (Either String r)
+prt2IO :: forall opts a r . (OptC opts, Show a) => (RResults2 a, Maybe r) -> IO (Either String r)
 prt2IO (ret,mr) = do
   let m2 = prt2Impl o ret
-      o = getOptT @opts
+      o = getOpt @opts
   unless (hasNoTree o) $ putStrLn $ m2Long m2
   return $ maybe (Left (m2Desc m2 <> " | " <> m2Short m2)) Right mr
 
@@ -716,8 +716,8 @@ mkProxy2' = Proxy
 type family MakeR2 p where
   MakeR2 '(opts,ip,op,i) = Refined2 opts ip op i
 
-type family ReplaceOptT2 (o :: OptT) t where
+type family ReplaceOptT2 (o :: Opt) t where
   ReplaceOptT2 o (Refined2 _ ip op i) = Refined2 o ip op i
 
-type family AppendOptT2 (o :: OptT) t where
+type family AppendOptT2 (o :: Opt) t where
   AppendOptT2 o (Refined2 o' ip op i) = Refined2 (o' ':# o) ip op i

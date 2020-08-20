@@ -166,12 +166,12 @@ unnamedTests = [
   , expect2 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1] "") $ eval2P (cc11 @OZ) "12345678901"
   ]
 
-type HexLtR3 (opts :: OptT) = Refined2 opts (ReadBase Int 16 Id) (Id < 500) String
-type IntLtR3 (opts :: OptT) = Refined2 opts (ReadP Int Id) (Id < 10) String
+type HexLtR3 (opts :: Opt) = Refined2 opts (ReadBase Int 16 Id) (Id < 500) String
+type IntLtR3 (opts :: Opt) = Refined2 opts (ReadP Int Id) (Id < 10) String
 
 -- better to use Guard for op boolean check cos we get better errormessages
 -- 1. packaged up as a promoted tuple
-type Tst3 (opts :: OptT) = '(opts, Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, String)
+type Tst3 (opts :: Opt) = '(opts, Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, String)
 
 www1, www2 :: String -> Either String (MakeR2 (Tst3 OA))
 www1 = newRefined2P (Proxy @(Tst3 OA))
@@ -199,22 +199,22 @@ ww3 = newRefined2
         @(Map (ReadP Int Id) (Resplit "\\." Id))
         @((Len == 4) && All (Between 0 255 Id))
 -}
-data G4 (opts :: OptT) = G4 { g4Age :: MakeR2 (Age opts)
+data G4 (opts :: Opt) = G4 { g4Age :: MakeR2 (Age opts)
              , g4Ip :: MakeR2 (Ip9 opts)
              } deriving (Show,Generic,Eq)
 
-type MyAge (opts :: OptT) = Refined2 opts (ReadP Int Id) (Gt 4) String
+type MyAge (opts :: Opt) = Refined2 opts (ReadP Int Id) (Gt 4) String
 
-type Age (opts :: OptT) = '(opts, ReadP Int Id, Gt 4, String)
+type Age (opts :: Opt) = '(opts, ReadP Int Id, Gt 4, String)
 
-type Ip9 (opts :: OptT) = '(opts,
+type Ip9 (opts :: Opt) = '(opts,
             Map (ReadP Int Id) (Resplit "\\." Id) -- split String on "." then convert to [Int]
            ,Len == 4 && All (Between 0 255 Id) Id -- process [Int] and make sure length==4 and each octet is between 0 and 255
            ,String -- input type is string which is also the output type
            )
 
-instance OptTC opts => FromJSON (G4 opts)
-instance OptTC opts => ToJSON (G4 opts)
+instance OptC opts => FromJSON (G4 opts)
+instance OptC opts => ToJSON (G4 opts)
 
 tst0a :: [Bool]
 tst0a =
@@ -248,7 +248,7 @@ testRefined2PJ :: forall opts ip op i proxy
    -> Either String (Refined2 opts ip op i)
 testRefined2PJ _ i =
   let (ret,mr) = eval2 @opts @ip @op i
-      m3 = prt2Impl (getOptT @opts) ret
+      m3 = prt2Impl (getOpt @opts) ret
   in case mr of
     Just r -> eitherDecode @(Refined2 opts ip op i) $ encode r
     Nothing -> Left $ show m3
@@ -265,7 +265,7 @@ testRefined2P :: forall opts ip op i proxy
    -> Either (String,String) (Refined2 opts ip op i, Refined2 opts ip op i)
 testRefined2P _ i =
   let (ret,mr) = eval2 @opts @ip @op i
-      o = getOptT @opts
+      o = getOpt @opts
       m3 = prt2Impl o ret
   in case mr of
     Just r ->

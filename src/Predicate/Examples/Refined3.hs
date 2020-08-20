@@ -141,22 +141,22 @@ import Data.Time
 -- FailT "expected 10 digits but found 11"
 --
 
-type Ccn (opts :: OptT) (ns :: [Nat]) = '(opts, Ccip, Ccop (SumT ns), Ccfmt ns, String)
+type Ccn (opts :: Opt) (ns :: [Nat]) = '(opts, Ccip, Ccop (SumT ns), Ccfmt ns, String)
 
-type Cc11 (opts :: OptT) = Ccn opts '[4,4,3]
+type Cc11 (opts :: Opt) = Ccn opts '[4,4,3]
 
 ccn :: Proxy (Ccn opts ns)
 ccn = mkProxy3
 
 -- works but have to add all the constraints
-ccn' :: ( OptTC opts
+ccn' :: ( OptC opts
         , PP ns String ~ [Integer]
         , KnownNat (SumT ns)
         , P ns String
         ) => Proxy (Ccn opts ns)
 ccn' = mkProxy3'
 
-cc11 :: OptTC opts => Proxy (Ccn opts '[4,4,3])   -- or Proxy Cc11
+cc11 :: OptC opts => Proxy (Ccn opts '[4,4,3])   -- or Proxy Cc11
 cc11 = mkProxy3'
 
 -- | read in a valid datetime
@@ -171,7 +171,7 @@ datetime1 :: Proxy (DateTime1 opts t)
 datetime1 = mkProxy3
 
 -- now that time is actually validated we dont need Dtop*
-type DateTime1 (opts :: OptT) (t :: Type) = '(opts, Dtip t, 'True, Dtfmt, String)
+type DateTime1 (opts :: Opt) (t :: Type) = '(opts, Dtip t, 'True, Dtfmt, String)
 
 -- fixed in time-1.9
 -- extra check to validate the time as parseTime doesnt validate the time component
@@ -180,12 +180,12 @@ type DateTime1 (opts :: OptT) (t :: Type) = '(opts, Dtip t, 'True, Dtfmt, String
 --    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
-type DateN (opts :: OptT) = '(opts, ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)
+type DateN (opts :: Opt) = '(opts, ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)
 
-type DateTimeNR (opts :: OptT) = MakeR3 (DateTimeN opts)
-type DateTimeN (opts :: OptT) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
+type DateTimeNR (opts :: Opt) = MakeR3 (DateTimeN opts)
+type DateTimeN (opts :: Opt) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
 
-ssn :: OptTC opts => Proxy (Ssn opts)
+ssn :: OptC opts => Proxy (Ssn opts)
 ssn = mkProxy3'
 
 -- | read in an ssn
@@ -199,8 +199,8 @@ ssn = mkProxy3'
 -- >>> newRefined3P (ssn @OL) "667-00-2211"
 -- Left "Step 2. False Boolean Check(op) | {Bool(1) [number for group 1 invalid: found 0] (1 <= 0)}"
 --
-type Ssn (opts :: OptT) = '(opts, Ssnip, Ssnop, Ssnfmt, String)
-type SsnR (opts :: OptT) = MakeR3 (Ssn opts)
+type Ssn (opts :: Opt) = '(opts, Ssnip, Ssnop, Ssnfmt, String)
+type SsnR (opts :: Opt) = MakeR3 (Ssn opts)
 -- | read in a time and validate it
 --
 -- >>> newRefined3P (hms @OL) "23:13:59"
@@ -212,14 +212,14 @@ type SsnR (opts :: OptT) = MakeR3 (Ssn opts)
 -- >>> newRefined3P (hms @OL) "26:13:59"
 -- Left "Step 2. Failed Boolean Check(op) | hours invalid: found 26"
 --
-hms :: OptTC opts => Proxy (Hms opts)
+hms :: OptC opts => Proxy (Hms opts)
 hms = mkProxy3'
 
-type HmsR (opts :: OptT) = MakeR3 (Hms opts)
-type Hms (opts :: OptT) = '(opts, Hmsip, Hmsop >> 'True, Hmsfmt, String)
+type HmsR (opts :: Opt) = MakeR3 (Hms opts)
+type Hms (opts :: Opt) = '(opts, Hmsip, Hmsop >> 'True, Hmsfmt, String)
 
-type HmsR' (opts :: OptT) = MakeR3 (Hms' opts)
-type Hms' (opts :: OptT) = '(opts, Hmsip, Hmsop', Hmsfmt, String)
+type HmsR' (opts :: Opt) = MakeR3 (Hms' opts)
+type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', Hmsfmt, String)
 
 
 -- | read in an ipv4 address and validate it
@@ -236,20 +236,20 @@ type Hms' (opts :: OptT) = '(opts, Hmsip, Hmsop', Hmsfmt, String)
 -- >>> newRefined3P (ip4 @OL) "001.257.14.1"
 -- Left "Step 2. Failed Boolean Check(op) | octet 1 out of range 0-255 found 257"
 --
-type Ip4R (opts :: OptT) = MakeR3 (Ip4 opts)
-type Ip4 (opts :: OptT) = '(opts, Ip4ip, Ip4op >> 'True, Ip4fmt, String) -- guards
+type Ip4R (opts :: Opt) = MakeR3 (Ip4 opts)
+type Ip4 (opts :: Opt) = '(opts, Ip4ip, Ip4op >> 'True, Ip4fmt, String) -- guards
 
-ip4 :: OptTC opts => Proxy (Ip4 opts)
+ip4 :: OptC opts => Proxy (Ip4 opts)
 ip4 = mkProxy3'
 
-type Ip4R' (opts :: OptT) = MakeR3 (Ip4' opts)
-type Ip4' (opts :: OptT) = '(opts, Ip4ip, Ip4op', Ip4fmt, String) -- boolean predicates
+type Ip4R' (opts :: Opt) = MakeR3 (Ip4' opts)
+type Ip4' (opts :: Opt) = '(opts, Ip4ip, Ip4op', Ip4fmt, String) -- boolean predicates
 
-ip4' :: OptTC opts => Proxy (Ip4' opts)
+ip4' :: OptC opts => Proxy (Ip4' opts)
 ip4' = mkProxy3'
 
-type Ip6R (opts :: OptT) = MakeR3 (Ip6 opts)
-type Ip6 (opts :: OptT) = '(opts, Ip6ip, Ip6op, Ip6fmt, String) -- guards
+type Ip6R (opts :: Opt) = MakeR3 (Ip6 opts)
+type Ip6 (opts :: Opt) = '(opts, Ip6ip, Ip6op, Ip6fmt, String) -- guards
 
 ip6 :: Proxy (Ip6 opts)
 ip6 = Proxy
@@ -262,8 +262,8 @@ ip6 = Proxy
 -- >>> newRefined3P (isbn10 @OZ) "0-306-40611-9"
 -- Left "Step 2. Failed Boolean Check(op) | mod 0 oops"
 --
-type Isbn10R (opts :: OptT) = MakeR3 (Isbn10 opts)
-type Isbn10 (opts :: OptT) = '(opts, Isbn10ip, Isbn10op, Isbn10fmt, String) -- guards
+type Isbn10R (opts :: Opt) = MakeR3 (Isbn10 opts)
+type Isbn10 (opts :: Opt) = '(opts, Isbn10ip, Isbn10op, Isbn10fmt, String) -- guards
 
 isbn10 :: Proxy (Isbn10 opts)
 isbn10 = Proxy
@@ -276,8 +276,8 @@ isbn10 = Proxy
 -- >>> newRefined3P (isbn13 @OZ) "978-0-306-40615-8"
 -- Left "Step 2. Failed Boolean Check(op) | sum=101 mod 10=1"
 --
-type Isbn13R (opts :: OptT) = MakeR3 (Isbn13 opts)
-type Isbn13 (opts :: OptT) = '(opts, Isbn13ip, Isbn13op, Isbn13fmt, String) -- guards
+type Isbn13R (opts :: Opt) = MakeR3 (Isbn13 opts)
+type Isbn13 (opts :: Opt) = '(opts, Isbn13ip, Isbn13op, Isbn13fmt, String) -- guards
 
 isbn13 :: Proxy (Isbn13 opts)
 isbn13 = Proxy
@@ -296,8 +296,8 @@ isbn13 = Proxy
 -- >>> newRefined3P (basen' @OL @16 @(Id < 400)) "f0fe" -- todo: why different parens vs braces
 -- Left "Step 2. False Boolean Check(op) | {61694 < 400}"
 --
-type BaseN (opts :: OptT) (n :: Nat) = BaseN' opts n 'True
-type BaseN' (opts :: OptT) (n :: Nat) p = '(opts, ReadBase Int n Id, p, ShowBase n Id, String)
+type BaseN (opts :: Opt) (n :: Nat) = BaseN' opts n 'True
+type BaseN' (opts :: Opt) (n :: Nat) p = '(opts, ReadBase Int n Id, p, ShowBase n Id, String)
 
 base16 :: Proxy (BaseN opts 16)
 base16 = basen
@@ -317,10 +317,10 @@ basen = mkProxy3
 basen' :: Proxy (BaseN' opts n p)
 basen' = mkProxy3
 
-daten :: OptTC opts => Proxy (DateN opts)
+daten :: OptC opts => Proxy (DateN opts)
 daten = mkProxy3'
 
-datetimen :: OptTC opts => Proxy (DateTimeN opts)
+datetimen :: OptC opts => Proxy (DateTimeN opts)
 datetimen = mkProxy3'
 
 -- | ensures that two numbers are in a given range (emulates 'Refined.Refined')
@@ -352,10 +352,10 @@ datetimen = mkProxy3'
 between :: Proxy (BetweenN opts m n)
 between = mkProxy3
 
-type BetweenN (opts :: OptT) m n = '(opts, Id, Between m n Id, Id, Int)
-type BetweenR (opts :: OptT) m n = RefinedEmulate opts (Between m n Id) Int
+type BetweenN (opts :: Opt) m n = '(opts, Id, Between m n Id, Id, Int)
+type BetweenR (opts :: Opt) m n = RefinedEmulate opts (Between m n Id) Int
 
-type LuhnR (opts :: OptT) (n :: Nat) = MakeR3 (LuhnT opts n)
+type LuhnR (opts :: Opt) (n :: Nat) = MakeR3 (LuhnT opts n)
 
 -- | Luhn check
 --
@@ -366,7 +366,7 @@ type LuhnR (opts :: OptT) (n :: Nat) = MakeR3 (LuhnT opts n)
 -- Left "Step 2. False Boolean Check(op) | {True && False | (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}"
 --
 -- | uses builtin 'IsLuhn'
-type LuhnT (opts :: OptT) (n :: Nat) =
+type LuhnT (opts :: Opt) (n :: Nat) =
    '(opts
     , Map (ReadP Int Id) (Ones Id)
     , Msg "incorrect number of digits:"
@@ -375,8 +375,8 @@ type LuhnT (opts :: OptT) (n :: Nat) =
     , String)
 
 -- | noop true
-type Ok (opts :: OptT) (t :: Type) = '(opts, Id, 'True, Id, t)
-type OkR (opts :: OptT) (t :: Type) = MakeR3 (Ok opts t)
+type Ok (opts :: Opt) (t :: Type) = '(opts, Id, 'True, Id, t)
+type OkR (opts :: Opt) (t :: Type) = MakeR3 (Ok opts t)
 
 ok :: Proxy (Ok opts t)
 ok = mkProxy3
@@ -399,8 +399,8 @@ oknot = mkProxy3
 -- >>> newRefined3P (Proxy @(BaseIJ' OL 16 2 (ReadBase Int 2 Id < 1000))) "ffe"
 -- Left "Step 2. False Boolean Check(op) | {4094 < 1000}"
 --
-type BaseIJ (opts :: OptT) (i :: Nat) (j :: Nat) = BaseIJ' opts i j 'True
-type BaseIJ' (opts :: OptT) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id >> ShowBase j Id, p, ReadBase Int j Id >> ShowBase i Id, String)
+type BaseIJ (opts :: Opt) (i :: Nat) (j :: Nat) = BaseIJ' opts i j 'True
+type BaseIJ' (opts :: Opt) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id >> ShowBase j Id, p, ReadBase Int j Id >> ShowBase i Id, String)
 
 -- | take any valid Read/Show instance and turn it into a valid 'Refined3'
 --
@@ -436,11 +436,11 @@ type BaseIJ' (opts :: OptT) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id 
 -- >>> newRefined3P (readshow @OZ @Value) "Number 123.4"
 -- Right (Refined3 {r3In = Number 123.4, r3Out = "Number 123.4"})
 --
-type ReadShow (opts :: OptT) (t :: Type) = '(opts, ReadP t Id, 'True, ShowP Id, String)
-type ReadShowR (opts :: OptT) (t :: Type) = MakeR3 (ReadShow opts t)
+type ReadShow (opts :: Opt) (t :: Type) = '(opts, ReadP t Id, 'True, ShowP Id, String)
+type ReadShowR (opts :: Opt) (t :: Type) = MakeR3 (ReadShow opts t)
 
-type ReadShow' (opts :: OptT) (t :: Type) p = '(opts, ReadP t Id, p, ShowP Id, String)
-type ReadShowR' (opts :: OptT) (t :: Type) p = MakeR3 (ReadShow' opts t p)
+type ReadShow' (opts :: Opt) (t :: Type) p = '(opts, ReadP t Id, p, ShowP Id, String)
+type ReadShowR' (opts :: Opt) (t :: Type) p = MakeR3 (ReadShow' opts t p)
 
 readshow :: Proxy (ReadShow opts t)
 readshow = mkProxy3

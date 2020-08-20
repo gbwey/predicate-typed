@@ -190,8 +190,8 @@ allProps =
       (\r -> testRefined3PJ Proxy (r3Out r) === Right r)
   ]
 
-type HexLtR3 (opts :: OptT) = Refined3 opts (ReadBase Int 16 Id) (Id < 500) (ShowBase 16 Id) String
-type IntLtR3 (opts :: OptT) = Refined3 opts (ReadP Int Id) (Id < 10) (ShowP Id) String
+type HexLtR3 (opts :: Opt) = Refined3 opts (ReadBase Int 16 Id) (Id < 500) (ShowBase 16 Id) String
+type IntLtR3 (opts :: Opt) = Refined3 opts (ReadP Int Id) (Id < 10) (ShowP Id) String
 
 type Tst1 = '( OAN, ReadP Int Id, Between 1 7 Id, PrintF "someval val=%03d" Id, String)
 
@@ -294,7 +294,7 @@ testRefined3PJ :: forall opts ip op fmt i proxy
    -> Either String (Refined3 opts ip op fmt i)
 testRefined3PJ _ i =
   let (ret,mr) = eval3 @opts @ip @op @fmt i
-      m3 = prt3Impl (getOptT @opts) ret
+      m3 = prt3Impl (getOpt @opts) ret
   in case mr of
     Just r -> eitherDecode @(Refined3 opts ip op fmt i) $ encode r
     Nothing -> Left $ show m3
@@ -311,7 +311,7 @@ testRefined3P :: forall opts ip op fmt i proxy
    -> Either (String,String) (Refined3 opts ip op fmt i, Refined3 opts ip op fmt i)
 testRefined3P _ i =
   let (ret,mr) = eval3 @opts @ip @op @fmt i
-      o = getOptT @opts
+      o = getOpt @opts
       m3 = prt3Impl o ret
   in case mr of
     Just r ->

@@ -182,9 +182,9 @@ import GHC.Stack
 -- >>> newRefined1P (Proxy @(T4 _)) (2019,10,13)
 -- Right (Refined1 (2019-10-13,41,7))
 --
-newtype Refined1 (opts :: OptT) ip op fmt i = Refined1 (PP ip i)
+newtype Refined1 (opts :: Opt) ip op fmt i = Refined1 (PP ip i)
 
-unRefined1 :: forall (opts :: OptT) ip op fmt i. Refined1 opts ip op fmt i -> PP ip i
+unRefined1 :: forall (opts :: Opt) ip op fmt i. Refined1 opts ip op fmt i -> PP ip i
 unRefined1 (Refined1 a) = a
 
 type role Refined1 nominal nominal nominal nominal nominal
@@ -200,7 +200,7 @@ unsafeRefined1' :: forall opts ip op fmt i
                 -> Refined1 opts ip op fmt i
 unsafeRefined1' i =
   let (ret,mr) = eval1 @opts @ip @op @fmt i
-  in fromMaybe (error $ show (prt1Impl (getOptT @opts) ret)) mr
+  in fromMaybe (error $ show (prt1Impl (getOpt @opts) ret)) mr
 
 -- | directly load values into 'Refined1' without any checking
 unsafeRefined1 :: forall opts ip op fmt i . PP ip i -> Refined1 opts ip op fmt i
@@ -208,7 +208,7 @@ unsafeRefined1 = Refined1
 
 -- | Provides the constraints on Refined1
 type Refined1C opts ip op fmt i =
-       ( OptTC opts
+       ( OptC opts
        , P ip i
        , P op (PP ip i)
        , PP op (PP ip i) ~ Bool   -- the internal value needs to pass the predicate check
@@ -239,7 +239,7 @@ deriving instance ( TH.Lift (PP ip i)
 instance (Refined1C opts ip op fmt String, Show (PP ip String)) => IsString (Refined1 opts ip op fmt String) where
   fromString s =
     let (ret,mr) = eval1 @opts @ip @op @fmt s
-    in fromMaybe (error $ "Refined1(fromString):" ++ show (prt1Impl (getOptT @opts) ret)) mr
+    in fromMaybe (error $ "Refined1(fromString):" ++ show (prt1Impl (getOpt @opts) ret)) mr
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined1'
@@ -295,13 +295,13 @@ instance ( Eq i
 -- >>> A.encode (unsafeRefined1 @OZ @Id @'True @Id 123)
 -- "123"
 --
-instance ( OptTC opts
+instance ( OptC opts
          , Show (PP fmt (PP ip i))
          , ToJSON (PP fmt (PP ip i))
          , P fmt (PP ip i)
          ) => ToJSON (Refined1 opts ip op fmt i) where
   toJSON (Refined1 x) =
-      let ss = runIdentity $ eval (Proxy @fmt) (getOptT @opts) x
+      let ss = runIdentity $ eval (Proxy @fmt) (getOpt @opts) x
       in case getValAndPE ss of
            (Right b,_) -> toJSON b
            (Left e,t3) -> error $ "oops tojson failed " ++ show e ++ " t3=" ++ show t3
@@ -348,7 +348,7 @@ instance (Show ( PP fmt (PP ip i))
                   i <- parseJSON @i z
                   let (ret,mr) = eval1 @opts @ip @op @fmt i
                   case mr of
-                    Nothing -> fail $ "Refined1:" ++ show (prt1Impl (getOptT @opts) ret)
+                    Nothing -> fail $ "Refined1:" ++ show (prt1Impl (getOpt @opts) ret)
                     Just r -> return r
 -- | 'Arbitrary' instance for 'Refined1'
 --
@@ -387,7 +387,7 @@ genRefined1P ::
   -> Gen (PP ip i)
   -> Gen (Refined1 opts ip op fmt i)
 genRefined1P _ g =
-  let o = getOptT @opts
+  let o = getOpt @opts
       f !cnt = do
         mppi <- suchThatMaybe g (\a -> getValLRFromTT (runIdentity (eval @_ (Proxy @op) o a)) == Right True)
         case mppi of
@@ -444,10 +444,10 @@ instance ( Show (PP fmt (PP ip i))
           i <- B.get @i
           let (ret,mr) = eval1 @opts @ip @op @fmt i
           case mr of
-            Nothing -> fail $ "Refined1:" ++ show (prt1Impl (getOptT @opts) ret)
+            Nothing -> fail $ "Refined1:" ++ show (prt1Impl (getOpt @opts) ret)
             Just r -> return r
   put (Refined1 x) =
-      let ss = runIdentity $ eval (Proxy @fmt) (getOptT @opts) x
+      let ss = runIdentity $ eval (Proxy @fmt) (getOpt @opts) x
       in case getValAndPE ss of
            (Right b,_) -> B.put @i b
            (Left e,t3) -> error $ "oops tojson failed " ++ show e ++ " t3=" ++ show t3
@@ -644,7 +644,7 @@ newRefined1TPImpl :: forall n m opts ip op fmt i proxy
    -> RefinedT m (Refined1 opts ip op fmt i)
 newRefined1TPImpl f _ i = do
   (ret,mr) <- f $ eval1M i
-  let m1 = prt1Impl (getOptT @opts) ret
+  let m1 = prt1Impl (getOpt @opts) ret
   tell [m1Long m1]
   case mr of
     Nothing -> throwError $ m1Desc m1 <> " | " <> m1Short m1
@@ -662,7 +662,7 @@ newRefined1TPSkipIPImpl :: forall n m opts ip op fmt i proxy
    -> RefinedT m (Refined1 opts ip op fmt i)
 newRefined1TPSkipIPImpl f _ a = do
   (ret,mr) <- f $ eval1MSkip a
-  let m1 = prt1Impl (getOptT @opts) ret
+  let m1 = prt1Impl (getOpt @opts) ret
   tell [m1Long m1]
   case mr of
     Nothing -> throwError $ m1Desc m1 <> " | " <> m1Short m1
@@ -711,7 +711,7 @@ rapply1P :: forall opts ip op fmt i proxy m .
   -> RefinedT m (Refined1 opts ip op fmt i)
   -> RefinedT m (Refined1 opts ip op fmt i)
 rapply1P p f ma mb = do
-  let opts = getOptT @opts
+  let opts = getOpt @opts
   tell [setOtherEffects opts "=== a ==="]
   Refined1 x <- ma
   tell [setOtherEffects opts "=== b ==="]
@@ -769,7 +769,7 @@ prtEval1P :: forall opts ip op fmt i proxy
   -> Either Msg1 (Refined1 opts ip op fmt i)
 prtEval1P _ i =
   let (ret,mr) = eval1 i
-  in maybe (Left $ prt1Impl (getOptT @opts) ret) Right mr
+  in maybe (Left $ prt1Impl (getOpt @opts) ret) Right mr
 
 -- | create a Refined1 value using a 5-tuple proxy (see 'mkProxy1')
 --
@@ -791,7 +791,7 @@ eval1M :: forall opts ip op fmt i m . (MonadEval m, Refined1C opts ip op fmt i)
   => i
   -> m (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined1 opts ip op fmt i))
 eval1M i = do
-  let o = getOptT @opts
+  let o = getOpt @opts
   ll <- eval (Proxy @ip) o i
   case getValAndPE ll of
    (Right a, t1) -> do
@@ -811,7 +811,7 @@ eval1MSkip :: forall opts ip op fmt i m . (MonadEval m, Refined1C opts ip op fmt
    => PP ip i
    -> m (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined1 opts ip op fmt i))
 eval1MSkip a = do
-   let o = getOptT @opts
+   let o = getOpt @opts
    rr <- evalBool (Proxy @op) o a
    case getValAndPE rr of
     (Right True,t2) -> do
@@ -822,9 +822,9 @@ eval1MSkip a = do
     (Right False,t2) -> pure (RTFalse a mkNodeSkipP t2, Nothing)
     (Left e,t2) -> pure (RTF a mkNodeSkipP e t2, Nothing)
 
-prt1IO :: forall opts a b r . (OptTC opts, Show a, Show b) => (RResults1 a b, Maybe r) -> IO (Either String r)
+prt1IO :: forall opts a b r . (OptC opts, Show a, Show b) => (RResults1 a b, Maybe r) -> IO (Either String r)
 prt1IO (ret,mr) = do
-  let o = getOptT @opts
+  let o = getOpt @opts
   let m1 = prt1Impl o ret
   unless (hasNoTree o) $ putStrLn $ m1Long m1
   return $ maybe (Left (m1Desc m1 <> " | " <> m1Short m1)) Right mr
@@ -902,7 +902,7 @@ eval1PX :: forall opts ip op fmt i proxy . Refined1C opts ip op fmt i
   -> i
   -> (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined opts op (PP ip i), PP fmt (PP ip i)))
 eval1PX _ i = runIdentity $ do
-  let o = getOptT @opts
+  let o = getOpt @opts
   ll <- eval (Proxy @ip) o i
   case getValAndPE ll of
     (Right a,t1) -> do
@@ -924,12 +924,12 @@ eval1X :: forall opts ip op fmt i . Refined1C opts ip op fmt i
 eval1X = eval1PX (Proxy @'(opts,ip,op,fmt,i))
 
 -- | emulates 'Refined' using 'Refined1' by setting the input conversion and output formatting as noops
-type RefinedEmulate (opts :: OptT) p a = Refined1 opts Id p Id a
+type RefinedEmulate (opts :: Opt) p a = Refined1 opts Id p Id a
 
 -- | replace the opts type
-type family ReplaceOptT1 (o :: OptT) t where
+type family ReplaceOptT1 (o :: Opt) t where
   ReplaceOptT1 o (Refined1 _ ip op fmt i) = Refined1 o ip op fmt i
 
 -- | change the opts type
-type family AppendOptT1 (o :: OptT) t where
+type family AppendOptT1 (o :: Opt) t where
   AppendOptT1 o (Refined1 o' ip op fmt i) = Refined1 (o' ':# o) ip op fmt i

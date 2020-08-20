@@ -93,7 +93,7 @@ refinedTH i =
       ((bp,(top,e)),mr) = runIdentity $ newRefinedM @opts @p i
   in case mr of
        Nothing ->
-         let msg1 = if hasNoTree (getOptT @opts) then "" else "\n" ++ e ++ "\n"
+         let msg1 = if hasNoTree (getOpt @opts) then "" else "\n" ++ e ++ "\n"
          in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top
        Just r -> TH.TExp <$> TH.lift r
 
@@ -106,7 +106,7 @@ refinedTHIO i = do
   ((bp,(top,e)),mr) <- TH.runIO (newRefinedM @opts @p i)
   case mr of
        Nothing ->
-         let msg1 = if hasNoTree (getOptT @opts) then "" else "\n" ++ e ++ "\n"
+         let msg1 = if hasNoTree (getOpt @opts) then "" else "\n" ++ e ++ "\n"
          in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top
        Just r -> TH.TExp <$> TH.lift r
 
@@ -158,7 +158,7 @@ refined1TH :: forall opts ip op fmt i
   -> TH.Q (TH.TExp (Refined1 opts ip op fmt i))
 refined1TH i =
   let msg0 = "refined1TH"
-      o = getOptT @opts
+      o = getOpt @opts
       (ret,mr) = eval1 @opts @ip @op @fmt i
   in case mr of
     Nothing ->
@@ -213,7 +213,7 @@ refined2TH :: forall opts ip op i
   -> TH.Q (TH.TExp (Refined2 opts ip op i))
 refined2TH i =
   let msg0 = "refined2TH"
-      o = getOptT @opts
+      o = getOpt @opts
       (ret,mr) = eval2 @opts @ip @op i
   in case mr of
     Nothing ->
@@ -234,7 +234,7 @@ refined2THIO i = do
   x <- TH.runIO (eval2M @opts @ip @op i)
   case x of
     (_, Just a) -> TH.TExp <$> TH.lift a
-    (ret, Nothing) -> fail $ show $ prt2Impl (getOptT @opts) ret
+    (ret, Nothing) -> fail $ show $ prt2Impl (getOpt @opts) ret
 
 -- | creates a 'Refined3.Refined3' refinement type
 --
@@ -289,7 +289,7 @@ refined3TH i =
   in case mr of
     Nothing ->
       let m3 = prt3Impl o ret
-          o = getOptT @opts
+          o = getOpt @opts
           msg1 = if hasNoTree o then "" else m3Long m3 ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m3Desc m3 <> " | " <> m3Short m3)
     Just r -> TH.TExp <$> TH.lift r
@@ -307,5 +307,5 @@ refined3THIO i = do
   x <- TH.runIO (eval3M @opts @ip @op @fmt i)
   case x of
     (_, Just a) -> TH.TExp <$> TH.lift a
-    (ret, Nothing) -> fail $ show $ prt3Impl (getOptT @opts) ret
+    (ret, Nothing) -> fail $ show $ prt3Impl (getOpt @opts) ret
 

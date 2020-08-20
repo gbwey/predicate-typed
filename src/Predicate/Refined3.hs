@@ -181,7 +181,7 @@ import GHC.Stack
 -- >>> newRefined3P (Proxy @(T4 _)) (2019,10,13)
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
-data Refined3 (opts :: OptT) ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: !(PP fmt (PP ip i)) }
+data Refined3 (opts :: Opt) ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: !(PP fmt (PP ip i)) }
 
 type role Refined3 nominal nominal nominal nominal nominal
 
@@ -196,7 +196,7 @@ unsafeRefined3' :: forall opts ip op fmt i
 unsafeRefined3' i =
   let (ret,mr) = eval3 @opts @ip @op @fmt i
   in case mr of
-       Nothing -> error $ show (prt3Impl (getOptT @opts) ret)
+       Nothing -> error $ show (prt3Impl (getOpt @opts) ret)
        Just r -> r
 
 -- | directly load values into 'Refined3' without any checking
@@ -210,7 +210,7 @@ unsafeRefined3 = Refined3
 
 -- | Provides the constraints on Refined3
 type Refined3C opts ip op fmt i =
-       ( OptTC opts
+       ( OptC opts
        , P ip i
        , P op (PP ip i)
        , PP op (PP ip i) ~ Bool   -- the internal value needs to pass the predicate check
@@ -243,7 +243,7 @@ instance (Refined3C opts ip op fmt String, Show (PP ip String))
   fromString s =
     let (ret,mr) = eval3 @opts @ip @op @fmt s
     in case mr of
-         Nothing -> error $ "Refined3(fromString):" ++ show (prt3Impl (getOptT @opts) ret)
+         Nothing -> error $ "Refined3(fromString):" ++ show (prt3Impl (getOpt @opts) ret)
          Just r -> r
 
 -- read instance from -ddump-deriv
@@ -345,7 +345,7 @@ instance (Show (PP fmt (PP ip i))
                   i <- parseJSON @i z
                   let (ret,mr) = eval3 @opts @ip @op @fmt i
                   case mr of
-                    Nothing -> fail $ "Refined3:" ++ show (prt3Impl (getOptT @opts) ret)
+                    Nothing -> fail $ "Refined3:" ++ show (prt3Impl (getOpt @opts) ret)
                     Just r -> return r
 
 -- | 'Arbitrary' instance for 'Refined3'
@@ -381,7 +381,7 @@ genRefined3P ::
   -> Gen (PP ip i)
   -> Gen (Refined3 opts ip op fmt i)
 genRefined3P _ g =
-  let o = getOptT @opts
+  let o = getOpt @opts
       f !cnt = do
         mppi <- suchThatMaybe g (\a -> getValLRFromTT (runIdentity (eval @_ (Proxy @op) o a)) == Right True)
         case mppi of
@@ -440,7 +440,7 @@ instance ( Show (PP fmt (PP ip i))
           i <- B.get @i
           let (ret,mr) = eval3 @opts @ip @op @fmt i
           case mr of
-            Nothing -> fail $ "Refined3:" ++ show (prt3Impl (getOptT @opts) ret)
+            Nothing -> fail $ "Refined3:" ++ show (prt3Impl (getOpt @opts) ret)
             Just r -> return r
   put (Refined3 _ r) = B.put @i r
 
@@ -665,7 +665,7 @@ newRefined3TPImpl :: forall n m opts ip op fmt i proxy
    -> RefinedT m (Refined3 opts ip op fmt i)
 newRefined3TPImpl f _ i = do
   (ret,mr) <- f $ eval3M i
-  let m3 = prt3Impl (getOptT @opts) ret
+  let m3 = prt3Impl (getOpt @opts) ret
   tell [m3Long m3]
   case mr of
     Nothing -> throwError $ m3Desc m3 <> " | " <> m3Short m3
@@ -684,7 +684,7 @@ newRefined3TPSkipIPImpl :: forall n m opts ip op fmt i proxy
    -> RefinedT m (Refined3 opts ip op fmt i)
 newRefined3TPSkipIPImpl f _ a = do
   (ret,mr) <- f $ eval3MSkip a
-  let m3 = prt3Impl (getOptT @opts) ret
+  let m3 = prt3Impl (getOpt @opts) ret
   tell [m3Long m3]
   case mr of
     Nothing -> throwError $ m3Desc m3 <> " | " <> m3Short m3
@@ -734,7 +734,7 @@ rapply3P :: forall opts ip op fmt i proxy m .
   -> RefinedT m (Refined3 opts ip op fmt i)
   -> RefinedT m (Refined3 opts ip op fmt i)
 rapply3P p f ma mb = do
-  let opts = getOptT @opts
+  let opts = getOpt @opts
   tell [setOtherEffects opts "=== a ==="]
   Refined3 x _ <- ma
   tell [setOtherEffects opts "=== b ==="]
@@ -792,7 +792,7 @@ prtEval3P :: forall opts ip op fmt i proxy
   -> Either Msg3 (Refined3 opts ip op fmt i)
 prtEval3P _ i =
   let (ret,mr) = eval3 i
-  in maybe (Left $ prt3Impl (getOptT @opts) ret) Right mr
+  in maybe (Left $ prt3Impl (getOpt @opts) ret) Right mr
 
 -- | same as 'eval3P' but can pass the parameters individually using type application
 eval3 :: forall opts ip op fmt i
@@ -821,7 +821,7 @@ eval3M :: forall opts ip op fmt i m
   => i
   -> m (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 opts ip op fmt i))
 eval3M i = do
-  let o = getOptT @opts
+  let o = getOpt @opts
   ll <- eval (Proxy @ip) o i
   case getValAndPE ll of
    (Right a, t1) -> do
@@ -844,7 +844,7 @@ eval3MSkip :: forall opts ip op fmt i m
    => PP ip i
    -> m (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined3 opts ip op fmt i))
 eval3MSkip a = do
-   let o = getOptT @opts
+   let o = getOpt @opts
    rr <- evalBool (Proxy @op) o a
    case getValAndPE rr of
     (Right True,t2) -> do
@@ -856,12 +856,12 @@ eval3MSkip a = do
     (Left e,t2) -> pure (RTF a mkNodeSkipP e t2, Nothing)
 
 prt3IO :: forall opts a b r .
-     (OptTC opts, Show a, Show b)
+     (OptC opts, Show a, Show b)
   => (RResults3 a b, Maybe r)
   -> IO (Either String r)
 prt3IO (ret,mr) = do
-  let m3 = prt3Impl (getOptT @opts) ret
-  unless (hasNoTree (getOptT @opts)) $ putStrLn $ m3Long m3
+  let m3 = prt3Impl (getOpt @opts) ret
+  unless (hasNoTree (getOpt @opts)) $ putStrLn $ m3Long m3
   return $ maybe (Left (m3Desc m3 <> " | " <> m3Short m3)) Right mr
 
 data Msg3 = Msg3 { m3Desc :: !String
@@ -938,7 +938,7 @@ eval3PX :: forall opts ip op fmt i proxy
   -> i
   -> (RResults3 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined opts op (PP ip i), PP fmt (PP ip i)))
 eval3PX _ i = runIdentity $ do
-  let o = getOptT @opts
+  let o = getOpt @opts
   ll <- eval (Proxy @ip) o i
   case getValAndPE ll of
     (Right a,t1) -> do
@@ -962,13 +962,13 @@ eval3X :: forall opts ip op fmt i
 eval3X = eval3PX (Proxy @'(opts,ip,op,fmt,i))
 
 -- | emulates 'Refined' using 'Refined3' by setting the input conversion and output formatting as noops
-type RefinedEmulate (opts :: OptT) p a = Refined3 opts Id p Id a
+type RefinedEmulate (opts :: Opt) p a = Refined3 opts Id p Id a
 
 -- | replace the opts type
-type family ReplaceOptT3 (o :: OptT) t where
+type family ReplaceOptT3 (o :: Opt) t where
   ReplaceOptT3 o (Refined3 _ ip op fmt i) = Refined3 o ip op fmt i
 
 -- | change the opts type
-type family AppendOptT3 (o :: OptT) t where
+type family AppendOptT3 (o :: Opt) t where
   AppendOptT3 o (Refined3 o' ip op fmt i) = Refined3 (o' ':# o) ip op fmt i
 

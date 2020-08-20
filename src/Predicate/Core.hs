@@ -154,7 +154,7 @@ evalBool :: ( MonadEval m
 evalBool p opts a = fixBoolT <$> eval p opts a
 
 evalQuick :: forall p i . P p i => i -> Either String (PP p i)
-evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) (getOptT @OL) i))
+evalQuick i = getValLRFromTT (runIdentity (eval (Proxy @p) (getOpt @OL) i))
 
 -- | identity function without show instance of 'Id'
 --
@@ -935,30 +935,30 @@ puv = run @OUV @p
 -- field1 >>> Error 'Left found Right
 -- FailT "'Left found Right"
 --
--- >>> run @(OptTT '[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"]) @('FailT '[]) ()
+-- >>> run @(OptT '[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"]) @('FailT '[]) ()
 -- test | field2 >>> Error 'FailT _ (BoolT)
 -- FailT "'FailT _"
 --
 run :: forall opts p a
-        . ( OptTC opts
+        . ( OptC opts
           , Show (PP p a)
           , P p a)
         => a
         -> IO (BoolT (PP p a))
 run a = do
-  let opts = getOptT @opts
+  let opts = getOpt @opts
   pp <- eval (Proxy @p) opts a
   let r = pp ^. tBool
   putStr $ prtTree opts pp
   return r
 
 runZ :: forall opts p a
-        . ( OptTC opts
+        . ( OptC opts
           , P p a)
         => a
         -> IO (BoolT (PP p a))
 runZ a = do
-  let opts = getOptT @opts
+  let opts = getOpt @opts
   pp <- eval (Proxy @p) opts a
   return $ pp ^. tBool
 
@@ -973,12 +973,12 @@ runZ a = do
 -- FailT "'FailT _"
 --
 runs :: forall optss p a
-        . ( OptTC (OptTT optss)
+        . ( OptC (OptT optss)
           , Show (PP p a)
           , P p a)
         => a
         -> IO (BoolT (PP p a))
-runs = run @(OptTT optss) @p
+runs = run @(OptT optss) @p
 
 -- | convenience method to evaluate two expressions using the same input and return the results
 runPQ :: ( P p a
