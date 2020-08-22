@@ -197,7 +197,7 @@ module Predicate.Util (
   , unlessNull
   , badLength
   , showIndex
-  , mapBoolT
+  , mapB
 
     ) where
 import qualified GHC.TypeNats as GN
@@ -348,7 +348,7 @@ mkNodeB :: POpts
         -> String
         -> [Holder]
         -> TT Bool
-mkNodeB opts b = mkNode opts (bool FalseT TrueT b)
+mkNodeB opts = mkNode opts . bool FalseT TrueT
 
 mkNodeSkipP :: Tree PE
 mkNodeSkipP = Node (PE TrueP "skipped PP ip i = Id") []
@@ -581,10 +581,7 @@ type Other2 = 'OOther 'True 'Default 'Default
 
 -- | fix PresentT Bool to TrueT or FalseT
 fixBoolT :: TT Bool -> TT Bool
-fixBoolT t =
-  case t ^? tBool . _PresentT of
-    Nothing -> t
-    Just b -> t & tBool .~ _boolT # b
+fixBoolT = tBool %~ mapB id
 
 show01 :: (Show a1, Show a2)
   => POpts
@@ -1172,8 +1169,7 @@ fixit ((i, _), t) = prefixMsg ("i=" <> show i <> ": ") t
 
 -- | prefix text in front of tString
 prefixMsg :: String -> TT a -> TT a
-prefixMsg msg t =
-   t & tString %~ (msg <>)
+prefixMsg msg = tString %~ (msg <>)
 
 -- | show the type as a string
 showT :: forall (t :: Type) . Typeable t => String
@@ -1684,23 +1680,50 @@ pureTryTestPred p a = do
 isPrime :: Int -> Bool
 isPrime n = n == 2 || n > 2 && all ((> 0) . mod n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
 
+-- | prime factors
+--
+-- >>> primeFactors 100
+-- [2,2,5,5]
+--
+-- >>> primeFactors 123
+-- [3,41]
+--
+primeFactors :: Integer -> [Integer]
+primeFactors n =
+  case factors of
+    [] -> [n]
+    _  -> factors ++ primeFactors (n `div` (head factors))
+  where factors = take 1 $ filter (\x -> (n `mod` x) == 0) [2 .. n-1]
+
+{- too slow
 primeFactors :: Integer -> [Integer]
 primeFactors i'
   | i' <=0 = error $ "primeFactors: invalid number for " ++ show i'
   | i' == 1 = [1]
   | otherwise = go primes i'
-  where go [] _ = error "oops"
-        go (p:ps) i | i <=0 = error "oops"
+  where go [] _ = error "primeFactors:programmer error1"
+        go (p:ps) i | i <=0 = error "primeFactors:programmer error2"
                     | i == 1 = []
                     | i `mod` p == 0 = p:go (p:ps) (i `div` p)
                     | otherwise = go ps i
-
+-- also too slow
 primes :: [Integer]
 primes = sieve [2..]
-  where sieve [] = error "oops"
+  where sieve [] = error "primes:programmer error"
         sieve (p:xs) =
           p : sieve [x | x <- xs, x `mod` p /= 0]
-
+-}
+-- | primes stream
+--
+-- >>> take 10 primes
+--[2,3,5,7,11,13,17,19,23,29]
+--
+primes :: [Integer]
+primes = 2 : 3 : 5 : primes'
+  where
+    isPrime' [] _ = error "primes:programmer error"
+    isPrime' (p:ps) n = p*p > n || n `rem` p /= 0 && isPrime' ps n
+    primes' = 7 : filter (isPrime' primes') (scanl (+) 11 $ cycle [2,4,2,4,6,2,6,4])
 
 -- | represents any kind
 type family AnyT :: k where {}
@@ -1808,25 +1831,43 @@ showIndex i = show (i+0)
 
 -- | map over 'BoolT'
 --
--- >>> mapBoolT show (PresentT 123)
+-- >>> mapB show (PresentT 123)
 -- PresentT "123"
 --
--- >>> mapBoolT show TrueT
+-- >>> mapB show TrueT
 -- PresentT "True"
 --
--- >>> mapBoolT not TrueT
--- PresentT False
+-- >>> mapB not TrueT
+-- FalseT
 --
--- >>> mapBoolT head (PresentT [1..5])
+-- >>> mapB head (PresentT [1..5])
 -- PresentT 1
 --
--- >>> mapBoolT head (FailT "some error")
+-- >>> mapB head (FailT "some error")
 -- FailT "some error"
 --
-mapBoolT :: (a -> b) -> BoolT a -> BoolT b
-mapBoolT f =
+-- >>> mapB id (PresentT False)
+-- FalseT
+--
+-- >>> mapB succ (PresentT False)
+-- TrueT
+--
+-- >>> mapB head (PresentT [False,True,False])
+-- FalseT
+--
+-- >>> mapB id (PresentT True)
+-- TrueT
+--
+-- >>> mapB id FalseT
+-- FalseT
+--
+mapB :: forall a b . Typeable b => (a -> b) -> BoolT a -> BoolT b
+mapB f =
   \case
-    PresentT a -> PresentT (f a)
     FailT msg -> FailT msg
-    TrueT -> PresentT (f True)
-    FalseT -> PresentT (f False)
+    PresentT a -> g a
+    TrueT -> g True
+    FalseT -> g False
+  where g a = case eqT @Bool @b of
+                Nothing -> PresentT (f a)
+                Just Refl -> bool FalseT TrueT (f a)

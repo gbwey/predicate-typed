@@ -34,7 +34,6 @@ import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree
 import Data.Tree.Lens
---import Data.Maybe
 import Control.Lens
 
 suite :: TestTree
