@@ -61,7 +61,6 @@ module Predicate.Util (
   , splitAndAlign
 
  -- ** display options
-  , POptsL
   , POpts
   , Debug(..)
   , Disp(..)
@@ -176,6 +175,11 @@ module Predicate.Util (
   , T5_4
   , T5_5
 
+ -- primes
+  , isPrime
+  , primes
+  , primeFactors
+
  -- ** miscellaneous
   , Holder
   , hh
@@ -190,10 +194,10 @@ module Predicate.Util (
   , chkSize
   , pureTryTest
   , pureTryTestPred
-  , isPrime
   , unlessNull
   , badLength
   , showIndex
+  , mapBoolT
 
     ) where
 import qualified GHC.TypeNats as GN
@@ -459,30 +463,30 @@ reifyOpts h =
         (fromMaybe (oNoColor defOpts) (getLast (oNoColor h)))
 
 -- | set maximum display width of expressions
-setWidth :: Int -> POptsL
+setWidth :: Int -> HOpts Last
 setWidth i = mempty { oWidth = pure i }
 
 -- | set title message for the display tree
-setMessage :: String -> POptsL
+setMessage :: String -> HOpts Last
 setMessage s = mempty { oMsg = pure s }
 
 -- | set maximum recursion eg when running regex
-setRecursion :: Int -> POptsL
+setRecursion :: Int -> HOpts Last
 setRecursion i = mempty { oRecursion = pure i }
 
 -- | set color of title message
 setOther :: Bool
          -> Color
          -> Color
-         -> POptsL
+         -> HOpts Last
 setOther b c1 c2 = mempty { oOther = pure $ coerce (b, c1, c2) }
 
 -- | turn on/off colors
-setNoColor :: Bool -> POptsL
+setNoColor :: Bool -> HOpts Last
 setNoColor b = mempty { oNoColor = pure b }
 
 -- | display type eg 'Unicode' or 'Ansi'
-setDisp :: Disp -> POptsL
+setDisp :: Disp -> HOpts Last
 setDisp d = mempty { oDisp = pure d }
 
 -- | create color palette for the expression tree
@@ -495,7 +499,7 @@ setCreateColor :: String
    -> Color
    -> Color
    -> Color
-   -> POptsL
+   -> HOpts Last
 setCreateColor s c1 c2 c3 c4 c5 c6 c7 c8 =
   let pc = \case
        FailP {} -> color c1 . bgColor c2
@@ -505,13 +509,11 @@ setCreateColor s c1 c2 c3 c4 c5 c6 c7 c8 =
   in mempty { oColor = pure (s,PColor pc) }
 
 -- | set debug mode
-setDebug :: Debug -> POptsL
+setDebug :: Debug -> HOpts Last
 setDebug d =
   mempty { oDebug = pure d }
 
 -- | monoid opts
-type POptsL = HOpts Last
-
 instance Monoid (HOpts Last) where
   mempty = HOpts mempty mempty mempty mempty mempty mempty mempty mempty
 
@@ -1487,7 +1489,7 @@ infixr 6 :#
 
 -- | extract options from the typelevel
 class OptC (k :: Opt) where
-   getOptC :: POptsL
+   getOptC :: HOpts Last
 instance KnownNat n => OptC ('OWidth n) where
    getOptC = setWidth (nat @n)
 instance KnownSymbol s => OptC ('OMsg s) where
@@ -1680,7 +1682,25 @@ pureTryTestPred p a = do
 -- False
 --
 isPrime :: Int -> Bool
-isPrime n = n==2 || n>2 && all ((> 0).rem n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
+isPrime n = n == 2 || n > 2 && all ((> 0) . mod n) (2:[3,5 .. floor . sqrt @Double . fromIntegral $ n+1])
+
+primeFactors :: Integer -> [Integer]
+primeFactors i'
+  | i' <=0 = error $ "primeFactors: invalid number for " ++ show i'
+  | i' == 1 = [1]
+  | otherwise = go primes i'
+  where go [] _ = error "oops"
+        go (p:ps) i | i <=0 = error "oops"
+                    | i == 1 = []
+                    | i `mod` p == 0 = p:go (p:ps) (i `div` p)
+                    | otherwise = go ps i
+
+primes :: [Integer]
+primes = sieve [2..]
+  where sieve [] = error "oops"
+        sieve (p:xs) =
+          p : sieve [x | x <- xs, x `mod` p /= 0]
+
 
 -- | represents any kind
 type family AnyT :: k where {}
@@ -1785,3 +1805,28 @@ prtTree opts pp =
 
 showIndex :: (Show i, Num i) => i -> String
 showIndex i = show (i+0)
+
+-- | map over 'BoolT'
+--
+-- >>> mapBoolT show (PresentT 123)
+-- PresentT "123"
+--
+-- >>> mapBoolT show TrueT
+-- PresentT "True"
+--
+-- >>> mapBoolT not TrueT
+-- PresentT False
+--
+-- >>> mapBoolT head (PresentT [1..5])
+-- PresentT 1
+--
+-- >>> mapBoolT head (FailT "some error")
+-- FailT "some error"
+--
+mapBoolT :: (a -> b) -> BoolT a -> BoolT b
+mapBoolT f =
+  \case
+    PresentT a -> PresentT (f a)
+    FailT msg -> FailT msg
+    TrueT -> PresentT (f True)
+    FalseT -> PresentT (f False)

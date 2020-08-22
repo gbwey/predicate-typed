@@ -1221,9 +1221,9 @@ instance P (RoundUpT n p) x
 -}
 {- need to explicitly set kind signature for first proxy p
 C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:1133:10-45: error:
-    • Could not deduce (P Apply1X
+    * Could not deduce (P Apply1X
                           ((Proxy (MsgI "RoundUpY "), Proxy (RoundUpT n p)), x))
-        arising from a use of ‘eval’
+        arising from a use of `eval`
       from the context: P (RoundUpT n p) x
         bound by the instance declaration
         at C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:(1124,10)-(1125,27)
@@ -1234,7 +1234,7 @@ C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:1133:10-45: error:
                            proxy (RoundUpY n p) -> POpts -> x -> m (TT (PP (RoundUpY n
 p) x))
         at C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:1127:3-6
-      The type variable ‘k0’ is ambiguous
+      The type variable `k0` is ambiguous
       Relevant bindings include
         q1 :: Proxy (Hide (RoundUpT n p))
           (bound at C:\\work\predicate-typed\src\Predicate\Data\Numeric.hs:1131:9)
@@ -1248,7 +1248,7 @@ p) x))
       These potential instance exist:
         one instance involving out-of-scope types
         (use -fprint-potential-instances to see them all)
-    • In a stmt of a 'do' block:
+    * In a stmt of a 'do' block:
         z <- eval (Proxy @Apply1X) opts ((p, q), x)
       In the expression:
         do let z = Proxy @Apply1X
@@ -1256,5 +1256,5 @@ p) x))
            let q = Proxy @(RoundUpT n p)
            let q1 = Proxy @(Hide (RoundUpT n p))
            ....
-      In an equation for ‘eval’:
+      In an equation for `eval`:
 -}

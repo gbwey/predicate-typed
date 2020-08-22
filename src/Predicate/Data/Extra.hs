@@ -4,6 +4,7 @@
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -61,6 +62,8 @@ module Predicate.Data.Extra (
 
   , IsPrime
   , PrimeNext
+  , PrimeFactors
+  , Primes
   , IsLuhn
 
   , Catch
@@ -809,15 +812,70 @@ instance (PP p x ~ a
         , Show a
         , Integral a
         ) => P (PrimeNext p) x where
-  type PP (PrimeNext p) x = Int
+  type PP (PrimeNext p) x = Integer
   eval _ opts x = do
     let msg0 = "PrimeNext"
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let ret = head $ dropWhile (not . isPrime) [max 0 (fromIntegral p + 1) ..]
+        --let ret = head $ dropWhile (not . isPrime) [max 0 (fromIntegral p + 1) ..]
+        let ret = head $ dropWhile (<= fromIntegral p) primes
         in mkNode opts (PresentT ret) (msg0 <> showVerbose opts " | " p) [hh pp]
+
+-- | get list of \'n\' primes
+--
+-- >>> pz @(Primes Id) 5
+-- PresentT [2,3,5,7,11]
+--
+data Primes n
+
+instance (Integral (PP n x)
+        , P n x
+        ) => P (Primes n) x where
+  type PP (Primes n) x = [Integer]
+  eval _ opts x = do
+    let msg0 = "Primes"
+    nn <- eval (Proxy @n) opts x
+    pure $ case getValueLR opts msg0 nn [] of
+      Left e -> e
+      Right (fromIntegral -> n) ->
+        let ret = take n primes
+        in mkNode opts (PresentT ret) (msg0 <> showVerbose opts " | " n) [hh nn]
+
+-- | prime factorisation of positive numbers
+--
+-- >>> pz @(PrimeFactors Id) 17
+-- PresentT [17]
+--
+-- >>> pz @(PrimeFactors Id) 1
+-- PresentT [1]
+--
+-- >>> pz @(PrimeFactors Id) 30
+-- PresentT [2,3,5]
+--
+-- >>> pz @(PrimeFactors Id) 64
+-- PresentT [2,2,2,2,2,2]
+--
+-- >>> pz @(PrimeFactors Id) (-30)
+-- FailT "PrimeFactors number<=0"
+--
+data PrimeFactors n
+
+instance (Integral (PP n x)
+        , P n x
+        ) => P (PrimeFactors n) x where
+  type PP (PrimeFactors n) x = [Integer]
+  eval _ opts x = do
+    let msg0 = "PrimeFactors"
+    nn <- eval (Proxy @n) opts x
+    pure $ case getValueLR opts msg0 nn [] of
+      Left e -> e
+      Right (fromIntegral -> n :: Integer)
+            | n <= 0 -> mkNode opts (FailT (msg0 <> " number<=0")) "" [hh nn]
+            | otherwise ->
+                let ret = primeFactors (fromIntegral n)
+                in mkNode opts (PresentT ret) (msg0 <> showVerbose opts " | " n) [hh nn]
 
 -- | IsLuhn predicate check on last digit
 --
