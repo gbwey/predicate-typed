@@ -868,7 +868,7 @@ instance Show a => P 'Proxy a where
     let b = Proxy @a
     in pure $ mkNode opts (PresentT b) ("'Proxy" <> showVerbose opts " | " a) []
 
--- | typelevel 'BoolT'
+-- | get the constructor used for the typelevel 'BoolT'
 --
 -- >>> pz @'TrueT ()
 -- TrueT
@@ -887,9 +887,10 @@ instance GetBoolT x b => P (b :: BoolT x) a where
   eval _ opts _ = do
     let ret = getBoolT @x @b
     pure $ case ret of
-      Left b -> mkNodeB opts b (if b then "'TrueT" else "'FalseT") []
-      Right True -> mkNode opts (PresentT False) "'PresentT _" []
-      Right False -> mkNode opts (FailT "'FailT _") "BoolT" []
+      TrueT -> mkNodeB opts True "'TrueT" []
+      FalseT -> mkNodeB opts False "'FalseT" []
+      PresentT {} -> mkNode opts (PresentT False) "'PresentT _" []
+      FailT {} -> mkNode opts (FailT "'FailT _") "" []
 
 -- | skips the evaluation tree and just displays the end result
 pz :: forall p a
@@ -936,7 +937,7 @@ puv = run @OUV @p
 -- FailT "'Left found Right"
 --
 -- >>> run @(OptT '[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"]) @('FailT '[]) ()
--- test | field2 >>> Error 'FailT _ (BoolT)
+-- test | field2 >>> Error 'FailT _
 -- FailT "'FailT _"
 --
 run :: forall opts p a
@@ -952,6 +953,7 @@ run a = do
   putStr $ prtTree opts pp
   return r
 
+-- no show instance required
 runZ :: forall opts p a
         . ( OptC opts
           , P p a)
@@ -969,7 +971,7 @@ runZ a = do
 -- PresentT (True,False)
 --
 -- >>> runs @'[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"] @('FailT '[]) ()
--- test | field2 >>> Error 'FailT _ (BoolT)
+-- test | field2 >>> Error 'FailT _
 -- FailT "'FailT _"
 --
 runs :: forall optss p a

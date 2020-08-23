@@ -198,6 +198,7 @@ module Predicate.Util (
   , badLength
   , showIndex
   , mapB
+  , fmapB
 
     ) where
 import qualified GHC.TypeNats as GN
@@ -279,15 +280,15 @@ deriving instance Eq a => Eq (BoolT a)
 
 -- | extracts the \'BoolT a\' constructors from the typelevel
 class GetBoolT a (x :: BoolT a) | x -> a where
-  getBoolT :: Either Bool Bool
+  getBoolT :: BoolT Bool
 instance GetBoolT Bool 'TrueT where
-  getBoolT = Left True
+  getBoolT = TrueT
 instance GetBoolT Bool 'FalseT where
-  getBoolT = Left False
+  getBoolT = FalseT
 instance GetBoolT a ('PresentT b) where
-  getBoolT = Right True
+  getBoolT = PresentT False
 instance GetBoolT a ('FailT s) where
-  getBoolT = Right False
+  getBoolT = FailT ""
 
 -- | lens for accessing 'BoolT' in 'TT'
 tBool :: Lens (TT a) (TT b) (BoolT a) (BoolT b)
@@ -1871,3 +1872,7 @@ mapB f =
   where g a = case eqT @Bool @b of
                 Nothing -> PresentT (f a)
                 Just Refl -> bool FalseT TrueT (f a)
+
+-- | convenience method for running 'mapB' inside a functor
+fmapB :: (Typeable b, Functor f) => (a -> b) -> f (BoolT a) -> f (BoolT b)
+fmapB = fmap . mapB
