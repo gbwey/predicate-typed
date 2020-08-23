@@ -1,4 +1,3 @@
--- need to remove some show instances: could have runQ which doesnt require show
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -2446,18 +2445,7 @@ instance forall p q x . (P (p q) x)
   type PP (Apply1 p) (Proxy q, x) = PP (p q) x
   eval _ opts (Proxy, x) =
     eval (Proxy @(p q)) opts x
-{-
--- how do we say that the k in p is the same as Apply1Z as we dont
--- know until we apply it
--- k is polymorphic: can use Nat Symbol or Type but we have to fix it
--- unless we pass something to p to tell it what k is which misses the whole point of partial application
-data Apply1Z (p :: k -> Type) :: Type
-instance forall k (p :: k -> Type) (q :: k) x . (P (p q) x)
-   => P (Apply1Z p) (Proxy q, x) where
-  type PP (Apply1Z p) (Proxy q, x) = PP (p q) x
-  eval _ opts (Proxy, x) =
-    eval (Proxy @(p q)) opts x
--}
+
 -- | application using a Proxy: \'q\' and \'r\' must be of kind Type else ambiguous k0 error
 --
 -- >>> pl @(Apply2 (+)) ((Proxy @(Fst Id),Proxy @(Length (Snd Id))),(5,"abcdef"))

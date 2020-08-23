@@ -456,7 +456,7 @@ data EnumFromTo p q
 -- PresentT [2020-01-02,2020-01-03,2020-01-04,2020-01-05,2020-01-06,2020-01-07]
 --
 data p ... q
-infix 4 ...
+infix 7 ...
 
 type EnumFromToT p q = EnumFromTo p q
 

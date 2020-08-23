@@ -40,6 +40,7 @@ module Predicate.Util (
   , _PresentT
   , _FalseT
   , _TrueT
+  , _boolT
 
  -- ** PE
   , PE
@@ -368,7 +369,7 @@ getValLR = \case
     FalseT -> Right False
     PresentT a -> Right a
 
--- | converts a typed tree to an untyped on for display
+-- | converts a typed tree to an untyped tree for display
 fromTT :: TT a -> Tree PE
 fromTT (TT bt ss tt) = Node (PE (bt ^. boolT2P) ss) tt
 
@@ -1696,24 +1697,6 @@ primeFactors n =
     _  -> factors ++ primeFactors (n `div` (head factors))
   where factors = take 1 $ filter (\x -> (n `mod` x) == 0) [2 .. n-1]
 
-{- too slow
-primeFactors :: Integer -> [Integer]
-primeFactors i'
-  | i' <=0 = error $ "primeFactors: invalid number for " ++ show i'
-  | i' == 1 = [1]
-  | otherwise = go primes i'
-  where go [] _ = error "primeFactors:programmer error1"
-        go (p:ps) i | i <=0 = error "primeFactors:programmer error2"
-                    | i == 1 = []
-                    | i `mod` p == 0 = p:go (p:ps) (i `div` p)
-                    | otherwise = go ps i
--- also too slow
-primes :: [Integer]
-primes = sieve [2..]
-  where sieve [] = error "primes:programmer error"
-        sieve (p:xs) =
-          p : sieve [x | x <- xs, x `mod` p /= 0]
--}
 -- | primes stream
 --
 -- >>> take 10 primes

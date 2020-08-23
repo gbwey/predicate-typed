@@ -40,11 +40,10 @@ To run the examples you will need these settings (ghc>=8.6)
   * 'OU unicode plus colors (for Windows: chcp 65001)
 
 * BoolT is a GADT that holds the return value from evaluating the type level expression
-   TrueT : predicate is true
-   FalseT : predicate is false
-   PresentT a : 'a' is any other value
-   FailT : indicates a failure
-
+   * TrueT : predicate is true
+   * FalseT : predicate is false
+   * PresentT a : 'a' is any other value
+   * FailT : indicates a failure
 
 # testing the dsl
 

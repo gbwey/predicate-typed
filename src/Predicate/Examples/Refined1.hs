@@ -19,7 +19,7 @@
 {- |
      Contains imports needed for 'Refined1'
 -}
-module Predicate.Examples.Refined1 where
+module Predicate.Examples.Refined1 () where
 import Predicate.Examples.Common
 import Predicate.Refined
 import Predicate.Refined1
