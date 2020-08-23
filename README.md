@@ -50,7 +50,7 @@ To run the examples you will need these settings (ghc>=8.6)
  * pu  is a shortcut for run @'OU  (unicode with colors)
  * pa  is a shortcut for run @'OA  (ascii with colors)
  * pl  is a shortcut for run @'OL  (short one liner)
- * pan is a shortcut for run @'OAN (ascii only)
+ * pan is a shortcut for run @'OAN (ascii without colors)
 
 ```haskell
 > pu @(Between 4 10 Id) 7

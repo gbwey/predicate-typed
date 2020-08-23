@@ -265,6 +265,27 @@ data BoolT a where
 
 -- | semigroup instance for 'BoolT'
 --
+-- >>> PresentT False <> (PresentT True <> FalseT) == (PresentT False <> PresentT True) <> FalseT
+-- True
+--
+-- >>> PresentT 123 <> (PresentT 456 <> PresentT 789) == (PresentT 123 <> PresentT 456) <> PresentT 789
+-- True
+--
+-- >>> PresentT True <> PresentT False
+-- PresentT False
+--
+-- >>> PresentT True <> PresentT True
+-- PresentT True
+--
+-- >>> FailT "abc" <> (PresentT True <> PresentT False) <> FailT "def"
+-- FailT "abcdef"
+--
+-- >>> (FailT "abc" <> PresentT True) <> (PresentT False <> FailT "def")
+-- FailT "abcdef"
+--
+-- >>> PresentT False <> (PresentT True <> PresentT False) == (PresentT False <> PresentT True) <> PresentT False
+-- True
+--
 instance Semigroup (BoolT a) where
    FailT s <> FailT s1 = FailT (s <> s1)
    FailT s <> _ = FailT s
@@ -274,7 +295,7 @@ instance Semigroup (BoolT a) where
    TrueT <> TrueT = TrueT
    TrueT <> PresentT a = PresentT a
    PresentT a <> TrueT = PresentT a
-   PresentT _ <> PresentT a = PresentT a
+   PresentT _a <> PresentT b = PresentT b
 
 deriving instance Show a => Show (BoolT a)
 deriving instance Eq a => Eq (BoolT a)
@@ -812,16 +833,40 @@ instance Foldable TT where
 instance Foldable BoolT where
   foldMap am = either (const mempty) am . getValLR
 
--- cant use: is / isn't / has as only FailT will be False: use Fold
--- this is more specific to TrueP FalseP
--- | prism from BoolT to Bool
-_boolT :: Prism' (BoolT Bool) Bool
-_boolT = prism' (bool FalseT TrueT)
+-- | prism from BoolT to a
+--
+-- >>> _boolT # True
+-- TrueT
+--
+-- >>> _boolT # False
+-- FalseT
+--
+-- >>> _boolT # 123
+-- PresentT 123
+--
+-- >>> TrueT ^? _boolT
+-- Just True
+--
+-- >>> FalseT ^? _boolT
+-- Just False
+--
+-- >>> PresentT 123 ^? _boolT
+-- Just 123
+--
+-- >>> FailT "abc" ^? _boolT
+-- Nothing
+--
+_boolT :: forall a . Typeable a => Prism' (BoolT a) a
+_boolT = prism' (case eqT @Bool @a of
+                    Just Refl -> bool FalseT TrueT
+                    Nothing -> PresentT
+                 )
          $ \case
               PresentT a -> Just a
               TrueT -> Just True
               FalseT -> Just False
               FailT {} -> Nothing
+
 
 -- | 'FailT' prism
 _FailT :: Prism' (BoolT a) String
