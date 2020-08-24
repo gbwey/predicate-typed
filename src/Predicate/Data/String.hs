@@ -46,7 +46,7 @@ import Predicate.Core
 import Predicate.Util
 import qualified GHC.TypeLits as GL
 import Control.Lens hiding (iall)
-import Data.List
+import Data.List (dropWhileEnd, isInfixOf, isPrefixOf, isSuffixOf)
 import qualified Data.Text.Lens as DTL
 import Data.Proxy
 import Data.Kind (Type)

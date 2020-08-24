@@ -207,7 +207,7 @@ import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:))
 import qualified GHC.TypeLits as GL
 import Control.Lens
 import Control.Arrow
-import Data.List
+import Data.List (intercalate, unfoldr)
 import qualified Data.Tree.View as TV
 import Data.Tree
 import Data.Tree.Lens
@@ -741,7 +741,9 @@ litL :: POpts -> String -> String
 litL = litL' . oWidth
 
 litL' :: Int -> String -> String
-litL' i s = take i s <> if length s > i then "..." else ""
+litL' i s =
+  let z = take i s
+  in z ++ if length z >= i then "..." else ""
 
 litBL :: POpts -> BL8.ByteString -> String
 litBL o s =

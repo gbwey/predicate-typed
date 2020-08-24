@@ -103,7 +103,7 @@ import Predicate.Data.Ordering (type (==), OrdA)
 import Predicate.Data.Numeric (Mod)
 import Predicate.Data.Monoid (type (<>))
 import Control.Lens hiding (iall)
-import Data.List
+import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf)
 import Data.Proxy
 import Control.Monad
 import Data.Kind (Type)
@@ -1920,7 +1920,7 @@ instance ( P p x
             Left e -> e
             Right s1 -> mkNodeB opts (ff s0 s1) (msg1 <> " " <> showL opts s1) [hh pp, hh qq]
 
--- | similar to 'isPrefixOf' 
+-- | similar to 'isPrefixOf'
 --
 -- >>> pl @(IsPrefix '[2,3] Id) [2,3,4]
 -- True (IsPrefix | [2,3] [2,3,4])
@@ -1937,12 +1937,12 @@ instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
   type PP (IsPrefix p q) x = PP (IsPrefixT p q) x
   eval _ = evalBool (Proxy @(IsPrefixT p q))
 
--- | similar to 'isInfixOf' 
+-- | similar to 'isInfixOf'
 --
 -- >>> pl @(IsInfix '[2,3] Id) [1,2,3]
 -- True (IsInfix | [2,3] [1,2,3])
 -- TrueT
--- 
+--
 -- >>> pl @(IsInfix '[2,3] Id) [1,2,1,3]
 -- False (IsInfix | [2,3] [1,2,1,3])
 -- FalseT
@@ -1954,12 +1954,12 @@ instance P (IsInfixT p q) x => P (IsInfix p q) x where
   type PP (IsInfix p q) x = PP (IsInfixT p q) x
   eval _ = evalBool (Proxy @(IsInfixT p q))
 
--- | similar to 'isSuffixOf' 
+-- | similar to 'isSuffixOf'
 --
 -- >>> pl @(IsSuffix '[2,3] Id) [1,2,3]
 -- True (IsSuffix | [2,3] [1,2,3])
 -- TrueT
--- 
+--
 -- >>> pl @(IsSuffix '[2,3] Id) [2,3,4]
 -- False (IsSuffix | [2,3] [2,3,4])
 -- FalseT

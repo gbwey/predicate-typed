@@ -78,7 +78,7 @@ import Predicate.Util
 import Predicate.Data.Ordering (type (==))
 import GHC.TypeLits (Nat,KnownNat)
 import qualified GHC.TypeLits as GL
-import Data.List
+import Data.List (elemIndex, unfoldr)
 import Data.Proxy
 import Data.Typeable
 import Data.Kind (Type)
