@@ -65,7 +65,6 @@ module Predicate.Refined (
 import Predicate.Core
 import Predicate.Util
 import Control.Lens
-import Data.Functor.Identity (Identity(..))
 import Data.Proxy
 import Control.Monad.Except -- (MonadError, ExceptT(..), runExceptT, throwError, catchError)
 import Control.Monad.Writer (WriterT(..), runWriterT, MonadWriter, tell)
@@ -289,7 +288,7 @@ genRefined :: forall opts p a .
 genRefined g =
   let o = getOpt @opts
       f !cnt = do
-        ma <- suchThatMaybe g (\a -> getValLRFromTT (runIdentity (eval @_ (Proxy @p) o a)) == Right True)
+        ma <- suchThatMaybe g $ \a -> evalQuick @p o a == Right True
         case ma of
           Nothing ->
              if cnt >= oRecursion o

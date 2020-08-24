@@ -1,3 +1,4 @@
+:seti -Wno-compat
 :seti -fprint-explicit-kinds
 :seti -XTemplateHaskell
 :seti -XTypeOperators
@@ -11,13 +12,14 @@
 :seti -XGADTs
 :seti -XFlexibleContexts
 :seti -XKindSignatures
-:seti -XTypeInType
 :seti -XTypeFamilies
 :seti -XUndecidableInstances
 :seti -XNoStarIsType
 
 :seti -Wall
-:seti -Wcompat
+{- :seti -Wcompat -}
+{- :seti -Wno-compat-unqualified-imports -}
+
 :seti -Wincomplete-record-updates
 :seti -Wincomplete-uni-patterns
 :seti -Wredundant-constraints
@@ -35,7 +37,7 @@ import Data.Char
 import Data.Either
 import Data.Foldable
 import Data.Function
-import Data.List
+:m + Data.List
 import Data.List.NonEmpty ((<|),NonEmpty(..))
 import qualified Data.List.NonEmpty as N
 import Data.Maybe

@@ -234,14 +234,14 @@ instance P TimeZt a where
       Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" []
       Just v -> mkNode opts (PresentT v) (msg0 <> " " <> showL opts v) []
 
-data FHandle s = FStdout | FStderr | FOther !s !WFMode deriving Show
+data FHandle s = FStdout | FStderr | FOther !s !WFMode deriving (Read, Show, Eq)
 
 class GetFHandle (x :: FHandle Symbol) where getFHandle :: FHandle String
 instance GetFHandle 'FStdout where getFHandle = FStdout
 instance GetFHandle 'FStderr where getFHandle = FStderr
 instance (GetMode w, KnownSymbol s) => GetFHandle ('FOther s w) where getFHandle = FOther (symb @s) (getMode @w)
 
-data WFMode = WFAppend | WFWrite | WFWriteForce deriving (Show,Eq)
+data WFMode = WFAppend | WFWrite | WFWriteForce deriving (Read, Show, Eq)
 
 class GetMode (x :: WFMode) where getMode :: WFMode
 instance GetMode 'WFAppend where getMode = WFAppend

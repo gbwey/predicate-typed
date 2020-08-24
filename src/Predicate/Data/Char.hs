@@ -280,7 +280,7 @@ data CharSet = CLower
              | COctDigit
              | CSeparator
              | CLatin1
-             deriving Show
+             deriving (Bounded, Show, Read, Eq)
 
 class GetCharSet (cs :: CharSet) where
   getCharSet :: (CharSet, Char -> Bool)

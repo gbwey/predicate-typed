@@ -45,6 +45,7 @@ library:
   - -Wincomplete-uni-patterns
   - -Wincomplete-record-updates
   - -Wcompat
+#  - -Wno-compat-unqualified-imports
 #  - -Widentities
 #  - -fhide-source-paths
 #  - -Wmissing-export-lists

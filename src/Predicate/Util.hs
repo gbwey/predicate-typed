@@ -234,6 +234,7 @@ import qualified Data.List.NonEmpty as N
 import Data.Either
 import qualified Text.Read.Lex as L
 import Text.ParserCombinators.ReadPrec
+import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified GHC.Read as GR
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BL8
@@ -254,7 +255,7 @@ import Data.Containers.ListUtils (nubOrd)
 data TT a = TT { _tBool :: !(BoolT a)  -- ^ the value at this root node
                , _tString :: !String  -- ^ detailed information eg input and output and text
                , _tForest :: !(Forest PE) -- ^ the child nodes
-               } deriving Show
+               } deriving (Read, Show, Eq)
 
 -- | contains the typed result from evaluating the expression tree
 data BoolT a where
@@ -299,6 +300,67 @@ instance Semigroup (BoolT a) where
 
 deriving instance Show a => Show (BoolT a)
 deriving instance Eq a => Eq (BoolT a)
+deriving instance Ord a => Ord (BoolT a)
+
+-- | 'Read' instance for BoolT
+--
+-- >>> reads @(BoolT Int) "PresentT 123"
+-- [(PresentT 123,"")]
+--
+-- >>> reads @(BoolT Int) "TrueT"
+-- []
+--
+-- >>> reads @(BoolT Bool) "TrueT"
+-- [(TrueT,"")]
+--
+-- >>> reads @(BoolT Bool) "FalseT"
+-- [(FalseT,"")]
+--
+-- >>> reads @(BoolT Bool) "PresentT False abc"
+-- [(PresentT False," abc")]
+--
+-- >>> reads @(BoolT Bool) "FailT \"some error message\""
+-- [(FailT "some error message","")]
+--
+-- >>> reads @(BoolT Double) "FailT \"some error message\""
+-- [(FailT "some error message","")]
+--
+
+instance (Typeable a, Read a) => Read (BoolT a) where
+  readPrec
+      = case eqT @a @Bool of
+          Just Refl ->
+           GR.parens
+            (GR.choose
+             [("FalseT", return FalseT),
+              ("TrueT", return TrueT)]
+             PCR.+++
+               (PCR.prec
+                  10
+                  (do GR.expectP (L.Ident "FailT")
+                      a1 <- PCR.step GR.readPrec
+                      return (FailT a1))
+                  PCR.+++
+                    PCR.prec
+                      10
+                      (do GR.expectP (L.Ident "PresentT")
+                          a2 <- PCR.step GR.readPrec
+                          return (PresentT a2))))
+
+          Nothing ->
+           GR.parens
+             (PCR.prec
+                  10
+                  (do GR.expectP (L.Ident "FailT")
+                      a1 <- PCR.step GR.readPrec
+                      return (FailT a1))
+                  PCR.+++
+                    PCR.prec
+                      10
+                      (do GR.expectP (L.Ident "PresentT")
+                          a2 <- PCR.step GR.readPrec
+                          return (PresentT a2)))
+
 
 -- | extracts the \'BoolT a\' constructors from the typelevel
 class GetBoolT a (x :: BoolT a) | x -> a where
@@ -338,12 +400,12 @@ data BoolP =
   | FalseP       -- ^ False predicate
   | TrueP        -- ^ True predicate
   | PresentP     -- ^ Any value
-  deriving (Show, Eq)
+  deriving (Show, Eq, Read)
 
 -- | represents the untyped evaluation tree for final display
 data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
              , _pString :: !String -- ^ optional strings to include in the results
-             } deriving Show
+             } deriving (Show, Read, Eq)
 
 -- | lens for accessing '_pBool'
 pBool :: Lens' PE BoolP
@@ -557,7 +619,7 @@ instance Semigroup (HOpts Last) where
 -- | display format for the tree
 data Disp = Ansi -- ^ draw normal tree
           | Unicode  -- ^ use unicode
-          deriving (Show, Eq)
+          deriving (Show, Eq, Read, Bounded, Enum)
 
 -- | default options
 defOpts :: POpts
@@ -586,7 +648,7 @@ data Debug =
      | DLite -- ^ one line summary with additional context from the head of the evaluation tree
      | DNormal  -- ^ outputs the evaluation tree but skips noisy subtrees
      | DVerbose -- ^ outputs the entire evaluation tree
-     deriving (Ord, Show, Eq, Enum, Bounded)
+     deriving (Read, Ord, Show, Eq, Enum, Bounded)
 
 -- | verbose debug flag
 isVerbose :: POpts -> Bool
@@ -714,7 +776,7 @@ data ROpt =
   | Ungreedy -- ^ Invert greediness of quantifiers
   | Utf8 -- ^ Run in UTF--8 mode
   | No_utf8_check -- ^ Do not check the pattern for UTF-8 validity
-  deriving (Show,Eq,Ord,Enum,Bounded)
+  deriving (Read, Show, Eq, Ord, Enum, Bounded)
 
 -- | compile a regex using the type level symbol
 compileRegex :: forall rs a . GetROpts rs
@@ -768,7 +830,7 @@ instance GetROpt 'Utf8 where getROpt = RL.utf8
 instance GetROpt 'No_utf8_check where getROpt = RL.no_utf8_check
 
 -- | simple regex string replacement options
-data ReplaceFnSub = RPrepend | ROverWrite | RAppend deriving (Show,Eq)
+data ReplaceFnSub = RPrepend | ROverWrite | RAppend deriving (Read, Show, Eq, Bounded, Enum)
 
 -- | extract replacement options from typelevel
 class GetReplaceFnSub (k :: ReplaceFnSub) where
@@ -1085,7 +1147,7 @@ instance GetColor 'Default where
   getColor = Default
 
 -- | all the ways to compare two values
-data OrderingP = CGt | CGe | CEq | CLe | CLt | CNe deriving (Show, Eq, Enum, Bounded)
+data OrderingP = CGt | CGe | CEq | CLe | CLt | CNe deriving (Read, Show, Eq, Enum, Bounded)
 
 -- | extract 'OrderingP' from the typelevel
 class GetOrd (k :: OrderingP) where
@@ -1500,34 +1562,6 @@ data Opt =
   | OUB                   -- ^ composite: unicode + colors + background
   | OUV                   -- ^ composite: unicode + colors + verbose
 
-instance Show Opt where
-  show = \case
-            OWidth _n -> "OWidth"
-            OMsg _s -> "OMsg"
-            ORecursion _n -> "ORecursion"
-            OOther _b _c1 _c2 -> "OOther"
-            OEmpty -> "OEmpty"
-            a :# b -> show a ++ " ':# " ++ show b
-            OColor _s _c1 _c2 _c3 _c4 _c5 _c6 _c7 _c8 -> "OColor"
-            OColorOn -> "OColorOn"
-            OColorOff -> "OColorOff"
-            OAnsi -> "OAnsi"
-            OUnicode -> "OUnicode"
-            OZero -> "OZero"
-            OLite -> "OLite"
-            ONormal -> "ONormal"
-            OVerbose -> "OVerbose"
-            OZ -> "OZ"
-            OL -> "OL"
-            OAN -> "OAN"
-            OANV -> "OANV"
-            OA -> "OA"
-            OAB -> "OAB"
-            OAV -> "OAV"
-            OU -> "OU"
-            OUB -> "OUB"
-            OUV -> "OUV"
-
 infixr 6 :#
 
 -- | extract options from the typelevel
@@ -1897,9 +1931,9 @@ mapB f =
     PresentT a -> g a
     TrueT -> g True
     FalseT -> g False
-  where g a = case eqT @Bool @b of
-                Nothing -> PresentT (f a)
-                Just Refl -> bool FalseT TrueT (f a)
+  where g = (. f) $ case eqT @Bool @b of
+                      Nothing -> PresentT
+                      Just Refl -> bool FalseT TrueT
 
 -- | convenience method for running 'mapB' inside a functor
 fmapB :: (Typeable b, Functor f) => (a -> b) -> f (BoolT a) -> f (BoolT b)

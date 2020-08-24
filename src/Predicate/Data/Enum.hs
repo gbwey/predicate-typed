@@ -30,6 +30,8 @@ module Predicate.Data.Enum (
   , EnumFromTo
   , EnumFromThenTo
   , FromEnum
+  , Universe
+  , Universe'
 
   -- ** bounded enums
   , SuccB
@@ -510,3 +512,38 @@ instance (P p x
           Left e -> e
           Right r ->
             mkNode opts (PresentT (enumFromThenTo p q r)) (msg0 <> " [" <> showL opts p <> ", " <> showL opts q <> " .. " <> showL opts r <> "]") [hh pp, hh qq, hh rr]
+
+-- | universe of enum using the type pointed to by \'p\'
+--
+-- >>> pl @(Universe Id) LT
+-- Present [LT,EQ,GT] (Universe [LT .. GT])
+-- PresentT [LT,EQ,GT]
+--
+data Universe p
+
+instance ( PP p x ~ a
+         , Show a
+         , Enum a
+         , Bounded a
+         ) => P (Universe p) x where
+  type PP (Universe p) x = [PP p x]
+  eval _ opts _z =
+    let msg0 = "Universe"
+        u = [mn .. mx]
+        mn = minBound @a
+        mx = maxBound @a
+    in pure $ mkNode opts (PresentT u) (msg0 <> " [" <> showL opts mn <> " .. " <> showL opts mx <> "]") []
+
+-- | get universe of an enum of type \'t\'
+--
+-- >>> pz @(Universe' Ordering) ()
+-- PresentT [LT,EQ,GT]
+--
+data Universe' (t :: Type)
+type UniverseT (t :: Type) = Universe (Hole t)
+
+instance P (UniverseT t) x => P (Universe' t) x where
+  type PP (Universe' t) x = PP (UniverseT t) x
+  eval _ = eval (Proxy @(UniverseT t))
+
+

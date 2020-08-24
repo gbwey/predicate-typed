@@ -238,7 +238,7 @@ instance (P p x
 -- >>> pz @(MkDay '(1,2,3) >> 'Just Id) ()
 -- PresentT 0001-02-03
 --
--- >>> pz @(Just (MkDay '(1,2,3))) 1
+-- >>> pz @('Just (MkDay '(1,2,3))) 1
 -- PresentT 0001-02-03
 --
 -- >>> pz @(MkDay Id) (2019,12,30)
@@ -331,7 +331,7 @@ instance P (MkDayExtraT p) x => P (MkDayExtra p) x where
 
 -- | get the day of the week
 --
--- >>> pz @(Just (MkDay '(2020,7,11)) >> '(UnMkDay Id, ToWeekYear Id,ToWeekDate Id)) ()
+-- >>> pz @('Just (MkDay '(2020,7,11)) >> '(UnMkDay Id, ToWeekYear Id,ToWeekDate Id)) ()
 -- PresentT ((2020,7,11),28,(6,"Saturday"))
 --
 data ToWeekDate p
@@ -347,21 +347,20 @@ instance ( P p x
       Left e -> e
       Right p ->
         let (_, _week, dow) = toWeekDate p
-            dowString =
-              case dow of
-                 1 -> "Monday"
-                 2 -> "Tuesday"
-                 3 -> "Wednesday"
-                 4 -> "Thursday"
-                 5 -> "Friday"
-                 6 -> "Saturday"
-                 7 -> "Sunday"
-                 _ -> error $ "oops: ToWeekDate invalid " ++ show dow
+            dowString = case dow `mod` 7 of
+                          0 -> "Sunday"
+                          1 -> "Monday"
+                          2 -> "Tuesday"
+                          3 -> "Wednesday"
+                          4 -> "Thursday"
+                          5 -> "Friday"
+                          6 -> "Saturday"
+                          o -> error $ "ToWeekDate: programmer error o=" ++ show o
         in mkNode opts (PresentT (dow,dowString)) (show01 opts msg0 dow p) [hh pp]
 
 -- | get week number of the year
 --
--- >>> pz @(Just (MkDay '(2020,7,11)) >> ToWeekYear Id) ()
+-- >>> pz @('Just (MkDay '(2020,7,11)) >> ToWeekYear Id) ()
 -- PresentT 28
 --
 data ToWeekYear p

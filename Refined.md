@@ -59,13 +59,13 @@ _pab_ does not have that restriction so you can run the whole thing or the indiv
 for less detail use _pl_\
 
 ```haskell
->pa @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
+>pu @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
 
->pa @(Resplit ":" Id) "12:01:05"
+>pu @(Resplit ":" Id) "12:01:05"
 
->pa @(Map (ReadP Int Id) Id) ["12","01","05"]
+>pu @(Map (ReadP Int Id) Id) ["12","01","05"]
 
->pa @(Len == 3) [12,1,5]
+>pu @(Len == 3) [12,1,5]
 ```
 
 ```haskell

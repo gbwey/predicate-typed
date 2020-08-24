@@ -183,7 +183,7 @@ unnamedTests = [
 allProps :: [TestTree]
 allProps =
   [
-    testProperty "base16" $ forAll (genRefined3P (mkProxy3 @'( OAN, ReadBase Int 16 Id, 'True, ShowBase 16 Id, String)) arbitrary) (\r -> evalQuick @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
+    testProperty "base16" $ forAll (genRefined3P (mkProxy3 @'( OAN, ReadBase Int 16 Id, 'True, ShowBase 16 Id, String)) arbitrary) (\r -> evalQuick @(ReadBase Int 16 Id) (getOpt @OL) (r3Out r) === Right (r3In r))
   , testProperty "readshow" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN)) (\r -> read @(HexLtR3 OAN) (show r) === r)
   , testProperty "jsonroundtrip1" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN))
       (\r -> testRefined3PJ Proxy (r3Out r) === Right r)

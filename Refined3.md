@@ -19,7 +19,7 @@ converts a base 16 String to an Int and validates that the number is between 0 a
 and then roundtrips the value to a string
 
 ```haskell
->type Hex opts = '( opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
+>type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
 >prtEval3PIO (Proxy @(Hex 'OL)) "0000fe"
 Refined3 {r3In = 254, r3Out = "fe"}
@@ -54,26 +54,26 @@ False 4094 <= 255
 
 Read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as output
 ```haskell
->pa @(ReadBase Int 16 Id) "0000fe"
+>pu @(ReadBase Int 16 Id) "0000fe"
 PresentT 254
 
->pa @(Between 0 255 Id) 254
+>pu @(Between 0 255 Id) 254
 TrueT
 
->pa @(ShowBase 16 Id) 254 = "fe"
+>pu @(ShowBase 16 Id) 254 = "fe"
 PresentT "fe"
 ```
 
 
 ```haskell
-type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
+type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
 $$(refined3TH "0000fe") :: MakeR3 (Hex 'OL)
 ```
 
 Here is an example where the predicate fails at compile-time and we choose to show the details using 'OU
 ```haskell
->type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 255 Id, ShowBase 16 Id, String)
+>type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
 >$$(refined3TH "000ffff") :: MakeR3 (Hex 'OU)
 

@@ -389,7 +389,7 @@ genRefined1P ::
 genRefined1P _ g =
   let o = getOpt @opts
       f !cnt = do
-        mppi <- suchThatMaybe g (\a -> getValLRFromTT (runIdentity (eval @_ (Proxy @op) o a)) == Right True)
+        mppi <- suchThatMaybe g $ \a -> evalQuick @op o a == Right True
         case mppi of
           Nothing ->
              if cnt >= oRecursion o

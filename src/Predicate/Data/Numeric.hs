@@ -353,7 +353,7 @@ instance P (FloorT t p) x => P (Floor t p) x where
   type PP (Floor t p) x = PP (FloorT t p) x
   eval _ = eval (Proxy @(FloorT t p))
 
-data BinOp = BMult | BSub | BAdd deriving (Show,Eq)
+data BinOp = BMult | BSub | BAdd deriving (Read, Show, Eq)
 
 data p + q
 infixl 6 +

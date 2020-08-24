@@ -383,15 +383,14 @@ genRefined3P ::
 genRefined3P _ g =
   let o = getOpt @opts
       f !cnt = do
-        mppi <- suchThatMaybe g (\a -> getValLRFromTT (runIdentity (eval @_ (Proxy @op) o a)) == Right True)
+        mppi <- suchThatMaybe g $ \a -> evalQuick @op o a == Right True
         case mppi of
           Nothing ->
              if cnt >= oRecursion o
              then error $ setOtherEffects o ("genRefined3P recursion exceeded(" ++ show (oRecursion o) ++ ")")
              else f (cnt+1)
-          Just ppi -> do
-             let lr = getValLRFromTT (runIdentity (eval @_ (Proxy @fmt) o ppi))
-             case lr of
+          Just ppi ->
+             case evalQuick @fmt o ppi of
                Left e -> error $ "genRefined3P: formatting failed!! " ++ e
                Right r -> pure $ unsafeRefined3 ppi r
   in f 0

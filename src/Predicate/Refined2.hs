@@ -78,7 +78,6 @@ module Predicate.Refined2 (
 import Predicate.Refined
 import Predicate.Core
 import Predicate.Util
-import Data.Functor.Identity (Identity(..))
 import Data.Tree
 import Data.Proxy
 import Control.Arrow (left)
@@ -231,7 +230,8 @@ instance ( Eq i
                                "r2Out" (PCR.reset GR.readPrec)
                  GR.expectP (RL.Punc "}")
 
-                 let lr = getValLRFromTT $ runIdentity $ evalBool (Proxy @op) (getOpt @opts) fld1
+                 let lr = evalQuick @op (getOpt @opts) fld1
+
                  case lr of
                    Left {} -> fail ""
                    Right True -> pure (Refined2 fld1 fld2)
