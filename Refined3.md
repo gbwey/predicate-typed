@@ -116,7 +116,7 @@ An example of an invalid refined3TH call
 >$$(refined3TH "2016-xy-09") :: ReadShowR 'OU Day
 
 <interactive>:719:4: error:
-    •
+    *
 *** Step 1. Initial Conversion(ip) Failed ***
 
 [Error ReadP Day (2016-xy-09)]
@@ -124,10 +124,10 @@ An example of an invalid refined3TH call
 `- P Id "2016-xy-09"
 
 refined3TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09)
-    • In the Template Haskell splice $$(refined3TH "2016-xy-09")
+    * In the Template Haskell splice $$(refined3TH "2016-xy-09")
       In the expression:
           $$(refined3TH "2016-xy-09") :: ReadShowR  'OU Day
-      In an equation for ‘it’:
+      In an equation for `it`:
           it = $$(refined3TH "2016-xy-09") :: ReadShowR  'OU Day
 ```
 

@@ -99,7 +99,7 @@ An example of an invalid refined2TH call
 `- P Id "2016-xy-09"
 
 refined2TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09)
-    • In the Template Haskell splice $$(refined2TH "2016-xy-09")
+    * In the Template Haskell splice $$(refined2TH "2016-xy-09")
       In the expression:
           $$(refined2TH "2016-xy-09") ::
             Refined2  'OAN (ReadP Day Id) (Id > 'Just (MkDay '(2012, 1, 1))) String
