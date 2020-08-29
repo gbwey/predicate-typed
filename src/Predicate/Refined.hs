@@ -107,7 +107,7 @@ import Data.Maybe (fromMaybe)
 -- >>> prtRefinedIO @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) "141.213.1"
 -- Left FalseT
 --
--- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> 'True) "141.213.1"
+-- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
 -- Left (FailT "bad length: found 3")
 --
 -- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> Guard (PrintF "bad length: found %d" Len) (Len == 4) >> GuardsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id) >> 'True) "141.213.1.444"

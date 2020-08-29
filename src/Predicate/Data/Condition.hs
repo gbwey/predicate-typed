@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# OPTIONS -Wno-compat #-}
+{-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
@@ -36,6 +36,7 @@ module Predicate.Data.Condition (
   , GuardSimple
   , GuardsN
   , GuardsDetail
+  , GuardBool
 
   , Bools
   , BoolsQuick
@@ -818,6 +819,32 @@ instance (Show a
           Left e -> e
           Right ee -> mkNode opts (FailT ee) (msg0 <> " | " <> showL opts a) (hh pp : [hh qq | isVerbose opts])
       Right True -> pure $ mkNode opts (PresentT a) (msg0 <> "(ok) | " <> showL opts a) [hh pp]  -- dont show the guard message if successful
+
+-- | boolean guard
+--
+-- >>> pl @(GuardBool (PrintF "bad length = %d" Len) (Len > 9)) [3..8]
+-- Error bad length = 6 (GuardBool)
+-- FailT "bad length = 6"
+--
+data GuardBool prt p
+
+instance (P prt a
+        , PP prt a ~ String
+        , P p a
+        , PP p a ~ Bool
+        ) => P (GuardBool prt p) a where
+  type PP (GuardBool prt p) a = Bool
+  eval _ opts a = do
+    let msg0 = "GuardBool"
+    pp <- evalBool (Proxy @p) opts a
+    case getValueLR opts msg0 pp [] of
+      Left e -> pure e
+      Right False -> do
+        qq <- eval (Proxy @prt) opts a
+        pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
+          Left e -> e
+          Right ee -> mkNode opts (FailT ee) msg0 [hh pp, hh qq]
+      Right True -> pure $ mkNode opts TrueT "" [hh pp]  -- dont show the guard message if successful
 
 -- | uses 'Guard' but negates \'p\'
 --

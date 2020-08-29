@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# OPTIONS -Wno-compat #-}
+{-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
@@ -68,8 +68,6 @@ module Predicate.Data.List (
   , Intercalate
 
  -- ** miscellaneous
-  , Len
-  , Length
   , Elem
   , Inits
   , Tails

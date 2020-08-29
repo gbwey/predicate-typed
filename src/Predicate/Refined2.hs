@@ -128,20 +128,20 @@ import Test.QuickCheck
 -- >>> newRefined2 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
 -- Left "Step 2. False Boolean Check(op) | {length invalid: 5 == 4}"
 --
--- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1.5"
+-- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
 -- Left "Step 2. Failed Boolean Check(op) | found length=5"
 --
--- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) "198.162.3.1"
+-- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1"
 -- Right (Refined2 {r2In = [198,162,3,1], r2Out = "198.162.3.1"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> newRefined2 @OZ @(MkDayExtra Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,13)
+-- >>> newRefined2 @OZ @(MkDayExtra Id >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) (2019,10,13)
 -- Right (Refined2 {r2In = (2019-10-13,41,7), r2Out = (2019,10,13)})
 --
 -- >>> newRefined2 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
 -- Left "Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}"
 --
--- >>> newRefined2 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) (2019,10,12)
+-- >>> newRefined2 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) (2019,10,12)
 -- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
 --
 data Refined2 (opts :: Opt) ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: !i }
@@ -207,7 +207,7 @@ instance ( s ~ String
 -- >>> reads @(Refined2 OZ (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
 -- [(Refined2 {r2In = -1234, r2Out = "-4d2"},"")]
 --
--- >>> reads @(Refined2 OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined2 OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (GuardBool "len/=4" (Len == 4)) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
 -- [(Refined2 {r2In = [192,168,0,1], r2Out = "192.168.0.1"},"")]
 --
 instance ( Eq i
@@ -386,9 +386,9 @@ genRefined2P _ g =
 --    `- P '"2019-06-01"
 -- <BLANKLINE>
 --
-instance ( Show i
+instance ( Refined2C opts ip op i
+         , Show i
          , Show (PP ip i)
-         , Refined2C opts ip op i
          , Binary i
          ) => Binary (Refined2 opts ip op i) where
   get = do
@@ -651,7 +651,7 @@ prt2Impl :: forall a . Show a
   -> Msg2
 prt2Impl opts v =
   let outmsg msg = "\n*** " <> formatOMsg opts " " <> msg <> " ***\n\n"
-      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ show a ++ ")")
+      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ showL opts a ++ ")")
       mkMsg2 m n r | hasNoTree opts = Msg2 m n ""
                    | otherwise = Msg2 m n r
   in case v of

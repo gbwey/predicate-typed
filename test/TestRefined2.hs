@@ -112,11 +112,10 @@ unnamedTests = [
   , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789")
                   $ eval2 @OA
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
-                  @(Guard "expected 3" (Len == 3)
-                 >> Guard "3 digits" (Ix' 0 >> Between 0 999 Id)
-                 >> Guard "2 digits" (Ix' 1 >> Between 0 99 Id)
-                 >> Guard "4 digits" (Ix' 2 >> Between 0 9999 Id)
-                 >> 'True
+                  @(GuardBool "expected 3" (Len == 3)
+                 && GuardBool "3 digits" (Ix' 0 >> Between 0 999 Id)
+                 && GuardBool "2 digits" (Ix' 1 >> Between 0 99 Id)
+                 && GuardBool "4 digits" (Ix' 2 >> Between 0 9999 Id)
                    )
                    "123-45-6789"
 
@@ -148,7 +147,7 @@ unnamedTests = [
 
   , expect2 (Right $ unsafeRefined2 [31,11,1999] "31-11-1999")
                   $ eval2 @OA @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
-                           @(Ddmmyyyyop >> 'True)
+                           @Ddmmyyyyop
                            "31-11-1999"
   , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789") $ eval2 @OA
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))

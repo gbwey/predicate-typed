@@ -82,12 +82,20 @@ type NameR1 (opts :: Opt) = R.Refined opts Name1 String
 type Name1 = Msg "invalid name:" (Re "^[A-Z][a-z']+$" Id)
 
 -- more specific messages
-type NameR2 (opts :: Opt) = R.Refined opts (Name2 >> 'True) String
+type NameR2 (opts :: Opt) = R.Refined opts Name2 String
 type Name2 =
           Uncons
        >> Just'
-       >> Guard (PrintF "not upper first(%c)" Id) IsUpper
-      *** Guard (PrintF "not lower rest(%s)" Id) IsLowerAll
+       >> (Guard (PrintF "not upper first(%c)" Id) IsUpper
+      *** Guard (PrintF "not lower rest(%s)" Id) IsLowerAll)
+       >> 'True
+
+type NameR2' (opts :: Opt) = R.Refined opts Name2' String
+type Name2' =
+          Uncons
+       >> Just'
+       >> (Fst Id >> GuardBool (PrintF "not upper first(%c)" Id) IsUpper)
+       && (Snd Id >> GuardBool (PrintF "not lower rest(%s)" Id) IsLowerAll)
 
 type AgeR (opts :: Opt) = R.Refined opts (Between 10 60 Id) Int
 

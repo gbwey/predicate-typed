@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# OPTIONS -Wno-compat #-}
+{-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}

@@ -216,7 +216,7 @@ hms :: OptC opts => Proxy (Hms opts)
 hms = mkProxy3'
 
 type HmsR (opts :: Opt) = MakeR3 (Hms opts)
-type Hms (opts :: Opt) = '(opts, Hmsip, Hmsop >> 'True, Hmsfmt, String)
+type Hms (opts :: Opt) = '(opts, Hmsip, Hmsop, Hmsfmt, String)
 
 type HmsR' (opts :: Opt) = MakeR3 (Hms' opts)
 type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', Hmsfmt, String)
@@ -237,7 +237,7 @@ type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', Hmsfmt, String)
 -- Left "Step 2. Failed Boolean Check(op) | octet 1 out of range 0-255 found 257"
 --
 type Ip4R (opts :: Opt) = MakeR3 (Ip4 opts)
-type Ip4 (opts :: Opt) = '(opts, Ip4ip, Ip4op >> 'True, Ip4fmt, String) -- guards
+type Ip4 (opts :: Opt) = '(opts, Ip4ip, Ip4op, Ip4fmt, String) -- guards
 
 ip4 :: OptC opts => Proxy (Ip4 opts)
 ip4 = mkProxy3'
@@ -292,6 +292,9 @@ isbn13 = Proxy
 --
 -- >>> newRefined3P (basen' @OZ @16 @(GuardSimple (Id < 400) >> 'True)) "f0fe"
 -- Left "Step 2. Failed Boolean Check(op) | (61694 < 400)"
+--
+-- >>> newRefined3P (basen' @OZ @16 @(GuardBool (PrintF "oops bad hex=%d" Id) (Id < 400))) "f0fe"
+-- Left "Step 2. Failed Boolean Check(op) | oops bad hex=61694"
 --
 -- >>> newRefined3P (basen' @OL @16 @(Id < 400)) "f0fe" -- todo: why different parens vs braces
 -- Left "Step 2. False Boolean Check(op) | {61694 < 400}"

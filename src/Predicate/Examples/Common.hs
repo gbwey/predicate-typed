@@ -123,7 +123,7 @@ type Hmsip = Map (ReadP Int Id) (Resplit ":" Id)
 -- type Hmsop' = BoolsQuick "" '[ Msg "hours:"   (Between 0 23 Id), Msg "minutes:" (Between 0 59 Id), Msg "seconds:" (Between 0 59 Id)]
 
 -- | \'op\' type for validating the time using a guard
-type Hmsop = GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]
+type Hmsop = GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)] >> 'True
 
 -- | \'op\' type for validating the time using predicate
 type Hmsop' = Bools '[ '("hours", Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id) ]
@@ -147,7 +147,7 @@ type Ip4ip' = Map (ReadP Int Id) (Rescan Ip4RE Id >> Snd (OneP Id))
 -- | \'op\' type for validating an ip4 address using a predicate
 type Ip4op' = BoolsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255 Id)
 -- | \'op\' type for validating an ip4 address using a guard
-type Ip4op = GuardsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255 Id)
+type Ip4op = GuardsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255 Id) >> 'True
 
 -- | \'fmt\' type for formatting an ip4 address
 type Ip4fmt = PrintL 4 "%03d.%03d.%03d.%03d" Id
@@ -183,8 +183,7 @@ type Isbn10ip = Resplit "-" Id
 type Isbn10op = GuardSimple (All (0 <..> 9) (Fst Id) && Between 0 10 (Snd Id))
              >> ZipWith (Fst Id * Snd Id) (1...10 >> Reverse) (Fst Id +: Snd Id)
              >> Sum
-             >> Guard "mod 0 oops" (Id `Mod` 11 == 0)
-             >> 'True
+             >> GuardBool "mod 0 oops" (Id `Mod` 11 == 0)
 
 type Isbn10fmt = ConcatMap (ShowP Id) Id *** If (Id == 10) "X" (ShowP Id)
                  >> Fst Id <> "-" <> Snd Id  -- no standard format: just hyphen before checkdigit
@@ -197,8 +196,7 @@ type Isbn13ip = Resplit "-" Id
 type Isbn13op = ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3] >> Reverse) Id
              >> Sum
              >> '(Id,Id `Mod` 10)
-             >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)
-             >> 'True
+             >> GuardBool (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)
 
 type Isbn13fmt = 'Just Unsnoc >> ConcatMap (ShowP Id) (Fst Id) <> "-" <> ShowP (Snd Id)
 
@@ -220,9 +218,10 @@ type Ddmmyyyyop =
     Guards '[ '(PrintT "guard(%d) day %d is out of range" Id, Between 1 31 Id)
             , '(PrintT "guard(%d) month %d is out of range" Id, Between 1 12 Id)
             , '(PrintT "guard(%d) year %d is out of range" Id, Between 1990 2050 Id) ]
+          >> 'True
 -}
 --type Ddmmyyyyop' = GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]
-type Ddmmyyyyop = GuardsDetail "%s %d is out of range" '[ '("day", Between 1 31 Id), '("month", Between 1 12 Id), '("year", Between 1990 2050 Id) ]
+type Ddmmyyyyop = GuardsDetail "%s %d is out of range" '[ '("day", Between 1 31 Id), '("month", Between 1 12 Id), '("year", Between 1990 2050 Id) ] >> 'True
 type Ddmmyyyyop' = Bools '[ '("day", Between 1 31 Id), '("month", Between 1 12 Id), '("year", Between 1990 2050 Id) ]
 --type Ddmmyyyyop'''' = BoolsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]
 

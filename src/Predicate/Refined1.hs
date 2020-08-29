@@ -159,23 +159,23 @@ import GHC.Stack
 -- >>> newRefined1 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left "Step 2. False Boolean Check(op) | {length invalid: 5 == 4}"
 --
--- >>> newRefined1 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
+-- >>> newRefined1 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left "Step 2. Failed Boolean Check(op) | found length=5"
 --
--- >>> newRefined1 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Guard (PrintF "found length=%d" Len) (Len == 4) >> 'True) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
+-- >>> newRefined1 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
 -- Right (Refined1 [198,162,3,1])
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> newRefined1 @OZ @(MkDayExtra Id >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,13)
+-- >>> newRefined1 @OZ @(MkDayExtra Id >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,13)
 -- Right (Refined1 (2019-10-13,41,7))
 --
 -- >>> newRefined1 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left "Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}"
 --
--- >>> newRefined1 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(Guard "expected a Sunday" (Thd Id == 7) >> 'True) @(UnMkDay (Fst Id)) (2019,10,12)
+-- >>> newRefined1 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
 -- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
 --
--- >>> type T4 k = '( OZ, MkDayExtra Id >> 'Just Id, Guard "expected a Sunday" (Thd Id == 7) >> 'True, UnMkDay (Fst Id), k)
+-- >>> type T4 k = '( OZ, MkDayExtra Id >> 'Just Id, GuardBool "expected a Sunday" (Thd Id == 7), UnMkDay (Fst Id), k)
 -- >>> newRefined1P (Proxy @(T4 _)) (2019,10,12)
 -- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
 --
@@ -253,7 +253,7 @@ instance (Refined1C opts ip op fmt String, Show (PP ip String)) => IsString (Ref
 -- >>> reads @(Refined1 OZ (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined1 (-1234)"
 -- [(Refined1 (-1234),"")]
 --
--- >>> reads @(Refined1 OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (Guard "len/=4" (Len == 4) >> 'True) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined1 [192,168,0,1]"
+-- >>> reads @(Refined1 OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (GuardBool "len/=4" (Len == 4)) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined1 [192,168,0,1]"
 -- [(Refined1 [192,168,0,1],"")]
 --
 -- >>> reads @(Refined1 OZ Id 'True Id Int) "Refined1 (-123)xyz"
@@ -843,7 +843,7 @@ prt1Impl :: forall a b . (Show a, Show b)
   -> Msg1
 prt1Impl opts v =
   let outmsg msg = "\n*** " <> formatOMsg opts " " <> msg <> " ***\n\n"
-      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ show a ++ ")")
+      msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ showL opts a ++ ")")
       mkMsg1 m n r | hasNoTree opts = Msg1 m n ""
                    | otherwise = Msg1 m n r
   in case v of
@@ -878,7 +878,7 @@ prt1Impl opts v =
               <> prtTreePure opts t3
          in mkMsg1 m n r
        RTTrueT a t1 t2 b t3 ->
-         let (m,n) = ("Step 3. Success Output Conversion(fmt)", show b)
+         let (m,n) = ("Step 3. Success Output Conversion(fmt)", showL opts b)
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg "Step 2. Success Boolean Check(op)"

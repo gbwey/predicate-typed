@@ -117,11 +117,10 @@ unnamedTests = [
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
                   $ eval3
                   @OAN @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
-                  @(Guard "expected 3" (Len == 3)
-                 >> Guard "3 digits" (Ix' 0 >> Between 0 999 Id)
-                 >> Guard "2 digits" (Ix' 1 >> Between 0 99 Id)
-                 >> Guard "4 digits" (Ix' 2 >> Between 0 9999 Id)
-                 >> 'True
+                  @(GuardBool "expected 3" (Len == 3)
+                 && GuardBool "3 digits" (Between 0 999 (Ix' 0))
+                 && GuardBool "2 digits" (Between 0 99 (Ix' 1))
+                 && GuardBool "4 digits" (Between 0 9999 (Ix' 2))
                    ) @"def"
                    "123-45-6789"
 
@@ -151,7 +150,7 @@ unnamedTests = [
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
                   $ eval3 @OAN @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
-                           @(Ddmmyyyyop >> 'True)
+                           @Ddmmyyyyop
                            @"xyz"
                            "31-11-1999"
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ eval3 @OAN
@@ -202,7 +201,7 @@ yy2 = newRefined3TP (Proxy @Tst1) "3"
 yy3 = rapply3 (*) yy1 yy2 -- fails
 yy4 = rapply3 (+) yy1 yy2 -- pure ()
 
-hms2E :: Proxy '( OAN, Hmsip2, Hmsop2 >> 'True, Hmsfmt2, String)
+hms2E :: Proxy '( OAN, Hmsip2, Hmsop2, Hmsfmt2, String)
 hms2E = mkProxy3
 
 type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id

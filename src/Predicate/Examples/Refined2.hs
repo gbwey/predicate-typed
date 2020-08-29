@@ -169,7 +169,7 @@ hms :: OptC opts => Proxy (Hms opts)
 hms = mkProxy2'
 
 type HmsR (opts :: Opt) = MakeR2 (Hms opts)
-type Hms (opts :: Opt) = '(opts, Hmsip, Hmsop >> 'True, String)
+type Hms (opts :: Opt) = '(opts, Hmsip, Hmsop, String)
 
 --hms' :: Proxy (Hms' OZ)
 --hms' = mkProxy2'
@@ -195,7 +195,7 @@ type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', String)
 -- Left "Step 2. Failed Boolean Check(op) | octet 1 out of range 0-255 found 257"
 --
 type Ip4R (opts :: Opt) = MakeR2 (Ip4 opts)
-type Ip4 (opts :: Opt) = '(opts, Ip4ip, Ip4op >> 'True, String) -- guards
+type Ip4 (opts :: Opt) = '(opts, Ip4ip, Ip4op, String) -- guards
 
 ip4 :: Proxy (Ip4 opts)
 ip4 = Proxy

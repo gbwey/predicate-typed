@@ -1,5 +1,5 @@
 {-# OPTIONS -Wall #-}
-{-# OPTIONS -Wno-compat #-}
+{-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# LANGUAGE TypeOperators #-}
@@ -40,7 +40,7 @@ module Predicate.Util (
   , _PresentT
   , _FalseT
   , _TrueT
-  , _boolT
+  , _BoolT
 
  -- ** PE
   , PE
@@ -212,7 +212,7 @@ import qualified Data.Tree.View as TV
 import Data.Tree
 import Data.Tree.Lens
 import Data.Proxy
-import Data.Data
+import Data.Typeable
 import System.Console.Pretty
 import GHC.Exts (Constraint)
 import qualified Text.Regex.PCRE.Heavy as RH
@@ -698,7 +698,7 @@ lit01 opts msg0 ret fmt as
          msg0
       <> " "
       <> showL opts ret
-      <> litVerbose opts (" | " ++ fmt) as
+      <> litVerbose opts (" | " ++ take 100 fmt) as
 
 -- | more restrictive: only display data in verbose debug mode
 litVerbose :: POpts
@@ -713,7 +713,7 @@ showLitImpl :: POpts
             -> String
             -> String
 showLitImpl o i s a =
-  if oDebug o >= i || oDebug o == DLite then s <> litL o a
+  if oDebug o >= i || oDebug o == DLite then (take 100 s) <> litL o a
   else ""
 
 showVerbose :: Show a
@@ -729,7 +729,7 @@ showAImpl :: Show a
   -> String
   -> a
   -> String
-showAImpl o i s a = showLitImpl o i s (show a)
+showAImpl o i s a = showLitImpl o i (take 100 s) (show a)
 
 showL :: Show a
   => POpts
@@ -748,12 +748,12 @@ litL' i s =
 litBL :: POpts -> BL8.ByteString -> String
 litBL o s =
   let i = oWidth o
-  in litL' i (BL8.unpack (BL8.take (fromIntegral i+1) s))
+  in litL' i (BL8.unpack (BL8.take (fromIntegral i) s))
 
 litBS :: POpts -> BS8.ByteString -> String
 litBS o s =
   let i = oWidth o
-  in litL' i (BS8.unpack (BS8.take (i+1) s))
+  in litL' i (BS8.unpack (BS8.take i s))
 
 -- | Regex options for Rescan Resplit Re etc
 data ROpt =
@@ -899,29 +899,29 @@ instance Foldable BoolT where
 
 -- | prism from BoolT to a
 --
--- >>> _boolT # True
+-- >>> _BoolT # True
 -- TrueT
 --
--- >>> _boolT # False
+-- >>> _BoolT # False
 -- FalseT
 --
--- >>> _boolT # 123
+-- >>> _BoolT # 123
 -- PresentT 123
 --
--- >>> TrueT ^? _boolT
+-- >>> TrueT ^? _BoolT
 -- Just True
 --
--- >>> FalseT ^? _boolT
+-- >>> FalseT ^? _BoolT
 -- Just False
 --
--- >>> PresentT 123 ^? _boolT
+-- >>> PresentT 123 ^? _BoolT
 -- Just 123
 --
--- >>> FailT "abc" ^? _boolT
+-- >>> FailT "abc" ^? _BoolT
 -- Nothing
 --
-_boolT :: forall a . Typeable a => Prism' (BoolT a) a
-_boolT = prism' (case eqT @Bool @a of
+_BoolT :: forall a . Typeable a => Prism' (BoolT a) a
+_BoolT = prism' (case eqT @Bool @a of
                     Just Refl -> bool FalseT TrueT
                     Nothing -> PresentT
                  )

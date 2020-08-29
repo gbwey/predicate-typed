@@ -111,7 +111,7 @@ module Predicate.Core (
   , type (&)
   , Apply1
   , Apply2
-
+  , Both
   ) where
 import Predicate.Util
 import qualified GHC.TypeLits as GL

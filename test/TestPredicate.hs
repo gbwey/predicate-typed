@@ -59,13 +59,13 @@ allTests =
   , expectPE (FailT "len is bad") $ pl @Ip6Test "FE80::203:Baff:FE77:326FF"
   , expectPE (FailT "not a hex") $ pl @Ip6Test "FE80::203:Baff:GE77:326F"
   , expectPE (FailT "count is bad") $ pl @Ip6Test "FE80::203:Baff:FE77:326F:::::"
-  , expectPE (PresentT [1,2,3,244]) $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id) >> Ip4op) "1.2.3.244"
-  , expectPE (FailT "octet 1 out of range 0-255 found 256") $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id) >> Ip4op) "1.256.3.244"
-  , expectPE (FailT "Guards:invalid length(5) expected 4") $ pl @(Rescan "(\\d+)\\.?" Id >> ConcatMap (Snd Id) Id >> Map (ReadBase Int 10 Id) Id >> Ip4op) "1.22.244.66.77"
+  , expectPE (PresentT [1,2,3,244]) $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id) >| Ip4op) "1.2.3.244"
+  , expectPE (FailT "octet 1 out of range 0-255 found 256") $ pl @(Rescan Ip4RE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id) >| Ip4op) "1.256.3.244"
+  , expectPE (FailT "Guards:invalid length(5) expected 4") $ pl @(Rescan "(\\d+)\\.?" Id >> ConcatMap (Snd Id) Id >> Map (ReadBase Int 10 Id) Id >| Ip4op) "1.22.244.66.77"
   , expectPE (PresentT 256) $ pl @(Rescan "(?i)^\\\\x([0-9a-f]{2})$" Id >> OneP Id >> Snd Id >> OneP Id >> ReadBase Int 16 Id >> Succ Id) "\\xfF"
   , expectPE (PresentT 256) $ pl @(Rescan "(?i)^\\\\x(.{2})$" Id >> OneP Id >> Snd Id >> OneP Id >> ReadBase Int 16 Id >> Succ Id) "\\xfF"
   , expectPE (PresentT (("fF",(255,"ff")),False)) $ pl @(Rescan "(?i)^\\\\x([0-9a-f]{2})$" Id >> OneP Id >> Snd Id >> OneP Id >> (Id &&& (ReadBase Int 16 Id >> (Id &&& ShowBase 16 Id))) >> (Id &&& ((Id *** Snd Id) >> Fst Id == Snd Id))) "\\xfF"
-  , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id) >> Ddmmyyyyop) "31-11-1999"
+  , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id) >| Ddmmyyyyop) "31-11-1999"
   , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:59"
   , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:60"
   , expectPE (PresentT (124,["1","2","2"])) $ pl @(Left' >> (Succ Id &&& (Pred Id >> ShowP Id >> Ones Id))) (Left 123)
@@ -103,8 +103,8 @@ allTests =
   , expectPE (PresentT [Just 1,Just 2,Just 3,Just 4]) $ pl @Sequence (Just [1..4])
 
   , expectPE (PresentT [13,2,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadP Int Id) (Snd Id)) "13-02-1999"
-  , expectPE (PresentT [3,2,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadP Int Id) (Snd Id) >> Ddmmyyyyop) "03-02-1999"
-  , expectPE (FailT "month 13 is out of range") $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadP Int Id) (Snd Id) >> Ddmmyyyyop) "12-13-1999"
+  , expectPE (PresentT [3,2,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadP Int Id) (Snd Id) >| Ddmmyyyyop) "03-02-1999"
+  , expectPE (FailT "month 13 is out of range") $ pl @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadP Int Id) (Snd Id) >| Ddmmyyyyop) "12-13-1999"
   , expectPE (PresentT 10) $ pl @(Luhn' 4) "1230"
   , expectPE (FailT "expected 14 mod 10 = 0 but found 4") $ pl @(Luhn' 4) "1234"
   , expectPE (PresentT [4, 7, 8, 9]) $ pl @'[4,7,8,9] ()
