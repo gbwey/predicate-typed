@@ -40,11 +40,11 @@ module Predicate.Examples.Refined3 (
   , HmsR'
 
   -- ** credit cards
-  , ccn
-  , ccn'
-  , Ccn
-  , cc11
-  , Cc11
+  , luhn
+  , luhn'
+  , Luhn
+  , luhn11
+  , Luhn11
   , LuhnR
   , LuhnT
 
@@ -128,36 +128,36 @@ import Data.Time
 
 -- | credit card with luhn algorithm
 --
--- >>> newRefined3P (cc11 @OZ) "1234-5678-901"
--- Left "Step 2. False Boolean Check(op) | FalseP"
+-- >>> newRefined3P (luhn11 @OZ) "1234-5678-901"
+-- Left "Step 2. Failed Boolean Check(op) | invalid checkdigit"
 --
--- >>> newRefined3P (cc11 @OZ) "1234-5678-903"
+-- >>> newRefined3P (luhn11 @OZ) "1234-5678-903"
 -- Right (Refined3 {r3In = [1,2,3,4,5,6,7,8,9,0,3], r3Out = "1234-5678-903"})
 --
--- >>> pz @(Ccip >> Ccop 11) "79927398713"
+-- >>> pz @(Luhnip >> Luhnop 11) "79927398713"
 -- TrueT
 --
--- >>> pz @(Ccip >> Ccop 10) "79927398713"
+-- >>> pz @(Luhnip >> Luhnop 10) "79927398713"
 -- FailT "expected 10 digits but found 11"
 --
 
-type Ccn (opts :: Opt) (ns :: [Nat]) = '(opts, Ccip, Ccop (SumT ns), Ccfmt ns, String)
+type Luhn (opts :: Opt) (ns :: [Nat]) = '(opts, Luhnip, Luhnop (SumT ns), Luhnfmt ns, String)
 
-type Cc11 (opts :: Opt) = Ccn opts '[4,4,3]
+type Luhn11 (opts :: Opt) = Luhn opts '[4,4,3]
 
-ccn :: Proxy (Ccn opts ns)
-ccn = mkProxy3
+luhn :: Proxy (Luhn opts ns)
+luhn = mkProxy3
 
 -- works but have to add all the constraints
-ccn' :: ( OptC opts
+luhn' :: ( OptC opts
         , PP ns String ~ [Integer]
         , KnownNat (SumT ns)
         , P ns String
-        ) => Proxy (Ccn opts ns)
-ccn' = mkProxy3'
+        ) => Proxy (Luhn opts ns)
+luhn' = mkProxy3'
 
-cc11 :: OptC opts => Proxy (Ccn opts '[4,4,3])   -- or Proxy Cc11
-cc11 = mkProxy3'
+luhn11 :: OptC opts => Proxy (Luhn opts '[4,4,3])   -- or Proxy Luhn11
+luhn11 = mkProxy3'
 
 -- | read in a valid datetime
 --
@@ -194,10 +194,10 @@ ssn = mkProxy3'
 -- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
 --
 -- >>> newRefined3P (ssn @OL) "666-01-2211"
--- Left "Step 2. False Boolean Check(op) | {Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))}"
+-- Left "Step 2. Failed Boolean Check(op) | Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))"
 --
 -- >>> newRefined3P (ssn @OL) "667-00-2211"
--- Left "Step 2. False Boolean Check(op) | {Bool(1) [number for group 1 invalid: found 0] (1 <= 0)}"
+-- Left "Step 2. Failed Boolean Check(op) | Bool(1) [number for group 1 invalid: found 0] (1 <= 0)"
 --
 type Ssn (opts :: Opt) = '(opts, Ssnip, Ssnop, Ssnfmt, String)
 type SsnR (opts :: Opt) = MakeR3 (Ssn opts)
@@ -459,12 +459,12 @@ readshow' = mkProxy3
 --
 --
 -- >>> pl @(T5_3 (Ip4 OL)) [141,213,308,4]
--- Error octet 2 out of range 0-255 found 308 ((>>) lhs failed)
+-- Error octet 2 out of range 0-255 found 308
 -- FailT "octet 2 out of range 0-255 found 308"
 --
 --
 -- >>> pl @(T5_3 (Ip4 OL)) [141,213,308,4,8]
--- Error Guards:invalid length(5) expected 4 ((>>) lhs failed)
+-- Error Guards:invalid length(5) expected 4
 -- FailT "Guards:invalid length(5) expected 4"
 --
 --

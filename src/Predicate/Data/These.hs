@@ -383,7 +383,7 @@ instance (P p a
 
 data IsTh (th :: These x y) p -- x y can be anything
 
--- trying to avoid show instance cos of ambiguities
+-- trying to avoid Show instance cos of ambiguities
 instance (PP p x ~ These a b
         , P p x
         , Show a

@@ -246,16 +246,16 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- PresentT [True,False,False]
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll]) "a98efghi"
--- False ((>>) False | {Bool(2) [] (IsUpperAll | "efghi")})
--- FalseT
+-- Error Bool(2) [] (IsUpperAll | "efghi") (["a","98","efghi"])
+-- FailT "Bool(2) [] (IsUpperAll | \"efghi\")"
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll]) "a98efghi"
 -- True ((>>) True | {Bools})
 -- TrueT
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll]) "a98efgHi"
--- False ((>>) False | {Bool(2) [] (False || False | (IsUpperAll | "efgHi") || (IsLowerAll | "efgHi"))})
--- FalseT
+-- Error Bool(2) [] (False || False | (IsUpperAll | "efgHi") || (IsLowerAll | "efgHi")) (["a","98","efgHi"])
+-- FailT "Bool(2) [] (False || False | (IsUpperAll | \"efgHi\") || (IsLowerAll | \"efgHi\"))"
 --
 data IsCharSetAll (cs :: CharSet)
 

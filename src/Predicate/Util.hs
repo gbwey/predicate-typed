@@ -105,6 +105,7 @@ module Predicate.Util (
   , litL
   , litBL
   , litBS
+  , nullSpace
 
   -- ** regular expressions
   , ROpt(..)
@@ -424,7 +425,11 @@ mkNode :: POpts
 mkNode opts bt ss hs =
   case oDebug opts of
     DZero -> TT bt [] []
-    DLite -> TT bt ss [] -- keeps the last one so we can use the root to give more details on failure (especially for Refined* types)
+    DLite ->
+    -- keeps the last string so we can use the root to give more details on failure (especially for Refined* types)
+    -- also holds onto any failures
+         let zs = filter (\(Holder x) -> has (tBool . _FailT) x) hs
+             in TT bt ss (map fromTTH zs)
     _ -> TT bt ss (map fromTTH hs)
 
 -- | creates a Boolean node for a predicate type
@@ -483,7 +488,7 @@ getValueLR opts msg0 tt hs =
           )
           (getValLRFromTT tt)
 
--- | wrapper for a show instance around 'Color'
+-- | wrapper for a Show instance around 'Color'
 newtype SColor = SColor Color
 
 instance Show SColor where
@@ -713,7 +718,7 @@ showLitImpl :: POpts
             -> String
             -> String
 showLitImpl o i s a =
-  if oDebug o >= i || oDebug o == DLite then (take 100 s) <> litL o a
+  if oDebug o >= i || oDebug o == DLite then take 100 s <> litL o a
   else ""
 
 showVerbose :: Show a
@@ -1643,17 +1648,17 @@ instance OptC 'OUB where
 instance OptC 'OUV where
    getOptC = getOptC @('OAV ':# 'OUnicode)
 
--- | combinations of options
-type OZ = 'OAnsi ':# 'OColorOff ':# 'OZero
-type OL = 'OAnsi ':# 'OColorOff ':# 'OLite ':# 'OWidth 200
-type OAN = 'OAnsi ':# 'OColorOff ':# 'ONormal ':# 'OWidth 100
-type OANV = 'OAnsi ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
-type OA = 'OAnsi ':# Color5 ':# 'ONormal ':# Other2 ':# 'OWidth 100
-type OAB = 'OAnsi ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
-type OAV = 'OAnsi ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
-type OU = 'OUnicode ':# Color5 ':# 'ONormal ':# Other2 ':# 'OWidth 100
-type OUB = 'OUnicode ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
-type OUV = 'OUnicode ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
+-- | option synonyms to save a keystroke
+type OZ = 'OZ     -- 'OAnsi ':# 'OColorOff ':# 'OZero
+type OL = 'OL     -- 'OAnsi ':# 'OColorOff ':# 'OLite ':# 'OWidth 200
+type OAN = 'OAN   -- 'OAnsi ':# 'OColorOff ':# 'ONormal ':# 'OWidth 100
+type OANV = 'OANV -- 'OAnsi ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
+type OA = 'OA     -- 'OAnsi ':# Color5 ':# 'ONormal ':# Other2 ':# 'OWidth 100
+type OAB = 'OAB   -- 'OAnsi ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
+type OAV = 'OAV   -- 'OAnsi ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
+type OU = 'OU     -- 'OUnicode ':# Color5 ':# 'ONormal ':# Other2 ':# 'OWidth 100
+type OUB = 'OUB   -- 'OUB -- 'OUnicode ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
+type OUV = 'OUV   -- 'OUnicode ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
 
 -- | convert typelevel options to 'POpts'
 --
@@ -1775,7 +1780,7 @@ primeFactors :: Integer -> [Integer]
 primeFactors n =
   case factors of
     [] -> [n]
-    _  -> factors ++ primeFactors (n `div` (head factors))
+    _  -> factors ++ primeFactors (n `div` head factors)
   where factors = take 1 $ filter (\x -> (n `mod` x) == 0) [2 .. n-1]
 
 -- | primes stream

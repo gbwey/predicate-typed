@@ -44,7 +44,7 @@ suite =
 namedTests :: [TestTree]
 namedTests =
   [ testCase "ip9" $ (@?=) (newRefined3 "121.0.12.13" :: Either String (MakeR3 Ip9)) (Right (unsafeRefined3 [121,0,12,13] "121.000.012.013"))
-  , testCase "luhn check" $ (@?=) (newRefined3 "12345678903" :: Either String (MakeR3 (Cc11 OAN))) (Right (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903"))
+  , testCase "luhn check" $ (@?=) (newRefined3 "12345678903" :: Either String (MakeR3 (Luhn11 OAN))) (Right (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903"))
   , testCase "datetime utctime" $ (@?=) (newRefined3 "2019-01-04 23:00:59" :: Either String (MakeR3 (DateTime1 OZ UTCTime))) (Right (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59"))
   , testCase "datetime localtime" $ (@?=) (newRefined3 "2019-01-04 09:12:30" :: Either String (MakeR3 (DateTime1 OZ LocalTime))) (Right (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30"))
   , testCase "hms" $ (@?=) (newRefined3 "12:0:59" :: Either String (MakeR3 (Hms OAN))) (Right (unsafeRefined3 [12,0,59] "12:00:59"))
@@ -54,7 +54,7 @@ namedTests =
   , testCase "daten1" $ (@?=) (newRefined3 "June 25 1900" :: Either String (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "1900-06-25") "1900-06-25"))
   , testCase "daten2" $ (@?=) (newRefined3 "12/02/99" :: Either String (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "1999-12-02") "1999-12-02"))
   , testCase "daten3" $ (@?=) (newRefined3 "2011-12-02" :: Either String (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "2011-12-02") "2011-12-02"))
-  , testCase "ccn123" $ (@?=) (newRefined3 "123455" :: Either String (MakeR3 (Ccn OAN '[1,2,3]))) (Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455"))
+  , testCase "ccn123" $ (@?=) (newRefined3 "123455" :: Either String (MakeR3 (Luhn OAN '[1,2,3]))) (Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455"))
   , testCase "readshow" $ (@?=) (newRefined3 "12 % 5" :: Either String (ReadShowR OAN Rational)) (Right (unsafeRefined3 (12 % 5) "12 % 5"))
   ]
 
@@ -71,14 +71,14 @@ unnamedTests = [
 
   , expectJ (Left ["Error in $.g4Ip", "ReadP Int (3x)"]) (toFrom $ G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "1.2.3x.4"))
   , expectJ (Left ["Error in $.g4Age", "False Boolean Check"]) (toFrom $ G4 (unsafeRefined3 (-2) "-2") (unsafeRefined3 [1,2,3,4] "1.2.3.4"))
-  , expectRight (testRefined3P (Proxy @(Ccn OAN '[4,4,3])) "123-45-6---789-03-")
-  , expectLeft (testRefined3P (Proxy @(Ccn OAN '[4,4,3])) "123-45-6---789-04-")
+  , expectRight (testRefined3P (Proxy @(Luhn OAN '[4,4,3])) "123-45-6---789-03-")
+  , expectLeft (testRefined3P (Proxy @(Luhn OAN '[4,4,3])) "123-45-6---789-04-")
   , expectRight (testRefined3P (Proxy @(Hms OAN)) "1:2:33")
   , expectLeft (testRefined3P (Proxy @(Hms OAN)) "1:2:61")
-  , expectRight (testRefined3P (Proxy @(Ccn OAN '[4,4,3])) "6433-1000-006")
-  , expectRight (testRefined3P (Proxy @(Ccn OAN '[4,4,3])) "6433-10000-06")
-  , expectLeft (testRefined3P (Proxy @(Ccn OAN '[4,4,3])) "6433-1000-000")
-  , expectRight (testRefined3P (Proxy @(Ccn OAN '[1,2,1])) "1-23-0")
+  , expectRight (testRefined3P (Proxy @(Luhn OAN '[4,4,3])) "6433-1000-006")
+  , expectRight (testRefined3P (Proxy @(Luhn OAN '[4,4,3])) "6433-10000-06")
+  , expectLeft (testRefined3P (Proxy @(Luhn OAN '[4,4,3])) "6433-1000-000")
+  , expectRight (testRefined3P (Proxy @(Luhn OAN '[1,2,1])) "1-23-0")
   , expect3 (Left $ XF "Regex no results")
                   $ eval3 @OAN @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
                           @((Len == 4) && All (Between 0 255 Id) Id)
@@ -163,9 +163,12 @@ unnamedTests = [
   , expect3 (Left $ XF "ReadP Int (3x)") $ eval3P (ip4 @OZ) "1.2.3x.4"
   , expect3 (Left $ XTF [1,2,3,4,5] "Guards:invalid length(5) expected 4") $ eval3P (ip4 @OZ) "1.2.3.4.5"
   , expect3 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ eval3P (ip4 @OZ) "1.2.300.4"
-  , expect3 (Left (XTFalse [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ eval3P (ip4' @OL) "1.2.300.4"
-  , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval3P (cc11 @OAN) "12345678903"
-  , expect3 (Left $ XTFalse [1,2,3,4,5,6,7,8,9,0,1] "") $ eval3P (cc11 @OZ) "12345678901"
+  , expect3 (Left $ XTF [1,2,3,4,5] "Bools:invalid length(5) expected 4") $ eval3P (ip4' @OZ) "1.2.3.4.5"
+  , expect3 (Left $ XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300]") $ eval3P (ip4' @OZ) "1.2.300.4"
+
+  , expect3 (Left (XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ eval3P (ip4' @OL) "1.2.300.4"
+  , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval3P (luhn11 @OAN) "12345678903"
+  , expect3 (Left $ XTF [1,2,3,4,5,6,7,8,9,0,1] "invalid checkdigit") $ eval3P (luhn11 @OZ) "12345678901"
 
   , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ eval3P hms2E "12:13:14"
 --  , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "seconds invalid: found 99")) $ eval3P hms2E "12:13:99"
@@ -263,8 +266,8 @@ tst0a :: [Bool]
 tst0a =
   [ newRefined3P (daten @OUB) "June 25 1900" == Right (unsafeRefined3 (fromGregorian 1900 6 25) "1900-06-25")
   , newRefined3P (daten @OUB) "12/02/19" == Right (unsafeRefined3 (fromGregorian 2019 12 2) "2019-12-02")
-  , newRefined3P (Proxy @(Ccn OAB '[1,1,1,1])) "1230" == Right (unsafeRefined3 [1,2,3,0] "1-2-3-0")
-  , newRefined3P (Proxy @(Ccn OAB '[1,2,3])) "123455" == Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
+  , newRefined3P (Proxy @(Luhn OAB '[1,1,1,1])) "1230" == Right (unsafeRefined3 [1,2,3,0] "1-2-3-0")
+  , newRefined3P (Proxy @(Luhn OAB '[1,2,3])) "123455" == Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
   ]
 
 -- prtRefinedTIO tst1a

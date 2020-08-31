@@ -461,7 +461,7 @@ instance (P p x
                          ret = M.fromListWith (++) kvs
                      in mkNode opts (PresentT ret) (show01' opts msg0 ret "s=" q ) (hh qq : map (hh . fixit) itts)
 
--- | similar to 'groupBy'
+-- | similar to 'Data.List.groupBy'
 --
 -- >>> pz @(GroupBy (Fst Id == Snd Id) Id) [1,3,4,5,1,5,5]
 -- PresentT [[1],[3],[4],[5],[1],[5,5]]
@@ -838,7 +838,7 @@ instance (P n a
     case lr of
       Left e -> pure e
       Right (fromIntegral -> n,p,nn,pp) -> do
-        let msg1 = msg0 <> " " <> showL opts n <> " pad=" <> show p
+        let msg1 = msg0 <> " " <> showL opts n <> " pad=" <> showL opts p
             hhs = [hh nn, hh pp]
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts (msg1 <> " q failed") qq hhs of
@@ -1120,7 +1120,7 @@ instance P (RemoveT p q) x => P (Remove p q) x where
 -- FailT "Head(empty)"
 --
 -- >>> pl @(Head (Fst Id) >> Le 6) ([]::[Int], True)
--- Error Head(empty) ((>>) lhs failed)
+-- Error Head(empty)
 -- FailT "Head(empty)"
 --
 -- >>> pl @(Head Id) [1,2,3]
@@ -1339,21 +1339,21 @@ instance (P p (a,a)
                     Right (ll', rr') -> do
                       lhs <- ff (map snd ll')
                       case getValueLR opts msg0 lhs [hh qq, hh pp] of
-                        Left _ -> pure lhs -- dont rewrap
+                        Left _ -> pure lhs -- dont rewrap or rewrite
                         Right ll -> do
                           rhs <- ff (map snd rr')
                           case getValueLR opts msg0 rhs [hh qq, hh pp, hh lhs] of
                             Left _ -> pure rhs
                             Right rr ->
                               pure $  mkNode opts (PresentT (ll ++ w : rr))
-                                     (msg0 <> " lhs=" <> showL opts ll <> " pivot " <> show w <> " rhs=" <> showL opts rr)
+                                     (msg0 <> " lhs=" <> showL opts ll <> " pivot " <> showL opts w <> " rhs=" <> showL opts rr)
                                      (hh pp : [hh lhs | length ll > 1] ++ [hh rhs | length rr > 1])
         ret <- ff as
         pure $ case getValueLR opts msg0 ret [hh qq] of
           Left _e -> ret -- dont rewrap else will double up messages: already handled
           Right xs -> mkNode opts (_tBool ret) (msg0 <> " " <> showL opts xs) [hh qq, hh ret]
 
--- | similar to 'sortOn'
+-- | similar to 'Data.List.sortOn'
 --
 -- >>> pl @(SortOn Id Id) [10,4,2,12,14]
 -- Present [2,4,10,12,14] (SortBy [2,4,10,12,14])
@@ -1394,7 +1394,7 @@ instance P (SortOnT p q) x => P (SortOn p q) x where
   type PP (SortOn p q) x = PP (SortOnT p q) x
   eval _ = eval (Proxy @(SortOnT p q))
 
--- | 'SortOn' but descending order
+-- | like SortOn but descending order
 --
 -- >>> pl @(SortOnDesc Id Id) [10,4,2,12,14]
 -- Present [14,12,10,4,2] (SortBy [14,12,10,4,2])
@@ -1912,7 +1912,7 @@ instance ( P p x
     case getValueLR opts msg0 pp [] of
         Left e -> pure e
         Right s0 -> do
-          let msg1 = msg0 <> " | " <> show s0
+          let msg1 = msg0 <> " | " <> showL opts s0
           qq <- eval (Proxy @q) opts x
           pure $ case getValueLR opts (msg1 <> " q failed") qq [hh pp] of
             Left e -> e

@@ -195,7 +195,7 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- TrueT
 --
 -- >>> pl @(Map Len Id >> Ix 3 (Failp "lhs") &&& Ix 0 5 >> Fst Id == Snd Id) [[1..4],[4..5]]
--- Error lhs ([4,2] (>>) rhs failed)
+-- Error lhs ([4,2])
 -- FailT "lhs"
 --
 -- >>> pl @(Map Len Id >> Ix 0 (Failp "lhs") &&& Ix 1 5 >> Fst Id == Snd Id) [[1..4],[4..5]]
@@ -203,15 +203,15 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- FalseT
 --
 -- >>> pl @(Map Len Id >> Ix 1 (Failp "lhs") &&& Ix 3 (Failp "rhs") >> Fst Id == Snd Id) [[1..4],[4..5]]
--- Error rhs ([4,2] (>>) rhs failed)
+-- Error rhs ([4,2])
 -- FailT "rhs"
 --
 -- >>> pl @(Map Len Id >> Ix 10 (Failp "lhs") &&& Ix 1 (Failp "rhs") >> Fst Id == Snd Id) [[1..4],[4..5]]
--- Error lhs ([4,2] (>>) rhs failed)
+-- Error lhs ([4,2])
 -- FailT "lhs"
 --
 -- >>> pl @(Map Len Id >> Ix 0 (Failp "lhs") &&& Ix 10 (Failp "rhs") >> Fst Id == Snd Id) [[1..4],[4..5]]
--- Error rhs ([4,2] (>>) rhs failed)
+-- Error rhs ([4,2])
 -- FailT "rhs"
 --
 -- >>> pl @(Map Len Id >> Ix 10 3 &&& Ix 1 (Failp "rhs") >> Fst Id == Snd Id) [[1..4],[4..5]]
@@ -298,7 +298,7 @@ instance (P q a
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) ->
-        let msg1 = msg0 <> "(" <> show q <> ")"
+        let msg1 = msg0 <> "(" <> showL opts q <> ")"
         in case p ^? ix q of
              Nothing -> do
                 rr <- eval (Proxy @r) opts (Proxy @(IxValue (PP p a)))
@@ -500,7 +500,7 @@ instance (P q a
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
-        let msg1 = msg0 <> "(" <> show q <> ")"
+        let msg1 = msg0 <> "(" <> showL opts q <> ")"
             hhs = [hh pp, hh qq]
         in case p ^? ix q of
              Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " not found") hhs

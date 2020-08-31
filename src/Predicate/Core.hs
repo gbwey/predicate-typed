@@ -155,7 +155,7 @@ evalBool p opts a = fixBoolT <$> eval p opts a
 evalQuick :: forall p i . P p i => POpts -> i -> Either String (PP p i)
 evalQuick o = getValLRFromTT . runIdentity . eval @_ (Proxy @p) o
 
--- | identity function without show instance of 'Id'
+-- | identity function without Show instance of 'Id'
 --
 -- >>> pz @I 23
 -- PresentT 23
@@ -317,7 +317,7 @@ instance GetBool b => P (b :: Bool) a where
   type PP b a = Bool
   eval _ opts _ =
     let b = getBool @b
-    in pure $ mkNodeB opts b ("'" <> show b) []
+    in pure $ mkNodeB opts b ("'" <> showL opts b) []
 
 -- | pulls the type level 'GHC.TypeLits.Symbol' to the value level as a 'GHC.Base.String'
 --
@@ -560,7 +560,7 @@ instance GetOrdering cmp => P (cmp :: Ordering) a where
   type PP cmp a = Ordering
   eval _ opts _a =
     let cmp = getOrdering @cmp
-        msg = "'" <> show cmp
+        msg = "'" <> showL opts cmp
     in pure $ mkNode opts (PresentT cmp) msg []
 
 -- | extracts the value level representation of the type level 'Nat'
@@ -572,7 +572,7 @@ instance KnownNat n => P (n :: Nat) a where
   type PP n a = Int
   eval _ opts _ =
     let n = nat @n
-    in pure $ mkNode opts (PresentT n) ("'" <> show n) []
+    in pure $ mkNode opts (PresentT n) ("'" <> showL opts n) []
 
 -- | extracts the value level representation of the type level '()
 --
@@ -952,7 +952,7 @@ run a = do
   putStr $ prtTree opts pp
   return r
 
--- no show instance required
+-- no Show instance required
 runZ :: forall opts p a
         . ( OptC opts
           , P p a)
@@ -1064,11 +1064,11 @@ instance (Show (PP p a)
   eval _ opts a = do
     let msg0 = "(>>)"
     pp <- eval (Proxy @p) opts a
-    case getValueLR opts "(>>) lhs failed" pp [] of
+    case getValueLR opts "" pp [] of
       Left e -> pure e
       Right p -> do
         qq <- eval (Proxy @q) opts p
-        pure $ case getValueLR opts (show p <> " (>>) rhs failed") qq [hh pp] of
+        pure $ case getValueLR opts (showL opts p) qq [hh pp] of
           Left e -> e
           Right q -> mkNode opts (_tBool qq) (lit01 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
 
@@ -1382,7 +1382,7 @@ instance (Foldable t
                    [] -> mkNode opts (FailT (msg0 <> " empty")) "expected one element" [hh pp]
                    [a] -> mkNode opts (PresentT a) msg0 [hh pp]
                    as -> let n = length as
-                         in mkNode opts (FailT (msg0 <> " " <> show n <> " elements")) "expected one element" [hh pp]
+                         in mkNode opts (FailT (msg0 <> " " <> showL opts n <> " elements")) "expected one element" [hh pp]
 
 --type OneP = Guard "expected list of length 1" (Len == 1) >> Head Id
 --type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
@@ -1463,7 +1463,7 @@ instance P (BetweenT p q) x => P (p <..> q) x where
 -- >>> pz @(All Odd Id) []
 -- TrueT
 --
--- >>> run @'OANV @(All Even Id) [1,5,11,5,3]
+-- >>> run @OANV @(All Even Id) [1,5,11,5,3]
 -- False All(5) i=0 (1 == 0)
 -- |
 -- +- P Id [1,5,11,5,3]
@@ -1551,7 +1551,7 @@ instance (P p a
                  Left e -> e
                  Right abcs ->
                    let hhs = hh qq : map (hh . fixit) ts
-                       msg1 = msg0 ++ "(" ++ show (length q) ++ ")"
+                       msg1 = msg0 ++ "(" ++ showL opts (length q) ++ ")"
                    in case find (not . view _1) abcs of
                         Nothing -> mkNodeB opts True msg1 hhs
                         Just (_,(i,_),tt) ->
@@ -1606,7 +1606,7 @@ instance (P p a
                  Left e -> e
                  Right abcs ->
                    let hhs = hh qq : map (hh . fixit) ts
-                       msg1 = msg0 ++ "(" ++ show (length q) ++ ")"
+                       msg1 = msg0 ++ "(" ++ showL opts (length q) ++ ")"
                    in case find (view _1) abcs of
                         Nothing -> mkNodeB opts False msg1 hhs
                         Just (_,(i,_),tt) ->
@@ -2000,7 +2000,7 @@ instance (Show (PP p a)
 -- PresentT [1,2,4,0]
 --
 -- >>> pl @(Do '[Pred Id,Id,ShowP Id,Ones Id,Map (ReadBase Int 8 Id) Id]) 1239
--- Error invalid base 8 (1238 (>>) rhs failed)
+-- Error invalid base 8 (1238)
 -- FailT "invalid base 8"
 --
 -- >>> pl @(Do '[4,5,6]) ()
@@ -2479,7 +2479,7 @@ instance GetWeekDay dy => P (dy :: DayOfWeek) a where
   type PP dy a = DayOfWeek
   eval _ opts _a =
     let dy = getWeekDay @dy
-        msg = "'" <> show dy
+        msg = "'" <> showL opts dy
     in pure $ mkNode opts (PresentT dy) msg []
 
 -- | get weekday from the typelevel

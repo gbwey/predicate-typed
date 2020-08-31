@@ -111,7 +111,7 @@ instance (PP p (b,a) ~ b
                          [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (PresentT q) (msg0 <> "(done)") [])], Right ())
                          a:as -> do
                             pp :: TT b <- evalHide @p opts (b,a)
-                            case getValueLR opts (msg0 <> " i=" <> showIndex i <> " a=" <> show a) pp [] of
+                            case getValueLR opts (msg0 <> " i=" <> showIndex i <> " a=" <> showL opts a) pp [] of
                                Left e  -> pure (rs,Left e)
                                Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
             (ts,lrx) :: ([((Int, b), TT b)], Either (TT [b]) ()) <- ff 1 q r []
@@ -418,7 +418,7 @@ instance P (IterateNWhileT n p f) x => P (IterateNWhile n p f) x where
 -- PresentT [95,94,93]
 --
 -- >>> pl @(IterateNUntil 9999 'False I) 1
--- Error Unfoldr (9999,1):recursion limit i=100 ((9999,1) (>>) rhs failed)
+-- Error Unfoldr (9999,1):recursion limit i=100 ((9999,1))
 -- FailT "Unfoldr (9999,1):recursion limit i=100"
 --
 data IterateNUntil n p f
@@ -505,9 +505,8 @@ instance (KnownNat n
   type PP (ParaImpl n (p ': p1 ': ps)) [a] = [PP p a]
   eval _ opts as' = do
      let cpos = n-pos-1
-         msgbase0 = msgbase2 <> "(" <> showIndex cpos <> " of " <> show n <> ")"
-         msgbase1 = msgbase2 <> "(" <> showIndex cpos <> ")"
-         msgbase2 = "Para"
+         msgbase0 = "Para(" <> showIndex cpos <> " of " <> show (n-1) <> ")"
+         msgbase1 = "Para(" <> showIndex cpos <> ")"
          n = nat @n
          pos = 1 + getLen @ps -- cos p1!
      case as' of
@@ -517,7 +516,7 @@ instance (KnownNat n
            Left e -> pure e
            Right b -> do
                         qq <- eval (Proxy @(ParaImpl n (p1 ': ps))) opts as
-                        pure $ case getValueLR opts (msgbase1 <> " rhs failed " <> show b) qq [hh pp] of
+                        pure $ case getValueLR opts (_tString qq <> " " <> showL opts b) qq [hh pp] of
                           Left e -> e
                           Right bs -> mkNode opts (PresentT (b:bs)) (msgbase1 <> " " <> showL opts (b:bs) <> showVerbose opts " | " as') [hh pp, hh qq]
        _ -> errorInProgram "ParaImpl n+1 case has no data left"
@@ -538,14 +537,13 @@ instance (KnownNat n
 -- PresentT [1,2,3,4,12]
 --
 -- >>> pl @(ParaN 5 (Guard "0-255" (Between 0 255 Id))) [1,2,3,400,12]
--- Error 0-255 (Para(0) rhs failed 1)
+-- Error 0-255 (Para(3 of 4) 3 2 1)
 -- FailT "0-255"
 --
 -- >>> pl @(ParaN 4 (PrintF "%03d" Id)) [141,21,3,0::Int]
 -- Present ["141","021","003","000"] (Para(0) ["141","021","003","000"] | [141,21,3,0])
 -- PresentT ["141","021","003","000"]
 --
-
 data ParaN (n :: Nat) p
 
 instance ( P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) x

@@ -631,7 +631,7 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 -- FailT "empty list"
 --
 -- >>> pl @(HeadFail "zz" (Fst Id) >> Le 6) ([],True)
--- Error zz ((>>) lhs failed)
+-- Error zz
 -- FailT "zz"
 --
 -- >>> pl @((HeadFail "failed1" (Fst Id) >> Le 6) || 'False) ([],True)

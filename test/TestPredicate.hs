@@ -75,8 +75,8 @@ allTests =
   , expectPE TrueT $ pl @('PresentT I >> Not 'FalseT) False
   -- IxL "d" doesnt work cos is Text not String
   -- use Fromstring
-  , expectPE (PresentT [7,9,9,2,7,3,9,8,7,1,3]) $ pl @(Map (ReadP Int Id) (Ones Id) >> Guard "checkdigit fail" (IsLuhn Id)) "79927398713"
-  , expectPE (FailT "checkdigit fail") $ pl @(Map (ReadP Int Id) (Ones Id) >> Guard "checkdigit fail" (IsLuhn Id)) "79927398714"
+  , expectPE (PresentT [7,9,9,2,7,3,9,8,7,1,3]) $ pl @(Map (ReadP Int Id) (Ones Id) >> Guard "invalid checkdigit" (IsLuhn Id)) "79927398713"
+  , expectPE (FailT "invalid checkdigit") $ pl @(Map (ReadP Int Id) (Ones Id) >> Guard "invalid checkdigit" (IsLuhn Id)) "79927398714"
   , expectPE (PresentT [10,14,15,9]) $ pl @(MM1 16 >> MM2 16) "aef9"
   , expectPE (FailT "invalid base 16") $ pl @(MM1 16 >> MM2 16) "aef9g"
   , expectPE (FailT "found empty") $ pl @(MM1 16 >> MM2 16) ""

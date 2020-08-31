@@ -61,7 +61,7 @@ tests:
   predicate-typed-test:
     main:                TestSpec.hs
     source-dirs:
-#    - src
+    - src
     - test
     ghc-options:
     - -threaded

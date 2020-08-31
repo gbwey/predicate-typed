@@ -115,7 +115,7 @@ data Re' (rs :: [ROpt]) p q
 -- PresentT 13.0
 --
 -- >>> pl @(ExitWhen "regex failed" (Not (Re "^\\d+(?:\\.\\d+)?$" Id)) >> ReadP Double Id) "-13.4"
--- Error regex failed ((>>) lhs failed)
+-- Error regex failed
 -- FailT "regex failed"
 --
 -- >>> pl @(Re "\\d{4}\\" Id) "ayx"
@@ -370,7 +370,7 @@ instance (GetROpts rs
 -- PresentT ([141,214,125,1,2,6],(False,True))
 --
 -- >>> pl @(Resplit "\\." Id >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (Between 0 255 Id) Id)) "141.214.125."
--- Error ReadP Int () (["141","214","125",""] (>>) rhs failed)
+-- Error ReadP Int () (["141","214","125",""])
 -- FailT "ReadP Int ()"
 --
 data Resplit p q

@@ -70,13 +70,13 @@ import Data.Functor.Identity
 --
 -- <interactive>:116:4: error:
 --     *
--- [Error asdf] lhs failed >>
+-- [Error asdf]
 -- |
 -- `- [Error asdf] Fail asdf
 --    |
 --    `- P '"asdf"
 --
--- refinedTH: predicate failed with FailP "asdf" ((>>) lhs failed)
+-- refinedTH: predicate failed with FailP "asdf"
 --     * In the Template Haskell splice $$(refinedTH 99)
 --       In the expression:
 --           $$(refinedTH 99) ::

@@ -119,8 +119,8 @@ import Test.QuickCheck
 -- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(Lt 255) "00fe"
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(Lt 253) "00fe"
--- Left "Step 2. False Boolean Check(op) | FalseP"
+-- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) "00fe"
+-- Left "Step 2. Failed Boolean Check(op) | 0xFE is too large"
 --
 -- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(Lt 255) "00fg"
 -- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"

@@ -149,8 +149,8 @@ import GHC.Stack
 -- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 253) @(PrintF "%x" Id) "00fe"
--- Left "Step 2. False Boolean Check(op) | FalseP"
+-- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) @(PrintF "%x" Id) "00fe"
+-- Left "Step 2. Failed Boolean Check(op) | 0xFE is too large"
 --
 -- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fg"
 -- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"

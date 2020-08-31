@@ -309,6 +309,6 @@ instance (P n a
     pure $ case lr of
       Left e -> e
       Right (fromIntegral -> (n::Int),p,pp,qq) ->
-        let msg1 = msg0 <> " " <> showL opts n <> " p=" <> show p
+        let msg1 = msg0 <> " " <> showL opts n <> " p=" <> showL opts p
             b = SG.stimes n p
             in mkNode opts (PresentT b) (show01' opts msg1 b "n=" n <> showVerbose opts " | " p) [hh pp, hh qq]

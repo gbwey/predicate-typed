@@ -21,7 +21,7 @@ and then roundtrips the value to a string
 ```haskell
 >type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
->prtEval3PIO (Proxy @(Hex 'OL)) "0000fe"
+>prtEval3PIO (Proxy @(Hex OL)) "0000fe"
 Refined3 {r3In = 254, r3Out = "fe"}
 ```
 1. `ReadBase Int 16 Id`
@@ -33,7 +33,7 @@ Refined3 {r3In = 254, r3Out = "fe"}
 
 run this to get details in color of each evaluation step on failure:
 ```haskell
->prtEval3PIO (Proxy @(Hex 'OU)) "0000ffe"
+>prtEval3PIO (Proxy @(Hex OU)) "0000ffe"
 
 *** Step 1. Success Initial Conversion(ip) [4094] ***
 
@@ -68,14 +68,14 @@ PresentT "fe"
 ```haskell
 type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
-$$(refined3TH "0000fe") :: MakeR3 (Hex 'OL)
+$$(refined3TH "0000fe") :: MakeR3 (Hex OL)
 ```
 
-Here is an example where the predicate fails at compile-time and we choose to show the details using 'OU
+Here is an example where the predicate fails at compile-time and we choose to show the details using OU
 ```haskell
 >type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
->$$(refined3TH "000ffff") :: MakeR3 (Hex 'OU)
+>$$(refined3TH "000ffff") :: MakeR3 (Hex OU)
 
 <interactive>:18:4: error:
     *
@@ -97,23 +97,23 @@ False 65535 <= 255
 
 refined3TH: predicate failed with Step 2. False Boolean Check(op) | {65535 <= 255}
     * In the Template Haskell splice $$(refined3TH "000ffff")
-      In the expression: $$(refined3TH "000ffff") :: MakeR3 (Hex 'OU)
+      In the expression: $$(refined3TH "000ffff") :: MakeR3 (Hex OU)
       In an equation for `it':
           it = $$(refined3TH "000ffff") :: MakeR3 Hex
 ```
 
 ### Any valid Read/Show instance can be used with Refined3
 ```haskell
->$$(refined3TH "13 % 3") :: ReadShowR 'OU Rational
+>$$(refined3TH "13 % 3") :: ReadShowR OU Rational
 Refined3 {r3In = 13 % 3, r3Out = "13 % 3"}
 
->$$(refined3TH "2016-11-09") :: ReadShowR 'OU Day
+>$$(refined3TH "2016-11-09") :: ReadShowR OU Day
 Refined3 {r3In = 2016-11-09, r3Out = "2016-11-09"}
 ```
 
 An example of an invalid refined3TH call
 ```haskell
->$$(refined3TH "2016-xy-09") :: ReadShowR 'OU Day
+>$$(refined3TH "2016-xy-09") :: ReadShowR OU Day
 
 <interactive>:719:4: error:
     *
@@ -126,22 +126,22 @@ An example of an invalid refined3TH call
 refined3TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09)
     * In the Template Haskell splice $$(refined3TH "2016-xy-09")
       In the expression:
-          $$(refined3TH "2016-xy-09") :: ReadShowR  'OU Day
+          $$(refined3TH "2016-xy-09") :: ReadShowR  OU Day
       In an equation for `it`:
-          it = $$(refined3TH "2016-xy-09") :: ReadShowR  'OU Day
+          it = $$(refined3TH "2016-xy-09") :: ReadShowR  OU Day
 ```
 
 ### Json decoding
 
 #### This example is successful as it is a valid hexadecimal and is between 10 though 256
 ```haskell
->eitherDecode' @(Refined3 'OU (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
+>eitherDecode' @(Refined3 OU (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
 Right (Refined3 {r3In = 254, r3Out = "254"})
 ```
 
 #### This example fails as the value is not a valid hexadecimal string
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined3 'OU (ReadBase Int 16 Id) 'True (ShowP Id) String) "\"00feg\""
+>either putStrLn print $ eitherDecode' @(Refined3 OU (ReadBase Int 16 Id) 'True (ShowP Id) String) "\"00feg\""
 Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ***Step 1. Initial Conversion(ip) Failed ***
@@ -154,7 +154,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 #### This example fails as the hexadecimal value is valid but is not between 10 and 256
 
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined3 'OU (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
+>either putStrLn print $ eitherDecode' @(Refined3 OU (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
 Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | {16663610 < 256}}
 
 ***Step 1. Success Initial Conversion(ip) (16663610) ***

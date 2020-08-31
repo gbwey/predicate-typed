@@ -40,8 +40,8 @@ module Predicate.Examples.Refined2 (
   , HmsR'
 
   -- ** credit cards
-  , Ccn
-  , cc11
+  , Luhn
+  , luhn11
 
   -- ** ssn
   , ssn
@@ -96,19 +96,19 @@ import Data.Proxy
 
 -- | credit card with luhn algorithm
 --
--- >>> newRefined2 @OZ @Ccip @(Ccop 11) "1234-5678-901"
--- Left "Step 2. False Boolean Check(op) | FalseP"
+-- >>> newRefined2 @OZ @Luhnip @(Luhnop 11) "1234-5678-901"
+-- Left "Step 2. Failed Boolean Check(op) | invalid checkdigit"
 --
--- >>> newRefined2 @OZ @Ccip @(Ccop 11) "1234-5678-903"
+-- >>> newRefined2 @OZ @Luhnip @(Luhnop 11) "1234-5678-903"
 -- Right (Refined2 {r2In = [1,2,3,4,5,6,7,8,9,0,3], r2Out = "1234-5678-903"})
 --
--- >>> pz @(Ccip >> Ccop 11) "79927398713"
+-- >>> pz @(Luhnip >> Luhnop 11) "79927398713"
 -- TrueT
 --
--- >>> pz @(Ccip >> Ccop 10) "79927398713"
+-- >>> pz @(Luhnip >> Luhnop 10) "79927398713"
 -- FailT "expected 10 digits but found 11"
 --
-type Ccn (opts :: Opt) (n :: Nat) = '(opts, Ccip, Ccop n, String)
+type Luhn (opts :: Opt) (n :: Nat) = '(opts, Luhnip, Luhnop n, String)
 
 -- | read in a valid datetime
 --
@@ -141,10 +141,10 @@ type DateTimeN (opts :: Opt) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True
 -- Right (Refined2 {r2In = [134,1,2211], r2Out = "134-01-2211"})
 --
 -- >>> newRefined2 @OL @Ssnip @Ssnop "666-01-2211"
--- Left "Step 2. False Boolean Check(op) | {Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))}"
+-- Left "Step 2. Failed Boolean Check(op) | Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))"
 --
 -- >>> newRefined2 @OL @Ssnip @Ssnop "667-00-2211"
--- Left "Step 2. False Boolean Check(op) | {Bool(1) [number for group 1 invalid: found 0] (1 <= 0)}"
+-- Left "Step 2. Failed Boolean Check(op) | Bool(1) [number for group 1 invalid: found 0] (1 <= 0)"
 --
 
 ssn :: OptC opts => Proxy (Ssn opts)
@@ -160,10 +160,10 @@ type Ssn (opts :: Opt) = '(opts, Ssnip, Ssnop, String)
 -- Right (Refined2 {r2In = [23,13,59], r2Out = "23:13:59"})
 --
 -- >>> newRefined2 @OL @Hmsip @Hmsop' "23:13:60"
--- Left "Step 2. False Boolean Check(op) | {Bool(2) [seconds] (60 <= 59)}"
+-- Left "Step 2. Failed Boolean Check(op) | Bool(2) [seconds] (60 <= 59)"
 --
 -- >>> newRefined2 @OL @Hmsip @Hmsop' "26:13:59"
--- Left "Step 2. False Boolean Check(op) | {Bool(0) [hours] (26 <= 23)}"
+-- Left "Step 2. Failed Boolean Check(op) | Bool(0) [hours] (26 <= 23)"
 --
 hms :: OptC opts => Proxy (Hms opts)
 hms = mkProxy2'
@@ -183,7 +183,7 @@ type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', String)
 -- Right (Refined2 {r2In = [1,223,14,1], r2Out = "001.223.14.1"})
 --
 -- >>> newRefined2 @OL @Ip4ip @Ip4op' "001.223.14.999"
--- Left "Step 2. False Boolean Check(op) | {Bool(3) [octet 3 out of range 0-255 found 999] (999 <= 255)}"
+-- Left "Step 2. Failed Boolean Check(op) | Bool(3) [octet 3 out of range 0-255 found 999] (999 <= 255)"
 --
 -- >>> newRefined2P (ip4 @OL) "001.223.14.999"
 -- Left "Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 999"
@@ -242,8 +242,8 @@ isbn13 = Proxy
 
 
 
-cc11 :: Proxy (Ccn opts 11)
-cc11 = Proxy
+luhn11 :: Proxy (Luhn opts 11)
+luhn11 = Proxy
 
 -- | convert a string from a given base \'i\' and store it internally as an base 10 integer
 --
@@ -269,7 +269,7 @@ type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n Id, p, String)
 -- Right (Refined2 {r2In = [1,2,3,0], r2Out = "1230"})
 --
 -- >>> newRefined2 @OL @Luhnip @(Luhnop 4) "1234"
--- Left "Step 2. False Boolean Check(op) | {True && False | (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}"
+-- Left "Step 2. Failed Boolean Check(op) | invalid checkdigit"
 --
 -- | uses builtin 'IsLuhn'
 
