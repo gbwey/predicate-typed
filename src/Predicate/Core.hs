@@ -56,7 +56,6 @@ module Predicate.Core (
   , runs
 
   , pz
-  , runZ
 
   , P(..)
 
@@ -627,7 +626,7 @@ instance (Show (PP p a)
       Left e -> pure e
       Right p -> do
         qq <- eval (Proxy @(p1 ': ps)) opts a
-        pure $ case getValueLR opts msg0 qq [hh pp] of
+        pure $ case getValueLR opts (_tString qq) qq [hh pp] of
           Left e -> e
           Right q ->
             let ret = p:q
@@ -891,19 +890,14 @@ instance GetBoolT x b => P (b :: BoolT x) a where
       PresentT {} -> mkNode opts (PresentT False) "'PresentT _" []
       FailT {} -> mkNode opts (FailT "'FailT _") "" []
 
--- | skips the evaluation tree and just displays the end result
-pz :: forall p a
-      . P p a
-     => a
-     -> IO (BoolT (PP p a))
-pz = runZ @OZ @p
-
-pan, panv, pa, pu, pl, pab, pub, pav, puv
+pu, pl, pa, pan, panv, pab, pub, pav, puv, pz
   :: forall p a
   . ( Show (PP p a)
     , P p a
     ) => a
       -> IO (BoolT (PP p a))
+-- | skips the evaluation tree and just displays the end result
+pz = run @OZ @p
 -- | same as 'pz' but adds context to the end result
 pl = run @OL @p
 -- | displays the evaluation tree in plain text without colors
@@ -949,19 +943,8 @@ run a = do
   let opts = getOpt @opts
   pp <- eval (Proxy @p) opts a
   let r = pp ^. tBool
-  putStr $ prtTree opts pp
+  unless (oDebug opts == DZero) $ putStr $ prtTree opts pp
   return r
-
--- no Show instance required
-runZ :: forall opts p a
-        . ( OptC opts
-          , P p a)
-        => a
-        -> IO (BoolT (PP p a))
-runZ a = do
-  let opts = getOpt @opts
-  pp <- eval (Proxy @p) opts a
-  return $ pp ^. tBool
 
 -- | run expression with multiple options in a list
 --

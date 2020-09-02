@@ -480,7 +480,7 @@ instance (Show (PP p a)
   type PP (ParaImpl n '[p]) [a] = [PP p a]
   eval _ opts as' = do
     let msgbase0 = "Para"
-        msgbase1 = msgbase0 <> "(" <> show n <> ")"
+        msgbase1 = msgbase0 <> "(" <> show (n-1) <> ")"
         n :: Int
         n = nat @n
     case as' of

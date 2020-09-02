@@ -71,7 +71,7 @@ instance (P p x
             msg1 = msg0 <> "(" ++ litBL opts { oWidth = oWidth opts `div` 3 } s ++ ")"
         in case A.eitherDecode' s of
            Right b -> mkNode opts (PresentT b) (msg0 <> " " ++ showL opts { oWidth = oWidth opts `div` 2 } b) hhs
-           Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e) ) (e <> " | " <> litBL opts s) hhs
+           Left e -> mkNode opts (FailT (msg1 <> " " <> e) ) (litBL opts s) hhs
 
 -- | parse json data using the type \'t\'
 --
@@ -80,8 +80,8 @@ instance (P p x
 -- PresentT (10,"abc")
 --
 -- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\",99]"
--- Error ParseJson (Int,[Char])([10,"abc",...) Error in $ (Error in $: cannot unpack array of length 3 into a tuple of length 2 | [10,"abc",99])
--- FailT "ParseJson (Int,[Char])([10,\"abc\",...) Error in $"
+-- Error ParseJson (Int,[Char])([10,"abc",99]) Error in $: cannot unpack array of length 3 into a tuple of length 2 ([10,"abc",99])
+-- FailT "ParseJson (Int,[Char])([10,\"abc\",99]) Error in $: cannot unpack array of length 3 into a tuple of length 2"
 --
 -- >>> pl @(ParseJson (Int,Bool) (FromString _ Id)) ("[1,true]" :: String)
 -- Present (1,True) (ParseJson (Int,Bool) (1,True))
@@ -92,8 +92,8 @@ instance (P p x
 -- PresentT (1,True)
 --
 -- >>> pl @(ParseJson () Id) "[1,true]"
--- Error ParseJson ()([1,true]) Error in $ (Error in $: parsing () failed, expected an empty array | [1,true])
--- FailT "ParseJson ()([1,true]) Error in $"
+-- Error ParseJson ()([1,true]) Error in $: parsing () failed, expected an empty array ([1,true])
+-- FailT "ParseJson ()([1,true]) Error in $: parsing () failed, expected an empty array"
 --
 data ParseJson (t :: Type) p
 type ParseJsonT (t :: Type) p = ParseJson' (Hole t) p
@@ -131,7 +131,7 @@ instance (P p x
           Just (Just s) ->
             case A.eitherDecodeStrict' s of
                Right b -> mkNode opts (PresentT b) (msg1 <> " " ++ showL opts b) hhs
-               Left e -> mkNode opts (FailT (msg1 <> " " <> takeWhile (/=':') e)) (e <> " | " <> litBS opts s) hhs
+               Left e -> mkNode opts (FailT (msg1 <> " " <> e)) (litBS opts s) hhs
 
 -- | parse a json file \'p\' using the type \'t\'
 --

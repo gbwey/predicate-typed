@@ -133,6 +133,28 @@ instance ( Show as
     let b = has _Empty as
     in pure $ mkNodeB opts b ("IsEmpty" <> showVerbose opts " | " as) []
 
+data IToList' t p
+
+instance (Show x
+        , P p x
+        , Typeable (PP t (PP p x))
+        , Show (PP t (PP p x))
+        , FoldableWithIndex (PP t (PP p x)) f
+        , PP p x ~ f a
+        , Show a
+        ) => P (IToList' t p) x where
+  type PP (IToList' t p) x = [(PP t (PP p x), ExtractAFromTA (PP p x))]
+  eval _ opts x = do
+    let msg0 = "IToList"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = itoList p
+            t = showT @(PP t (PP p x))
+        in mkNode opts (PresentT b) (msg0 <> "(" <> t <> ") " <> showL opts b <> showVerbose opts " | " x) [hh pp]
+
+
 
 -- | similar to 'Control.Lens.itoList'
 --
@@ -171,28 +193,6 @@ instance ( Show as
 -- Present [(0,'a'),(1,'b'),(2,'c')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c')] | "abc")
 -- PresentT [(0,'a'),(1,'b'),(2,'c')]
 --
-
-data IToList' t p
-
-instance (Show x
-        , P p x
-        , Typeable (PP t (PP p x))
-        , Show (PP t (PP p x))
-        , FoldableWithIndex (PP t (PP p x)) f
-        , PP p x ~ f a
-        , Show a
-        ) => P (IToList' t p) x where
-  type PP (IToList' t p) x = [(PP t (PP p x), ExtractAFromTA (PP p x))]
-  eval _ opts x = do
-    let msg0 = "IToList"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = itoList p
-            t = showT @(PP t (PP p x))
-        in mkNode opts (PresentT b) (msg0 <> "(" <> t <> ") " <> showL opts b <> showVerbose opts " | " x) [hh pp]
-
 data IToList (t :: Type) p
 type IToListT (t :: Type) p = IToList' (Hole t) p
 

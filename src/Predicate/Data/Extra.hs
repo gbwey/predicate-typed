@@ -71,6 +71,7 @@ module Predicate.Data.Extra (
   , Dot
   , RDot
   , K
+  , Lift
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -1043,8 +1044,6 @@ instance (P p x
             Right _ -> mkNode opts (_tBool qq) (msg0 <> " caught exception[" <> emsg <> "]") [hh pp, hh qq]
       Right _ -> pure $ mkNode opts (_tBool pp) (msg0 <> " did not fire") [hh pp]
 
-
-
 -- | compose simple functions
 --
 -- >>> pl @(Dot '[Thd,Snd,Fst] Id) ((1,(2,9,10)),(3,4))
@@ -1081,15 +1080,19 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
   RDotExpandT '[p] q = p $ q
   RDotExpandT (p ': p1 ': ps) q = RDotExpandT (p1 ': ps) (p $ q)
 
--- | creates a constant expression ignoring the second argument
+-- | creates a constant expression ignoring the second argument:types dont need to match on rhs!
 --
--- >>> pl @(RDot '[Fst,Snd,Thd,K "xxx"] Id) ((1,(2,9,10)),(3,4))
+-- >>> pl @(RDot '[Fst,Snd,Thd,K "xxx"] Id) 12345
 -- Present "xxx" (K '"xxx")
 -- PresentT "xxx"
 --
--- >>> pl @(RDot '[Fst,Snd,Thd,K '("abc",Id)] Id) ((1,(2,9,10)),(3,4))
--- Present ("abc",((1,(2,9,10)),(3,4))) (K '("abc",((1,(2,9,10)),(3,4))))
--- PresentT ("abc",((1,(2,9,10)),(3,4)))
+-- >>> pl @(RDot '[Fst,Snd,Thd,K '("abc",Id)] Id) ()
+-- Present ("abc",()) (K '("abc",()))
+-- PresentT ("abc",())
+--
+-- >>> pl @(Dot '[K "skip",L6,Lift Dup,Succ] Id) ()
+-- Present "skip" (K '"skip")
+-- PresentT "skip"
 --
 -- >>> pl @(Thd $ Snd $ Fst $ K Id "dud") ((1,("W",9,'a')),(3,4))
 -- Present 'a' (Thd 'a' | ("W",9,'a'))
@@ -1099,8 +1102,25 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 -- Present '`' ((>>) '`' | {Pred '`' | 'a'})
 -- PresentT '`'
 --
+-- >>> pl @(K "ss" $ Thd $ Thd $ Fst Id) ()
+-- Present "ss" (K '"ss")
+-- PresentT "ss"
+--
 data K (p :: k) (q :: k1)
 instance P p a => P (K p q) a where
   type PP (K p q) a = PP p a
   eval _ = eval (Proxy @(MsgI "K " p))
+
+-- | Lift a no arg Adt to a function of one argument (for use with 'Dot' and 'RDot')
+--
+-- >>> pl @(Lift Len (Snd Id)) (True,"abcdef")
+-- Present 6 ((>>) 6 | {Len 6 | "abcdef"})
+-- PresentT 6
+--
+data Lift p q
+type LiftT p q = q >> p
+
+instance P (LiftT p q) x => P (Lift p q) x where
+  type PP (Lift p q) x = PP (LiftT p q) x
+  eval _ = eval (Proxy @(LiftT p q))
 

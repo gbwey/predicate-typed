@@ -106,6 +106,7 @@ module Predicate.Util (
   , litBL
   , litBS
   , nullSpace
+  , nullIf
 
   -- ** regular expressions
   , ROpt(..)
@@ -246,6 +247,7 @@ import Data.Maybe
 import Data.Coerce
 import Data.Foldable (toList)
 import Data.Containers.ListUtils (nubOrd)
+import Data.Char (isSpace)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -1185,8 +1187,12 @@ hasNoTree opts =
     DVerbose -> False
 
 nullSpace :: String -> String
-nullSpace s | null s = ""
-            | otherwise = " " <> s
+nullSpace = nullIf " "
+
+nullIf :: String -> String -> String
+nullIf s t
+  | all isSpace t = ""
+  | otherwise = s <> t
 
 -- | render the 'BoolP' value with colors
 colorBoolP ::
