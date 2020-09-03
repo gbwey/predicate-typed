@@ -322,7 +322,7 @@ instance (GetFHandle fh
                             fmap (left show) $ E.try @E.SomeException $ withFile s md (`hPutStr` ss)
           pure $ case mb of
             Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" [hh pp]
-            Just (Left e) -> mkNode opts (FailT e) (msg0 <> " " <> e) [hh pp]
+            Just (Left e) -> mkNode opts (FailT $ msg0 <> ":" <> e) "" [hh pp]
             Just (Right ()) -> mkNode opts (PresentT ()) msg0 [hh pp]
 
 -- | read in a value of a given type from stdin with a prompt: similar to 'System.IO.readIO'
@@ -344,6 +344,6 @@ instance P Stdin x where
                         Right ss -> Right ss
     pure $ case mb of
       Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" []
-      Just (Left e) -> mkNode opts (FailT e) (msg0 <> " " <> e) []
+      Just (Left e) -> mkNode opts (FailT $ msg0 <> ":" <> e) "" []
       Just (Right ss) -> mkNode opts (PresentT ss) (msg0 <> "[" <> litVerbose opts "" ss <> "]") []
 

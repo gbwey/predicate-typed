@@ -95,7 +95,7 @@ type Dtip t = ParseTimeP t "%F %T" Id
 type Dtfmt = FormatTimeP "%F %T" Id
 
 -- | \'ip\' type for reading in a ssn
-type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd (OneP Id))
+type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd OneP)
 -- | \'op\' type for validating a ssn
 type Ssnop = BoolsQuick (PrintT "number for group %d invalid: found %d" Id)
                      '[Between 1 899 Id && Id /= 666, Between 1 99 Id, Between 1 9999 Id]
@@ -134,7 +134,7 @@ type Ip4RE = "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$"
 type Ip4ip = Map (ReadP Int Id) (Resplit "\\." Id)
 
 -- | \'ip\' type for reading in an ip4 address using a regular expression
-type Ip4ip' = Map (ReadP Int Id) (Rescan Ip4RE Id >> Snd (OneP Id))
+type Ip4ip' = Map (ReadP Int Id) (Rescan Ip4RE Id >> Snd OneP)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
 
 -- | \'op\' type for validating an ip4 address using a predicate

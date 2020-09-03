@@ -135,7 +135,7 @@ instance P ThatsT x => P Thats x where
 
 -- | similar to 'TheseC.catThese'
 --
--- >>> pz @(ZipThese Id (Tail Id) >> Theses) [1..10]
+-- >>> pz @(ZipThese Id Tail >> Theses) [1..10]
 -- PresentT [(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,8),(8,9),(9,10)]
 --
 data Theses
@@ -147,7 +147,7 @@ instance P ThesesT x => P Theses x where
 
 -- | similar to 'TheseC.catHere'
 --
--- >>> pz @(ZipThese Id (Tail Id) >> Heres) [1..10]
+-- >>> pz @(ZipThese Id Tail >> Heres) [1..10]
 -- PresentT [1,2,3,4,5,6,7,8,9,10]
 --
 data Heres
@@ -163,7 +163,7 @@ instance ( Show a
 
 -- | similar to 'TheseC.catThere'
 --
--- >>> pz @(ZipThese Id (Tail Id) >> Theres) [1..10]
+-- >>> pz @(ZipThese Id Tail >> Theres) [1..10]
 -- PresentT [2,3,4,5,6,7,8,9,10]
 --
 data Theres
@@ -566,9 +566,9 @@ instance (PP p a ~ [x]
       Left e -> e
       Right (p,q,pp,qq) ->
         let hhs = [hh pp, hh qq]
-        in case chkSize opts msg0 p hhs <* chkSize opts msg0 q hhs of
+        in case chkSize2 opts msg0 p q hhs of
           Left e -> e
-          Right () ->
+          Right _ ->
             let d = simpleAlign p q
             in mkNode opts (PresentT d) (show01' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
 

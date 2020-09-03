@@ -111,7 +111,7 @@ unnamedTests = [
 
   , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789")
                   $ eval2 @OA
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
                   @(GuardBool "expected 3" (Len == 3)
                  && GuardBool "3 digits" (Ix' 0 >> Between 0 999 Id)
                  && GuardBool "2 digits" (Ix' 1 >> Between 0 99 Id)
@@ -121,7 +121,7 @@ unnamedTests = [
 
   , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789")
                   $ eval2 @OA
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   "123-45-6789"
 
@@ -146,11 +146,11 @@ unnamedTests = [
                   "123::Ffff:::11"
 
   , expect2 (Right $ unsafeRefined2 [31,11,1999] "31-11-1999")
-                  $ eval2 @OA @(Rescan DdmmyyyyRE Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
+                  $ eval2 @OA @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
                            @Ddmmyyyyop
                            "31-11-1999"
   , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789") $ eval2 @OA
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP Id >> Map (ReadBase Int 10 Id) (Snd Id))
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   "123-45-6789"
 
@@ -222,16 +222,16 @@ tst0a =
   , newRefined2P (Proxy @(Luhn OAB 6)) "123455" == Right (unsafeRefined2 [1,2,3,4,5,5] "123455")
   ]
 
--- prtRefinedTIO tst1a
-tst1a :: Monad m => RefinedT m ((Int,String),(Int,String))
-tst1a = withRefined2T @OA @(ReadBase Int 16 Id) @(Between 100 200 Id) @String "a3"
-  $ \r1 -> withRefined2T @OA @(ReadP Int Id) @'True @String "12"
+-- prtRefinedTIO $ tst1a @'OU
+tst1a :: forall (opts :: Opt) m . (OptC opts, Monad m) => RefinedT m ((Int,String),(Int,String))
+tst1a = withRefined2T @opts @(ReadBase Int 16 Id) @(Between 100 200 Id) @String "a3"
+  $ \r1 -> withRefined2T @opts @(ReadP Int Id) @'True @String "12"
      $ \r2 -> return ((r2In r1, r2Out r1), (r2In r2, r2Out r2))
 
--- prtRefinedTIO tst2a
-tst2a :: MonadIO m => RefinedT m ((Int,String),(Int,String))
-tst2a = withRefined2TIO @OA @(ReadBase Int 16 Id) @(Stderr "start" |> Between 100 200 Id >| Stdout "end") @String "a3"
-  $ \r1 -> withRefined2TIO @OA @(ReadP Int Id) @'True @String "12"
+-- prtRefinedTIO $ tst2a @'OU
+tst2a :: forall (opts :: Opt) m . (OptC opts, MonadIO m) => RefinedT m ((Int,String),(Int,String))
+tst2a = withRefined2TIO @opts @(ReadBase Int 16 Id) @(Stderr "start" |> Between 100 200 Id >| Stdout "end") @String "a3"
+  $ \r1 -> withRefined2TIO @opts @(ReadP Int Id) @'True @String "12"
      $ \r2 -> return ((r2In r1, r2Out r1), (r2In r2, r2Out r2))
 
 -- have to use 'i' as we dont hold onto the input
@@ -334,6 +334,6 @@ test2c = newRefined2 "200.2.3.4"
 
 test2d :: Either String (Refined2 OU
     TimeUtc
-    (ToDay Id > 'Just (MkDay '(2020,05,31)))
+    (ToDay > 'Just (MkDay '(2020,05,31)))
     ())
 test2d = newRefined2P Proxy ()

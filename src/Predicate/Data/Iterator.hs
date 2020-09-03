@@ -103,7 +103,7 @@ instance (PP p (b,a) ~ b
       Right (q,r,qq,rr) ->
         case chkSize opts msg0 r [hh rr] of
           Left e -> pure e
-          Right () -> do
+          Right _ -> do
             let ff i b as' rs
                    | i >= oRecursion opts = pure (rs, Left $ mkNode opts (FailT (msg0 <> ":recursion limit i=" <> showIndex i)) ("(b,as')=" <> showL opts (b,as')) [])
                    | otherwise =
@@ -167,11 +167,11 @@ instance P (ScanNT n p q) x => P (ScanN n p q) x where
 -- Present "abcde" (Scanl "abcde" | b='a' | as=[1,2,3,4])
 -- PresentT "abcde"
 --
--- >>> pl @(ScanNA (Tail Id)) (4,"abcd" :: String)
+-- >>> pl @(ScanNA Tail) (4,"abcd" :: String)
 -- Present ["abcd","bcd","cd","d",""] (Scanl ["abcd","bcd","cd","d",""] | b="abcd" | as=[1,2,3,4])
 -- PresentT ["abcd","bcd","cd","d",""]
 --
--- >>> pl @(Len &&& Id >> ScanNA (Tail Id)) "abcd"
+-- >>> pl @(Len &&& Id >> ScanNA Tail) "abcd"
 -- Present ["abcd","bcd","cd","d",""] ((>>) ["abcd","bcd","cd","d",""] | {Scanl ["abcd","bcd","cd","d",""] | b="abcd" | as=[1,2,3,4]})
 -- PresentT ["abcd","bcd","cd","d",""]
 --
@@ -239,19 +239,19 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 -- Error Scanl list size exceeded (Last)
 -- FailT "Scanl list size exceeded"
 --
--- >>> pl @(Foldl (Guard "someval" (Fst Id < Snd Id) >> Snd Id) (Head Id) (Tail Id)) [1,4,7,9,16]
+-- >>> pl @(Foldl (Guard "someval" (Fst Id < Snd Id) >> Snd Id) (Head Id) Tail) [1,4,7,9,16]
 -- Present 16 (Last 16 | [1,4,7,9,16])
 -- PresentT 16
 --
--- >>> pl @(Foldl (Guard (PrintT "%d not less than %d" Id) (Fst Id < Snd Id) >> Snd Id) (Head Id) (Tail Id)) [1,4,7,6,16::Int]
+-- >>> pl @(Foldl (Guard (PrintT "%d not less than %d" Id) (Fst Id < Snd Id) >> Snd Id) (Head Id) Tail) [1,4,7,6,16::Int]
 -- Error 7 not less than 6 (Last)
 -- FailT "7 not less than 6"
 --
--- >>> pl @(Foldl (If ((Fst Id >> Fst Id) && (Snd Id > Snd (Fst Id))) '( 'True, Snd Id) '( 'False, Snd (Fst Id))) '( 'True, Head Id) (Tail Id)) [1,4,7,9,16]
+-- >>> pl @(Foldl (If ((Fst Id >> Fst Id) && (Snd Id > Snd (Fst Id))) '( 'True, Snd Id) '( 'False, Snd (Fst Id))) '( 'True, Head Id) Tail) [1,4,7,9,16]
 -- Present (True,16) (Last (True,16) | [(True,1),(True,4),(True,7),(True,9),(True,16)])
 -- PresentT (True,16)
 --
--- >>> pl @(Foldl (If ((Fst Id >> Fst Id) && (Snd Id > Snd (Fst Id))) '( 'True, Snd Id) '( 'False, Snd (Fst Id))) '( 'True, Head Id) (Tail Id)) [1,4,7,9,16,2]
+-- >>> pl @(Foldl (If ((Fst Id >> Fst Id) && (Snd Id > Snd (Fst Id))) '( 'True, Snd Id) '( 'False, Snd (Fst Id))) '( 'True, Head Id) Tail) [1,4,7,9,16,2]
 -- Present (False,16) (Last (False,16) | [(True,1),(True,4),(True,7),(True,9),(True,16),(False,16)])
 -- PresentT (False,16)
 --

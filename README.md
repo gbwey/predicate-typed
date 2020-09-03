@@ -43,7 +43,7 @@ To run the examples you will need these settings (ghc>=8.6)
    * TrueT : predicate is true
    * FalseT : predicate is false
    * PresentT a : 'a' is any other value
-   * FailT : indicates a failure
+   * FailT String : indicates a failure with an error message
 
 # testing the dsl
 

@@ -261,7 +261,7 @@ instance P (IxT' n) x => P (Ix' n) x where
   type PP (Ix' n) x = PP (IxT' n) x
   eval _ = eval (Proxy @(IxT' n))
 
--- | similar to 'Data.List.!!' leveraging 'Ixed'
+-- | similar to 'Data.List.!!' leveraging 'Ixed': see '!!'
 --
 -- >>> pz @(IxL Id 2 "notfound") ["abc","D","eF","","G"]
 -- PresentT "eF"
@@ -442,7 +442,7 @@ instance P (BangBangT p q) a => P (p !! q) a where
   type PP (p !! q) a = PP (BangBangT p q) a
   eval _ = eval (Proxy @(BangBangT p q))
 
--- | 'lookup' leveraging 'Ixed'
+-- | 'lookup' leveraging 'Ixed': see '!!?'
 --
 -- >>> pz @(Lookup Id 2) ["abc","D","eF","","G"]
 -- PresentT (Just "eF")

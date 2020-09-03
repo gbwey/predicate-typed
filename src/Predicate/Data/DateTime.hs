@@ -412,45 +412,34 @@ instance ToTimeC CP.SystemTime where
 
 -- | extract 'Day' from a DateTime
 --
--- >>> pz @(ReadP UTCTime Id >> ToDay Id) "2020-07-06 12:11:13Z"
+-- >>> pz @(ReadP UTCTime Id >> ToDay) "2020-07-06 12:11:13Z"
 -- PresentT 2020-07-06
 --
-data ToDay p
-
-instance ( P p x
-         , Show (PP p x)
-         , ToDayC (PP p x)
-         ) => P (ToDay p) x where
-  type PP (ToDay p) x = Day
-  eval _ opts x = do
+data ToDay
+instance ( Show x
+         , ToDayC x
+         ) => P ToDay x where
+  type PP ToDay x = Day
+  eval _ opts x =
     let msg0 = "ToDay"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let ret = getDay p
-        in mkNode opts (PresentT ret) (show01 opts msg0 ret p) [hh pp]
+        ret = getDay x
+    in pure $ mkNode opts (PresentT ret) (show01 opts msg0 ret x) []
 
 -- | extract 'TimeOfDay' from DateTime
 --
--- >>> pz @(ReadP UTCTime Id >> ToDay Id) "2020-07-06 12:11:13Z"
--- PresentT 2020-07-06
+-- >>> pz @(ReadP UTCTime Id >> ToTime) "2020-07-06 12:11:13Z"
+-- PresentT 12:11:13
 --
-data ToTime p
+data ToTime
 
-instance ( P p x
-         , Show (PP p x)
-         , ToTimeC (PP p x)
-         ) => P (ToTime p) x where
-  type PP (ToTime p) x = TimeOfDay
-  eval _ opts x = do
+instance ( Show x
+         , ToTimeC x
+         ) => P ToTime x where
+  type PP ToTime x = TimeOfDay
+  eval _ opts x =
     let msg0 = "ToTime"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let ret = getTime p
-        in mkNode opts (PresentT ret) (show01 opts msg0 ret p) [hh pp]
+        ret = getTime x
+    in pure $ mkNode opts (PresentT ret) (show01 opts msg0 ret x) []
 
 
 -- | create a 'TimeOfDay' from three int values passed in as year month and day
@@ -503,13 +492,13 @@ instance P (MkTimeT p) x => P (MkTime p) x where
 
 -- | uncreate a 'TimeOfDay' returning hour minute seconds picoseconds
 --
--- >>> pz @(ReadP UTCTime "2019-01-01 12:13:14.1234Z" >> ToTime Id >> UnMkTime Id) ()
+-- >>> pz @(ReadP UTCTime "2019-01-01 12:13:14.1234Z" >> ToTime >> UnMkTime Id) ()
 -- PresentT (12,13,70617 % 5000)
 --
--- >>> pz @(ReadP UTCTime Id >> ToTime Id >> UnMkTime Id) "2020-07-22 08:01:14.127Z"
+-- >>> pz @(ReadP UTCTime Id >> ToTime >> UnMkTime Id) "2020-07-22 08:01:14.127Z"
 -- PresentT (8,1,14127 % 1000)
 --
--- >>> pz @(ReadP ZonedTime Id >> '(UnMkDay (ToDay Id), UnMkTime (ToTime Id))) "2020-07-11 11:41:12.333 CET"
+-- >>> pz @(ReadP ZonedTime Id >> '(UnMkDay ToDay, UnMkTime ToTime)) "2020-07-11 11:41:12.333 CET"
 -- PresentT ((2020,7,11),(11,41,12333 % 1000))
 --
 data UnMkTime p

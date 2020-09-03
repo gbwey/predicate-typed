@@ -195,7 +195,7 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- FailT "no match"
 --
 -- >>> pl @(Case (Fail (Snd Id >> Unproxy) (PrintF "no match for %03d" (Fst Id))) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
--- Error no match for 015 (Case:otherwise failed:Fail no match for 015)
+-- Error no match for 015 (Case:otherwise failed)
 -- FailT "no match for 015"
 --
 -- >>> pl @(Case "other" '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
@@ -219,7 +219,7 @@ data Case' (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- | like 'Case' but allows you to use the value in the error message
 --
 -- >>> pl @(Case'' (PrintF "no match for %03d" Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
--- Error no match for 015 (Case:otherwise failed:Fail no match for 015)
+-- Error no match for 015 (Case:otherwise failed)
 -- FailT "no match for 015"
 --
 -- >>> pl @(Case'' (PrintF "no match for %03d" Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 2
@@ -227,7 +227,7 @@ data Case' (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- PresentT "eq2"
 --
 -- >>> pl @(Case'' (PrintF "no match for %04d" Id) '[Between 0 5 Id, Same 6, Between 7 10 Id] '[ 'LT, 'EQ, 'GT] Id) (-12)
--- Error no match for -012 (Case:otherwise failed:Fail no match for -012)
+-- Error no match for -012 (Case:otherwise failed)
 -- FailT "no match for -012"
 --
 data Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2)
@@ -436,7 +436,7 @@ instance (PP prt (Int, a) ~ String
                    qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
                    pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                       Left e -> e
-                      Right msgx -> mkNode opts (FailT msgx) (msgbase1 <> " failed [" <> msgx <> "] " <> showL opts a) (hh pp : [hh qq | isVerbose opts])
+                      Right msgx -> mkNode opts (FailT msgx) (msgbase1 <> " " <> showL opts a) (hh pp : [hh qq | isVerbose opts])
                  Right True ->
                    if pos == 0 then -- we are at the bottom of the tree
                       pure $ mkNode opts (PresentT [a]) msgbase2 [hh pp]
@@ -444,7 +444,7 @@ instance (PP prt (Int, a) ~ String
                      ss <- eval (Proxy @(GuardsImpl n ps)) opts as
                      pure $ case getValueLR opts (_tString ss) ss [hh pp] of
                        Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                       Right zs -> (ss & tForest %~ \x -> fromTT pp : x) & tBool .~ PresentT (a:zs)
+                       Right zs -> (ss & tForest %~ (fromTT pp:)) & tBool .~ PresentT (a:zs)
          _ -> errorInProgram "GuardsImpl n+1 case has no data"
 
 -- | GuardsQuick contain a type level list of conditions and one of matching values: on no match will fail using the first parameter
@@ -468,11 +468,11 @@ instance (PP prt (Int, a) ~ String
 -- FailT "Guards:invalid length(2) expected 3"
 --
 -- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,13,1999::Int]
--- Error guard(1) 13 is out of range (Guard(1) failed [guard(1) 13 is out of range] 13)
+-- Error guard(1) 13 is out of range (Guard(1) 13)
 -- FailT "guard(1) 13 is out of range"
 --
 -- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [0,44,1999::Int]
--- Error guard(0) 0 is out of range (Guard(0) failed [guard(0) 0 is out of range] 0)
+-- Error guard(0) 0 is out of range (Guard(0) 0)
 -- FailT "guard(0) 0 is out of range"
 --
 -- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,11,2000,1,2::Int]
@@ -480,7 +480,7 @@ instance (PP prt (Int, a) ~ String
 -- FailT "Guards:invalid length(5) expected 3"
 --
 -- >>> pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[W 'True, Ge 12, W 'False, Lt 2]) [1,2,-99,-999]
--- Error guard(1) err 002 (Guard(1) failed [guard(1) err 002] 2)
+-- Error guard(1) err 002 (Guard(1) 2)
 -- FailT "guard(1) err 002"
 --
 -- >>> pl @(GuardsQuick (PrintT "guard(%d) err %03d" Id) '[W 'True, Ge 12, W 'False, Lt 2]) [1,2,-99]
@@ -541,7 +541,7 @@ instance ([a] ~ x
         n = getLen @ps
     case chkSize opts msg1 as [] of
       Left e -> pure e
-      Right () ->
+      Right _ ->
         if n /= length as then
            let msg2 = msg0 <> badLength as n
            in pure $ mkNode opts (FailT msg2) "" []
@@ -594,7 +594,7 @@ instance (PP prt (Int, a) ~ String
                      ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
                      pure $ case getValueLR opts (_tString ss) ss [hh pp] of
                        Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                       Right _ ->  ss & tForest %~ \x -> fromTT pp : x
+                       Right _ ->  ss & tForest %~ (fromTT pp:)
          _ -> errorInProgram "BoolsImpl n+1 case has no data"
 
 -- | boolean guard which checks a given a list of predicates against the list of values
@@ -706,7 +706,7 @@ instance (PP prt a ~ String
                    qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
                    pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                       Left e -> e
-                      Right msgx -> mkNode opts (FailT msgx) (msgbase1 <> " failed [" <> msgx <> "] " <> showL opts a) (hh pp : [hh qq | isVerbose opts])
+                      Right msgx -> mkNode opts (FailT msgx) (msgbase1 <> ":" <> showL opts a) (hh pp : [hh qq | isVerbose opts])
                  Right True -> do
                    ss <- eval (Proxy @(GuardsImplX n ps)) opts as
                    pure $ case getValueLR opts (_tString ss) ss [hh pp] of

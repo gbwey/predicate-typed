@@ -29,7 +29,6 @@
 :set prompt >
 :set +t
 import Control.Applicative
-import qualified Control.Arrow as A
 import Control.Lens
 import qualified Control.Lens as L
 import Control.Monad

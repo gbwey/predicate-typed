@@ -217,7 +217,7 @@ instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
 -- PresentT "ask%dfas%kef00035 hey %"
 --
 -- >>> pl @(Fail () (PrintF "someval int=%d" Id)) (45 :: Int)
--- Error someval int=45 (Fail someval int=45)
+-- Error someval int=45
 -- FailT "someval int=45"
 --
 data PrintF s p

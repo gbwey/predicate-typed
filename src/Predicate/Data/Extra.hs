@@ -972,24 +972,24 @@ instance P (ProxyT t) x where
 -- Present [] (Catch caught exception[Regex failed to compile])
 -- PresentT []
 --
--- >>> pl @(Catch (OneP Id) 99) [10,11]
--- Present 99 (Catch caught exception[OneP 2 elements])
+-- >>> pl @(Catch OneP 99) [10,11]
+-- Present 99 (Catch caught exception[OneP:expected one element(2)])
 -- PresentT 99
 --
--- >>> pl @(Catch (OneP Id) 99) [10]
+-- >>> pl @(Catch OneP 99) [10]
 -- Present 10 (Catch did not fire)
 -- PresentT 10
 --
--- >>> pl @(Catch (OneP Id) 'True) [False]  -- cant know that this is FalseT cos is driven by type of the list not the 'True part
+-- >>> pl @(Catch OneP 'True) [False]  -- cant know that this is FalseT cos is driven by type of the list not the 'True part
 -- Present False (Catch did not fire)
 -- PresentT False
 --
--- >>> pl @(Catch (OneP Id) 'False) [True,True,False]
--- False (Catch caught exception[OneP 3 elements])
+-- >>> pl @(Catch OneP 'False) [True,True,False]
+-- False (Catch caught exception[OneP:expected one element(3)])
 -- FalseT
 --
--- >>> pl @(Catch (OneP Id) 'True) []
--- True (Catch caught exception[OneP empty])
+-- >>> pl @(Catch OneP 'True) []
+-- True (Catch caught exception[OneP:expected one element(empty)])
 -- TrueT
 --
 data Catch p q
@@ -1006,17 +1006,17 @@ data Catch p q
 -- Error msg=someval caught(044) (Catch default condition failed)
 -- FailT "msg=someval caught(044)"
 --
--- >>> pl @(Catch' (OneP Id) (Second (ShowP Id) >> PrintT "msg=%s caught(%s)" Id)) [10,12,13]
--- Error msg=OneP 3 elements caught([10,12,13]) (Catch default condition failed)
--- FailT "msg=OneP 3 elements caught([10,12,13])"
+-- >>> pl @(Catch' OneP (Second (ShowP Id) >> PrintT "msg=%s caught(%s)" Id)) [10,12,13]
+-- Error msg=OneP:expected one element(3) caught([10,12,13]) (Catch default condition failed)
+-- FailT "msg=OneP:expected one element(3) caught([10,12,13])"
 --
--- >>> pl @(Catch' (OneP Id) (PrintT "msg=%s caught(%s)" (Second (ShowP Id)))) [10]
+-- >>> pl @(Catch' OneP (PrintT "msg=%s caught(%s)" (Second (ShowP Id)))) [10]
 -- Present 10 (Catch did not fire)
 -- PresentT 10
 --
--- >>> pl @(Catch' (OneP Id) (PrintT "msg=%s err s=%s" (Second (ShowP Id)))) [10,11]
--- Error msg=OneP 2 elements err s=[10,11] (Catch default condition failed)
--- FailT "msg=OneP 2 elements err s=[10,11]"
+-- >>> pl @(Catch' OneP (PrintT "msg=%s err s=%s" (Second (ShowP Id)))) [10,11]
+-- Error msg=OneP:expected one element(2) err s=[10,11] (Catch default condition failed)
+-- FailT "msg=OneP:expected one element(2) err s=[10,11]"
 --
 data Catch' p s
 type CatchT' p s = Catch p (FailCatchT s) -- eg set eg s=PrintF "%d" Id or PrintF "%s" (ShowP Id)

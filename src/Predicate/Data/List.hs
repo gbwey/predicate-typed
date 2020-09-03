@@ -408,7 +408,7 @@ instance (P p x
       Right q ->
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
-          Right () -> do
+          Right _ -> do
              ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] q
              pure $ case splitAndAlign opts msg0 ts of
                Left e -> e
@@ -451,7 +451,7 @@ instance (P p x
       Right q ->
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
-          Right () -> do
+          Right _ -> do
              ts <- zipWithM (\i a -> ((i, a),) <$> evalHide @p opts a) [0::Int ..] q
              pure $ case splitAndAlign opts msg0 ts of
                    Left e -> e
@@ -540,7 +540,7 @@ instance (Show x
       Right q ->
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
-          Right () ->
+          Right _ ->
              case q of
                [] -> pure $ mkNode opts (PresentT []) (show01' opts msg0 q "s=" q) [hh qq]
                [_] -> pure $ mkNode opts (PresentT [q]) (show01' opts msg0 [q] "s=" q) [hh qq]
@@ -624,7 +624,7 @@ instance (P p x
       Right q ->
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
-          Right () -> do
+          Right _ -> do
             let ff [] zs = pure (zs, [], Nothing) -- [(ia,qq)] extras | the rest of the data | optional last pivot or failure
                 ff ((i,a):ias) zs = do
                    pp <- evalBoolHide @p opts a
@@ -698,9 +698,9 @@ instance (PP p x ~ [a]
       Left e -> e
       Right (p,q,pp,qq) ->
         let hhs = [hh pp, hh qq]
-        in case chkSize opts msg0 p hhs <* chkSize opts msg0 q hhs of
+        in case chkSize2 opts msg0 p q hhs of
           Left e -> e
-          Right () ->
+          Right _ ->
             let d = intercalate p (map pure q)
             in mkNode opts (PresentT d) (show01 opts msg0 d p <> showVerbose opts " | " q) hhs
 
@@ -816,7 +816,7 @@ instance ( PP p x ~ [a]
       Right p ->
         case chkSize opts msg0 p [hh pp] of
           Left e -> e
-          Right () ->
+          Right _ ->
             let d = map pure p
             in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
 
@@ -1149,35 +1149,30 @@ instance (Show (ConsT s)
 
 -- | takes the tail of a list-like container: similar to 'tail'
 --
--- >>> pz @(Tail Id) "abcd"
+-- >>> pz @Tail "abcd"
 -- PresentT "bcd"
 --
--- >>> pl @(Tail Id) [1..5]
+-- >>> pl @Tail [1..5]
 -- Present [2,3,4,5] (Tail [2,3,4,5] | [1,2,3,4,5])
 -- PresentT [2,3,4,5]
 --
--- >>> pl @(Tail Id) ([] :: [()])
+-- >>> pl @Tail []
 -- Error Tail(empty)
 -- FailT "Tail(empty)"
 --
 
-data Tail p
+data Tail
 
 instance (Show s
         , Cons s s (ConsT s) (ConsT s)
-        , PP p x ~ s
-        , P p x
-        ) => P (Tail p) x where
-  type PP (Tail p) x = PP p x
+        , x ~ s
+        ) => P Tail x where
+  type PP Tail x = x
   eval _ opts x = do
     let msg0 = "Tail"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        case p ^? _Cons of
-          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" [hh pp]
-          Just (_,as) -> mkNode opts (PresentT as) (show01 opts msg0 as p) [hh pp]
+    pure $ case x ^? _Cons of
+      Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" []
+      Just (_,as) -> mkNode opts (PresentT as) (show01 opts msg0 as x) []
 
 
 -- | takes the last of a list-like container: similar to 'last'
@@ -1214,40 +1209,35 @@ instance (Show (ConsT s)
 
 -- | takes the init of a list-like container: similar to 'init'
 --
--- >>> pz @(Init Id) "abcd"
+-- >>> pz @Init "abcd"
 -- PresentT "abc"
 --
--- >>> pz @(Init Id) (T.pack "abcd")
+-- >>> pz @Init (T.pack "abcd")
 -- PresentT "abc"
 --
--- >>> pz @(Init Id) []
+-- >>> pz @Init []
 -- FailT "Init(empty)"
 --
--- >>> pl @(Init Id) [1..5]
+-- >>> pl @Init [1..5]
 -- Present [1,2,3,4] (Init [1,2,3,4] | [1,2,3,4,5])
 -- PresentT [1,2,3,4]
 --
--- >>> pl @(Init Id) ([] :: [()])
+-- >>> pl @Init []
 -- Error Init(empty)
 -- FailT "Init(empty)"
 --
-data Init p
+data Init
 
 instance (Show s
         , Snoc s s (ConsT s) (ConsT s)
-        , PP p x ~ s
-        , P p x
-        ) => P (Init p) x where
-  type PP (Init p) x = PP p x
+        , x ~ s
+        ) => P Init x where
+  type PP Init x = x
   eval _ opts x = do
     let msg0 = "Init"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        case p ^? _Snoc of
-          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" [hh pp]
-          Just (as,_) -> mkNode opts (PresentT as) (show01 opts msg0 as p) [hh pp]
+    pure $ case x ^? _Snoc of
+      Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" []
+      Just (as,_) -> mkNode opts (PresentT as) (show01 opts msg0 as x) []
 
 
 -- | 'unzip' equivalent
@@ -1531,9 +1521,9 @@ instance (PP q a ~ [x]
       Left e -> pure e
       Right (q,r,qq,rr) ->
         let hhs = [hh qq, hh rr]
-        in case chkSize opts msg0 q hhs <* chkSize opts msg0 r hhs of
+        in case chkSize2 opts msg0 q r hhs of
           Left e -> pure e
-          Right () -> do
+          Right _ -> do
             let lls = (length q, length r)
             if uncurry (==) lls then do
                ts <- zipWithM (\i (x,y) -> ((i, (x,y)),) <$> evalHide @p opts (x,y)) [0::Int ..] (zip q r)
@@ -1587,9 +1577,9 @@ instance (PP l a ~ x
       Left e -> pure e
       Right (p,q,pp,qq) -> do
         let hhs = [hh pp, hh qq]
-        case chkSize opts msg0 p hhs <* chkSize opts msg0 q hhs of
+        case chkSize2 opts msg0 p q hhs of
           Left e -> pure e
-          Right () -> do
+          Right _ -> do
             let lls = (length p,length q)
             case uncurry compare lls of
               LT -> do
@@ -1660,9 +1650,9 @@ instance (PP l a ~ x
       Left e -> pure e
       Right (p,q,pp,qq) -> do
         let hhs = [hh pp, hh qq]
-        case chkSize opts msg0 p hhs <* chkSize opts msg0 q hhs of
+        case chkSize2 opts msg0 p q hhs of
           Left e -> pure e
-          Right () -> do
+          Right _ -> do
             let lls = (length p,length q)
             case uncurry compare lls of
               GT -> let msg1 = msg0 ++ show lls
@@ -1716,9 +1706,9 @@ instance (PP r a ~ y
       Left e -> pure e
       Right (p,q,pp,qq) -> do
         let hhs = [hh pp, hh qq]
-        case chkSize opts msg0 p hhs <* chkSize opts msg0 q hhs of
+        case chkSize2 opts msg0 p q hhs of
           Left e -> pure e
-          Right () -> do
+          Right _ -> do
             let lls = (length p,length q)
             case uncurry compare lls of
               LT -> let msg1 = msg0 ++ show lls
@@ -1765,9 +1755,9 @@ instance (PP p a ~ [x]
       Left e -> e
       Right (p,q,pp,qq) ->
         let hhs = [hh pp, hh qq]
-        in case chkSize opts msg0 p hhs <* chkSize opts msg0 q hhs of
+        in case chkSize2 opts msg0 p q hhs of
           Left e -> e
-          Right () ->
+          Right _ ->
             let lls = (length p, length q)
             in case uncurry compare lls of
                  EQ -> let d = zip p q

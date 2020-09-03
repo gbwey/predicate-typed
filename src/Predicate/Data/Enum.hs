@@ -515,18 +515,18 @@ instance (P p x
 
 -- | universe of enum using the type pointed to by \'p\'
 --
--- >>> pl @(Universe Id) LT
+-- >>> pl @(Universe' Id) LT
 -- Present [LT,EQ,GT] (Universe [LT .. GT])
 -- PresentT [LT,EQ,GT]
 --
-data Universe p
+data Universe' p
 
 instance ( PP p x ~ a
          , Show a
          , Enum a
          , Bounded a
-         ) => P (Universe p) x where
-  type PP (Universe p) x = [PP p x]
+         ) => P (Universe' p) x where
+  type PP (Universe' p) x = [PP p x]
   eval _ opts _z =
     let msg0 = "Universe"
         u = [mn .. mx]
@@ -536,14 +536,14 @@ instance ( PP p x ~ a
 
 -- | get universe of an enum of type \'t\'
 --
--- >>> pz @(Universe' Ordering) ()
+-- >>> pz @(Universe Ordering) ()
 -- PresentT [LT,EQ,GT]
 --
-data Universe' (t :: Type)
-type UniverseT (t :: Type) = Universe (Hole t)
+data Universe (t :: Type)
+type UniverseT (t :: Type) = Universe' (Hole t)
 
-instance P (UniverseT t) x => P (Universe' t) x where
-  type PP (Universe' t) x = PP (UniverseT t) x
+instance P (UniverseT t) x => P (Universe t) x where
+  type PP (Universe t) x = PP (UniverseT t) x
   eval _ = eval (Proxy @(UniverseT t))
 
 

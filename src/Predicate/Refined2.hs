@@ -473,10 +473,10 @@ withRefined2TP p = (>>=) . newRefined2TP p
 -- >>> newRefined2 @OL @Id @'True 22
 -- Right (Refined2 {r2In = 22, r2Out = 22})
 --
--- >>> newRefined2 @OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-04 12:13:14Z"
+-- >>> newRefined2 @OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust ToDay)) "2020-05-04 12:13:14Z"
 -- Right (Refined2 {r2In = 2020-05-04 12:13:14 UTC, r2Out = "2020-05-04 12:13:14Z"})
 --
--- >>> newRefined2 @OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust (ToDay Id))) "2020-05-08 12:13:14Z"
+-- >>> newRefined2 @OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust ToDay)) "2020-05-08 12:13:14Z"
 -- Left "Step 2. False Boolean Check(op) | {Just 2020-05-08 <= Just 2020-05-07}"
 --
 newRefined2 :: forall opts ip op i

@@ -81,18 +81,18 @@ instance Show x => P Dup x where
 -- PresentT [(1,2),(2,3),(3,4)]
 --
 -- >>> pz @Pairs []
--- FailT "Pairs no data found"
+-- FailT "Pairs:no data found"
 --
 -- >>> pz @Pairs [1]
--- FailT "Pairs only one element found"
+-- FailT "Pairs:only one element found"
 --
 -- >>> pl @Pairs ([] :: [()])
--- Error Pairs no data found (Pairs no data found)
--- FailT "Pairs no data found"
+-- Error Pairs:no data found
+-- FailT "Pairs:no data found"
 --
 -- >>> pl @Pairs [1]
--- Error Pairs only one element found (Pairs only one element found)
--- FailT "Pairs only one element found"
+-- Error Pairs:only one element found
+-- FailT "Pairs:only one element found"
 --
 -- >>> pl @Pairs [1,2]
 -- Present [(1,2)] (Pairs [(1,2)] | [1,2])
@@ -112,11 +112,11 @@ instance Show a => P Pairs [a] where
   eval _ opts as =
     let msg0 = "Pairs"
         lr = case as of
-               [] -> Left (msg0 <> " no data found")
-               [_] -> Left (msg0 <> " only one element found")
+               [] -> Left (msg0 <> ":no data found")
+               [_] -> Left (msg0 <> ":only one element found")
                _:bs@(_:_) -> Right (zip as bs)
     in pure $ case lr of
-         Left e -> mkNode opts (FailT e) e []
+         Left e -> mkNode opts (FailT e) "" []
          Right zs -> mkNode opts (PresentT zs) (show01 opts msg0 zs as ) []
 
 
@@ -217,7 +217,7 @@ instance P (SecondT q) x => P (Second q) x where
   type PP (Second q) x = PP (SecondT q) x
   eval _ = eval (Proxy @(SecondT q))
 
--- | applies \'p\' to lhs of the tuple and \'q\' to the rhs and then \'Ands\' them together
+-- | applies \'p\' to lhs of the tuple and \'q\' to the rhs and then \'ands\' them together: see '&*'
 --
 -- >>> pl @(AndA (Gt 3) (Lt 10) Id) (1,2)
 -- False (False (&*) True | (1 > 3))
@@ -267,7 +267,7 @@ instance P (AndAT p q) x => P (p &* q) x where
   type PP (p &* q) x = PP (AndAT p q) x
   eval _ = evalBool (Proxy @(AndAT p q))
 
--- | applies \'p\' to lhs of the tuple and \'q\' to the rhs and then \'Ors\' them together
+-- | applies \'p\' to lhs of the tuple and \'q\' to the rhs and then \'ors\' them together: see '|+'
 --
 -- >>> pl @(OrA (Gt 3) (Lt 10) Id) (1,2)
 -- True (False (|+) True)

@@ -195,6 +195,7 @@ module Predicate.Util (
   , readField
   , showThese
   , chkSize
+  , chkSize2
   , pureTryTest
   , pureTryTestPred
   , unlessNull
@@ -952,14 +953,14 @@ _PresentT = prism' PresentT $ \case
                                 _ -> Nothing
 
 -- | 'FalseT' prism
-_FalseT :: Prism' (BoolT Bool) ()
+_FalseT :: a ~ Bool => Prism' (BoolT a) ()
 _FalseT = prism' (const FalseT) $
             \case
                FalseT -> Just ()
                _ -> Nothing
 
 -- | 'TrueT' prism
-_TrueT :: Prism' (BoolT Bool) ()
+_TrueT :: a ~ Bool => Prism' (BoolT a) ()
 _TrueT = prism' (const TrueT) $
             \case
                TrueT -> Just ()
@@ -1721,12 +1722,23 @@ chkSize :: Foldable t
    -> String
    -> t a
    -> [Holder]
-   -> Either (TT x) ()
+   -> Either (TT x) [a]
 chkSize opts msg0 xs hhs =
   let mx = oRecursion opts
   in case splitAt mx (toList xs) of
-    (_,[]) -> Right ()
+    (zs,[]) -> Right zs
     (_,_:_) -> Left $ mkNode opts (FailT (msg0 <> " list size exceeded")) ("max is " ++ show mx) hhs
+
+-- | deal with possible recursion on two lists
+chkSize2 :: (Foldable t, Foldable u)
+   => POpts
+   -> String
+   -> t a
+   -> u b
+   -> [Holder]
+   -> Either (TT x) ([a],[b])
+chkSize2 opts msg0 xs ys hhs =
+ (,) <$> chkSize opts msg0 xs hhs <*> chkSize opts msg0 ys hhs
 
 -- | pretty print a message
 formatOMsg :: POpts -> String -> String

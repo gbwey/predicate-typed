@@ -1280,7 +1280,7 @@ instance (P prt a
     pp <- eval (Proxy @prt) opts a
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right s -> mkNode opts (FailT s) (msg0 <> " " <> s) [hh pp | isVerbose opts]
+      Right s -> mkNode opts (FailT s) "" [hh pp | isVerbose opts]
 
 -- | Fails the computation with a message for simple failures: doesnt preserve types
 --
@@ -1317,55 +1317,50 @@ instance P (Fail Unproxy p) x => P (Failp p) x where
 
 -- | gets the singleton value from a foldable
 --
--- >>> pl @(OneP Id) [10..15]
--- Error OneP 6 elements (expected one element)
--- FailT "OneP 6 elements"
+-- >>> pl @OneP [10..15]
+-- Error OneP:expected one element(6)
+-- FailT "OneP:expected one element(6)"
 --
--- >>> pl @(OneP Id) [10]
+-- >>> pl @OneP [10]
 -- Present 10 (OneP)
 -- PresentT 10
 --
--- >>> pl @(OneP Id) []
--- Error OneP empty (expected one element)
--- FailT "OneP empty"
+-- >>> pl @OneP []
+-- Error OneP:expected one element(empty)
+-- FailT "OneP:expected one element(empty)"
 --
--- >>> pl @(OneP Id) (Just 10)
+-- >>> pl @OneP (Just 10)
 -- Present 10 (OneP)
 -- PresentT 10
 --
--- >>> pl @(OneP Id) Nothing
--- Error OneP empty (expected one element)
--- FailT "OneP empty"
+-- >>> pl @OneP Nothing
+-- Error OneP:expected one element(empty)
+-- FailT "OneP:expected one element(empty)"
 --
--- >>> pl @(OneP Id) [12]
+-- >>> pl @OneP [12]
 -- Present 12 (OneP)
 -- PresentT 12
 --
--- >>> pl @(OneP Id) [1..5]
--- Error OneP 5 elements (expected one element)
--- FailT "OneP 5 elements"
+-- >>> pl @OneP [1..5]
+-- Error OneP:expected one element(5)
+-- FailT "OneP:expected one element(5)"
 --
--- >>> pl @(OneP Id) ([] ::[()])
--- Error OneP empty (expected one element)
--- FailT "OneP empty"
+-- >>> pl @OneP ([] ::[()])
+-- Error OneP:expected one element(empty)
+-- FailT "OneP:expected one element(empty)"
 --
-
-data OneP p
+data OneP
 instance (Foldable t
-        , PP p x ~ t a
-        , P p x
-        ) => P (OneP p) x where
-  type PP (OneP p) x = ExtractAFromTA (PP p x)
+        , x ~ t a
+        ) => P OneP x where
+  type PP OneP x = ExtractAFromTA x
   eval _ opts x = do
     let msg0 = "OneP"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p -> case toList p of
-                   [] -> mkNode opts (FailT (msg0 <> " empty")) "expected one element" [hh pp]
-                   [a] -> mkNode opts (PresentT a) msg0 [hh pp]
-                   as -> let n = length as
-                         in mkNode opts (FailT (msg0 <> " " <> showL opts n <> " elements")) "expected one element" [hh pp]
+    pure $ case toList x of
+      [] -> mkNode opts (FailT (msg0 <> ":expected one element(empty)")) "" []
+      [a] -> mkNode opts (PresentT a) msg0 []
+      as -> let n = length as
+            in mkNode opts (FailT (msg0 <> ":expected one element(" <> show n <> ")")) "" []
 
 --type OneP = Guard "expected list of length 1" (Len == 1) >> Head Id
 --type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
@@ -1528,8 +1523,8 @@ instance (P p a
       Right q ->
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
-          Right () -> do
-            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] (toList q)
+          Right xs -> do
+            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] xs
             pure $ case splitAndAlign opts msg0 ts of
                  Left e -> e
                  Right abcs ->
@@ -1581,10 +1576,10 @@ instance (P p a
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
       Right q ->
-        case chkSize opts msg0 q [hh qq] of
+        case chkSize opts msg0 (toList q) [hh qq] of
           Left e -> pure e
-          Right () -> do
-            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] (toList q)
+          Right xs -> do
+            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] xs
             pure $ case splitAndAlign opts msg0 ts of
                  Left e -> e
                  Right abcs ->
@@ -1963,12 +1958,15 @@ instance (Show (PP p a)
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
       Right q -> do
-        ts <- zipWithM (\i a -> ((i, a),) <$> evalHide @p opts a) [0::Int ..] (toList q)
-        pure $ case splitAndAlign opts msg0 ts of
-             Left e -> e
-             Right abcs ->
-               let vals = map (view _1) abcs
-               in mkNode opts (PresentT vals) (show01 opts msg0 vals q) (hh qq : map (hh . fixit) ts)
+        case chkSize opts msg0 (toList q) [hh qq] of
+          Left e -> pure e
+          Right xs -> do
+            ts <- zipWithM (\i a -> ((i, a),) <$> evalHide @p opts a) [0::Int ..] xs
+            pure $ case splitAndAlign opts msg0 ts of
+                 Left e -> e
+                 Right abcs ->
+                   let vals = map (view _1) abcs
+                   in mkNode opts (PresentT vals) (show01 opts msg0 vals q) (hh qq : map (hh . fixit) ts)
 
 -- | processes a type level list predicates running each in sequence: see 'Predicate.>>'
 --

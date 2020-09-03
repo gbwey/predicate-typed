@@ -328,7 +328,7 @@ instance (Show a
         let hhs = [hh nn, hh pp]
         in case chkSize opts msg0 p hhs of
             Left e ->  e
-            Right () ->
+            Right _ ->
               let msg1 = msg0 <> "(" <> show n <> ")"
                   d = take n (cycle (toList p))
               in mkNode opts (PresentT d) (show01 opts msg1 d p) hhs
