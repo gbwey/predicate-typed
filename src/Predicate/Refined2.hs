@@ -71,6 +71,8 @@ module Predicate.Refined2 (
   , unsafeRefined2
   , unsafeRefined2'
 
+  , replaceOpt2
+  , appendOpt2
   , type ReplaceOptT2
   , type AppendOptT2
 
@@ -98,6 +100,7 @@ import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
 import Test.QuickCheck
+import Data.Coerce
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -146,7 +149,7 @@ import Test.QuickCheck
 --
 data Refined2 (opts :: Opt) ip op i = Refined2 { r2In :: !(PP ip i), r2Out :: !i }
 
-type role Refined2 nominal nominal nominal nominal
+type role Refined2 phantom nominal nominal nominal
 
 -- | directly load values into 'Refined2'. It still checks to see that those values are valid
 unsafeRefined2' :: forall opts ip op i
@@ -715,6 +718,12 @@ mkProxy2' = Proxy
 -- | type family for converting from a 4-tuple '(opts,ip,op,i) to a 'Refined2' type
 type family MakeR2 p where
   MakeR2 '(opts,ip,op,i) = Refined2 opts ip op i
+
+replaceOpt2 :: forall (opt :: Opt) opt0 ip op i . Refined2 opt0 ip op i -> Refined2 opt ip op i
+replaceOpt2 = coerce
+
+appendOpt2 :: forall (opt :: Opt) opt0 ip op i . Refined2 opt0 ip op i -> Refined2 (opt0 ':# opt) ip op i
+appendOpt2 = coerce
 
 type family ReplaceOptT2 (o :: Opt) t where
   ReplaceOptT2 o (Refined2 _ ip op i) = Refined2 o ip op i

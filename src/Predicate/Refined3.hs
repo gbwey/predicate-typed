@@ -90,6 +90,8 @@ module Predicate.Refined3 (
   , eval3PX
   , eval3X
 
+  , replaceOpt3
+  , appendOpt3
   , type ReplaceOptT3
   , type AppendOptT3
 
@@ -117,6 +119,7 @@ import Data.Char (isSpace)
 import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
+import Data.Coerce
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -183,7 +186,7 @@ import GHC.Stack
 --
 data Refined3 (opts :: Opt) ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: !(PP fmt (PP ip i)) }
 
-type role Refined3 nominal nominal nominal nominal nominal
+type role Refined3 phantom nominal nominal nominal nominal
 
 -- | directly load values into 'Refined3'. It still checks to see that those values are valid
 unsafeRefined3' :: forall opts ip op fmt i
@@ -975,6 +978,12 @@ eval3X = eval3PX (Proxy @'(opts,ip,op,fmt,i))
 
 -- | emulates 'Refined' using 'Refined3' by setting the input conversion and output formatting as noops
 type RefinedEmulate (opts :: Opt) p a = Refined3 opts Id p Id a
+
+replaceOpt3 :: forall (opt :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 opt ip op fmt i
+replaceOpt3 = coerce
+
+appendOpt3 :: forall (opt :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 (opt0 ':# opt) ip op fmt i
+appendOpt3 = coerce
 
 -- | replace the opts type
 type family ReplaceOptT3 (o :: Opt) t where

@@ -58,6 +58,8 @@ module Predicate.Refined (
   , unsafeRefined
   , unsafeRefined'
 
+  , replaceOpt
+  , appendOpt
   , type ReplaceOptT
   , type AppendOptT
 
@@ -82,7 +84,7 @@ import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
 import Data.Maybe (fromMaybe)
-
+import Data.Coerce
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -143,7 +145,7 @@ newtype Refined (opts :: Opt) p a = Refined a deriving (Show, Eq, Generic, TH.Li
 unRefined :: forall k (opts :: Opt) (p :: k) a. Refined opts p a -> a
 unRefined (Refined a) = a
 
-type role Refined nominal nominal nominal
+type role Refined phantom nominal nominal
 
 -- | 'IsString' instance for Refined
 --
@@ -575,6 +577,12 @@ unsafeRefined' a =
                  DZero -> error bp
                  DLite -> error $ bp ++ "\n" ++ s
                  _ -> error $ bp ++ "\n" ++ s
+
+replaceOpt :: forall (opt :: Opt) opt0 p a . Refined opt0 p a -> Refined opt p a
+replaceOpt = coerce
+
+appendOpt :: forall (opt :: Opt) opt0 p a . Refined opt0 p a -> Refined (opt0 ':# opt) p a
+appendOpt = coerce
 
 type family ReplaceOptT (o :: Opt) t where
   ReplaceOptT o (Refined _ p a) = Refined o p a
