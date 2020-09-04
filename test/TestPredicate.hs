@@ -68,15 +68,15 @@ allTests =
   , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id) >| Ddmmyyyyop) "31-11-1999"
   , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:59"
   , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE Id) >> ReadP TimeOfDay Id) "23:13:60"
-  , expectPE (PresentT (124,["1","2","2"])) $ pl @(Left' >> (Succ Id &&& (Pred Id >> ShowP Id >> Ones Id))) (Left 123)
+  , expectPE (PresentT (124,["1","2","2"])) $ pl @(Left' >> (Succ Id &&& (Pred Id >> ShowP Id >> Ones))) (Left 123)
   , expectPE (PresentT (1,("asdf",True))) $ pl @'(1,'("asdf",'True)) ()
   , expectPE (PresentT (12, False)) $ pl @('These Id (Not Id)) (These 12 True)
     --- have to wrap with W cos different kinds
   , expectPE TrueT $ pl @('PresentT I >> Not 'FalseT) False
   -- IxL "d" doesnt work cos is Text not String
   -- use Fromstring
-  , expectPE (PresentT [7,9,9,2,7,3,9,8,7,1,3]) $ pl @(Map (ReadP Int Id) (Ones Id) >> Guard "invalid checkdigit" (IsLuhn Id)) "79927398713"
-  , expectPE (FailT "invalid checkdigit") $ pl @(Map (ReadP Int Id) (Ones Id) >> Guard "invalid checkdigit" (IsLuhn Id)) "79927398714"
+  , expectPE (PresentT [7,9,9,2,7,3,9,8,7,1,3]) $ pl @(Map (ReadP Int Id) Ones >> Guard "invalid checkdigit" IsLuhn) "79927398713"
+  , expectPE (FailT "invalid checkdigit") $ pl @(Map (ReadP Int Id) Ones >> Guard "invalid checkdigit" IsLuhn) "79927398714"
   , expectPE (PresentT [10,14,15,9]) $ pl @(MM1 16 >> MM2 16) "aef9"
   , expectPE (FailT "invalid base 16") $ pl @(MM1 16 >> MM2 16) "aef9g"
   , expectPE (FailT "found empty") $ pl @(MM1 16 >> MM2 16) ""
@@ -89,8 +89,8 @@ allTests =
 -- have to check the length of the match vs input to see that are the same
   , expectPE (PresentT [1,3,4,15]) $ pl @(((Rescan "([[:xdigit:]])" Id >> Map (Snd Id >> OneP >> ReadBase Int 16 Id) Id) &&& Id) >> Guard "notallmatched" ((Len *** Len) >> Fst Id == Snd Id) >> Fst Id) "134F"
   , expectPE (FailT "notallmatched") $ pl @(((Rescan "([[:xdigit:]])" Id >> Map (Snd Id >> OneP >> ReadBase Int 16 Id) Id) &&& Id) >> Guard "notallmatched" ((Len *** Len) >> Fst Id == Snd Id) >> Fst Id) "134g"
-  , expectPE TrueT $ pl @(Map (ReadP _ Id) (Ones Id) >> IsLuhn Id) "12345678903"
-  , expectPE FalseT $ pl @(Map (ReadP _ Id) (Ones Id) >> IsLuhn Id) "12345678904"
+  , expectPE TrueT $ pl @(Map (ReadP _ Id) Ones >> IsLuhn) "12345678903"
+  , expectPE FalseT $ pl @(Map (ReadP _ Id) Ones >> IsLuhn) "12345678904"
   , expectPE (FailT "incorrect length: found 10 but expected 11 in [1234567890]") $ pl @(Luhn' 11) "1234567890"
   , (@?=) (Just "abc") ((_FailT # "abc") ^? _FailT)
   , (@?=) (Just ()) ((_TrueT # ()) ^? _TrueT)
@@ -197,5 +197,5 @@ type Ip6Test = Resplit ":" Id
 
 -- base n number of length x and then convert to a list of length x of (0 to (n-1))
 -- checks that each digit is between 0 and n-1
-type MM1 (n :: Nat) = Map (ReadBase Int n Id) (Ones Id)
+type MM1 (n :: Nat) = Map (ReadBase Int n Id) Ones
 type MM2 (n :: Nat) = ExitWhen "found empty" IsEmpty >> Guard "0<=x<n" (All (Ge 0 && Lt n) Id)

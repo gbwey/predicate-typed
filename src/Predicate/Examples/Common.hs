@@ -80,10 +80,10 @@ import GHC.TypeLits (Nat)
 import Data.Time
 
 -- | \'ip\' type for converting a credit card number to a list of singleton digits
-type Luhnip = Map (ReadP Int Id) (Ones (Remove "-" Id))
+type Luhnip = Map (ReadP Int Id) (Remove "-" Id >> Ones)
 
 -- | \'op\' type for validating a credit card number by check digit
-type Luhnop (n :: Nat) = GuardBool (PrintT "expected %d digits but found %d" '(n,Len)) (Len == n) && GuardBool "invalid checkdigit" (IsLuhn Id)
+type Luhnop (n :: Nat) = GuardBool (PrintT "expected %d digits but found %d" '(n,Len)) (Len == n) && GuardBool "invalid checkdigit" IsLuhn
 
 -- | \'fmt\' type for formatting a credit card using \'ns\' as the format
 type Luhnfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
@@ -231,7 +231,7 @@ type Luhn' (n :: Nat) =
        Msg "Luhn'" (Do
        '[Guard (PrintT "incorrect length: found %d but expected %d in [%s]" '(Len, n, Id)) (Len == n)
         ,Do
-            '[Ones Id
+            '[Ones
             ,Map (ReadP Int Id) Id
             ,Reverse
             ,ZipWith (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) (Cycle n [1,2]) Id

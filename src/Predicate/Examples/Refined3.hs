@@ -371,9 +371,9 @@ type LuhnR (opts :: Opt) (n :: Nat) = MakeR3 (LuhnT opts n)
 -- | uses builtin 'IsLuhn'
 type LuhnT (opts :: Opt) (n :: Nat) =
    '(opts
-    , Map (ReadP Int Id) (Ones Id)
+    , Map (ReadP Int Id) Ones
     , Msg "incorrect number of digits:"
-          (Len == n) && IsLuhn Id
+          (Len == n) && IsLuhn
     , ConcatMap (ShowP Id) Id
     , String)
 

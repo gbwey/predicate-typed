@@ -358,7 +358,7 @@ instance P (RotateT n p) x => P (Rotate n p) x where
 -- >>> pz @(Partition (Ge 3) Id) [10,4,1,7,3,1,3,5]
 -- PresentT ([10,4,7,3,3,5],[1,1])
 --
--- >>> pz @(Partition (IsPrime Id) Id) [10,4,1,7,3,1,3,5]
+-- >>> pz @(Partition IsPrime Id) [10,4,1,7,3,1,3,5]
 -- PresentT ([7,3,3,5],[10,4,1,1])
 --
 -- >>> pz @(Partition (Ge 300) Id) [10,4,1,7,3,1,3,5]
@@ -387,7 +387,7 @@ instance P (RotateT n p) x => P (Rotate n p) x where
 -- Error ExitWhen (Partition(i=10, a=11) excnt=1)
 -- FailT "ExitWhen"
 --
--- >>> pl @(Partition (IsPrime Id) Id) [1..15]
+-- >>> pl @(Partition IsPrime Id) [1..15]
 -- Present ([2,3,5,7,11,13],[1,4,6,8,9,10,12,14,15]) (Partition ([2,3,5,7,11,13],[1,4,6,8,9,10,12,14,15]) | s=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
 -- PresentT ([2,3,5,7,11,13],[1,4,6,8,9,10,12,14,15])
 --
@@ -795,30 +795,25 @@ instance ( [a] ~ x
 
 -- | split a list into single values
 --
--- >>> pz @(Ones Id) [4,8,3,9]
+-- >>> pz @Ones [4,8,3,9]
 -- PresentT [[4],[8],[3],[9]]
 --
--- >>> pz @(Ones Id) []
+-- >>> pz @Ones []
 -- PresentT []
 --
-data Ones p
+data Ones
 
-instance ( PP p x ~ [a]
-         , P p x
-         , Show a
-         ) => P (Ones p) x where
-  type PP (Ones p) x = [PP p x]
-  eval _ opts x = do
+instance ( x ~ [a]
+--         , Show a
+         ) => P Ones x where
+  type PP Ones x = [x]
+  eval _ opts x =
     let msg0 = "Ones"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        case chkSize opts msg0 p [hh pp] of
+    in pure $ case chkSize opts msg0 x [] of
           Left e -> e
           Right _ ->
-            let d = map pure p
-            in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
+            let d = map pure x
+            in mkNode opts (PresentT d) "" []
 
 data PadImpl (left :: Bool) n p q
 

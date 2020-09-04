@@ -1976,11 +1976,11 @@ instance (Show (PP p a)
 -- >>> pz @(Do '[W 123, W "xyz", Len &&& Id, Pred Id *** Id<>Id]) ()
 -- PresentT (2,"xyzxyz")
 --
--- >>> pl @(Do '[Succ Id,Id,ShowP Id,Ones Id,Map (ReadBase Int 8 Id) Id]) 1239
+-- >>> pl @(Do '[Succ Id,Id,ShowP Id,Ones,Map (ReadBase Int 8 Id) Id]) 1239
 -- Present [1,2,4,0] ((>>) [1,2,4,0] | {Map [1,2,4,0] | ["1","2","4","0"]})
 -- PresentT [1,2,4,0]
 --
--- >>> pl @(Do '[Pred Id,Id,ShowP Id,Ones Id,Map (ReadBase Int 8 Id) Id]) 1239
+-- >>> pl @(Do '[Pred Id,Id,ShowP Id,Ones,Map (ReadBase Int 8 Id) Id]) 1239
 -- Error invalid base 8 (1238)
 -- FailT "invalid base 8"
 --

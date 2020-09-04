@@ -199,7 +199,7 @@ instance ( PP p x ~ a
 -- Present fromList [] (MaybeIn(Nothing) fromList [] | Proxy)
 -- PresentT (fromList [])
 --
--- >>> pl @(MaybeIn MEmptyP (Ones Id)) (Just @String "abc")
+-- >>> pl @(MaybeIn MEmptyP Ones) (Just @String "abc")
 -- Present ["a","b","c"] (MaybeIn(Just) ["a","b","c"] | "abc")
 -- PresentT ["a","b","c"]
 --
@@ -227,19 +227,19 @@ instance ( PP p x ~ a
 -- Present (1,[]) ((>>) (1,[]) | {MaybeIn(Nothing) (1,[]) | Proxy})
 -- PresentT (1,[])
 --
--- >>> pl @(MaybeIn MEmptyP (Ones (ShowP Id))) (Just 123)
+-- >>> pl @(MaybeIn MEmptyP (ShowP Id >> Ones)) (Just 123)
 -- Present ["1","2","3"] (MaybeIn(Just) ["1","2","3"] | 123)
 -- PresentT ["1","2","3"]
 --
--- >>> pl @(MaybeIn MEmptyP (Ones (ShowP Id))) (Nothing @String)
+-- >>> pl @(MaybeIn MEmptyP (ShowP Id >> Ones)) (Nothing @String)
 -- Present [] (MaybeIn(Nothing) [] | Proxy)
 -- PresentT []
 --
--- >>> pl @(MaybeIn MEmptyP (Ones Id)) (Just @String "ab")
+-- >>> pl @(MaybeIn MEmptyP Ones) (Just @String "ab")
 -- Present ["a","b"] (MaybeIn(Just) ["a","b"] | "ab")
 -- PresentT ["a","b"]
 --
--- >>> pl @(MaybeIn MEmptyP (Ones Id)) (Nothing @String)
+-- >>> pl @(MaybeIn MEmptyP Ones) (Nothing @String)
 -- Present [] (MaybeIn(Nothing) [] | Proxy)
 -- PresentT []
 --

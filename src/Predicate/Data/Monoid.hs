@@ -238,11 +238,11 @@ instance ( Show (PP t a)
 -- >>> pz @(MEmptyT (SG.Sum Int)) ()
 -- PresentT (Sum {getSum = 0})
 --
--- >>> pl @(MEmptyT _ ||| Ones Id) (Right "abc")
+-- >>> pl @(MEmptyT _ ||| Ones) (Right "abc")
 -- Present ["a","b","c"] ((|||) Right ["a","b","c"] | "abc")
 -- PresentT ["a","b","c"]
 --
--- >>> pl @(MEmptyT _ ||| Ones Id) (Left ["ab"])
+-- >>> pl @(MEmptyT _ ||| Ones) (Left ["ab"])
 -- Present [] ((|||) Left [] | ["ab"])
 -- PresentT []
 --

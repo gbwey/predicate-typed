@@ -40,8 +40,8 @@ namedTests =
 unnamedTests :: [IO ()]
 unnamedTests = [
     (@=?) (Right (unsafeRefined @OA @'True ("1.2.3.4" :: String))) (newRefined "1.2.3.4")
-  , (@=?) (Right (unsafeRefined @OA @((Len == 4) && IsLuhn Id) [1,2,3,0])) (newRefined [1,2,3,0])
-  , (@=?) (Right (unsafeRefined @OA @(Not ((Len == 4) && IsLuhn Id)) [1,2,3,1])) (newRefined [1,2,3,1])
+  , (@=?) (Right (unsafeRefined @OA @((Len == 4) && IsLuhn) [1,2,3,0])) (newRefined [1,2,3,0])
+  , (@=?) (Right (unsafeRefined @OA @(Not ((Len == 4) && IsLuhn)) [1,2,3,1])) (newRefined [1,2,3,1])
 
   , (@=?) [(unsafeRefined 7, "")] (reads @(Refined OA (Between 2 10 Id) Int) "Refined 7")
   , (@=?) [] (reads @(Refined OA (Between 2 10 Id) Int) "Refined 0")

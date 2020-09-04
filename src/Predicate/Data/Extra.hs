@@ -775,28 +775,23 @@ type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
 
 -- | a predicate on prime numbers
 --
--- >>> pz @(IsPrime Id) 2
+-- >>> pz @IsPrime 2
 -- TrueT
 --
--- >>> pz @(Map '(Id,IsPrime Id) Id) [0..12]
+-- >>> pz @(Map '(Id,IsPrime) Id) [0..12]
 -- PresentT [(0,False),(1,False),(2,True),(3,True),(4,False),(5,True),(6,False),(7,True),(8,False),(9,False),(10,False),(11,True),(12,False)]
 --
-data IsPrime p
+data IsPrime
 
-instance (PP p x ~ a
-        , P p x
+instance (x ~ a
         , Show a
         , Integral a
-        ) => P (IsPrime p) x where
-  type PP (IsPrime p) x = Bool
-  eval _ opts x = do
+        ) => P IsPrime x where
+  type PP IsPrime x = Bool
+  eval _ opts x =
     let msg0 = "IsPrime"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = p > 1 && isPrime (fromIntegral p)
-        in mkNodeB opts b (msg0 <> showVerbose opts " | " p) [hh pp]
+        b = x > 1 && isPrime (fromIntegral x)
+    in pure $ mkNodeB opts b (msg0 <> showVerbose opts " | " x) []
 
 -- | get the next prime number
 --
@@ -880,38 +875,35 @@ instance (Integral (PP n x)
 
 -- | IsLuhn predicate check on last digit
 --
--- >>> pz @(IsLuhn Id) [1,2,3,0]
+-- >>> pz @IsLuhn [1,2,3,0]
 -- TrueT
 --
--- >>> pz @(IsLuhn Id) [1,2,3,4]
+-- >>> pz @IsLuhn [1,2,3,4]
 -- FalseT
 --
--- >>> pz @(GuardSimple (IsLuhn Id)) [15,4,3,1,99]
+-- >>> pz @(GuardSimple IsLuhn) [15,4,3,1,99]
 -- FailT "(IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])"
 --
--- >>> pl @(IsLuhn Id) [15,4,3,1,99]
+-- >>> pl @IsLuhn [15,4,3,1,99]
 -- False (IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])
 -- FalseT
 --
-data IsLuhn p
+data IsLuhn
 
-instance (PP p x ~ [Int]
-        , P p x
-        ) => P (IsLuhn p) x where
-  type PP (IsLuhn p) x = Bool
-  eval _ opts x = do
+instance x ~ [Int]
+         => P IsLuhn x where
+  type PP IsLuhn x = Bool
+  eval _ opts x =
     let msg0 = "IsLuhn"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let xs = zipWith (*) (reverse p) (cycle [1,2])
-            ys = map (\w -> if w>=10 then w-9 else w) xs
-            z = sum ys
-            ret = z `mod` 10
-            hhs = [hh pp]
-        in if ret == 0 then mkNodeB opts True (msg0 <> " | " <> showL opts p) hhs
-           else mkNodeB opts False (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " p) hhs
+    in pure $ case chkSize opts msg0 x [] of
+         Left e -> e
+         Right _ ->
+          let xs = zipWith (*) (reverse x) (cycle [1,2])
+              ys = map (\w -> if w>=10 then w-9 else w) xs
+              z = sum ys
+              ret = z `mod` 10
+          in if ret == 0 then mkNodeB opts True (msg0 <> " | " <> showL opts x) []
+             else mkNodeB opts False (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " x) []
 
 -- | coerce over a functor
 --

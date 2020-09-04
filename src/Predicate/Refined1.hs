@@ -359,7 +359,7 @@ instance (Show ( PP fmt (PP ip i))
 -- >>> all ((/=0) . unRefined1) xs
 -- True
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined1 OU Id (IsPrime Id) Id Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined1 OU Id IsPrime Id Int)))
 -- >>> all (isPrime . unRefined1) xs
 -- True
 --

@@ -100,11 +100,11 @@ import qualified Data.Type.Equality as DE
 -- Present 21 (If 'False 21)
 -- PresentT 21
 --
--- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (Id * 7 >> ShowP Id >> Ones Id)) 3
+-- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (Id * 7 >> ShowP Id >> Ones)) 3
 -- Present ["2","1"] (If 'False ["2","1"])
 -- PresentT ["2","1"]
 --
--- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (ShowP (Id * 7) >> Ones Id)) 19
+-- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (ShowP (Id * 7) >> Ones)) 19
 -- Error failing with 19 (If [True])
 -- FailT "failing with 19"
 --
@@ -898,14 +898,14 @@ instance P (ExitWhenT prt p) x => P (ExitWhen prt p) x where
 
 -- | similar to 'Guard' but uses the root message of the False predicate case as the failure message
 --
--- >>> pz @(GuardSimple (IsLuhn Id)) [1..4]
+-- >>> pz @(GuardSimple IsLuhn) [1..4]
 -- FailT "(IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])"
 --
--- >>> pl @(IsLuhn Id) [1..4]
+-- >>> pl @IsLuhn [1..4]
 -- False (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])
 -- FalseT
 --
--- >>> pz @(GuardSimple (IsLuhn Id)) [1,2,3,0]
+-- >>> pz @(GuardSimple IsLuhn) [1,2,3,0]
 -- PresentT [1,2,3,0]
 --
 -- >>> pz @(GuardSimple (Len > 30)) [1,2,3,0]

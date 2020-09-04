@@ -35,7 +35,6 @@ module Predicate.Data.Foldable (
   , FromListExt
 
   , ToList
-  , ToList'
 
   , IToList
   , IToList'
@@ -373,42 +372,6 @@ instance (Show (t a)
     let msg0 = "ToList"
         z = toList as
     in pure $ mkNode opts (PresentT z) (msg0 <> showVerbose opts " " as) []
-
--- | similar to 'toList'
---
--- >>> pz @(ToList' Id) ("aBc" :: String)
--- PresentT "aBc"
---
--- >>> pz @(ToList' Id) (Just 14)
--- PresentT [14]
---
--- >>> pz @(ToList' Id) Nothing
--- PresentT []
---
--- >>> pz @(ToList' Id) (Left ("xx" :: String))
--- PresentT []
---
--- >>> pz @(ToList' Id) (These 12 ("xx" :: String))
--- PresentT ["xx"]
---
-data ToList' p
-
-instance (PP p x ~ t a
-        , P p x
-        , Show (t a)
-        , Foldable t
-        , Show a
-        ) => P (ToList' p) x where
-  type PP (ToList' p) x = [ExtractAFromTA (PP p x)] -- extra layer of indirection means pan (ToList' Id) "abc" won't work without setting the type of "abc" unlike ToList
-  eval _ opts x = do
-    let msg0 = "ToList'"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let hhs = [hh pp]
-            b = toList p
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) hhs
 
 data Null' p
 

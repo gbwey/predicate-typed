@@ -118,16 +118,16 @@ import Data.Coerce
 -- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id)) "141.213.1x34.444"
 -- Left (FailT "ReadP Int (1x34)")
 --
--- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn Id) "12344"
+-- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12344"
 -- Right (Refined "12344")
 --
--- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn Id) "12340"
+-- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12340"
 -- Left FalseT
 --
--- >>> prtRefinedIO @OZ @(Any (IsPrime Id) Id) [11,13,17,18]
+-- >>> prtRefinedIO @OZ @(Any IsPrime Id) [11,13,17,18]
 -- Right (Refined [11,13,17,18])
 --
--- >>> prtRefinedIO @OZ @(All (IsPrime Id) Id) [11,13,17,18]
+-- >>> prtRefinedIO @OZ @(All IsPrime Id) [11,13,17,18]
 -- Left FalseT
 --
 -- >>> prtRefinedIO @OZ @(Snd Id !! Fst Id >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
@@ -272,7 +272,7 @@ instance ( RefinedC opts p a
 -- >>> all ((/=0) . unRefined) xs
 -- True
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined OU (IsPrime Id) Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined OU IsPrime Int)))
 -- >>> all (isPrime . unRefined) xs
 -- True
 --
@@ -333,15 +333,13 @@ genRefined g =
 -- <BLANKLINE>
 -- Refined 9
 --
--- >>> x = newRefinedT @OAN @(IsPrime Id || Id < 3) 3
--- >>> y = newRefinedT @OAN @(IsPrime Id || Id < 3) 5
+-- >>> x = newRefinedT @OAN @(IsPrime || Id < 3) 3
+-- >>> y = newRefinedT @OAN @(IsPrime || Id < 3) 5
 -- >>> prtRefinedTIO (rapply (+) x y)
 -- === a ===
 -- True True || False
 -- |
 -- +- True IsPrime
--- |  |
--- |  `- P Id 3
 -- |
 -- `- False 3 < 3
 --    |
@@ -353,8 +351,6 @@ genRefined g =
 -- True True || False
 -- |
 -- +- True IsPrime
--- |  |
--- |  `- P Id 5
 -- |
 -- `- False 5 < 3
 --    |
@@ -366,8 +362,6 @@ genRefined g =
 -- False False || False | (IsPrime) || (8 < 3)
 -- |
 -- +- False IsPrime
--- |  |
--- |  `- P Id 8
 -- |
 -- `- False 8 < 3
 --    |
