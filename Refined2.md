@@ -57,13 +57,11 @@ Here is an example where the predicate fails at compile-time and we choose to sh
 <interactive>:18:4: error:
     *
 *** Step 1. Success nitial Conversion(ip) (65535) ***
-
 P ReadBase(Int,16) 65535
 |
 `- P Id "000ffff"
 
 *** Step 2. False Boolean Check(op) ***
-
 False 65535 <= 255
 |
 +- P Id 65535
@@ -94,7 +92,6 @@ An example of an invalid refined2TH call
 
 <interactive>:64:4: error:
 *** Step 1. Initial Conversion(ip) Failed ***
-
 [Error ReadP Day (2016-xy-09)]
 |
 `- P Id "2016-xy-09"
@@ -120,7 +117,6 @@ Right (Refined2 {r2In = 254, r2Out = "00fe"})
 Error in $: Refined2:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 *** Step 1. Initial Conversion(ip) Failed ***
-
 [Error invalid base 16] ReadBase(Int,16) as=00feg err=[(254,"g")]
 |
 `- P Id "00feg"
@@ -134,13 +130,11 @@ Error in $: Refined2:Step 1. Initial Conversion(ip) Failed | invalid base 16
 Error in $: Refined2:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 
 *** Step 1. Success Initial Conversion(ip) [16663610] ***
-
 P ReadBase(Int,16) 16663610 | "00fe443a"
 |
 `- P Id "00fe443a"
 
 *** Step 2. False Boolean Check(op) ***
-
 False True && False | (16663610 < 256)
 |
 +- True 16663610 > 10

@@ -149,41 +149,6 @@ import Data.Coerce
 --
 -- Although a common scenario is String as input, you are free to choose any input type you like
 --
--- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fe"
--- Right (Refined3 {r3In = 254, r3Out = "fe"})
---
--- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) @(PrintF "%x" Id) "00fe"
--- Left "Step 2. Failed Boolean Check(op) | 0xFE is too large"
---
--- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fg"
--- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"
---
--- >>> newRefined3 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
--- Left "Step 2. False Boolean Check(op) | {length invalid: 5 == 4}"
---
--- >>> newRefined3 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
--- Left "Step 2. Failed Boolean Check(op) | found length=5"
---
--- >>> newRefined3 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
--- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
---
--- >>> :m + Data.Time.Calendar.WeekDate
--- >>> newRefined3 @OZ @(MkDayExtra Id >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,13)
--- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
---
--- >>> newRefined3 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
--- Left "Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}"
---
--- >>> newRefined3 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
--- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
---
--- >>> type T4 k = '( OZ, MkDayExtra Id >> 'Just Id, GuardBool "expected a Sunday" (Thd Id == 7), UnMkDay (Fst Id), k)
--- >>> newRefined3P (Proxy @(T4 _)) (2019,10,12)
--- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
---
--- >>> newRefined3P (Proxy @(T4 _)) (2019,10,13)
--- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
---
 data Refined3 (opts :: Opt) ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: !(PP fmt (PP ip i)) }
 
 type role Refined3 phantom nominal nominal nominal nominal
@@ -315,15 +280,11 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 opts ip op fmt i) where
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined3 OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
 -- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
--- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
--- <BLANKLINE>
 -- P ReadBase(Int,16) 16663610
 -- |
 -- `- P Id "00fe443a"
--- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
--- <BLANKLINE>
 -- False True && False | (16663610 < 256)
 -- |
 -- +- True 16663610 > 10
@@ -411,15 +372,11 @@ genRefined3P _ g =
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
 -- Refined3:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
--- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (2019-04-23) ***
--- <BLANKLINE>
 -- P ReadP Day 2019-04-23
 -- |
 -- `- P Id "2019-04-23"
--- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
--- <BLANKLINE>
 -- False 2019-05-30 <= 2019-04-23
 -- |
 -- +- P Id 2019-04-23
@@ -511,15 +468,11 @@ withRefined3TIO = (>>=) . newRefined3TPIO (Proxy @'(opts,ip,op,fmt,i))
 -- this example fails as the the hex value is out of range
 --
 -- >>> prtRefinedTIO $ withRefined3TP (b16 @OAN) "a388" $ \x -> withRefined3TP (b2 @OAN) "1001110111" $ \y -> pure (x,y)
--- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (41864) ***
--- <BLANKLINE>
 -- P ReadBase(Int,16) 41864
 -- |
 -- `- P Id "a388"
--- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
--- <BLANKLINE>
 -- False 41864 <= 200
 -- |
 -- +- P Id 41864
@@ -555,6 +508,34 @@ withRefined3TP p = (>>=) . newRefined3TP p
 
 -- | pure version for extracting Refined3
 --
+-- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fe"
+-- Right (Refined3 {r3In = 254, r3Out = "fe"})
+--
+-- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) @(PrintF "%x" Id) "00fe"
+-- Left "Step 2. Failed Boolean Check(op) | 0xFE is too large"
+--
+-- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fg"
+-- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"
+--
+-- >>> newRefined3 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
+-- Left "Step 2. False Boolean Check(op) | {length invalid: 5 == 4}"
+--
+-- >>> newRefined3 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
+-- Left "Step 2. Failed Boolean Check(op) | found length=5"
+--
+-- >>> newRefined3 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
+-- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
+--
+-- >>> :m + Data.Time.Calendar.WeekDate
+-- >>> newRefined3 @OZ @(MkDayExtra Id >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,13)
+-- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
+--
+-- >>> newRefined3 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
+-- Left "Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}"
+--
+-- >>> newRefined3 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) @(UnMkDay (Fst Id)) (2019,10,12)
+-- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
+--
 -- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:15:7"
 -- Right (Refined3 {r3In = 01:15:07, r3Out = "01:15:07"})
 --
@@ -573,6 +554,15 @@ newRefined3 :: forall opts ip op fmt i
    -> Either String (Refined3 opts ip op fmt i)
 newRefined3 = newRefined3P Proxy
 
+-- | pure version for extracting Refined3 using a proxy
+--
+-- >>> type T4 k = '( OZ, MkDayExtra Id >> 'Just Id, GuardBool "expected a Sunday" (Thd Id == 7), UnMkDay (Fst Id), k)
+-- >>> newRefined3P (Proxy @(T4 _)) (2019,10,12)
+-- Left "Step 2. Failed Boolean Check(op) | expected a Sunday"
+--
+-- >>> newRefined3P (Proxy @(T4 _)) (2019,10,13)
+-- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
+--
 newRefined3P :: forall opts ip op fmt i proxy
   . ( Refined3C opts ip op fmt i
     , Show (PP ip i)
@@ -583,7 +573,7 @@ newRefined3P :: forall opts ip op fmt i proxy
    -> Either String (Refined3 opts ip op fmt i)
 newRefined3P _ x =
   let (lr,xs) = runIdentity $ unRavelT $ newRefined3T @opts @ip @op @fmt x
-  in left (\e -> e ++ (if all null xs then "" else "\n" ++ unlines xs)) lr
+  in left (\e -> (if all null xs then "" else unlines xs) <> (if null e then "" else e)) lr
 
 -- | create a wrapped 'Refined3' type
 --
@@ -892,7 +882,7 @@ prt3Impl :: forall a b . (Show a, Show b)
   -> RResults3 a b
   -> Msg3
 prt3Impl opts v =
-  let outmsg msg = "\n*** " <> formatOMsg opts " " <> msg <> " ***\n\n"
+  let outmsg msg = "*** " <> formatOMsg opts " " <> msg <> " ***\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ showL opts a ++ ")")
       mkMsg3 m n r | hasNoTree opts = Msg3 m n ""
                    | otherwise = Msg3 m n r

@@ -264,15 +264,11 @@ instance ToJSON i => ToJSON (Refined2 opts ip op i) where
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined2 OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe443a\""
 -- Error in $: Refined2:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
--- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
--- <BLANKLINE>
 -- P ReadBase(Int,16) 16663610
 -- |
 -- `- P Id "00fe443a"
--- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
--- <BLANKLINE>
 -- False True && False | (16663610 < 256)
 -- |
 -- +- True 16663610 > 10
@@ -367,15 +363,11 @@ genRefined2P _ g =
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
 -- Refined2:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
--- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (2019-04-23) ***
--- <BLANKLINE>
 -- P ReadP Day 2019-04-23
 -- |
 -- `- P Id "2019-04-23"
--- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
--- <BLANKLINE>
 -- False 2019-05-30 <= 2019-04-23
 -- |
 -- +- P Id 2019-04-23
@@ -431,15 +423,11 @@ withRefined2TIO = (>>=) . newRefined2TIO @opts @ip @op @i
 -- this example fails as the the hex value is out of range
 --
 -- >>> prtRefinedTIO $ withRefined2T @OAN @(ReadBase Int 16 Id) @(Between 100 200 Id) "a388" $ \x -> withRefined2T @OAN @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (x,y)
--- <BLANKLINE>
 -- *** Step 1. Success Initial Conversion(ip) (41864) ***
--- <BLANKLINE>
 -- P ReadBase(Int,16) 41864
 -- |
 -- `- P Id "a388"
--- <BLANKLINE>
 -- *** Step 2. False Boolean Check(op) ***
--- <BLANKLINE>
 -- False 41864 <= 200
 -- |
 -- +- P Id 41864
@@ -497,7 +485,7 @@ newRefined2P :: forall opts ip op i proxy
       -> Either String (Refined2 opts ip op i)
 newRefined2P _ x =
   let (lr,xs) = runIdentity $ unRavelT $ newRefined2T @opts @ip @op x
-  in left (\e -> e ++ (if all null xs then "" else "\n" ++ unlines xs)) lr
+  in left (\e -> (if all null xs then "" else unlines xs) <> (if null e then "" else e)) lr
 
 -- | create a wrapped 'Refined2' type
 --
@@ -653,7 +641,7 @@ prt2Impl :: forall a . Show a
   -> RResults2 a
   -> Msg2
 prt2Impl opts v =
-  let outmsg msg = "\n*** " <> formatOMsg opts " " <> msg <> " ***\n\n"
+  let outmsg msg = "*** " <> formatOMsg opts " " <> msg <> " ***\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ showL opts a ++ ")")
       mkMsg2 m n r | hasNoTree opts = Msg2 m n ""
                    | otherwise = Msg2 m n r

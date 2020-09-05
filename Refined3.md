@@ -36,13 +36,11 @@ run this to get details in color of each evaluation step on failure:
 >prtEval3PIO (Proxy @(Hex OU)) "0000ffe"
 
 *** Step 1. Success Initial Conversion(ip) [4094] ***
-
 P ReadBase(Int,16) 4094
 |
 `- P Id "0000ffe"
 
 *** Step 2. False Boolean Check(op) ***
-
 False 4094 <= 255
 |
 +- P Id 4094
@@ -80,13 +78,11 @@ Here is an example where the predicate fails at compile-time and we choose to sh
 <interactive>:18:4: error:
     *
 *** Step 1. Success Initial Conversion(ip) (65535) ***
-
 P ReadBase(Int,16) 65535
 |
 `- P Id "000ffff"
 
 *** Step 2. False Boolean Check(op) ***
-
 False 65535 <= 255
 |
 +- P Id 65535
@@ -118,7 +114,6 @@ An example of an invalid refined3TH call
 <interactive>:719:4: error:
     *
 *** Step 1. Initial Conversion(ip) Failed ***
-
 [Error ReadP Day (2016-xy-09)]
 |
 `- P Id "2016-xy-09"
