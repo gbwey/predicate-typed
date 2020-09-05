@@ -68,105 +68,75 @@ import qualified Data.Text.Lazy as TL
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Sequence as Seq
 
--- | similar to 'T.strip' 'T.stripStart' 'T.stripEnd'
---
--- >>> pz @(TrimBoth (Snd Id)) (20," abc   " :: String)
--- PresentT "abc"
---
--- >>> pz @(TrimBoth (Snd Id)) (20,T.pack " abc   ")
--- PresentT "abc"
---
--- >>> pz @(TrimL (Snd Id)) (20," abc   ")
--- PresentT "abc   "
---
--- >>> pz @(TrimR (Snd Id)) (20," abc   ")
--- PresentT " abc"
---
--- >>> pz @(TrimR "  abc ") ()
--- PresentT "  abc"
---
--- >>> pz @(TrimR "") ()
--- PresentT ""
---
--- >>> pz @(TrimBoth "         ") ()
--- PresentT ""
---
--- >>> pz @(TrimBoth "") ()
--- PresentT ""
---
-data TrimImpl (left :: Bool) (right :: Bool) p
+data TrimImpl (left :: Bool) (right :: Bool)
 
 instance (FailUnlessT (OrT l r)
            ('GL.Text "TrimImpl: left and right cannot both be False")
         , GetBool l
         , GetBool r
-        , DTL.IsText (PP p x)
-        , P p x
-        ) => P (TrimImpl l r p) x where
-  type PP (TrimImpl l r p) x = PP p x
-  eval _ opts x = do
+        , DTL.IsText x
+        ) => P (TrimImpl l r) x where
+  type PP (TrimImpl l r) x = x
+  eval _ opts x =
     let msg0 = "Trim" ++ (if l && r then "Both" else if l then "L" else "R")
         l = getBool @l
         r = getBool @r
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right (view DTL.unpacked -> p) ->
-        let fl = if l then dropWhile isSpace else id
-            fr = if r then dropWhileEnd isSpace else id
-            b =  (fl . fr) p
-        in mkNode opts (PresentT (b ^. DTL.packed)) (msg0 <> litL opts b <> litVerbose opts " | " p) [hh pp]
+        p = view DTL.unpacked x
+        fl = if l then dropWhile isSpace else id
+        fr = if r then dropWhileEnd isSpace else id
+        b =  (fl . fr) p
+     in pure $ mkNode opts (PresentT (b ^. DTL.packed)) (msg0 <> litL opts b <> litVerbose opts " | " p) []
 
 -- | similar to 'T.stripStart'
 --
--- >>> pz @(TrimL (Snd Id)) (20," abc   ")
+-- >>> pz @(Snd Id >> TrimL) (20," abc   ")
 -- PresentT "abc   "
 --
-data TrimL p
-type TrimLT p = TrimImpl 'True 'False p
+data TrimL
+type TrimLT = TrimImpl 'True 'False
 
-instance P (TrimLT p) x => P (TrimL p) x where
-  type PP (TrimL p) x = PP (TrimLT p) x
-  eval _ = eval (Proxy @(TrimLT p))
+instance P TrimLT x => P TrimL x where
+  type PP TrimL x = PP TrimLT x
+  eval _ = eval (Proxy @TrimLT)
 
 -- | similar to 'T.stripEnd'
 --
--- >>> pz @(TrimR (Snd Id)) (20," abc   ")
+-- >>> pz @(Snd Id >> TrimR) (20," abc   ")
 -- PresentT " abc"
 --
--- >>> pz @(TrimR "  abc ") ()
+-- >>> pz @("  abc " >> TrimR) ()
 -- PresentT "  abc"
 --
--- >>> pz @(TrimR "") ()
+-- >>> pz @("" >> TrimR) ()
 -- PresentT ""
 --
-data TrimR p
-type TrimRT p = TrimImpl 'False 'True p
+data TrimR
+type TrimRT = TrimImpl 'False 'True
 
-instance P (TrimRT p) x => P (TrimR p) x where
-  type PP (TrimR p) x = PP (TrimRT p) x
-  eval _ = eval (Proxy @(TrimRT p))
+instance P TrimRT x => P TrimR x where
+  type PP TrimR x = PP TrimRT x
+  eval _ = eval (Proxy @TrimRT)
 
 -- | similar to 'T.strip'
 --
--- >>> pz @(TrimBoth (Snd Id)) (20," abc   " :: String)
+-- >>> pz @(Snd Id >> TrimBoth) (20," abc   " :: String)
 -- PresentT "abc"
 --
--- >>> pz @(TrimBoth (Snd Id)) (20,T.pack " abc   ")
+-- >>> pz @(Snd Id >> TrimBoth) (20,T.pack " abc   ")
 -- PresentT "abc"
 --
--- >>> pz @(TrimBoth "         ") ()
+-- >>> pz @("         " >> TrimBoth) ()
 -- PresentT ""
 --
--- >>> pz @(TrimBoth "") ()
+-- >>> pz @("" >> TrimBoth) ()
 -- PresentT ""
 --
-data TrimBoth p
-type TrimBothT p = TrimImpl 'True 'True p
+data TrimBoth
+type TrimBothT = TrimImpl 'True 'True
 
-instance P (TrimBothT p) x => P (TrimBoth p) x where
-  type PP (TrimBoth p) x = PP (TrimBothT p) x
-  eval _ = eval (Proxy @(TrimBothT p))
+instance P TrimBothT x => P TrimBoth x where
+  type PP TrimBoth x = PP TrimBothT x
+  eval _ = eval (Proxy @TrimBothT)
 
 data StripImpl(left :: Bool) p q
 
@@ -363,19 +333,10 @@ instance P (IsSuffixCIT p q) x => P (IsSuffixCI p q) x where
   eval _ = evalBool (Proxy @(IsSuffixCIT p q))
 
 -- | very simple conversion to a string
-data ToString p
-instance ( ToStringC (PP p x)
-         , P p x
-         ) => P (ToString p) x where
-  type PP (ToString p) x = String
-  eval _ opts x = do
-    let msg0 = "ToString"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let d = toStringC p
-        in mkNode opts (PresentT d) msg0 [hh pp]
+data ToString
+instance ToStringC x => P ToString x where
+  type PP ToString x = String
+  eval _ opts x = pure $ mkNode opts (PresentT (toStringC x)) "ToString" []
 
 class ToStringC a where
   toStringC :: a -> String

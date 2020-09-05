@@ -76,10 +76,6 @@ import qualified Data.ByteString.Char8 as BS8
 -- >>> pz @(FileExists "xyzzy") ()
 -- FalseT
 --
--- >>> pl @(FileExists "xxy") ()
--- False (IsJust)
--- FalseT
---
 data ReadFile p
 
 instance ( PP p x ~ String
@@ -130,23 +126,18 @@ instance P (FileExistsT p) x => P (FileExists p) x where
 
 -- | similar to 'doesFileExist'
 data FileExists p
-type FileExistsT p = IsJust (ReadFile p)
+type FileExistsT p = ReadFile p >> IsJust
 
 -- | similar to 'doesDirectoryExist'
 --
 -- >>> pz @(DirExists ".") ()
 -- TrueT
 --
--- >>> pl @(DirExists ".") ()
--- True (IsJust)
--- TrueT
---
--- >>> pl @(DirExists "xxy") ()
--- False (IsJust)
+-- >>> pz @(DirExists "xxy") ()
 -- FalseT
 --
 data DirExists p
-type DirExistsT p = IsJust (ReadDir p)
+type DirExistsT p = ReadDir p >> IsJust
 
 instance P (DirExistsT p) x => P (DirExists p) x where
   type PP (DirExists p) x = PP (DirExistsT p) x

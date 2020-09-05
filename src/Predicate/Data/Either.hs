@@ -78,8 +78,7 @@ import Data.Either
 -- FailT "Left' found Right"
 --
 data Left'
-instance (Show a
-        ) => P Left' (Either a x) where
+instance Show a => P Left' (Either a x) where
   type PP Left' (Either a x) = a
   eval _ opts lr =
     let msg0 = "Left'"
@@ -168,49 +167,33 @@ instance (Show (PP p a)
 
 -- | similar to 'isLeft'
 --
--- >>> pz @(IsLeft Id) (Right 123)
+-- >>> pz @IsLeft (Right 123)
 -- FalseT
 --
--- >>> pz @(IsLeft Id) (Left 'a')
+-- >>> pz @IsLeft (Left 'a')
 -- TrueT
 --
-data IsLeft p
+data IsLeft
 
-instance ( P p x
-         , PP p x ~ Either a b
-         ) => P (IsLeft p) x where
-  type PP (IsLeft p) x = Bool
-  eval _ opts x = do
-    let msg0 = "IsLeft"
-    pp <- eval (Proxy @p) opts x
-    let hhs = [hh pp]
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right (Left _) -> mkNodeB opts True msg0 hhs
-      Right (Right _) -> mkNodeB opts False msg0 hhs
+instance x ~ Either a b
+       => P IsLeft x where
+  type PP IsLeft x = Bool
+  eval _ opts x = pure $ mkNodeB opts (isLeft x) "IsLeft" []
 
 -- | similar to 'isRight'
 --
--- >>> pz @(IsRight Id) (Right 123)
+-- >>> pz @IsRight (Right 123)
 -- TrueT
 --
--- >>> pz @(IsRight Id) (Left "aa")
+-- >>> pz @IsRight (Left "aa")
 -- FalseT
 --
-data IsRight p
+data IsRight
 
-instance ( P p x
-         , PP p x ~ Either a b
-         ) => P (IsRight p) x where
-  type PP (IsRight p) x = Bool
-  eval _ opts x = do
-    let msg0 = "IsRight"
-    pp <- eval (Proxy @p) opts x
-    let hhs = [hh pp]
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right (Left _) -> mkNodeB opts False msg0 hhs
-      Right (Right _) -> mkNodeB opts True msg0 hhs
+instance x ~ Either a b
+         => P IsRight x where
+  type PP IsRight x = Bool
+  eval _ opts x = pure $ mkNodeB opts (isRight x) "IsRight" []
 
 
 -- | similar 'Control.Arrow.+++'

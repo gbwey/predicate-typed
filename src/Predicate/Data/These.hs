@@ -345,82 +345,80 @@ instance (P p a
         let d = These p q
         in mkNode opts (PresentT d) (msg0 <> " " <> showL opts d) [hh pp, hh qq]
 
--- | predicate on 'These'
---
--- >>> pz @(IsThis Id) (This "aBc")
--- TrueT
---
--- >>> pz @(IsThis Id) (These 1 'a')
--- FalseT
---
--- >>> pz @(IsThese Id) (These 1 'a')
--- TrueT
---
--- >>> pl @(IsThat Id) (This 12)
--- False (IsThat | This 12)
--- FalseT
---
--- >>> pl @(IsThis Id) (This 12)
--- True (IsThis | This 12)
--- TrueT
---
--- >>> pl @(IsThese Id) (This 12)
--- False (IsThese | This 12)
--- FalseT
---
--- >>> pl @(IsThese Id) (These 'x' 12)
--- True (IsThese | These 'x' 12)
--- TrueT
---
--- >>> pl @(IsThese Id) (That (SG.Sum 12))
--- False (IsThese | That (Sum {getSum = 12}))
--- FalseT
---
--- >>> pl @(IsThese Id) (These 1 (SG.Sum 12))
--- True (IsThese | These 1 (Sum {getSum = 12}))
--- TrueT
---
-
-data IsTh (th :: These x y) p -- x y can be anything
+data IsTh (th :: These x y) -- x y can be anything
 
 -- trying to avoid Show instance cos of ambiguities
-instance (PP p x ~ These a b
-        , P p x
+instance (x ~ These a b
         , Show a
         , Show b
         , GetThese th
-        ) => P (IsTh (th :: These x1 x2) p) x where
-  type PP (IsTh th p) x = Bool
-  eval _ opts x = do
+        ) => P (IsTh (th :: These x1 x2)) x where
+  type PP (IsTh th) x = Bool
+  eval _ opts x =
     let msg0 = "Is"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let (t,f) = getThese @th
-            b = f p
-        in mkNodeB opts b (msg0 <> t <> showVerbose opts " | " p) [hh pp]
+        (t,f) = getThese @th
+        b = f x
+    in pure $ mkNodeB opts b (msg0 <> t <> showVerbose opts " | " x) []
 
-data IsThis p
-type IsThisT p = IsTh ('This '()) p
+-- | predicate on 'Data.These.This'
+--
+-- >>> pz @IsThis (This "aBc")
+-- TrueT
+--
+-- >>> pz @IsThis (These 1 'a')
+-- FalseT
+--
+-- >>> pl @IsThis (This 12)
+-- True (IsThis | This 12)
+-- TrueT
+--
+data IsThis
+type IsThisT = IsTh ('This '())
 
-instance P (IsThisT p) x => P (IsThis p) x where
-  type PP (IsThis p) x = PP (IsThisT p) x
-  eval _ = evalBool (Proxy @(IsThisT p))
+instance P IsThisT x => P IsThis x where
+  type PP IsThis x = PP IsThisT x
+  eval _ = evalBool (Proxy @IsThisT)
 
-data IsThat p
-type IsThatT p = IsTh ('That '()) p
+-- | predicate on 'Data.These.That'
+--
+-- >>> pl @IsThat (This 12)
+-- False (IsThat | This 12)
+-- FalseT
+--
+data IsThat
+type IsThatT = IsTh ('That '())
 
-instance P (IsThatT p) x => P (IsThat p) x where
-  type PP (IsThat p) x = PP (IsThatT p) x
-  eval _ = evalBool (Proxy @(IsThatT p))
+instance P IsThatT x => P IsThat x where
+  type PP IsThat x = PP IsThatT x
+  eval _ = evalBool (Proxy @IsThatT)
 
-data IsThese p
-type IsTheseT p = IsTh ('These '() '()) p
+-- | predicate on 'Data.These.These'
+--
+-- >>> pl @IsThese (This 12)
+-- False (IsThese | This 12)
+-- FalseT
+--
+-- >>> pz @IsThese (These 1 'a')
+-- TrueT
+--
+-- >>> pl @IsThese (These 'x' 12)
+-- True (IsThese | These 'x' 12)
+-- TrueT
+--
+-- >>> pl @IsThese (That (SG.Sum 12))
+-- False (IsThese | That (Sum {getSum = 12}))
+-- FalseT
+--
+-- >>> pl @IsThese (These 1 (SG.Sum 12))
+-- True (IsThese | These 1 (Sum {getSum = 12}))
+-- TrueT
+--
+data IsThese
+type IsTheseT = IsTh ('These '() '())
 
-instance P (IsTheseT p) x => P (IsThese p) x where
-  type PP (IsThese p) x = PP (IsTheseT p) x
-  eval _ = evalBool (Proxy @(IsTheseT p))
+instance P IsTheseT x => P IsThese x where
+  type PP IsThese x = PP IsTheseT x
+  eval _ = evalBool (Proxy @IsTheseT)
 
 -- | similar to 'Data.These.these'
 --

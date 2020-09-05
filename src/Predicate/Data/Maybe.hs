@@ -50,6 +50,7 @@ import Predicate.Data.Foldable (ConcatMap)
 import Predicate.Data.Monoid (MEmptyP)
 import Data.Proxy
 import Data.Kind (Type)
+import Data.Maybe
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -70,8 +71,7 @@ import Data.Kind (Type)
 -- FailT "Just' found Nothing"
 --
 data Just'
-instance (Show a
-        ) => P Just' (Maybe a) where
+instance Show a => P Just' (Maybe a) where
   type PP Just' (Maybe a) = a
   eval _ opts lr =
     let msg0 = "Just'"
@@ -271,57 +271,41 @@ instance (P q a
 
 -- | similar to 'Data.Maybe.isJust'
 --
--- >>> pz @(IsJust Id) Nothing
+-- >>> pz @IsJust Nothing
 -- FalseT
 --
--- >>> pz @(IsJust Id) (Just 'a')
+-- >>> pz @IsJust (Just 'a')
 -- TrueT
 --
-data IsJust p
+data IsJust
 
-instance ( P p x
-         , PP p x ~ Maybe a
-         ) => P (IsJust p) x where
-  type PP (IsJust p) x = Bool
-  eval _ opts x = do
-    let msg0 = "IsJust"
-    pp <- eval (Proxy @p) opts x
-    let hhs = [hh pp]
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right (Just _) -> mkNodeB opts True msg0 hhs
-      Right Nothing -> mkNodeB opts False msg0 hhs
+instance x ~ Maybe a
+         => P IsJust x where
+  type PP IsJust x = Bool
+  eval _ opts x = pure $ mkNodeB opts (isJust x) "IsJust" []
 
 -- | similar to 'Data.Maybe.isNothing'
 --
--- >>> pz @(IsNothing Id) (Just 123)
+-- >>> pz @IsNothing (Just 123)
 -- FalseT
 --
--- >>> pz @(IsNothing Id) Nothing
+-- >>> pz @IsNothing Nothing
 -- TrueT
 --
--- >>> pl @(Not (IsNothing Id) &&& ('Just Id >> Id + 12)) (Just 1)
+-- >>> pl @(Not IsNothing &&& ('Just Id >> Id + 12)) (Just 1)
 -- Present (True,13) (W '(True,13))
 -- PresentT (True,13)
 --
--- >>> pl @(Not (IsNothing Id) &&& ('Just Id >> Id + 12)) Nothing
+-- >>> pl @(Not IsNothing &&& ('Just Id >> Id + 12)) Nothing
 -- Error 'Just(empty) (W '(,))
 -- FailT "'Just(empty)"
 --
-data IsNothing p
+data IsNothing
 
-instance ( P p x
-         , PP p x ~ Maybe a
-         ) => P (IsNothing p) x where
-  type PP (IsNothing p) x = Bool
-  eval _ opts x = do
-    let msg0 = "IsNothing"
-    pp <- eval (Proxy @p) opts x
-    let hhs = [hh pp]
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right (Just _) -> mkNodeB opts False msg0 hhs
-      Right Nothing -> mkNodeB opts True msg0 hhs
+instance x ~ Maybe a
+         => P IsNothing x where
+  type PP IsNothing x = Bool
+  eval _ opts x = pure $ mkNodeB opts (isNothing x) "IsNothing" []
 
 -- | like 'Data.Maybe.mapMaybe'
 --
