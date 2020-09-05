@@ -5,9 +5,9 @@ Both the original input and the internal value are stored in Refined2
 :load Predicate.Examples.Refined2
 
 ```haskell
-data Refined2 opts ip op i
+data Refined2 opt ip op i
 ```
-* **_opts_** display options see [README](README.md)
+* **_opt_** display options see [README](README.md)
 * **_ip_** converts the external type **_i_** to an internal type
 * **_op_** predicate on the internal type
 * **_i_** input type
@@ -18,7 +18,7 @@ converts a base 16 String to an Int and validates that the number is between 0 a
 internally Refined2 holds the internal value r2In as an Int and the original String in r2Out
 
 ```haskell
->type Hex = '( OL, ReadBase Int 16 Id, Between 0 0xff Id, String)
+>type Hex = '(OL, ReadBase Int 16 Id, Between 0 0xff Id, String)
 
 >newRefined2P (Proxy @Hex) "0000fe"
 Refined2 {r2In = 254, r2Out = "0000fe"}
@@ -42,14 +42,15 @@ Left "Step 2. False Boolean Check(op) | {False && False | (0-255:0 <= -10) && (l
 ```
 
 ```haskell
-type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 255 Id, String)
+type Hex opt = '(opt, ReadBase Int 16 Id, Between 0 255 Id, String)
 
 $$(refined2TH "0000fe") :: MakeR2 (Hex OL)
+Refined2 {r2In = 254, r2Out = "0000fe"}
 ```
 
 Here is an example where the predicate fails at compile-time and we choose to show the details using OU
 ```haskell
->type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 255 Id, String)
+>type Hex opt = '(opt, ReadBase Int 16 Id, Between 0 255 Id, String)
 
 >$$(refined2TH "000ffff") :: MakeR2 (Hex OU)
 

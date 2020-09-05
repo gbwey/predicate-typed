@@ -204,6 +204,13 @@ module Predicate.Util (
   , mapB
   , fmapB
 
+ -- ** tuple classes
+  , ExtractL1C(..)
+  , ExtractL2C(..)
+  , ExtractL3C(..)
+  , ExtractL4C(..)
+  , ExtractL5C(..)
+  , ExtractL6C(..)
     ) where
 import qualified GHC.TypeNats as GN
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
@@ -1963,3 +1970,116 @@ mapB f =
 -- | convenience method for running 'mapB' inside a functor
 fmapB :: (Typeable b, Functor f) => (a -> b) -> f (BoolT a) -> f (BoolT b)
 fmapB = fmap . mapB
+
+class ExtractL1C tp where
+  type ExtractL1T tp
+  extractL1C :: tp -> ExtractL1T tp
+instance ExtractL1C (a,b) where
+  type ExtractL1T (a,b) = a
+  extractL1C (a,_) = a
+instance ExtractL1C (a,b,c) where
+  type ExtractL1T (a,b,c) = a
+  extractL1C (a,_,_) = a
+instance ExtractL1C (a,b,c,d) where
+  type ExtractL1T (a,b,c,d) = a
+  extractL1C (a,_,_,_) = a
+instance ExtractL1C (a,b,c,d,e) where
+  type ExtractL1T (a,b,c,d,e) = a
+  extractL1C (a,_,_,_,_) = a
+instance ExtractL1C (a,b,c,d,e,f) where
+  type ExtractL1T (a,b,c,d,e,f) = a
+  extractL1C (a,_,_,_,_,_) = a
+
+class ExtractL2C tp where
+  type ExtractL2T tp
+  extractL2C :: tp -> ExtractL2T tp
+instance ExtractL2C (a,b) where
+  type ExtractL2T (a,b) = b
+  extractL2C (_,b) = b
+instance ExtractL2C (a,b,c) where
+  type ExtractL2T (a,b,c) = b
+  extractL2C (_,b,_) = b
+instance ExtractL2C (a,b,c,d) where
+  type ExtractL2T (a,b,c,d) = b
+  extractL2C (_,b,_,_) = b
+instance ExtractL2C (a,b,c,d,e) where
+  type ExtractL2T (a,b,c,d,e) = b
+  extractL2C (_,b,_,_,_) = b
+instance ExtractL2C (a,b,c,d,e,f) where
+  type ExtractL2T (a,b,c,d,e,f) = b
+  extractL2C (_,b,_,_,_,_) = b
+class ExtractL3C tp where
+  type ExtractL3T tp
+  extractL3C :: tp -> ExtractL3T tp
+instance ExtractL3C (a,b) where
+  type ExtractL3T (a,b) = GL.TypeError ('GL.Text "Thd doesn't work for 2-tuples")
+  extractL3C _ = errorInProgram "Thd doesn't work for 2-tuples"
+instance ExtractL3C (a,b,c) where
+  type ExtractL3T (a,b,c) = c
+  extractL3C (_,_,c) = c
+instance ExtractL3C (a,b,c,d) where
+  type ExtractL3T (a,b,c,d) = c
+  extractL3C (_,_,c,_) = c
+instance ExtractL3C (a,b,c,d,e) where
+  type ExtractL3T (a,b,c,d,e) = c
+  extractL3C (_,_,c,_,_) = c
+instance ExtractL3C (a,b,c,d,e,f) where
+  type ExtractL3T (a,b,c,d,e,f) = c
+  extractL3C (_,_,c,_,_,_) = c
+
+class ExtractL4C tp where
+  type ExtractL4T tp
+  extractL4C :: tp -> ExtractL4T tp
+instance ExtractL4C (a,b) where
+  type ExtractL4T (a,b) = GL.TypeError ('GL.Text "L4 doesn't work for 2-tuples")
+  extractL4C _ = errorInProgram "L4 doesn't work for 2-tuples"
+instance ExtractL4C (a,b,c) where
+  type ExtractL4T (a,b,c) = GL.TypeError ('GL.Text "L4 doesn't work for 3-tuples")
+  extractL4C _ = errorInProgram "L4 doesn't work for 3-tuples"
+instance ExtractL4C (a,b,c,d) where
+  type ExtractL4T (a,b,c,d) = d
+  extractL4C (_,_,_,d) = d
+instance ExtractL4C (a,b,c,d,e) where
+  type ExtractL4T (a,b,c,d,e) = d
+  extractL4C (_,_,_,d,_) = d
+instance ExtractL4C (a,b,c,d,e,f) where
+  type ExtractL4T (a,b,c,d,e,f) = d
+  extractL4C (_,_,_,d,_,_) = d
+
+class ExtractL5C tp where
+  type ExtractL5T tp
+  extractL5C :: tp -> ExtractL5T tp
+instance ExtractL5C (a,b) where
+  type ExtractL5T (a,b) = GL.TypeError ('GL.Text "L5 doesn't work for 2-tuples")
+  extractL5C _ = errorInProgram "L5 doesn't work for 2-tuples"
+instance ExtractL5C (a,b,c) where
+  type ExtractL5T (a,b,c) = GL.TypeError ('GL.Text "L5 doesn't work for 3-tuples")
+  extractL5C _ = errorInProgram "L5 doesn't work for 3-tuples"
+instance ExtractL5C (a,b,c,d) where
+  type ExtractL5T (a,b,c,d) = GL.TypeError ('GL.Text "L5 doesn't work for 4-tuples")
+  extractL5C _ = errorInProgram "L5 doesn't work for 4-tuples"
+instance ExtractL5C (a,b,c,d,e) where
+  type ExtractL5T (a,b,c,d,e) = e
+  extractL5C (_,_,_,_,e) = e
+instance ExtractL5C (a,b,c,d,e,f) where
+  type ExtractL5T (a,b,c,d,e,f) = e
+  extractL5C (_,_,_,_,e,_) = e
+
+class ExtractL6C tp where
+  type ExtractL6T tp
+  extractL6C :: tp -> ExtractL6T tp
+instance ExtractL6C (a,b) where
+  type ExtractL6T (a,b) = GL.TypeError ('GL.Text "L6 doesn't work for 2-tuples")
+  extractL6C _ = errorInProgram "L6 doesn't work for 2-tuples"
+instance ExtractL6C (a,b,c) where
+  type ExtractL6T (a,b,c) = GL.TypeError ('GL.Text "L6 doesn't work for 3-tuples")
+  extractL6C _ = errorInProgram "L6 doesn't work for 3-tuples"
+instance ExtractL6C (a,b,c,d) where
+  type ExtractL6T (a,b,c,d) = GL.TypeError ('GL.Text "L6 doesn't work for 4-tuples")
+  extractL6C _ = errorInProgram "L6 doesn't work for 4-tuples"
+instance ExtractL6C (a,b,c,d,e) where
+  type ExtractL6T (a,b,c,d,e) = GL.TypeError ('GL.Text "L6 doesn't work for 5-tuples")
+  extractL6C _ = errorInProgram "L6 doesn't work for 5-tuples"
+instance ExtractL6C (a,b,c,d,e,f) where
+  type ExtractL6T (a,b,c,d,e,f) = f
+  extractL6C (_,_,_,_,_,f) = f

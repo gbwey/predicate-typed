@@ -7,9 +7,9 @@ Both the internal value and the formatted output are stored in Refined3
 ### An example using Refined3 (for more information see [doctests](src/Predicate/Examples/Refined3.hs))
 
 ```haskell
-data Refined3 opts ip op fmt i
+data Refined3 opt ip op fmt i
 ```
-* **_opts_** display options see [README](README.md)
+* **_opt_** display options see [README](README.md)
 * **_ip_** converts the external type **_i_** to an internal type
 * **_op_** predicate on the internal type
 * **_fmt_** converts the internal type back to the external type (canonical value)
@@ -19,7 +19,7 @@ converts a base 16 String to an Int and validates that the number is between 0 a
 and then roundtrips the value to a string
 
 ```haskell
->type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
+>type Hex opt = '(opt, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
 >prtEval3PIO (Proxy @(Hex OL)) "0000fe"
 Refined3 {r3In = 254, r3Out = "fe"}
@@ -66,14 +66,14 @@ PresentT "fe"
 
 
 ```haskell
-type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
+type Hex opt = '(opt, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
 $$(refined3TH "0000fe") :: MakeR3 (Hex OL)
 ```
 
 Here is an example where the predicate fails at compile-time and we choose to show the details using OU
 ```haskell
->type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
+>type Hex opt = '(opt, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
 >$$(refined3TH "000ffff") :: MakeR3 (Hex OU)
 

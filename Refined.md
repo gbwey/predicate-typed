@@ -5,9 +5,9 @@
 :load Predicate
 
 ```haskell
-newtype Refined opts p a
+newtype Refined opt p a
 ```
-* **_opts_** display options see [README](README.md)
+* **_opt_** display options see [README](README.md)
 * **_p_** predicate on **_a_**
 * **_a_** input type
 

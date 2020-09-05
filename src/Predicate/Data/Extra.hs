@@ -72,6 +72,10 @@ module Predicate.Data.Extra (
   , RDot
   , K
   , Lift
+
+  , Apply1
+  , Apply2
+
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -1115,4 +1119,59 @@ type LiftT p q = q >> p
 instance P (LiftT p q) x => P (Lift p q) x where
   type PP (Lift p q) x = PP (LiftT p q) x
   eval _ = eval (Proxy @(LiftT p q))
+
+-- | application using a Proxy: \'q\' must be of kind Type else ambiguous k0 error
+--
+-- >>> pl @(Apply1 (MsgI "hello ")) (Proxy @(W "there"),()) -- have to wrap Symbol
+-- Present "there" (hello W '"there")
+-- PresentT "there"
+--
+-- >>> pl @(Apply1 Length) (Proxy @(Snd Id),(True,"abcdef"))
+-- Present 6 (Length 6 | "abcdef")
+-- PresentT 6
+--
+-- >>> pl @(Apply1 ((+) 4)) (Proxy @(Fst Id),(5,"abcdef"))
+-- Present 9 (4 + 5 = 9)
+-- PresentT 9
+--
+-- >>> pl @(Apply1 Fst) (Proxy @Id, (123,"asfd"))
+-- Present 123 (Fst 123 | (123,"asfd"))
+-- PresentT 123
+--
+-- >>> pz @('(Proxy (W 12),9) >> Apply1 ((+) Id)) ()
+-- PresentT 21
+--
+-- >>> pz @('(Proxy (W 5),()) >> Apply1 Succ) ()
+-- PresentT 6
+--
+-- >>> pz @('(Proxy (W 12),Id) >> Apply1 ((+) Id)) 9
+-- PresentT 21
+--
+data Apply1 (p :: Type -> Type) -- will not work unless p :: Type -> Type: cant be polymorphic in k
+instance forall p q x . (P (p q) x)
+   => P (Apply1 p) (Proxy q, x) where
+  type PP (Apply1 p) (Proxy q, x) = PP (p q) x
+  eval _ opts (Proxy, x) =
+    eval (Proxy @(p q)) opts x
+
+-- | application using a Proxy: \'q\' and \'r\' must be of kind Type else ambiguous k0 error
+--
+-- >>> pl @(Apply2 (+)) ((Proxy @(Fst Id),Proxy @(Length (Snd Id))),(5,"abcdef"))
+-- Present 11 (5 + 6 = 11)
+-- PresentT 11
+--
+-- >>> pl @(Apply2 (+)) ((Proxy @(W 3),Proxy @(W 7)),())
+-- Present 10 (3 + 7 = 10)
+-- PresentT 10
+--
+-- >>> pl @(Apply2 (&&&)) ((Proxy @(W "abc"),Proxy @(W 13)), ())
+-- Present ("abc",13) (W '("abc",13))
+-- PresentT ("abc",13)
+--
+data Apply2 (p :: Type -> Type -> Type)
+instance forall p (q :: Type) (r :: Type) x . (P (p q r) x)
+   => P (Apply2 p) ((Proxy q,Proxy r), x) where
+  type PP (Apply2 p) ((Proxy q,Proxy r), x) = PP (p q r) x
+  eval _ opts ((Proxy, Proxy), x) =
+    eval (Proxy @(p q r)) opts x
 

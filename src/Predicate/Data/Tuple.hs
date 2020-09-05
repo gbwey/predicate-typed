@@ -30,6 +30,7 @@ module Predicate.Data.Tuple (
   , Second
   , type (&&&)
   , type (***)
+  , Both
   , Pairs
 
   , AndA
@@ -322,3 +323,51 @@ infixr 3 |+
 instance P (OrAT p q) x => P (p |+ q) x where
   type PP (p |+ q) x = PP (OrAT p q) x
   eval _ = evalBool (Proxy @(OrAT p q))
+
+-- | applies \'p\' to the first and second slot of an n-tuple (similar to '***')
+--
+-- >>> pl @(Both Len (Fst Id)) (("abc",[10..17],1,2,3),True)
+-- Present (3,8) (Both)
+-- PresentT (3,8)
+--
+-- >>> pl @(Both (Pred Id) $ Fst Id) ((12,'z',[10..17]),True)
+-- Present (11,'y') (Both)
+-- PresentT (11,'y')
+--
+-- >>> pl @(Both (Succ Id) Id) (4,'a')
+-- Present (5,'b') (Both)
+-- PresentT (5,'b')
+--
+-- >>> pl @(Both Len (Fst Id)) (("abc",[10..17]),True)
+-- Present (3,8) (Both)
+-- PresentT (3,8)
+--
+-- >>> import Data.Time
+-- >>> pl @(Both (ReadP Day Id) Id) ("1999-01-01","2001-02-12")
+-- Present (1999-01-01,2001-02-12) (Both)
+-- PresentT (1999-01-01,2001-02-12)
+--
+data Both p q
+instance ( ExtractL1C (PP q x)
+         , ExtractL2C (PP q x)
+         , P p (ExtractL1T (PP q x))
+         , P p (ExtractL2T (PP q x))
+         , P q x
+   ) => P (Both p q) x where
+  type PP (Both p q) x = (PP p (ExtractL1T (PP q x)), PP p (ExtractL2T (PP q x)))
+  eval _ opts x = do
+    let msg0 = "Both"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        let (a,a') = (extractL1C q, extractL2C q)
+        pp <- eval (Proxy @p) opts a
+        case getValueLR opts msg0 pp [hh qq] of
+          Left e -> pure e
+          Right b -> do
+            pp' <- eval (Proxy @p) opts a'
+            pure $ case getValueLR opts msg0 pp' [hh qq, hh pp] of
+              Left e -> e
+              Right b' ->
+                mkNode opts (PresentT (b,b')) msg0 [hh qq, hh pp, hh pp']

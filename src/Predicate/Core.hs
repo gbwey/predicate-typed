@@ -108,9 +108,6 @@ module Predicate.Core (
   , SwapC(..)
   , type ($)
   , type (&)
-  , Apply1
-  , Apply2
-  , Both
   ) where
 import Predicate.Util
 import qualified GHC.TypeLits as GL
@@ -1629,25 +1626,6 @@ instance P (L1T p) x => P (L1 p) x where
   type PP (L1 p) x = PP (L1T p) x
   eval _ = eval (Proxy @(L1T p))
 
-class ExtractL1C tp where
-  type ExtractL1T tp
-  extractL1C :: tp -> ExtractL1T tp
-instance ExtractL1C (a,b) where
-  type ExtractL1T (a,b) = a
-  extractL1C (a,_) = a
-instance ExtractL1C (a,b,c) where
-  type ExtractL1T (a,b,c) = a
-  extractL1C (a,_,_) = a
-instance ExtractL1C (a,b,c,d) where
-  type ExtractL1T (a,b,c,d) = a
-  extractL1C (a,_,_,_) = a
-instance ExtractL1C (a,b,c,d,e) where
-  type ExtractL1T (a,b,c,d,e) = a
-  extractL1C (a,_,_,_,_) = a
-instance ExtractL1C (a,b,c,d,e,f) where
-  type ExtractL1T (a,b,c,d,e,f) = a
-  extractL1C (a,_,_,_,_,_) = a
-
 -- | similar to 'snd'
 --
 -- >>> pz @(Snd Id) (10,"Abc")
@@ -1683,25 +1661,6 @@ type L2T p = Snd p
 instance P (L2T p) x => P (L2 p) x where
   type PP (L2 p) x = PP (L2T p) x
   eval _ = eval (Proxy @(L2T p))
-
-class ExtractL2C tp where
-  type ExtractL2T tp
-  extractL2C :: tp -> ExtractL2T tp
-instance ExtractL2C (a,b) where
-  type ExtractL2T (a,b) = b
-  extractL2C (_,b) = b
-instance ExtractL2C (a,b,c) where
-  type ExtractL2T (a,b,c) = b
-  extractL2C (_,b,_) = b
-instance ExtractL2C (a,b,c,d) where
-  type ExtractL2T (a,b,c,d) = b
-  extractL2C (_,b,_,_) = b
-instance ExtractL2C (a,b,c,d,e) where
-  type ExtractL2T (a,b,c,d,e) = b
-  extractL2C (_,b,_,_,_) = b
-instance ExtractL2C (a,b,c,d,e,f) where
-  type ExtractL2T (a,b,c,d,e,f) = b
-  extractL2C (_,b,_,_,_,_) = b
 
 -- | similar to 3rd element in a n-tuple
 --
@@ -1739,25 +1698,6 @@ instance P (L3T p) x => P (L3 p) x where
   type PP (L3 p) x = PP (L3T p) x
   eval _ = eval (Proxy @(L3T p))
 
-class ExtractL3C tp where
-  type ExtractL3T tp
-  extractL3C :: tp -> ExtractL3T tp
-instance ExtractL3C (a,b) where
-  type ExtractL3T (a,b) = GL.TypeError ('GL.Text "Thd doesn't work for 2-tuples")
-  extractL3C _ = errorInProgram "Thd doesn't work for 2-tuples"
-instance ExtractL3C (a,b,c) where
-  type ExtractL3T (a,b,c) = c
-  extractL3C (_,_,c) = c
-instance ExtractL3C (a,b,c,d) where
-  type ExtractL3T (a,b,c,d) = c
-  extractL3C (_,_,c,_) = c
-instance ExtractL3C (a,b,c,d,e) where
-  type ExtractL3T (a,b,c,d,e) = c
-  extractL3C (_,_,c,_,_) = c
-instance ExtractL3C (a,b,c,d,e,f) where
-  type ExtractL3T (a,b,c,d,e,f) = c
-  extractL3C (_,_,c,_,_,_) = c
-
 -- | similar to 4th element in a n-tuple
 --
 -- >>> pz @(L4 Id) (10,"Abc",'x',True)
@@ -1787,25 +1727,6 @@ instance (Show (ExtractL4T (PP p x))
         let b = extractL4C p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
-class ExtractL4C tp where
-  type ExtractL4T tp
-  extractL4C :: tp -> ExtractL4T tp
-instance ExtractL4C (a,b) where
-  type ExtractL4T (a,b) = GL.TypeError ('GL.Text "L4 doesn't work for 2-tuples")
-  extractL4C _ = errorInProgram "L4 doesn't work for 2-tuples"
-instance ExtractL4C (a,b,c) where
-  type ExtractL4T (a,b,c) = GL.TypeError ('GL.Text "L4 doesn't work for 3-tuples")
-  extractL4C _ = errorInProgram "L4 doesn't work for 3-tuples"
-instance ExtractL4C (a,b,c,d) where
-  type ExtractL4T (a,b,c,d) = d
-  extractL4C (_,_,_,d) = d
-instance ExtractL4C (a,b,c,d,e) where
-  type ExtractL4T (a,b,c,d,e) = d
-  extractL4C (_,_,_,d,_) = d
-instance ExtractL4C (a,b,c,d,e,f) where
-  type ExtractL4T (a,b,c,d,e,f) = d
-  extractL4C (_,_,_,d,_,_) = d
-
 -- | similar to 5th element in a n-tuple
 --
 -- >>> pz @(L5 Id) (10,"Abc",'x',True,1)
@@ -1827,25 +1748,6 @@ instance (Show (ExtractL5T (PP p x))
       Right p ->
         let b = extractL5C p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
-
-class ExtractL5C tp where
-  type ExtractL5T tp
-  extractL5C :: tp -> ExtractL5T tp
-instance ExtractL5C (a,b) where
-  type ExtractL5T (a,b) = GL.TypeError ('GL.Text "L5 doesn't work for 2-tuples")
-  extractL5C _ = errorInProgram "L5 doesn't work for 2-tuples"
-instance ExtractL5C (a,b,c) where
-  type ExtractL5T (a,b,c) = GL.TypeError ('GL.Text "L5 doesn't work for 3-tuples")
-  extractL5C _ = errorInProgram "L5 doesn't work for 3-tuples"
-instance ExtractL5C (a,b,c,d) where
-  type ExtractL5T (a,b,c,d) = GL.TypeError ('GL.Text "L5 doesn't work for 4-tuples")
-  extractL5C _ = errorInProgram "L5 doesn't work for 4-tuples"
-instance ExtractL5C (a,b,c,d,e) where
-  type ExtractL5T (a,b,c,d,e) = e
-  extractL5C (_,_,_,_,e) = e
-instance ExtractL5C (a,b,c,d,e,f) where
-  type ExtractL5T (a,b,c,d,e,f) = e
-  extractL5C (_,_,_,_,e,_) = e
 
 
 -- | similar to 6th element in a n-tuple
@@ -1869,72 +1771,6 @@ instance (Show (ExtractL6T (PP p x))
       Right p ->
         let b = extractL6C p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
-
-class ExtractL6C tp where
-  type ExtractL6T tp
-  extractL6C :: tp -> ExtractL6T tp
-instance ExtractL6C (a,b) where
-  type ExtractL6T (a,b) = GL.TypeError ('GL.Text "L6 doesn't work for 2-tuples")
-  extractL6C _ = errorInProgram "L6 doesn't work for 2-tuples"
-instance ExtractL6C (a,b,c) where
-  type ExtractL6T (a,b,c) = GL.TypeError ('GL.Text "L6 doesn't work for 3-tuples")
-  extractL6C _ = errorInProgram "L6 doesn't work for 3-tuples"
-instance ExtractL6C (a,b,c,d) where
-  type ExtractL6T (a,b,c,d) = GL.TypeError ('GL.Text "L6 doesn't work for 4-tuples")
-  extractL6C _ = errorInProgram "L6 doesn't work for 4-tuples"
-instance ExtractL6C (a,b,c,d,e) where
-  type ExtractL6T (a,b,c,d,e) = GL.TypeError ('GL.Text "L6 doesn't work for 5-tuples")
-  extractL6C _ = errorInProgram "L6 doesn't work for 5-tuples"
-instance ExtractL6C (a,b,c,d,e,f) where
-  type ExtractL6T (a,b,c,d,e,f) = f
-  extractL6C (_,_,_,_,_,f) = f
-
--- | applies \'p\' to the first and second slot of an n-tuple
---
--- >>> pl @(Both Len (Fst Id)) (("abc",[10..17],1,2,3),True)
--- Present (3,8) (Both)
--- PresentT (3,8)
---
--- >>> pl @(Both (Pred Id) $ Fst Id) ((12,'z',[10..17]),True)
--- Present (11,'y') (Both)
--- PresentT (11,'y')
---
--- >>> pl @(Both (Succ Id) Id) (4,'a')
--- Present (5,'b') (Both)
--- PresentT (5,'b')
---
--- >>> pl @(Both Len (Fst Id)) (("abc",[10..17]),True)
--- Present (3,8) (Both)
--- PresentT (3,8)
---
--- >>> pl @(Both (ReadP Day Id) Id) ("1999-01-01","2001-02-12")
--- Present (1999-01-01,2001-02-12) (Both)
--- PresentT (1999-01-01,2001-02-12)
---
-data Both p q
-instance ( ExtractL1C (PP q x)
-         , ExtractL2C (PP q x)
-         , P p (ExtractL1T (PP q x))
-         , P p (ExtractL2T (PP q x))
-         , P q x
-   ) => P (Both p q) x where
-  type PP (Both p q) x = (PP p (ExtractL1T (PP q x)), PP p (ExtractL2T (PP q x)))
-  eval _ opts x = do
-    let msg0 = "Both"
-    qq <- eval (Proxy @q) opts x
-    case getValueLR opts msg0 qq [] of
-      Left e -> pure e
-      Right q -> do
-        let (a,a') = (extractL1C q, extractL2C q)
-        pp <- eval (Proxy @p) opts a
-        case getValueLR opts msg0 pp [hh qq] of
-          Left e -> pure e
-          Right b -> do
-            pp' <- eval (Proxy @p) opts a'
-            pure $ case getValueLR opts msg0 pp' [hh qq, hh pp] of
-              Left e -> e
-              Right b' ->
-                mkNode opts (PresentT (b,b')) msg0 [hh qq, hh pp, hh pp']
 
 -- | similar to 'map'
 --
@@ -2393,60 +2229,6 @@ instance (Show a
         d = a ^. coerced
     in pure $ mkNode opts (PresentT d) (show01 opts msg0 d a) []
 
--- | application using a Proxy: \'q\' must be of kind Type else ambiguous k0 error
---
--- >>> pl @(Apply1 (MsgI "hello ")) (Proxy @(W "there"),()) -- have to wrap Symbol
--- Present "there" (hello W '"there")
--- PresentT "there"
---
--- >>> pl @(Apply1 Length) (Proxy @(Snd Id),(True,"abcdef"))
--- Present 6 (Length 6 | "abcdef")
--- PresentT 6
---
--- >>> pl @(Apply1 ((+) 4)) (Proxy @(Fst Id),(5,"abcdef"))
--- Present 9 (4 + 5 = 9)
--- PresentT 9
---
--- >>> pl @(Apply1 Fst) (Proxy @Id, (123,"asfd"))
--- Present 123 (Fst 123 | (123,"asfd"))
--- PresentT 123
---
--- >>> pz @('(Proxy (W 12),9) >> Apply1 ((+) Id)) ()
--- PresentT 21
---
--- >>> pz @('(Proxy (W 5),()) >> Apply1 Succ) ()
--- PresentT 6
---
--- >>> pz @('(Proxy (W 12),Id) >> Apply1 ((+) Id)) 9
--- PresentT 21
---
-data Apply1 (p :: Type -> Type) -- will not work unless p :: Type -> Type: cant be polymorphic in k
-instance forall p q x . (P (p q) x)
-   => P (Apply1 p) (Proxy q, x) where
-  type PP (Apply1 p) (Proxy q, x) = PP (p q) x
-  eval _ opts (Proxy, x) =
-    eval (Proxy @(p q)) opts x
-
--- | application using a Proxy: \'q\' and \'r\' must be of kind Type else ambiguous k0 error
---
--- >>> pl @(Apply2 (+)) ((Proxy @(Fst Id),Proxy @(Length (Snd Id))),(5,"abcdef"))
--- Present 11 (5 + 6 = 11)
--- PresentT 11
---
--- >>> pl @(Apply2 (+)) ((Proxy @(W 3),Proxy @(W 7)),())
--- Present 10 (3 + 7 = 10)
--- PresentT 10
---
--- >>> pl @(Apply2 (&&&)) ((Proxy @(W "abc"),Proxy @(W 13)), ())
--- Present ("abc",13) (W '("abc",13))
--- PresentT ("abc",13)
---
-data Apply2 (p :: Type -> Type -> Type)
-instance forall p (q :: Type) (r :: Type) x . (P (p q r) x)
-   => P (Apply2 p) ((Proxy q,Proxy r), x) where
-  type PP (Apply2 p) ((Proxy q,Proxy r), x) = PP (p q r) x
-  eval _ opts ((Proxy, Proxy), x) =
-    eval (Proxy @(p q r)) opts x
 {-
  -- | extracts the value level representation of the promoted 'DayOfWeek'
  --
