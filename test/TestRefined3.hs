@@ -43,19 +43,19 @@ suite =
 
 namedTests :: [TestTree]
 namedTests =
-  [ testCase "ip9" $ (@?=) (newRefined3 "121.0.12.13" :: Either String (MakeR3 Ip9)) (Right (unsafeRefined3 [121,0,12,13] "121.000.012.013"))
-  , testCase "luhn check" $ (@?=) (newRefined3 "12345678903" :: Either String (MakeR3 (Luhn11 OAN))) (Right (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903"))
-  , testCase "datetime utctime" $ (@?=) (newRefined3 "2019-01-04 23:00:59" :: Either String (MakeR3 (DateTime1 OZ UTCTime))) (Right (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59"))
-  , testCase "datetime localtime" $ (@?=) (newRefined3 "2019-01-04 09:12:30" :: Either String (MakeR3 (DateTime1 OZ LocalTime))) (Right (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30"))
-  , testCase "hms" $ (@?=) (newRefined3 "12:0:59" :: Either String (MakeR3 (Hms OAN))) (Right (unsafeRefined3 [12,0,59] "12:00:59"))
-  , testCase "between5and9" $ (@?=) (newRefined3 "7" :: Either String (Refined3 OAN (ReadP Int Id) (Between 5 9 Id) (PrintF "%03d" Id) String)) (Right (unsafeRefined3 7 "007"))
-  , testCase "ssn" $ (@?=) (newRefined3 "123-45-6789" :: Either String (MakeR3 (Ssn OAN))) (Right (unsafeRefined3 [123,45,6789] "123-45-6789"))
-  , testCase "base16" $ (@?=) (newRefined3 "12f" :: Either String (MakeR3 (BaseN OAN 16))) (Right (unsafeRefined3 303 "12f"))
-  , testCase "daten1" $ (@?=) (newRefined3 "June 25 1900" :: Either String (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "1900-06-25") "1900-06-25"))
-  , testCase "daten2" $ (@?=) (newRefined3 "12/02/99" :: Either String (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "1999-12-02") "1999-12-02"))
-  , testCase "daten3" $ (@?=) (newRefined3 "2011-12-02" :: Either String (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "2011-12-02") "2011-12-02"))
-  , testCase "ccn123" $ (@?=) (newRefined3 "123455" :: Either String (MakeR3 (Luhn OAN '[1,2,3]))) (Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455"))
-  , testCase "readshow" $ (@?=) (newRefined3 "12 % 5" :: Either String (ReadShowR OAN Rational)) (Right (unsafeRefined3 (12 % 5) "12 % 5"))
+  [ testCase "ip9" $ (@?=) (newRefined3 "121.0.12.13" :: Either Msg3 (MakeR3 Ip9)) (Right (unsafeRefined3 [121,0,12,13] "121.000.012.013"))
+  , testCase "luhn check" $ (@?=) (newRefined3 "12345678903" :: Either Msg3 (MakeR3 (Luhn11 OAN))) (Right (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903"))
+  , testCase "datetime utctime" $ (@?=) (newRefined3 "2019-01-04 23:00:59" :: Either Msg3 (MakeR3 (DateTime1 OZ UTCTime))) (Right (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59"))
+  , testCase "datetime localtime" $ (@?=) (newRefined3 "2019-01-04 09:12:30" :: Either Msg3 (MakeR3 (DateTime1 OZ LocalTime))) (Right (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30"))
+  , testCase "hms" $ (@?=) (newRefined3 "12:0:59" :: Either Msg3 (MakeR3 (Hms OAN))) (Right (unsafeRefined3 [12,0,59] "12:00:59"))
+  , testCase "between5and9" $ (@?=) (newRefined3 "7" :: Either Msg3 (Refined3 OAN (ReadP Int Id) (Between 5 9 Id) (PrintF "%03d" Id) String)) (Right (unsafeRefined3 7 "007"))
+  , testCase "ssn" $ (@?=) (newRefined3 "123-45-6789" :: Either Msg3 (MakeR3 (Ssn OAN))) (Right (unsafeRefined3 [123,45,6789] "123-45-6789"))
+  , testCase "base16" $ (@?=) (newRefined3 "12f" :: Either Msg3 (MakeR3 (BaseN OAN 16))) (Right (unsafeRefined3 303 "12f"))
+  , testCase "daten1" $ (@?=) (newRefined3 "June 25 1900" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "1900-06-25") "1900-06-25"))
+  , testCase "daten2" $ (@?=) (newRefined3 "12/02/99" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "1999-12-02") "1999-12-02"))
+  , testCase "daten3" $ (@?=) (newRefined3 "2011-12-02" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "2011-12-02") "2011-12-02"))
+  , testCase "ccn123" $ (@?=) (newRefined3 "123455" :: Either Msg3 (MakeR3 (Luhn OAN '[1,2,3]))) (Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455"))
+  , testCase "readshow" $ (@?=) (newRefined3 "12 % 5" :: Either Msg3 (ReadShowR OAN Rational)) (Right (unsafeRefined3 (12 % 5) "12 % 5"))
   ]
 
 unnamedTests :: [IO ()]
@@ -64,7 +64,7 @@ unnamedTests = [
   , (@?=) [] (reads @(Refined3 OAN (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 256, r3Out = \"100\"}")
   , (@?=) [(unsafeRefined3 (-1234) "-4d2", "")] (reads @(Refined3 OAN (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}")
 
-  , (@?=) (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) (newRefined3 "1.2.3.4" :: Either String (Ip4R OAB))
+  , (@?=) (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) (newRefined3 "1.2.3.4" :: Either Msg3 (Ip4R OAB))
 
   , expectJ (Right (G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "001.002.003.004"))) (toFrom $ G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "1.2.3.4"))
   , expectJ (Left ["Error in $.g4Ip", "False Boolean Check"]) (toFrom $ G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "1.2.3.400"))
@@ -80,42 +80,42 @@ unnamedTests = [
   , expectLeft (testRefined3P (Proxy @(Luhn OAN '[4,4,3])) "6433-1000-000")
   , expectRight (testRefined3P (Proxy @(Luhn OAN '[1,2,1])) "1-23-0")
   , expect3 (Left $ XF "Regex no results")
-                  $ eval3 @OAN @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
+                  $ runIdentity $ eval3M @OAN @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
                           @((Len == 4) && All (Between 0 255 Id) Id)
                           @(PrintL 4 "%03d.%03d.%03d.%03d" Id)
                           "1.21.x31.4"
 
   , expect3 (Right $ unsafeRefined3 [1,21,31,4] "001.021.031.004")
-                  $ eval3 @OAN @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
+                  $ runIdentity $ eval3M @OAN @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
                           @((Len == 4) && All (Between 0 255 Id) Id)
                           @(PrintL 4 "%03d.%03d.%03d.%03d" Id)
                           "1.21.31.4"
 
   , expect3 (Left $ XTFalse (-6.5) "(-13) % 2 > (-7) % 3")
-                  $ eval3 @OAN @(ReadP Double Id)
+                  $ runIdentity $ eval3M @OAN @(ReadP Double Id)
                           @(ToRational Id > 7 -% 3)
                           @(PrintF "%5.3f" Id)
                           "-6.5"
 
   , expect3 (Right $ unsafeRefined3 4.123 "")
-                  $ eval3 @OAN @(ReadP Double Id) @(ToRational Id > 7 -% 3) @""
+                  $ runIdentity $ eval3M @OAN @(ReadP Double Id) @(ToRational Id > 7 -% 3) @""
                   "4.123"
 
   , expect3 (Right $ unsafeRefined3 4.123 (4123 % 1000))
-                  $ eval3 @OAN @Id @(Gt (7 -% 3)) @(4123 % 1000) 4.123
+                  $ runIdentity $ eval3M @OAN @Id @(Gt (7 -% 3)) @(4123 % 1000) 4.123
 
   , expect3 (Right $ unsafeRefined3 [1,2,3,4] "")
-                  $ eval3 @OAN @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255 Id) Id && (Len == 4)) @""
+                  $ runIdentity $ eval3M @OAN @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255 Id) Id && (Len == 4)) @""
                   "1.2.3.4"
 
   , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
-                  $ eval3 @OAN @Ip6ip @Ip6op @"" "123:Ffeff:1123:11:1"
+                  $ runIdentity $ eval3M @OAN @Ip6ip @Ip6op @"" "123:Ffeff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [12,2,0,255] "abc")
-                  $ eval3 @OAN @Ip4ip @Ip4op' @"abc" "12.2.0.255"
+                  $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @"abc" "12.2.0.255"
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
-                  $ eval3
+                  $ runIdentity $ eval3M
                   @OAN @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
                   @(GuardBool "expected 3" (Len == 3)
                  && GuardBool "3 digits" (Between 0 999 (Ix' 0))
@@ -125,7 +125,7 @@ unnamedTests = [
                    "123-45-6789"
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz")
-                  $ eval3
+                  $ runIdentity $ eval3M
                   @OAN
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
@@ -133,53 +133,53 @@ unnamedTests = [
                   "123-45-6789"
 
   , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
-                  $ eval3 @OAN @Ip6ip @Ip6op @"xyz"
+                  $ runIdentity $ eval3M @OAN @Ip6ip @Ip6op @"xyz"
                   "123:Ffeff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [0,0,0,291,65535,4387,17,1] "xyz")
-                  $ eval3 @OAN @Ip6ip @Ip6op @"xyz"
+                  $ runIdentity $ eval3M @OAN @Ip6ip @Ip6op @"xyz"
                   "123:Ffff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [0,0,291,0,65535,0,0,17] "xyz")
-                  $ eval3 @OAN @Ip6ip @Ip6op @"xyz"
+                  $ runIdentity $ eval3M @OAN @Ip6ip @Ip6op @"xyz"
                   "123::Ffff:::11"
 
   , expect3 (Right $ unsafeRefined3 [0,0,291,0,65535,0,0,17] "xyz")
-                  $ eval3 @OAN @Ip6ip @Ip6op @"xyz"
+                  $ runIdentity $ eval3M @OAN @Ip6ip @Ip6op @"xyz"
                   "123::Ffff:::11"
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
-                  $ eval3 @OAN @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
+                  $ runIdentity $ eval3M @OAN @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
                            @Ddmmyyyyop
                            @"xyz"
                            "31-11-1999"
-  , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ eval3 @OAN
+  , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ runIdentity $ eval3M @OAN
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   @"xyz"
                   "123-45-6789"
 
-  , expect3 (Right $ unsafeRefined3 [1,2,3,4] "001.002.003.004") $ eval3P (ip4 @OZ) "1.2.3.4"
-  , expect3 (Left $ XF "ReadP Int (3x)") $ eval3P (ip4 @OZ) "1.2.3x.4"
-  , expect3 (Left $ XTF [1,2,3,4,5] "Guards:invalid length(5) expected 4") $ eval3P (ip4 @OZ) "1.2.3.4.5"
-  , expect3 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ eval3P (ip4 @OZ) "1.2.300.4"
-  , expect3 (Left $ XTF [1,2,3,4,5] "Bools:invalid length(5) expected 4") $ eval3P (ip4' @OZ) "1.2.3.4.5"
-  , expect3 (Left $ XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300]") $ eval3P (ip4' @OZ) "1.2.300.4"
+  , expect3 (Right $ unsafeRefined3 [1,2,3,4] "001.002.003.004") $ runIdentity $ eval3P (ip4 @OZ) "1.2.3.4"
+  , expect3 (Left $ XF "ReadP Int (3x)") $ runIdentity $ eval3P (ip4 @OZ) "1.2.3x.4"
+  , expect3 (Left $ XTF [1,2,3,4,5] "Guards:invalid length(5) expected 4") $ runIdentity $ eval3P (ip4 @OZ) "1.2.3.4.5"
+  , expect3 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ runIdentity $ eval3P (ip4 @OZ) "1.2.300.4"
+  , expect3 (Left $ XTF [1,2,3,4,5] "Bools:invalid length(5) expected 4") $ runIdentity $ eval3P (ip4' @OZ) "1.2.3.4.5"
+  , expect3 (Left $ XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300]") $ runIdentity $ eval3P (ip4' @OZ) "1.2.300.4"
 
-  , expect3 (Left (XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ eval3P (ip4' @OL) "1.2.300.4"
-  , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ eval3P (luhn11 @OAN) "12345678903"
-  , expect3 (Left $ XTF [1,2,3,4,5,6,7,8,9,0,1] "invalid checkdigit") $ eval3P (luhn11 @OZ) "12345678901"
+  , expect3 (Left (XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ runIdentity $ eval3P (ip4' @OL) "1.2.300.4"
+  , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ runIdentity $ eval3P (luhn11 @OAN) "12345678903"
+  , expect3 (Left $ XTF [1,2,3,4,5,6,7,8,9,0,1] "invalid checkdigit") $ runIdentity $ eval3P (luhn11 @OZ) "12345678901"
 
-  , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ eval3P hms2E "12:13:14"
---  , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "seconds invalid: found 99")) $ eval3P hms2E "12:13:99"
+  , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ runIdentity $ eval3P hms2E "12:13:14"
+--  , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "seconds invalid: found 99")) $ runIdentity $ eval3P hms2E "12:13:99"
 
-  , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ eval3 @OAN @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) "1.2.3.4"
-  , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ eval3 @OAN @Ip4ip @Ip4op' @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) "1.2.3.4"
+  , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) "1.2.3.4"
+  , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) "1.2.3.4"
   , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (Proxy @'( OAN, Ip4ip, Ip4op', ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id), _)) "1.2.3.4"
   , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (mkProxy3' @_  @OAN @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id))) "1.2.3.4"
 
   -- keep the original value
-  , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ eval3 @OAN @(Id &&& Ip4ip) @(Snd Id >> Ip4op') @(Snd Id >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) "1.2.3.4"
+  , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ runIdentity $ eval3M @OAN @(Id &&& Ip4ip) @(Snd Id >> Ip4op') @(Snd Id >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) "1.2.3.4"
   ]
 
 allProps :: [TestTree]
@@ -215,7 +215,7 @@ type Hmsfmt2 = Snd Id >> FormatTimeP "%T" Id
 -- 1. packaged up as a promoted tuple
 type Tst3 = '( OAN, Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, ConcatMap (PrintF "%03d" Id) Id, String)
 
-www1, www2 :: String -> Either String (MakeR3 Tst3)
+www1, www2 :: String -> Either Msg3 (MakeR3 Tst3)
 www1 = newRefined3P (mkProxy3 @Tst3)
 www2 = newRefined3P tst3
 
@@ -230,7 +230,7 @@ tst3 :: Proxy
 tst3 = mkProxy3
 
 -- 3. direct
-ww3, ww3' :: String -> Either String (Refined3 OAN
+ww3, ww3' :: String -> Either Msg3 (Refined3 OAN
                                (Map (ReadP Int Id) (Resplit "\\." Id))
                                ((Len == 4) && All (Between 0 255 Id) Id)
                                (ConcatMap (PrintF "%03d" Id) Id)
@@ -294,7 +294,7 @@ testRefined3PJ :: forall opts ip op fmt i proxy
    -> i
    -> Either String (Refined3 opts ip op fmt i)
 testRefined3PJ _ i =
-  let (ret,mr) = eval3 @opts @ip @op @fmt i
+  let (ret,mr) = runIdentity $ eval3M @opts @ip @op @fmt i
       m3 = prt3Impl (getOpt @opts) ret
   in case mr of
     Just r -> eitherDecode @(Refined3 opts ip op fmt i) $ encode r
@@ -311,12 +311,12 @@ testRefined3P :: forall opts ip op fmt i proxy
    -> i
    -> Either (String,String) (Refined3 opts ip op fmt i, Refined3 opts ip op fmt i)
 testRefined3P _ i =
-  let (ret,mr) = eval3 @opts @ip @op @fmt i
+  let (ret,mr) = runIdentity $ eval3M @opts @ip @op @fmt i
       o = getOpt @opts
       m3 = prt3Impl o ret
   in case mr of
     Just r ->
-      let (ret1,mr1) = eval3 @opts @ip @op @fmt (r3Out r)
+      let (ret1,mr1) = runIdentity $ eval3M @opts @ip @op @fmt (r3Out r)
           m3a = prt3Impl o ret1
       in case mr1 of
            Nothing -> Left ("testRefined3P(2): round trip failed: old(" ++ show i ++ ") new(" ++ show (r3Out r) ++ ")", show m3a)

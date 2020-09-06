@@ -213,7 +213,7 @@ refined2TH :: forall opts ip op i
 refined2TH i =
   let msg0 = "refined2TH"
       o = getOpt @opts
-      (ret,mr) = eval2 @opts @ip @op i
+      (ret,mr) = runIdentity $ eval2M @opts @ip @op i
   in case mr of
     Nothing ->
       let m2 = prt2Impl o ret
@@ -284,7 +284,7 @@ refined3TH :: forall opts ip op fmt i
   -> TH.Q (TH.TExp (Refined3 opts ip op fmt i))
 refined3TH i =
   let msg0 = "refined3TH"
-      (ret,mr) = eval3 @opts @ip @op @fmt i
+      (ret,mr) = runIdentity $ eval3M @opts @ip @op @fmt i
   in case mr of
     Nothing ->
       let m3 = prt3Impl o ret

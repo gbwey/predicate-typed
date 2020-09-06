@@ -129,7 +129,7 @@ import Data.Time
 -- | credit card with luhn algorithm
 --
 -- >>> newRefined3P (luhn11 @OZ) "1234-5678-901"
--- Left "Step 2. Failed Boolean Check(op) | invalid checkdigit"
+-- Left Step 2. Failed Boolean Check(op) | invalid checkdigit
 --
 -- >>> newRefined3P (luhn11 @OZ) "1234-5678-903"
 -- Right (Refined3 {r3In = [1,2,3,4,5,6,7,8,9,0,3], r3Out = "1234-5678-903"})
@@ -165,7 +165,7 @@ luhn11 = mkProxy3'
 -- Right (Refined3 {r3In = 2018-09-14 02:57:04, r3Out = "2018-09-14 02:57:04"})
 --
 -- >>> newRefined3P (datetime1 @OL @LocalTime) "2018-09-99 12:12:12"
--- Left "Step 1. Initial Conversion(ip) Failed | ParseTimeP LocalTime (%F %T) failed to parse"
+-- Left Step 1. Initial Conversion(ip) Failed | ParseTimeP LocalTime (%F %T) failed to parse
 --
 datetime1 :: Proxy (DateTime1 opts t)
 datetime1 = mkProxy3
@@ -194,10 +194,10 @@ ssn = mkProxy3'
 -- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
 --
 -- >>> newRefined3P (ssn @OL) "666-01-2211"
--- Left "Step 2. Failed Boolean Check(op) | Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))"
+-- Left Step 2. Failed Boolean Check(op) | Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))
 --
 -- >>> newRefined3P (ssn @OL) "667-00-2211"
--- Left "Step 2. Failed Boolean Check(op) | Bool(1) [number for group 1 invalid: found 0] (1 <= 0)"
+-- Left Step 2. Failed Boolean Check(op) | Bool(1) [number for group 1 invalid: found 0] (1 <= 0)
 --
 type Ssn (opts :: Opt) = '(opts, Ssnip, Ssnop, Ssnfmt, String)
 type SsnR (opts :: Opt) = MakeR3 (Ssn opts)
@@ -207,10 +207,10 @@ type SsnR (opts :: Opt) = MakeR3 (Ssn opts)
 -- Right (Refined3 {r3In = [23,13,59], r3Out = "23:13:59"})
 --
 -- >>> newRefined3P (hms @OL) "23:13:60"
--- Left "Step 2. Failed Boolean Check(op) | seconds invalid: found 60"
+-- Left Step 2. Failed Boolean Check(op) | seconds invalid: found 60
 --
 -- >>> newRefined3P (hms @OL) "26:13:59"
--- Left "Step 2. Failed Boolean Check(op) | hours invalid: found 26"
+-- Left Step 2. Failed Boolean Check(op) | hours invalid: found 26
 --
 hms :: OptC opts => Proxy (Hms opts)
 hms = mkProxy3'
@@ -228,13 +228,13 @@ type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', Hmsfmt, String)
 -- Right (Refined3 {r3In = [1,223,14,1], r3Out = "001.223.014.001"})
 --
 -- >>> newRefined3P (ip4 @OL) "001.223.14.999"
--- Left "Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 999"
+-- Left Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 999
 --
 -- >>> newRefined3P (ip4 @OZ) "001.223.14.999.1"
--- Left "Step 2. Failed Boolean Check(op) | Guards:invalid length(5) expected 4"
+-- Left Step 2. Failed Boolean Check(op) | Guards:invalid length(5) expected 4
 --
 -- >>> newRefined3P (ip4 @OL) "001.257.14.1"
--- Left "Step 2. Failed Boolean Check(op) | octet 1 out of range 0-255 found 257"
+-- Left Step 2. Failed Boolean Check(op) | octet 1 out of range 0-255 found 257
 --
 type Ip4R (opts :: Opt) = MakeR3 (Ip4 opts)
 type Ip4 (opts :: Opt) = '(opts, Ip4ip, Ip4op, Ip4fmt, String) -- guards
@@ -260,7 +260,7 @@ ip6 = Proxy
 -- Right (Refined3 {r3In = ([0,3,0,6,4,0,6,1,1],10), r3Out = "030640611-X"})
 --
 -- >>> newRefined3P (isbn10 @OZ) "0-306-40611-9"
--- Left "Step 2. Failed Boolean Check(op) | mod 0 oops"
+-- Left Step 2. Failed Boolean Check(op) | mod 0 oops
 --
 type Isbn10R (opts :: Opt) = MakeR3 (Isbn10 opts)
 type Isbn10 (opts :: Opt) = '(opts, Isbn10ip, Isbn10op, Isbn10fmt, String) -- guards
@@ -274,7 +274,7 @@ isbn10 = Proxy
 -- Right (Refined3 {r3In = [9,7,8,0,3,0,6,4,0,6,1,5,7], r3Out = "978030640615-7"})
 --
 -- >>> newRefined3P (isbn13 @OZ) "978-0-306-40615-8"
--- Left "Step 2. Failed Boolean Check(op) | sum=101 mod 10=1"
+-- Left Step 2. Failed Boolean Check(op) | sum=101 mod 10=1
 --
 type Isbn13R (opts :: Opt) = MakeR3 (Isbn13 opts)
 type Isbn13 (opts :: Opt) = '(opts, Isbn13ip, Isbn13op, Isbn13fmt, String) -- guards
@@ -291,13 +291,13 @@ isbn13 = Proxy
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
 -- >>> newRefined3P (basen' @OZ @16 @(GuardSimple (Id < 400) >> 'True)) "f0fe"
--- Left "Step 2. Failed Boolean Check(op) | (61694 < 400)"
+-- Left Step 2. Failed Boolean Check(op) | (61694 < 400)
 --
 -- >>> newRefined3P (basen' @OZ @16 @(GuardBool (PrintF "oops bad hex=%d" Id) (Id < 400))) "f0fe"
--- Left "Step 2. Failed Boolean Check(op) | oops bad hex=61694"
+-- Left Step 2. Failed Boolean Check(op) | oops bad hex=61694
 --
 -- >>> newRefined3P (basen' @OL @16 @(Id < 400)) "f0fe" -- todo: why different parens vs braces
--- Left "Step 2. False Boolean Check(op) | {61694 < 400}"
+-- Left Step 2. False Boolean Check(op) | {61694 < 400}
 --
 type BaseN (opts :: Opt) (n :: Nat) = BaseN' opts n 'True
 type BaseN' (opts :: Opt) (n :: Nat) p = '(opts, ReadBase Int n Id, p, ShowBase n Id, String)
@@ -332,9 +332,9 @@ datetimen = mkProxy3'
 -- Right (Refined3 {r3In = 14, r3Out = 14})
 --
 -- >>> newRefined3P (between @OZ @10 @16) 17
--- Left "Step 2. False Boolean Check(op) | FalseP"
+-- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> prtEval3P (between @OAN @10 @16) 17
+-- >>> newRefined3P (between @OAN @10 @16) 17
 -- Left Step 2. False Boolean Check(op) | {17 <= 16}
 -- *** Step 1. Success Initial Conversion(ip) (17) ***
 -- P Id 17
@@ -362,7 +362,7 @@ type LuhnR (opts :: Opt) (n :: Nat) = MakeR3 (LuhnT opts n)
 -- Right (Refined3 {r3In = [1,2,3,0], r3Out = "1230"})
 --
 -- >>> newRefined3P (Proxy @(LuhnT OL 4)) "1234"
--- Left "Step 2. False Boolean Check(op) | {True && False | (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}"
+-- Left Step 2. False Boolean Check(op) | {True && False | (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}
 --
 -- | uses builtin 'IsLuhn'
 type LuhnT (opts :: Opt) (n :: Nat) =
@@ -393,10 +393,10 @@ oknot = mkProxy3
 -- Right (Refined3 {r3In = "11111110", r3Out = "fe"})
 --
 -- >>> newRefined3P (Proxy @(BaseIJ OZ 16 2)) "fge"
--- Left "Step 1. Initial Conversion(ip) Failed | invalid base 16"
+-- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
 -- >>> newRefined3P (Proxy @(BaseIJ' OL 16 2 (ReadBase Int 2 Id < 1000))) "ffe"
--- Left "Step 2. False Boolean Check(op) | {4094 < 1000}"
+-- Left Step 2. False Boolean Check(op) | {4094 < 1000}
 --
 type BaseIJ (opts :: Opt) (i :: Nat) (j :: Nat) = BaseIJ' opts i j 'True
 type BaseIJ' (opts :: Opt) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id >> ShowBase j Id, p, ReadBase Int j Id >> ShowBase i Id, String)
@@ -408,7 +408,7 @@ type BaseIJ' (opts :: Opt) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id >
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
 -- >>> newRefined3P (readshow @OZ @Rational) "13x % 3"
--- Left "Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3)"
+-- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3)
 --
 -- >>> newRefined3P (readshow' @OZ @Rational @(3 % 1 <..> 5 % 1)) "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
@@ -417,13 +417,13 @@ type BaseIJ' (opts :: Opt) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id >
 -- Right (Refined3 {r3In = (-13) % 3, r3Out = "(-13) % 3"})
 --
 -- >>> newRefined3P (Proxy @(ReadShow' OZ Rational (Id > (15 % 1)))) "13 % 3"
--- Left "Step 2. False Boolean Check(op) | FalseP"
+-- Left Step 2. False Boolean Check(op) | FalseP
 --
 -- >>> newRefined3P (Proxy @(ReadShow' OL Rational (Msg (PrintF "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1))))) "13 % 3"
--- Left "Step 2. False Boolean Check(op) | {invalid=4.33 13 % 3 > 15 % 1}"
+-- Left Step 2. False Boolean Check(op) | {invalid=4.33 13 % 3 > 15 % 1}
 --
 -- >>> newRefined3P (Proxy @(ReadShow' OZ Rational (Id > (11 % 1)))) "13 % 3"
--- Left "Step 2. False Boolean Check(op) | FalseP"
+-- Left Step 2. False Boolean Check(op) | FalseP
 --
 -- >>> newRefined3P (readshow @OZ @UTCTime) "2018-10-19 14:53:11.5121359 UTC"
 -- Right (Refined3 {r3In = 2018-10-19 14:53:11.5121359 UTC, r3Out = "2018-10-19 14:53:11.5121359 UTC"})

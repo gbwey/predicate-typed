@@ -60,8 +60,6 @@ module Predicate.Refined (
 
   , replaceOpt
   , appendOpt
-  , type ReplaceOptT
-  , type AppendOptT
 
  ) where
 import Predicate.Core
@@ -578,9 +576,3 @@ replaceOpt = coerce
 
 appendOpt :: forall (opt :: Opt) opt0 p a . Refined opt0 p a -> Refined (opt0 ':# opt) p a
 appendOpt = coerce
-
-type family ReplaceOptT (o :: Opt) t where
-  ReplaceOptT o (Refined _ p a) = Refined o p a
-
-type family AppendOptT (o :: Opt) t where
-  AppendOptT o (Refined o' p a) = Refined (o' ':# o) p a
