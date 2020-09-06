@@ -21,7 +21,7 @@ and then roundtrips the value to a string
 ```haskell
 >type Hex opt = '(opt, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
 
->prtEval3PIO (Proxy @(Hex OL)) "0000fe"
+>newRefined3P (Proxy @(Hex OL)) "0000fe"
 Refined3 {r3In = 254, r3Out = "fe"}
 ```
 1. `ReadBase Int 16 Id`
@@ -33,7 +33,7 @@ Refined3 {r3In = 254, r3Out = "fe"}
 
 run this to get details in color of each evaluation step on failure:
 ```haskell
->prtEval3PIO (Proxy @(Hex OU)) "0000ffe"
+>newRefined3P (Proxy @(Hex OU)) "0000ffe"
 
 *** Step 1. Success Initial Conversion(ip) [4094] ***
 P ReadBase(Int,16) 4094

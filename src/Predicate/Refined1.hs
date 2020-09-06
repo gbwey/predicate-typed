@@ -43,9 +43,6 @@ module Predicate.Refined1 (
   , Refined1C
 
  -- ** display results
-  , prtEval1IO
-  , prtEval1PIO
-  , prt1IO
   , prt1Impl
   , Msg1 (..)
   , RResults1 (..)
@@ -56,6 +53,8 @@ module Predicate.Refined1 (
   , eval1M
   , newRefined1
   , newRefined1P
+  , newRefined1'
+  , newRefined1P'
 
   -- ** create a wrapped Refined1 value
   , newRefined1T
@@ -311,11 +310,11 @@ instance (Show ( PP fmt (PP ip i))
                     Just r -> return r
 -- | 'Arbitrary' instance for 'Refined1'
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined1 OU (ReadP Int Id) (1 <..> 120 && Even) (ShowP Id) String)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined1 OAN (ReadP Int Id) (1 <..> 120 && Even) (ShowP Id) String)))
 -- >>> all ((/=0) . unRefined1) xs
 -- True
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined1 OU Id IsPrime Id Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined1 OAN Id IsPrime Id Int)))
 -- >>> all (isPrime . unRefined1) xs
 -- True
 --
@@ -326,7 +325,7 @@ instance (Arbitrary (PP ip i)
 
 -- | create a 'Refined1' generator
 --
--- >>> g = genRefined1 @OU @(ReadP Int Id) @(Between 10 100 Id && Even) @(ShowP Id) (choose (10,100))
+-- >>> g = genRefined1 @OAN @(ReadP Int Id) @(Between 10 100 Id && Even) @(ShowP Id) (choose (10,100))
 -- >>> xs <- generate (vectorOf 10 g)
 -- >>> all (\x -> let y = unRefined1 x in y >= 0 && y <= 100 && even y) xs
 -- True
@@ -567,7 +566,7 @@ newRefined1TPImpl f _ i = do
   let m1 = prt1Impl (getOpt @opts) ret
   tell [m1Long m1]
   case mr of
-    Nothing -> throwError $ m1Desc m1 <> " | " <> m1Short m1
+    Nothing -> throwError $ m1Desc m1 <> nullIf " | " (m1Short m1)
     Just r -> return r
 
 newRefined1TPSkipIPImpl :: forall n m opts ip op fmt i proxy
@@ -585,7 +584,7 @@ newRefined1TPSkipIPImpl f _ a = do
   let m1 = prt1Impl (getOpt @opts) ret
   tell [m1Long m1]
   case mr of
-    Nothing -> throwError $ m1Desc m1 <> " | " <> m1Short m1
+    Nothing -> throwError $ m1Desc m1 <> nullIf " | " (m1Short m1)
     Just r -> return r
 
 -- | attempts to cast a wrapped 'Refined1' to another 'Refined1' with different predicates
@@ -649,26 +648,31 @@ data RResults1 a b =
      | RTTrueT !a !(Tree PE) !(Tree PE) !b !(Tree PE)      -- Right a + Right True + Right b
      deriving Show
 
--- | same as 'prtEval1PIO' but passes in the proxy
-prtEval1IO :: forall opts ip op fmt i
-  . ( Refined1C opts ip op fmt i
+
+-- | same as 'newRefined3P'' but passes in the proxy
+newRefined1' :: forall opts ip op fmt i m
+  . ( MonadEval m
+    , Refined1C opts ip op fmt i
     , Show (PP ip i)
-    , Show i)
+    , Show i
+    )
   => i
-  -> IO (Either String (Refined1 opts ip op fmt i))
-prtEval1IO = prtEval1PIO Proxy
+  -> m (Either Msg1 (Refined1 opts ip op fmt i))
+newRefined1' = newRefined1P' Proxy
 
 -- | same as 'newRefined1P' but runs in IO
-prtEval1PIO :: forall opts ip op fmt i proxy
-  . ( Refined1C opts ip op fmt i
+newRefined1P' :: forall opts ip op fmt i proxy m
+  . ( MonadEval m
+    , Refined1C opts ip op fmt i
     , Show (PP ip i)
-    , Show i)
+    , Show i
+    )
   => proxy '(opts,ip,op,fmt,i)
   -> i
-  -> IO (Either String (Refined1 opts ip op fmt i))
-prtEval1PIO _ i = do
-  x <- eval1M i
-  prt1IO @opts x
+  -> m (Either Msg1 (Refined1 opts ip op fmt i))
+newRefined1P' _ i = do
+  (ret,mr)<- eval1M i
+  return $ maybe (Left $ prt1Impl (getOpt @opts) ret) Right mr
 
 -- | same as 'newRefined1P' but skips the proxy and allows you to set each parameter individually using type application
 -- | pure version for extracting Refined1
@@ -789,20 +793,13 @@ eval1MSkip a = do
     (Right False,t2) -> pure (RTFalse a mkNodeSkipP t2, Nothing)
     (Left e,t2) -> pure (RTF a mkNodeSkipP e t2, Nothing)
 
-prt1IO :: forall opts a b r . (OptC opts, Show a, Show b) => (RResults1 a b, Maybe r) -> IO (Either String r)
-prt1IO (ret,mr) = do
-  let o = getOpt @opts
-  let m1 = prt1Impl o ret
-  unless (hasNoTree o) $ putStrLn $ m1Long m1
-  return $ maybe (Left (m1Desc m1 <> " | " <> m1Short m1)) Right mr
-
 data Msg1 = Msg1 { m1Desc :: !String
                  , m1Short :: !String
                  , m1Long :: !String
                  } deriving Eq
 
 instance Show Msg1 where
-  show (Msg1 a b c) = a <> " | " <> b <> (if null c then "" else "\n" <> c)
+  show (Msg1 a b c) = a <> " | " <> b <> nullIf "\n" c
 
 prt1Impl :: forall a b . (Show a, Show b)
   => POpts

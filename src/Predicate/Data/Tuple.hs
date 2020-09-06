@@ -252,7 +252,7 @@ instance (PP r x ~ (a,b)
                           (False, True) -> topMessage pp
                           (True, False) -> topMessage qq
                           (False, False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
-                in mkNodeB opts (p&&q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> (if null zz then zz else " | " <> zz)) [hh rr, hh pp, hh qq]
+                in mkNodeB opts (p&&q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> nullIf " | " zz) [hh rr, hh pp, hh qq]
 
 -- | applies \'p\' to lhs of the tuple and \'q\' to the rhs and then \'Ands\' them together
 --
@@ -300,7 +300,7 @@ instance (PP r x ~ (a,b)
                 let zz = case (p,q) of
                           (False,False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
                           _ -> ""
-                in mkNodeB opts (p||q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> (if null zz then zz else " | " <> zz)) [hh rr, hh pp, hh qq]
+                in mkNodeB opts (p||q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> nullIf " | " zz) [hh rr, hh pp, hh qq]
 
 -- | applies \'p\' to lhs of the tuple and \'q\' to the rhs and then \'Ors\' them together
 --

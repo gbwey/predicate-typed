@@ -15,6 +15,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoStarIsType #-}
 module TestPredicate where
+--module TestPredicate (suite) where
 import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -146,6 +147,10 @@ allTests =
 
 
   , expectPE (PresentT [Left 1,Left 2,Right "fizz",Left 4,Right "buzz",Right "fizz",Left 7,Left 8,Right "fizz",Right "buzz",Left 11,Right "fizz",Left 13,Left 14,Right "fizzbuzz"]) $ pl @(Map Fizzbuzz''' Id) [1..15]
+  , expectPE (PresentT [Left 1,Left 2,Right "fizz",Left 4,Right "buzz",Right "fizz",Left 7,Left 8,Right "fizz",Right "buzz",Left 11,Right "fizz",Left 13,Left 14,Right "fizzbuzz"]) $ pl @(Map Fizzbuzz'' Id) [1..15]
+  , expectPE (PresentT [(1,""),(2,""),(3,"fizz"),(4,""),(5,"buzz"),(6,"fizz"),(7,""),(8,""),(9,"fizz"),(10,"buzz"),(11,""),(12,"fizz"),(13,""),(14,""),(15,"fizzbuzz")]) $ pl @Fizzbuzzs [1..15]
+  , expectPE (PresentT [Left 1,Left 2,Right "fizz",Left 4,Right "buzz",Right "fizz",Left 7,Left 8,Right "fizz",Right "buzz",Left 11,Right "fizz",Left 13,Left 14,Right "fizzbuzz"]) $ pl @Fizzbuzzs2 [1..15]
+  , expectPE (PresentT [Left 1,Left 2,Right "fizz",Left 4,Right "buzz",Right "fizz",Left 7,Left 8,Right "fizz",Right "buzz",Left 11,Right "fizz",Left 13,Left 14,Right "fizzbuzz"]) $ pl @Fizzbuzzs3 [1..15]
 
   , expectPE (PresentT "abc") $ pl @(Thd (Snd (Fst Id))) (('x',(13,False,"abc")),True,'y')
   , expectPE (PresentT 9.3) $ pl @(Fst (Snd (Thd Id))) ('x',True,(13,(9.3,False),"def"))

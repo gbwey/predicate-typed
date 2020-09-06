@@ -116,7 +116,7 @@ instance RefinedC opts p String => IsString (Refined opts p String) where
 errorDisplay :: POpts -> (String,(String,String)) -> String
 errorDisplay o (bp,(top,e)) =
      bp
-  ++ (if null top then "" else " " ++ top)
+  ++ nullIf " " top
   ++ (if null e || hasNoTree o then "" else "\n" ++ e)
 
 -- | 'Read' instance for 'Refined'
@@ -221,11 +221,11 @@ instance ( RefinedC opts p a
 
 -- | 'Arbitrary' instance for 'Refined'
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined OU (Id /= 0) Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined OAN (Id /= 0) Int)))
 -- >>> all ((/=0) . unRefined) xs
 -- True
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined OU IsPrime Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined OAN IsPrime Int)))
 -- >>> all (isPrime . unRefined) xs
 -- True
 --
@@ -460,7 +460,7 @@ newRefined a =
   in case mr of
        Nothing -> case oDebug (getOpt @opts) of
                     DZero -> Left bp
-                    DLite -> Left (bp <> (if null top then "" else " " <> top))
+                    DLite -> Left (bp <> nullIf " " top)
                     _ -> Left e
        Just r -> Right r
 

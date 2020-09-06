@@ -713,7 +713,7 @@ lit01 opts msg0 ret fmt as
          msg0
       <> " "
       <> showL opts ret
-      <> litVerbose opts (" | " ++ take 100 fmt) as
+      <> litVerbose opts (" | " <> take 100 fmt) as
 
 -- | more restrictive: only display data in verbose debug mode
 litVerbose :: POpts

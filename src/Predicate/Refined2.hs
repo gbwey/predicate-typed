@@ -34,9 +34,6 @@ module Predicate.Refined2 (
   , Refined2C
 
  -- ** display results
-  , prtEval2IO
-  , prtEval2PIO
-  , prt2IO
   , prt2Impl
   , Msg2 (..)
   , RResults2 (..)
@@ -46,6 +43,8 @@ module Predicate.Refined2 (
   , eval2M
   , newRefined2
   , newRefined2P
+  , newRefined2'
+  , newRefined2P'
 
   -- ** create a wrapped Refined2 value
   , newRefined2T
@@ -265,7 +264,7 @@ instance ( Show i
 -- | 'Arbitrary' instance for 'Refined2'
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined2 OU (ToEnum Day Id) (Snd (ToWeekDate Id) == "Tuesday") Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined2 OAN (ToEnum Day Id) (Snd (ToWeekDate Id) == "Tuesday") Int)))
 -- >>> all (\x -> let y = toEnum @Day (r2Out x) in view _3 (toWeekDate y) == 2 && r2In x == y) xs
 -- True
 --
@@ -277,7 +276,7 @@ instance ( Arbitrary i
 
 -- | create a 'Refined2' generator using a generator to restrict the values (so it completes)
 --
--- >>> g = genRefined2 @OU @(ToEnum Day Id) @(UnMkDay Id >> Snd Id == 10) arbitrary
+-- >>> g = genRefined2 @OAN @(ToEnum Day Id) @(UnMkDay Id >> Snd Id == 10) arbitrary
 -- >>> xs <- generate (vectorOf 10 g)
 -- >>> all (\x -> let y = toEnum @Day (fromIntegral (r2Out x)) in view _2 (toGregorian y) == 10 && y == r2In x) xs
 -- True
@@ -479,7 +478,7 @@ newRefined2TImpl f i = do
   let m2 = prt2Impl (getOpt @opts) ret
   tell [m2Long m2]
   case mr of
-    Nothing -> throwError $ m2Desc m2 <> " | " <> m2Short m2
+    Nothing -> throwError $ m2Desc m2 <> nullIf " | " (m2Short m2)
     Just r -> return r
 
 -- | An ADT that summarises the results of evaluating Refined2 representing all possible states
@@ -490,24 +489,30 @@ data RResults2 a =
      | RTTrue !a !(Tree PE) !(Tree PE) -- op true
      deriving Show
 
--- | same as 'prtEval2PIO' without a proxy for used with TypeApplications
-prtEval2IO :: forall opts ip op i
-  . ( Refined2C opts ip op i
+
+newRefined2' :: forall opts ip op i m
+  . ( MonadEval m
+    , Refined2C opts ip op i
     , Show (PP ip i)
-    ) => i
-  -> IO (Either String (Refined2 opts ip op i))
-prtEval2IO = prtEval2PIO Proxy
+    , Show i
+    )
+  => i
+  -> m (Either Msg2 (Refined2 opts ip op i))
+newRefined2' = newRefined2P' Proxy
 
 -- | same as 'newRefined2P' but runs in IO
-prtEval2PIO :: forall opts ip op i proxy
-  . ( Refined2C opts ip op i
+newRefined2P' :: forall opts ip op i proxy m
+  . ( MonadEval m
+    , Refined2C opts ip op i
     , Show (PP ip i)
-    ) => proxy '(opts,ip,op,i)
+    , Show i
+    )
+  => proxy '(opts,ip,op,i)
   -> i
-  -> IO (Either String (Refined2 opts ip op i))
-prtEval2PIO _ i = do
-  x <- eval2M @opts @ip @op i
-  prt2IO @opts x
+  -> m (Either Msg2 (Refined2 opts ip op i))
+newRefined2P' _ i = do
+  (ret,mr)<- eval2M i
+  return $ maybe (Left $ prt2Impl (getOpt @opts) ret) Right mr
 
 -- | pure version for extracting Refined2
 --
@@ -592,20 +597,13 @@ eval2M i = do
       (Left e,t2) -> (RTF a t1 e t2, Nothing)
    (Left e,t1) -> pure (RF e t1, Nothing)
 
-prt2IO :: forall opts a r . (OptC opts, Show a) => (RResults2 a, Maybe r) -> IO (Either String r)
-prt2IO (ret,mr) = do
-  let m2 = prt2Impl o ret
-      o = getOpt @opts
-  unless (hasNoTree o) $ putStrLn $ m2Long m2
-  return $ maybe (Left (m2Desc m2 <> " | " <> m2Short m2)) Right mr
-
 data Msg2 = Msg2 { m2Desc :: !String
                  , m2Short :: !String
                  , m2Long :: !String
                  } deriving Eq
 
 instance Show Msg2 where
-  show (Msg2 a b c) = a <> " | " <> b <> (if null c then "" else "\n" <> c)
+  show (Msg2 a b c) = a <> " | " <> b <> nullIf "\n" c
 
 prt2Impl :: forall a . Show a
   => POpts

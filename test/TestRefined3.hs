@@ -16,6 +16,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoStarIsType #-}
 module TestRefined3 where
+--module TestRefined3 (suite) where
 import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -33,13 +34,12 @@ import GHC.Generics (Generic)
 import Data.Aeson
 import Control.Monad.Cont
 import Text.Show.Functions ()
-import Data.Tree
 import Data.Tree.Lens
 
 suite :: TestTree
 suite =
   let s = "TestRefined3"
-  in testGroup s (namedTests <> orderTests s unnamedTests <> allProps)
+  in testGroup s (namedTests <> orderTests s (unnamedTests <> tstextras) <> allProps)
 
 namedTests :: [TestTree]
 namedTests =
@@ -64,7 +64,7 @@ unnamedTests = [
   , (@?=) [] (reads @(Refined3 OAN (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 256, r3Out = \"100\"}")
   , (@?=) [(unsafeRefined3 (-1234) "-4d2", "")] (reads @(Refined3 OAN (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}")
 
-  , (@?=) (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) (newRefined3 "1.2.3.4" :: Either Msg3 (Ip4R OAB))
+  , (@?=) (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) (newRefined3 "1.2.3.4" :: Either Msg3 (Ip4R OAN))
 
   , expectJ (Right (G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "001.002.003.004"))) (toFrom $ G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "1.2.3.4"))
   , expectJ (Left ["Error in $.g4Ip", "False Boolean Check"]) (toFrom $ G4 (unsafeRefined3 12 "12") (unsafeRefined3 [1,2,3,4] "1.2.3.400"))
@@ -192,7 +192,7 @@ allProps =
   ]
 
 type HexLtR3 (opts :: Opt) = Refined3 opts (ReadBase Int 16 Id) (Id < 500) (ShowBase 16 Id) String
-type IntLtR3 (opts :: Opt) = Refined3 opts (ReadP Int Id) (Id < 10) (ShowP Id) String
+--type IntLtR3 (opts :: Opt) = Refined3 opts (ReadP Int Id) (Id < 10) (ShowP Id) String
 
 type Tst1 = '( OAN, ReadP Int Id, Between 1 7 Id, PrintF "someval val=%03d" Id, String)
 
@@ -211,9 +211,9 @@ type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
 type Hmsop2 = Fst Id >> Hmsop
 type Hmsfmt2 = Snd Id >> FormatTimeP "%T" Id
 
--- better to use Guard for op boolean check cos we get better errormessages
+-- use GuardBool for op boolean check to get better errormessages
 -- 1. packaged up as a promoted tuple
-type Tst3 = '( OAN, Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, ConcatMap (PrintF "%03d" Id) Id, String)
+type Tst3 = '( OAN, Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id, String)
 
 www1, www2 :: String -> Either Msg3 (MakeR3 Tst3)
 www1 = newRefined3P (mkProxy3 @Tst3)
@@ -225,29 +225,29 @@ www2 = newRefined3P tst3
 tst3 :: Proxy
         '( OAN, Map (ReadP Int Id) (Resplit "\\." Id)
         ,(Len == 4) && All (Between 0 255 Id) Id
-        ,ConcatMap (PrintF "%03d" Id) Id
+        ,Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id
         ,String)
 tst3 = mkProxy3
 
 -- 3. direct
-ww3, ww3' :: String -> Either Msg3 (Refined3 OAN
+www3, www3' :: String -> Either Msg3 (Refined3 OAN
                                (Map (ReadP Int Id) (Resplit "\\." Id))
                                ((Len == 4) && All (Between 0 255 Id) Id)
-                               (ConcatMap (PrintF "%03d" Id) Id)
+                               (Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id)
                                String)
-ww3 = newRefined3
+www3 = newRefined3
 
-ww3' = newRefined3
+www3' = newRefined3
         @OAN
         @(Map (ReadP Int Id) (Resplit "\\." Id))
         @((Len == 4) && All (Between 0 255 Id) Id)
-        @(ConcatMap (PrintF "%03d" Id) Id)
+        @(Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id)
 
 data G4 = G4 { g4Age :: MakeR3 Age
              , g4Ip :: MakeR3 Ip9
              } deriving (Show,Generic,Eq)
 
-type MyAge = Refined3 OAN (ReadP Int Id) (Gt 4) (ShowP Id) String
+--type MyAge = Refined3 OAN (ReadP Int Id) (Gt 4) (ShowP Id) String
 
 type Age = '( OAN, ReadP Int Id, Gt 4, ShowP Id, String)
 
@@ -262,12 +262,22 @@ type Ip9 = '(
 instance FromJSON G4
 instance ToJSON G4
 
-tst0a :: [Bool]
-tst0a =
-  [ newRefined3P (daten @OUB) "June 25 1900" == Right (unsafeRefined3 (fromGregorian 1900 6 25) "1900-06-25")
-  , newRefined3P (daten @OUB) "12/02/19" == Right (unsafeRefined3 (fromGregorian 2019 12 2) "2019-12-02")
-  , newRefined3P (Proxy @(Luhn OAB '[1,1,1,1])) "1230" == Right (unsafeRefined3 [1,2,3,0] "1-2-3-0")
-  , newRefined3P (Proxy @(Luhn OAB '[1,2,3])) "123455" == Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
+tstextras :: [Assertion]
+tstextras =
+  [ newRefined3P (daten @OAN) "June 25 1900" @?= Right (unsafeRefined3 (fromGregorian 1900 6 25) "1900-06-25")
+  , newRefined3P (daten @OAN) "12/02/19" @?= Right (unsafeRefined3 (fromGregorian 2019 12 2) "2019-12-02")
+  , newRefined3P (Proxy @(Luhn OAN '[1,1,1,1])) "1230" @?= Right (unsafeRefined3 [1,2,3,0] "1-2-3-0")
+  , newRefined3P (Proxy @(Luhn OAN '[1,2,3])) "123455" @?= Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
+  , ((runIdentity $ unRavelT $ tst1a @OAN @Identity) ^. _1) @?= Right ((163,"a3"),(12,"12"))
+  , runIdentity (unRavelT yy1) ^? _1 . _Right @?= Just (unsafeRefined3 4 "someval val=004")
+  , runIdentity (unRavelT yy2) ^? _1 . _Right @?= Just (unsafeRefined3 3 "someval val=003")
+  , runIdentity (unRavelT yy3) ^? _1 . _Left @?= Just "Step 2. False Boolean Check(op) | {12 <= 7}"
+  , runIdentity (unRavelT yy4) ^? _1 . _Right @?= Just (unsafeRefined3 7 "someval val=007")
+  , www1 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
+  , www2 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
+  , www3 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
+  , www3' "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
+  , expectIO (fst <$> unRavelT (tst2a @'OAN)) (either Left (\x -> if x == ((163,"a3"),(12,"12")) then Right () else Left "tst2a failed to match"))
   ]
 
 -- prtRefinedTIO $ tst1a @OZ
@@ -306,7 +316,8 @@ testRefined3P :: forall opts ip op fmt i proxy
      , Show (PP fmt (PP ip i))
      , Refined3C opts ip op fmt i
      , Eq i
-     , Eq (PP ip i))
+     , Eq (PP ip i)
+     )
    => proxy '(opts,ip,op,fmt,i)
    -> i
    -> Either (String,String) (Refined3 opts ip op fmt i, Refined3 opts ip op fmt i)
@@ -324,7 +335,7 @@ testRefined3P _ i =
              if r /= r1 then Left ("testRefined3P(3): round trip pure () but values dont match: old(" ++ show i ++ ") new(" ++ show (r3Out r) ++ ")", show (r,r1))
              else Right (r,r1)
     Nothing -> Left ("testRefined3P(1): bad initial predicate i=" ++ show i, show m3)
-
+{-
 testRefined3PIO :: forall opts ip op fmt i proxy
    . ( Show (PP ip i)
      , Show (PP fmt (PP ip i))
@@ -339,15 +350,7 @@ testRefined3PIO p i =
   case testRefined3P p i of
     Right (r,r1) -> return $ Right (r,r1)
     Left (msg, e) -> putStrLn e >> return (Left msg)
-
-getTTs3 :: RResults3 a b -> [Tree PE]
-getTTs3 = \case
-   RF _ t1 -> [t1]
-   RTF _ t1 _ t2 -> [t1,t2]
-   RTFalse _ t1 t2 -> [t1,t2]
-   RTTrueF _ t1 t2 _ t3 -> [t1,t2,t3]
-   RTTrueT _ t1 t2 _ t3 -> [t1,t2,t3]
-
+-}
 data Results3 a b =
        XF String        -- Left e
      | XTF a String     -- Right a + Left e

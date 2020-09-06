@@ -41,11 +41,6 @@ module Predicate.Refined3 (
   , Refined3C
 
  -- ** display results
-  , newRefined3
-  , newRefined3P
-  , prtEval3IO
-  , prtEval3PIO
-  , prt3IO
   , prt3Impl
   , Msg3 (..)
   , RResults3 (..)
@@ -53,6 +48,10 @@ module Predicate.Refined3 (
   -- ** evaluation methods
   , eval3P
   , eval3M
+  , newRefined3
+  , newRefined3P
+  , newRefined3'
+  , newRefined3P'
 
   -- ** create a wrapped Refined3 value
   , newRefined3T
@@ -114,7 +113,6 @@ import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
 import Data.Coerce
-
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -308,7 +306,7 @@ instance ( Refined3C opts ip op fmt i
 
 -- | 'Arbitrary' instance for 'Refined3'
 --
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined3 OU (ReadP Int Id) (1 <..> 120 && Even) (ShowP Id) String)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined3 OAN (ReadP Int Id) (1 <..> 120 && Even) (ShowP Id) String)))
 -- >>> all (\x -> let y = r3In x in y /= 0 && r3Out x == show y) xs
 -- True
 --
@@ -319,7 +317,7 @@ instance ( Arbitrary (PP ip i)
 
 -- | create a 'Refined3' generator using a generator to restrict the values (so it completes)
 --
--- >>> g = genRefined3 @OU @(ReadP Int Id) @(Between 10 100 Id && Even) @(ShowP Id) (choose (10,100))
+-- >>> g = genRefined3 @OAN @(ReadP Int Id) @(Between 10 100 Id && Even) @(ShowP Id) (choose (10,100))
 -- >>> xs <- generate (vectorOf 10 g)
 -- >>> all (\x -> let y = r3In x in y >= 0 && y <= 100 && even y) xs
 -- True
@@ -588,7 +586,7 @@ newRefined3TPImpl f _ i = do
   let m3 = prt3Impl (getOpt @opts) ret
   tell [m3Long m3]
   case mr of
-    Nothing -> throwError $ m3Desc m3 <> " | " <> m3Short m3
+    Nothing -> throwError $ m3Desc m3 <> nullIf " | " (m3Short m3)
     Just r -> return r
 
 newRefined3TPSkipIPImpl :: forall n m opts ip op fmt i proxy
@@ -607,7 +605,7 @@ newRefined3TPSkipIPImpl f _ a = do
   let m3 = prt3Impl (getOpt @opts) ret
   tell [m3Long m3]
   case mr of
-    Nothing -> throwError $ m3Desc m3 <> " | " <> m3Short m3
+    Nothing -> throwError $ m3Desc m3 <> nullIf " | " (m3Short m3)
     Just r -> return r
 
 -- | attempts to cast a wrapped 'Refined3' to another 'Refined3' with different predicates
@@ -675,28 +673,30 @@ data RResults3 a b =
      | RTTrueT !a !(Tree PE) !(Tree PE) !b !(Tree PE)      -- Right a + Right True + Right b
      deriving Show
 
--- | same as 'prtEval3PIO' but passes in the proxy
-prtEval3IO :: forall opts ip op fmt i
-  . ( Refined3C opts ip op fmt i
+-- | same as 'newRefined3P'' but passes in the proxy
+newRefined3' :: forall opts ip op fmt i m
+  . ( MonadEval m
+    , Refined3C opts ip op fmt i
     , Show (PP ip i)
     , Show i
     )
   => i
-  -> IO (Either String (Refined3 opts ip op fmt i))
-prtEval3IO = prtEval3PIO Proxy
+  -> m (Either Msg3 (Refined3 opts ip op fmt i))
+newRefined3' = newRefined3P' Proxy
 
 -- | same as 'newRefined3P' but runs in IO
-prtEval3PIO :: forall opts ip op fmt i proxy
-  . ( Refined3C opts ip op fmt i
+newRefined3P' :: forall opts ip op fmt i proxy m
+  . ( MonadEval m
+    , Refined3C opts ip op fmt i
     , Show (PP ip i)
     , Show i
     )
   => proxy '(opts,ip,op,fmt,i)
   -> i
-  -> IO (Either String (Refined3 opts ip op fmt i))
-prtEval3PIO _ i = do
-  x <- eval3M i
-  prt3IO @opts x
+  -> m (Either Msg3 (Refined3 opts ip op fmt i))
+newRefined3P' _ i = do
+  (ret,mr)<- eval3M i
+  return $ maybe (Left $ prt3Impl (getOpt @opts) ret) Right mr
 
 -- | same as 'newRefined3P' but skips the proxy and allows you to set each parameter individually using type application
 --
@@ -744,7 +744,7 @@ newRefined3 :: forall opts ip op fmt i
     )
   => i
   -> Either Msg3 (Refined3 opts ip op fmt i)
-newRefined3 = newRefined3P Proxy
+newRefined3 = runIdentity . newRefined3'
 
 -- | create a Refined3 using a 5-tuple proxy and aggregate the results on failure
 --
@@ -763,9 +763,7 @@ newRefined3P :: forall opts ip op fmt i proxy
   => proxy '(opts,ip,op,fmt,i)
   -> i
   -> Either Msg3 (Refined3 opts ip op fmt i)
-newRefined3P _ i =
-  let (ret,mr) = runIdentity $ eval3M i
-  in maybe (Left $ prt3Impl (getOpt @opts) ret) Right mr
+newRefined3P p = runIdentity . newRefined3P' p
 
 -- | create a Refined3 value using a 5-tuple proxy (see 'mkProxy3')
 --
@@ -821,25 +819,13 @@ eval3MSkip a = do
     (Right False,t2) -> pure (RTFalse a mkNodeSkipP t2, Nothing)
     (Left e,t2) -> pure (RTF a mkNodeSkipP e t2, Nothing)
 
-prt3IO :: forall opts a b r .
-     ( OptC opts
-     , Show a
-     , Show b
-     )
-  => (RResults3 a b, Maybe r)
-  -> IO (Either String r)
-prt3IO (ret,mr) = do
-  let m3 = prt3Impl (getOpt @opts) ret
-  unless (hasNoTree (getOpt @opts)) $ putStrLn $ m3Long m3
-  return $ maybe (Left (m3Desc m3 <> " | " <> m3Short m3)) Right mr
-
 data Msg3 = Msg3 { m3Desc :: !String
                  , m3Short :: !String
                  , m3Long :: !String
                  } deriving Eq
 
 instance Show Msg3 where
-  show (Msg3 a b c) = a <> " | " <> b <> (if null c then "" else "\n" <> c)
+  show (Msg3 a b c) = a <> " | " <> b <> nullIf "\n" c
 
 prt3Impl :: forall a b . (Show a, Show b)
   => POpts

@@ -381,7 +381,7 @@ ok :: Proxy (Ok opts t)
 ok = mkProxy3
 
 -- | noop false
-type OkNot (t :: Type) = '( OA, Id, 'False, Id, t)
+type OkNot (t :: Type) = '( OAN, Id, 'False, Id, t)
 type OkNotR (t :: Type) = MakeR3 (OkNot t)
 
 oknot :: Proxy (OkNot t)

@@ -162,14 +162,14 @@ refined1TH i =
   in case mr of
     Nothing ->
       let m1 = prt1Impl o ret
-          msg1 = if hasNoTree o then "" else m1Long m1 ++ "\n"
+          msg1 = if hasNoTree o then "" else "\n" ++ m1Long m1 ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m1Desc m1 <> " | " <> m1Short m1)
     Just r -> TH.TExp <$> TH.lift r
 
 
 -- | creates a 'Refined2.Refined2' refinement type
 --
--- >>> $$(refined2TH 100) :: Refined2 OA Id (Between 100 125 Id) Int
+-- >>> $$(refined2TH 100) :: Refined2 OAN Id (Between 100 125 Id) Int
 -- Refined2 {r2In = 100, r2Out = 100}
 --
 -- >>> $$(refined2TH 100) :: Refined2 OAN Id (Between 100 125 Id) Int
@@ -217,7 +217,7 @@ refined2TH i =
   in case mr of
     Nothing ->
       let m2 = prt2Impl o ret
-          msg1 = if hasNoTree o then "" else m2Long m2 ++ "\n"
+          msg1 = if hasNoTree o then "" else "\n" ++ m2Long m2 ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m2Desc m2 <> " | " <> m2Short m2)
     Just r -> TH.TExp <$> TH.lift r
 
@@ -289,7 +289,7 @@ refined3TH i =
     Nothing ->
       let m3 = prt3Impl o ret
           o = getOpt @opts
-          msg1 = if hasNoTree o then "" else m3Long m3 ++ "\n"
+          msg1 = if hasNoTree o then "" else "\n" ++ m3Long m3 ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m3Desc m3 <> " | " <> m3Short m3)
     Just r -> TH.TExp <$> TH.lift r
 
