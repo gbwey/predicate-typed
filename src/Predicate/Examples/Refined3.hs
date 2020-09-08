@@ -99,7 +99,6 @@ module Predicate.Examples.Refined3 (
 
   -- ** between
   , between
-  , BetweenR
   , BetweenN
 
   -- ** miscellaneous
@@ -352,7 +351,6 @@ between :: Proxy (BetweenN opts m n)
 between = mkProxy3
 
 type BetweenN (opts :: Opt) m n = '(opts, Id, Between m n Id, Id, Int)
-type BetweenR (opts :: Opt) m n = RefinedEmulate opts (Between m n Id) Int
 
 type LuhnR (opts :: Opt) (n :: Nat) = MakeR3 (LuhnT opts n)
 
@@ -381,7 +379,7 @@ ok :: Proxy (Ok opts t)
 ok = mkProxy3
 
 -- | noop false
-type OkNot (t :: Type) = '( OAN, Id, 'False, Id, t)
+type OkNot (t :: Type) = '(OAN, Id, 'False, Id, t)
 type OkNotR (t :: Type) = MakeR3 (OkNot t)
 
 oknot :: Proxy (OkNot t)

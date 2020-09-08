@@ -175,8 +175,6 @@ unnamedTests = [
 
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) "1.2.3.4"
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) "1.2.3.4"
-  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (Proxy @'( OAN, Ip4ip, Ip4op', ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id), _)) "1.2.3.4"
-  , expect3 (Right (unsafeRefined [1,2,3,4], "001.002.003.004")) $ eval3PX (mkProxy3' @_  @OAN @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id))) "1.2.3.4"
 
   -- keep the original value
   , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ runIdentity $ eval3M @OAN @(Id &&& Ip4ip) @(Snd Id >> Ip4op') @(Snd Id >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) "1.2.3.4"
@@ -185,7 +183,7 @@ unnamedTests = [
 allProps :: [TestTree]
 allProps =
   [
-    testProperty "base16" $ forAll (genRefined3P (mkProxy3 @'( OAN, ReadBase Int 16 Id, 'True, ShowBase 16 Id, String)) arbitrary) (\r -> evalQuick @(ReadBase Int 16 Id) (getOpt @OL) (r3Out r) === Right (r3In r))
+    testProperty "base16" $ forAll (genRefined3P (mkProxy3 @'(OAN, ReadBase Int 16 Id, 'True, ShowBase 16 Id, String)) arbitrary) (\r -> evalQuick @(ReadBase Int 16 Id) (getOpt @OL) (r3Out r) === Right (r3In r))
   , testProperty "readshow" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN)) (\r -> read @(HexLtR3 OAN) (show r) === r)
   , testProperty "jsonroundtrip1" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN))
       (\r -> testRefined3PJ Proxy (r3Out r) === Right r)
@@ -194,7 +192,7 @@ allProps =
 type HexLtR3 (opts :: Opt) = Refined3 opts (ReadBase Int 16 Id) (Id < 500) (ShowBase 16 Id) String
 --type IntLtR3 (opts :: Opt) = Refined3 opts (ReadP Int Id) (Id < 10) (ShowP Id) String
 
-type Tst1 = '( OAN, ReadP Int Id, Between 1 7 Id, PrintF "someval val=%03d" Id, String)
+type Tst1 = '(OAN, ReadP Int Id, Between 1 7 Id, PrintF "someval val=%03d" Id, String)
 
 yy1, yy2, yy3, yy4 :: RefinedT Identity (MakeR3 Tst1)
 
@@ -204,7 +202,7 @@ yy2 = newRefined3TP (Proxy @Tst1) "3"
 yy3 = rapply3 (*) yy1 yy2 -- fails
 yy4 = rapply3 (+) yy1 yy2 -- pure ()
 
-hms2E :: Proxy '( OAN, Hmsip2, Hmsop2, Hmsfmt2, String)
+hms2E :: Proxy '(OAN, Hmsip2, Hmsop2, Hmsfmt2, String)
 hms2E = mkProxy3
 
 type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
@@ -213,7 +211,7 @@ type Hmsfmt2 = Snd Id >> FormatTimeP "%T" Id
 
 -- use GuardBool for op boolean check to get better errormessages
 -- 1. packaged up as a promoted tuple
-type Tst3 = '( OAN, Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id, String)
+type Tst3 = '(OAN, Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id, String)
 
 www1, www2 :: String -> Either Msg3 (MakeR3 Tst3)
 www1 = newRefined3P (mkProxy3 @Tst3)
@@ -223,7 +221,7 @@ www2 = newRefined3P tst3
 
 -- 2. packaged as a proxy
 tst3 :: Proxy
-        '( OAN, Map (ReadP Int Id) (Resplit "\\." Id)
+        '(OAN, Map (ReadP Int Id) (Resplit "\\." Id)
         ,(Len == 4) && All (Between 0 255 Id) Id
         ,Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id
         ,String)
@@ -249,7 +247,7 @@ data G4 = G4 { g4Age :: MakeR3 Age
 
 --type MyAge = Refined3 OAN (ReadP Int Id) (Gt 4) (ShowP Id) String
 
-type Age = '( OAN, ReadP Int Id, Gt 4, ShowP Id, String)
+type Age = '(OAN, ReadP Int Id, Gt 4, ShowP Id, String)
 
 type Ip9 = '(
             OAN
@@ -296,7 +294,6 @@ tst2a = withRefined3TIO @opts @(ReadBase Int 16 Id) @(Stderr "start" |> Between 
 testRefined3PJ :: forall opts ip op fmt i proxy
    . (ToJSON (PP fmt (PP ip i))
     , Show (PP ip i)
-    , Show (PP fmt (PP ip i))
     , Refined3C opts ip op fmt i
     , FromJSON i
     )
@@ -304,11 +301,9 @@ testRefined3PJ :: forall opts ip op fmt i proxy
    -> i
    -> Either String (Refined3 opts ip op fmt i)
 testRefined3PJ _ i =
-  let (ret,mr) = runIdentity $ eval3M @opts @ip @op @fmt i
-      m3 = prt3Impl (getOpt @opts) ret
-  in case mr of
-    Just r -> eitherDecode @(Refined3 opts ip op fmt i) $ encode r
-    Nothing -> Left $ show m3
+  case newRefined3 @opts @ip @op @fmt i of
+    Right r -> eitherDecode @(Refined3 opts ip op fmt i) $ encode r
+    Left e -> Left $ show e
 
 -- test that roundtripping holds ie i ~ PP fmt (PP ip i)
 testRefined3P :: forall opts ip op fmt i proxy
@@ -322,19 +317,14 @@ testRefined3P :: forall opts ip op fmt i proxy
    -> i
    -> Either (String,String) (Refined3 opts ip op fmt i, Refined3 opts ip op fmt i)
 testRefined3P _ i =
-  let (ret,mr) = runIdentity $ eval3M @opts @ip @op @fmt i
-      o = getOpt @opts
-      m3 = prt3Impl o ret
-  in case mr of
-    Just r ->
-      let (ret1,mr1) = runIdentity $ eval3M @opts @ip @op @fmt (r3Out r)
-          m3a = prt3Impl o ret1
-      in case mr1 of
-           Nothing -> Left ("testRefined3P(2): round trip failed: old(" ++ show i ++ ") new(" ++ show (r3Out r) ++ ")", show m3a)
-           Just r1 ->
-             if r /= r1 then Left ("testRefined3P(3): round trip pure () but values dont match: old(" ++ show i ++ ") new(" ++ show (r3Out r) ++ ")", show (r,r1))
-             else Right (r,r1)
-    Nothing -> Left ("testRefined3P(1): bad initial predicate i=" ++ show i, show m3)
+  case newRefined3 @opts @ip @op @fmt i of
+    Right r ->
+      case newRefined3 @opts @ip @op @fmt (r3Out r) of
+        Left e -> Left ("testRefined3P(2): round trip failed: old(" ++ show i ++ ") new(" ++ show (r3Out r) ++ ")", show e)
+        Right r1 ->
+           if r /= r1 then Left ("testRefined3P(3): round trip pure () but values dont match: old(" ++ show i ++ ") new(" ++ show (r3Out r) ++ ")", show (r,r1))
+           else Right (r,r1)
+    Left e -> Left ("testRefined3P(1): bad initial predicate i=" ++ show i, show e)
 {-
 testRefined3PIO :: forall opts ip op fmt i proxy
    . ( Show (PP ip i)
@@ -351,25 +341,25 @@ testRefined3PIO p i =
     Right (r,r1) -> return $ Right (r,r1)
     Left (msg, e) -> putStrLn e >> return (Left msg)
 -}
-data Results3 a b =
+data Results3 a =
        XF String        -- Left e
      | XTF a String     -- Right a + Left e
      | XTFalse a String -- Right a + Right False
      | XTTrueF a String -- Right a + Right True + Left e
-     | XTTrueT a b      -- Right a + Right True + Right b
+     | XTTrueT a        -- Right a + Right True + Right b
      deriving (Show,Eq)
 
-toRResults3 :: RResults3 a b -> Results3 a b
+toRResults3 :: RResults3 a -> Results3 a
 toRResults3 = \case
    RF e _ -> XF e
    RTF a _ e _ -> XTF a e
    RTFalse a _ t2 -> XTFalse a (t2 ^. root . pString)
    RTTrueF a _ _ e _ -> XTTrueF a e
-   RTTrueT a _ _ b _ -> XTTrueT a b
+   RTTrueT a _ _ _ -> XTTrueT a
 
-expect3 :: (HasCallStack, Show i, Show r, Eq i, Eq r, Eq j, Show j)
-  => Either (Results3 i j) r
-  -> (RResults3 i j, Maybe r)
+expect3 :: (HasCallStack, Show i, Show r, Eq i, Eq r)
+  => Either (Results3 i) r
+  -> (RResults3 i, Maybe r)
   -> IO ()
 expect3 lhs (rhs,mr) =
   (@?=) (maybe (Left $ toRResults3 rhs) Right mr) lhs

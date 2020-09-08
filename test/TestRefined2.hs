@@ -175,7 +175,7 @@ www2 = newRefined2P tst3
 
 -- 2. packaged as a proxy
 tst3 :: Proxy
-        '( OAN, Map (ReadP Int Id) (Resplit "\\." Id)
+        '(OAN, Map (ReadP Int Id) (Resplit "\\." Id)
         ,(Len == 4) && All (Between 0 255 Id) Id
         ,String)
 tst3 = Proxy
@@ -268,19 +268,14 @@ testRefined2P :: forall opts ip op i proxy
    -> i
    -> Either (String,String) (Refined2 opts ip op i, Refined2 opts ip op i)
 testRefined2P _ i =
-  let (ret,mr) = runIdentity $ eval2M @opts @ip @op i
-      o = getOpt @opts
-      m3 = prt2Impl o ret
-  in case mr of
-    Just r ->
-      let (ret1,mr1) = runIdentity $ eval2M @opts @ip @op (r2Out r)
-          m3a = prt2Impl o ret1
-      in case mr1 of
-           Nothing -> Left ("testRefined2P(2): round trip failed: old(" ++ show i ++ ") new(" ++ show (r2Out r) ++ ")", show m3a)
-           Just r1 ->
+  case newRefined2 @opts @ip @op i of
+    Right r ->
+      case newRefined2 @opts @ip @op (r2Out r) of
+        Left m3a -> Left ("testRefined2P(2): round trip failed: old(" ++ show i ++ ") new(" ++ show (r2Out r) ++ ")", show m3a)
+        Right r1 ->
              if r /= r1 then Left ("testRefined2P(3): round trip pure () but values dont match: old(" ++ show i ++ ") new(" ++ show (r2Out r) ++ ")", show (r,r1))
              else Right (r,r1)
-    Nothing -> Left ("testRefined2P(1): bad initial predicate i=" ++ show i, show m3)
+    Left m3 -> Left ("testRefined2P(1): bad initial predicate i=" ++ show i, show m3)
 {-
 testRefined2PIO :: forall opts ip op i proxy
    . ( Show (PP ip i)

@@ -19,6 +19,7 @@ module Predicate.Util_TH (
 
   -- ** Refined1
   , refined1TH
+  , refined1THIO
 
   -- ** Refined2
   , refined2TH
@@ -148,24 +149,34 @@ refinedTHIO i = do
 -- @
 --
 refined1TH :: forall opts ip op fmt i
-  . ( Show i
+  . ( TH.Lift (PP ip i)
+    , Refined1C opts ip op fmt i
     , Show (PP ip i)
-    , TH.Lift i
-    , TH.Lift (PP ip i)
-    , Refined1C opts ip op fmt i)
+    )
   => i
   -> TH.Q (TH.TExp (Refined1 opts ip op fmt i))
 refined1TH i =
   let msg0 = "refined1TH"
       o = getOpt @opts
-      (ret,mr) = eval1 @opts @ip @op @fmt i
-  in case mr of
-    Nothing ->
-      let m1 = prt1Impl o ret
-          msg1 = if hasNoTree o then "" else "\n" ++ m1Long m1 ++ "\n"
+  in case newRefined1 @opts @ip @op @fmt i of
+    Left m1 ->
+      let msg1 = if hasNoTree o then "" else "\n" ++ m1Long m1 ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m1Desc m1 <> " | " <> m1Short m1)
-    Just r -> TH.TExp <$> TH.lift r
+    Right r -> TH.TExp <$> TH.lift r
 
+-- | creates a 'Refined1.Refined1' refinement type using IO
+refined1THIO :: forall opts ip op fmt i
+  . ( TH.Lift (PP ip i)
+    , Refined1C opts ip op fmt i
+    , Show (PP ip i)
+    )
+  => i
+  -> TH.Q (TH.TExp (Refined1 opts ip op fmt i))
+refined1THIO i = do
+  x <- TH.runIO (newRefined1' @opts @ip @op @fmt i)
+  case x of
+    Right a -> TH.TExp <$> TH.lift a
+    Left e -> fail $ show e
 
 -- | creates a 'Refined2.Refined2' refinement type
 --
@@ -213,27 +224,26 @@ refined2TH :: forall opts ip op i
 refined2TH i =
   let msg0 = "refined2TH"
       o = getOpt @opts
-      (ret,mr) = runIdentity $ eval2M @opts @ip @op i
-  in case mr of
-    Nothing ->
-      let m2 = prt2Impl o ret
-          msg1 = if hasNoTree o then "" else "\n" ++ m2Long m2 ++ "\n"
-      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m2Desc m2 <> " | " <> m2Short m2)
-    Just r -> TH.TExp <$> TH.lift r
+  in case newRefined2 @opts @ip @op i of
+       Left m2 ->
+         let msg1 = if hasNoTree o then "" else "\n" ++ m2Long m2 ++ "\n"
+         in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m2Desc m2 <> " | " <> m2Short m2)
+       Right r -> TH.TExp <$> TH.lift r
 
+-- | creates a 'Refined2.Refined2' refinement type using IO
 refined2THIO :: forall opts ip op i
-  . ( Show (PP ip i)
-    , TH.Lift i
+  . ( TH.Lift i
     , TH.Lift (PP ip i)
     , Refined2C opts ip op i
+    , Show (PP ip i)
     )
   => i
   -> TH.Q (TH.TExp (Refined2 opts ip op i))
 refined2THIO i = do
-  x <- TH.runIO (eval2M @opts @ip @op i)
+  x <- TH.runIO (newRefined2' @opts @ip @op i)
   case x of
-    (_, Just a) -> TH.TExp <$> TH.lift a
-    (ret, Nothing) -> fail $ show $ prt2Impl (getOpt @opts) ret
+    Right a -> TH.TExp <$> TH.lift a
+    Left e -> fail $ show e
 
 -- | creates a 'Refined3.Refined3' refinement type
 --
@@ -274,8 +284,7 @@ refined2THIO i = do
 -- Refined3 {r3In = [200,2,3,4], r3Out = "200.002.003.004"}
 --
 refined3TH :: forall opts ip op fmt i
-  . ( Show i
-    , Show (PP ip i)
+  . ( Show (PP ip i)
     , TH.Lift i
     , TH.Lift (PP ip i)
     , Refined3C opts ip op fmt i
@@ -284,27 +293,25 @@ refined3TH :: forall opts ip op fmt i
   -> TH.Q (TH.TExp (Refined3 opts ip op fmt i))
 refined3TH i =
   let msg0 = "refined3TH"
-      (ret,mr) = runIdentity $ eval3M @opts @ip @op @fmt i
-  in case mr of
-    Nothing ->
-      let m3 = prt3Impl o ret
-          o = getOpt @opts
+  in case newRefined3 @opts @ip @op @fmt i of
+    Left m3 ->
+      let o = getOpt @opts
           msg1 = if hasNoTree o then "" else "\n" ++ m3Long m3 ++ "\n"
       in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m3Desc m3 <> " | " <> m3Short m3)
-    Just r -> TH.TExp <$> TH.lift r
+    Right r -> TH.TExp <$> TH.lift r
 
+-- | creates a 'Refined3.Refined3' refinement type using IO
 refined3THIO :: forall opts ip op fmt i
-  . ( Show i
-    , Show (PP ip i)
-    , TH.Lift i
+  . ( TH.Lift i
     , TH.Lift (PP ip i)
     , Refined3C opts ip op fmt i
+    , Show (PP ip i)
     )
   => i
   -> TH.Q (TH.TExp (Refined3 opts ip op fmt i))
 refined3THIO i = do
-  x <- TH.runIO (eval3M @opts @ip @op @fmt i)
+  x <- TH.runIO (newRefined3' @opts @ip @op @fmt i)
   case x of
-    (_, Just a) -> TH.TExp <$> TH.lift a
-    (ret, Nothing) -> fail $ show $ prt3Impl (getOpt @opts) ret
+    Right a -> TH.TExp <$> TH.lift a
+    Left e -> fail $ show e
 

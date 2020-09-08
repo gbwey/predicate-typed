@@ -43,7 +43,6 @@ module Predicate.Refined1 (
   , Refined1C
 
  -- ** display results
-  , prt1Impl
   , Msg1 (..)
   , RResults1 (..)
 
@@ -82,11 +81,7 @@ module Predicate.Refined1 (
   , genRefined1
   , genRefined1P
 
-  -- ** emulate Refined1 using Refined
-  , RefinedEmulate
-  , eval1PX
-  , eval1X
-
+  -- ** miscellaneous
   , replaceOpt1
   , appendOpt1
 
@@ -134,7 +129,7 @@ import Data.Coerce
 --
 --   * @PP fmt (PP ip i)@ should be valid as input for Refined1
 --
--- Setting @ip@ to @Id@ and @fmt@ to @Id@ makes it equivalent to 'Refined.Refined': see 'RefinedEmulate'
+-- Setting @ip@ to @Id@ and @fmt@ to @Id@ makes it equivalent to 'Refined.Refined'
 --
 -- Setting the input type @i@ to 'GHC.Base.String' resembles the corresponding Read/Show instances but with an additional predicate on the read value
 --
@@ -154,15 +149,15 @@ type role Refined1 phantom nominal nominal nominal nominal
 -- | directly load values into 'Refined1'. It still checks to see that those values are valid
 unsafeRefined1' :: forall opts ip op fmt i
                 . ( HasCallStack
-                  , Show i
                   , Show (PP ip i)
                   , Refined1C opts ip op fmt i
                   )
                 => i
                 -> Refined1 opts ip op fmt i
 unsafeRefined1' i =
-  let (ret,mr) = eval1 @opts @ip @op @fmt i
-  in fromMaybe (error $ show (prt1Impl (getOpt @opts) ret)) mr
+  case newRefined1 @opts @ip @op @fmt i of
+    Left e -> error $ show e
+    Right r -> r
 
 -- | directly load values into 'Refined1' without any checking
 unsafeRefined1 :: forall opts ip op fmt i . PP ip i -> Refined1 opts ip op fmt i
@@ -178,17 +173,9 @@ type Refined1C opts ip op fmt i =
        , PP fmt (PP ip i) ~ i  -- the output type must match the original input type
        )
 
-deriving instance ( Show i
-                  , Show (PP ip i)
-                  , Show (PP fmt (PP ip i))
-                  ) => Show (Refined1 opts ip op fmt i)
-deriving instance ( Eq i
-                  , Eq (PP ip i)
-                  , Eq (PP fmt (PP ip i))
-                  ) => Eq (Refined1 opts ip op fmt i)
-deriving instance ( TH.Lift (PP ip i)
-                  , TH.Lift (PP fmt (PP ip i))
-                  ) => TH.Lift (Refined1 opts ip op fmt i)
+deriving instance Show (PP ip i) => Show (Refined1 opts ip op fmt i)
+deriving instance  Eq (PP ip i) => Eq (Refined1 opts ip op fmt i)
+deriving instance TH.Lift (PP ip i) => TH.Lift (Refined1 opts ip op fmt i)
 
 -- | 'IsString' instance for Refined1
 --
@@ -221,15 +208,9 @@ instance (Refined1C opts ip op fmt String, Show (PP ip String)) => IsString (Ref
 -- >>> reads @(Refined1 OZ Id 'True Id Int) "Refined1 (-123)xyz"
 -- [(Refined1 (-123),"xyz")]
 --
-
-
-instance ( Eq i
-         , Show i
-         , Eq (PP ip i)
-         , Show (PP ip i)
+instance ( Eq (PP ip i)
          , Refined1C opts ip op fmt i
          , Read (PP ip i)
-         , Read (PP fmt (PP ip i))
          ) => Read (Refined1 opts ip op fmt i) where
     readPrec
       = GR.parens
@@ -258,7 +239,6 @@ instance ( Eq i
 -- "123"
 --
 instance ( OptC opts
-         , Show (PP fmt (PP ip i))
          , ToJSON (PP fmt (PP ip i))
          , P fmt (PP ip i)
          ) => ToJSON (Refined1 opts ip op fmt i) where
@@ -297,8 +277,7 @@ instance ( OptC opts
 --    `- P '256
 -- <BLANKLINE>
 --
-instance (Show ( PP fmt (PP ip i))
-        , Show (PP ip i)
+instance (Show (PP ip i)
         , Refined1C opts ip op fmt i
         , FromJSON i
         ) => FromJSON (Refined1 opts ip op fmt i) where
@@ -362,8 +341,8 @@ genRefined1P _ g =
 -- >>> import Control.Arrow ((+++))
 -- >>> import Control.Lens
 -- >>> import Data.Time
--- >>> type K1 = MakeR1 '( OAN, ReadP Day Id, 'True, ShowP Id, String)
--- >>> type K2 = MakeR1 '( OAN, ReadP Day Id, Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id, ShowP Id, String)
+-- >>> type K1 = MakeR1 '(OAN, ReadP Day Id, 'True, ShowP Id, String)
+-- >>> type K2 = MakeR1 '(OAN, ReadP Day Id, Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id, ShowP Id, String)
 -- >>> r = unsafeRefined1' "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
 -- Refined1 2019-04-23
@@ -389,8 +368,7 @@ genRefined1P _ g =
 -- <BLANKLINE>
 --
 
-instance ( Show (PP fmt (PP ip i))
-         , Show (PP ip i)
+instance ( Show (PP ip i)
          , Refined1C opts ip op fmt i
          , Binary i
          ) => Binary (Refined1 opts ip op fmt i) where
@@ -418,7 +396,7 @@ instance (Refined1C opts ip op fmt i
 --
 -- set the 5-tuple directly
 --
--- >>> eg1 = mkProxy1 @'( OL, ReadP Int Id, Gt 10, ShowP Id, String)
+-- >>> eg1 = mkProxy1 @'(OL, ReadP Int Id, Gt 10, ShowP Id, String)
 -- >>> newRefined1P eg1 "24"
 -- Right (Refined1 24)
 --
@@ -449,7 +427,6 @@ withRefined1TIO :: forall opts ip op fmt i m b
   . ( MonadIO m
     , Refined1C opts ip op fmt i
     , Show (PP ip i)
-    , Show i
     )
   => i
   -> (Refined1 opts ip op fmt i -> RefinedT m b)
@@ -490,7 +467,7 @@ withRefined1T :: forall opts ip op fmt i m b
   . ( Monad m
     , Refined1C opts ip op fmt i
     , Show (PP ip i)
-    , Show i)
+    )
   => i
   -> (Refined1 opts ip op fmt i -> RefinedT m b)
   -> RefinedT m b
@@ -500,7 +477,6 @@ withRefined1TP :: forall opts ip op fmt i b proxy m
   . ( Monad m
     , Refined1C opts ip op fmt i
     , Show (PP ip i)
-    , Show i
     )
   => proxy '(opts,ip,op,fmt,i)
   -> i
@@ -513,7 +489,6 @@ newRefined1T :: forall opts ip op fmt i m
   . ( Refined1C opts ip op fmt i
     , Monad m
     , Show (PP ip i)
-    , Show i
     )
    => i
    -> RefinedT m (Refined1 opts ip op fmt i)
@@ -521,20 +496,19 @@ newRefined1T = newRefined1TP (Proxy @'(opts,ip,op,fmt,i))
 
 -- | create a wrapped 'Refined1' type
 --
--- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( OZ, MkDayExtra Id >> 'Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined1TP (Proxy @'(OZ, MkDayExtra Id >> 'Just Id, GuardSimple (Thd Id == 5) >> 'True, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,1)
 -- Refined1 (2019-11-01,44,5)
 --
--- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( OL, MkDayExtra Id >> 'Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined1TP (Proxy @'(OL, MkDayExtra Id >> 'Just Id, Thd Id == 5, UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined1TP (Proxy @'( OL, MkDayExtra Id >> 'Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined1TP (Proxy @'(OL, MkDayExtra Id >> 'Just Id, Msg "wrong day:" (Thd Id == 5), UnMkDay (Fst Id), (Int,Int,Int))) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
 --
 newRefined1TP :: forall opts ip op fmt i proxy m
    . ( Refined1C opts ip op fmt i
      , Monad m
      , Show (PP ip i)
-     , Show i
      )
   => proxy '(opts,ip,op,fmt,i)
   -> i
@@ -545,7 +519,7 @@ newRefined1TPIO :: forall opts ip op fmt i proxy m
    . ( Refined1C opts ip op fmt i
      , MonadIO m
      , Show (PP ip i)
-     , Show i)
+     )
   => proxy '(opts,ip,op,fmt,i)
   -> i
   -> RefinedT m (Refined1 opts ip op fmt i)
@@ -556,7 +530,7 @@ newRefined1TPImpl :: forall n m opts ip op fmt i proxy
      , Monad m
      , MonadEval n
      , Show (PP ip i)
-     , Show (PP fmt (PP ip i)))
+     )
   => (forall x . n x -> RefinedT m x)
    -> proxy '(opts,ip,op,fmt,i)
    -> i
@@ -574,7 +548,7 @@ newRefined1TPSkipIPImpl :: forall n m opts ip op fmt i proxy
      , Monad m
      , MonadEval n
      , Show (PP ip i)
-     , Show (PP fmt (PP ip i)))
+     )
   => (forall x . n x -> RefinedT m x)
    -> proxy '(opts,ip,op,fmt,i)
    -> PP ip i
@@ -593,7 +567,7 @@ convertRefined1TP :: forall opts ip op fmt i ip1 op1 fmt1 i1 m .
   , Monad m
   , Show (PP ip i)
   , PP ip i ~ PP ip1 i1
-  , Show i1)
+  )
   => Proxy '(opts, ip, op, fmt, i)
   -> Proxy '(opts, ip1, op1, fmt1, i1)
   -> RefinedT m (Refined1 opts ip op fmt i)
@@ -609,7 +583,7 @@ rapply1 :: forall opts ip op fmt i m .
   ( Refined1C opts ip op fmt i
   , Monad m
   , Show (PP ip i)
-  , Show i)
+  )
   => (PP ip i -> PP ip i -> PP ip i)
   -> RefinedT m (Refined1 opts ip op fmt i)
   -> RefinedT m (Refined1 opts ip op fmt i)
@@ -623,7 +597,7 @@ rapply1P :: forall opts ip op fmt i proxy m .
   ( Refined1C opts ip op fmt i
   , Monad m
   , Show (PP ip i)
-  , Show i)
+  )
   => proxy '(opts,ip,op,fmt,i)
   -> (PP ip i -> PP ip i -> PP ip i)
   -> RefinedT m (Refined1 opts ip op fmt i)
@@ -640,12 +614,12 @@ rapply1P p f ma mb = do
   newRefined1TPSkipIPImpl (return . runIdentity) p (f x y)
 
 -- | An ADT that summarises the results of evaluating Refined1 representing all possible states
-data RResults1 a b =
+data RResults1 a =
        RF !String !(Tree PE)        -- Left e
      | RTF !a !(Tree PE) !String !(Tree PE)    -- Right a + Left e
      | RTFalse !a !(Tree PE) !(Tree PE)        -- Right a + Right False
      | RTTrueF !a !(Tree PE) !(Tree PE) !String !(Tree PE) -- Right a + Right True + Left e
-     | RTTrueT !a !(Tree PE) !(Tree PE) !b !(Tree PE)      -- Right a + Right True + Right b
+     | RTTrueT !a !(Tree PE) !(Tree PE) !(Tree PE)      -- Right a + Right True + Right b
      deriving Show
 
 
@@ -654,7 +628,6 @@ newRefined1' :: forall opts ip op fmt i m
   . ( MonadEval m
     , Refined1C opts ip op fmt i
     , Show (PP ip i)
-    , Show i
     )
   => i
   -> m (Either Msg1 (Refined1 opts ip op fmt i))
@@ -665,7 +638,6 @@ newRefined1P' :: forall opts ip op fmt i proxy m
   . ( MonadEval m
     , Refined1C opts ip op fmt i
     , Show (PP ip i)
-    , Show i
     )
   => proxy '(opts,ip,op,fmt,i)
   -> i
@@ -717,14 +689,14 @@ newRefined1P' _ i = do
 newRefined1 :: forall opts ip op fmt i
   . ( Refined1C opts ip op fmt i
     , Show (PP ip i)
-    , Show i)
+    )
   => i
   -> Either Msg1 (Refined1 opts ip op fmt i)
 newRefined1 = newRefined1P Proxy
 
 -- | create a Refined1 using a 5-tuple proxy and aggregate the results on failure
 --
--- >>> type T4 k = '( OZ, MkDayExtra Id >> 'Just Id, GuardBool "expected a Sunday" (Thd Id == 7), UnMkDay (Fst Id), k)
+-- >>> type T4 k = '(OZ, MkDayExtra Id >> 'Just Id, GuardBool "expected a Sunday" (Thd Id == 7), UnMkDay (Fst Id), k)
 -- >>> newRefined1P (Proxy @(T4 _)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
@@ -734,7 +706,7 @@ newRefined1 = newRefined1P Proxy
 newRefined1P :: forall opts ip op fmt i proxy
   . ( Refined1C opts ip op fmt i
     , Show (PP ip i)
-    , Show i)
+    )
   => proxy '(opts,ip,op,fmt,i)
   -> i
   -> Either Msg1 (Refined1 opts ip op fmt i)
@@ -749,18 +721,18 @@ newRefined1P _ i =
 eval1P :: forall opts ip op fmt i proxy . Refined1C opts ip op fmt i
   => proxy '(opts,ip,op,fmt,i)
   -> i
-  -> (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined1 opts ip op fmt i))
+  -> (RResults1 (PP ip i), Maybe (Refined1 opts ip op fmt i))
 eval1P _ = runIdentity . eval1M
 
 -- | same as 'eval1P' but can pass the parameters individually using type application
 eval1 :: forall opts ip op fmt i . Refined1C opts ip op fmt i
   => i
-  -> (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined1 opts ip op fmt i))
+  -> (RResults1 (PP ip i), Maybe (Refined1 opts ip op fmt i))
 eval1 = eval1P Proxy
 
 eval1M :: forall opts ip op fmt i m . (MonadEval m, Refined1C opts ip op fmt i)
   => i
-  -> m (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined1 opts ip op fmt i))
+  -> m (RResults1 (PP ip i), Maybe (Refined1 opts ip op fmt i))
 eval1M i = do
   let o = getOpt @opts
   ll <- eval (Proxy @ip) o i
@@ -771,7 +743,7 @@ eval1M i = do
       (Right True,t2) -> do
         ss <- eval (Proxy @fmt) o a
         pure $ case getValAndPE ss of
-         (Right b,t3) -> (RTTrueT a t1 t2 b t3, Just (Refined1 a))
+         (Right _b,t3) -> (RTTrueT a t1 t2 t3, Just (Refined1 a))
          (Left e,t3) -> (RTTrueF a t1 t2 e t3, Nothing)
       (Right False,t2) -> pure (RTFalse a t1 t2, Nothing)
       (Left e,t2) -> pure (RTF a t1 e t2, Nothing)
@@ -780,7 +752,7 @@ eval1M i = do
 -- | creates Refined1 value but skips the initial conversion
 eval1MSkip :: forall opts ip op fmt i m . (MonadEval m, Refined1C opts ip op fmt i)
    => PP ip i
-   -> m (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined1 opts ip op fmt i))
+   -> m (RResults1 (PP ip i), Maybe (Refined1 opts ip op fmt i))
 eval1MSkip a = do
    let o = getOpt @opts
    rr <- evalBool (Proxy @op) o a
@@ -788,7 +760,7 @@ eval1MSkip a = do
     (Right True,t2) -> do
       ss <- eval (Proxy @fmt) o a
       pure $ case getValAndPE ss of
-       (Right b,t3) -> (RTTrueT a mkNodeSkipP t2 b t3, Just (Refined1 a))
+       (Right _b,t3) -> (RTTrueT a mkNodeSkipP t2 t3, Just (Refined1 a))
        (Left e,t3) -> (RTTrueF a mkNodeSkipP t2 e t3, Nothing)
     (Right False,t2) -> pure (RTFalse a mkNodeSkipP t2, Nothing)
     (Left e,t2) -> pure (RTF a mkNodeSkipP e t2, Nothing)
@@ -799,11 +771,11 @@ data Msg1 = Msg1 { m1Desc :: !String
                  } deriving Eq
 
 instance Show Msg1 where
-  show (Msg1 a b c) = a <> " | " <> b <> nullIf "\n" c
+  show (Msg1 a b c) = a <> nullIf " | " b <> nullIf "\n" c
 
-prt1Impl :: forall a b . (Show a, Show b)
+prt1Impl :: forall a . Show a
   => POpts
-  -> RResults1 a b
+  -> RResults1 a
   -> Msg1
 prt1Impl opts v =
   let outmsg msg = "*** " <> formatOMsg opts " " <> msg <> " ***\n"
@@ -841,54 +813,15 @@ prt1Impl opts v =
               <> outmsg m
               <> prtTreePure opts t3
          in mkMsg1 m n r
-       RTTrueT a t1 t2 b t3 ->
-         let (m,n) = ("Step 3. Success Output Conversion(fmt)", showL opts b)
+       RTTrueT a t1 t2 t3 ->
+         let (m,n) = ("Step 3. Success Output Conversion(fmt)", "")
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg "Step 2. Success Boolean Check(op)"
               <> prtTreePure opts t2
               <> outmsg m
-              <> fixLite opts b t3
+              <> fixLite opts () t3
          in mkMsg1 m n r
-
--- | similar to 'eval1P' but it emulates 'Refined1' but using 'Refined'
---
--- takes a 5-tuple proxy as input but outputs the Refined value and the result separately
---
--- * initial conversion using \'ip\' and stores that in 'Refined'
--- * runs the boolean predicate \'op\' to make sure to validate the converted value from 1.
--- * runs \'fmt\' against the converted value from 1.
--- * returns both the 'Refined' and the output from 3.
--- * if any of the above steps fail the process stops it and dumps out 'RResults1'
---
-eval1PX :: forall opts ip op fmt i proxy . Refined1C opts ip op fmt i
-  => proxy '(opts,ip,op,fmt,i)
-  -> i
-  -> (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined opts op (PP ip i), PP fmt (PP ip i)))
-eval1PX _ i = runIdentity $ do
-  let o = getOpt @opts
-  ll <- eval (Proxy @ip) o i
-  case getValAndPE ll of
-    (Right a,t1) -> do
-      rr <- evalBool (Proxy @op) o a
-      case getValAndPE rr of
-        (Right True,t2) -> do
-          ss <- eval (Proxy @fmt) o a
-          pure $ case getValAndPE ss of
-            (Right b,t3) -> (RTTrueT a t1 t2 b t3, Just (unsafeRefined a, b))
-            (Left e,t3) -> (RTTrueF a t1 t2 e t3, Nothing)
-        (Right False,t2) -> pure (RTFalse a t1 t2, Nothing)
-        (Left e,t2) -> pure (RTF a t1 e t2, Nothing)
-    (Left e,t1) -> pure (RF e t1, Nothing)
-
--- | same as 'eval1PX' but allows you to set the parameters individually using type application
-eval1X :: forall opts ip op fmt i . Refined1C opts ip op fmt i
-  => i
-  -> (RResults1 (PP ip i) (PP fmt (PP ip i)), Maybe (Refined opts op (PP ip i), PP fmt (PP ip i)))
-eval1X = eval1PX (Proxy @'(opts,ip,op,fmt,i))
-
--- | emulates 'Refined' using 'Refined1' by setting the input conversion and output formatting as noops
-type RefinedEmulate (opts :: Opt) p a = Refined1 opts Id p Id a
 
 replaceOpt1 :: forall (opt :: Opt) opt0 ip op fmt i . Refined1 opt0 ip op fmt i -> Refined1 opt ip op fmt i
 replaceOpt1 = coerce

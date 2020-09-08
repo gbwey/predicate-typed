@@ -243,7 +243,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as N
 import Data.Either
 import qualified Text.Read.Lex as L
-import Text.ParserCombinators.ReadPrec
+import Text.ParserCombinators.ReadPrec hiding (lift)
 import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified GHC.Read as GR
 import Data.ByteString (ByteString)

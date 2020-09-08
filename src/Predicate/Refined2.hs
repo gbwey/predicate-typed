@@ -34,7 +34,6 @@ module Predicate.Refined2 (
   , Refined2C
 
  -- ** display results
-  , prt2Impl
   , Msg2 (..)
   , RResults2 (..)
 
@@ -178,10 +177,7 @@ instance ( s ~ String
 -- >>> reads @(Refined2 OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (GuardBool "len/=4" (Len == 4)) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
 -- [(Refined2 {r2In = [192,168,0,1], r2Out = "192.168.0.1"},"")]
 --
-instance ( Eq i
-         , Show i
-         , Show (PP ip i)
-         , Refined2C opts ip op i
+instance ( Refined2C opts ip op i
          , Read (PP ip i)
          , Read i
          ) => Read (Refined2 opts ip op i) where
@@ -249,9 +245,8 @@ instance ToJSON i => ToJSON (Refined2 opts ip op i) where
 --    `- P '256
 -- <BLANKLINE>
 --
-instance ( Show i
+instance ( Refined2C opts ip op i
          , Show (PP ip i)
-         , Refined2C opts ip op i
          , FromJSON i
          ) => FromJSON (Refined2 opts ip op i) where
   parseJSON z = do
@@ -347,7 +342,6 @@ genRefined2P _ g =
 -- <BLANKLINE>
 --
 instance ( Refined2C opts ip op i
-         , Show i
          , Show (PP ip i)
          , Binary i
          ) => Binary (Refined2 opts ip op i) where
@@ -494,7 +488,6 @@ newRefined2' :: forall opts ip op i m
   . ( MonadEval m
     , Refined2C opts ip op i
     , Show (PP ip i)
-    , Show i
     )
   => i
   -> m (Either Msg2 (Refined2 opts ip op i))
@@ -505,13 +498,12 @@ newRefined2P' :: forall opts ip op i proxy m
   . ( MonadEval m
     , Refined2C opts ip op i
     , Show (PP ip i)
-    , Show i
     )
   => proxy '(opts,ip,op,i)
   -> i
   -> m (Either Msg2 (Refined2 opts ip op i))
 newRefined2P' _ i = do
-  (ret,mr)<- eval2M i
+  (ret,mr) <- eval2M i
   return $ maybe (Left $ prt2Impl (getOpt @opts) ret) Right mr
 
 -- | pure version for extracting Refined2
@@ -603,7 +595,7 @@ data Msg2 = Msg2 { m2Desc :: !String
                  } deriving Eq
 
 instance Show Msg2 where
-  show (Msg2 a b c) = a <> " | " <> b <> nullIf "\n" c
+  show (Msg2 a b c) = a <> nullIf " | " b <> nullIf "\n" c
 
 prt2Impl :: forall a . Show a
   => POpts
@@ -650,7 +642,7 @@ prt2Impl opts v =
 --
 -- set the 4-tuple directly
 --
--- >>> eg1 = mkProxy2 @'( OL, ReadP Int Id, Gt 10, String)
+-- >>> eg1 = mkProxy2 @'(OL, ReadP Int Id, Gt 10, String)
 -- >>> newRefined2P eg1 "24"
 -- Right (Refined2 {r2In = 24, r2Out = "24"})
 --

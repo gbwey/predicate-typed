@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 37a53799a93c97a898a66fda6efddd3254fbf261a836471a49c6de18dae63eb4
+-- hash: 80ed4bd3406c4cb2b953f597d3040f019d8bedfdb94575fc1369b6033f1a52b6
 
 name:           predicate-typed
 version:        0.7.3.0
@@ -91,6 +91,7 @@ library
     , th-lift
     , these >=0.8
     , time
+    , transformers
     , tree-view >=0.5
   if impl(ghc >= 8.8)
     ghc-options: -fwrite-ide-info -hiedir=.hie
@@ -167,6 +168,7 @@ test-suite doctests
     , th-lift
     , these >=0.8
     , time
+    , transformers
     , tree-view >=0.5
   if impl(ghc >= 8.8)
     ghc-options: -fwrite-ide-info -hiedir=.hie
@@ -252,6 +254,7 @@ test-suite predicate-typed-test
     , th-lift
     , these >=0.8
     , time
+    , transformers
     , tree-view >=0.5
   if impl(ghc >= 8.8)
     ghc-options: -fwrite-ide-info -hiedir=.hie
