@@ -585,7 +585,7 @@ instance P (FilterT p q) x => P (Filter p q) x where
 -- Present ([1,2],[3,4,5,6,7,8]) (Break cnt=(2,6))
 -- PresentT ([1,2],[3,4,5,6,7,8])
 --
--- >>> pl @(Break (Case 'False '[Gt 2,Gt 4] '[ W 'True, Failt _ "ASfd"] Id) Id) [1..8]  -- case version
+-- >>> pl @(Break (Case 'False '[Gt 2,Gt 4] '[W 'True, Failt _ "ASfd"] Id) Id) [1..8]  -- case version
 -- Present ([1,2],[3,4,5,6,7,8]) (Break cnt=(2,6))
 -- PresentT ([1,2],[3,4,5,6,7,8])
 --

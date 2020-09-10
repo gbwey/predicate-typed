@@ -498,7 +498,7 @@ instance P (MkTimeT p) x => P (MkTime p) x where
 -- >>> pz @(ReadP UTCTime Id >> ToTime >> UnMkTime Id) "2020-07-22 08:01:14.127Z"
 -- PresentT (8,1,14127 % 1000)
 --
--- >>> pz @(ReadP ZonedTime Id >> '(UnMkDay ToDay, UnMkTime ToTime)) "2020-07-11 11:41:12.333 CET"
+-- >>> pz @(ReadP ZonedTime Id >> '(UnMkDay ToDay, UnMkTime ToTime)) "2020-07-11 11:41:12.333+0400"
 -- PresentT ((2020,7,11),(11,41,12333 % 1000))
 --
 data UnMkTime p

@@ -1,3 +1,6 @@
+-- tojson binary hash arbitrary all use i not PP ip i
+-- all instances work with the original input [ie not the internal values]
+--   cos we have no way to get i from PP ip i (unlike Refined3)
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -36,6 +39,7 @@ module Predicate.Refined2 (
  -- ** display results
   , Msg2 (..)
   , RResults2 (..)
+  , prt2Impl
 
   -- ** evaluation methods
   , eval2P
@@ -84,7 +88,7 @@ import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
-import Data.Maybe (fromMaybe, isJust)
+import Data.Maybe (isJust)
 import Control.Lens
 import Data.Tree.Lens (root)
 import Data.Char (isSpace)
@@ -124,8 +128,9 @@ unsafeRefined2' :: forall opts ip op i
                 => i
                 -> Refined2 opts ip op i
 unsafeRefined2' i =
-  let (ret,mr) = runIdentity $ eval2M @opts @ip @op i
-  in fromMaybe (error $ show (prt2Impl (getOpt @opts) ret)) mr
+  case newRefined2 @opts @ip @op i of
+    Left e -> error $ show e
+    Right r -> r
 
 -- | directly load values into 'Refined2' without any checking
 unsafeRefined2 :: forall opts ip op i
@@ -154,13 +159,14 @@ deriving instance (TH.Lift (PP ip i), TH.Lift i) => TH.Lift (Refined2 opts ip op
 -- >>> pureTryTest $ fromString @(Refined2 OL (ReadP Int Id) (Id > 12) String) "2"
 -- Left ()
 --
-instance ( s ~ String
-         , Refined2C opts ip op s
-         , Show (PP ip s)
-         ) => IsString (Refined2 opts ip op s) where
-  fromString s =
-    let (ret,mr) = runIdentity $ eval2M @opts @ip @op s
-    in fromMaybe (error $ "Refined2(fromString):" ++ show (prt2Impl (getOpt @opts) ret)) mr
+instance ( i ~ String
+         , Refined2C opts ip op i
+         , Show (PP ip i)
+         ) => IsString (Refined2 opts ip op i) where
+  fromString i =
+    case newRefined2 @opts @ip @op i of
+      Left e -> error $ "Refined2(fromString):" ++ show e
+      Right r -> r
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined2'
@@ -194,7 +200,7 @@ instance ( Refined2C opts ip op i
                                "r2Out" (PCR.reset GR.readPrec)
                  GR.expectP (RL.Punc "}")
 
-                 let lr = evalQuick @op (getOpt @opts) fld1
+                 let lr = evalQuick @opts @op fld1
 
                  case lr of
                    Left {} -> fail ""
@@ -251,10 +257,9 @@ instance ( Refined2C opts ip op i
          ) => FromJSON (Refined2 opts ip op i) where
   parseJSON z = do
                   i <- parseJSON @i z
-                  let (ret,mr) = runIdentity $ eval2M @opts @ip @op i
-                  case mr of
-                    Nothing -> fail $ "Refined2:" ++ show (prt2Impl (getOpt @opts) ret)
-                    Just r -> return r
+                  case newRefined2 @opts @ip @op i of
+                    Left e -> fail $ "Refined2:" ++ show e
+                    Right r -> return r
 
 -- | 'Arbitrary' instance for 'Refined2'
 --
@@ -347,10 +352,9 @@ instance ( Refined2C opts ip op i
          ) => Binary (Refined2 opts ip op i) where
   get = do
           i <- B.get @i
-          let (ret,mr) = runIdentity $ eval2M @opts @ip @op i
-          case mr of
-            Nothing -> fail $ "Refined2:" ++ show (prt2Impl (getOpt @opts) ret)
-            Just r -> return r
+          case newRefined2 @opts @ip @op i of
+            Left e -> fail $ "Refined2:" ++ show e
+            Right r -> return r
   put (Refined2 _ r) = B.put @i r
 
 -- | 'Hashable' instance for 'Refined2'
@@ -375,7 +379,6 @@ withRefined2TIO = (>>=) . newRefined2TIO @opts @ip @op @i
 -- This first example reads a hex string and makes sure it is between 100 and 200 and then
 -- reads a binary string and adds the values together
 --
--- >>> :set -XPolyKinds
 -- >>> prtRefinedTIO $ withRefined2T @OZ @(ReadBase Int 16 Id) @(Between 100 200 Id) "a3" $ \x -> withRefined2T @OZ @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (r2In x + r2In y)
 -- 794
 --
@@ -470,7 +473,7 @@ newRefined2TImpl :: forall n m opts ip op i
 newRefined2TImpl f i = do
   (ret,mr) <- f $ eval2M i
   let m2 = prt2Impl (getOpt @opts) ret
-  tell [m2Long m2]
+  unless (null (m2Long m2)) $ tell [m2Long m2]
   case mr of
     Nothing -> throwError $ m2Desc m2 <> nullIf " | " (m2Short m2)
     Just r -> return r
@@ -653,8 +656,8 @@ prt2Impl opts v =
 -- Right (Refined2 {r2In = 24, r2Out = "24"})
 --
 mkProxy2 :: forall z opts ip op i
-  . ( z ~ '(opts,ip,op,i)
-    ) => Proxy '(opts,ip,op,i)
+  . z ~ '(opts,ip,op,i)
+    => Proxy '(opts,ip,op,i)
 mkProxy2 = Proxy
 
 -- | same as 'mkProxy2' but checks to make sure the proxy is consistent with the 'Refined2C' constraint
@@ -668,8 +671,8 @@ mkProxy2' = Proxy
 type family MakeR2 p where
   MakeR2 '(opts,ip,op,i) = Refined2 opts ip op i
 
-replaceOpt2 :: forall (opt :: Opt) opt0 ip op i . Refined2 opt0 ip op i -> Refined2 opt ip op i
+replaceOpt2 :: forall (opts :: Opt) opt0 ip op i . Refined2 opt0 ip op i -> Refined2 opts ip op i
 replaceOpt2 = coerce
 
-appendOpt2 :: forall (opt :: Opt) opt0 ip op i . Refined2 opt0 ip op i -> Refined2 (opt0 ':# opt) ip op i
+appendOpt2 :: forall (opts :: Opt) opt0 ip op i . Refined2 opt0 ip op i -> Refined2 (opt0 ':# opts) ip op i
 appendOpt2 = coerce

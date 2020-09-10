@@ -5,7 +5,7 @@
 :load Predicate
 
 ```haskell
-newtype Refined opt p a
+newtype Refined opts p a
 ```
 * **_opt_** display options see [README](README.md)
 * **_p_** predicate on **_a_**

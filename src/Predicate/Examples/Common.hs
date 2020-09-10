@@ -113,7 +113,7 @@ type Ssnfmt = PrintL 3 "%03d-%02d-%04d" Id
 
 -- | \'ip\' type for reading in time
 type Hmsip = Map (ReadP Int Id) (Resplit ":" Id)
--- type Hmsop' = BoolsQuick "" '[ Msg "hours:"   (Between 0 23 Id), Msg "minutes:" (Between 0 59 Id), Msg "seconds:" (Between 0 59 Id)]
+-- type Hmsop' = BoolsQuick "" '[Msg "hours:"   (Between 0 23 Id), Msg "minutes:" (Between 0 59 Id), Msg "seconds:" (Between 0 59 Id)]
 
 -- | \'op\' type for validating the time using a guard
 type Hmsop = GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)] >> 'True

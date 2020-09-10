@@ -148,8 +148,13 @@ evalBool :: ( MonadEval m
               -> m (TT (PP p a))
 evalBool p opts a = fixBoolT <$> eval p opts a
 
-evalQuick :: forall p i . P p i => POpts -> i -> Either String (PP p i)
-evalQuick o = getValLRFromTT . runIdentity . eval @_ (Proxy @p) o
+evalQuick :: forall opts p i
+  . ( OptC opts
+    , P p i
+    )
+    => i
+    -> Either String (PP p i)
+evalQuick = getValLRFromTT . runIdentity . eval @_ (Proxy @p) (getOpt @opts)
 
 -- | identity function without Show instance of 'Id'
 --
@@ -945,7 +950,7 @@ run a = do
 
 -- | run expression with multiple options in a list
 --
--- >>> runs @'[ OL, 'OMsg "field2"] @'( 'True, 'False) ()
+-- >>> runs @'[OL, 'OMsg "field2"] @'( 'True, 'False) ()
 -- field2 >>> Present (True,False) ('(True,False))
 -- PresentT (True,False)
 --
@@ -1836,7 +1841,7 @@ instance (Show (PP p a)
 -- Present (-3) % 1 ((>>) (-3) % 1 | {Negate (-3) % 1 | 3 % 1})
 -- PresentT ((-3) % 1)
 --
--- >>> pl @(Do '[ W ('PresentT I), W 'FalseT, Not Id]) False
+-- >>> pl @(Do '[W ('PresentT I), W 'FalseT, Not Id]) False
 -- True ((>>) True | {Not (Id False)})
 -- TrueT
 --

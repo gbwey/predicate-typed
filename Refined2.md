@@ -5,7 +5,7 @@ Both the original input and the internal value are stored in Refined2
 :load Predicate.Examples.Refined2
 
 ```haskell
-data Refined2 opt ip op i
+data Refined2 opts ip op i
 ```
 * **_opt_** display options see [README](README.md)
 * **_ip_** converts the external type **_i_** to an internal type
@@ -42,7 +42,7 @@ Left "Step 2. False Boolean Check(op) | {False && False | (0-255:0 <= -10) && (l
 ```
 
 ```haskell
-type Hex opt = '(opt, ReadBase Int 16 Id, Between 0 255 Id, String)
+type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 255 Id, String)
 
 $$(refined2TH "0000fe") :: MakeR2 (Hex OL)
 Refined2 {r2In = 254, r2Out = "0000fe"}
@@ -50,7 +50,7 @@ Refined2 {r2In = 254, r2Out = "0000fe"}
 
 Here is an example where the predicate fails at compile-time and we choose to show the details using OU
 ```haskell
->type Hex opt = '(opt, ReadBase Int 16 Id, Between 0 255 Id, String)
+>type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 255 Id, String)
 
 >$$(refined2TH "000ffff") :: MakeR2 (Hex OU)
 

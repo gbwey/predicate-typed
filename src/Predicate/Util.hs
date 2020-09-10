@@ -77,16 +77,19 @@ module Predicate.Util (
   , type Color5
   , type Other1
   , type Other2
+
   , type OZ
   , type OL
-  , type OAN
-  , type OANV
   , type OA
   , type OAB
+  , type OAN
+  , type OAV
+  , type OANV
   , type OU
   , type OUB
+  , type OUN
   , type OUV
-  , type OAV
+  , type OUNV
 
   , HOpts(..)
   , Opt(..)
@@ -190,6 +193,7 @@ module Predicate.Util (
   , showTK
   , prettyOrd
   , removeAnsi
+--  , removeAnsiImpl
   , MonadEval(..)
   , errorInProgram
   , readField
@@ -1574,14 +1578,16 @@ data Opt =
   | OVerbose              -- ^ debug mode verbose
   | OZ                    -- ^ composite: no messages
   | OL                    -- ^ composite: lite version
-  | OAN                   -- ^ composite: ansi + no colors
-  | OANV                  -- ^ composite: ansi + no colors + verbose
   | OA                    -- ^ composite: ansi + colors
-  | OAV                   -- ^ composite: ansi + colors + verbose
   | OAB                   -- ^ composite: ansi + colors + background
+  | OAN                   -- ^ composite: ansi + no colors
+  | OAV                   -- ^ composite: ansi + colors + verbose
+  | OANV                  -- ^ composite: ansi + no colors + verbose
   | OU                    -- ^ composite: unicode + colors
   | OUB                   -- ^ composite: unicode + colors + background
+  | OUN                   -- ^ composite: unicode + no colors
   | OUV                   -- ^ composite: unicode + colors + verbose
+  | OUNV                  -- ^ composite: unicode + no colors + verbose
 
 infixr 6 :#
 
@@ -1645,34 +1651,40 @@ instance OptC 'OZ where
    getOptC = setDisp Ansi <> setNoColor True <> setDebug DZero
 instance OptC 'OL where
    getOptC = setDisp Ansi <> setNoColor True <> setDebug DLite <> setWidth 200
-instance OptC 'OAN where
-   getOptC = setDisp Ansi <> setNoColor True <> setDebug DNormal <> setWidth 100
-instance OptC 'OANV where
-   getOptC = setDisp Ansi <> setNoColor True <> setDebug DVerbose <> setWidth 200
 instance OptC 'OA where
    getOptC = setDisp Ansi <> getOptC @Color5 <> setDebug DNormal <> getOptC @Other2 <> setWidth 100
 instance OptC 'OAB where
    getOptC = setDisp Ansi <> getOptC @Color1 <> setDebug DNormal <> getOptC @Other1 <> setWidth 100
+instance OptC 'OAN where
+   getOptC = setDisp Ansi <> setNoColor True <> setDebug DNormal <> setWidth 100
 instance OptC 'OAV where
    getOptC = getOptC @('OA ':# 'OVerbose ':# 'OWidth 200)
+instance OptC 'OANV where
+   getOptC = setDisp Ansi <> setNoColor True <> setDebug DVerbose <> setWidth 200
 instance OptC 'OU where
    getOptC = getOptC @('OA ':# 'OUnicode)
 instance OptC 'OUB where
    getOptC = getOptC @('OAB ':# 'OUnicode)
+instance OptC 'OUN where
+   getOptC = getOptC @('OAN ':# 'OUnicode)
 instance OptC 'OUV where
    getOptC = getOptC @('OAV ':# 'OUnicode)
+instance OptC 'OUNV where
+   getOptC = getOptC @('OANV ':# 'OUnicode)
 
 -- | option synonyms to save a keystroke
 type OZ = 'OZ     -- 'OAnsi ':# 'OColorOff ':# 'OZero
 type OL = 'OL     -- 'OAnsi ':# 'OColorOff ':# 'OLite ':# 'OWidth 200
-type OAN = 'OAN   -- 'OAnsi ':# 'OColorOff ':# 'ONormal ':# 'OWidth 100
-type OANV = 'OANV -- 'OAnsi ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
 type OA = 'OA     -- 'OAnsi ':# Color5 ':# 'ONormal ':# Other2 ':# 'OWidth 100
 type OAB = 'OAB   -- 'OAnsi ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
+type OAN = 'OAN   -- 'OAnsi ':# 'OColorOff ':# 'ONormal ':# 'OWidth 100
 type OAV = 'OAV   -- 'OAnsi ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
+type OANV = 'OANV -- 'OAnsi ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
 type OU = 'OU     -- 'OUnicode ':# Color5 ':# 'ONormal ':# Other2 ':# 'OWidth 100
-type OUB = 'OUB   -- 'OUB -- 'OUnicode ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
+type OUB = 'OUB   -- 'OUnicode ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
+type OUN = 'OUN   -- 'OUnicode ':# 'OColorOff ':# 'OWidth 200
 type OUV = 'OUV   -- 'OUnicode ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
+type OUNV = 'OUNV -- 'OUnicode ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
 
 -- | convert typelevel options to 'POpts'
 --

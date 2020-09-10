@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 80ed4bd3406c4cb2b953f597d3040f019d8bedfdb94575fc1369b6033f1a52b6
+-- hash: 84546ab745c9c8eaec3e00e9b352cd0cdd044e67f41c2341bc410af44b42cdfc
 
 name:           predicate-typed
 version:        0.7.3.0
@@ -50,14 +50,13 @@ library
       Predicate.Data.These
       Predicate.Data.Tuple
       Predicate.Examples.Common
-      Predicate.Examples.Refined1
       Predicate.Examples.Refined2
       Predicate.Examples.Refined3
       Predicate.Prelude
       Predicate.Refined
-      Predicate.Refined1
       Predicate.Refined2
       Predicate.Refined3
+      Predicate.Refined5
       Predicate.TH_Orphans
       Predicate.Util
       Predicate.Util_TH
@@ -125,14 +124,13 @@ test-suite doctests
       Predicate.Data.These
       Predicate.Data.Tuple
       Predicate.Examples.Common
-      Predicate.Examples.Refined1
       Predicate.Examples.Refined2
       Predicate.Examples.Refined3
       Predicate.Prelude
       Predicate.Refined
-      Predicate.Refined1
       Predicate.Refined2
       Predicate.Refined3
+      Predicate.Refined5
       Predicate.TH_Orphans
       Predicate.Util
       Predicate.Util_TH
@@ -202,14 +200,13 @@ test-suite predicate-typed-test
       Predicate.Data.These
       Predicate.Data.Tuple
       Predicate.Examples.Common
-      Predicate.Examples.Refined1
       Predicate.Examples.Refined2
       Predicate.Examples.Refined3
       Predicate.Prelude
       Predicate.Refined
-      Predicate.Refined1
       Predicate.Refined2
       Predicate.Refined3
+      Predicate.Refined5
       Predicate.TH_Orphans
       Predicate.Util
       Predicate.Util_TH

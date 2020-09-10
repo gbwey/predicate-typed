@@ -183,7 +183,7 @@ unnamedTests = [
 allProps :: [TestTree]
 allProps =
   [
-    testProperty "base16" $ forAll (genRefined3P (mkProxy3 @'(OAN, ReadBase Int 16 Id, 'True, ShowBase 16 Id, String)) arbitrary) (\r -> evalQuick @(ReadBase Int 16 Id) (getOpt @OL) (r3Out r) === Right (r3In r))
+    testProperty "base16" $ forAll (genRefined3P (mkProxy3 @'(OAN, ReadBase Int 16 Id, 'True, ShowBase 16 Id, String)) arbitrary) (\r -> evalQuick @OL @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
   , testProperty "readshow" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN)) (\r -> read @(HexLtR3 OAN) (show r) === r)
   , testProperty "jsonroundtrip1" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN))
       (\r -> testRefined3PJ Proxy (r3Out r) === Right r)
@@ -266,7 +266,7 @@ tstextras =
   , newRefined3P (daten @OAN) "12/02/19" @?= Right (unsafeRefined3 (fromGregorian 2019 12 2) "2019-12-02")
   , newRefined3P (Proxy @(Luhn OAN '[1,1,1,1])) "1230" @?= Right (unsafeRefined3 [1,2,3,0] "1-2-3-0")
   , newRefined3P (Proxy @(Luhn OAN '[1,2,3])) "123455" @?= Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
-  , ((runIdentity $ unRavelT $ tst1a @OAN @Identity) ^. _1) @?= Right ((163,"a3"),(12,"12"))
+  , (runIdentity (unRavelT $ tst1a @OAN @Identity) ^. _1) @?= Right ((163,"a3"),(12,"12"))
   , runIdentity (unRavelT yy1) ^? _1 . _Right @?= Just (unsafeRefined3 4 "someval val=004")
   , runIdentity (unRavelT yy2) ^? _1 . _Right @?= Just (unsafeRefined3 3 "someval val=003")
   , runIdentity (unRavelT yy3) ^? _1 . _Left @?= Just "Step 2. False Boolean Check(op) | {12 <= 7}"

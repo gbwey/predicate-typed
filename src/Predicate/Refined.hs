@@ -1,3 +1,12 @@
+{-
+return Msg0 and then we can reuse it
+
+prtRefinedIO :: forall opts p a
+   . RefinedC opts p a
+   => a
+   -> IO (Either (BoolT Bool) (Refined opts p a))
+-}
+
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -32,6 +41,7 @@ module Predicate.Refined (
   , unRefined
   , RefinedC
   , RefinedT(..)
+  , evalBoolP
 
   -- ** print methods
   , prtRefinedIO
@@ -82,7 +92,11 @@ import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
 import Data.Maybe (fromMaybe)
+import Data.Char (isSpace)
+import Data.Tree.Lens (root)
 import Data.Coerce
+import Control.Arrow (left)
+
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -92,7 +106,8 @@ import Data.Coerce
 
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
 --
-newtype Refined (opts :: Opt) p a = Refined a deriving (Show, Eq, Generic, TH.Lift)
+newtype Refined (opts :: Opt) p a = Refined a
+  deriving (Show, Eq, Generic, TH.Lift)
 
 -- | extract the value from Refined
 unRefined :: forall k (opts :: Opt) (p :: k) a. Refined opts p a -> a
@@ -113,7 +128,7 @@ instance RefinedC opts p String => IsString (Refined opts p String) where
     let (w,mr) = runIdentity $ newRefinedM @opts @p s
     in fromMaybe (error $ "Refined(fromString):" ++ errorDisplay (getOpt @opts) w) mr
 
-errorDisplay :: POpts -> (String,(String,String)) -> String
+errorDisplay :: POpts -> (String, (String, String)) -> String
 errorDisplay o (bp,(top,e)) =
      bp
   ++ nullIf " " top
@@ -241,14 +256,14 @@ genRefined :: forall opts p a .
    => Gen a
    -> Gen (Refined opts p a)
 genRefined g =
-  let o = getOpt @opts
-      f !cnt = do
-        ma <- suchThatMaybe g $ \a -> evalQuick @p o a == Right True
+  let f !cnt = do
+        ma <- suchThatMaybe g $ \a -> evalQuick @opts @p a == Right True
         case ma of
           Nothing ->
-             if cnt >= oRecursion o
-             then error $ setOtherEffects o ("genRefined recursion exceeded(" ++ show (oRecursion o) ++ ")")
-             else f (cnt+1)
+             let o = getOpt @opts
+             in if cnt >= oRecursion o
+                then error $ setOtherEffects o ("genRefined recursion exceeded(" ++ show (oRecursion o) ++ ")")
+                else f (cnt+1)
           Just a -> pure $ unsafeRefined a
   in f 0
 
@@ -331,13 +346,14 @@ rapply :: forall opts p a opts1 z m . (z ~ (opts ':# opts1), OptC opts1, Refined
   -> RefinedT m (Refined z p a)
 rapply f ma mb = do
   let opts = getOpt @opts
-  tell [setOtherEffects opts "=== a ==="]
+  let uc = unless (hasNoTree opts)
+  uc $ tell [setOtherEffects opts "=== a ==="]
   Refined x <- ma
   let opts1 = getOpt @opts1
-  tell [setOtherEffects opts1 "=== b ==="]
+  uc $ tell [setOtherEffects opts1 "=== b ==="]
   Refined y <- mb
   let opts2 = getOpt @z
-  tell [setOtherEffects opts2 "=== a `op` b ==="]
+  uc $ tell [setOtherEffects opts2 "=== a `op` b ==="]
   newRefinedT @_ @p (f x y)
 
 -- | same as 'rapply' except we already have valid 'Refined' values as input
@@ -463,6 +479,30 @@ newRefined a =
                     DLite -> Left (bp <> nullIf " " top)
                     _ -> Left e
        Just r -> Right r
+{-
+data Msg0 = Msg0 { m0Desc :: !String
+                 , m0Short :: !String
+                 , m0Long :: !String
+                 } deriving Eq
+
+instance Show Msg0 where
+  show (Msg0 a b c) = a <> nullIf " | " b <> nullIf "\n" c
+-}
+evalBoolP :: forall opts p a
+   . RefinedC opts p a
+   => a
+   -> Either String a
+evalBoolP i =
+  let pp = runIdentity $ evalBool (Proxy @p) (getOpt @opts) i
+      opts = getOpt @opts
+      (lr,p2) = getValAndPE pp
+      z = let zz = p2 ^. root . pString
+          in if all isSpace zz then "FalseP" else "{" <> zz <> "}"
+      w = case lr of
+            Right True -> Right i
+            Right False -> Left $ "false boolean check" ++ nullIf " | " z
+            Left e -> Left $ "failed boolean check " ++ nullIf " | " e
+  in left (++ ("\n" ++ prtTreePure opts p2)) w
 
 newRefinedM :: forall opts p a m
    . ( MonadEval m
@@ -491,7 +531,7 @@ newRefinedTImpl f a = do
   let o = getOpt @opts
   tt <- f $ evalBool (Proxy @p) o a
   let msg = prtTree o tt
-  tell [msg]
+  unless (null msg) $ tell [msg]
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
     _ -> throwError $ colorBoolT' o (_tBool tt)
@@ -571,8 +611,9 @@ unsafeRefined' a =
                  DLite -> error $ bp ++ "\n" ++ s
                  _ -> error $ bp ++ "\n" ++ s
 
-replaceOpt :: forall (opt :: Opt) opt0 p a . Refined opt0 p a -> Refined opt p a
+replaceOpt :: forall (opts :: Opt) opt0 p a . Refined opt0 p a -> Refined opts p a
 replaceOpt = coerce
 
-appendOpt :: forall (opt :: Opt) opt0 p a . Refined opt0 p a -> Refined (opt0 ':# opt) p a
+appendOpt :: forall (opts :: Opt) opt0 p a . Refined opt0 p a -> Refined (opt0 ':# opts) p a
 appendOpt = coerce
+

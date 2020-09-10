@@ -1,3 +1,5 @@
+-- arbitrary and hash use the internal value!
+-- binary and json use the external value
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -148,10 +150,9 @@ unsafeRefined3' :: forall opts ip op fmt i
                 => i
                 -> Refined3 opts ip op fmt i
 unsafeRefined3' i =
-  let (ret,mr) = runIdentity $ eval3M @opts @ip @op @fmt i
-  in case mr of
-       Nothing -> error $ show (prt3Impl (getOpt @opts) ret)
-       Just r -> r
+  case newRefined3 @opts @ip @op @fmt i of
+    Left e -> error $ show e
+    Right r -> r
 
 -- | directly load values into 'Refined3' without any checking
 unsafeRefined3 ::
@@ -193,10 +194,9 @@ deriving instance ( TH.Lift (PP ip i)
 instance (Refined3C opts ip op fmt String, Show (PP ip String))
   => IsString (Refined3 opts ip op fmt String) where
   fromString s =
-    let (ret,mr) = runIdentity $ eval3M @opts @ip @op @fmt s
-    in case mr of
-         Nothing -> error $ "Refined3(fromString):" ++ show (prt3Impl (getOpt @opts) ret)
-         Just r -> r
+    case newRefined3 @opts @ip @op @fmt s of
+      Left e -> error $ "Refined3(fromString):" ++ show e
+      Right r -> r
 
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
@@ -244,10 +244,10 @@ instance ( Eq i
 -- | 'ToJSON' instance for 'Refined3'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined3 @OZ @(ReadBase Int 16 Id) @(Between 0 255 Id) @(ShowBase 16 Id) 254 "fe")
+-- >>> A.encode (unsafeRefined3' @OZ @(ReadBase Int 16 Id) @(Between 0 255 Id) @(ShowBase 16 Id) "fe")
 -- "\"fe\""
 --
--- >>> A.encode (unsafeRefined3 @OZ @Id @'True @Id 123 123)
+-- >>> A.encode (unsafeRefined3' @OZ @Id @'True @Id 123)
 -- "123"
 --
 instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 opts ip op fmt i) where
@@ -288,10 +288,9 @@ instance ( Refined3C opts ip op fmt i
          ) => FromJSON (Refined3 opts ip op fmt i) where
   parseJSON z = do
                   i <- parseJSON @i z
-                  let (ret,mr) = runIdentity $ eval3M @opts @ip @op @fmt i
-                  case mr of
-                    Nothing -> fail $ "Refined3:" ++ show (prt3Impl (getOpt @opts) ret)
-                    Just r -> return r
+                  case newRefined3 @opts @ip @op @fmt i of
+                    Left e -> fail $ "Refined3:" ++ show e
+                    Right r -> return r
 
 -- | 'Arbitrary' instance for 'Refined3'
 --
@@ -326,16 +325,16 @@ genRefined3P ::
   -> Gen (PP ip i)
   -> Gen (Refined3 opts ip op fmt i)
 genRefined3P _ g =
-  let o = getOpt @opts
-      f !cnt = do
-        mppi <- suchThatMaybe g $ \a -> evalQuick @op o a == Right True
+  let f !cnt = do
+        mppi <- suchThatMaybe g $ \a -> evalQuick @opts @op a == Right True
         case mppi of
           Nothing ->
-             if cnt >= oRecursion o
-             then error $ setOtherEffects o ("genRefined3P recursion exceeded(" ++ show (oRecursion o) ++ ")")
-             else f (cnt+1)
+             let o = getOpt @opts
+             in if cnt >= oRecursion o
+                then error $ setOtherEffects o ("genRefined3P recursion exceeded(" ++ show (oRecursion o) ++ ")")
+                else f (cnt+1)
           Just ppi ->
-             case evalQuick @fmt o ppi of
+             case evalQuick @opts @fmt ppi of
                Left e -> error $ "genRefined3P: formatting failed!! " ++ e
                Right r -> pure $ unsafeRefined3 ppi r
   in f 0
@@ -377,10 +376,9 @@ instance ( Refined3C opts ip op fmt i
          ) => Binary (Refined3 opts ip op fmt i) where
   get = do
           i <- B.get @i
-          let (ret,mr) = runIdentity $ eval3M @opts @ip @op @fmt i
-          case mr of
-            Nothing -> fail $ "Refined3:" ++ show (prt3Impl (getOpt @opts) ret)
-            Just r -> return r
+          case newRefined3 @opts @ip @op @fmt i of
+            Left e -> fail $ "Refined3:" ++ show e
+            Right r -> return r
   put (Refined3 _ r) = B.put @i r
 
 -- | 'Hashable' instance for 'Refined3'
@@ -412,7 +410,10 @@ mkProxy3 ::
 mkProxy3 = Proxy
 
 -- | same as 'mkProxy3' but checks to make sure the proxy is consistent with the 'Refined3C' constraint
-mkProxy3' :: forall z opts ip op fmt i . (z ~ '(opts,ip,op,fmt,i), Refined3C opts ip op fmt i) => Proxy '(opts,ip,op,fmt,i)
+mkProxy3' :: forall z opts ip op fmt i
+  . ( z ~ '(opts,ip,op,fmt,i)
+    , Refined3C opts ip op fmt i
+    ) => Proxy '(opts,ip,op,fmt,i)
 mkProxy3' = Proxy
 
 -- | type family for converting from a 5-tuple '(opts,ip,op,fmt,i) to a 'Refined3' type
@@ -439,8 +440,8 @@ withRefined3TIO = (>>=) . newRefined3TPIO (Proxy @'(opts,ip,op,fmt,i))
 --
 -- >>> :set -XPolyKinds
 -- >>> :set -XRankNTypes
--- >>> b16 :: forall opts . Proxy '( opts, ReadBase Int 16 Id, Between 100 200 Id, ShowBase 16 Id, String); b16 = Proxy
--- >>> b2 :: forall opts . Proxy '( opts, ReadBase Int 2 Id, 'True, ShowBase 2 Id, String); b2 = Proxy
+-- >>> b16 :: forall opts . Proxy '(opts, ReadBase Int 16 Id, Between 100 200 Id, ShowBase 16 Id, String); b16 = Proxy
+-- >>> b2 :: forall opts . Proxy '(opts, ReadBase Int 2 Id, 'True, ShowBase 2 Id, String); b2 = Proxy
 -- >>> prtRefinedTIO $ withRefined3TP (b16 @OZ) "a3" $ \x -> withRefined3TP (b2 @OZ) "1001110111" $ \y -> pure (r3In x + r3In y)
 -- 794
 --
@@ -530,7 +531,7 @@ newRefined3TP = newRefined3TPImpl (return . runIdentity)
 -- failure msg[Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}]
 --
 -- >>> unRavelT $ newRefined3TIO @OL @(Hide (Rescan "(\\d+)" Id >> ConcatMap (Snd Id) Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff) Id) @(ShowP Id) "|23|99|255|254.911."
--- (Left "Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}",[""])
+-- (Left "Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}",[])
 --
 newRefined3TIO :: forall opts ip op fmt i m
    . ( Refined3C opts ip op fmt i
@@ -564,7 +565,7 @@ newRefined3TPImpl :: forall n m opts ip op fmt i proxy
 newRefined3TPImpl f _ i = do
   (ret,mr) <- f $ eval3M i
   let m3 = prt3Impl (getOpt @opts) ret
-  tell [m3Long m3]
+  unless (null (m3Long m3)) $ tell [m3Long m3]
   case mr of
     Nothing -> throwError $ m3Desc m3 <> nullIf " | " (m3Short m3)
     Just r -> return r
@@ -582,7 +583,7 @@ newRefined3TPSkipIPImpl :: forall n m opts ip op fmt i proxy
 newRefined3TPSkipIPImpl f _ a = do
   (ret,mr) <- f $ eval3MSkip a
   let m3 = prt3Impl (getOpt @opts) ret
-  tell [m3Long m3]
+  unless (null (m3Long m3)) $ tell [m3Long m3]
   case mr of
     Nothing -> throwError $ m3Desc m3 <> nullIf " | " (m3Short m3)
     Just r -> return r
@@ -616,7 +617,7 @@ rapply3 :: forall opts ip op fmt i m .
   -> RefinedT m (Refined3 opts ip op fmt i)
 rapply3 = rapply3P (Proxy @'(opts,ip,op,fmt,i))
 
--- prtRefinedTIO $ rapply3P base16 (+) (newRefined3TP Proxy "ff") (newRefined3TP Proxy "22")
+-- prtRefinedTIO $ rapply3P (base16 @OU) (+) (newRefined3TP Proxy "ff") (newRefined3TP Proxy "22")
 
 -- | same as 'rapply3' but uses a 5-tuple proxy instead
 rapply3P :: forall opts ip op fmt i proxy m .
@@ -631,12 +632,13 @@ rapply3P :: forall opts ip op fmt i proxy m .
   -> RefinedT m (Refined3 opts ip op fmt i)
 rapply3P p f ma mb = do
   let opts = getOpt @opts
-  tell [setOtherEffects opts "=== a ==="]
+  let uc = unless (hasNoTree opts)
+  uc $ tell [setOtherEffects opts "=== a ==="]
   Refined3 x _ <- ma
-  tell [setOtherEffects opts "=== b ==="]
+  uc $ tell [setOtherEffects opts "=== b ==="]
   Refined3 y _ <- mb
   -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  tell [setOtherEffects opts "=== a `op` b ==="]
+  uc $ tell [setOtherEffects opts "=== a `op` b ==="]
   newRefined3TPSkipIPImpl (return . runIdentity) p (f x y)
 
 -- | An ADT that summarises the results of evaluating Refined3 representing all possible states
@@ -668,7 +670,7 @@ newRefined3P' :: forall opts ip op fmt i proxy m
   -> i
   -> m (Either Msg3 (Refined3 opts ip op fmt i))
 newRefined3P' _ i = do
-  (ret,mr)<- eval3M i
+  (ret,mr) <- eval3M i
   return $ maybe (Left $ prt3Impl (getOpt @opts) ret) Right mr
 
 -- | same as 'newRefined3P' but skips the proxy and allows you to set each parameter individually using type application
@@ -848,9 +850,9 @@ prt3Impl opts v =
               <> fixLite opts () t3
          in mkMsg3 m n r
 
-replaceOpt3 :: forall (opt :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 opt ip op fmt i
+replaceOpt3 :: forall (opts :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 opts ip op fmt i
 replaceOpt3 = coerce
 
-appendOpt3 :: forall (opt :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 (opt0 ':# opt) ip op fmt i
+appendOpt3 :: forall (opts :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 (opt0 ':# opts) ip op fmt i
 appendOpt3 = coerce
 

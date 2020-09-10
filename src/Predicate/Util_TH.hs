@@ -1,5 +1,6 @@
 -- stack exec -- ghc-pkg unregister ghc-lib-parser-8.8.0.20190424 --force
 {-# OPTIONS -Wall #-}
+{-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -17,10 +18,6 @@ module Predicate.Util_TH (
     refinedTH
   , refinedTHIO
 
-  -- ** Refined1
-  , refined1TH
-  , refined1THIO
-
   -- ** Refined2
   , refined2TH
   , refined2THIO
@@ -28,13 +25,18 @@ module Predicate.Util_TH (
   -- ** Refined3
   , refined3TH
   , refined3THIO
+
+  -- ** Refined5
+  , refined5TH
+  , refined5THIO
+
  ) where
 import Predicate.Util
 import Predicate.Core
 import Predicate.Refined
-import Predicate.Refined1
 import Predicate.Refined2
 import Predicate.Refined3
+import Predicate.Refined5
 
 import qualified Language.Haskell.TH.Syntax as TH
 import Data.Functor.Identity
@@ -93,8 +95,8 @@ refinedTH i =
       ((bp,(top,e)),mr) = runIdentity $ newRefinedM @opts @p i
   in case mr of
        Nothing ->
-         let msg1 = if hasNoTree (getOpt @opts) then "" else "\n" ++ e ++ "\n"
-         in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top
+         let msg1 = if hasNoTree (getOpt @opts) || null e then "" else "\n" ++ e
+         in fail $ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top ++ msg1
        Just r -> TH.TExp <$> TH.lift r
 
 refinedTHIO :: forall opts p i
@@ -106,77 +108,9 @@ refinedTHIO i = do
   ((bp,(top,e)),mr) <- TH.runIO (newRefinedM @opts @p i)
   case mr of
        Nothing ->
-         let msg1 = if hasNoTree (getOpt @opts) then "" else "\n" ++ e ++ "\n"
-         in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top
+         let msg1 = if hasNoTree (getOpt @opts) || null e then "" else "\n" ++ e
+         in fail $ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top ++ msg1
        Just r -> TH.TExp <$> TH.lift r
-
--- | creates a 'Refined1.Refined1' refinement type
---
--- >>> $$(refined1TH 100) :: Refined1 OZ Id (Between 100 125 Id) Id Int
--- Refined1 100
---
--- >>> $$(refined1TH 100) :: Refined1 OZ Id (Between 100 125 Id) Id Int
--- Refined1 100
---
--- >>> $$(refined1TH 100) :: Refined1 OZ Id (Between 100 125 Id) Id Int
--- Refined1 100
---
--- @
--- >$$(refined1TH 99) :: Refined1 OZ Id (Between 100 125 Id) Id Int
---
--- <interactive>:127:4: error:
---     *
--- *** Step 1. Success Initial Conversion(ip) (99) ***
---
--- P Id 99
---
--- *** Step 2. False Boolean Check(op) ***
---
--- False 100 <= 99
--- |
--- +- P Id 99
--- |
--- +- P '100
--- |
--- `- P '125
---
--- refined1TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
---     * In the Template Haskell splice $$(refined1TH 99)
---       In the expression:
---           $$(refined1TH 99) :: Refined1 OZ Id (Between 100 125 Id) Id Int
---       In an equation for \'it\':
---           it = $$(refined1TH 99) :: Refined1 OZ Id (Between 100 125 Id) Id Int
--- @
---
-refined1TH :: forall opts ip op fmt i
-  . ( TH.Lift (PP ip i)
-    , Refined1C opts ip op fmt i
-    , Show (PP ip i)
-    )
-  => i
-  -> TH.Q (TH.TExp (Refined1 opts ip op fmt i))
-refined1TH i =
-  let msg0 = "refined1TH"
-      o = getOpt @opts
-  in case newRefined1 @opts @ip @op @fmt i of
-    Left m1 ->
-      let msg1 = if hasNoTree o then "" else "\n" ++ m1Long m1 ++ "\n"
-      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m1Desc m1 <> " | " <> m1Short m1)
-    Right r -> TH.TExp <$> TH.lift r
-
--- | creates a 'Refined1.Refined1' refinement type using IO
-refined1THIO :: forall opts ip op fmt i
-  . ( TH.Lift (PP ip i)
-    , Refined1C opts ip op fmt i
-    , Show (PP ip i)
-    )
-  => i
-  -> TH.Q (TH.TExp (Refined1 opts ip op fmt i))
-refined1THIO i = do
-  x <- TH.runIO (newRefined1' @opts @ip @op @fmt i)
-  case x of
-    Right a -> TH.TExp <$> TH.lift a
-    Left e -> fail $ show e
 
 -- | creates a 'Refined2.Refined2' refinement type
 --
@@ -222,13 +156,9 @@ refined2TH :: forall opts ip op i
   => i
   -> TH.Q (TH.TExp (Refined2 opts ip op i))
 refined2TH i =
-  let msg0 = "refined2TH"
-      o = getOpt @opts
-  in case newRefined2 @opts @ip @op i of
-       Left m2 ->
-         let msg1 = if hasNoTree o then "" else "\n" ++ m2Long m2 ++ "\n"
-         in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m2Desc m2 <> " | " <> m2Short m2)
-       Right r -> TH.TExp <$> TH.lift r
+  case newRefined2 @opts @ip @op i of
+    Left e -> fail $ show e
+    Right r -> TH.TExp <$> TH.lift r
 
 -- | creates a 'Refined2.Refined2' refinement type using IO
 refined2THIO :: forall opts ip op i
@@ -242,8 +172,8 @@ refined2THIO :: forall opts ip op i
 refined2THIO i = do
   x <- TH.runIO (newRefined2' @opts @ip @op i)
   case x of
-    Right a -> TH.TExp <$> TH.lift a
     Left e -> fail $ show e
+    Right a -> TH.TExp <$> TH.lift a
 
 -- | creates a 'Refined3.Refined3' refinement type
 --
@@ -292,12 +222,8 @@ refined3TH :: forall opts ip op fmt i
   => i
   -> TH.Q (TH.TExp (Refined3 opts ip op fmt i))
 refined3TH i =
-  let msg0 = "refined3TH"
-  in case newRefined3 @opts @ip @op @fmt i of
-    Left m3 ->
-      let o = getOpt @opts
-          msg1 = if hasNoTree o then "" else "\n" ++ m3Long m3 ++ "\n"
-      in fail $ msg1 ++ msg0 ++ ": predicate failed with " ++ (m3Desc m3 <> " | " <> m3Short m3)
+  case newRefined3 @opts @ip @op @fmt i of
+    Left e -> fail $ show e
     Right r -> TH.TExp <$> TH.lift r
 
 -- | creates a 'Refined3.Refined3' refinement type using IO
@@ -312,6 +238,33 @@ refined3THIO :: forall opts ip op fmt i
 refined3THIO i = do
   x <- TH.runIO (newRefined3' @opts @ip @op @fmt i)
   case x of
-    Right a -> TH.TExp <$> TH.lift a
     Left e -> fail $ show e
+    Right a -> TH.TExp <$> TH.lift a
+
+refined5TH :: forall opts ip op i
+  . ( Show (PP ip i)
+    , TH.Lift (PP ip i)
+    , Refined2C opts ip op i
+    )
+  => i
+  -> TH.Q (TH.TExp (Refined5 opts ip op i))
+refined5TH i =
+  case newRefined5 @opts @ip @op i of
+    Left e -> fail $ show e
+    Right r -> TH.TExp <$> TH.lift r
+
+
+-- | creates a 'Refined5.Refined5' refinement type using IO
+refined5THIO :: forall opts ip op i
+  . ( TH.Lift (PP ip i)
+    , Refined2C opts ip op i
+    , Show (PP ip i)
+    )
+  => i
+  -> TH.Q (TH.TExp (Refined5 opts ip op i))
+refined5THIO i = do
+  x <- TH.runIO (newRefined5' @opts @ip @op i)
+  case x of
+    Left e -> fail $ show e
+    Right a -> TH.TExp <$> TH.lift a
 
