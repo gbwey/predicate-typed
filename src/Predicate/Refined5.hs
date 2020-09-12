@@ -171,6 +171,12 @@ instance ( i ~ String
 -- >>> reads @(Refined5 OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (GuardBool "len/=4" (Len == 4)) String) "Refined5 [192,168,0,1]"
 -- [(Refined5 [192,168,0,1],"")]
 --
+-- >>> reads @(Refined5 OZ (ReadP Rational Id) (Id > Negate 4 % 3) String) "Refined5 (-10 % 9)"
+-- [(Refined5 ((-10) % 9),"")]
+--
+-- >>> reads @(Refined5 OZ (ReadP Rational Id) (Id > Negate 4 % 3) String) "Refined5 (-10 % 6)"
+-- []
+
 instance ( Refined2C opts ip op i
          , Read (PP ip i)
          ) => Read (Refined5 opts ip op i) where
@@ -254,7 +260,9 @@ instance ( Arbitrary (PP ip i)
 -- | create a 'Refined5' generator using a generator to restrict the values (so it completes)
 genRefined5 ::
     forall opts ip op i
-  . Refined2C opts ip op i
+  . ( Refined2C opts ip op i
+    , HasCallStack
+    )
   => Gen (PP ip i)
   -> Gen (Refined5 opts ip op i)
 genRefined5 = genRefined5P Proxy
@@ -263,7 +271,9 @@ genRefined5 = genRefined5P Proxy
 -- | create a 'Refined5' generator using a proxy
 genRefined5P ::
     forall opts ip op i
-  . Refined2C opts ip op i
+  . ( Refined2C opts ip op i
+    , HasCallStack
+    )
   => Proxy '(opts,ip,op,i)
   -> Gen (PP ip i)
   -> Gen (Refined5 opts ip op i)
@@ -373,7 +383,7 @@ newRefined5T :: forall opts ip op i m
    . ( Refined2C opts ip op i
      , Monad m
      , Show (PP ip i)
-    ) => i
+     ) => i
       -> RefinedT m (Refined5 opts ip op i)
 newRefined5T = newRefined5TImpl (return . runIdentity)
 
@@ -382,7 +392,7 @@ newRefined5TP :: forall opts ip op i proxy m
    . ( Refined2C opts ip op i
      , Monad m
      , Show (PP ip i)
-   ) => proxy '(opts,ip,op,i)
+     ) => proxy '(opts,ip,op,i)
   -> i
   -> RefinedT m (Refined5 opts ip op i)
 newRefined5TP _ = newRefined5TImpl (return . runIdentity)
@@ -392,7 +402,7 @@ newRefined5TIO :: forall opts ip op i m
    . ( Refined2C opts ip op i
      , MonadIO m
      , Show (PP ip i)
-    ) => i
+     ) => i
       -> RefinedT m (Refined5 opts ip op i)
 newRefined5TIO = newRefined5TImpl @IO @m liftIO
 
@@ -401,13 +411,13 @@ newRefined5TImpl :: forall n m opts ip op i
      , Monad m
      , MonadEval n
      , Show (PP ip i)
-   ) => (forall x . n x -> RefinedT m x)
+     ) => (forall x . n x -> RefinedT m x)
    -> i
    -> RefinedT m (Refined5 opts ip op i)
 newRefined5TImpl f i = do
   (ret,mr) <- f $ eval5M i
   let m2 = prt2Impl (getOpt @opts) ret
-  unless (null (m2Long m2)) $ tell [m2Long m2]
+  unlessNullM (m2Long m2) (tell . pure)
   case mr of
     Nothing -> throwError $ m2Desc m2 <> nullIf " | " (m2Short m2)
     Just r -> return r
@@ -477,14 +487,14 @@ newRefined5P' _ i = do
 newRefined5 :: forall opts ip op i
   . ( Refined2C opts ip op i
     , Show (PP ip i)
-  ) => i
+    ) => i
     -> Either Msg2 (Refined5 opts ip op i)
 newRefined5 = newRefined5P Proxy
 
 newRefined5P :: forall opts ip op i
   . ( Refined2C opts ip op i
     , Show (PP ip i)
-  ) => Proxy '(opts,ip,op,i)
+    ) => Proxy '(opts,ip,op,i)
     -> i
     -> Either Msg2 (Refined5 opts ip op i)
 newRefined5P _ i =

@@ -464,6 +464,12 @@ instance P AscT x => P Asc x where
 -- >>> pz @Asc' [1,2,3,4,5,5,7]
 -- FalseT
 --
+-- >>> pz @Asc' []
+-- TrueT
+--
+-- >>> pz @Asc' [-10]
+-- TrueT
+--
 data Asc'
 type AscT' = All (Fst Id < Snd Id) Pairs
 

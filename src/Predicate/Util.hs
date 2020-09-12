@@ -2,6 +2,7 @@
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
+{-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -203,6 +204,7 @@ module Predicate.Util (
   , pureTryTest
   , pureTryTestPred
   , unlessNull
+  , unlessNullM
   , badLength
   , showIndex
   , mapB
@@ -819,7 +821,10 @@ class GetROpts (os :: [ROpt]) where
   getROpts :: ([String], [RL.PCREOption])
 instance GetROpts '[] where
   getROpts = ([], [])
-instance (Typeable r, GetROpt r, GetROpts rs) => GetROpts (r ': rs) where
+instance ( Typeable r
+         , GetROpt r
+         , GetROpts rs
+         ) => GetROpts (r ': rs) where
   getROpts = ((showTK @r :) *** (getROpt @r :)) (getROpts @rs)
 
 displayROpts :: [String] -> String
@@ -1828,7 +1833,7 @@ primeFactors n =
 primes :: [Integer]
 primes = 2 : 3 : 5 : primes'
   where
-    isPrime' [] _ = error "primes:programmer error"
+    isPrime' [] _ = errorInProgram "primes is empty"
     isPrime' (p:ps) n = p*p > n || n `rem` p /= 0 && isPrime' ps n
     primes' = 7 : filter (isPrime' primes') (scanl (+) 11 $ cycle [2,4,2,4,6,2,6,4])
 
@@ -1851,6 +1856,11 @@ type family OptT (xs :: [Opt]) where
 unlessNull :: (Foldable t, Monoid m) => t a -> m -> m
 unlessNull t m | null t = mempty
                | otherwise = m
+
+unlessNullM :: (Foldable t, Applicative m) => t a -> (t a -> m ()) -> m ()
+unlessNullM t f
+  | null t = pure ()
+  | otherwise = f t
 
 -- | message to display when the length of a foldable is exceeded
 badLength :: Foldable t

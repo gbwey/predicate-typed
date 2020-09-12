@@ -284,6 +284,7 @@ instance ( Arbitrary i
 genRefined2 ::
     forall opts ip op i
   . ( Refined2C opts ip op i
+    , HasCallStack
     , Show (PP ip i)
     )
   => Gen i
@@ -295,6 +296,7 @@ genRefined2 = genRefined2P Proxy
 genRefined2P ::
     forall opts ip op i
   . ( Refined2C opts ip op i
+    , HasCallStack
     , Show (PP ip i)
     )
   => Proxy '(opts,ip,op,i)
@@ -312,7 +314,7 @@ genRefined2P _ g =
           Just i -> do
              let lr = newRefined2 @opts @ip @op i
              case lr of
-               Left e -> error $ "conversion failed: programming error failed!! " ++ show e
+               Left e -> errorInProgram $ "conversion failed:" ++ show e
                Right r -> pure r
   in f 0
 
@@ -473,7 +475,7 @@ newRefined2TImpl :: forall n m opts ip op i
 newRefined2TImpl f i = do
   (ret,mr) <- f $ eval2M i
   let m2 = prt2Impl (getOpt @opts) ret
-  unless (null (m2Long m2)) $ tell [m2Long m2]
+  unlessNullM (m2Long m2) (tell . pure)
   case mr of
     Nothing -> throwError $ m2Desc m2 <> nullIf " | " (m2Short m2)
     Just r -> return r

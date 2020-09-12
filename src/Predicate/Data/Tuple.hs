@@ -82,18 +82,10 @@ instance Show x => P Dup x where
 -- PresentT [(1,2),(2,3),(3,4)]
 --
 -- >>> pz @Pairs []
--- FailT "Pairs:no data found"
+-- PresentT []
 --
 -- >>> pz @Pairs [1]
--- FailT "Pairs:only one element found"
---
--- >>> pl @Pairs ([] :: [()])
--- Error Pairs:no data found
--- FailT "Pairs:no data found"
---
--- >>> pl @Pairs [1]
--- Error Pairs:only one element found
--- FailT "Pairs:only one element found"
+-- PresentT []
 --
 -- >>> pl @Pairs [1,2]
 -- Present [(1,2)] (Pairs [(1,2)] | [1,2])
@@ -111,15 +103,10 @@ data Pairs
 instance Show a => P Pairs [a] where
   type PP Pairs [a] = [(a,a)]
   eval _ opts as =
-    let msg0 = "Pairs"
-        lr = case as of
-               [] -> Left (msg0 <> ":no data found")
-               [_] -> Left (msg0 <> ":only one element found")
-               _:bs@(_:_) -> Right (zip as bs)
-    in pure $ case lr of
-         Left e -> mkNode opts (FailT e) "" []
-         Right zs -> mkNode opts (PresentT zs) (show01 opts msg0 zs as ) []
-
+    let zs = case as of
+               [] -> []
+               _:bs -> zip as bs
+    in pure $ mkNode opts (PresentT zs) (show01 opts "Pairs" zs as) []
 
 -- | similar to 'Control.Arrow.&&&'
 --

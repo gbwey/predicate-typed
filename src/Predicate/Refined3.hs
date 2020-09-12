@@ -312,7 +312,9 @@ instance ( Arbitrary (PP ip i)
 --
 genRefined3 ::
     forall opts ip op fmt i
-  . Refined3C opts ip op fmt i
+  . ( Refined3C opts ip op fmt i
+    , HasCallStack
+    )
   => Gen (PP ip i)
   -> Gen (Refined3 opts ip op fmt i)
 genRefined3 = genRefined3P Proxy
@@ -320,7 +322,9 @@ genRefined3 = genRefined3P Proxy
 -- | create a 'Refined3' generator using a proxy
 genRefined3P ::
     forall opts ip op fmt i
-  . Refined3C opts ip op fmt i
+  . ( Refined3C opts ip op fmt i
+    , HasCallStack
+    )
   => Proxy '(opts,ip,op,fmt,i)
   -> Gen (PP ip i)
   -> Gen (Refined3 opts ip op fmt i)
@@ -565,7 +569,7 @@ newRefined3TPImpl :: forall n m opts ip op fmt i proxy
 newRefined3TPImpl f _ i = do
   (ret,mr) <- f $ eval3M i
   let m3 = prt3Impl (getOpt @opts) ret
-  unless (null (m3Long m3)) $ tell [m3Long m3]
+  unlessNullM (m3Long m3) (tell . pure)
   case mr of
     Nothing -> throwError $ m3Desc m3 <> nullIf " | " (m3Short m3)
     Just r -> return r
@@ -583,7 +587,7 @@ newRefined3TPSkipIPImpl :: forall n m opts ip op fmt i proxy
 newRefined3TPSkipIPImpl f _ a = do
   (ret,mr) <- f $ eval3MSkip a
   let m3 = prt3Impl (getOpt @opts) ret
-  unless (null (m3Long m3)) $ tell [m3Long m3]
+  unlessNullM (m3Long m3) (tell . pure)
   case mr of
     Nothing -> throwError $ m3Desc m3 <> nullIf " | " (m3Short m3)
     Just r -> return r
@@ -855,4 +859,3 @@ replaceOpt3 = coerce
 
 appendOpt3 :: forall (opts :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 (opt0 ':# opts) ip op fmt i
 appendOpt3 = coerce
-

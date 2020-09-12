@@ -1,12 +1,3 @@
-{-
-return Msg0 and then we can reuse it
-
-prtRefinedIO :: forall opts p a
-   . RefinedC opts p a
-   => a
-   -> IO (Either (BoolT Bool) (Refined opts p a))
--}
-
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -145,7 +136,9 @@ errorDisplay o (bp,(top,e)) =
 -- >>> reads @(Refined OZ 'True Int) "Refined (-123)xyz"
 -- [(Refined (-123),"xyz")]
 --
-instance (RefinedC opts p a, Read a) => Read (Refined opts p a) where
+instance ( RefinedC opts p a
+         , Read a
+         ) => Read (Refined opts p a) where
   readPrec
     = GR.parens
         (PCR.prec
@@ -183,7 +176,9 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 -- `- P '14
 -- <BLANKLINE>
 --
-instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
+instance ( RefinedC opts p a
+         , FromJSON a
+         ) => FromJSON (Refined opts p a) where
   parseJSON z = do
     a <- parseJSON z
     let (w,mr) = runIdentity $ newRefinedM @opts @p a
@@ -219,7 +214,9 @@ instance (RefinedC opts p a, FromJSON a) => FromJSON (Refined opts p a) where
 --    `- P '"2019-06-01"
 -- <BLANKLINE>
 --
-instance (RefinedC opts p a, Binary a) => Binary (Refined opts p a) where
+instance ( RefinedC opts p a
+         , Binary a
+         ) => Binary (Refined opts p a) where
   get = do
     fld0 <- B.get @a
     let (w,mr) = runIdentity $ newRefinedM @opts @p fld0
@@ -252,7 +249,9 @@ instance ( Arbitrary a
 
 -- | create 'Refined' generator using a generator to restrict the values
 genRefined :: forall opts p a .
-   RefinedC opts p a
+   ( RefinedC opts p a
+   , HasCallStack
+   )
    => Gen a
    -> Gen (Refined opts p a)
 genRefined g =
@@ -479,15 +478,7 @@ newRefined a =
                     DLite -> Left (bp <> nullIf " " top)
                     _ -> Left e
        Just r -> Right r
-{-
-data Msg0 = Msg0 { m0Desc :: !String
-                 , m0Short :: !String
-                 , m0Long :: !String
-                 } deriving Eq
 
-instance Show Msg0 where
-  show (Msg0 a b c) = a <> nullIf " | " b <> nullIf "\n" c
--}
 evalBoolP :: forall opts p a
    . RefinedC opts p a
    => a
@@ -530,8 +521,7 @@ newRefinedTImpl :: forall opts p a n m
 newRefinedTImpl f a = do
   let o = getOpt @opts
   tt <- f $ evalBool (Proxy @p) o a
-  let msg = prtTree o tt
-  unless (null msg) $ tell [msg]
+  unlessNullM (prtTree o tt) (tell . pure)
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
     _ -> throwError $ colorBoolT' o (_tBool tt)
@@ -582,7 +572,7 @@ prtRefinedTImpl :: forall n m a
 prtRefinedTImpl f rt = do
   (lr,ws) <-  f $ unRavelT rt
   liftIO $ do
-    forM_ (zip [1::Int ..] ws) $ \(_,y) -> unless (null y) $ putStrLn y
+    forM_ (zip [1::Int ..] ws) $ \(_,y) -> unlessNullM y putStrLn
     case lr of
       Left e -> putStrLn $ "failure msg[" <> e <> "]"
       Right a -> print a
@@ -616,4 +606,3 @@ replaceOpt = coerce
 
 appendOpt :: forall (opts :: Opt) opt0 p a . Refined opt0 p a -> Refined (opt0 ':# opts) p a
 appendOpt = coerce
-

@@ -3,9 +3,8 @@
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE NoStarIsType #-}
 {- |
-     Mainly contains useful Template Haskell Lift instances for Date Time
+     orphan Lift instances for Data.Time
 -}
 module Predicate.TH_Orphans () where
 import Language.Haskell.TH.Syntax
@@ -21,8 +20,6 @@ deriving instance Lift TimeOfDay
 deriving instance Lift (Fixed a)
 
 $(TL.deriveLift ''DiffTime)
---instance Lift DiffTime where
---  lift x = return $ LitE (IntegerL $ diffTimeToPicoseconds x)
 
 deriving instance Lift UTCTime
 

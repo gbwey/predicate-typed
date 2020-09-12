@@ -1195,7 +1195,8 @@ data Length p
 instance (PP p x ~ t a
         , P p x
         , Show (t a)
-        , Foldable t) => P (Length p) x where
+        , Foldable t
+        ) => P (Length p) x where
   type PP (Length p) x = Int
   eval _ opts x = do
     let msg0 = "Length"

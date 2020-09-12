@@ -355,7 +355,7 @@ instance ( P p x
                           4 -> "Thursday"
                           5 -> "Friday"
                           6 -> "Saturday"
-                          o -> error $ "ToWeekDate: programmer error o=" ++ show o
+                          o -> errorInProgram $ "ToWeekDate:" ++ show o
         in mkNode opts (PresentT (dow,dowString)) (show01 opts msg0 dow p) [hh pp]
 
 -- | get week number of the year
