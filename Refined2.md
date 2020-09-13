@@ -54,13 +54,12 @@ Here is an example where the predicate fails at compile-time and we choose to sh
 
 >$$(refined2TH "000ffff") :: MakeR2 (Hex OU)
 
-<interactive>:18:4: error:
-    *
-*** Step 1. Success nitial Conversion(ip) (65535) ***
+<interactive>:41:4: error:
+    * Step 2. False Boolean Check(op) | {65535 <= 255}
+*** Step 1. Success Initial Conversion(ip) (65535) ***
 P ReadBase(Int,16) 65535
 |
 `- P Id "000ffff"
-
 *** Step 2. False Boolean Check(op) ***
 False 65535 <= 255
 |
@@ -70,11 +69,8 @@ False 65535 <= 255
 |
 `- P '255
 
-refined2TH: predicate failed with Step 2. False Boolean Check(op) | {65535 <= 255}
     * In the Template Haskell splice $$(refined2TH "000ffff")
-      In the expression: $$(refined2TH "000ffff") :: MakeR2 (Hex OU)
-      In an equation for `it':
-          it = $$(refined2TH "000ffff") :: MakeR2 Hex
+      In the expression: $$(refined2TH "000ffff") :: MakeR2 (Hex OAN)
 ```
 
 ### Any valid Read/Show instance can be used with Refined2

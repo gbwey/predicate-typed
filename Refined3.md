@@ -75,13 +75,12 @@ Here is an example where the predicate fails at compile-time and we choose to sh
 
 >$$(refined3TH "000ffff") :: MakeR3 (Hex OU)
 
-<interactive>:18:4: error:
-    *
+<interactive>:39:4: error:
+    * Step 2. False Boolean Check(op) | {65535 <= 255}
 *** Step 1. Success Initial Conversion(ip) (65535) ***
 P ReadBase(Int,16) 65535
 |
 `- P Id "000ffff"
-
 *** Step 2. False Boolean Check(op) ***
 False 65535 <= 255
 |
@@ -91,11 +90,8 @@ False 65535 <= 255
 |
 `- P '255
 
-refined3TH: predicate failed with Step 2. False Boolean Check(op) | {65535 <= 255}
     * In the Template Haskell splice $$(refined3TH "000ffff")
-      In the expression: $$(refined3TH "000ffff") :: MakeR3 (Hex OU)
-      In an equation for `it':
-          it = $$(refined3TH "000ffff") :: MakeR3 Hex
+      In the expression: $$(refined3TH "000ffff") :: MakeR3 (Hex OAN)
 ```
 
 ### Any valid Read/Show instance can be used with Refined3
@@ -120,10 +116,7 @@ An example of an invalid refined3TH call
 
 refined3TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09)
     * In the Template Haskell splice $$(refined3TH "2016-xy-09")
-      In the expression:
-          $$(refined3TH "2016-xy-09") :: ReadShowR  OU Day
-      In an equation for `it`:
-          it = $$(refined3TH "2016-xy-09") :: ReadShowR  OU Day
+      In the expression: $$(refined3TH "2016-xy-09") :: ReadShowR  OU Day
 ```
 
 ### Json decoding
@@ -150,17 +143,13 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ```haskell
 >either putStrLn print $ eitherDecode' @(Refined3 OU (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
-Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | {16663610 < 256}}
-
-***Step 1. Success Initial Conversion(ip) (16663610) ***
-
+Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
+*** Step 1. Success Initial Conversion(ip) (16663610) ***
 P ReadBase(Int,16) 16663610
 |
 `- P Id "00fe443a"
-
-***Step 2. False Boolean Check(op) = FalseP ***
-
-False True && False | {16663610 < 256}
+*** Step 2. False Boolean Check(op) ***
+False True && False | (16663610 < 256)
 |
 +- True 16663610 > 10
 |  |
