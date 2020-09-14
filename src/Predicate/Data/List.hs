@@ -77,6 +77,7 @@ module Predicate.Data.List (
   , SplitAts
   , SplitAt
   , ChunksOf
+  , ChunksOf'
   , Rotate
   , Take
   , Drop
@@ -1013,25 +1014,48 @@ instance P (DropT n p) x => P (Drop n p) x where
 -- PresentT [[1,2,3,4,5],[6,7,8,9,10],[11,12,13,14,15]]
 --
 data ChunksOf n p
+type ChunksOfT n p = ChunksOf' n n p
+
+instance P (ChunksOfT n p) x => P (ChunksOf n p) x where
+  type PP (ChunksOf n p) x = PP (ChunksOfT n p) x
+  eval _ = eval (Proxy @(ChunksOfT n p))
+
+-- | splits a list pointed to by \'p\' into lists of size \'n\' with a gap of \'i\'
+--
+-- >>> pz @(Unfoldr (If Null (MkNothing _) (MkJust '(Take 3 Id,Drop 2 Id))) Id) [1..10]
+-- PresentT [[1,2,3],[3,4,5],[5,6,7],[7,8,9],[9,10]]
+--
+-- >>> pz @(ChunksOf' 3 2 Id) [1..10]
+-- PresentT [[1,2,3],[3,4,5],[5,6,7],[7,8,9],[9,10]]
+--
+data ChunksOf' n i p
 
 instance (PP p a ~ [b]
         , P n a
+        , P i a
         , P p a
         , Show b
+        , Integral (PP i a)
         , Integral (PP n a)
-        ) => P (ChunksOf n p) a where
-  type PP (ChunksOf n p) a = [PP p a]
+        ) => P (ChunksOf' n i p) a where
+  type PP (ChunksOf' n i p) a = [PP p a]
   eval _ opts a = do
     let msg0 = "ChunksOf"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a []
-    pure $ case lr of
-      Left e -> e
-      Right (fromIntegral -> n,p,pp,qq) ->
-        let hhs = [hh pp, hh qq]
-            msg1 = msg0 <> " " <> showL opts n <> " " <> showL opts p
-        in if n <= 0 then mkNode opts (FailT (msg0 <> " n<1")) "" hhs
-           else let ret = unfoldr (\s -> if null s then Nothing else Just $ splitAt n s) p
-                in mkNode opts (PresentT ret) (show01' opts msg1 ret "n=" n <> showVerbose opts " | " p) hhs
+    lr <- runPQ msg0 (Proxy @n) (Proxy @i) opts a []
+    case lr of
+      Left e -> pure e
+      Right (fromIntegral -> n,fromIntegral -> i,nn,ii) -> do
+        let hhs = [hh nn, hh ii]
+            msg1 = msg0 <> " " <> showL opts (n,i)
+        pp <- eval (Proxy @p) opts a
+        pure $ case getValueLR opts (msg1 <> " p failed") pp hhs of
+          Left e -> e
+          Right p ->
+            let hhs1 = hhs ++ [hh pp]
+            in if n <= 0 then mkNode opts (FailT (msg0 <> " n<=0")) "" hhs1
+               else if i < 1 then mkNode opts (FailT (msg0 <> " i<1")) "" hhs1
+               else let ret = unfoldr (\s -> if null s then Nothing else Just (take n s,drop i s)) p
+                in mkNode opts (PresentT ret) (show01' opts msg1 ret "n,i=" (n,i) <> showVerbose opts " | " p) hhs1
 
 -- empty lists at the type level wont work here
 

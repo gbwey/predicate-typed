@@ -32,6 +32,8 @@ module Predicate.Data.Tuple (
   , type (***)
   , Both
   , Pairs
+  , Tuple
+  , Tuple'
 
   , AndA
   , type (&*)
@@ -42,6 +44,7 @@ module Predicate.Data.Tuple (
 import Predicate.Core
 import Predicate.Util
 import Data.Proxy
+import GHC.TypeNats (Nat, KnownNat)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -358,3 +361,62 @@ instance ( ExtractL1C (PP q x)
               Left e -> e
               Right b' ->
                 mkNode opts (PresentT (b,b')) msg0 [hh qq, hh pp, hh pp']
+
+-- | create a n tuple from a list
+--
+-- >>> pz @(Tuple 4) "abcdefg"
+-- PresentT ('a','b','c','d')
+--
+-- >>> pz @(Tuple 4) "abc"
+-- FailT "Tuple(4):not enough elements"
+--
+-- >>> pz @(Fst Id >> Tuple 3) ([1..5],True)
+-- PresentT (1,2,3)
+--
+-- >>> pz @(Lift (Tuple 3) (Fst Id)) ([1..5],True)
+-- PresentT (1,2,3)
+--
+data Tuple (n :: Nat)
+
+instance ( KnownNat n
+         , TupleC n a
+         , x ~ [a]
+         , Show a
+         ) => P (Tuple n) x where
+  type PP (Tuple n) x = TupleT n (ExtractAFromList x)
+  eval _ opts as =
+    let msg0 = "Tuple(" ++ show n ++ ")"
+        n :: Int
+        n = nat @n
+    in pure $ case getTupleC @n as of
+         Left es -> mkNode opts (FailT (msg0 <> ":not enough elements")) (showVerbose opts " | " es) []
+         Right r -> mkNode opts (PresentT r) msg0 []
+
+-- | create a n tuple from a list
+--
+-- >>> pz @(Tuple' 4) "abcdefg"
+-- PresentT (Right ('a','b','c','d'))
+--
+-- >>> pz @(Tuple' 4) "abc"
+-- PresentT (Left "abc")
+--
+-- >>> pz @(Tuple' 4) []
+-- PresentT (Left [])
+--
+-- >>> :set -XPolyKinds
+-- >>> type F n i = ChunksOf' n i Id >> Map (Tuple' n) Id >> PartitionEithers
+-- >>> pz @(F 3 1) [1..7]
+-- PresentT ([[6,7],[7]],[(1,2,3),(2,3,4),(3,4,5),(4,5,6),(5,6,7)])
+--
+data Tuple' (n :: Nat)
+
+instance ( KnownNat n
+         , TupleC n a
+         , x ~ [a]
+         ) => P (Tuple' n) x where
+  type PP (Tuple' n) x = Either x (TupleT n (ExtractAFromList x))
+  eval _ opts as =
+    let msg0 = "Tuple'(" ++ show n ++ ")"
+        n :: Int
+        n = nat @n
+    in pure $ mkNode opts (PresentT (getTupleC @n as)) msg0 []

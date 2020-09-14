@@ -133,6 +133,7 @@ module Predicate.Util (
   , LenT
   , InductTupleC(..)
   , InductListC(..)
+  , TupleC(..)
   , FlipT
   , IfT
   , SumT
@@ -194,7 +195,6 @@ module Predicate.Util (
   , showTK
   , prettyOrd
   , removeAnsi
---  , removeAnsiImpl
   , MonadEval(..)
   , errorInProgram
   , readField
@@ -343,7 +343,9 @@ deriving instance Ord a => Ord (BoolT a)
 -- [(FailT "some error message","")]
 --
 
-instance (Typeable a, Read a) => Read (BoolT a) where
+instance ( Typeable a
+         , Read a
+         ) => Read (BoolT a) where
   readPrec
       = case eqT @a @Bool of
           Just Refl ->
@@ -922,6 +924,7 @@ instance Foldable BoolT where
   foldMap am = either (const mempty) am . getValLR
 
 -- (_BoolT %~ length) <$> pz @Pairs [1..4]
+-- (over _BoolT length) <$> pz @Pairs [1..4]
 -- fmapB length $ pz @Pairs [1..4]
 
 -- | BoolT prism
@@ -1055,7 +1058,10 @@ type family NotT (b :: Bool) :: Bool where
 -- >>> nat @14
 -- 14
 --
-nat :: forall n a . (KnownNat n, Num a) => a
+nat :: forall n a
+  . ( KnownNat n
+    , Num a
+    ) => a
 nat = fromIntegral (GL.natVal (Proxy @n))
 
 -- | gets the Symbol from the typelevel
@@ -1074,7 +1080,9 @@ class GetNats as where
   getNats :: [Int]
 instance GetNats '[] where
   getNats = []
-instance (KnownNat n, GetNats ns) => GetNats (n ': ns) where
+instance ( KnownNat n
+         , GetNats ns
+         ) => GetNats (n ': ns) where
   getNats = nat @n : getNats @ns
 
 -- | get a list of Symbols from the typelevel
@@ -1086,7 +1094,9 @@ class GetSymbs ns where
   getSymbs :: [String]
 instance GetSymbs '[] where
   getSymbs = []
-instance (KnownSymbol s, GetSymbs ss) => GetSymbs (s ': ss) where
+instance ( KnownSymbol s
+         , GetSymbs ss
+         ) => GetSymbs (s ': ss) where
   getSymbs = symb @s : getSymbs @ss
 
 -- | get the length of a typelevel container
@@ -1960,7 +1970,7 @@ prtTree opts pp =
 showIndex :: (Show i, Num i) => i -> String
 showIndex i = show (i+0)
 
--- | map over 'BoolT' (use _BoolT)
+-- | map over 'BoolT'
 --
 -- >>> mapB show (PresentT 123)
 -- PresentT "123"
@@ -2117,3 +2127,33 @@ instance ExtractL6C (a,b,c,d,e) where
 instance ExtractL6C (a,b,c,d,e,f) where
   type ExtractL6T (a,b,c,d,e,f) = f
   extractL6C (_,_,_,_,_,f) = f
+
+class TupleC (n :: Nat) a where
+  type TupleT n a
+  getTupleC :: [a] -> Either [a] (TupleT n a)
+instance TupleC 2 a where
+  type TupleT 2 a = (a,a)
+  getTupleC = \case
+                a:b:_ -> Right (a,b)
+                o -> Left o
+instance TupleC 3 a where
+  type TupleT 3 a = (a,a,a)
+  getTupleC = \case
+                a:b:c:_ -> Right (a,b,c)
+                o -> Left o
+instance TupleC 4 a where
+  type TupleT 4 a = (a,a,a,a)
+  getTupleC = \case
+                a:b:c:d:_ -> Right (a,b,c,d)
+                o -> Left o
+instance TupleC 5 a where
+  type TupleT 5 a = (a,a,a,a,a)
+  getTupleC = \case
+                a:b:c:d:e:_ -> Right (a,b,c,d,e)
+                o -> Left o
+instance TupleC 6 a where
+  type TupleT 6 a = (a,a,a,a,a,a)
+  getTupleC = \case
+                a:b:c:d:e:f:_ -> Right (a,b,c,d,e,f)
+                o -> Left o
+

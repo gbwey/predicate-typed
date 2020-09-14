@@ -36,13 +36,6 @@ module Predicate.Data.Index (
   , LookupFail
   , LookupFail'
 
-  -- ** list to tuples
-  , Tuple2
-  , Tuple3
-  , Tuple4
-  , Tuple5
-  , Tuple6
-
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -521,14 +514,3 @@ type BangBangQT p q = Lookup p q
 instance P (BangBangQT p q) a => P (p !!? q) a where
   type PP (p !!? q) a = PP (BangBangQT p q) a
   eval _ = eval (Proxy @(BangBangQT p q))
-
--- | convert a list to a 2-tuple
-type Tuple2 p = '(p !! 0, p !! 1)
--- | convert a list to a 3-tuple
-type Tuple3 p = '(p !! 0, p !! 1, p !! 2)
--- | convert a list to a 4-tuple
-type Tuple4 p = '(p !! 0, p !! 1, p !! 2, p !! 3)
--- | convert a list to a 5-tuple
-type Tuple5 p = '(p !! 0, p !! 1, p !! 2, p !! 3, p !! 4)
--- | convert a list to a 6-tuple
-type Tuple6 p = '(p !! 0, p !! 1, p !! 2, p !! 3, p !! 4, p !! 5)

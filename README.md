@@ -53,7 +53,7 @@ To run the examples you will need these settings (ghc>=8.6)
  * pan is a shortcut for run @OAN (ascii without colors)
 
 ```haskell
-> pu @(Between 4 10 Id) 7
+>pu @(Between 4 10 Id) 7
 True 4 <= 7 <= 10
 |
 +- P Id 7
@@ -65,7 +65,7 @@ TrueT
 ```
 
 ```haskell
-> pu @(Between 4 10 Id) 11
+>pu @(Between 4 10 Id) 11
 False 11 <= 10
 |
 +- P Id 11
@@ -77,14 +77,14 @@ FalseT
 ```
 
 ```haskell
-> pu @(Between (4 % 7) (10 % 2) Id) 7
+>pu @(Between (4 % 7) (10 % 2) Id) 7
 ...
 False (7 % 1 <= 5 % 1)
 FalseT
 ```
 
 ```haskell
-> pu @(Re "^[[:upper:]][[:lower:]]+" Id) "Fred"
+>pu @(Re "^[[:upper:]][[:lower:]]+" Id) "Fred"
 ...
 TrueT
 ```
@@ -96,13 +96,13 @@ FalseT
 ```
 
 ```haskell
-> pu @(Resplit "\\s+" Id >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+" Id) Id)) "Fred Abel Bart Jimmy"
+>pu @(Resplit "\\s+" Id >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+" Id) Id)) "Fred Abel Bart Jimmy"
 ...
 PresentT ["Fred","Abel","Bart","Jimmy"]
 ```
 
 ```haskell
-> pu @(Resplit "\\s+" Id >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+" Id) Id)) "Fred Abel bart Jimmy"
+>pu @(Resplit "\\s+" Id >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+" Id) Id)) "Fred Abel bart Jimmy"
 ...
 FailT "(True && False | (All(4) i=2 (Re' [] (^[[:upper:]][[:lower:]]+) | bart)))"
 ```
@@ -114,14 +114,14 @@ TrueT
 ```
 
 ```haskell
-> pu @(ReadP Day Id >> ToWeekDate Id >> Snd Id == "Monday") "2020-07-14"
+>pu @(ReadP Day Id >> ToWeekDate Id >> Snd Id == "Monday") "2020-07-14"
 ...
 False (>>) False | {"Tuesday" == "Monday"}
 FalseT
 ```
 
 ```haskell
-> pu @(ReadP Day Id >> ToWeekDate Id >> GuardSimple (Snd Id == "Monday")) "2020-07-13"
+>pu @(ReadP Day Id >> ToWeekDate Id >> GuardSimple (Snd Id == "Monday")) "2020-07-13"
 ...
 PresentT (1,"Monday")
 ```
