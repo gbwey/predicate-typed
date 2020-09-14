@@ -251,7 +251,7 @@ instance (P def (Proxy a)
            pp <- eval (Proxy @def) opts (Proxy @a)
            pure $ case getValueLR opts msg1 pp [] of
              Left e -> e
-             Right _ -> mkNode opts (_tBool pp) msg1 [hh pp]
+             Right _ -> mkNode opts (_ttBool pp) msg1 [hh pp]
          Just a -> pure $ mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
 
 data Ix' (n :: Nat)
@@ -304,7 +304,7 @@ instance (P q a
                 rr <- eval (Proxy @r) opts (Proxy @(IxValue (PP p a)))
                 pure $ case getValueLR opts msg1 rr [hh pp, hh qq] of
                   Left e -> e
-                  Right _ -> mkNode opts (_tBool rr) (msg1 <> " index not found") [hh pp, hh qq]
+                  Right _ -> mkNode opts (_ttBool rr) (msg1 <> " index not found") [hh pp, hh qq]
              Just ret -> pure $ mkNode opts (PresentT ret) (show01' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to 'Data.List.!!' leveraging 'Ixed'

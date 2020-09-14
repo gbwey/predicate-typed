@@ -27,9 +27,9 @@
 module Predicate.Util (
   -- ** TT
     TT(..)
-  , tBool
-  , tString
-  , tForest
+  , ttBool
+  , ttString
+  , ttForest
   , fixBoolT
   , topMessage
   , hasNoTree
@@ -269,9 +269,9 @@ import Data.Char (isSpace)
 -- >>> :set -XTypeOperators
 
 -- | represents the evaluation tree for predicates
-data TT a = TT { _tBool :: !(BoolT a)  -- ^ the value at this root node
-               , _tString :: !String  -- ^ detailed information eg input and output and text
-               , _tForest :: !(Forest PE) -- ^ the child nodes
+data TT a = TT { _ttBool :: !(BoolT a)  -- ^ the value at this root node
+               , _ttString :: !String  -- ^ detailed information eg input and output and text
+               , _ttForest :: !(Forest PE) -- ^ the child nodes
                } deriving (Read, Show, Eq)
 
 -- | contains the typed result from evaluating the expression tree
@@ -392,16 +392,16 @@ instance GetBoolT a ('FailT s) where
   getBoolT = FailT ""
 
 -- | lens for accessing 'BoolT' in 'TT'
-tBool :: Lens (TT a) (TT b) (BoolT a) (BoolT b)
-tBool afb s = (\b -> s { _tBool = b }) <$> afb (_tBool s)
+ttBool :: Lens (TT a) (TT b) (BoolT a) (BoolT b)
+ttBool afb s = (\b -> s { _ttBool = b }) <$> afb (_ttBool s)
 
 -- | lens for accessing the message from 'BoolT'
-tString :: Lens' (TT a) String
-tString afb s = (\b -> s { _tString = b }) <$> afb (_tString s)
+ttString :: Lens' (TT a) String
+ttString afb s = (\b -> s { _ttString = b }) <$> afb (_ttString s)
 
 -- | lens for accessing the subtree from 'BoolT'
-tForest :: Lens' (TT a) (Forest PE)
-tForest afb s = (\b -> s { _tForest = b }) <$> afb (_tForest s)
+ttForest :: Lens' (TT a) (Forest PE)
+ttForest afb s = (\b -> s { _ttForest = b }) <$> afb (_ttForest s)
 
 -- | a lens from typed 'BoolT' to the untyped 'BoolP'
 boolT2P :: Lens' (BoolT a) BoolP
@@ -444,7 +444,7 @@ mkNode opts bt ss hs =
     DLite ->
     -- keeps the last string so we can use the root to give more details on failure (especially for Refined* types)
     -- also holds onto any failures
-         let zs = filter (\(Holder x) -> has (tBool . _FailT) x) hs
+         let zs = filter (\(Holder x) -> has (ttBool . _FailT) x) hs
              in TT bt ss (map fromTTH zs)
     _ -> TT bt ss (map fromTTH hs)
 
@@ -463,7 +463,7 @@ getValAndPE :: TT a -> (Either String a, Tree PE)
 getValAndPE tt = (getValLRFromTT tt, fromTT tt)
 
 getValLRFromTT :: TT a -> Either String a
-getValLRFromTT = getValLR  . _tBool
+getValLRFromTT = getValLR  . _ttBool
 
 -- | get the value from BoolT or fail
 getValLR :: BoolT a -> Either String a
@@ -687,7 +687,7 @@ type Other2 = 'OOther 'True 'Default 'Default
 
 -- | fix PresentT Bool to TrueT or FalseT
 fixBoolT :: TT Bool -> TT Bool
-fixBoolT = tBool %~ mapB id
+fixBoolT = ttBool . _BoolT %~ id
 
 show01 :: (Show a1, Show a2)
   => POpts
@@ -903,8 +903,8 @@ groupErrors =
 
 partitionTTExtended :: (w, TT a) -> Either ((w, TT x), String) (a, w, TT a)
 partitionTTExtended (s, t) =
-  case _tBool t of
-    FailT e -> Left ((s, t & tBool .~ FailT e), e)
+  case _ttBool t of
+    FailT e -> Left ((s, t & ttBool .~ FailT e), e)
     PresentT a -> Right (a,s,t)
     TrueT -> Right (True,s,t)
     FalseT -> Right (False,s,t)
@@ -916,12 +916,15 @@ formatList :: forall x z . Show x
 formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts DLite ", a=" a <> ")")
 
 instance Foldable TT where
-  foldMap am = foldMap am . _tBool
+  foldMap am = foldMap am . _ttBool
 
 instance Foldable BoolT where
   foldMap am = either (const mempty) am . getValLR
 
--- | prism from BoolT to a
+-- (_BoolT %~ length) <$> pz @Pairs [1..4]
+-- fmapB length $ pz @Pairs [1..4]
+
+-- | BoolT prism
 --
 -- >>> _BoolT # True
 -- TrueT
@@ -944,17 +947,28 @@ instance Foldable BoolT where
 -- >>> FailT "abc" ^? _BoolT
 -- Nothing
 --
-_BoolT :: forall a . Typeable a => Prism' (BoolT a) a
-_BoolT = prism' (case eqT @Bool @a of
+-- >>> PresentT 1 & _BoolT .~ True
+-- TrueT
+--
+-- >>> PresentT False & _BoolT %~ not
+-- TrueT
+--
+-- >>> TrueT & _BoolT .~ 123
+-- PresentT 123
+--
+-- >>> FailT "asdF" & _BoolT .~ True
+-- FailT "asdF"
+--
+_BoolT :: forall a b . Typeable b => Prism (BoolT a) (BoolT b) a b
+_BoolT = prism (case eqT @Bool @b of
                     Just Refl -> bool FalseT TrueT
                     Nothing -> PresentT
                  )
          $ \case
-              PresentT a -> Just a
-              TrueT -> Just True
-              FalseT -> Just False
-              FailT {} -> Nothing
-
+              PresentT a -> Right a
+              TrueT -> Right True
+              FalseT -> Right False
+              FailT e -> Left (FailT e)
 
 -- | 'FailT' prism
 _FailT :: Prism' (BoolT a) String
@@ -1291,7 +1305,7 @@ prtTreePure opts t
 -- | extract message part from tree
 topMessage :: TT a -> String
 topMessage pp =
-  let s = pp ^. tString
+  let s = pp ^. ttString
   in unlessNull s $ "(" <> s <> ")"
 
 showImpl :: POpts
@@ -1306,9 +1320,9 @@ showImpl o =
 fixit :: ((Int, x), TT a) -> TT a
 fixit ((i, _), t) = prefixMsg ("i=" <> show i <> ": ") t
 
--- | prefix text in front of tString
+-- | prefix text in front of ttString
 prefixMsg :: String -> TT a -> TT a
-prefixMsg msg = tString %~ (msg <>)
+prefixMsg msg = ttString %~ (msg <>)
 
 -- | show the type as a string
 showT :: forall (t :: Type) . Typeable t => String
@@ -1931,7 +1945,7 @@ type family TheseT lr where
 
 prtTree :: Show x => POpts -> TT x -> String
 prtTree opts pp =
-  let r = pp ^. tBool
+  let r = pp ^. ttBool
   in case oDebug opts of
        DZero -> ""
        DLite ->
@@ -1946,7 +1960,7 @@ prtTree opts pp =
 showIndex :: (Show i, Num i) => i -> String
 showIndex i = show (i+0)
 
--- | map over 'BoolT'
+-- | map over 'BoolT' (use _BoolT)
 --
 -- >>> mapB show (PresentT 123)
 -- PresentT "123"
@@ -1959,6 +1973,12 @@ showIndex i = show (i+0)
 --
 -- >>> mapB head (PresentT [1..5])
 -- PresentT 1
+--
+-- >>> mapB head (PresentT [True,False])
+-- TrueT
+--
+-- >>> mapB null (PresentT "asf")
+-- FalseT
 --
 -- >>> mapB head (FailT "some error")
 -- FailT "some error"
@@ -1978,16 +1998,8 @@ showIndex i = show (i+0)
 -- >>> mapB id FalseT
 -- FalseT
 --
-mapB :: forall a b . Typeable b => (a -> b) -> BoolT a -> BoolT b
-mapB f =
-  \case
-    FailT msg -> FailT msg
-    PresentT a -> g a
-    TrueT -> g True
-    FalseT -> g False
-  where g = (. f) $ case eqT @Bool @b of
-                      Nothing -> PresentT
-                      Just Refl -> bool FalseT TrueT
+mapB :: Typeable b => (a -> b) -> BoolT a -> BoolT b
+mapB f = over _BoolT f
 
 -- | convenience method for running 'mapB' inside a functor
 fmapB :: (Typeable b, Functor f) => (a -> b) -> f (BoolT a) -> f (BoolT b)

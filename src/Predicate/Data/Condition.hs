@@ -129,7 +129,7 @@ instance (Show (PP r a)
               else eval (Proxy @r) opts a
         pure $ case getValueLR opts (msg0 <> " [" <> show b <> "]") qqrr [hh pp, hh qqrr] of
           Left e -> e
-          Right ret -> mkNode opts (_tBool qqrr) (msg0 <> " " <> (if b then "'True " else "'False ") <> showL opts ret) [hh pp, hh qqrr]
+          Right ret -> mkNode opts (_ttBool qqrr) (msg0 <> " " <> (if b then "'True " else "'False ") <> showL opts ret) [hh pp, hh qqrr]
 
 type family GuardsT (ps :: [k]) where
   GuardsT '[] = '[]
@@ -302,7 +302,7 @@ instance (P r x
               Right b -> mkNode opts (PresentT b) (show01 opts msgbase0 b a) (hh rr : hh pp : [hh qq | isVerbose opts])
           Right False -> do
             ee <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
-            pure $ case getValueLR opts ("Case:otherwise failed" <> nullIf ":" (_tString ee)) ee [hh rr, hh pp] of
+            pure $ case getValueLR opts ("Case:otherwise failed" <> nullIf ":" (_ttString ee)) ee [hh rr, hh pp] of
               Left e -> e
               Right b -> mkNode opts (PresentT b) (show01 opts msgbase0 b a) [hh rr, hh pp, hh ee]
 
@@ -339,7 +339,7 @@ instance (KnownNat n
               Right b -> mkNode opts (PresentT b) (show01 opts msgbase0 b a) (hh rr : hh pp : [hh qq | isVerbose opts])
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
-            pure $ case getValueLR opts (_tString ww) ww [hh rr, hh pp] of
+            pure $ case getValueLR opts (_ttString ww) ww [hh rr, hh pp] of
               Left e -> e -- use original failure msg
               Right b -> mkNode opts (PresentT b) (show01 opts msgbase1 b a) [hh rr, hh pp, hh ww]
 
@@ -442,9 +442,9 @@ instance (PP prt (Int, a) ~ String
                       pure $ mkNode opts (PresentT [a]) msgbase2 [hh pp]
                    else do
                      ss <- eval (Proxy @(GuardsImpl n ps)) opts as
-                     pure $ case getValueLR opts (_tString ss) ss [hh pp] of
+                     pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
                        Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                       Right zs -> (ss & tForest %~ (fromTT pp:)) & tBool .~ PresentT (a:zs)
+                       Right zs -> (ss & ttForest %~ (fromTT pp:)) & ttBool .~ PresentT (a:zs)
          _ -> errorInProgram "GuardsImpl n+1 case has no data"
 
 -- | GuardsQuick contain a type level list of conditions and one of matching values: on no match will fail using the first parameter
@@ -592,9 +592,9 @@ instance (PP prt (Int, a) ~ String
                       pure $ mkNodeB opts True msgbase2 [hh pp]
                    else do
                      ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
-                     pure $ case getValueLR opts (_tString ss) ss [hh pp] of
+                     pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
                        Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                       Right _ ->  ss & tForest %~ (fromTT pp:)
+                       Right _ ->  ss & ttForest %~ (fromTT pp:)
          _ -> errorInProgram "BoolsImpl n+1 case has no data"
 
 -- | boolean guard which checks a given a list of predicates against the list of values
@@ -709,7 +709,7 @@ instance (PP prt a ~ String
                       Right msgx -> mkNode opts (FailT msgx) (msgbase1 <> ":" <> showL opts a) (hh pp : [hh qq | isVerbose opts])
                  Right True -> do
                    ss <- eval (Proxy @(GuardsImplX n ps)) opts as
-                   pure $ case getValueLR opts (_tString ss) ss [hh pp] of
+                   pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
                      Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
                      Right zs -> mkNode opts (PresentT (a:zs)) (msgbase1 <> " " <> showL opts a) [hh pp, hh ss]
          _ -> errorInProgram "GuardsImplX n+1 case has no data"

@@ -225,19 +225,19 @@ instance (P s x
         pp <- eval (Proxy @p) opts (x,a)
         pure $ case getValueLR opts msg1 pp [hh ss] of
           Left e -> e
-          Right _ -> mkNode opts (_tBool pp) msg1 [hh ss, hh pp]
+          Right _ -> mkNode opts (_ttBool pp) msg1 [hh ss, hh pp]
       Right (That b) -> do
         let msg1 = msg0 <> "(That)"
         qq <- eval (Proxy @q) opts (x,b)
         pure $ case getValueLR opts msg1 qq [hh ss] of
           Left e -> e
-          Right _ -> mkNode opts (_tBool qq) msg1 [hh ss, hh qq]
+          Right _ -> mkNode opts (_ttBool qq) msg1 [hh ss, hh qq]
       Right (These a b) -> do
         let msg1 = msg0 <> "(These)"
         rr <- eval (Proxy @r) opts (x,(a,b))
         pure $ case getValueLR opts msg1 rr [hh ss] of
           Left e -> e
-          Right _ -> mkNode opts (_tBool rr) msg1 [hh ss, hh rr]
+          Right _ -> mkNode opts (_ttBool rr) msg1 [hh ss, hh rr]
 
 type family TheseXT lr x p where
   TheseXT (These a b) x p = PP p (x,a)

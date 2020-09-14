@@ -90,7 +90,7 @@ instance (PP q x ~ a
              pp <- eval (Proxy @p) opts (Proxy @a)
              pure $ case getValueLR opts msg1 pp [hh qq] of
                Left e -> e
-               Right _ -> mkNode opts (_tBool pp) msg1 [hh qq, hh pp]
+               Right _ -> mkNode opts (_ttBool pp) msg1 [hh qq, hh pp]
           Just n -> pure $ mkNode opts (PresentT n) (show01 opts msg0 n q) [hh qq]
 
 -- | bounded 'succ' function
@@ -160,7 +160,7 @@ instance (PP q x ~ a
              pp <- eval (Proxy @p) opts (Proxy @a)
              pure $ case getValueLR opts msg1 pp [hh qq] of
                Left e -> e
-               Right _ -> mkNode opts (_tBool pp) msg1 [hh qq, hh pp]
+               Right _ -> mkNode opts (_ttBool pp) msg1 [hh qq, hh pp]
           Just n -> pure $ mkNode opts (PresentT n) (show01 opts msg0 n q) [hh qq]
 
 
@@ -378,7 +378,7 @@ instance (P def (Proxy (PP t a))
          pp <- eval (Proxy @def) opts (Proxy @(PP t a))
          pure $ case getValueLR opts msg1 pp [] of
            Left e -> e
-           Right _ -> mkNode opts (_tBool pp) msg1 [hh pp]
+           Right _ -> mkNode opts (_ttBool pp) msg1 [hh pp]
       Just n -> pure $ mkNode opts (PresentT n) (show01 opts msg0 n a) []
 
 -- | bounded 'toEnum' function

@@ -156,14 +156,14 @@ instance (Show (PP p a)
         pure $ case getValueLR opts msg0 pp [] of
           Left e -> e
           Right a1 -> let msg1 = msg0 ++ " Left"
-                      in mkNode opts (_tBool pp) (show01 opts msg1 a1 a) [hh pp]
+                      in mkNode opts (_ttBool pp) (show01 opts msg1 a1 a) [hh pp]
       Right a -> do
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts msg0 qq [] of
           Left e -> e
           Right a1 ->
             let msg1 = msg0 ++ " Right"
-            in mkNode opts (_tBool qq) (show01 opts msg1 a1 a) [hh qq]
+            in mkNode opts (_ttBool qq) (show01 opts msg1 a1 a) [hh qq]
 
 -- | similar to 'isLeft'
 --
@@ -375,13 +375,13 @@ instance (P r x
         pp <- eval (Proxy @p) opts (x,a)
         pure $ case getValueLR opts msg1 pp [hh rr] of
           Left e -> e
-          Right _ -> mkNode opts (_tBool pp) msg1 [hh rr, hh pp]
+          Right _ -> mkNode opts (_ttBool pp) msg1 [hh rr, hh pp]
       Right (Right b) -> do
         let msg1 = msg0 <> "(Right)"
         qq <- eval (Proxy @q) opts (x,b)
         pure $ case getValueLR opts msg1 qq [hh rr] of
           Left e -> e
-          Right _ -> mkNode opts (_tBool qq) msg1 [hh rr, hh qq]
+          Right _ -> mkNode opts (_ttBool qq) msg1 [hh rr, hh qq]
 
 type family EitherXT lr x p where
   EitherXT (Either a b) x p = PP p (x,a)

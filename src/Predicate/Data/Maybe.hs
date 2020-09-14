@@ -261,13 +261,13 @@ instance (P q a
         pp <- eval (Proxy @p) opts (Proxy @(PP q a))
         pure $ case getValueLR opts msg1 pp [] of
           Left e -> e
-          Right b -> mkNode opts (_tBool pp) (msg1 <> " " <> showL opts b <> " | Proxy") [hh pp]
+          Right b -> mkNode opts (_ttBool pp) (msg1 <> " " <> showL opts b <> " | Proxy") [hh pp]
       Just a -> do
         let msg1 = msg0 <> "(Just)"
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts msg1 qq [] of
           Left e -> e
-          Right b -> mkNode opts (_tBool qq) (show01 opts msg1 b a) [hh qq]
+          Right b -> mkNode opts (_ttBool qq) (show01 opts msg1 b a) [hh qq]
 
 -- | similar to 'Data.Maybe.isJust'
 --

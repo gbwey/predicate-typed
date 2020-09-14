@@ -1336,7 +1336,7 @@ instance (P p (a,a)
         ret <- ff as
         pure $ case getValueLR opts msg0 ret [hh qq] of
           Left _e -> ret -- dont rewrap else will double up messages: already handled
-          Right xs -> mkNode opts (_tBool ret) (msg0 <> " " <> showL opts xs) [hh qq, hh ret]
+          Right xs -> mkNode opts (_ttBool ret) (msg0 <> " " <> showL opts xs) [hh qq, hh ret]
 
 -- | similar to 'Data.List.sortOn'
 --

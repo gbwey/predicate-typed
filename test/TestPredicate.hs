@@ -188,7 +188,7 @@ testopts3 = getOpt @('OColor "testcolor1" 'Red 'Green 'Default 'White 'Default '
 type Fizzbuzz = '(Id,  If (Id `Mod` 3==0) "fizz" "" <> If (Id `Mod` 5==0) "buzz" "")
 type Fizzbuzz'' = Case (MkLeft String (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] '[MkRight Int "fizzbuzz", MkRight Int "fizz", MkRight Int "buzz"] Id
 -- makes use of type family MapT which does the apply on ADTs: so type synonyms dont work
-type Fizzbuzz''' = Case (MkLeft String (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] (MapT (MkRight' (Hole Int)) '[ "fizzbuzz", "fizz", "buzz"]) Id
+type Fizzbuzz''' = Case (MkLeft String (Fst Id)) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0, Id `Mod` 5 == 0] (MapT (MkRight' (Hole Int)) '["fizzbuzz", "fizz", "buzz"]) Id
 
 type Fizzbuzzs = Map Fizzbuzz Id
 type Fizzbuzzs2 = Map (Fizzbuzz >> If (Null' (Snd Id)) (MkLeft String (Fst Id)) (MkRight Int (Snd Id))) Id

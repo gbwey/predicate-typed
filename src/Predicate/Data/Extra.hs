@@ -1033,12 +1033,12 @@ instance (P p x
     pp <- eval (Proxy @p) opts x
     case getValueLR opts msg0 pp [] of
       Left e -> do
-         let emsg = e ^?! tBool . _FailT -- extract the failt string a push back into the fail case
+         let emsg = e ^?! ttBool . _FailT -- extract the failt string a push back into the fail case
          qq <- eval (Proxy @q) opts ((emsg, x), Proxy @(PP p x))
          pure $ case getValueLR opts (msg0 <> " default condition failed") qq [hh pp] of
             Left e1 -> e1
-            Right _ -> mkNode opts (_tBool qq) (msg0 <> " caught exception[" <> emsg <> "]") [hh pp, hh qq]
-      Right _ -> pure $ mkNode opts (_tBool pp) (msg0 <> " did not fire") [hh pp]
+            Right _ -> mkNode opts (_ttBool qq) (msg0 <> " caught exception[" <> emsg <> "]") [hh pp, hh qq]
+      Right _ -> pure $ mkNode opts (_ttBool pp) (msg0 <> " did not fire") [hh pp]
 
 -- | compose simple functions
 --

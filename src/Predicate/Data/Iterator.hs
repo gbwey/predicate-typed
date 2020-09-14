@@ -121,7 +121,7 @@ instance (PP p (b,a) ~ b
                    let vals = map (view _1) abcs
                        itts = map (view _2 &&& view _3) abcs
                    in case lrx of
-                        Left e -> mkNode opts (_tBool e) msg0 (hh qq : hh rr : map (hh . fixit) itts ++ [hh e])
+                        Left e -> mkNode opts (_ttBool e) msg0 (hh qq : hh rr : map (hh . fixit) itts ++ [hh e])
                         Right () -> mkNode opts (PresentT vals) (show01' opts msg0 vals "b=" q <> showVerbose opts " | as=" r) (hh qq : hh rr : map (hh . fixit) itts)
 
 -- | iterates n times keeping all the results
@@ -356,7 +356,7 @@ instance (PP q a ~ s
                let vals = map (view _1) abcs
                    itts = map (view _2 &&& view _3) abcs
                in case lr of
-                   Left e -> mkNode opts (_tBool e) msg1 (hh qq : map (hh . fixit) itts ++ [hh e])
+                   Left e -> mkNode opts (_ttBool e) msg1 (hh qq : map (hh . fixit) itts ++ [hh e])
                    Right () ->
                      let ret = fst <$> catMaybes vals
                      in mkNode opts (PresentT ret) (show01' opts msg1 ret "s=" q ) (hh qq : map (hh . fixit) itts)
@@ -516,7 +516,7 @@ instance (KnownNat n
            Left e -> pure e
            Right b -> do
                         qq <- eval (Proxy @(ParaImpl n (p1 ': ps))) opts as
-                        pure $ case getValueLR opts (_tString qq <> " " <> showL opts b) qq [hh pp] of
+                        pure $ case getValueLR opts (_ttString qq <> " " <> showL opts b) qq [hh pp] of
                           Left e -> e
                           Right bs -> mkNode opts (PresentT (b:bs)) (msgbase1 <> " " <> showL opts (b:bs) <> showVerbose opts " | " as') [hh pp, hh qq]
        _ -> errorInProgram "ParaImpl n+1 case has no data left"

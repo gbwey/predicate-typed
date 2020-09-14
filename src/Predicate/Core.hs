@@ -262,7 +262,7 @@ instance P p x => P (Hide p) x where
   type PP (Hide p) x = PP p x
   eval _ opts x = do
       tt <- eval (Proxy @p) opts x
-      pure $ tt & tForest .~ []
+      pure $ tt & ttForest .~ []
 
 data Hole (t :: Type)
 
@@ -628,7 +628,7 @@ instance (Show (PP p a)
       Left e -> pure e
       Right p -> do
         qq <- eval (Proxy @(p1 ': ps)) opts a
-        pure $ case getValueLR opts (_tString qq) qq [hh pp] of
+        pure $ case getValueLR opts (_ttString qq) qq [hh pp] of
           Left e -> e
           Right q ->
             let ret = p:q
@@ -944,7 +944,7 @@ run :: forall opts p a
 run a = do
   let opts = getOpt @opts
   pp <- eval (Proxy @p) opts a
-  let r = pp ^. tBool
+  let r = pp ^. ttBool
   unless (oDebug opts == DZero) $ putStr $ prtTree opts pp
   return r
 
@@ -1055,7 +1055,7 @@ instance (Show (PP p a)
         qq <- eval (Proxy @q) opts p
         pure $ case getValueLR opts (showL opts p) qq [hh pp] of
           Left e -> e
-          Right q -> mkNode opts (_tBool qq) (lit01 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
+          Right q -> mkNode opts (_ttBool qq) (lit01 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
 
 -- | flipped version of 'Predicate.Core.>>'
 data p << q
@@ -1068,7 +1068,7 @@ instance P (LeftArrowsT p q) x => P (p << q) x where
 
 -- bearbeiten! only used by >>
 topMessageEgregious :: TT a -> String
-topMessageEgregious pp = innermost (pp ^. tString)
+topMessageEgregious pp = innermost (pp ^. ttString)
   where innermost = ('{':) . reverse . ('}':) . takeWhile (/='{') . dropWhile (=='}') . reverse
 
 -- | unwraps a value (see '_Wrapped'')

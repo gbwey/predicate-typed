@@ -449,7 +449,7 @@ prtRefinedIO :: forall opts p a
 prtRefinedIO a = do
   let o = getOpt @opts
   tt <- evalBool (Proxy @p) o a
-  let r = _tBool tt
+  let r = _ttBool tt
   case oDebug o of
      DZero -> pure ()
      DLite -> putStrLn $ colorBoolT o r <> " " <> topMessage tt
@@ -504,7 +504,7 @@ newRefinedM :: forall opts p a m
 newRefinedM a = do
   let o = getOpt @opts
   pp <- evalBool (Proxy @p) o a
-  let r = colorBoolT' o (_tBool pp)
+  let r = colorBoolT' o (_ttBool pp)
       s = prtTree o pp
   pure $ ((r,(topMessage pp, s)),) $ case getValueLR o "" pp [] of
        Right True -> Just (Refined a)
@@ -524,7 +524,7 @@ newRefinedTImpl f a = do
   unlessNullM (prtTree o tt) (tell . pure)
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
-    _ -> throwError $ colorBoolT' o (_tBool tt)
+    _ -> throwError $ colorBoolT' o (_ttBool tt)
 
 -- | returns a wrapper 'RefinedT' around a possible 'Refined' value if \'a\' is valid for the predicate \'p\'
 newRefinedT :: forall opts p a m
@@ -595,7 +595,7 @@ unsafeRefined' a =
   in case getValueLR o "" tt [] of
        Right True -> Refined a
        _ -> let s = prtTree o tt
-                bp = colorBoolT' o (tt ^. tBool)
+                bp = colorBoolT' o (tt ^. ttBool)
             in case oDebug o of
                  DZero -> error bp
                  DLite -> error $ bp ++ "\n" ++ s
