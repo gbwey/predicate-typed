@@ -87,7 +87,6 @@ import qualified Numeric
 import Data.Char
 import Data.Ratio
 import GHC.Real (Ratio((:%)))
-import Control.Lens ((&))
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -126,7 +125,7 @@ instance (Num (PP t a)
 -- >>> pz @(FromInteger Rational Id) 12
 -- PresentT (12 % 1)
 --
--- >>> pl @((FromInteger _ 12 &&& Id) >> Fst Id + Snd Id) (SG.Min 7)
+-- >>> pl @((FromInteger _ 12 &&& Id) >> Fst + Snd) (SG.Min 7)
 -- Present Min {getMin = 19} ((>>) Min {getMin = 19} | {getMin = 19})
 -- PresentT (Min {getMin = 19})
 --
@@ -134,7 +133,7 @@ instance (Num (PP t a)
 -- Present Product {getProduct = 84} ((>>) Product {getProduct = 84} | {getProduct = 84})
 -- PresentT (Product {getProduct = 84})
 --
--- >>> pl @(FromInteger (SG.Sum _) (Fst Id)) (3,"A")
+-- >>> pl @(FromInteger (SG.Sum _) Fst) (3,"A")
 -- Present Sum {getSum = 3} (FromInteger Sum {getSum = 3})
 -- PresentT (Sum {getSum = 3})
 --
@@ -184,11 +183,11 @@ instance P (FromIntegralT t p) x => P (FromIntegral t p) x where
 -- >>> pz @(ToRational Id) 23.5
 -- PresentT (47 % 2)
 --
--- >>> pl @((ToRational 123 &&& Id) >> Fst Id + Snd Id) 4.2
+-- >>> pl @((ToRational 123 &&& Id) >> Fst + Snd) 4.2
 -- Present 636 % 5 ((>>) 636 % 5 | {123 % 1 + 21 % 5 = 636 % 5})
 -- PresentT (636 % 5)
 --
--- >>> pl @(Fst Id >= Snd Id || Snd Id > 23 || 12 -% 5 <= ToRational (Fst Id)) (12,13)
+-- >>> pl @(Fst >= Snd || Snd > 23 || 12 -% 5 <= ToRational Fst) (12,13)
 -- True (False || True)
 -- TrueT
 --
@@ -220,7 +219,7 @@ instance (a ~ PP p x
 
 -- | 'fromRational' function where you need to provide the type \'t\' of the result
 --
--- >>> pl @(FromRational' (Fst Id) (Snd Id)) (1::Float,2 % 5)
+-- >>> pl @(FromRational' Fst Snd) (1::Float,2 % 5)
 -- Present 0.4 (FromRational 0.4 | 2 % 5)
 -- PresentT 0.4
 --
@@ -262,11 +261,11 @@ instance P (FromRationalT t p) x => P (FromRational t p) x where
 -- >>> pz @(Truncate Int Id) (23 % 5)
 -- PresentT 4
 --
--- >>> pl @(Truncate' (Fst Id >> Unproxy) (Snd Id)) (Proxy @Integer,2.3)
+-- >>> pl @(Truncate' (Fst >> Unproxy) Snd) (Proxy @Integer,2.3)
 -- Present 2 (Truncate 2 | 2.3)
 -- PresentT 2
 --
--- >>> pl @(Truncate' (Fst Id) (Snd Id)) (1::Int,2.3)
+-- >>> pl @(Truncate' Fst Snd) (1::Int,2.3)
 -- Present 2 (Truncate 2 | 2.3)
 -- PresentT 2
 --
@@ -384,7 +383,7 @@ instance P (MultT p q) x => P (p * q) x where
 
 -- | similar to 'GHC.Real.(^)'
 --
--- >>> pz @(Fst Id ^ Snd Id) (10,4)
+-- >>> pz @(Fst ^ Snd) (10,4)
 -- PresentT 10000
 --
 data p ^ q
@@ -415,7 +414,7 @@ instance (P p a
 
 -- | similar to 'GHC.Float.(**)'
 --
--- >>> pz @(Fst Id ** Snd Id) (10,4)
+-- >>> pz @(Fst ** Snd) (10,4)
 -- PresentT 10000.0
 --
 -- >>> pz @'(IsPrime,Id ^ 3,(FromIntegral _ Id) ** (FromRational _ (1 % 2))) 4
@@ -446,7 +445,7 @@ instance (PP p a ~ PP q a
 
 -- | similar to 'logBase'
 --
--- >>> pz @(Fst Id `LogBase` Snd Id >> Truncate Int Id) (10,12345)
+-- >>> pz @(Fst `LogBase` Snd >> Truncate Int Id) (10,12345)
 -- PresentT 4
 --
 data LogBase p q
@@ -481,10 +480,10 @@ instance GetBinOp 'BAdd where
 
 -- | addition, multiplication and subtraction
 --
--- >>> pz @(Fst Id * Snd Id) (13,5)
+-- >>> pz @(Fst * Snd) (13,5)
 -- PresentT 65
 --
--- >>> pz @(Fst Id + 4 * Length (Snd Id) - 4) (3,"hello")
+-- >>> pz @(Fst + 4 * Length Snd - 4) (3,"hello")
 -- PresentT 19
 --
 data Bin (op :: BinOp) p q
@@ -508,7 +507,7 @@ instance (GetBinOp op
 
 -- | fractional division
 --
--- >>> pz @(Fst Id / Snd Id) (13,2)
+-- >>> pz @(Fst / Snd) (13,2)
 -- PresentT 6.5
 --
 -- >>> pz @(ToRational 13 / Id) 0
@@ -548,7 +547,7 @@ instance (PP p a ~ PP q a
 -- >>> pz @(Id < 21 % 5) 4.5
 -- FalseT
 --
--- >>> pz @(Fst Id % Snd Id) (13,2)
+-- >>> pz @(Fst % Snd) (13,2)
 -- PresentT (13 % 2)
 --
 -- >>> pz @(13 % Id) 0
@@ -633,7 +632,7 @@ instance (Integral (PP p x)
 -- Present (-5) % 3 (5 % 1 / (-3) % 1 = (-5) % 3)
 -- PresentT ((-5) % 3)
 --
--- >>> pl @(5 -% 1 / Fst Id) (3,'x')
+-- >>> pl @(5 -% 1 / Fst) (3,'x')
 -- Present (-5) % 3 ((-5) % 1 / 3 % 1 = (-5) % 3)
 -- PresentT ((-5) % 3)
 --
@@ -651,7 +650,7 @@ instance P (NegateRatioT p q) x => P (p -% q) x where
 -- >>> pz @(Negate Id) 14
 -- PresentT (-14)
 --
--- >>> pz @(Negate (Fst Id * Snd Id)) (14,3)
+-- >>> pz @(Negate (Fst * Snd)) (14,3)
 -- PresentT (-42)
 --
 -- >>> pz @(Negate (15 -% 4)) "abc"
@@ -660,7 +659,7 @@ instance P (NegateRatioT p q) x => P (p -% q) x where
 -- >>> pz @(Negate (15 % 3)) ()
 -- PresentT ((-5) % 1)
 --
--- >>> pz @(Negate (Fst Id % Snd Id)) (14,3)
+-- >>> pz @(Negate (Fst % Snd)) (14,3)
 -- PresentT ((-14) % 3)
 --
 data Negate p
@@ -685,7 +684,7 @@ instance ( Show (PP p x)
 -- >>> pz @(Abs Id) (-14)
 -- PresentT 14
 --
--- >>> pz @(Abs (Snd Id)) ("xx",14)
+-- >>> pz @(Abs Snd) ("xx",14)
 -- PresentT 14
 --
 -- >>> pz @(Abs Id) 0
@@ -712,10 +711,10 @@ instance ( Show (PP p x)
 
 -- | similar to 'div'
 --
--- >>> pz @(Div (Fst Id) (Snd Id)) (10,4)
+-- >>> pz @(Div Fst Snd) (10,4)
 -- PresentT 2
 --
--- >>> pz @(Div (Fst Id) (Snd Id)) (10,0)
+-- >>> pz @(Div Fst Snd) (10,0)
 -- FailT "Div zero denominator"
 --
 data Div p q
@@ -741,10 +740,10 @@ instance (PP p a ~ PP q a
 
 -- | similar to 'GHC.Real.mod'
 --
--- >>> pz @(Mod (Fst Id) (Snd Id)) (10,3)
+-- >>> pz @(Mod Fst Snd) (10,3)
 -- PresentT 1
 --
--- >>> pz @(Mod (Fst Id) (Snd Id)) (10,0)
+-- >>> pz @(Mod Fst Snd) (10,0)
 -- FailT "Mod zero denominator"
 --
 data Mod p q
@@ -769,34 +768,34 @@ instance (PP p a ~ PP q a
 
 -- | similar to 'divMod'
 --
--- >>> pz @(DivMod (Fst Id) (Snd Id)) (10,3)
+-- >>> pz @(DivMod Fst Snd) (10,3)
 -- PresentT (3,1)
 --
--- >>> pz @(DivMod (Fst Id) (Snd Id)) (10,-3)
+-- >>> pz @(DivMod Fst Snd) (10,-3)
 -- PresentT (-4,-2)
 --
--- >>> pz @(DivMod (Fst Id) (Snd Id)) (-10,3)
+-- >>> pz @(DivMod Fst Snd) (-10,3)
 -- PresentT (-4,2)
 --
--- >>> pz @(DivMod (Fst Id) (Snd Id)) (-10,-3)
+-- >>> pz @(DivMod Fst Snd) (-10,-3)
 -- PresentT (3,-1)
 --
--- >>> pz @(DivMod (Fst Id) (Snd Id)) (10,0)
+-- >>> pz @(DivMod Fst Snd) (10,0)
 -- FailT "DivMod zero denominator"
 --
 -- >>> pl @(DivMod (Negate Id) 7) 23
 -- Present (-4,5) (-23 `divMod` 7 = (-4,5))
 -- PresentT (-4,5)
 --
--- >>> pl @(DivMod (Fst Id) (Snd Id)) (10,-3)
+-- >>> pl @(DivMod Fst Snd) (10,-3)
 -- Present (-4,-2) (10 `divMod` -3 = (-4,-2))
 -- PresentT (-4,-2)
 --
--- >>> pl @(DivMod (Fst Id) (Snd Id)) (10,0)
+-- >>> pl @(DivMod Fst Snd) (10,0)
 -- Error DivMod zero denominator
 -- FailT "DivMod zero denominator"
 --
--- >>> pl @(DivMod (9 - Fst Id) (Last (Snd Id))) (10,[12,13])
+-- >>> pl @(DivMod (9 - Fst) (Snd >> Last)) (10,[12,13])
 -- Present (-1,12) (-1 `divMod` 13 = (-1,12))
 -- PresentT (-1,12)
 --
@@ -824,26 +823,26 @@ instance (PP p a ~ PP q a
 
 -- | similar to 'quotRem'
 --
--- >>> pz @(QuotRem (Fst Id) (Snd Id)) (10,3)
+-- >>> pz @(QuotRem Fst Snd) (10,3)
 -- PresentT (3,1)
 --
--- >>> pz @(QuotRem (Fst Id) (Snd Id)) (10,-3)
+-- >>> pz @(QuotRem Fst Snd) (10,-3)
 -- PresentT (-3,1)
 --
--- >>> pz @(QuotRem (Fst Id) (Snd Id)) (-10,-3)
+-- >>> pz @(QuotRem Fst Snd) (-10,-3)
 -- PresentT (3,-1)
 --
--- >>> pz @(QuotRem (Fst Id) (Snd Id)) (-10,3)
+-- >>> pz @(QuotRem Fst Snd) (-10,3)
 -- PresentT (-3,-1)
 --
--- >>> pz @(QuotRem (Fst Id) (Snd Id)) (10,0)
+-- >>> pz @(QuotRem Fst Snd) (10,0)
 -- FailT "QuotRem zero denominator"
 --
 -- >>> pl @(QuotRem (Negate Id) 7) 23
 -- Present (-3,-2) (-23 `quotRem` 7 = (-3,-2))
 -- PresentT (-3,-2)
 --
--- >>> pl @(QuotRem (Fst Id) (Snd Id)) (10,-3)
+-- >>> pl @(QuotRem Fst Snd) (10,-3)
 -- Present (-3,1) (10 `quotRem` -3 = (-3,1))
 -- PresentT (-3,1)
 --
@@ -870,14 +869,14 @@ instance (PP p a ~ PP q a
                   in mkNode opts (PresentT d) (showL opts p <> " `quotRem` " <> showL opts q <> " = " <> showL opts d) hhs
 
 data Quot p q
-type QuotT p q = Fst (QuotRem p q)
+type QuotT p q = QuotRem p q >> Fst
 
 instance P (QuotT p q) x => P (Quot p q) x where
   type PP (Quot p q) x = PP (QuotT p q) x
   eval _ = eval (Proxy @(QuotT p q))
 
 data Rem p q
-type RemT p q = Snd (QuotRem p q)
+type RemT p q = QuotRem p q >> Snd
 
 instance P (RemT p q) x => P (Rem p q) x where
   type PP (Rem p q) x = PP (RemT p q) x
@@ -1154,19 +1153,19 @@ instance (PP p x ~ [a]
 
 -- | calculate the amount to roundup to next n
 --
--- >>> pl @(RoundUp (Fst Id) (Snd Id)) (3,9)
+-- >>> pl @(RoundUp Fst Snd) (3,9)
 -- Present 0 (RoundUp 3 `mod` 3 = 0)
 -- PresentT 0
 --
--- >>> pl @(RoundUp (Fst Id) (Snd Id)) (3,10)
+-- >>> pl @(RoundUp Fst Snd) (3,10)
 -- Present 2 (RoundUp 2 `mod` 3 = 2)
 -- PresentT 2
 --
--- >>> pl @(RoundUp (Fst Id) (Snd Id)) (3,11)
+-- >>> pl @(RoundUp Fst Snd) (3,11)
 -- Present 1 (RoundUp 1 `mod` 3 = 1)
 -- PresentT 1
 --
--- >>> pl @(RoundUp (Fst Id) (Snd Id)) (3,12)
+-- >>> pl @(RoundUp Fst Snd) (3,12)
 -- Present 0 (RoundUp 3 `mod` 3 = 0)
 -- PresentT 0
 --
@@ -1184,7 +1183,7 @@ type RoundUpT n p = (n - p `Mod` n) `Mod` n
 instance P (RoundUpT n p) x => P (RoundUp n p) x where
   type PP (RoundUp n p) x = PP (RoundUpT n p) x
   eval _ opts =
-    opts & if isVerbose opts
-           then eval (Proxy @(MsgI "RoundUp " (RoundUpT n p)))
-           else eval (Proxy @(MsgI "RoundUp " (Hide (RoundUpT n p))))
+    if isVerbose opts
+    then eval (Proxy @(MsgI "RoundUp " (RoundUpT n p))) opts
+    else eval (Proxy @(MsgI "RoundUp " (Hide (RoundUpT n p)))) opts
 

@@ -180,7 +180,7 @@ instance ( i ~ String
 -- >>> reads @(Refined2 OZ (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
 -- [(Refined2 {r2In = -1234, r2Out = "-4d2"},"")]
 --
--- >>> reads @(Refined2 OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (GuardBool "len/=4" (Len == 4)) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined2 OZ (Map (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
 -- [(Refined2 {r2In = [192,168,0,1], r2Out = "192.168.0.1"},"")]
 --
 instance ( Refined2C opts ip op i
@@ -264,7 +264,7 @@ instance ( Refined2C opts ip op i
 -- | 'Arbitrary' instance for 'Refined2'
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined2 OAN (ToEnum Day Id) (Snd (ToWeekDate Id) == "Tuesday") Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined2 OAN (ToEnum Day Id) (L2 (ToWeekDate Id) == "Tuesday") Int)))
 -- >>> all (\x -> let y = toEnum @Day (r2Out x) in view _3 (toWeekDate y) == 2 && r2In x == y) xs
 -- True
 --
@@ -276,7 +276,7 @@ instance ( Arbitrary i
 
 -- | create a 'Refined2' generator using a generator to restrict the values (so it completes)
 --
--- >>> g = genRefined2 @OAN @(ToEnum Day Id) @(UnMkDay Id >> Snd Id == 10) arbitrary
+-- >>> g = genRefined2 @OAN @(ToEnum Day Id) @(UnMkDay Id >> Snd == 10) arbitrary
 -- >>> xs <- generate (vectorOf 10 g)
 -- >>> all (\x -> let y = toEnum @Day (fromIntegral (r2Out x)) in view _2 (toGregorian y) == 10 && y == r2In x) xs
 -- True
@@ -425,16 +425,16 @@ withRefined2TP p = (>>=) . newRefined2TP p
 
 -- | create a wrapped 'Refined2' type
 --
--- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Thd Id == 5) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Thd == 5) (2019,11,1)
 -- Refined2 {r2In = (2019-11-01,44,5), r2Out = (2019,11,1)}
 --
--- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Thd Id == 5) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Thd == 5) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Msg "wrong day:" (Thd == 5)) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined2TIO @OL @(Hide (Rescan "(\\d+)" Id >> ConcatMap (Snd Id) Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff) Id) "|23|99|255|254.911."
+-- >>> prtRefinedTIO $ newRefined2TIO @OL @(Hide (Rescan "(\\d+)" >> ConcatMap Snd Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff)) "|23|99|255|254.911."
 -- failure msg[Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}]
 --
 newRefined2T :: forall opts ip op i m
@@ -522,23 +522,23 @@ newRefined2P' _ i = do
 -- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(Lt 255) "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> newRefined2 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
+-- >>> newRefined2 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
 --
--- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
+-- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1"
+-- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1"
 -- Right (Refined2 {r2In = [198,162,3,1], r2Out = "198.162.3.1"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> newRefined2 @OZ @(MkDayExtra Id >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) (2019,10,13)
+-- >>> newRefined2 @OZ @(MkDayExtra Id >> 'Just Id) @(GuardBool "expected a Sunday" (Thd == 7)) (2019,10,13)
 -- Right (Refined2 {r2In = (2019-10-13,41,7), r2Out = (2019,10,13)})
 --
--- >>> newRefined2 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
+-- >>> newRefined2 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd == 7)) (2019,10,12)
 -- Left Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}
 --
--- >>> newRefined2 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) (2019,10,12)
+-- >>> newRefined2 @OZ @(MkDayExtra' Fst Snd Thd >> 'Just Id) @(GuardBool "expected a Sunday" (Thd == 7)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
 -- >>> newRefined2 @OL @Id @'True 22

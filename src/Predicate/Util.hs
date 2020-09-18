@@ -1315,7 +1315,7 @@ prtTreePure opts t
 -- | extract message part from tree
 topMessage :: TT a -> String
 topMessage pp =
-  let s = pp ^. ttString
+  let s = _ttString pp
   in unlessNull s $ "(" <> s <> ")"
 
 showImpl :: POpts

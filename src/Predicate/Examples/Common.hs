@@ -95,7 +95,7 @@ type Dtip t = ParseTimeP t "%F %T" Id
 type Dtfmt = FormatTimeP "%F %T" Id
 
 -- | \'ip\' type for reading in a ssn
-type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> Snd OneP)
+type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd)
 -- | \'op\' type for validating a ssn
 type Ssnop = BoolsQuick (PrintT "number for group %d invalid: found %d" Id)
                      '[Between 1 899 Id && Id /= 666, Between 1 99 Id, Between 1 9999 Id]
@@ -112,7 +112,7 @@ type Ssnop' = GuardsDetail "%s invalid: found %d"
 type Ssnfmt = PrintL 3 "%03d-%02d-%04d" Id
 
 -- | \'ip\' type for reading in time
-type Hmsip = Map (ReadP Int Id) (Resplit ":" Id)
+type Hmsip = Map (ReadP Int Id) (Resplit ":")
 -- type Hmsop' = BoolsQuick "" '[Msg "hours:"   (Between 0 23 Id), Msg "minutes:" (Between 0 59 Id), Msg "seconds:" (Between 0 59 Id)]
 
 -- | \'op\' type for validating the time using a guard
@@ -131,10 +131,10 @@ type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- strict validat
 type Ip4RE = "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$"
 
 -- | \'ip\' type for reading in an ip4 address
-type Ip4ip = Map (ReadP Int Id) (Resplit "\\." Id)
+type Ip4ip = Map (ReadP Int Id) (Resplit "\\.")
 
 -- | \'ip\' type for reading in an ip4 address using a regular expression
-type Ip4ip' = Map (ReadP Int Id) (Rescan Ip4RE Id >> Snd OneP)
+type Ip4ip' = Map (ReadP Int Id) (Rescan Ip4RE >> OneP >> Snd)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
 
 -- | \'op\' type for validating an ip4 address using a predicate
@@ -153,45 +153,45 @@ type Ip4StrictRE = "^" <%> IntersperseT "\\." (RepeatT 4 OctetRE) <%> "$"
 
 
 -- | \'ip\' type for reading in an ip6 address
-type Ip6ip = Resplit ":" Id
+type Ip6ip = Resplit ":"
          >> Map (If (Id == "") "0" Id) Id
          >> Map (ReadBase Int 16 Id) Id
          >> PadL 8 0 Id
 
---type Ip6ip' = Map (If (Id == "") 0 (ReadBase Int 16 Id)) (Resplit ":" Id) >> PadL 8 0 Id
+--type Ip6ip' = Map (If (Id == "") 0 (ReadBase Int 16 Id)) (Resplit ":") >> PadL 8 0 Id
 
 -- | \'op\' type for validating an ip6 address using predicates
 type Ip6op = Msg "count is bad:" (Len == 8)
-          && Msg "out of bounds:" (All (Between 0 65535 Id) Id)
+          && Msg "out of bounds:" (All (Between 0 65535 Id))
 
 -- | \'fmt\' type for formatting an ip6 address
 type Ip6fmt = PrintL 8 "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x" Id
 
 
-type Isbn10ip = Resplit "-" Id
+type Isbn10ip = Resplit "-"
              >> Concat Id
              >> 'Just Unsnoc
              >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id))
 
-type Isbn10op = GuardSimple (All (0 <..> 9) (Fst Id) && Between 0 10 (Snd Id))
-             >> ZipWith (Fst Id * Snd Id) (1...10 >> Reverse) (Fst Id +: Snd Id)
+type Isbn10op = GuardSimple ((Fst >> All (0 <..> 9)) && Between 0 10 Snd)
+             >> ZipWith (Fst * Snd) (1...10 >> Reverse) (Fst +: Snd)
              >> Sum
              >> GuardBool "mod 0 oops" (Id `Mod` 11 == 0)
 
 type Isbn10fmt = ConcatMap (ShowP Id) Id *** If (Id == 10) "X" (ShowP Id)
-                 >> Fst Id <> "-" <> Snd Id  -- no standard format: just hyphen before checkdigit
+                 >> Fst <> "-" <> Snd  -- no standard format: just hyphen before checkdigit
 
 
-type Isbn13ip = Resplit "-" Id
+type Isbn13ip = Resplit "-"
              >> Concat Id
              >> Map (ReadP Int (Singleton Id)) Id
 
-type Isbn13op = ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3] >> Reverse) Id
+type Isbn13op = ZipWith (Fst * Snd) (Cycle 13 [1,3] >> Reverse) Id
              >> Sum
              >> '(Id,Id `Mod` 10)
-             >> GuardBool (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)
+             >> GuardBool (PrintT "sum=%d mod 10=%d" Id) (Snd == 0)
 
-type Isbn13fmt = 'Just Unsnoc >> ConcatMap (ShowP Id) (Fst Id) <> "-" <> ShowP (Snd Id)
+type Isbn13fmt = 'Just Unsnoc >> ConcatMap (ShowP Id) Fst <> "-" <> ShowP Snd
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
 type DateFmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
@@ -222,7 +222,7 @@ type Luhnop' (n :: Nat) =
          Guard (PrintT "incorrect number of digits found %d but expected %d in [%s]" '(Len, n, ShowP Id)) (Len == n)
       >> Do '[
               Reverse
-             ,ZipWith (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) (Cycle n [1,2]) Id
+             ,ZipWith (Fst * Snd >> If (Id >= 10) (Id - 9) Id) (Cycle n [1,2]) Id
              ,Sum
              ]
         >> Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
@@ -234,23 +234,23 @@ type Luhn' (n :: Nat) =
             '[Ones
             ,Map (ReadP Int Id) Id
             ,Reverse
-            ,ZipWith (Fst Id * Snd Id >> If (Id >= 10) (Id - 9) Id) (Cycle n [1,2]) Id
+            ,ZipWith (Fst * Snd >> If (Id >= 10) (Id - 9) Id) (Cycle n [1,2]) Id
             ,Sum
            ]
         ,Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
         ])
 
 -- convert json microsoft datetime to zonedtime
---type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id
+--type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id
 
--- type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z" Id
+-- type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z" Id
 
 -- jam the values together
 -- eg pu @JsonMicrosoftDateTime "Date(1593460089052+0800)"
 type JsonMicrosoftDateTime =
-  Do '[ Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" Id
-      , Head Id
-      , Snd Id
+  Do '[ Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)"
+      , Head
+      , Snd
       , Id !! 0 <> "." <> Id !! 1
       , ParseTimeP ZonedTime "%s%Q%z" Id
       ]

@@ -172,7 +172,7 @@ refined2THIO i = do
 --           $$(refined3TH 99) :: Refined3 OAN Id (Between 100 125 Id) Id Int
 -- @
 --
--- >>> $$(refined3TH @OL @(Resplit "\\." Id >> Map (ReadP Int Id) Id) @(All (0 <..> 0xff) Id && Len == 4) @(PrintL 4 "%03d.%03d.%03d.%03d" Id)  "200.2.3.4")
+-- >>> $$(refined3TH @OL @(Resplit "\\." >> Map (ReadP Int Id) Id) @(All (0 <..> 0xff) && Len == 4) @(PrintL 4 "%03d.%03d.%03d.%03d" Id)  "200.2.3.4")
 -- Refined3 {r3In = [200,2,3,4], r3Out = "200.002.003.004"}
 --
 refined3TH :: forall opts ip op fmt i

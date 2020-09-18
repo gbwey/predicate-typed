@@ -80,14 +80,14 @@ unnamedTests = [
   , expectLeft (testRefined3P (Proxy @(Luhn OAN '[4,4,3])) "6433-1000-000")
   , expectRight (testRefined3P (Proxy @(Luhn OAN '[1,2,1])) "1-23-0")
   , expect3 (Left $ XF "Regex no results")
-                  $ runIdentity $ eval3M @OAN @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
-                          @((Len == 4) && All (Between 0 255 Id) Id)
+                  $ runIdentity $ eval3M @OAN @(Rescan Ip4RE >> HeadFail "failedn" Id >> Map (ReadP Int Id) Snd)
+                          @((Len == 4) && All (Between 0 255 Id))
                           @(PrintL 4 "%03d.%03d.%03d.%03d" Id)
                           "1.21.x31.4"
 
   , expect3 (Right $ unsafeRefined3 [1,21,31,4] "001.021.031.004")
-                  $ runIdentity $ eval3M @OAN @(Rescan Ip4RE Id >> HeadFail "failedn" Id >> Map (ReadP Int Id) (Snd Id))
-                          @((Len == 4) && All (Between 0 255 Id) Id)
+                  $ runIdentity $ eval3M @OAN @(Rescan Ip4RE >> HeadFail "failedn" Id >> Map (ReadP Int Id) Snd)
+                          @((Len == 4) && All (Between 0 255 Id))
                           @(PrintL 4 "%03d.%03d.%03d.%03d" Id)
                           "1.21.31.4"
 
@@ -105,7 +105,7 @@ unnamedTests = [
                   $ runIdentity $ eval3M @OAN @Id @(Gt (7 -% 3)) @(4123 % 1000) 4.123
 
   , expect3 (Right $ unsafeRefined3 [1,2,3,4] "")
-                  $ runIdentity $ eval3M @OAN @(Map (ReadP Int Id) (Resplit "\\." Id)) @(All (Between 0 255 Id) Id && (Len == 4)) @""
+                  $ runIdentity $ eval3M @OAN @(Map (ReadP Int Id) (Resplit "\\.")) @(All (Between 0 255 Id) && (Len == 4)) @""
                   "1.2.3.4"
 
   , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
@@ -116,7 +116,7 @@ unnamedTests = [
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
                   $ runIdentity $ eval3M
-                  @OAN @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
+                  @OAN @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10 Id) Snd)
                   @(GuardBool "expected 3" (Len == 3)
                  && GuardBool "3 digits" (Between 0 999 (Ix' 0))
                  && GuardBool "2 digits" (Between 0 99 (Ix' 1))
@@ -127,7 +127,7 @@ unnamedTests = [
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz")
                   $ runIdentity $ eval3M
                   @OAN
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10 Id) Snd)
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   @"xyz"
                   "123-45-6789"
@@ -149,12 +149,12 @@ unnamedTests = [
                   "123::Ffff:::11"
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
-                  $ runIdentity $ eval3M @OAN @(Rescan DdmmyyyyRE Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
+                  $ runIdentity $ eval3M @OAN @(Rescan DdmmyyyyRE >> OneP >> Map (ReadBase Int 10 Id) Snd)
                            @Ddmmyyyyop
                            @"xyz"
                            "31-11-1999"
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ runIdentity $ eval3M @OAN
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" Id >> OneP >> Map (ReadBase Int 10 Id) (Snd Id))
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10 Id) Snd)
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   @"xyz"
                   "123-45-6789"
@@ -177,7 +177,7 @@ unnamedTests = [
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) "1.2.3.4"
 
   -- keep the original value
-  , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ runIdentity $ eval3M @OAN @(Id &&& Ip4ip) @(Snd Id >> Ip4op') @(Snd Id >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) "1.2.3.4"
+  , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ runIdentity $ eval3M @OAN @(Id &&& Ip4ip) @(Snd >> Ip4op') @(Snd >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) "1.2.3.4"
   ]
 
 allProps :: [TestTree]
@@ -206,12 +206,12 @@ hms2E :: Proxy '(OAN, Hmsip2, Hmsop2, Hmsfmt2, String)
 hms2E = mkProxy3
 
 type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
-type Hmsop2 = Fst Id >> Hmsop
-type Hmsfmt2 = Snd Id >> FormatTimeP "%T" Id
+type Hmsop2 = Fst >> Hmsop
+type Hmsfmt2 = Snd >> FormatTimeP "%T" Id
 
 -- use GuardBool for op boolean check to get better errormessages
 -- 1. packaged up as a promoted tuple
-type Tst3 = '(OAN, Map (ReadP Int Id) (Resplit "\\." Id), (Len == 4) && All (Between 0 255 Id) Id, Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id, String)
+type Tst3 = '(OAN, Map (ReadP Int Id) (Resplit "\\."), (Len == 4) && All (Between 0 255 Id), Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id, String)
 
 www1, www2 :: String -> Either Msg3 (MakeR3 Tst3)
 www1 = newRefined3P (mkProxy3 @Tst3)
@@ -221,24 +221,24 @@ www2 = newRefined3P tst3
 
 -- 2. packaged as a proxy
 tst3 :: Proxy
-        '(OAN, Map (ReadP Int Id) (Resplit "\\." Id)
-        ,(Len == 4) && All (Between 0 255 Id) Id
+        '(OAN, Map (ReadP Int Id) (Resplit "\\.")
+        ,(Len == 4) && All (Between 0 255 Id)
         ,Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id
         ,String)
 tst3 = mkProxy3
 
 -- 3. direct
 www3, www3' :: String -> Either Msg3 (Refined3 OAN
-                               (Map (ReadP Int Id) (Resplit "\\." Id))
-                               ((Len == 4) && All (Between 0 255 Id) Id)
+                               (Map (ReadP Int Id) (Resplit "\\."))
+                               ((Len == 4) && All (Between 0 255 Id))
                                (Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id)
                                String)
 www3 = newRefined3
 
 www3' = newRefined3
         @OAN
-        @(Map (ReadP Int Id) (Resplit "\\." Id))
-        @((Len == 4) && All (Between 0 255 Id) Id)
+        @(Map (ReadP Int Id) (Resplit "\\."))
+        @((Len == 4) && All (Between 0 255 Id))
         @(Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id)
 
 data G4 = G4 { g4Age :: MakeR3 Age
@@ -251,8 +251,8 @@ type Age = '(OAN, ReadP Int Id, Gt 4, ShowP Id, String)
 
 type Ip9 = '(
             OAN
-           ,Map (ReadP Int Id) (Resplit "\\." Id) -- split String on "." then convert to [Int]
-           ,Len == 4 && All (Between 0 255 Id) Id -- process [Int] and make sure length==4 and each octet is between 0 and 255
+           ,Map (ReadP Int Id) (Resplit "\\.") -- split String on "." then convert to [Int]
+           ,Len == 4 && All (Between 0 255 Id) -- process [Int] and make sure length==4 and each octet is between 0 and 255
            ,PrintL 4 "%03d.%03d.%03d.%03d" Id -- printf [Int]
            ,String -- input type is string which is also the output type
            )

@@ -126,10 +126,10 @@ import Control.Applicative
 
 -- | similar to (++)
 --
--- >>> pz @(Fst Id ++ Snd Id) ([9,10,11],[1,2,3,4])
+-- >>> pz @(Fst ++ Snd) ([9,10,11],[1,2,3,4])
 -- PresentT [9,10,11,1,2,3,4]
 --
--- >>> pz @(Snd Id ++ Fst Id) ([],[5])
+-- >>> pz @(Snd ++ Fst) ([],[5])
 -- PresentT [5]
 --
 -- >>> pz @(Char1 "xyz" :+ W "ab" ++ W "cdefg") ()
@@ -163,20 +163,20 @@ instance (P p x
 
 -- | similar to cons
 --
--- >>> pz @(Fst Id :+ Snd Id) (99,[1,2,3,4])
+-- >>> pz @(Fst :+ Snd) (99,[1,2,3,4])
 -- PresentT [99,1,2,3,4]
 --
--- >>> pz @(Snd Id :+ Fst Id) ([],5)
+-- >>> pz @(Snd :+ Fst) ([],5)
 -- PresentT [5]
 --
 -- >>> pz @(123 :+ EmptyList _) "somestuff"
 -- PresentT [123]
 --
--- >>> pl @(FlipT (:+) (Fst Id) (Snd Id)) ([1..5],99)
+-- >>> pl @(FlipT (:+) Fst Snd) ([1..5],99)
 -- Present [99,1,2,3,4,5] ((:+) [99,1,2,3,4,5] | p=99 | q=[1,2,3,4,5])
 -- PresentT [99,1,2,3,4,5]
 --
--- >>> pl @(Fst Id :+ Snd Id) (99,[1..5])
+-- >>> pl @(Fst :+ Snd) (99,[1..5])
 -- Present [99,1,2,3,4,5] ((:+) [99,1,2,3,4,5] | p=99 | q=[1,2,3,4,5])
 -- PresentT [99,1,2,3,4,5]
 --
@@ -184,7 +184,7 @@ instance (P p x
 -- Present [4,1,2,3] ((:+) [4,1,2,3] | p=4 | q=[1,2,3])
 -- PresentT [4,1,2,3]
 --
--- >>> pl @(Fst Id :+ Snd Id) (4,[1,2,3])
+-- >>> pl @(Fst :+ Snd) (4,[1,2,3])
 -- Present [4,1,2,3] ((:+) [4,1,2,3] | p=4 | q=[1,2,3])
 -- PresentT [4,1,2,3]
 --
@@ -213,20 +213,20 @@ instance (P p x
 
 -- | similar to snoc
 --
--- >>> pz @(Snd Id +: Fst Id) (99,[1,2,3,4])
+-- >>> pz @(Snd +: Fst) (99,[1,2,3,4])
 -- PresentT [1,2,3,4,99]
 --
--- >>> pz @(Fst Id +: Snd Id) ([],5)
+-- >>> pz @(Fst +: Snd) ([],5)
 -- PresentT [5]
 --
--- >>> pz @(EmptyT [] Id +: 5) 5
+-- >>> pz @(EmptyT [] +: 5) 5
 -- PresentT [5]
 --
 -- >>> pl @('[1,2,3] +: 4) ()
 -- Present [1,2,3,4] ((+:) [1,2,3,4] | p=[1,2,3] | q=4)
 -- PresentT [1,2,3,4]
 --
--- >>> pl @(Snd Id +: Fst Id) (4,[1,2,3])
+-- >>> pl @(Snd +: Fst) (4,[1,2,3])
 -- Present [1,2,3,4] ((+:) [1,2,3,4] | p=[1,2,3] | q=4)
 -- PresentT [1,2,3,4]
 --
@@ -234,7 +234,7 @@ instance (P p x
 -- Present "abcx" ((+:) "abcx" | p="abc" | q='x')
 -- PresentT "abcx"
 --
--- >>> pl @(Fst Id +: Snd Id) ("abc" :: T.Text,'x')
+-- >>> pl @(Fst +: Snd) ("abc" :: T.Text,'x')
 -- Present "abcx" ((+:) "abcx" | p="abc" | q='x')
 -- PresentT "abcx"
 --
@@ -347,7 +347,7 @@ instance (Show (ConsT s)
 -- PresentT ["bcda","cdab","dabc","abcd","bcda","cdab","dabc","abcd","bcda","cdab","dabc"]
 --
 data Rotate n p
-type RotateT n p = SplitAt (n `Mod` Length p) p >> Swap >> Fst Id <> Snd Id
+type RotateT n p = SplitAt (n `Mod` Length p) p >> Swap >> Fst <> Snd
 
 instance P (RotateT n p) x => P (Rotate n p) x where
   type PP (Rotate n p) x = PP (RotateT n p) x
@@ -380,7 +380,7 @@ instance P (RotateT n p) x => P (Rotate n p) x where
 -- Present ([2,4,6],[1,3,5]) (Partition ([2,4,6],[1,3,5]) | s=[1,2,3,4,5,6])
 -- PresentT ([2,4,6],[1,3,5])
 --
--- >>> pl @(Partition Even Id >> Null *** (Len > 4) >> Fst Id == Snd Id) [1..6]
+-- >>> pl @(Partition Even Id >> Null *** (Len > 4) >> Fst == Snd) [1..6]
 -- True ((>>) True | {False == False})
 -- TrueT
 --
@@ -464,31 +464,31 @@ instance (P p x
 
 -- | similar to 'Data.List.groupBy'
 --
--- >>> pz @(GroupBy (Fst Id == Snd Id) Id) [1,3,4,5,1,5,5]
+-- >>> pz @(GroupBy (Fst == Snd) Id) [1,3,4,5,1,5,5]
 -- PresentT [[1],[3],[4],[5],[1],[5,5]]
 --
--- >>> pz @(GroupBy (Fst Id == Snd Id) Id) [1,1,1,3,4,5,1,5,5]
+-- >>> pz @(GroupBy (Fst == Snd) Id) [1,1,1,3,4,5,1,5,5]
 -- PresentT [[1,1,1],[3],[4],[5],[1],[5,5]]
 --
--- >>> pz @(GroupBy (Fst Id == Snd Id) Id) [5,5]
+-- >>> pz @(GroupBy (Fst == Snd) Id) [5,5]
 -- PresentT [[5,5]]
 --
--- >>> pz @(GroupBy (Fst Id == Snd Id) Id) [1,2]
+-- >>> pz @(GroupBy (Fst == Snd) Id) [1,2]
 -- PresentT [[1],[2]]
 --
--- >>> pz @(GroupBy (Fst Id == Snd Id) Id) [1]
+-- >>> pz @(GroupBy (Fst == Snd) Id) [1]
 -- PresentT [[1]]
 --
--- >>> pz @(GroupBy (Fst Id == Snd Id) Id) []
+-- >>> pz @(GroupBy (Fst == Snd) Id) []
 -- PresentT []
 --
--- >>> pz @(GroupBy (Fst Id < Snd Id) Id) [1,2,3,4,4,1,2]
+-- >>> pz @(GroupBy (Fst < Snd) Id) [1,2,3,4,4,1,2]
 -- PresentT [[1,2,3,4],[4],[1,2]]
 --
--- >>> pz @(GroupBy (Fst Id /= Snd Id) Id) [1,2,3,4,4,4,1]
+-- >>> pz @(GroupBy (Fst /= Snd) Id) [1,2,3,4,4,4,1]
 -- PresentT [[1,2,3,4],[4],[4,1]]
 --
--- >>> pan @(GroupBy (Fst Id == Snd Id) Id) "hello    goodbye"
+-- >>> pan @(GroupBy (Fst == Snd) Id) "hello    goodbye"
 -- P GroupBy ["h","e","ll","o","    ","g","oo","d","b","y","e"]
 -- |
 -- +- P Id "hello    goodbye"
@@ -564,7 +564,7 @@ gp1 b = go [b]
                              else ret : go [a] as
 
 data Filter p q
-type FilterT p q = Fst (Partition p q)
+type FilterT p q = Partition p q >> Fst
 
 instance P (FilterT p q) x => P (Filter p q) x where
   type PP (Filter p q) x = PP (FilterT p q) x
@@ -594,15 +594,15 @@ instance P (FilterT p q) x => P (Filter p q) x where
 -- Error ASfd (Break predicate failed)
 -- FailT "ASfd"
 --
--- >>> pl @(Break (Snd Id) Id) (zip [1..] [False,False,False,True,True,False])
+-- >>> pl @(Break Snd Id) (zip [1..] [False,False,False,True,True,False])
 -- Present ([(1,False),(2,False),(3,False)],[(4,True),(5,True),(6,False)]) (Break cnt=(3,3))
 -- PresentT ([(1,False),(2,False),(3,False)],[(4,True),(5,True),(6,False)])
 --
--- >>> pl @(Break (Snd Id) Id) (zip [1..] [False,False,False,False])
+-- >>> pl @(Break Snd Id) (zip [1..] [False,False,False,False])
 -- Present ([(1,False),(2,False),(3,False),(4,False)],[]) (Break cnt=(4,0))
 -- PresentT ([(1,False),(2,False),(3,False),(4,False)],[])
 --
--- >>> pl @(Break (Snd Id) Id) (zip [1..] [True,True,True,True])
+-- >>> pl @(Break Snd Id) (zip [1..] [True,True,True,True])
 -- Present ([],[(1,True),(2,True),(3,True),(4,True)]) (Break cnt=(0,4))
 -- PresentT ([],[(1,True),(2,True),(3,True),(4,True)])
 --
@@ -675,11 +675,11 @@ instance P (SpanT p q) x => P (Span p q) x where
 -- >>> pz @(Intercalate '[99,100] Id) [1..5]
 --PresentT [1,99,100,2,99,100,3,99,100,4,99,100,5]
 --
--- >>> pl @(Intercalate (Fst Id) (Snd Id)) ([0,1], [12,13,14,15,16])
+-- >>> pl @(Intercalate Fst Snd) ([0,1], [12,13,14,15,16])
 -- Present [12,0,1,13,0,1,14,0,1,15,0,1,16] (Intercalate [12,0,1,13,0,1,14,0,1,15,0,1,16] | [0,1] | [12,13,14,15,16])
 -- PresentT [12,0,1,13,0,1,14,0,1,15,0,1,16]
 --
--- >>> pl @((Pure [] (Negate Len) &&& Id) >> Intercalate (Fst Id) (Snd Id)) [12,13,14,15,16]
+-- >>> pl @((Pure [] (Negate Len) &&& Id) >> Intercalate Fst Snd) [12,13,14,15,16]
 -- Present [12,-5,13,-5,14,-5,15,-5,16] ((>>) [12,-5,13,-5,14,-5,15,-5,16] | {Intercalate [12,-5,13,-5,14,-5,15,-5,16] | [-5] | [12,13,14,15,16]})
 -- PresentT [12,-5,13,-5,14,-5,15,-5,16]
 --
@@ -707,10 +707,10 @@ instance (PP p x ~ [a]
 
 -- | 'elem' function
 --
--- >>> pz @(Elem (Fst Id) (Snd Id)) ('x',"abcdxy")
+-- >>> pz @(Elem Fst Snd) ('x',"abcdxy")
 -- TrueT
 --
--- >>> pz @(Elem (Fst Id) (Snd Id)) ('z',"abcdxy")
+-- >>> pz @(Elem Fst Snd) ('z',"abcdxy")
 -- FalseT
 --
 -- >>> pl @(Elem Id '[2,3,4]) 2
@@ -804,9 +804,7 @@ instance ( [a] ~ x
 --
 data Ones
 
-instance ( x ~ [a]
---         , Show a
-         ) => P Ones x where
+instance x ~ [a] => P Ones x where
   type PP Ones x = [x]
   eval _ opts x =
     let msg0 = "Ones"
@@ -856,10 +854,10 @@ instance (P n a
 -- >>> pz @(PadL 5 999 Id) [12,13]
 -- PresentT [999,999,999,12,13]
 --
--- >>> pz @(PadR 5 (Fst Id) '[12,13]) (999,'x')
+-- >>> pz @(PadR 5 Fst '[12,13]) (999,'x')
 -- PresentT [12,13,999,999,999]
 --
--- >>> pz @(PadR 2 (Fst Id) '[12,13,14]) (999,'x')
+-- >>> pz @(PadR 2 Fst '[12,13,14]) (999,'x')
 -- PresentT [12,13,14]
 --
 -- >>> pl @(PadL 10 0 Id) [1..3]
@@ -946,13 +944,13 @@ instance (P ns x
 -- >>> pz @(SplitAt 0 Id) "hello world"
 -- PresentT ("","hello world")
 --
--- >>> pz @(SplitAt (Snd Id) (Fst Id)) ("hello world",4)
+-- >>> pz @(SplitAt Snd Fst) ("hello world",4)
 -- PresentT ("hell","o world")
 --
 -- >>> pz @(SplitAt (Negate 2) Id) "hello world"
 -- PresentT ("hello wor","ld")
 --
--- >>> pl @(Snd Id >> SplitAt 2 Id >> Len *** Len >> Fst Id > Snd Id) ('x',[1..5])
+-- >>> pl @(Snd >> SplitAt 2 Id >> Len *** Len >> Fst > Snd) ('x',[1..5])
 -- False ((>>) False | {2 > 3})
 -- FalseT
 --
@@ -980,14 +978,14 @@ splitAtNeg n as = splitAt (if n<0 then length as + n else n) as
 
 
 data Take n p
-type TakeT n p = Fst (SplitAt n p)
+type TakeT n p = SplitAt n p >> Fst
 
 instance P (TakeT n p) x => P (Take n p) x where
   type PP (Take n p) x = PP (TakeT n p) x
   eval _ = eval (Proxy @(TakeT n p))
 
 data Drop n p
-type DropT n p = Snd (SplitAt n p)
+type DropT n p = SplitAt n p >> Snd
 
 instance P (DropT n p) x => P (Drop n p) x where
   type PP (Drop n p) x = PP (DropT n p) x
@@ -995,30 +993,30 @@ instance P (DropT n p) x => P (Drop n p) x where
 
 -- | splits a list pointed to by \'p\' into lists of size \'n\'
 --
--- >>> pz @(ChunksOf 2 Id) "abcdef"
+-- >>> pz @(ChunksOf 2) "abcdef"
 -- PresentT ["ab","cd","ef"]
 --
--- >>> pz @(ChunksOf 2 Id) "abcdefg"
+-- >>> pz @(ChunksOf 2) "abcdefg"
 -- PresentT ["ab","cd","ef","g"]
 --
--- >>> pz @(ChunksOf 2 Id) ""
+-- >>> pz @(ChunksOf 2) ""
 -- PresentT []
 --
--- >>> pz @(ChunksOf 2 Id) "a"
+-- >>> pz @(ChunksOf 2) "a"
 -- PresentT ["a"]
 --
--- >>> pz @(PadR (Len + RoundUp 5 Len) 999 Id >> ChunksOf 5 Id) [1..17]
+-- >>> pz @(PadR (Len + RoundUp 5 Len) 999 Id >> ChunksOf 5) [1..17]
 -- PresentT [[1,2,3,4,5],[6,7,8,9,10],[11,12,13,14,15],[16,17,999,999,999]]
 --
--- >>> pz @(PadR (Len + RoundUp 5 Len) 999 Id >> ChunksOf 5 Id) [1..15]
+-- >>> pz @(PadR (Len + RoundUp 5 Len) 999 Id >> ChunksOf 5) [1..15]
 -- PresentT [[1,2,3,4,5],[6,7,8,9,10],[11,12,13,14,15]]
 --
-data ChunksOf n p
-type ChunksOfT n p = ChunksOf' n n p
+data ChunksOf n
+type ChunksOfT n = ChunksOf' n n Id
 
-instance P (ChunksOfT n p) x => P (ChunksOf n p) x where
-  type PP (ChunksOf n p) x = PP (ChunksOfT n p) x
-  eval _ = eval (Proxy @(ChunksOfT n p))
+instance P (ChunksOfT n) x => P (ChunksOf n) x where
+  type PP (ChunksOf n) x = PP (ChunksOfT n) x
+  eval _ = eval (Proxy @(ChunksOfT n))
 
 -- | splits a list pointed to by \'p\' into lists of size \'n\' with a gap of \'i\'
 --
@@ -1124,47 +1122,41 @@ instance P (RemoveT p q) x => P (Remove p q) x where
 
 -- | takes the head of a list-like container: similar to 'head'
 --
--- >>> pz @(Head Id) "abcd"
+-- >>> pz @Head "abcd"
 -- PresentT 'a'
 --
--- >>> pz @(Head Id) []
+-- >>> pz @Head []
 -- FailT "Head(empty)"
 --
--- >>> pl @(Head Id) ([] :: [Int])
+-- >>> pl @Head ([] :: [Int])
 -- Error Head(empty)
 -- FailT "Head(empty)"
 --
--- >>> pl @(Head Id) ([] :: [Double])
+-- >>> pl @Head ([] :: [Double])
 -- Error Head(empty)
 -- FailT "Head(empty)"
 --
--- >>> pl @(Head (Fst Id) >> Le 6) ([]::[Int], True)
--- Error Head(empty)
+-- >>> pl @(Fst >> Head >> Le 6) ([]::[Int], True)
+-- Error Head(empty) ([])
 -- FailT "Head(empty)"
 --
--- >>> pl @(Head Id) [1,2,3]
+-- >>> pl @Head [1,2,3]
 -- Present 1 (Head 1 | [1,2,3])
 -- PresentT 1
 --
 
-data Head p
+data Head
 
-instance (Show (ConsT s)
-        , Show s
-        , Cons s s (ConsT s) (ConsT s)
-        , PP p x ~ s
-        , P p x
-        ) => P (Head p) x where
-  type PP (Head p) x = ConsT (PP p x)
-  eval _ opts x = do
+instance (Show (ConsT x)
+        , Show x
+        , Cons x x (ConsT x) (ConsT x)
+        ) => P Head x where
+  type PP Head x = ConsT x
+  eval _ opts x =
     let msg0 = "Head"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        case p ^? _Cons of
-          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" [hh pp]
-          Just (a,_) -> mkNode opts (PresentT a) (show01 opts msg0 a p) [hh pp]
+    in pure $ case x ^? _Cons of
+        Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" []
+        Just (a,_) -> mkNode opts (PresentT a) (show01 opts msg0 a x) []
 
 -- | takes the tail of a list-like container: similar to 'tail'
 --
@@ -1196,35 +1188,29 @@ instance (Show s
 
 -- | takes the last of a list-like container: similar to 'last'
 --
--- >>> pz @(Last Id) "abcd"
+-- >>> pz @Last "abcd"
 -- PresentT 'd'
 --
--- >>> pz @(Last Id) []
+-- >>> pz @Last []
 -- FailT "Last(empty)"
 --
--- >>> pl @(Last Id) [1,2,3]
+-- >>> pl @Last [1,2,3]
 -- Present 3 (Last 3 | [1,2,3])
 -- PresentT 3
 --
 
-data Last p
+data Last
 
-instance (Show (ConsT s)
-        , Show s
-        , Snoc s s (ConsT s) (ConsT s)
-        , PP p x ~ s
-        , P p x
-        ) => P (Last p) x where
-  type PP (Last p) x = ConsT (PP p x)
-  eval _ opts x = do
+instance ( Snoc x x (ConsT x) (ConsT x)
+         , Show (ConsT x)
+         , Show x
+         ) => P Last x where
+  type PP Last x = ConsT x
+  eval _ opts x =
     let msg0 = "Last"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        case p ^? _Snoc of
-          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" [hh pp]
-          Just (_,a) -> mkNode opts (PresentT a) (show01 opts msg0 a p) [hh pp]
+    in pure $ case x ^? _Snoc of
+          Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" []
+          Just (_,a) -> mkNode opts (PresentT a) (show01 opts msg0 a x) []
 
 -- | takes the init of a list-like container: similar to 'init'
 --
@@ -1265,7 +1251,7 @@ instance (Show s
 -- PresentT ([1,2,3,4],"abcd")
 --
 data Unzip
-type UnzipT = '(Map (Fst Id) Id, Map (Snd Id) Id)
+type UnzipT = '(Map Fst Id, Map Snd Id)
 
 instance P UnzipT x => P Unzip x where
   type PP Unzip x = PP UnzipT x
@@ -1278,7 +1264,7 @@ instance P UnzipT x => P Unzip x where
 -- PresentT ([1,2,3,4],"abcd",[True,False,True,False])
 --
 data Unzip3
-type Unzip3T = '(Map (Fst Id) Id, Map (Snd Id) Id, Map (Thd Id) Id)
+type Unzip3T = '(Map Fst Id, Map Snd Id, Map Thd Id)
 
 instance P Unzip3T x => P Unzip3 x where
   type PP Unzip3 x = PP Unzip3T x
@@ -1286,10 +1272,7 @@ instance P Unzip3T x => P Unzip3 x where
 
 -- | sort a list
 --
--- >>> pz @(SortOn (Fst Id) Id) [(10,"abc"), (3,"def"), (4,"gg"), (10,"xyz"), (1,"z")]
--- PresentT [(1,"z"),(3,"def"),(4,"gg"),(10,"abc"),(10,"xyz")]
---
--- >>> pz @(SortBy (OrdP (Snd Id) (Fst Id)) Id) [(10,"ab"),(4,"x"),(20,"bbb")]
+-- >>> pz @(SortBy (OrdP Snd Fst) Id) [(10,"ab"),(4,"x"),(20,"bbb")]
 -- PresentT [(20,"bbb"),(10,"ab"),(4,"x")]
 --
 -- >>> pz @(SortBy 'LT Id) [1,5,2,4,7,0]
@@ -1298,13 +1281,13 @@ instance P Unzip3T x => P Unzip3 x where
 -- >>> pz @(SortBy 'GT Id) [1,5,2,4,7,0]
 -- PresentT [0,7,4,2,5,1]
 --
--- >>> pz @(SortBy ((Fst (Fst Id) ==! Fst (Snd Id)) <> (Snd (Fst Id) ==! Snd (Snd Id))) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
+-- >>> pz @(SortBy ((L1 Fst ==! L1 Snd) <> (L2 Fst ==! L2 Snd)) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
 -- PresentT [(4,"a"),(4,"x"),(4,"y"),(10,"ab"),(20,"bbb")]
 --
--- >>> pz @(SortBy ((Fst (Fst Id) ==! Fst (Snd Id)) <> (Snd (Snd Id) ==! Snd (Fst Id))) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
+-- >>> pz @(SortBy ((L1 Fst ==! L1 Snd) <> (L2 Snd ==! L2 Fst)) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
 -- PresentT [(4,"y"),(4,"x"),(4,"a"),(10,"ab"),(20,"bbb")]
 --
--- >>> pl @(SortBy (Swap >> OrdA (Fst Id)) (Snd Id)) ((),[('z',1),('a',10),('m',22)])
+-- >>> pl @(SortBy (Swap >> OrdA Fst) Snd) ((),[('z',1),('a',10),('m',22)])
 -- Present [('z',1),('m',22),('a',10)] (SortBy [('z',1),('m',22),('a',10)])
 -- PresentT [('z',1),('m',22),('a',10)]
 --
@@ -1312,11 +1295,11 @@ instance P Unzip3T x => P Unzip3 x where
 -- Present ["aa","cx","by","az"] (SortBy ["aa","cx","by","az"])
 -- PresentT ["aa","cx","by","az"]
 --
--- >>> pl @(SortBy (If (Fst Id==5 && Snd Id==3) (Failt _ (PrintT "pivot=%d value=%d" Id)) 'GT) (Snd Id)) ((), [5,7,3,1,6,2,1,3])
+-- >>> pl @(SortBy (If (Fst==5 && Snd==3) (Failt _ (PrintT "pivot=%d value=%d" Id)) 'GT) Snd) ((), [5,7,3,1,6,2,1,3])
 -- Error pivot=5 value=3(2) (SortBy)
 -- FailT "pivot=5 value=3(2)"
 --
--- >>> pl @(SortBy (If (Fst Id==50 && Snd Id==3) (Failt _ (PrintT "pivot=%d value=%d" Id)) (OrdA Id)) (Snd Id)) ((), [5,7,3,1,6,2,1,3])
+-- >>> pl @(SortBy (If (Fst==50 && Snd==3) (Failt _ (PrintT "pivot=%d value=%d" Id)) (OrdA Id)) Snd) ((), [5,7,3,1,6,2,1,3])
 -- Present [1,1,2,3,3,5,6,7] (SortBy [1,1,2,3,3,5,6,7])
 -- PresentT [1,1,2,3,3,5,6,7]
 --
@@ -1364,6 +1347,9 @@ instance (P p (a,a)
 
 -- | similar to 'Data.List.sortOn'
 --
+-- >>> pz @(SortOn Fst Id) [(10,"abc"), (3,"def"), (4,"gg"), (10,"xyz"), (1,"z")]
+-- PresentT [(1,"z"),(3,"def"),(4,"gg"),(10,"abc"),(10,"xyz")]
+--
 -- >>> pl @(SortOn Id Id) [10,4,2,12,14]
 -- Present [2,4,10,12,14] (SortBy [2,4,10,12,14])
 -- PresentT [2,4,10,12,14]
@@ -1372,7 +1358,7 @@ instance (P p (a,a)
 -- Present [14,12,10,4,2] (SortBy [14,12,10,4,2])
 -- PresentT [14,12,10,4,2]
 --
--- >>> pl @(SortOn (Fst Id) Id) (zip "cabdaz" [10,4,2,12,14,1])
+-- >>> pl @(SortOn Fst Id) (zip "cabdaz" [10,4,2,12,14,1])
 -- Present [('a',4),('a',14),('b',2),('c',10),('d',12),('z',1)] (SortBy [('a',4),('a',14),('b',2),('c',10),('d',12),('z',1)])
 -- PresentT [('a',4),('a',14),('b',2),('c',10),('d',12),('z',1)]
 --
@@ -1380,15 +1366,15 @@ instance (P p (a,a)
 -- Error asdf(4) (SortBy)
 -- FailT "asdf(4)"
 --
--- >>> pl @(SortOn (Snd Id) (Snd Id)) ((),[('z',14),('a',10),('m',22),('a',1)])
+-- >>> pl @(SortOn Snd Snd) ((),[('z',14),('a',10),('m',22),('a',1)])
 -- Present [('a',1),('a',10),('z',14),('m',22)] (SortBy [('a',1),('a',10),('z',14),('m',22)])
 -- PresentT [('a',1),('a',10),('z',14),('m',22)]
 --
--- >>> pl @(SortOn (Fst Id) (Snd Id)) ((),[('z',1),('a',10),('m',22)])
+-- >>> pl @(SortOn Fst Snd) ((),[('z',1),('a',10),('m',22)])
 -- Present [('a',10),('m',22),('z',1)] (SortBy [('a',10),('m',22),('z',1)])
 -- PresentT [('a',10),('m',22),('z',1)]
 --
--- >>> pl @(SortOn (Fst Id) Id) [('z',1),('a',10),('m',22),('a',9),('m',10)]
+-- >>> pl @(SortOn Fst Id) [('z',1),('a',10),('m',22),('a',9),('m',10)]
 -- Present [('a',10),('a',9),('m',22),('m',10),('z',1)] (SortBy [('a',10),('a',9),('m',22),('m',10),('z',1)])
 -- PresentT [('a',10),('a',9),('m',22),('m',10),('z',1)]
 --
@@ -1409,7 +1395,7 @@ instance P (SortOnT p q) x => P (SortOn p q) x where
 -- Present [14,12,10,4,2] (SortBy [14,12,10,4,2])
 -- PresentT [14,12,10,4,2]
 --
--- >>> pl @(SortOnDesc (Fst Id) (Snd Id)) ((),[('z',1),('a',10),('m',22)])
+-- >>> pl @(SortOnDesc Fst Snd) ((),[('z',1),('a',10),('m',22)])
 -- Present [('z',1),('m',22),('a',10)] (SortBy [('z',1),('m',22),('a',10)])
 -- PresentT [('z',1),('m',22),('a',10)]
 --
@@ -1470,7 +1456,7 @@ instance ( Show t
 -- >>> pz @(Singleton Id) False
 -- PresentT [False]
 --
--- >>> pz @(Singleton (Snd Id)) (False,"hello")
+-- >>> pz @(Singleton Snd) (False,"hello")
 -- PresentT ["hello"]
 --
 data Singleton p
@@ -1509,16 +1495,16 @@ instance P (EmptyList t) x where
 -- >>> pz @(ZipWith Id (1...5) (Char1 "a" ... Char1 "e")) ()
 -- PresentT [(1,'a'),(2,'b'),(3,'c'),(4,'d'),(5,'e')]
 --
--- >>> pz @(ZipWith (ShowP (Fst Id) <> ShowP (Snd Id)) (1...5) (Char1 "a" ... Char1 "e")) ()
+-- >>> pz @(ZipWith (ShowP Fst <> ShowP Snd) (1...5) (Char1 "a" ... Char1 "e")) ()
 -- PresentT ["1'a'","2'b'","3'c'","4'd'","5'e'"]
 --
--- >>> pz @(ZipWith (MkThese (Fst Id) (Snd Id)) (1...6) (Char1 "a" ... Char1 "f")) ()
+-- >>> pz @(ZipWith (MkThese Fst Snd) (1...6) (Char1 "a" ... Char1 "f")) ()
 -- PresentT [These 1 'a',These 2 'b',These 3 'c',These 4 'd',These 5 'e',These 6 'f']
 --
--- >>> pz @(ZipWith (MkThese (Fst Id) (Snd Id)) '[] (Char1 "a" ... Char1 "f")) ()
+-- >>> pz @(ZipWith (MkThese Fst Snd) '[] (Char1 "a" ... Char1 "f")) ()
 -- FailT "ZipWith(0,6) length mismatch"
 --
--- >>> pz @(ZipWith (MkThese (Fst Id) (Snd Id)) (1...3) (Char1 "a" ... Char1 "f")) ()
+-- >>> pz @(ZipWith (MkThese Fst Snd) (1...3) (Char1 "a" ... Char1 "f")) ()
 -- FailT "ZipWith(3,6) length mismatch"
 --
 data ZipWith p q r
@@ -1560,19 +1546,19 @@ instance (PP q a ~ [x]
 
 -- | Zip two lists to their maximum length using optional padding
 --
--- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("abc", [1..5])
+-- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("abc", [1..5])
 -- PresentT [('a',1),('b',2),('c',3),('Z',4),('Z',5)]
 --
--- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("abcdefg", [1..5])
+-- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("abcdefg", [1..5])
 -- PresentT [('a',1),('b',2),('c',3),('d',4),('e',5),('f',99),('g',99)]
 --
--- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("abcde", [1..5])
+-- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("abcde", [1..5])
 -- PresentT [('a',1),('b',2),('c',3),('d',4),('e',5)]
 --
--- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("", [1..5])
+-- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("", [1..5])
 -- PresentT [('Z',1),('Z',2),('Z',3),('Z',4),('Z',5)]
 --
--- >>> pz @(ZipPad (Char1 "Z") 99 (Fst Id) (Snd Id)) ("abcde", [])
+-- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("abcde", [])
 -- PresentT [('a',99),('b',99),('c',99),('d',99),('e',99)]
 --
 data ZipPad l r p q
@@ -1646,7 +1632,7 @@ instance (PP l a ~ x
 -- Present [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')] (ZipL [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')] | p=[1 % 1,2 % 1,3 % 1] | q="abcde")
 -- PresentT [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')]
 --
--- >>> pl @(ZipL "X" (EmptyT _ Id) Id) ("abcd" :: String)
+-- >>> pl @(ZipL "X" (EmptyT _) Id) ("abcd" :: String)
 -- Present [("X",'a'),("X",'b'),("X",'c'),("X",'d')] (ZipL [("X",'a'),("X",'b'),("X",'c'),("X",'d')] | p=[] | q="abcd")
 -- PresentT [("X",'a'),("X",'b'),("X",'c'),("X",'d')]
 --
@@ -1702,7 +1688,7 @@ instance (PP l a ~ x
 -- Error ZipR(2,3) rhs would be truncated (p=[1,2] | q="abc")
 -- FailT "ZipR(2,3) rhs would be truncated"
 --
--- >>> pl @(ZipR (Char1 "Y") (EmptyT _ Id) Id) "abcd"
+-- >>> pl @(ZipR (Char1 "Y") (EmptyT _) Id) "abcd"
 -- Error ZipR(0,4) rhs would be truncated (p=[] | q="abcd")
 -- FailT "ZipR(0,4) rhs would be truncated"
 --
@@ -1786,35 +1772,26 @@ instance (PP p a ~ [x]
 
 -- | similar to 'empty'
 --
--- >>> pz @(EmptyT Maybe Id) ()
+-- >>> pz @(EmptyT Maybe) ()
 -- PresentT Nothing
 --
--- >>> pz @(EmptyT [] Id) ()
+-- >>> pz @(EmptyT []) ()
 -- PresentT []
 --
--- >>> pz @(EmptyT [] (Char1 "x")) (13,True)
+-- >>> pz @(Char1 "x" >> EmptyT []) (13,True)
 -- PresentT ""
 --
--- >>> pz @(EmptyT (Either String) (Fst Id)) (13,True)
+-- >>> pz @(Fst >> EmptyT (Either String)) (13,True)
 -- PresentT (Left "")
 --
-data EmptyT (t :: Type -> Type) p
+data EmptyT (t :: Type -> Type)
 
-instance (P p x
-        , PP p x ~ a
-        , Show (t a)
-        , Show a
-        , Alternative t
-        ) => P (EmptyT t p) x where
-  type PP (EmptyT t p) x = t (PP p x)
-  eval _ opts x = do
+instance Alternative t => P (EmptyT t) x where
+  type PP (EmptyT t) x = t x
+  eval _ opts _x =
     let msg0 = "EmptyT"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = empty @t
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+        b = empty @t
+    in pure $ mkNode opts (PresentT b) msg0 []
 
 
 -- | similar to 'sum'

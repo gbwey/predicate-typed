@@ -297,17 +297,17 @@ instance ( Show a
 -- | Convenient method to convert a \'p\' or \'q\' to a 'Either' based on a predicate \'b\'
 --   if \'b\' then Right \'p\' else Left \'q\'
 --
--- >>> pz @(EitherBool (Fst Id > 4) (Snd Id >> Fst Id) (Snd Id >> Snd Id)) (24,(-1,999))
+-- >>> pz @(EitherBool (Fst > 4) (Snd >> Fst) (Snd >> Snd)) (24,(-1,999))
 -- PresentT (Right 999)
 --
--- >>> pz @(EitherBool (Fst Id > 4) (Fst (Snd Id)) (Snd (Snd Id))) (1,(-1,999))
+-- >>> pz @(EitherBool (Fst > 4) (L1 Snd) (L2 Snd)) (1,(-1,999))
 -- PresentT (Left (-1))
 --
--- >>> pl @(EitherBool (Fst Id > 10) (Snd Id >> Fst Id) (Snd Id >> Snd Id)) (7,('x',99))
+-- >>> pl @(EitherBool (Fst > 10) (Snd >> Fst) (Snd >> Snd)) (7,('x',99))
 -- Present Left 'x' (EitherBool(False) Left 'x')
 -- PresentT (Left 'x')
 --
--- >>> pl @(EitherBool (Fst Id > 10) (Snd Id >> Fst Id) (Snd Id >> Snd Id)) (11,('x',99))
+-- >>> pl @(EitherBool (Fst > 10) (Snd >> Fst) (Snd >> Snd)) (11,('x',99))
 -- Present Right 99 (EitherBool(True) Right 99)
 -- PresentT (Right 99)
 --
@@ -347,13 +347,13 @@ instance (Show (PP p a)
 
 -- | similar to 'Control.Arrow.|||' but additionally gives \'p\' and \'q\' the original input
 --
--- >>> pz @(EitherX (ShowP (Fst (Fst Id) + Snd Id)) (ShowP Id) (Snd Id)) (9,Left 123)
+-- >>> pz @(EitherX (ShowP (L1 Fst + Snd)) (ShowP Id) Snd) (9,Left 123)
 -- PresentT "132"
 --
--- >>> pz @(EitherX (ShowP (Fst (Fst Id) + Snd Id)) (ShowP Id) (Snd Id)) (9,Right 'x')
+-- >>> pz @(EitherX (ShowP (L1 Fst + Snd)) (ShowP Id) Snd) (9,Right 'x')
 -- PresentT "((9,Right 'x'),'x')"
 --
--- >>> pz @(EitherX (ShowP Id) (ShowP (Second (Succ Id))) (Snd Id)) (9,Right 'x')
+-- >>> pz @(EitherX (ShowP Id) (ShowP (Second (Succ Id))) Snd) (9,Right 'x')
 -- PresentT "((9,Right 'x'),'y')"
 --
 data EitherX p q r
@@ -456,7 +456,7 @@ instance P (MkRightT t p) x => P (MkRight t p) x where
 -- >>> pz @(LeftDef (1 % 4) Id) (Right "aa")
 -- PresentT (1 % 4)
 --
--- >>> pz @(LeftDef (PrintT "found right=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Right "xy")
+-- >>> pz @(LeftDef (PrintT "found right=%s fst=%d" '(Fst,L1 Snd)) Snd) (123,Right "xy")
 -- PresentT "found right=xy fst=123"
 --
 -- >>> pz @(LeftDef (MEmptyT _) Id) (Right 222)
@@ -497,7 +497,7 @@ instance ( PP q x ~ Either a b
 -- >>> pz @(RightDef (1 % 4) Id) (Left "aa")
 -- PresentT (1 % 4)
 --
--- >>> pz @(RightDef (PrintT "found left=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Left "xy")
+-- >>> pz @(RightDef (PrintT "found left=%s fst=%d" '(Fst,L1 Snd)) Snd) (123,Left "xy")
 -- PresentT "found left=xy fst=123"
 --
 -- >>> pz @(RightDef (MEmptyT _) Id) (Left 222)
@@ -539,29 +539,29 @@ instance ( PP q x ~ Either a b
 -- >>> pz @(LeftFail "oops" Id) (Right "aa")
 -- FailT "oops"
 --
--- >>> pz @(LeftFail (PrintT "found right=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Right "xy")
+-- >>> pz @(LeftFail (PrintT "found right=%s fst=%d" '(Fst,L1 Snd)) Snd) (123,Right "xy")
 -- FailT "found right=xy fst=123"
 --
 -- >>> pz @(LeftFail (MEmptyT _) Id) (Right 222)
 -- FailT ""
 --
--- >>> pl @(LeftFail (PrintF "someval=%d" (Fst (Snd Id))) (Snd Id)) (13::Int,Right @(SG.Sum Int) "abc")
+-- >>> pl @(LeftFail (PrintF "someval=%d" (L1 Snd)) Snd) (13::Int,Right @(SG.Sum Int) "abc")
 -- Error someval=13 (LeftFail Right)
 -- FailT "someval=13"
 --
--- >>> pl @(LeftFail (PrintF "someval=%s" (Fst Id)) Id) (Right @(SG.Sum Int) ("abc" :: String))
+-- >>> pl @(LeftFail (PrintF "someval=%s" Fst) Id) (Right @(SG.Sum Int) ("abc" :: String))
 -- Error someval=abc (LeftFail Right)
 -- FailT "someval=abc"
 --
--- >>> pl @(LeftFail (PrintF "found rhs=%d" (Fst Id)) Id) (Right @String @Int 10)
+-- >>> pl @(LeftFail (PrintF "found rhs=%d" Fst) Id) (Right @String @Int 10)
 -- Error found rhs=10 (LeftFail Right)
 -- FailT "found rhs=10"
 --
--- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd Id >> Snd Id >> Snd Id)) (Snd Id >> Fst Id)) ('x',(Right 10,23::Int))
+-- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd >> Snd >> Snd)) (Snd >> Fst)) ('x',(Right 10,23::Int))
 -- Error found rhs=23 (LeftFail Right)
 -- FailT "found rhs=23"
 --
--- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd (Snd (Snd Id)))) (Fst (Snd Id))) ('x',(Left "abc",23::Int))
+-- >>> pl @(LeftFail (PrintF "found rhs=%d" (L2 (L2 Snd))) (L1 Snd)) ('x',(Left "abc",23::Int))
 -- Present "abc" (Left)
 -- PresentT "abc"
 --
@@ -598,7 +598,7 @@ instance ( PP p (b,x) ~ String
 -- >>> pz @(RightFail "oops" Id) (Left "aa")
 -- FailT "oops"
 --
--- >>> pz @(RightFail (PrintT "found left=%s fst=%d" '(Fst Id,Fst (Snd Id))) (Snd Id)) (123,Left "xy")
+-- >>> pz @(RightFail (PrintT "found left=%s fst=%d" '(Fst,L1 Snd)) Snd) (123,Left "xy")
 -- FailT "found left=xy fst=123"
 --
 -- >>> pz @(RightFail (MEmptyT _) Id) (Left 222)

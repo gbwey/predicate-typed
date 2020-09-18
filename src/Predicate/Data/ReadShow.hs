@@ -190,10 +190,10 @@ instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
 -- >>> pz @(PrintF "value=%03d" Id) 12
 -- PresentT "value=012"
 --
--- >>> pz @(PrintF "%s" (Fst Id)) ("abc",'x')
+-- >>> pz @(PrintF "%s" Fst) ("abc",'x')
 -- PresentT "abc"
 --
--- >>> pz @(PrintF "%d" (Fst Id)) ("abc",'x')
+-- >>> pz @(PrintF "%d" Fst) ("abc",'x')
 -- FailT "PrintF (IO e=printf: bad formatting char 'd')"
 --
 -- >>> pl @(PrintF "someval %d" Id) ("!23"::String)
@@ -208,7 +208,7 @@ instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
 -- Present "0004d2" (PrintF [0004d2] | p=1234 | s=%06x)
 -- PresentT "0004d2"
 --
--- >>> pl @(Msg (PrintF "digits=%d" Len) (Head Id)) [1..4]
+-- >>> pl @(Msg (PrintF "digits=%d" Len) Head) [1..4]
 -- Present 1 (digits=4 Head 1 | [1,2,3,4])
 -- PresentT 1
 --
@@ -254,7 +254,7 @@ instance ( PrintfArg a
 
 -- | print for flat n-tuples of size two or larger
 --
--- >>> pl @(PrintT "%d %s %s %s" '(Fst Id, Snd Id, Snd Id,Snd Id)) (10,"Asdf")
+-- >>> pl @(PrintT "%d %s %s %s" '(Fst, Snd, Snd,Snd)) (10,"Asdf")
 -- Present "10 Asdf Asdf Asdf" (PrintT [10 Asdf Asdf Asdf] | s=%d %s %s %s)
 -- PresentT "10 Asdf Asdf Asdf"
 --
@@ -268,7 +268,7 @@ instance ( PrintfArg a
 -- >>> pz @(PrintT "fst=%s snd=%03d thd=%s" Id) ("ab",123,"xx")
 -- PresentT "fst=ab snd=123 thd=xx"
 --
--- >>> pl @(PrintT "%s %d %c %s" '(W "xyz", Fst Id, Snd Id, Thd Id)) (123,'x',"ab")
+-- >>> pl @(PrintT "%s %d %c %s" '(W "xyz", Fst, Snd, Thd)) (123,'x',"ab")
 -- Present "xyz 123 x ab" (PrintT [xyz 123 x ab] | s=%s %d %c %s)
 -- PresentT "xyz 123 x ab"
 --
@@ -339,14 +339,14 @@ type family CheckT (tp :: Type) :: Bool where
 
 -- | print for lists  -- use 'PrintT' as it is safer than 'PrintL'
 --
--- >>> pl @(PrintL 4 "%s %s %s %s" '[W "xyz", ShowP (Fst Id), ShowP (Snd Id), Thd Id]) (123,'x',"ab")
+-- >>> pl @(PrintL 4 "%s %s %s %s" '[W "xyz", ShowP Fst, ShowP Snd, Thd]) (123,'x',"ab")
 -- Present "xyz 123 'x' ab" (PrintL(4) [xyz 123 'x' ab] | s=%s %s %s %s)
 -- PresentT "xyz 123 'x' ab"
 --
 -- >>> pz @(PrintL 1 "%05d" '[Id]) 123  -- tick is required for a one element list (use 'PrintF')
 -- PresentT "00123"
 --
--- >>> pz @(PrintL 2 "%d %05d" [Fst Id,Snd Id]) (29,123)
+-- >>> pz @(PrintL 2 "%d %05d" [Fst,Snd]) (29,123)
 -- PresentT "29 00123"
 --
 -- >>> pl @(PrintL 3 "first=%d second=%d third=%d" Id) [10,11,12]

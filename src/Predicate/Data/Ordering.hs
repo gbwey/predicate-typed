@@ -101,7 +101,7 @@ type Ne n = I /= n
 -- True ("abc" > "aa")
 -- TrueT
 --
--- >>> pl @(Fst Id > Snd Id) (True,False)
+-- >>> pl @(Fst > Snd) (True,False)
 -- True (True > False)
 -- TrueT
 --
@@ -122,26 +122,26 @@ instance P (Cmp 'CGe p q) x => P (p >= q) x where
 
 -- | compare if expression \'p\' is equal to \'q\'
 --
--- >>> pl @(Fst Id == Snd Id) ("ab","xyzabw")
+-- >>> pl @(Fst == Snd) ("ab","xyzabw")
 -- False ("ab" == "xyzabw")
 -- FalseT
 --
--- >>> pl @(Fst Id == Snd Id) ("aBc","AbC")
+-- >>> pl @(Fst == Snd) ("aBc","AbC")
 -- False ("aBc" == "AbC")
 -- FalseT
 --
--- >>> pz @(Fst Id == Snd Id) ("aBc","aBc")
+-- >>> pz @(Fst == Snd) ("aBc","aBc")
 -- TrueT
 --
 -- >>> pl @(Id == "Abc") "abc"
 -- False ("abc" == "Abc")
 -- FalseT
 --
--- >>> pl @(Fst Id == Snd Id) (True,False)
+-- >>> pl @(Fst == Snd) (True,False)
 -- False (True == False)
 -- FalseT
 --
--- >>> pl @(Not Id *** Id >> Fst Id == Snd Id) (True,False)
+-- >>> pl @(Not Id *** Id >> Fst == Snd) (True,False)
 -- True ((>>) True | {False == False})
 -- TrueT
 --
@@ -154,19 +154,19 @@ instance P (Cmp 'CEq p q) x => P (p == q) x where
 
 -- | compare if expression \'p\' is less than or equal to \'q\'
 --
--- >>> pl @(Not (Fst Id >> Len <= 6)) ([2..7],True)
+-- >>> pl @(Not (Fst >> Len <= 6)) ([2..7],True)
 -- False (Not ((>>) True | {6 <= 6}))
 -- FalseT
 --
--- >>> pl @(Fst Id >> Len <= 6) ([2..7],True)
+-- >>> pl @(Fst >> Len <= 6) ([2..7],True)
 -- True ((>>) True | {6 <= 6})
 -- TrueT
 --
--- >>> pl @(Length (Fst Id) <= 6) ([2..7],True)
+-- >>> pl @(Length Fst <= 6) ([2..7],True)
 -- True (6 <= 6)
 -- TrueT
 --
--- >>> pl @(Fst Id >> (Len <= 6)) ([2..7],True)
+-- >>> pl @(Fst >> (Len <= 6)) ([2..7],True)
 -- True ((>>) True | {6 <= 6})
 -- TrueT
 --
@@ -187,7 +187,7 @@ instance P (Cmp 'CLt p q) x => P (p < q) x where
 
 -- | compare if expression \'p\' is not equal to \'q\'
 --
--- >>> pl @(Fst Id /= Snd Id) ("ab","xyzabw")
+-- >>> pl @(Fst /= Snd) ("ab","xyzabw")
 -- True ("ab" /= "xyzabw")
 -- TrueT
 --
@@ -250,30 +250,30 @@ instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
 
 -- | similar to 'compare'
 --
--- >>> pz @(Fst Id ==! Snd Id) (10,9)
+-- >>> pz @(Fst ==! Snd) (10,9)
 -- PresentT GT
 --
--- >>> pz @(14 % 3 ==! Fst Id -% Snd Id) (-10,7)
+-- >>> pz @(14 % 3 ==! Fst -% Snd) (-10,7)
 -- PresentT GT
 --
--- >>> pz @(Fst Id ==! Snd Id) (10,11)
+-- >>> pz @(Fst ==! Snd) (10,11)
 -- PresentT LT
 --
--- >>> pz @(Snd Id ==! (Fst Id >> Snd Id >> Head Id)) (('x',[10,12,13]),10)
+-- >>> pz @(Snd ==! (Fst >> Snd >> Head)) (('x',[10,12,13]),10)
 -- PresentT EQ
 --
--- >>> pz @(Snd Id ==! Head (Snd (Fst Id))) (('x',[10,12,13]),10)
+-- >>> pz @(Snd ==! (L2 Fst >> Head)) (('x',[10,12,13]),10)
 -- PresentT EQ
 --
 -- >>> pl @("aa" ==! Id) "aaaa"
 -- Present LT ((==!) "aa" < "aaaa")
 -- PresentT LT
 --
--- >>> pl @(Pairs >> Map (First (Succ Id >> Succ Id) >> Fst Id ==! Snd Id) Id) [1,2,3,6,8]
+-- >>> pl @(Pairs >> Map (First (Succ Id >> Succ Id) >> Fst ==! Snd) Id) [1,2,3,6,8]
 -- Present [GT,GT,LT,EQ] ((>>) [GT,GT,LT,EQ] | {Map [GT,GT,LT,EQ] | [(1,2),(2,3),(3,6),(6,8)]})
 -- PresentT [GT,GT,LT,EQ]
 --
--- >>> pl @((Ones << ShowP Id) >> Map (Fst Id ==! Snd Id) Pairs) 1234223
+-- >>> pl @((Ones << ShowP Id) >> Map (Fst ==! Snd) Pairs) 1234223
 -- Present [LT,LT,LT,GT,EQ,LT] ((>>) [LT,LT,LT,GT,EQ,LT] | {Map [LT,LT,LT,GT,EQ,LT] | [("1","2"),("2","3"),("3","4"),("4","2"),("2","2"),("2","3")]})
 -- PresentT [LT,LT,LT,GT,EQ,LT]
 --
@@ -281,15 +281,15 @@ instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
 -- Present LT ((==!) "Abc" < "abc")
 -- PresentT LT
 --
--- >>> pl @(Fst Id ==! Snd Id) (3,12)
+-- >>> pl @(Fst ==! Snd) (3,12)
 -- Present LT ((==!) 3 < 12)
 -- PresentT LT
 --
--- >>> pl @(Fst Id ==! Snd Id) ("aBc","AbC")
+-- >>> pl @(Fst ==! Snd) ("aBc","AbC")
 -- Present GT ((==!) "aBc" > "AbC")
 -- PresentT GT
 --
--- >>> pl @(Snd Id ==! Fst Id) ("aBc","AbC")
+-- >>> pl @(Snd ==! Fst) ("aBc","AbC")
 -- Present LT ((==!) "AbC" < "aBc")
 -- PresentT LT
 --
@@ -323,7 +323,7 @@ instance P (OrdA' p p) x => P (OrdA p) x where
   eval _ = eval (Proxy @(OrdA' p p))
 
 data OrdA' p q
-type OrdAT' p q = (Fst Id >> p) ==! (Snd Id >> q)
+type OrdAT' p q = (Fst >> p) ==! (Snd >> q)
 
 instance P (OrdAT' p q) x => P (OrdA' p q) x where
   type PP (OrdA' p q) x = PP (OrdAT' p q) x
@@ -331,18 +331,18 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 
 -- | compare two strings ignoring case and return an ordering
 --
--- >>> pz @(Fst Id ===~ Snd Id) ("abC","aBc")
+-- >>> pz @(Fst ===~ Snd) ("abC","aBc")
 -- PresentT EQ
 --
--- >>> pz @(Fst Id ===~ Snd Id) ("abC","DaBc")
+-- >>> pz @(Fst ===~ Snd) ("abC","DaBc")
 -- PresentT LT
 --
--- >>> pl @(Fst Id ===~ Snd Id &&& Fst Id ==! Snd Id) ("abc","abc")
+-- >>> pl @(Fst ===~ Snd &&& Fst ==! Snd) ("abc","abc")
 -- Present (EQ,EQ) (W '(EQ,EQ))
 -- PresentT (EQ,EQ)
 --
 --
--- >>> pl @(Fst Id ===~ Snd Id) ("aBc","AbC")
+-- >>> pl @(Fst ===~ Snd) ("aBc","AbC")
 -- Present EQ ((===~) aBc = AbC)
 -- PresentT EQ
 --
@@ -355,11 +355,11 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 -- True (Abc ==~ abc)
 -- TrueT
 --
--- >>> pl @(Fst Id ==~ Snd Id) ("aBc","AbC")
+-- >>> pl @(Fst ==~ Snd) ("aBc","AbC")
 -- True (aBc ==~ AbC)
 -- TrueT
 --
--- >>> pl @(Fst Id ==~ Snd Id && Fst Id == Snd Id) ("Abc","Abc")
+-- >>> pl @(Fst ==~ Snd && Fst == Snd) ("Abc","Abc")
 -- True (True && True)
 -- TrueT
 --
@@ -443,7 +443,7 @@ instance (PP p a ~ String
 -- | a type level predicate for a monotonic increasing list
 --
 -- >>> pl @Asc "aaacdef"
--- True (All(6))
+-- True ((>>) True | {All(6)})
 -- TrueT
 --
 -- >>> pz @Asc [1,2,3,4,5,5,7]
@@ -453,7 +453,7 @@ instance (PP p a ~ String
 -- FalseT
 --
 data Asc
-type AscT = All (Fst Id <= Snd Id) Pairs
+type AscT = Pairs >> All (Fst <= Snd)
 
 instance P AscT x => P Asc x where
   type PP Asc x = PP AscT x
@@ -471,7 +471,7 @@ instance P AscT x => P Asc x where
 -- TrueT
 --
 data Asc'
-type AscT' = All (Fst Id < Snd Id) Pairs
+type AscT' = Pairs >> All (Fst < Snd)
 
 instance P AscT' x => P Asc' x where
   type PP Asc' x = PP AscT' x
@@ -479,14 +479,14 @@ instance P AscT' x => P Asc' x where
 
 -- | a type level predicate for a monotonic decreasing list
 data Desc
-type DescT = All (Fst Id >= Snd Id) Pairs
+type DescT = Pairs >> All (Fst >= Snd)
 
 instance P DescT x => P Desc x where
   type PP Desc x = PP DescT x
   eval _ = evalBool (Proxy @DescT)
 -- | a type level predicate for a strictly decreasing list
 data Desc'
-type DescT' = All (Fst Id > Snd Id) Pairs
+type DescT' = Pairs >> All (Fst > Snd)
 
 instance P DescT' x => P Desc' x where
   type PP Desc' x = PP DescT' x
@@ -508,7 +508,7 @@ instance P DescT' x => P Desc' x where
 -- FalseT
 --
 data AllPositive
-type AllPositiveT = All Positive Id
+type AllPositiveT = All Positive
 
 instance P AllPositiveT x => P AllPositive x where
   type PP AllPositive x = PP AllPositiveT x
@@ -520,7 +520,7 @@ instance P AllPositiveT x => P AllPositive x where
 -- TrueT
 --
 data AllNegative
-type AllNegativeT = All Negative Id
+type AllNegativeT = All Negative
 
 instance P AllNegativeT x => P AllNegative x where
   type PP AllNegative x = PP AllNegativeT x

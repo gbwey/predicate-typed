@@ -72,10 +72,10 @@ import Data.Void
 
 -- | similar to 'scanl'
 --
--- >>> pz @(Scanl (Snd Id :+ Fst Id) (Fst Id) (Snd Id)) ([99],[1..5])
+-- >>> pz @(Scanl (Snd :+ Fst) Fst Snd) ([99],[1..5])
 -- PresentT [[99],[1,99],[2,1,99],[3,2,1,99],[4,3,2,1,99],[5,4,3,2,1,99]]
 --
--- >>> pl @(Scanl (Snd Id :+ Fst Id) (Fst Id) (Snd Id)) ([99],[])
+-- >>> pl @(Scanl (Snd :+ Fst) Fst Snd) ([99],[])
 -- Present [[99]] (Scanl [[99]] | b=[99] | as=[])
 -- PresentT [[99]]
 --
@@ -135,7 +135,7 @@ instance (PP p (b,a) ~ b
 -- >>> pz @(ScanN 4 (Succ Id) Id) 4
 -- PresentT [4,5,6,7,8]
 --
--- >>> pz @('(0,1) >> ScanN 20 '(Snd Id, Fst Id + Snd Id) Id >> Map (Fst Id) Id) "sdf"
+-- >>> pz @('(0,1) >> ScanN 20 '(Snd, Fst + Snd) Id >> Map Fst Id) "sdf"
 -- PresentT [0,1,1,2,3,5,8,13,21,34,55,89,144,233,377,610,987,1597,2584,4181,6765]
 --
 -- >>> pl @(ScanN 2 (Succ Id) Id) 4
@@ -155,7 +155,7 @@ instance (PP p (b,a) ~ b
 -- PresentT [99,98,97,96,95]
 --
 data ScanN n p q
-type ScanNT n p q = Scanl (Fst Id >> p) q (1...n) -- n times using q then run p
+type ScanNT n p q = Scanl (Fst >> p) q (1...n) -- n times using q then run p
 
 instance P (ScanNT n p q) x => P (ScanN n p q) x where
   type PP (ScanN n p q) x = PP (ScanNT n p q) x
@@ -176,7 +176,7 @@ instance P (ScanNT n p q) x => P (ScanN n p q) x where
 -- PresentT ["abcd","bcd","cd","d",""]
 --
 data ScanNA q
-type ScanNAT q = ScanN (Fst Id) q (Snd Id)
+type ScanNAT q = ScanN Fst q Snd
 
 instance P (ScanNAT q) x => P (ScanNA q) x where
   type PP (ScanNA q) x = PP (ScanNAT q) x
@@ -191,23 +191,23 @@ instance P (ScanNAT q) x => P (ScanNA q) x where
 -- PresentT [2020-07-27,2020-07-28,2020-07-29,2020-07-30,2020-07-31,2020-08-01]
 --
 -- >>> pl @(FoldN 2 (Succ Id) Id) LT
--- Present GT (Last GT | [LT,EQ,GT])
+-- Present GT ((>>) GT | {Last GT | [LT,EQ,GT]})
 -- PresentT GT
 --
 -- >>> pl @(FoldN 30 (Succ Id) Id) LT
--- Error Succ IO e=Prelude.Enum.Ordering.succ: bad argument (Last)
+-- Error Succ IO e=Prelude.Enum.Ordering.succ: bad argument
 -- FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument"
 --
 -- >>> pl @(FoldN 6 (Succ Id) Id) 'a'
--- Present 'g' (Last 'g' | "abcdefg")
+-- Present 'g' ((>>) 'g' | {Last 'g' | "abcdefg"})
 -- PresentT 'g'
 --
 -- >>> pl @(FoldN 6 (Pred Id) Id) 'a'
--- Present '[' (Last '[' | "a`_^]\\[")
+-- Present '[' ((>>) '[' | {Last '[' | "a`_^]\\["})
 -- PresentT '['
 --
 -- >>> pl @(FoldN 0 (Succ Id) Id) LT
--- Present LT (Last LT | [LT])
+-- Present LT ((>>) LT | {Last LT | [LT]})
 -- PresentT LT
 --
 -- >>> pl @(FoldN 2 (Succ Id) Id >> FoldN 2 (Pred Id) Id) LT
@@ -215,12 +215,12 @@ instance P (ScanNAT q) x => P (ScanNA q) x where
 -- PresentT LT
 --
 -- >>> pl @(FoldN 4 ((Id &&& Id) >> SapA) Id) "abc"
--- Present "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc" (Last "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc" | ["abc","abcabc","abcabcabcabc","abcabcabcabcabcabcabcabc","abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc"])
+-- Present "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc" ((>>) "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc" | {Last "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc" | ["abc","abcabc","abcabcabcabc","abcabcabcabcabcabcabcabc","abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc"]})
 -- PresentT "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc"
 --
 
 data FoldN n p q
-type FoldNT n p q = Last (ScanN n p q)
+type FoldNT n p q = ScanN n p q >> Last
 
 instance P (FoldNT n p q) x => P (FoldN n p q) x where
   type PP (FoldN n p q) x = PP (FoldNT n p q) x
@@ -228,48 +228,48 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 
 -- | Foldl similar to 'foldl'
 --
--- >>> pl @(Foldl (Fst Id + Snd Id) 0 (1 ... 10)) ()
--- Present 55 (Last 55 | [0,1,3,6,10,15,21,28,36,45,55])
+-- >>> pl @(Foldl (Fst + Snd) 0 (1 ... 10)) ()
+-- Present 55 ((>>) 55 | {Last 55 | [0,1,3,6,10,15,21,28,36,45,55]})
 -- PresentT 55
 --
--- >>> pz @(Foldl (Snd Id :+ Fst Id) '[99] (1 ... 10)) ()
+-- >>> pz @(Foldl (Snd :+ Fst) '[99] (1 ... 10)) ()
 -- PresentT [10,9,8,7,6,5,4,3,2,1,99]
 --
--- >>> pl @(Foldl (Fst Id) '() (EnumFromTo 1 9999)) ()
--- Error Scanl list size exceeded (Last)
+-- >>> pl @(Foldl Fst '() (EnumFromTo 1 9999)) ()
+-- Error Scanl list size exceeded
 -- FailT "Scanl list size exceeded"
 --
--- >>> pl @(Foldl (Guard "someval" (Fst Id < Snd Id) >> Snd Id) (Head Id) Tail) [1,4,7,9,16]
--- Present 16 (Last 16 | [1,4,7,9,16])
+-- >>> pl @(Foldl (Guard "someval" (Fst < Snd) >> Snd) Head Tail) [1,4,7,9,16]
+-- Present 16 ((>>) 16 | {Last 16 | [1,4,7,9,16]})
 -- PresentT 16
 --
--- >>> pl @(Foldl (Guard (PrintT "%d not less than %d" Id) (Fst Id < Snd Id) >> Snd Id) (Head Id) Tail) [1,4,7,6,16::Int]
--- Error 7 not less than 6 (Last)
+-- >>> pl @(Foldl (Guard (PrintT "%d not less than %d" Id) (Fst < Snd) >> Snd) Head Tail) [1,4,7,6,16::Int]
+-- Error 7 not less than 6
 -- FailT "7 not less than 6"
 --
--- >>> pl @(Foldl (If ((Fst Id >> Fst Id) && (Snd Id > Snd (Fst Id))) '( 'True, Snd Id) '( 'False, Snd (Fst Id))) '( 'True, Head Id) Tail) [1,4,7,9,16]
--- Present (True,16) (Last (True,16) | [(True,1),(True,4),(True,7),(True,9),(True,16)])
+-- >>> pl @(Foldl (If ((Fst >> Fst) && (Snd > L2 Fst)) '( 'True, Snd) '( 'False, L2 Fst)) '( 'True, Head) Tail) [1,4,7,9,16]
+-- Present (True,16) ((>>) (True,16) | {Last (True,16) | [(True,1),(True,4),(True,7),(True,9),(True,16)]})
 -- PresentT (True,16)
 --
--- >>> pl @(Foldl (If ((Fst Id >> Fst Id) && (Snd Id > Snd (Fst Id))) '( 'True, Snd Id) '( 'False, Snd (Fst Id))) '( 'True, Head Id) Tail) [1,4,7,9,16,2]
--- Present (False,16) (Last (False,16) | [(True,1),(True,4),(True,7),(True,9),(True,16),(False,16)])
+-- >>> pl @(Foldl (If ((Fst >> Fst) && (Snd > L2 Fst)) '( 'True, Snd) '( 'False, L2 Fst)) '( 'True, Head) Tail) [1,4,7,9,16,2]
+-- Present (False,16) ((>>) (False,16) | {Last (False,16) | [(True,1),(True,4),(True,7),(True,9),(True,16),(False,16)]})
 -- PresentT (False,16)
 --
--- >>> pl @(Foldl (Snd Id :+ Fst Id) (MEmptyT [_]) Id) [1..5]
--- Present [5,4,3,2,1] (Last [5,4,3,2,1] | [[],[1],[2,1],[3,2,1],[4,3,2,1],[5,4,3,2,1]])
+-- >>> pl @(Foldl (Snd :+ Fst) (MEmptyT [_]) Id) [1..5]
+-- Present [5,4,3,2,1] ((>>) [5,4,3,2,1] | {Last [5,4,3,2,1] | [[],[1],[2,1],[3,2,1],[4,3,2,1],[5,4,3,2,1]]})
 -- PresentT [5,4,3,2,1]
 --
--- >>> pl @('Just Uncons >> Foldl (If (Fst (Fst Id)) (If (Snd (Fst Id) < Snd Id) '( 'True,Snd Id) '( 'False, Snd Id)) (Fst Id)) '( 'True,Fst Id) (Snd Id)) [-10,-2,2,3,4,10,9,11]
+-- >>> pl @('Just Uncons >> Foldl (If (L1 Fst) (If (L2 Fst < Snd) '( 'True,Snd) '( 'False, Snd)) Fst) '( 'True,Fst) Snd) [-10,-2,2,3,4,10,9,11]
 -- Present (False,9) ((>>) (False,9) | {Last (False,9) | [(True,-10),(True,-2),(True,2),(True,3),(True,4),(True,10),(False,9),(False,9)]})
 -- PresentT (False,9)
 --
--- >>> pl @('Just Uncons >> Foldl (If (Fst (Fst Id)) (If (Snd (Fst Id) < Snd Id) '( 'True,Snd Id) '( 'False, Snd Id)) (Fst Id)) '( 'True,Fst Id) (Snd Id)) [-10,2,3,4,10,11]
+-- >>> pl @('Just Uncons >> Foldl (If (L1 Fst) (If (L2 Fst < Snd) '( 'True,Snd) '( 'False, Snd)) Fst) '( 'True,Fst) Snd) [-10,2,3,4,10,11]
 -- Present (True,11) ((>>) (True,11) | {Last (True,11) | [(True,-10),(True,2),(True,3),(True,4),(True,10),(True,11)]})
 -- PresentT (True,11)
 --
 
 data Foldl p q r
-type FoldLT p q r = Last (Scanl p q r)
+type FoldLT p q r = Scanl p q r >> Last
 
 instance P (FoldLT p q r) x => P (Foldl p q r) x where
   type PP (Foldl p q r) x = PP (FoldLT p q r) x
@@ -401,7 +401,7 @@ instance P (IterateWhileT p f) x => P (IterateWhile p f) x where
 -- PresentT [95,94,93]
 --
 data IterateNWhile n p f
-type IterateNWhileT n p f = '(n, Id) >> IterateWhile (Fst Id > 0 && (Snd Id >> p)) (Pred Id *** f) >> Map (Snd Id) Id
+type IterateNWhileT n p f = '(n, Id) >> IterateWhile (Fst > 0 && (Snd >> p)) (Pred Id *** f) >> Map Snd Id
 
 instance P (IterateNWhileT n p f) x => P (IterateNWhile n p f) x where
   type PP (IterateNWhile n p f) x = PP (IterateNWhileT n p f) x

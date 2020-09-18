@@ -59,7 +59,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 
 -- | similar to 'SG.<>'
 --
--- >>> pz @(Fst Id <> Snd Id) ("abc","def")
+-- >>> pz @(Fst <> Snd) ("abc","def")
 -- PresentT "abcdef"
 --
 -- >>> pz @("abcd" <> "ef" <> Id) "ghi"
@@ -113,7 +113,7 @@ instance (Semigroup (PP p x)
 -- PresentT 9
 --
 data SapA' (t :: Type)
-type SapAT' (t :: Type) = Wrap t (Fst Id) <> Wrap t (Snd Id)
+type SapAT' (t :: Type) = Wrap t Fst <> Wrap t Snd
 
 instance P (SapAT' t) x => P (SapA' t) x where
   type PP (SapA' t) x = PP (SapAT' t) x
@@ -121,11 +121,11 @@ instance P (SapAT' t) x => P (SapA' t) x where
 
 -- | semigroup append both sides of a tuple (ie uncurry (<>))
 --
--- >>> pz @(Snd Id >> SapA) (4,("abc","def"))
+-- >>> pz @(Snd >> SapA) (4,("abc","def"))
 -- PresentT "abcdef"
 --
 data SapA
-type SapAT = Fst Id <> Snd Id
+type SapAT = Fst <> Snd
 
 instance P SapAT x => P SapA x where
   type PP SapA x = PP SapAT x
@@ -282,11 +282,11 @@ instance P MEmptyPT x => P MEmptyP x where
 -- Present Sum {getSum = 52} (STimes 4 p=Sum {getSum = 13} Sum {getSum = 52} | n=4 | Sum {getSum = 13})
 -- PresentT (Sum {getSum = 52})
 --
--- >>> pl @(STimes (Fst Id) (Snd Id)) (4,['x','y'])
+-- >>> pl @(STimes Fst Snd) (4,['x','y'])
 -- Present "xyxyxyxy" (STimes 4 p="xy" "xyxyxyxy" | n=4 | "xy")
 -- PresentT "xyxyxyxy"
 --
--- >>> pl @(STimes (Fst Id) (Snd Id)) (4,"abc")
+-- >>> pl @(STimes Fst Snd) (4,"abc")
 -- Present "abcabcabcabc" (STimes 4 p="abc" "abcabcabcabc" | n=4 | "abc")
 -- PresentT "abcabcabcabc"
 --

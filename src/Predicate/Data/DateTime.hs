@@ -80,7 +80,7 @@ import qualified Data.Time.Clock.POSIX as P
 -- >>> pz @(FormatTimeP "%F %T" Id) (readNote @LocalTime "invalid localtime" "2019-05-24 05:19:59")
 -- PresentT "2019-05-24 05:19:59"
 --
--- >>> pz @(FormatTimeP (Fst Id) (Snd Id)) ("the date is %d/%m/%Y", readNote @Day "invalid day" "2019-05-24")
+-- >>> pz @(FormatTimeP Fst Snd) ("the date is %d/%m/%Y", readNote @Day "invalid day" "2019-05-24")
 -- PresentT "the date is 24/05/2019"
 --
 -- >>> pl @(FormatTimeP "%Y-%m-%d" Id) (readNote @Day "invalid day" "2019-08-17")
@@ -186,7 +186,7 @@ instance (ParseTime (PP t a)
 -- >>> pz @(ParseTimes LocalTime '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"] "03/11/19 01:22:33") ()
 -- PresentT 2019-03-11 01:22:33
 --
--- >>> pz @(ParseTimes LocalTime (Fst Id) (Snd Id)) (["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"], "03/11/19 01:22:33")
+-- >>> pz @(ParseTimes LocalTime Fst Snd) (["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"], "03/11/19 01:22:33")
 -- PresentT 2019-03-11 01:22:33
 --
 -- >>> pl @(Map (ParseTimes Day '["%Y-%m-%d", "%m/%d/%y", "%b %d %Y"] Id) Id) ["2001-01-01", "Jan 24 2009", "03/29/0x7"]
@@ -206,7 +206,7 @@ instance P (ParseTimesT t p q) x => P (ParseTimes t p q) x where
 
 -- | create a 'Day' from three int values passed in as year month and day
 --
--- >>> pz @(MkDay' (Fst Id) (Snd Id) (Thd Id)) (2019,99,99999)
+-- >>> pz @(MkDay' Fst Snd Thd) (2019,99,99999)
 -- PresentT Nothing
 --
 data MkDay' p q r
@@ -248,7 +248,7 @@ instance (P p x
 -- PresentT (Just 1999-03-13)
 --
 data MkDay p
-type MkDayT p = MkDay' (Fst p) (Snd p) (Thd p)
+type MkDayT p = p >> MkDay' Fst Snd Thd
 
 instance P (MkDayT p) x => P (MkDay p) x where
   type PP (MkDay p) x = PP (MkDayT p) x
@@ -278,7 +278,7 @@ instance ( PP p x ~ Day
 
 -- | create a 'Day', week number, and the day of the week from three numbers passed in as year month and day
 --
--- >>> pz @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id)) (2019,99,99999)
+-- >>> pz @(MkDayExtra' Fst Snd Thd) (2019,99,99999)
 -- PresentT Nothing
 --
 data MkDayExtra' p q r
@@ -310,10 +310,10 @@ instance (P p x
 
 -- | create a 'Day', week number, and the day of the week from three numbers passed in as year month and day
 --
--- >>> pz @(MkDayExtra '(1,2,3) >> 'Just Id >> Fst Id) ()
+-- >>> pz @(MkDayExtra '(1,2,3) >> 'Just Id >> Fst) ()
 -- PresentT 0001-02-03
 --
--- >>> pz @(Fst (Just (MkDayExtra '(1,2,3)))) 1
+-- >>> pz @(L1 (Just (MkDayExtra '(1,2,3)))) 1
 -- PresentT 0001-02-03
 --
 -- >>> pz @(MkDayExtra Id) (2019,12,30)
@@ -323,7 +323,7 @@ instance (P p x
 -- PresentT (Just (1999-03-13,10,6))
 --
 data MkDayExtra p
-type MkDayExtraT p = MkDayExtra' (Fst p) (Snd p) (Thd p)
+type MkDayExtraT p = p >> MkDayExtra' Fst Snd Thd
 
 instance P (MkDayExtraT p) x => P (MkDayExtra p) x where
   type PP (MkDayExtra p) x = PP (MkDayExtraT p) x
@@ -444,7 +444,7 @@ instance ( Show x
 
 -- | create a 'TimeOfDay' from three int values passed in as year month and day
 --
--- >>> pz @(MkTime' (Fst Id) (Snd Id) (Thd Id)) (13,99,99999)
+-- >>> pz @(MkTime' Fst Snd Thd) (13,99,99999)
 -- PresentT 13:99:99999
 --
 data MkTime' p q r
@@ -483,7 +483,7 @@ instance (P p x
 -- PresentT 17:03:13
 --
 data MkTime p
-type MkTimeT p = MkTime' (Fst p) (Snd p) (Thd p)
+type MkTimeT p = p >> MkTime' Fst Snd Thd
 
 instance P (MkTimeT p) x => P (MkTime p) x where
   type PP (MkTime p) x = PP (MkTimeT p) x
@@ -538,7 +538,7 @@ instance ( PP p x ~ TimeOfDay
 -- Present 1970-01-01 04:07:12 UTC (PosixToUTCTime 1970-01-01 04:07:12 UTC | 14832 % 1)
 -- PresentT 1970-01-01 04:07:12 UTC
 --
--- >>> pz @(Rescan "^Date\\((\\d+)([^\\)]+)\\)" Id >> Head Id >> Snd Id >> ReadP Integer (Id !! 0) >> PosixToUTCTime (Id % 1000)) "Date(1530144000000+0530)"
+-- >>> pz @(Rescan "^Date\\((\\d+)([^\\)]+)\\)" >> Head >> Snd >> ReadP Integer (Id !! 0) >> PosixToUTCTime (Id % 1000)) "Date(1530144000000+0530)"
 -- PresentT 2018-06-28 00:00:00 UTC
 --
 data PosixToUTCTime p
@@ -562,7 +562,7 @@ instance ( PP p x ~ Rational
 -- Present 1593384312 % 1 ((>>) 1593384312 % 1 | {UTCTimeToPosix 1593384312 % 1 | 2020-06-28 22:45:12 UTC})
 -- PresentT (1593384312 % 1)
 --
--- >>> pz @(Rescan "^Date\\((\\d+)([^\\)]+)\\)" Id >> Head Id >> Snd Id >> ((ReadP Integer (Id !! 0) >> PosixToUTCTime (Id % 1000)) &&& ReadP TimeZone (Id !! 1))) "Date(1530144000000+0530)"
+-- >>> pz @(Rescan "^Date\\((\\d+)([^\\)]+)\\)" >> Head >> Snd >> ((ReadP Integer (Id !! 0) >> PosixToUTCTime (Id % 1000)) &&& ReadP TimeZone (Id !! 1))) "Date(1530144000000+0530)"
 -- PresentT (2018-06-28 00:00:00 UTC,+0530)
 --
 -- not so useful: instead use ParseTimeP FormatTimeP with %s %q %z etc

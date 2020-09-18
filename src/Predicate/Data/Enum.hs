@@ -328,7 +328,7 @@ instance (Show a
 -- Error ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2) ([97,98,99,100,101])
 -- FailT "ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2)"
 --
--- >>> pl @((ToEnum Day Id *** ToEnum Day Id) >> EnumFromTo (Fst Id) (Snd Id)) (0,5)
+-- >>> pl @((ToEnum Day Id *** ToEnum Day Id) >> EnumFromTo Fst Snd) (0,5)
 -- Present [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] ((>>) [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] | {1858-11-17 ... 1858-11-22})
 -- PresentT [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22]
 --

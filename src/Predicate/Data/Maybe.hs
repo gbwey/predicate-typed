@@ -167,11 +167,11 @@ instance ( PP p x ~ a
 -- False (MaybeIn(Just) False | "aa")
 -- FalseT
 --
--- >>> pl @(MaybeIn MEmptyP (Fst Id ==! Snd Id)) (Just ('x','z'))
+-- >>> pl @(MaybeIn MEmptyP (Fst ==! Snd)) (Just ('x','z'))
 -- Present LT (MaybeIn(Just) LT | ('x','z'))
 -- PresentT LT
 --
--- >>> pl @(MaybeIn MEmptyP (Fst Id ==! Snd Id)) (Nothing @(Char,Char))
+-- >>> pl @(MaybeIn MEmptyP (Fst ==! Snd)) (Nothing @(Char,Char))
 -- Present EQ (MaybeIn(Nothing) EQ | Proxy)
 -- PresentT EQ
 --
@@ -442,10 +442,10 @@ instance ( PP p x ~ a
 -- >>> pz @(JustFail "nope" Id) Nothing
 -- FailT "nope"
 --
--- >>> pz @(JustFail (PrintF "oops=%d" (Snd Id)) (Fst Id)) (Nothing, 123)
+-- >>> pz @(JustFail (PrintF "oops=%d" Snd) Fst) (Nothing, 123)
 -- FailT "oops=123"
 --
--- >>> pz @(JustFail (PrintF "oops=%d" (Snd Id)) (Fst Id)) (Just 'x', 123)
+-- >>> pz @(JustFail (PrintF "oops=%d" Snd) Fst) (Just 'x', 123)
 -- PresentT 'x'
 --
 data JustFail p q

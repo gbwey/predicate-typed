@@ -403,22 +403,22 @@ withRefinedTIO a k = newRefinedTIO @opts @p a >>= k
 -- >>> prtRefinedIO @OZ @(Between 10 14 Id) 99
 -- Left FalseT
 --
--- >>> prtRefinedIO @OZ @(Last Id >> Len == 4) ["one","two","three","four"]
+-- >>> prtRefinedIO @OZ @(Last >> Len == 4) ["one","two","three","four"]
 -- Right (Refined ["one","two","three","four"])
 --
--- >>> prtRefinedIO @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) "141.213.1.99"
+-- >>> prtRefinedIO @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1.99"
 -- Right (Refined "141.213.1.99")
 --
--- >>> prtRefinedIO @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$" Id) "141.213.1"
+-- >>> prtRefinedIO @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1"
 -- Left FalseT
 --
--- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
+-- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
 -- Left (FailT "bad length: found 3")
 --
--- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id)) "141.213.1.444"
+-- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id)) "141.213.1.444"
 -- Left (FailT "Bool(3) [octet 3 out of range 444]")
 --
--- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\." Id) >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id)) "141.213.1x34.444"
+-- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id)) "141.213.1x34.444"
 -- Left (FailT "ReadP Int (1x34)")
 --
 -- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12344"
@@ -427,19 +427,19 @@ withRefinedTIO a k = newRefinedTIO @opts @p a >>= k
 -- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12340"
 -- Left FalseT
 --
--- >>> prtRefinedIO @OZ @(Any IsPrime Id) [11,13,17,18]
+-- >>> prtRefinedIO @OZ @(Any IsPrime) [11,13,17,18]
 -- Right (Refined [11,13,17,18])
 --
--- >>> prtRefinedIO @OZ @(All IsPrime Id) [11,13,17,18]
+-- >>> prtRefinedIO @OZ @(All IsPrime) [11,13,17,18]
 -- Left FalseT
 --
--- >>> prtRefinedIO @OZ @(Snd Id !! Fst Id >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @OZ @(Snd !! Fst >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Right (Refined (2,["abc","defghij","xyzxyazsfd"]))
 --
--- >>> prtRefinedIO @OZ @(Snd Id !! Fst Id >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @OZ @(Snd !! Fst >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
 -- Left (FailT "(!!) index not found")
 --
--- >>> prtRefinedIO @OZ @(Snd Id !! Fst Id >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
+-- >>> prtRefinedIO @OZ @(Snd !! Fst >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Left FalseT
 --
 prtRefinedIO :: forall opts p a
@@ -595,7 +595,7 @@ unsafeRefined' a =
   in case getValueLR o "" tt [] of
        Right True -> Refined a
        _ -> let s = prtTree o tt
-                bp = colorBoolT' o (tt ^. ttBool)
+                bp = colorBoolT' o (_ttBool tt)
             in case oDebug o of
                  DZero -> error bp
                  DLite -> error $ bp ++ "\n" ++ s

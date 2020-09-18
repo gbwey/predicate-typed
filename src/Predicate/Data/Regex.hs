@@ -81,67 +81,6 @@ import qualified Text.Regex.PCRE.Heavy as RH
 --
 data Re' (rs :: [ROpt]) p q
 
--- | runs a regular expression and returns a boolean: see 'RH.=~'
---
--- >>> pz @(Re "^\\d{2}:\\d{2}:\\d{2}$" Id) "13:05:25"
--- TrueT
---
--- >>> pl @(Re "\\d{4}-\\d{3}" Id) "1234-123"
--- True (Re (\d{4}-\d{3}) | 1234-123)
--- TrueT
---
--- >>> pl @(Re "\\d{4}-\\d{3}" Id) "1234-1x3"
--- False (Re (\d{4}-\d{3}) | 1234-1x3)
--- FalseT
---
--- >>> pl @(Re "(?i)ab" Id) "aB" -- runtime [use 'Caseless instead]
--- True (Re ((?i)ab) | aB)
--- TrueT
---
--- >>> pl @(Re "ab" Id) "aB"
--- False (Re (ab) | aB)
--- FalseT
---
--- >>> pl @(Re "^\\d{1,3}(?:\\.\\d{1,3}){3}$" Id) "123.1.1.21"
--- True (Re (^\d{1,3}(?:\.\d{1,3}){3}$) | 123.1.1.21)
--- TrueT
---
--- >>> pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$" Id) >> ReadP Double Id) "13.345"
--- Present 13.345 ((>>) 13.345 | {ReadP Double 13.345})
--- PresentT 13.345
---
--- >>> pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$" Id) >> ReadP Double Id) "13"
--- Present 13.0 ((>>) 13.0 | {ReadP Double 13.0})
--- PresentT 13.0
---
--- >>> pl @(ExitWhen "regex failed" (Not (Re "^\\d+(?:\\.\\d+)?$" Id)) >> ReadP Double Id) "-13.4"
--- Error regex failed
--- FailT "regex failed"
---
--- >>> pl @(Re "\\d{4}\\" Id) "ayx"
--- Error Regex failed to compile (Re (\d{4}\) ([],[]):\ at end of pattern)
--- FailT "Regex failed to compile"
---
--- >>> pl @(Re "^\\d+$" Id) "123\nx"
--- False (Re (^\d+$) | 123
--- x)
--- FalseT
---
--- >>> pl @(Re "(?m)^\\d+$" Id) "123\nx" -- (?m) anchors match beginning/end of line instead of whole string
--- True (Re ((?m)^\d+$) | 123
--- x)
--- TrueT
---
--- >>> pl @(Catch (Re "\\d+(" Id) 'False) "123"
--- False (Catch caught exception[Regex failed to compile])
--- FalseT
---
--- >>> pl @(Catch (Re "\\d+" Id) 'False) "123"
--- True (Catch did not fire)
--- TrueT
---
-data Re p q
-
 instance (GetROpts rs
         , PP p x ~ String
         , PP q x ~ String
@@ -164,11 +103,72 @@ instance (GetROpts rs
                let b = q RH.=~ regex
                in mkNodeB opts b (msg1 <> litVerbose opts " | " q) hhs
 
-type ReT p q = Re' '[] p q
 
-instance P (ReT p q) x => P (Re p q) x where
-  type PP (Re p q) x = PP (ReT p q) x
-  eval _ = evalBool (Proxy @(ReT p q))
+-- | runs a regular expression and returns a boolean: see 'RH.=~'
+--
+-- >>> pz @(Re "^\\d{2}:\\d{2}:\\d{2}$") "13:05:25"
+-- TrueT
+--
+-- >>> pl @(Re "\\d{4}-\\d{3}") "1234-123"
+-- True (Re (\d{4}-\d{3}) | 1234-123)
+-- TrueT
+--
+-- >>> pl @(Re "\\d{4}-\\d{3}") "1234-1x3"
+-- False (Re (\d{4}-\d{3}) | 1234-1x3)
+-- FalseT
+--
+-- >>> pl @(Re "(?i)ab") "aB" -- runtime [use 'Caseless instead]
+-- True (Re ((?i)ab) | aB)
+-- TrueT
+--
+-- >>> pl @(Re "ab") "aB"
+-- False (Re (ab) | aB)
+-- FalseT
+--
+-- >>> pl @(Re "^\\d{1,3}(?:\\.\\d{1,3}){3}$") "123.1.1.21"
+-- True (Re (^\d{1,3}(?:\.\d{1,3}){3}$) | 123.1.1.21)
+-- TrueT
+--
+-- >>> pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$") >> ReadP Double Id) "13.345"
+-- Present 13.345 ((>>) 13.345 | {ReadP Double 13.345})
+-- PresentT 13.345
+--
+-- >>> pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$") >> ReadP Double Id) "13"
+-- Present 13.0 ((>>) 13.0 | {ReadP Double 13.0})
+-- PresentT 13.0
+--
+-- >>> pl @(ExitWhen "regex failed" (Not (Re "^\\d+(?:\\.\\d+)?$")) >> ReadP Double Id) "-13.4"
+-- Error regex failed
+-- FailT "regex failed"
+--
+-- >>> pl @(Re "\\d{4}\\") "ayx"
+-- Error Regex failed to compile (Re (\d{4}\) ([],[]):\ at end of pattern)
+-- FailT "Regex failed to compile"
+--
+-- >>> pl @(Re "^\\d+$") "123\nx"
+-- False (Re (^\d+$) | 123
+-- x)
+-- FalseT
+--
+-- >>> pl @(Re "(?m)^\\d+$") "123\nx" -- (?m) anchors match beginning/end of line instead of whole string
+-- True (Re ((?m)^\d+$) | 123
+-- x)
+-- TrueT
+--
+-- >>> pl @(Catch (Re "\\d+(") 'False) "123"
+-- False (Catch caught exception[Regex failed to compile])
+-- FalseT
+--
+-- >>> pl @(Catch (Re "\\d+") 'False) "123"
+-- True (Catch did not fire)
+-- TrueT
+--
+data Re p
+type ReT p = Re' '[] p Id
+
+instance P (ReT p) x => P (Re p) x where
+  type PP (Re p) x = PP (ReT p) x
+  eval _ = evalBool (Proxy @(ReT p))
 
 -- only way with rescan is to be explicit: no repeats! and useanchors but not (?m)
 -- or just use Re' but then we only get a bool ie doesnt capture groups
@@ -182,6 +182,9 @@ instance P (ReT p q) x => P (Re p q) x where
 -- >>> pl @(Rescan' '[ 'Anchored ] "([[:xdigit:]]{2})" Id) "wfeb12az"
 -- Error Regex no results (Rescan' ['Anchored] (([[:xdigit:]]{2})) | "wfeb12az")
 -- FailT "Regex no results"
+--
+-- >>> pz @(Rescan' '[] Snd "13:05:25") ('a',"^(\\d{2}):(\\d{2}):(\\d{2})$")
+-- PresentT [("13:05:25",["13","05","25"])]
 --
 data Rescan' (rs :: [ROpt]) p q
 
@@ -212,69 +215,66 @@ instance (GetROpts rs
 
 -- | see 'RH.scan'
 --
--- >>> pz @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
+-- >>> pz @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$") "13:05:25"
 -- PresentT [("13:05:25",["13","05","25"])]
 --
--- >>> pz @(Rescan (Snd Id) "13:05:25") ('a',"^(\\d{2}):(\\d{2}):(\\d{2})$")
--- PresentT [("13:05:25",["13","05","25"])]
---
--- >>> pz @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$" Id >> Snd (Head Id) >> Map (ReadP Int Id) Id) "13:05:25"
+-- >>> pz @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$" >> L2 Head >> Map (ReadP Int Id) Id) "13:05:25"
 -- PresentT [13,5,25]
 --
--- >>> pl @(Rescan "(\\d+)\\D?" Id >> Map (Second (ReadP Int (OneP))) Id) "123-444-987"
+-- >>> pl @(Rescan "(\\d+)\\D?" >> Map (Second (ReadP Int (OneP))) Id) "123-444-987"
 -- Present [("123-",123),("444-",444),("987",987)] ((>>) [("123-",123),("444-",444),("987",987)] | {Map [("123-",123),("444-",444),("987",987)] | [("123-",["123"]),("444-",["444"]),("987",["987"])]})
 -- PresentT [("123-",123),("444-",444),("987",987)]
 --
--- >>> pl @(Rescan ".(.)" Id) "aBcd"
+-- >>> pl @(Rescan ".(.)") "aBcd"
 -- Present [("aB",["B"]),("cd",["d"])] (Rescan (.(.)) [("aB",["B"]),("cd",["d"])] | aBcd)
 -- PresentT [("aB",["B"]),("cd",["d"])]
 --
--- >>> pl @(Rescan "\\d{1,3}(\\.)?" Id) "123.8.99.21"
+-- >>> pl @(Rescan "\\d{1,3}(\\.)?") "123.8.99.21"
 -- Present [("123.",["."]),("8.",["."]),("99.",["."]),("21",[])] (Rescan (\d{1,3}(\.)?) [("123.",["."]),("8.",["."]),("99.",["."]),("21",[])] | 123.8.99.21)
 -- PresentT [("123.",["."]),("8.",["."]),("99.",["."]),("21",[])]
 --
--- >>> pl @(Map (Fst Id) (Rescan "." (ShowP Id)) >> Filter (Same "2") Id) 12324
+-- >>> pl @(Map Fst (Rescan "." << ShowP Id) >> Filter (Same "2") Id) 12324
 -- Present ["2","2"] ((>>) ["2","2"] | {Fst ["2","2"] | (["2","2"],["1","3","4"])})
 -- PresentT ["2","2"]
 --
--- >>> pl @(Rescan "(\\d)+?" Id) "1234"
+-- >>> pl @(Rescan "(\\d)+?") "1234"
 -- Present [("1",["1"]),("2",["2"]),("3",["3"]),("4",["4"])] (Rescan ((\d)+?) [("1",["1"]),("2",["2"]),("3",["3"]),("4",["4"])] | 1234)
 -- PresentT [("1",["1"]),("2",["2"]),("3",["3"]),("4",["4"])]
 --
--- >>> pl @(Rescan "(\\d)+" Id) "1234"
+-- >>> pl @(Rescan "(\\d)+") "1234"
 -- Present [("1234",["4"])] (Rescan ((\d)+) [("1234",["4"])] | 1234)
 -- PresentT [("1234",["4"])]
 --
--- >>> pl @(Rescan "(\\d{1,3})(\\.(\\d{1,3}))+?" Id) "1.2.3.4" -- overcapturing
+-- >>> pl @(Rescan "(\\d{1,3})(\\.(\\d{1,3}))+?") "1.2.3.4" -- overcapturing
 -- Present [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])] (Rescan ((\d{1,3})(\.(\d{1,3}))+?) [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])] | 1.2.3.4)
 -- PresentT [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])]
 --
--- >>> pl @(Rescan "^(\\d)+?$" Id) "1234"
+-- >>> pl @(Rescan "^(\\d)+?$") "1234"
 -- Present [("1234",["4"])] (Rescan (^(\d)+?$) [("1234",["4"])] | 1234)
 -- PresentT [("1234",["4"])]
 --
--- >>> pl @(Rescan "(\\d{1,3})(\\.(\\d{1,3}))+?" Id) "1.2.3.4"
+-- >>> pl @(Rescan "(\\d{1,3})(\\.(\\d{1,3}))+?") "1.2.3.4"
 -- Present [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])] (Rescan ((\d{1,3})(\.(\d{1,3}))+?) [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])] | 1.2.3.4)
 -- PresentT [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])]
 --
--- >>> pl @(Rescan "(\\d{1,3})(?:\\.(\\d{1,3}))+?" Id) "1.2.3.4" -- bizzare!
+-- >>> pl @(Rescan "(\\d{1,3})(?:\\.(\\d{1,3}))+?") "1.2.3.4" -- bizzare!
 -- Present [("1.2",["1","2"]),("3.4",["3","4"])] (Rescan ((\d{1,3})(?:\.(\d{1,3}))+?) [("1.2",["1","2"]),("3.4",["3","4"])] | 1.2.3.4)
 -- PresentT [("1.2",["1","2"]),("3.4",["3","4"])]
 --
--- >>> pl @(Rescan "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$" Id) "1.2.3.4"
+-- >>> pl @(Rescan "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$") "1.2.3.4"
 -- Present [("1.2.3.4",["1","2","3","4"])] (Rescan (^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$) [("1.2.3.4",["1","2","3","4"])] | 1.2.3.4)
 -- PresentT [("1.2.3.4",["1","2","3","4"])]
 --
--- >>> pl @(Rescan "([[:xdigit:]]{2})" Id) "wfeb12az"
+-- >>> pl @(Rescan "([[:xdigit:]]{2})") "wfeb12az"
 -- Present [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])] (Rescan (([[:xdigit:]]{2})) [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])] | wfeb12az)
 -- PresentT [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])]
 --
-data Rescan p q
-type RescanT p q = Rescan' '[] p q
+data Rescan p
+type RescanT p = Rescan' '[] p Id
 
-instance P (RescanT p q) x => P (Rescan p q) x where
-  type PP (Rescan p q) x = PP (RescanT p q) x
-  eval _ = eval (Proxy @(RescanT p q))
+instance P (RescanT p) x => P (Rescan p) x where
+  type PP (Rescan p) x = PP (RescanT p) x
+  eval _ = eval (Proxy @(RescanT p))
 
 
 -- | see 'RH.scanRanges'
@@ -322,6 +322,9 @@ instance P (RescanRangesT p q) x => P (RescanRanges p q) x where
 -- Present ["123","456",""] (Resplit' ['Caseless] (aBc) ["123","456",""] | 123AbC456abc)
 -- PresentT ["123","456",""]
 --
+-- >>> pz @(Resplit' '[] (Singleton Fst) Snd) (':', "12:13:1")
+-- PresentT ["12","13","1"]
+--
 data Resplit' (rs :: [ROpt]) p q
 
 instance (GetROpts rs
@@ -351,34 +354,31 @@ instance (GetROpts rs
 
 -- | splits a string on a regex delimiter: see 'RH.split'
 --
--- >>> pz @(Resplit "\\." Id) "141.201.1.22"
+-- >>> pz @(Resplit "\\.") "141.201.1.22"
 -- PresentT ["141","201","1","22"]
 --
--- >>> pz @(Resplit (Singleton (Fst Id)) (Snd Id)) (':', "12:13:1")
--- PresentT ["12","13","1"]
---
--- >>> pl @(Resplit "\\." Id) "123.2.3.5.6"
+-- >>> pl @(Resplit "\\.") "123.2.3.5.6"
 -- Present ["123","2","3","5","6"] (Resplit (\.) ["123","2","3","5","6"] | 123.2.3.5.6)
 -- PresentT ["123","2","3","5","6"]
 --
--- >>> pl @(Map (ReadP Int Id) (Resplit "\\." Id) >> '(Id, '(Len == 4, All (Between 0 255 Id) Id))) "141.214.125.1.2.3333"
+-- >>> pl @(Map (ReadP Int Id) (Resplit "\\.") >> '(Id, '(Len == 4, All (Between 0 255 Id)))) "141.214.125.1.2.3333"
 -- Present ([141,214,125,1,2,3333],(False,False)) ((>>) ([141,214,125,1,2,3333],(False,False)) | {'([141,214,125,1,2,3333],(False,False))})
 -- PresentT ([141,214,125,1,2,3333],(False,False))
 --
--- >>> pl @(Map (ReadP Int Id) (Resplit "\\." Id) >> Id &&& ((Len == 4) &&& All (Between 0 255 Id) Id)) "141.214.125.1.2.6"
+-- >>> pl @(Map (ReadP Int Id) (Resplit "\\.") >> Id &&& ((Len == 4) &&& All (Between 0 255 Id))) "141.214.125.1.2.6"
 -- Present ([141,214,125,1,2,6],(False,True)) ((>>) ([141,214,125,1,2,6],(False,True)) | {W '([141,214,125,1,2,6],(False,True))})
 -- PresentT ([141,214,125,1,2,6],(False,True))
 --
--- >>> pl @(Resplit "\\." Id >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (Between 0 255 Id) Id)) "141.214.125."
+-- >>> pl @(Resplit "\\." >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (Between 0 255 Id))) "141.214.125."
 -- Error ReadP Int () (["141","214","125",""])
 -- FailT "ReadP Int ()"
 --
-data Resplit p q
-type ResplitT p q = Resplit' '[] p q
+data Resplit p
+type ResplitT p = Resplit' '[] p Id
 
-instance P (ResplitT p q) x => P (Resplit p q) x where
-  type PP (Resplit p q) x = PP (ResplitT p q) x
-  eval _ = eval (Proxy @(ResplitT p q))
+instance P (ResplitT p) x => P (Resplit p) x where
+  type PP (Resplit p) x = PP (ResplitT p) x
+  eval _ = eval (Proxy @(ResplitT p))
 
 -- | replaces regex \'s\' with a string \'s1\' inside the value: see 'RH.sub' and 'RH.gsub'
 --
@@ -454,13 +454,13 @@ instance P (ReplaceOneT' rs p q r) x => P (ReplaceOne' rs p q r) x where
 -- Present "123def456abc" (ReplaceOne (abc) 123abc456abc | 123def456abc)
 -- PresentT "123def456abc"
 --
--- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1530144000123+0530)"
+-- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1530144000123+0530)"
 -- PresentT 2018-06-28 05:30:00.123 +0530
 --
--- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1593460089052+0800)"
+-- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1593460089052+0800)"
 -- PresentT 2020-06-30 03:48:09.052 +0800
 --
--- >>> pz @(Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" Id >> Head Id >> Snd Id >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1593460089052+0800)"
+-- >>> pz @(Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1593460089052+0800)"
 -- PresentT 2020-06-30 03:48:09.052 +0800
 --
 data ReplaceOne p q r
@@ -564,7 +564,7 @@ instance (PP p x ~ (String -> [String] -> String)
 -- Requires "Text.Show.Functions"
 --
 -- >>> :m + Text.Show.Functions
--- >>> pz @(ReplaceAll "\\." (ReplaceFn2 (Fst Id)) (Snd Id)) (\x -> x <> ":" <> x, "141.201.1.22")
+-- >>> pz @(ReplaceAll "\\." (ReplaceFn2 Fst) Snd) (\x -> x <> ":" <> x, "141.201.1.22")
 -- PresentT "141.:.201.:.1.:.22"
 --
 data ReplaceFn2 p
@@ -586,7 +586,7 @@ instance (PP p x ~ (String -> String)
 --
 -- >>> :m + Text.Show.Functions
 -- >>> import Data.List (intercalate)
--- >>> pz @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (ReplaceFn3 (Fst Id)) (Snd Id)) (\ys -> intercalate  " | " $ map (show . succ . readNote @Int "invalid int") ys, "141.201.1.22")
+-- >>> pz @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (ReplaceFn3 Fst) Snd) (\ys -> intercalate  " | " $ map (show . succ . readNote @Int "invalid int") ys, "141.201.1.22")
 -- PresentT "142 | 202 | 2 | 23"
 --
 data ReplaceFn3 p

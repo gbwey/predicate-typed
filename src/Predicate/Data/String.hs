@@ -89,7 +89,7 @@ instance (FailUnlessT (OrT l r)
 
 -- | similar to 'T.stripStart'
 --
--- >>> pz @(Snd Id >> TrimL) (20," abc   ")
+-- >>> pz @(Snd >> TrimL) (20," abc   ")
 -- PresentT "abc   "
 --
 data TrimL
@@ -101,7 +101,7 @@ instance P TrimLT x => P TrimL x where
 
 -- | similar to 'T.stripEnd'
 --
--- >>> pz @(Snd Id >> TrimR) (20," abc   ")
+-- >>> pz @(Snd >> TrimR) (20," abc   ")
 -- PresentT " abc"
 --
 -- >>> pz @("  abc " >> TrimR) ()
@@ -119,10 +119,10 @@ instance P TrimRT x => P TrimR x where
 
 -- | similar to 'T.strip'
 --
--- >>> pz @(Snd Id >> TrimBoth) (20," abc   " :: String)
+-- >>> pz @(Snd >> TrimBoth) (20," abc   " :: String)
 -- PresentT "abc"
 --
--- >>> pz @(Snd Id >> TrimBoth) (20,T.pack " abc   ")
+-- >>> pz @(Snd >> TrimBoth) (20,T.pack " abc   ")
 -- PresentT "abc"
 --
 -- >>> pz @("         " >> TrimBoth) ()
@@ -263,7 +263,7 @@ instance P (IsPrefixCT p q) x => P (IsPrefixC p q) x where
 -- False (IsInfixC | ab xyzbaw)
 -- FalseT
 --
--- >>> pl @(IsInfixC (Fst Id) (Snd Id)) ("ab","xyzabw")
+-- >>> pl @(IsInfixC Fst Snd) ("ab","xyzabw")
 -- True (IsInfixC | ab xyzabw)
 -- TrueT
 --

@@ -272,7 +272,7 @@ instance (Show l
 -- >>> pz @(Concat Id) ["abc","D","eF","","G"]
 -- PresentT "abcDeFG"
 --
--- >>> pz @(Concat (Snd Id)) ('x',["abc","D","eF","","G"])
+-- >>> pz @(Concat Snd) ('x',["abc","D","eF","","G"])
 -- PresentT "abcDeFG"
 --
 data Concat p

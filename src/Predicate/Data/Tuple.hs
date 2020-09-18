@@ -64,11 +64,11 @@ import GHC.TypeNats (Nat, KnownNat)
 -- Present (4,4) ((>>) (4,4) | {Id (4,4)})
 -- PresentT (4,4)
 --
--- >>> pl @(Dup << Fst Id * Snd Id) (4,5)
+-- >>> pl @(Dup << Fst * Snd) (4,5)
 -- Present (20,20) ((>>) (20,20) | {W '(20,20)})
 -- PresentT (20,20)
 --
--- >>> pl @(Fst Id * Snd Id >> Dup) (4,5)
+-- >>> pl @(Fst * Snd >> Dup) (4,5)
 -- Present (20,20) ((>>) (20,20) | {W '(20,20)})
 -- PresentT (20,20)
 --
@@ -113,11 +113,11 @@ instance Show a => P Pairs [a] where
 
 -- | similar to 'Control.Arrow.&&&'
 --
--- >>> pl @(Min &&& Max >> Id >> Fst Id < Snd Id) [10,4,2,12,14]
+-- >>> pl @(Min &&& Max >> Id >> Fst < Snd) [10,4,2,12,14]
 -- True ((>>) True | {2 < 14})
 -- TrueT
 --
--- >>> pl @((123 &&& Id) >> Fst Id + Snd Id) 4
+-- >>> pl @((123 &&& Id) >> Fst + Snd) 4
 -- Present 127 ((>>) 127 | {123 + 4 = 127})
 -- PresentT 127
 --
@@ -129,15 +129,15 @@ instance Show a => P Pairs [a] where
 -- Present (Just 10,((),())) (W '(Just 10,((),())))
 -- PresentT (Just 10,((),()))
 --
--- >>> pl @(Fst Id &&& Snd Id &&& Thd Id &&& ()) (1,'x',True)
+-- >>> pl @(Fst &&& Snd &&& Thd &&& ()) (1,'x',True)
 -- Present (1,('x',(True,()))) (W '(1,('x',(True,()))))
 -- PresentT (1,('x',(True,())))
 --
--- >>> pl @(Fst Id &&& Snd Id &&& Thd Id &&& ()) (1,'x',True)
+-- >>> pl @(Fst &&& Snd &&& Thd &&& ()) (1,'x',True)
 -- Present (1,('x',(True,()))) (W '(1,('x',(True,()))))
 -- PresentT (1,('x',(True,())))
 --
--- >>> pl @(Fst Id &&& Snd Id &&& Thd Id &&& ()) (1,1.4,"aaa")
+-- >>> pl @(Fst &&& Snd &&& Thd &&& ()) (1,1.4,"aaa")
 -- Present (1,(1.4,("aaa",()))) (W '(1,(1.4,("aaa",()))))
 -- PresentT (1,(1.4,("aaa",())))
 --
@@ -316,11 +316,11 @@ instance P (OrAT p q) x => P (p |+ q) x where
 
 -- | applies \'p\' to the first and second slot of an n-tuple (similar to '***')
 --
--- >>> pl @(Both Len (Fst Id)) (("abc",[10..17],1,2,3),True)
+-- >>> pl @(Both Len Fst) (("abc",[10..17],1,2,3),True)
 -- Present (3,8) (Both)
 -- PresentT (3,8)
 --
--- >>> pl @(Both (Pred Id) $ Fst Id) ((12,'z',[10..17]),True)
+-- >>> pl @(Both (Pred Id) $ Fst) ((12,'z',[10..17]),True)
 -- Present (11,'y') (Both)
 -- PresentT (11,'y')
 --
@@ -328,7 +328,7 @@ instance P (OrAT p q) x => P (p |+ q) x where
 -- Present (5,'b') (Both)
 -- PresentT (5,'b')
 --
--- >>> pl @(Both Len (Fst Id)) (("abc",[10..17]),True)
+-- >>> pl @(Both Len Fst) (("abc",[10..17]),True)
 -- Present (3,8) (Both)
 -- PresentT (3,8)
 --
@@ -370,10 +370,10 @@ instance ( ExtractL1C (PP q x)
 -- >>> pz @(Tuple 4) "abc"
 -- FailT "Tuple(4):not enough elements"
 --
--- >>> pz @(Fst Id >> Tuple 3) ([1..5],True)
+-- >>> pz @(Fst >> Tuple 3) ([1..5],True)
 -- PresentT (1,2,3)
 --
--- >>> pz @(Lift (Tuple 3) (Fst Id)) ([1..5],True)
+-- >>> pz @(Lift (Tuple 3) Fst) ([1..5],True)
 -- PresentT (1,2,3)
 --
 data Tuple (n :: Nat)

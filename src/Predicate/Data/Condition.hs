@@ -73,7 +73,7 @@ import qualified Data.Type.Equality as DE
 -- >>> pz @(If (Gt 4) "greater than 4" "less than or equal to 4") 0
 -- PresentT "less than or equal to 4"
 --
--- >>> pz @(If (Snd Id == "a") '("xxx",Fst Id + 13) (If (Snd Id == "b") '("yyy",Fst Id + 7) (Failt _ "oops"))) (99,"b")
+-- >>> pz @(If (Snd == "a") '("xxx",Fst + 13) (If (Snd == "b") '("yyy",Fst + 7) (Failt _ "oops"))) (99,"b")
 -- PresentT ("yyy",106)
 --
 -- >>> pl @(If (Len > 2) (Map (Succ Id) Id) (FailS "someval")) [12,15,16]
@@ -158,7 +158,7 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 -- >>> pz @(Case (Failt _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
 -- FailT "asdf"
 --
--- >>> pz @(Case (FailS "asdf" >> Snd Id >> Unproxy) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
+-- >>> pz @(Case (FailS "asdf" >> Snd >> Unproxy) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
 -- FailT "asdf"
 --
 -- >>> pz @(Case (Failt _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "b"
@@ -178,23 +178,23 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 
 -- | tries to match the value \'r\' with a condition in \'ps\' and if there is a match calls the associated \'qs\' entry else run \'e\'
 --
--- >>> pl @(Case (Snd Id >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 15
+-- >>> pl @(Case (Snd >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 15
 -- Present "gt3" (Case(0 of 2) "gt3" | 15)
 -- PresentT "gt3"
 --
--- >>> pl @(Case (Snd Id >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 1
+-- >>> pl @(Case (Snd >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 1
 -- Present "lt2" (Case(0) "lt2" | 1)
 -- PresentT "lt2"
 --
--- >>> pl @(Case (Snd Id >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 3
+-- >>> pl @(Case (Snd >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 3
 -- Present "eq3" (Case(0) "eq3" | 3)
 -- PresentT "eq3"
 --
--- >>> pl @(Case (Snd Id >> Failp "no match") '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
+-- >>> pl @(Case (Snd >> Failp "no match") '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Error no match (Case:otherwise failed:Proxy)
 -- FailT "no match"
 --
--- >>> pl @(Case (Fail (Snd Id >> Unproxy) (PrintF "no match for %03d" (Fst Id))) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
+-- >>> pl @(Case (Fail (Snd >> Unproxy) (PrintF "no match for %03d" Fst)) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Error no match for 015 (Case:otherwise failed)
 -- FailT "no match for 015"
 --
@@ -202,7 +202,7 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- Present "other" (Case(0) "other" | 15)
 -- PresentT "other"
 --
--- >>> pl @(Case (ShowP (Fst Id) >> Id <> Id <> Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
+-- >>> pl @(Case (ShowP Fst >> Id <> Id <> Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Present "151515" (Case(0) "151515" | 15)
 -- PresentT "151515"
 --
@@ -232,7 +232,7 @@ data Case' (ps :: [k]) (qs :: [k1]) (r :: k2)
 --
 data Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2)
 
-type CaseT' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd Id >> Failp "Case:no match") ps qs r
+type CaseT' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd >> Failp "Case:no match") ps qs r
 type CaseT'' s (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (FailCaseT s) ps qs r -- eg s= PrintF "%s" (ShowP Id)
 
 instance P (CaseT'' s ps qs r) x => P (Case'' s ps qs r) x where
@@ -243,7 +243,7 @@ instance P (CaseT' ps qs r) x => P (Case' ps qs r) x where
   type PP (Case' ps qs r) x = PP (CaseT' ps qs r) x
   eval _ = eval (Proxy @(CaseT' ps qs r))
 
-type FailCaseT p = Fail (Snd Id >> Unproxy) (Fst Id >> p)
+type FailCaseT p = Fail (Snd >> Unproxy) (Fst >> p)
 
 type CaseImplT e ps qs r = CaseImpl (LenT ps) e ps qs r
 
@@ -366,22 +366,22 @@ data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 -- >>> pz @(Guards '[ '(PrintT "arg %d failed with value %d" Id,Gt 4), '(PrintT "%d %d" Id, Same 4)]) [17,3]
 -- FailT "1 3"
 --
--- >>> pz @(Msg "isbn10" (Resplit "-" Id) >> Concat Id >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> ZipWith (Fst Id * Snd Id) (1...10 >> Reverse) (Fst Id +: Snd Id) >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40614-X"
+-- >>> pz @(Msg "isbn10" (Resplit "-") >> Concat Id >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> ZipWith (Fst * Snd) (1...10 >> Reverse) (Fst +: Snd) >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40614-X"
 -- FailT "mod 0 oops"
 --
--- >>> pz @(Resplit "-" Id >> Concat Id >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> ZipWith (Fst Id * Snd Id) (1...10 >> Reverse) (Fst Id +: Snd Id) >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40611-X"
+-- >>> pz @(Resplit "-" >> Concat Id >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> ZipWith (Fst * Snd) (1...10 >> Reverse) (Fst +: Snd) >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40611-X"
 -- PresentT 132
 --
--- >>> pz @(Msg "isbn13" (Resplit "-" Id) >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3] >> Reverse) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-7"
+-- >>> pz @(Msg "isbn13" (Resplit "-") >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> ZipWith (Fst * Snd) (Cycle 13 [1,3] >> Reverse) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd == 0)) "978-0-306-40615-7"
 -- PresentT (100,0)
 --
--- >>> pz @(Resplit "-" Id >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3] >> Reverse) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd Id == 0)) "978-0-306-40615-8"
+-- >>> pz @(Resplit "-" >> Concat Id >> Map (ReadP Int (Singleton Id)) Id >> ZipWith (Fst * Snd) (Cycle 13 [1,3] >> Reverse) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd == 0)) "978-0-306-40615-8"
 -- FailT "sum=101 mod 10=1"
 --
--- >>> pz @(Do '[Resplit "-" Id, Concat Id, ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-9"
+-- >>> pz @(Do '[Resplit "-", Concat Id, ZipWith (Fst * Snd) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-9"
 -- FailT "109 is not evenly divisible by 10"
 --
--- >>> pz @(Do '[Resplit "-" Id, Concat Id, ZipWith (Fst Id * Snd Id) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-0"
+-- >>> pz @(Do '[Resplit "-", Concat Id, ZipWith (Fst * Snd) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-0"
 -- PresentT 100
 --
 data Guards (ps :: [(k,k1)])
@@ -848,31 +848,31 @@ instance (P prt a
 
 -- | uses 'Guard' but negates \'p\'
 --
--- >>> pl @(HeadFail "failedn" Id &&& (Len == 1 >> ExitWhen "ExitWhen" Id) >> Fst Id) [3]
+-- >>> pl @(HeadFail "failedn" Id &&& (Len == 1 >> ExitWhen "ExitWhen" Id) >> Fst) [3]
 -- Error ExitWhen
 -- FailT "ExitWhen"
 --
--- >>> pl @(Head Id &&& (Len == 1 >> Not Id >> ExitWhen "ExitWhen" Id) >> Fst Id) [3]
+-- >>> pl @(Head &&& (Len == 1 >> Not Id >> ExitWhen "ExitWhen" Id) >> Fst) [3]
 -- Present 3 ((>>) 3 | {Fst 3 | (3,False)})
 -- PresentT 3
 --
--- >>> pl @(Head Id &&& (Len == 1 >> ExitWhen "ExitWhen" (Not Id)) >> Fst Id) [3]
+-- >>> pl @(Head &&& (Len == 1 >> ExitWhen "ExitWhen" (Not Id)) >> Fst) [3]
 -- Present 3 ((>>) 3 | {Fst 3 | (3,True)})
 -- PresentT 3
 --
--- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head Id) [3,1]
+-- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head) [3,1]
 -- Error ExitWhen
 -- FailT "ExitWhen"
 --
--- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head Id) [3]
+-- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head) [3]
 -- Present 3 ((>>) 3 | {Head 3 | [3]})
 -- PresentT 3
 --
--- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head Id >> Gt (20 -% 1)) [3]
+-- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head >> Gt (20 -% 1)) [3]
 -- True ((>>) True | {3 % 1 > (-20) % 1})
 -- TrueT
 --
--- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head Id >> Gt (20 -% 1)) [-23]
+-- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head >> Gt (20 -% 1)) [-23]
 -- False ((>>) False | {(-23) % 1 > (-20) % 1})
 -- FalseT
 --

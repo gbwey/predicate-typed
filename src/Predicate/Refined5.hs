@@ -168,7 +168,7 @@ instance ( i ~ String
 -- >>> reads @(Refined5 OZ (ReadBase Int 16 Id) (Id < 0) String) "Refined5 -1234"
 -- [(Refined5 (-1234),"")]
 --
--- >>> reads @(Refined5 OZ (Map (ReadP Int Id) (Resplit "\\." Id)) (GuardBool "len/=4" (Len == 4)) String) "Refined5 [192,168,0,1]"
+-- >>> reads @(Refined5 OZ (Map (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) String) "Refined5 [192,168,0,1]"
 -- [(Refined5 [192,168,0,1],"")]
 --
 -- >>> reads @(Refined5 OZ (ReadP Rational Id) (Id > Negate 4 % 3) String) "Refined5 (-10 % 9)"
@@ -367,16 +367,16 @@ withRefined5TP p = (>>=) . newRefined5TP p
 
 -- | create a wrapped 'Refined5' type
 --
--- >>> prtRefinedTIO $ newRefined5T @OL @(MkDayExtra Id >> 'Just Id) @(Thd Id == 5) (2019,11,1)
+-- >>> prtRefinedTIO $ newRefined5T @OL @(MkDayExtra Id >> 'Just Id) @(Thd == 5) (2019,11,1)
 -- Refined5 (2019-11-01,44,5)
 --
--- >>> prtRefinedTIO $ newRefined5T @OL @(MkDayExtra Id >> 'Just Id) @(Thd Id == 5) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined5T @OL @(MkDayExtra Id >> 'Just Id) @(Thd == 5) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined5T @OL @(MkDayExtra Id >> 'Just Id) @(Msg "wrong day:" (Thd Id == 5)) (2019,11,2)
+-- >>> prtRefinedTIO $ newRefined5T @OL @(MkDayExtra Id >> 'Just Id) @(Msg "wrong day:" (Thd == 5)) (2019,11,2)
 -- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
 --
--- >>> prtRefinedTIO $ newRefined5TIO @OL @(Hide (Rescan "(\\d+)" Id >> ConcatMap (Snd Id) Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff) Id) "|23|99|255|254.911."
+-- >>> prtRefinedTIO $ newRefined5TIO @OL @(Hide (Rescan "(\\d+)" >> ConcatMap Snd Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff)) "|23|99|255|254.911."
 -- failure msg[Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}]
 --
 newRefined5T :: forall opts ip op i m
@@ -456,23 +456,23 @@ newRefined5P' _ i = do
 -- >>> newRefined5 @OZ @(ReadBase Int 16 Id) @(Lt 255) "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> newRefined5 @OL @(Map (ReadP Int Id) (Resplit "\\." Id)) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
+-- >>> newRefined5 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
 --
--- >>> newRefined5 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
+-- >>> newRefined5 @OZ @(Map (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> newRefined5 @OZ @(Map (ReadP Int Id) (Resplit "\\." Id)) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1"
+-- >>> newRefined5 @OZ @(Map (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1"
 -- Right (Refined5 [198,162,3,1])
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> newRefined5 @OZ @(MkDayExtra Id >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) (2019,10,13)
+-- >>> newRefined5 @OZ @(MkDayExtra Id >> 'Just Id) @(GuardBool "expected a Sunday" (Thd == 7)) (2019,10,13)
 -- Right (Refined5 (2019-10-13,41,7))
 --
--- >>> newRefined5 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd Id == 7)) (2019,10,12)
+-- >>> newRefined5 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd == 7)) (2019,10,12)
 -- Left Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}
 --
--- >>> newRefined5 @OZ @(MkDayExtra' (Fst Id) (Snd Id) (Thd Id) >> 'Just Id) @(GuardBool "expected a Sunday" (Thd Id == 7)) (2019,10,12)
+-- >>> newRefined5 @OZ @(MkDayExtra' Fst Snd Thd >> 'Just Id) @(GuardBool "expected a Sunday" (Thd == 7)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
 -- >>> newRefined5 @OL @Id @'True 22

@@ -298,6 +298,17 @@ instance P () a where
     let msg0 = "()"
     in pure $ mkNode opts (PresentT ()) msg0 []
 
+-- | 'const' [] function
+--
+-- >>> pz @[] "Asf"
+-- PresentT []
+--
+instance P [] a where
+  type PP [] a = [a]
+  eval _ opts _ =
+    let msg0 = "[]"
+    in pure $ mkNode opts (PresentT []) msg0 []
+
 instance P (Proxy t) a where
   type PP (Proxy t) a = Proxy t
   eval _ opts _ =
@@ -656,7 +667,7 @@ instance (Show (PP p a)
 -- Error 'Just(empty)
 -- FailT "'Just(empty)"
 --
--- >>> pz @('Just (Fst Id)) (Just 123,'x')
+-- >>> pz @('Just Fst) (Just 123,'x')
 -- PresentT 123
 --
 instance (Show a
@@ -697,7 +708,7 @@ instance P 'Nothing (Maybe a) where
 -- >>> pz @('Left Id) (Left 123)
 -- PresentT 123
 --
--- >>> pz @('Left (Snd Id)) ('x', Left 123)
+-- >>> pz @('Left Snd) ('x', Left 123)
 -- PresentT 123
 --
 -- >>> pz @('Left Id) (Right "aaa")
@@ -732,7 +743,7 @@ instance ( PP p x ~ Either a b
 -- Present 123 (Right)
 -- PresentT 123
 --
--- >>> pz @('Right Id >> Snd Id) (Right ('x',123))
+-- >>> pz @('Right Id >> Snd) (Right ('x',123))
 -- PresentT 123
 --
 -- >>> pz @('Right Id) (Left "aaa")
@@ -944,9 +955,8 @@ run :: forall opts p a
 run a = do
   let opts = getOpt @opts
   pp <- eval (Proxy @p) opts a
-  let r = pp ^. ttBool
   unless (oDebug opts == DZero) $ putStr $ prtTree opts pp
-  return r
+  return (_ttBool pp)
 
 -- | run expression with multiple options in a list
 --
@@ -1034,7 +1044,7 @@ evalHide opts =
 
 -- | compose expressions
 --
--- >>> pz @(Fst Id >> Snd Id) ((11,12),'x')
+-- >>> pz @(Fst >> Snd) ((11,12),'x')
 -- PresentT 12
 --
 data p >> q
@@ -1068,7 +1078,7 @@ instance P (LeftArrowsT p q) x => P (p << q) x where
 
 -- bearbeiten! only used by >>
 topMessageEgregious :: TT a -> String
-topMessageEgregious pp = innermost (pp ^. ttString)
+topMessageEgregious pp = innermost (_ttString pp)
   where innermost = ('{':) . reverse . ('}':) . takeWhile (/='{') . dropWhile (=='}') . reverse
 
 -- | unwraps a value (see '_Wrapped'')
@@ -1187,7 +1197,7 @@ instance ( Show a
 -- >>> pz @(Length Right') (Right "abcd")
 -- PresentT 4
 --
--- >>> pz @(Length (Thd (Snd Id))) (True,(23,'x',[10,9,1,3,4,2]))
+-- >>> pz @(Length (L3 Snd)) (True,(23,'x',[10,9,1,3,4,2]))
 -- PresentT 6
 --
 data Length p
@@ -1215,7 +1225,7 @@ instance (PP p x ~ t a
 -- >>> pz @(Not Id) True
 -- FalseT
 --
--- >>> pz @(Not (Fst Id)) (True,22)
+-- >>> pz @(Not Fst) (True,22)
 -- FalseT
 --
 -- >>> pl @(Not (Lt 3)) 13
@@ -1243,10 +1253,10 @@ instance ( PP p x ~ Bool
 
 -- | 'id' function on a boolean
 --
--- >>> pz @(Head '[ 'True] >> IdBool) ()
+-- >>> pz @('[ 'True] >> Head >> IdBool) ()
 -- TrueT
 --
--- >>> pz @(Fst Id >> IdBool) (False,22)
+-- >>> pz @(Fst >> IdBool) (False,22)
 -- FalseT
 --
 data IdBool
@@ -1365,8 +1375,8 @@ instance (Foldable t
       as -> let n = length as
             in mkNode opts (FailT (msg0 <> ":expected one element(" <> show n <> ")")) "" []
 
---type OneP = Guard "expected list of length 1" (Len == 1) >> Head Id
---type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head Id
+--type OneP = Guard "expected list of length 1" (Len == 1) >> Head
+--type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head
 
 -- | A predicate that determines if the value is between \'p\' and \'q\'
 --
@@ -1377,11 +1387,11 @@ instance (Foldable t
 -- False (9 <= 8)
 -- FalseT
 --
--- >>> pl @(Between (Fst Id >> Fst Id) (Fst Id >> Snd Id) (Snd Id)) ((1,4),3)
+-- >>> pl @(Between (Fst >> Fst) (Fst >> Snd) Snd) ((1,4),3)
 -- True (1 <= 3 <= 4)
 -- TrueT
 --
--- >>> pl @(Between (Fst Id >> Fst Id) (Fst Id >> Snd Id) (Snd Id)) ((1,4),10)
+-- >>> pl @(Between (Fst >> Fst) (Fst >> Snd) Snd) ((1,4),10)
 -- False (10 <= 4)
 -- FalseT
 --
@@ -1434,20 +1444,18 @@ instance P (BetweenT p q) x => P (p <..> q) x where
 
 -- | similar to 'all'
 --
--- >>> pl @(All (Between 1 8 Id) Id) [7,3,4,1,2,9,0,1]
+-- >>> pl @(All (Between 1 8 Id)) [7,3,4,1,2,9,0,1]
 -- False (All(8) i=5 (9 <= 8))
 -- FalseT
 --
--- >>> pz @(All Odd Id) [1,5,11,5,3]
+-- >>> pz @(All Odd) [1,5,11,5,3]
 -- TrueT
 --
--- >>> pz @(All Odd Id) []
+-- >>> pz @(All Odd) []
 -- TrueT
 --
--- >>> run @OANV @(All Even Id) [1,5,11,5,3]
+-- >>> run @OANV @(All Even) [1,5,11,5,3]
 -- False All(5) i=0 (1 == 0)
--- |
--- +- P Id [1,5,11,5,3]
 -- |
 -- +- False i=0: 1 == 0
 -- |  |
@@ -1500,122 +1508,112 @@ instance P (BetweenT p q) x => P (p <..> q) x where
 --    `- P '0
 -- FalseT
 --
--- >>> pl @(All (Gt 3) (Fst Id)) ([10,12,3,5],"ss")
--- False (All(4) i=2 (3 > 3))
+-- >>> pl @(Fst >> All (Gt 3)) ([10,12,3,5],"ss")
+-- False ((>>) False | {All(4) i=2 (3 > 3)})
 -- FalseT
 --
--- >>> pl @(All (Lt 3) Id) [1::Int .. 10]
+-- >>> pl @(All (Lt 3)) [1::Int .. 10]
 -- False (All(10) i=2 (3 < 3))
 -- FalseT
 --
-data All p q
+data All p
 
 instance (P p a
         , PP p a ~ Bool
-        , PP q x ~ f a
-        , P q x
+        , x ~ f a
         , Show a
         , Foldable f
-        ) => P (All p q) x where
-  type PP (All p q) x = Bool
+        ) => P (All p) x where
+  type PP (All p) x = Bool
   eval _ opts x = do
     let msg0 = "All"
-    qq <- eval (Proxy @q) opts x
-    case getValueLR opts msg0 qq [] of
+    case chkSize opts msg0 x [] of
       Left e -> pure e
-      Right q ->
-        case chkSize opts msg0 q [hh qq] of
-          Left e -> pure e
-          Right xs -> do
-            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] xs
-            pure $ case splitAndAlign opts msg0 ts of
-                 Left e -> e
-                 Right abcs ->
-                   let hhs = hh qq : map (hh . fixit) ts
-                       msg1 = msg0 ++ "(" ++ showL opts (length q) ++ ")"
-                   in case find (not . view _1) abcs of
-                        Nothing -> mkNodeB opts True msg1 hhs
-                        Just (_,(i,_),tt) ->
-                          mkNodeB opts False (msg1 <> " i=" ++ showIndex i ++ " " <> topMessage tt) hhs
+      Right xs -> do
+        ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] xs
+        pure $ case splitAndAlign opts msg0 ts of
+             Left e -> e
+             Right abcs ->
+               let hhs = map (hh . fixit) ts
+                   msg1 = msg0 ++ "(" ++ showL opts (length x) ++ ")"
+               in case find (not . view _1) abcs of
+                    Nothing -> mkNodeB opts True msg1 hhs
+                    Just (_,(i,_),tt) ->
+                      mkNodeB opts False (msg1 <> " i=" ++ showIndex i ++ " " <> topMessage tt) hhs
 
 -- | similar to 'any'
 --
--- >>> pl @(Any Even Id) [1,5,11,5,3]
+-- >>> pl @(Any Even) [1,5,11,5,3]
 -- False (Any(5))
 -- FalseT
 --
--- >>> pl @(Any Even Id) [1,5,112,5,3]
+-- >>> pl @(Any Even) [1,5,112,5,3]
 -- True (Any(5) i=2 (0 == 0))
 -- TrueT
 --
--- >>> pz @(Any Even Id) []
+-- >>> pz @(Any Even) []
 -- FalseT
 --
--- >>> pl @(Any (Gt 3) (Fst Id)) ([10,12,3,5],"ss")
--- True (Any(4) i=0 (10 > 3))
+-- >>> pl @(Fst >> Any (Gt 3)) ([10,12,3,5],"ss")
+-- True ((>>) True | {Any(4) i=0 (10 > 3)})
 -- TrueT
 --
--- >>> pl @(Any (Same 2) Id) [1,4,5]
+-- >>> pl @(Any (Same 2)) [1,4,5]
 -- False (Any(3))
 -- FalseT
 --
--- >>> pl @(Any (Same 2) Id) [1,4,5,2,1]
+-- >>> pl @(Any (Same 2)) [1,4,5,2,1]
 -- True (Any(5) i=3 (2 == 2))
 -- TrueT
 --
-data Any p q
+data Any p
 
 instance (P p a
         , PP p a ~ Bool
-        , PP q x ~ f a
-        , P q x
+        , x ~ f a
         , Show a
         , Foldable f
-        ) => P (Any p q) x where
-  type PP (Any p q) x = Bool
+        ) => P (Any p) x where
+  type PP (Any p ) x = Bool
   eval _ opts x = do
     let msg0 = "Any"
-    qq <- eval (Proxy @q) opts x
-    case getValueLR opts msg0 qq [] of
+    case chkSize opts msg0 x [] of
       Left e -> pure e
-      Right q ->
-        case chkSize opts msg0 (toList q) [hh qq] of
-          Left e -> pure e
-          Right xs -> do
-            ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] xs
-            pure $ case splitAndAlign opts msg0 ts of
-                 Left e -> e
-                 Right abcs ->
-                   let hhs = hh qq : map (hh . fixit) ts
-                       msg1 = msg0 ++ "(" ++ showL opts (length q) ++ ")"
-                   in case find (view _1) abcs of
-                        Nothing -> mkNodeB opts False msg1 hhs
-                        Just (_,(i,_),tt) ->
-                          mkNodeB opts True (msg1 <> " i=" ++ showIndex i ++ " " <> topMessage tt) hhs
+      Right xs -> do
+        ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] xs
+        pure $ case splitAndAlign opts msg0 ts of
+             Left e -> e
+             Right abcs ->
+               let hhs = map (hh . fixit) ts
+                   msg1 = msg0 ++ "(" ++ showL opts (length xs) ++ ")"
+               in case find (view _1) abcs of
+                    Nothing -> mkNodeB opts False msg1 hhs
+                    Just (_,(i,_),tt) ->
+                      mkNodeB opts True (msg1 <> " i=" ++ showIndex i ++ " " <> topMessage tt) hhs
 
 -- | similar to 'fst'
 --
--- >>> pz @(Fst Id) (10,"Abc")
+-- >>> pz @Fst (10,"Abc")
 -- PresentT 10
 --
--- >>> pz @(Fst Id) (10,"Abc",'x')
+-- >>> pz @Fst (10,"Abc",'x')
 -- PresentT 10
 --
--- >>> pz @(Fst Id) (10,"Abc",'x',False)
+-- >>> pz @Fst (10,"Abc",'x',False)
 -- PresentT 10
 --
--- >>> pl @(Fst Id) (99,'a',False,1.3)
+-- >>> pl @Fst (99,'a',False,1.3)
 -- Present 99 (Fst 99 | (99,'a',False,1.3))
 -- PresentT 99
 --
-data Fst p
+data L1 p
 
 instance (Show (ExtractL1T (PP p x))
         , ExtractL1C (PP p x)
         , P p x
         , Show (PP p x)
-        ) => P (Fst p) x where
-  type PP (Fst p) x = ExtractL1T (PP p x)
+        ) => P (L1 p) x where
+  type PP (L1 p) x = ExtractL1T (PP p x)
   eval _ opts x = do
     let msg0 = "Fst"
     pp <- eval (Proxy @p) opts x
@@ -1625,33 +1623,33 @@ instance (Show (ExtractL1T (PP p x))
         let b = extractL1C p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
-data L1 p
-type L1T p = Fst p
+data Fst
+type FstT = L1 Id
 
-instance P (L1T p) x => P (L1 p) x where
-  type PP (L1 p) x = PP (L1T p) x
-  eval _ = eval (Proxy @(L1T p))
+instance P FstT x => P Fst x where
+  type PP Fst x = PP FstT x
+  eval _ = eval (Proxy @FstT)
 
 -- | similar to 'snd'
 --
--- >>> pz @(Snd Id) (10,"Abc")
+-- >>> pz @Snd (10,"Abc")
 -- PresentT "Abc"
 --
--- >>> pz @(Snd Id) (10,"Abc",True)
+-- >>> pz @Snd (10,"Abc",True)
 -- PresentT "Abc"
 --
--- >>> pl @(Snd Id) (99,'a',False,1.3)
+-- >>> pl @Snd (99,'a',False,1.3)
 -- Present 'a' (Snd 'a' | (99,'a',False,1.3))
 -- PresentT 'a'
 --
-data Snd p
+data L2 p
 
 instance (Show (ExtractL2T (PP p x))
         , ExtractL2C (PP p x)
         , P p x
         , Show (PP p x)
-        ) => P (Snd p) x where
-  type PP (Snd p) x = ExtractL2T (PP p x)
+        ) => P (L2 p) x where
+  type PP (L2 p) x = ExtractL2T (PP p x)
   eval _ opts x = do
     let msg0 = "Snd"
     pp <- eval (Proxy @p) opts x
@@ -1661,33 +1659,33 @@ instance (Show (ExtractL2T (PP p x))
         let b = extractL2C p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
-data L2 p
-type L2T p = Snd p
+data Snd
+type SndT = L2 Id
 
-instance P (L2T p) x => P (L2 p) x where
-  type PP (L2 p) x = PP (L2T p) x
-  eval _ = eval (Proxy @(L2T p))
+instance P SndT x => P Snd x where
+  type PP Snd x = PP SndT x
+  eval _ = eval (Proxy @SndT)
 
 -- | similar to 3rd element in a n-tuple
 --
--- >>> pz @(Thd Id) (10,"Abc",133)
+-- >>> pz @Thd (10,"Abc",133)
 -- PresentT 133
 --
--- >>> pz @(Thd Id) (10,"Abc",133,True)
+-- >>> pz @Thd (10,"Abc",133,True)
 -- PresentT 133
 --
--- >>> pl @(Thd Id) (99,'a',False,1.3)
+-- >>> pl @Thd (99,'a',False,1.3)
 -- Present False (Thd False | (99,'a',False,1.3))
 -- PresentT False
 --
-data Thd p
+data L3 p
 
 instance (Show (ExtractL3T (PP p x))
         , ExtractL3C (PP p x)
         , P p x
         , Show (PP p x)
-        ) => P (Thd p) x where
-  type PP (Thd p) x = ExtractL3T (PP p x)
+        ) => P (L3 p) x where
+  type PP (L3 p) x = ExtractL3T (PP p x)
   eval _ opts x = do
     let msg0 = "Thd"
     pp <- eval (Proxy @p) opts x
@@ -1697,19 +1695,19 @@ instance (Show (ExtractL3T (PP p x))
         let b = extractL3C p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
-data L3 p
-type L3T p = Thd p
+data Thd
+type ThdT = L3 Id
 
-instance P (L3T p) x => P (L3 p) x where
-  type PP (L3 p) x = PP (L3T p) x
-  eval _ = eval (Proxy @(L3T p))
+instance P ThdT x => P Thd x where
+  type PP Thd x = PP ThdT x
+  eval _ = eval (Proxy @ThdT)
 
 -- | similar to 4th element in a n-tuple
 --
 -- >>> pz @(L4 Id) (10,"Abc",'x',True)
 -- PresentT True
 --
--- >>> pz @(L4 (Fst (Snd Id))) ('x',((10,"Abc",'x',999),"aa",1),9)
+-- >>> pz @(L4 (L1 Snd)) ('x',((10,"Abc",'x',999),"aa",1),9)
 -- PresentT 999
 --
 -- >>> pl @(L4 Id) (99,'a',False,"someval")
@@ -1869,7 +1867,7 @@ type family DoExpandT (ps :: [k]) :: Type where
 
 -- | similar to 'Prelude.&&'
 --
--- >>> pz @(Fst Id && Snd Id) (True, True)
+-- >>> pz @(Fst && Snd) (True, True)
 -- TrueT
 --
 -- >>> pz @(Id > 15 && Id < 17) 16
@@ -1878,10 +1876,10 @@ type family DoExpandT (ps :: [k]) :: Type where
 -- >>> pz @(Id > 15 && Id < 17) 30
 -- FalseT
 --
--- >>> pz @(Fst Id && (Length (Snd Id) >= 4)) (True,[11,12,13,14])
+-- >>> pz @(Fst && (Length Snd >= 4)) (True,[11,12,13,14])
 -- TrueT
 --
--- >>> pz @(Fst Id && (Length (Snd Id) == 4)) (True,[12,11,12,13,14])
+-- >>> pz @(Fst && (Length Snd == 4)) (True,[12,11,12,13,14])
 -- FalseT
 --
 data p && q
@@ -1947,10 +1945,10 @@ instance (P p a
 
 -- | similar to 'Prelude.||'
 --
--- >>> pz @(Fst Id || (Length (Snd Id) >= 4)) (False,[11,12,13,14])
+-- >>> pz @(Fst || (Length Snd >= 4)) (False,[11,12,13,14])
 -- TrueT
 --
--- >>> pz @(Not (Fst Id) || (Length (Snd Id) == 4)) (True,[12,11,12,13,14])
+-- >>> pz @(Not Fst || (Length Snd == 4)) (True,[12,11,12,13,14])
 -- FalseT
 --
 data p || q
@@ -2013,16 +2011,16 @@ instance (P p a
 
 -- | boolean implication
 --
--- >>> pz @(Fst Id ~> (Length (Snd Id) >= 4)) (True,[11,12,13,14])
+-- >>> pz @(Fst ~> (Length Snd >= 4)) (True,[11,12,13,14])
 -- TrueT
 --
--- >>> pz @(Fst Id ~> (Length (Snd Id) == 4)) (True,[12,11,12,13,14])
+-- >>> pz @(Fst ~> (Length Snd == 4)) (True,[12,11,12,13,14])
 -- FalseT
 --
--- >>> pz @(Fst Id ~> (Length (Snd Id) == 4)) (False,[12,11,12,13,14])
+-- >>> pz @(Fst ~> (Length Snd == 4)) (False,[12,11,12,13,14])
 -- TrueT
 --
--- >>> pz @(Fst Id ~> (Length (Snd Id) >= 4)) (False,[11,12,13,14])
+-- >>> pz @(Fst ~> (Length Snd >= 4)) (False,[11,12,13,14])
 -- TrueT
 --
 data p ~> q
@@ -2119,11 +2117,11 @@ instance (Show (p a b)
 
 -- | like 'GHC.Base.$' for expressions
 --
--- >>> pl @(Fst $ Snd $ Id) ((1,2),(3,4))
+-- >>> pl @(L1 $ L2 $ Id) ((1,2),(3,4))
 -- Present 3 (Fst 3 | (3,4))
 -- PresentT 3
 --
--- >>> pl @((<=) 4 $ Fst $ Snd $ Id) ((1,2),(3,4))
+-- >>> pl @((<=) 4 $ L1 $ L2 $ Id) ((1,2),(3,4))
 -- False (4 <= 3)
 -- FalseT
 --
@@ -2136,7 +2134,7 @@ instance P (p q) a => P (p $ q) a where
 
 -- | similar to 'Control.Lens.&'
 --
--- >>> pl @(Id & Fst & Singleton & Length) (13,"xyzw")
+-- >>> pl @(Id & L1 & Singleton & Length) (13,"xyzw")
 -- Present 1 (Length 1 | [13])
 -- PresentT 1
 --
@@ -2152,7 +2150,7 @@ instance P (p q) a => P (p $ q) a where
 -- Present (4,(7,"aa")) ('(4,(7,"aa")))
 -- PresentT (4,(7,"aa"))
 --
--- >>> pl @(Thd $ Snd $ Fst Id) ((1,("W",9,'a')),(3,4))
+-- >>> pl @(L3 $ L2 $ Fst) ((1,("W",9,'a')),(3,4))
 -- Present 'a' (Thd 'a' | ("W",9,'a'))
 -- PresentT 'a'
 --
@@ -2171,7 +2169,7 @@ instance P (p q) a => P (q & p) a where
 -- >>> pz @(Pure [] Id) 4
 -- PresentT [4]
 --
--- >>> pz @(Pure (Either String) (Fst Id)) (13,True)
+-- >>> pz @(Pure (Either String) Fst) (13,True)
 -- PresentT (Right 13)
 --
 -- >>> pl @(Pure Maybe Id) 'x'

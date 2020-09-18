@@ -84,25 +84,25 @@ FalseT
 ```
 
 ```haskell
->pu @(Re "^[[:upper:]][[:lower:]]+" Id) "Fred"
+>pu @(Re "^[[:upper:]][[:lower:]]+") "Fred"
 ...
 TrueT
 ```
 
 ```haskell
-pu @(Re "^[[:upper:]][[:lower:]]+" Id) "fred"
+pu @(Re "^[[:upper:]][[:lower:]]+") "fred"
 ...
 FalseT
 ```
 
 ```haskell
->pu @(Resplit "\\s+" Id >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+" Id) Id)) "Fred Abel Bart Jimmy"
+>pu @(Resplit "\\s+" >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+"))) "Fred Abel Bart Jimmy"
 ...
 PresentT ["Fred","Abel","Bart","Jimmy"]
 ```
 
 ```haskell
->pu @(Resplit "\\s+" Id >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+" Id) Id)) "Fred Abel bart Jimmy"
+>pu @(Resplit "\\s+" >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+"))) "Fred Abel bart Jimmy"
 ...
 FailT "(True && False | (All(4) i=2 (Re' [] (^[[:upper:]][[:lower:]]+) | bart)))"
 ```

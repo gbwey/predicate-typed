@@ -114,7 +114,7 @@ instance ( Show a
 -- PresentT []
 --
 data Thiss
-type ThissT = Fst PartitionThese
+type ThissT = PartitionThese >> Fst
 
 instance P ThissT x => P Thiss x where
   type PP Thiss x = PP ThissT x
@@ -123,11 +123,11 @@ instance P ThissT x => P Thiss x where
 -- | similar to 'TheseC.catThat'
 --
 -- >>> pl @Thats [This 1, This 10,That 'x', This 99, That 'y']
--- Present "xy" (Snd "xy" | ([1,10,99],"xy",[]))
+-- Present "xy" ((>>) "xy" | {Snd "xy" | ([1,10,99],"xy",[])})
 -- PresentT "xy"
 --
 data Thats
-type ThatsT = Snd PartitionThese
+type ThatsT = PartitionThese >> Snd
 
 instance P ThatsT x => P Thats x where
   type PP Thats x = PP ThatsT x
@@ -139,7 +139,7 @@ instance P ThatsT x => P Thats x where
 -- PresentT [(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,8),(8,9),(9,10)]
 --
 data Theses
-type ThesesT = Thd PartitionThese
+type ThesesT = PartitionThese >> Thd
 
 instance P ThesesT x => P Theses x where
   type PP Theses x = PP ThesesT x
@@ -179,27 +179,27 @@ instance ( Show a
 
 -- | similar to 'Data.These.mergeTheseWith' but additionally provides \'p\', \'q\' and \'r\' the original input as the first element in the tuple
 --
--- >>> pz @(TheseX ((Fst (Fst Id) + Snd Id) >> ShowP Id) (ShowP Id) (Snd (Snd Id)) (Snd Id)) (9,This 123)
+-- >>> pz @(TheseX ((L1 Fst + Snd) >> ShowP Id) (ShowP Id) (L2 Snd) Snd) (9,This 123)
 -- PresentT "132"
 --
--- >>> pz @(TheseX '(Snd Id,"fromthis") '(Negate 99,Snd Id) (Snd Id) Id) (This 123)
+-- >>> pz @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (This 123)
 -- PresentT (123,"fromthis")
 --
--- >>> pz @(TheseX '(Snd Id,"fromthis") '(Negate 99,Snd Id) (Snd Id) Id) (That "fromthat")
+-- >>> pz @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (That "fromthat")
 -- PresentT (-99,"fromthat")
 --
--- >>> pz @(TheseX '(Snd Id,"fromthis") '(Negate 99,Snd Id) (Snd Id) Id) (These 123 "fromthese")
+-- >>> pz @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (These 123 "fromthese")
 -- PresentT (123,"fromthese")
 --
--- >>> pl @(TheseX (PrintF "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (PrintT "a=%d b=%s" (Snd Id)) Id) (These @Int 9 "rhs")
+-- >>> pl @(TheseX (PrintF "a=%d" (Succ Snd)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (These @Int 9 "rhs")
 -- Present "a=9 b=rhs" (TheseX(These))
 -- PresentT "a=9 b=rhs"
 --
--- >>> pl @(TheseX (PrintF "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (PrintT "a=%d b=%s" (Snd Id)) Id) (This @Int 9)
+-- >>> pl @(TheseX (PrintF "a=%d" (Succ Snd)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (This @Int 9)
 -- Present "a=10" (TheseX(This))
 -- PresentT "a=10"
 --
--- >>> pl @(TheseX (PrintF "a=%d" (Succ (Snd Id))) ("b=" <> Snd Id) (PrintT "a=%d b=%s" (Snd Id)) Id) (That @Int "rhs")
+-- >>> pl @(TheseX (PrintF "a=%d" (Succ Snd)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (That @Int "rhs")
 -- Present "b=rhs" (TheseX(That))
 -- PresentT "b=rhs"
 --
@@ -271,7 +271,7 @@ instance ( Show (PP p x)
 -- Present This 'x' (MkThis This 'x')
 -- PresentT (This 'x')
 --
--- >>> pl @(MkThis () (Fst Id)) ('x',True)
+-- >>> pl @(MkThis () Fst) ('x',True)
 -- Present This 'x' (MkThis This 'x')
 -- PresentT (This 'x')
 --
@@ -322,7 +322,7 @@ instance P (MkThatT t p) x => P (MkThat t p) x where
 
 -- | 'Data.These.These' constructor
 --
--- >>> pz @(MkThese (Fst Id) (Snd Id)) (44,'x')
+-- >>> pz @(MkThese Fst Snd) (44,'x')
 -- PresentT (These 44 'x')
 --
 -- >>> pl @(MkThese Id 'True) 'x'
@@ -422,22 +422,22 @@ instance P IsTheseT x => P IsThese x where
 
 -- | similar to 'Data.These.these'
 --
--- >>> pz @(TheseIn Id Len (Fst Id + Length (Snd Id))) (This 13)
+-- >>> pz @(TheseIn Id Len (Fst + Length Snd)) (This 13)
 -- PresentT 13
 --
--- >>> pz @(TheseIn Id Len (Fst Id + Length (Snd Id))) (That "this is a long string")
+-- >>> pz @(TheseIn Id Len (Fst + Length Snd)) (That "this is a long string")
 -- PresentT 21
 --
--- >>> pz @(TheseIn Id Len (Fst Id + Length (Snd Id))) (These 20 "somedata")
+-- >>> pz @(TheseIn Id Len (Fst + Length Snd)) (These 20 "somedata")
 -- PresentT 28
 --
--- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (That "this is a long string")
+-- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (That "this is a long string")
 -- PresentT (Right "this is a long string")
 --
--- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 1 "this is a long string")
+-- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 1 "this is a long string")
 -- PresentT (Right "this is a long string")
 --
--- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst Id > Length (Snd Id)) (MkLeft _ (Fst Id)) (MkRight _ (Snd Id)))) (These 100 "this is a long string")
+-- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 100 "this is a long string")
 -- PresentT (Left 100)
 --
 -- >>> pl @(TheseIn "this" "that" "these") (This (SG.Sum 12))
@@ -495,22 +495,22 @@ instance (Show a
                Left e -> e
                Right c -> mkNode opts (PresentT c) (show01 opts msg0 c (These a b)) [hh rr]
 
--- | TheseId: returns a tuple so you need to provide a value for rhs in the This case and lhs for the That case
+-- | TheseId: given a 'These' returns a tuple but you need to provide default values for both sides
 --
--- >>> pl @(TheseId 'True "xyz") (This "abc")
+-- >>> pl @(TheseId "xyz" 'True ) (This "abc")
 -- Present ("abc",True) (TheseIn ("abc",True) | This "abc")
 -- PresentT ("abc",True)
 --
--- >>> pl @(TheseId 'True "xyz") (That False)
+-- >>> pl @(TheseId "xyz" 'True) (That False)
 -- Present ("xyz",False) (TheseIn ("xyz",False) | That False)
 -- PresentT ("xyz",False)
 --
--- >>> pl @(TheseId 'True "xyz") (These "abc" False)
+-- >>> pl @(TheseId "xyz" 'True) (These "abc" False)
 -- Present ("abc",False) (TheseIn ("abc",False) | These "abc" False)
 -- PresentT ("abc",False)
 --
 data TheseId p q
-type TheseIdT p q = TheseIn '(I, p) '(q, I) I
+type TheseIdT p q = TheseIn '(I, q) '(p, I) I
 
 instance P (TheseIdT p q) x => P (TheseId p q) x where
   type PP (TheseId p q) x = PP (TheseIdT p q) x
@@ -520,10 +520,10 @@ instance P (TheseIdT p q) x => P (TheseId p q) x where
 --
 -- the key is that all information about both lists are preserved
 --
--- >>> pz @(ZipThese (Fst Id) (Snd Id)) ("aBc", [1..5])
+-- >>> pz @(ZipThese Fst Snd) ("aBc", [1..5])
 -- PresentT [These 'a' 1,These 'B' 2,These 'c' 3,That 4,That 5]
 --
--- >>> pz @(ZipThese (Fst Id) (Snd Id)) ("aBcDeF", [1..3])
+-- >>> pz @(ZipThese Fst Snd) ("aBcDeF", [1..3])
 -- PresentT [These 'a' 1,These 'B' 2,These 'c' 3,This 'D',This 'e',This 'F']
 --
 -- >>> pz @(ZipThese Id Reverse) "aBcDeF"
@@ -538,11 +538,11 @@ instance P (TheseIdT p q) x => P (TheseId p q) x where
 -- >>> pz @(ZipThese '[] '[]) "aBcDeF"
 -- PresentT []
 --
--- >>> pl @(ZipThese (Fst Id) (Snd Id) >> Map (TheseIn Id Id (Fst Id)) Id) (['w'..'y'],['a'..'f'])
+-- >>> pl @(ZipThese Fst Snd >> Map (TheseIn Id Id Fst) Id) (['w'..'y'],['a'..'f'])
 -- Present "wxydef" ((>>) "wxydef" | {Map "wxydef" | [These 'w' 'a',These 'x' 'b',These 'y' 'c',That 'd',That 'e',That 'f']})
 -- PresentT "wxydef"
 --
--- >>> pl @(("sdf" &&& Id) >> ZipThese (Fst Id) (Snd Id) >> Map (TheseIn (Id &&& 0) (Head "x" &&& Id) Id) Id) [1..5]
+-- >>> pl @(("sdf" &&& Id) >> ZipThese Fst Snd >> Map (TheseIn (Id &&& 0) (("x" >> Head) &&& Id) Id) Id) [1..5]
 -- Present [('s',1),('d',2),('f',3),('x',4),('x',5)] ((>>) [('s',1),('d',2),('f',3),('x',4),('x',5)] | {Map [('s',1),('d',2),('f',3),('x',4),('x',5)] | [These 's' 1,These 'd' 2,These 'f' 3,That 4,That 5]})
 -- PresentT [('s',1),('d',2),('f',3),('x',4),('x',5)]
 --
@@ -590,7 +590,7 @@ simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
 -- >>> pz @(ThisDef (1 % 4) Id) (These 2.3 "aa")
 -- PresentT (1 % 4)
 --
--- >>> pz @(ThisDef (PrintT "found %s fst=%d" '(ShowP (Snd Id), Fst Id)) (Snd Id)) (123,That "xy")
+-- >>> pz @(ThisDef (PrintT "found %s fst=%d" '(ShowP Snd, Fst)) Snd) (123,That "xy")
 -- PresentT "found That \"xy\" fst=123"
 --
 -- >>> pz @(ThisDef (MEmptyT _) Id) (That 222)
@@ -644,7 +644,7 @@ instance ( PP q x ~ These a b
 -- >>> pz @(ThatDef (1 % 4) Id) (These "aa" 2.3)
 -- PresentT (1 % 4)
 --
--- >>> pz @(ThatDef (PrintT "found %s fst=%d" '(ShowP (Snd Id), Fst Id)) (Snd Id)) (123,This "xy")
+-- >>> pz @(ThatDef (PrintT "found %s fst=%d" '(ShowP Snd, Fst)) Snd) (123,This "xy")
 -- PresentT "found This \"xy\" fst=123"
 --
 -- >>> pz @(ThatDef (MEmptyT _) Id) (This 222)
@@ -688,7 +688,7 @@ instance ( PP q x ~ These a b
 -- >>> pz @(TheseDef '(1 % 4,"zz") Id) (That "x")
 -- PresentT (1 % 4,"zz")
 --
--- >>> pz @(TheseDef '(PrintT "found %s fst=%d" '(ShowP (Snd Id), Fst Id),999) (Snd Id)) (123,This "xy")
+-- >>> pz @(TheseDef '(PrintT "found %s fst=%d" '(ShowP Snd, Fst),999) Snd) (123,This "xy")
 -- PresentT ("found This \"xy\" fst=123",999)
 --
 -- >>> pz @(TheseDef (MEmptyT (SG.Sum _, String)) Id) (This 222)
@@ -742,7 +742,7 @@ instance ( PP q x ~ These a b
 -- >>> pz @(ThisFail "oops" Id) (That "aa")
 -- FailT "oops"
 --
--- >>> pz @(ThisFail (PrintT "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,That "xy")
+-- >>> pz @(ThisFail (PrintT "found %s fst=%d" '(ShowP Snd,Fst)) Snd) (123,That "xy")
 -- FailT "found That \"xy\" fst=123"
 --
 -- >>> pz @(ThisFail (MEmptyT _) Id) (That 222)
@@ -793,7 +793,7 @@ instance ( PP p x ~ String
 -- >>> pz @(ThatFail "oops" Id) (This "aa")
 -- FailT "oops"
 --
--- >>> pz @(ThatFail (PrintT "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,This "xy")
+-- >>> pz @(ThatFail (PrintT "found %s fst=%d" '(ShowP Snd,Fst)) Snd) (123,This "xy")
 -- FailT "found This \"xy\" fst=123"
 --
 -- >>> pz @(ThatFail (MEmptyT _) Id) (This 222)
@@ -834,7 +834,7 @@ instance ( PP p x ~ String
 -- >>> pz @(TheseFail "oops" Id) (That "aa")
 -- FailT "oops"
 --
--- >>> pz @(TheseFail (PrintT "found %s fst=%d" '(ShowP (Snd Id),Fst Id)) (Snd Id)) (123,That "xy")
+-- >>> pz @(TheseFail (PrintT "found %s fst=%d" '(ShowP Snd,Fst)) Snd) (123,That "xy")
 -- FailT "found That \"xy\" fst=123"
 --
 -- >>> pz @(TheseFail (MEmptyT _) Id) (That 222)
@@ -920,10 +920,10 @@ instance AssocC (,) where
   assoc ((a,b),c) = (a,(b,c))
   unassoc (a,(b,c)) = ((a,b),c)
 
-instance (Show (p (p a b) c)
-        , Show (p a (p b c))
-        , AssocC p
-        ) => P Assoc (p (p a b) c) where
+instance ( AssocC p
+         , Show (p (p a b) c)
+         , Show (p a (p b c))
+         ) => P Assoc (p (p a b) c) where
   type PP Assoc (p (p a b) c) = p a (p b c)
   eval _ opts pabc =
     let msg0 = "Assoc"
@@ -953,10 +953,10 @@ instance (Show (p (p a b) c)
 --
 data Unassoc
 
-instance (Show (p (p a b) c)
-        , Show (p a (p b c))
-        , AssocC p
-        ) => P Unassoc (p a (p b c)) where
+instance ( AssocC p
+         , Show (p (p a b) c)
+         , Show (p a (p b c))
+         ) => P Unassoc (p a (p b c)) where
   type PP Unassoc (p a (p b c)) = p (p a b) c
   eval _ opts pabc =
     let msg0 = "Unassoc"

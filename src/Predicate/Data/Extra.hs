@@ -72,10 +72,8 @@ module Predicate.Data.Extra (
   , RDot
   , K
   , Lift
-
   , Apply1
   , Apply2
-
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -130,22 +128,22 @@ instance (Show (f (t a))
 
 -- | similar to 'Control.Applicative.<$'
 --
--- >>> pz @(Fst Id <$ Snd Id) ("abc",Just 20)
+-- >>> pz @(Fst <$ Snd) ("abc",Just 20)
 -- PresentT (Just "abc")
 --
--- >>> pl @(Fst Id <$ Snd Id) (4,These "xxx" 'a')
+-- >>> pl @(Fst <$ Snd) (4,These "xxx" 'a')
 -- Present These "xxx" 4 ((<$) 4)
 -- PresentT (These "xxx" 4)
 --
--- >>> pl @(Fst Id <$ Snd Id) (4,This 'a')
+-- >>> pl @(Fst <$ Snd) (4,This 'a')
 -- Present This 'a' ((<$) 4)
 -- PresentT (This 'a')
 --
--- >>> pl @(Fst Id <$ Snd Id) (4,Just 'a')
+-- >>> pl @(Fst <$ Snd) (4,Just 'a')
 -- Present Just 4 ((<$) 4)
 -- PresentT (Just 4)
 --
--- >>> pl @(Fst Id <$ Snd Id) (4,Nothing @Int)
+-- >>> pl @(Fst <$ Snd) (4,Nothing @Int)
 -- Present Nothing ((<$) 4)
 -- PresentT Nothing
 --
@@ -158,7 +156,7 @@ instance (Show (f (t a))
 -- Present Compose (Just "aaaa") ((<$) 'a')
 -- PresentT (Compose (Just "aaaa"))
 --
--- >>> pl @(Snd Id <$ Fst Id) (Just 10,'x')
+-- >>> pl @(Snd <$ Fst) (Just 10,'x')
 -- Present Just 'x' ((<$) 'x')
 -- PresentT (Just 'x')
 --
@@ -184,11 +182,11 @@ instance (P p x
 
 -- | similar to Applicative 'Control.Applicative.<*'
 --
--- >>> pl @(Fst Id <* Snd Id) (Just 4,Just 'a')
+-- >>> pl @(Fst <* Snd) (Just 4,Just 'a')
 -- Present Just 4 ((<*) Just 4 | p=Just 4 | q=Just 'a')
 -- PresentT (Just 4)
 --
--- >>> pz @(Fst Id <* Snd Id) (Just "abc",Just 20)
+-- >>> pz @(Fst <* Snd) (Just "abc",Just 20)
 -- PresentT (Just "abc")
 --
 data p <* q
@@ -198,7 +196,7 @@ type ArrowRT p q = q <* p
 
 -- | similar to Applicative 'Control.Applicative.*>'
 --
--- >>> pl @(Fst Id *> Snd Id) (Just 4,Just 'a')
+-- >>> pl @(Fst *> Snd) (Just 4,Just 'a')
 -- Present Just 'a' ((<*) Just 'a' | p=Just 'a' | q=Just 4)
 -- PresentT (Just 'a')
 --
@@ -229,20 +227,20 @@ instance (Show (t c)
 
 -- | similar to 'Control.Applicative.<|>'
 --
--- >>> pz @(Fst Id <|> Snd Id) (Nothing,Just 20)
+-- >>> pz @(Fst <|> Snd) (Nothing,Just 20)
 -- PresentT (Just 20)
 --
--- >>> pz @(Fst Id <|> Snd Id) (Just 10,Just 20)
+-- >>> pz @(Fst <|> Snd) (Just 10,Just 20)
 -- PresentT (Just 10)
 --
--- >>> pz @(Fst Id <|> Snd Id) (Nothing,Nothing)
+-- >>> pz @(Fst <|> Snd) (Nothing,Nothing)
 -- PresentT Nothing
 --
--- >>> pl @(Fst Id <|> Snd Id) (Just "cdef",Just "ab")
+-- >>> pl @(Fst <|> Snd) (Just "cdef",Just "ab")
 -- Present Just "cdef" ((<|>) Just "cdef" | p=Just "cdef" | q=Just "ab")
 -- PresentT (Just "cdef")
 --
--- >>> pl @(Fst Id <|> Snd Id) ("cdef","ab"::String)
+-- >>> pl @(Fst <|> Snd) ("cdef","ab"::String)
 -- Present "cdefab" ((<|>) "cdefab" | p="cdef" | q="ab")
 -- PresentT "cdefab"
 --
@@ -330,7 +328,7 @@ instance (Show (t (t a))
 -- | function application for expressions: similar to 'GHC.Base.$'
 --
 -- >>> :m + Text.Show.Functions
--- >>> pz @(Fst Id $$ Snd Id) ((*16),4)
+-- >>> pz @(Fst $$ Snd) ((*16),4)
 -- PresentT 64
 --
 -- >>> pz @(Id $$ "def") ("abc"<>)
@@ -362,7 +360,7 @@ instance (P p x
 -- | flipped function application for expressions: similar to 'Control.Lens.&'
 --
 -- >>> :m + Text.Show.Functions
--- >>> pz @(Snd Id $& Fst Id) ((*16),4)
+-- >>> pz @(Snd $& Fst) ((*16),4)
 -- PresentT 64
 --
 -- >>> pz @("def" $& Id) ("abc"<>)
@@ -419,7 +417,7 @@ instance (Show (f (t a))
 
 -- | like 'traverse'
 --
--- >>> pl @(Traverse (If (Gt 3) (Pure Maybe Id) (EmptyT Maybe Id)) Id) [1..5]
+-- >>> pl @(Traverse (If (Gt 3) (Pure Maybe Id) (EmptyT Maybe)) Id) [1..5]
 -- Present Nothing ((>>) Nothing | {Sequence Nothing | [Nothing,Nothing,Nothing,Just 4,Just 5]})
 -- PresentT Nothing
 --
@@ -427,7 +425,7 @@ instance (Show (f (t a))
 -- Present Nothing ((>>) Nothing | {Sequence Nothing | [Just 1,Just 2,Just 3,Nothing,Nothing]})
 -- PresentT Nothing
 --
--- >>> pl @(Traverse (If (Gt 0) (Pure Maybe Id) (EmptyT Maybe Id)) Id) [1..5]
+-- >>> pl @(Traverse (If (Gt 0) (Pure Maybe Id) (EmptyT Maybe)) Id) [1..5]
 -- Present Just [1,2,3,4,5] ((>>) Just [1,2,3,4,5] | {Sequence Just [1,2,3,4,5] | [Just 1,Just 2,Just 3,Just 4,Just 5]})
 -- PresentT (Just [1,2,3,4,5])
 --
@@ -567,33 +565,33 @@ instance P (SkipBothT p q) x => P (p >|> q) x where
 -- >>> pz @(HeadDef (MEmptyT String) '["abc","def","asdfadf"]) ()
 -- PresentT "abc"
 --
--- >>> pz @(HeadDef (MEmptyT _) (Snd Id)) (123,["abc","def","asdfadf"])
+-- >>> pz @(HeadDef (MEmptyT _) Snd) (123,["abc","def","asdfadf"])
 -- PresentT "abc"
 --
--- >>> pz @(HeadDef (MEmptyT _) (Snd Id)) (123,[])
+-- >>> pz @(HeadDef (MEmptyT _) Snd) (123,[])
 -- PresentT ()
 --
--- >>> pl @(HeadDef 9 (Fst Id)) ([],True)
+-- >>> pl @(HeadDef 9 Fst) ([],True)
 -- Present 9 (JustDef Nothing)
 -- PresentT 9
 --
--- >>> pl @(HeadDef 9 (Fst Id)) ([1..5],True)
+-- >>> pl @(HeadDef 9 Fst) ([1..5],True)
 -- Present 1 (JustDef Just)
 -- PresentT 1
 --
--- >>> pl @(HeadDef 3 (Fst Id)) ([10..15],True)
+-- >>> pl @(HeadDef 3 Fst) ([10..15],True)
 -- Present 10 (JustDef Just)
 -- PresentT 10
 --
--- >>> pl @(HeadDef 12 (Fst Id) >> Le 6) ([],True)
+-- >>> pl @(HeadDef 12 Fst >> Le 6) ([],True)
 -- False ((>>) False | {12 <= 6})
 -- FalseT
 --
--- >>> pl @(HeadDef 1 (Fst Id) >> Le 6) ([],True)
+-- >>> pl @(HeadDef 1 Fst >> Le 6) ([],True)
 -- True ((>>) True | {1 <= 6})
 -- TrueT
 --
--- >>> pl @(HeadDef 10 (Fst Id) >> Le 6) ([],True)
+-- >>> pl @(HeadDef 10 Fst >> Le 6) ([],True)
 -- False ((>>) False | {10 <= 6})
 -- FalseT
 --
@@ -605,15 +603,15 @@ instance P (SkipBothT p q) x => P (p >|> q) x where
 -- Present [10] (JustDef Just)
 -- PresentT [10]
 --
--- >>> pl @(HeadDef (Fst Id) (Snd Id)) (99,[10..14])
+-- >>> pl @(HeadDef Fst Snd) (99,[10..14])
 -- Present 10 (JustDef Just)
 -- PresentT 10
 --
--- >>> pl @(HeadDef (Fst Id) (Snd Id)) (99,[] :: [Int])
+-- >>> pl @(HeadDef Fst Snd) (99,[] :: [Int])
 -- Present 99 (JustDef Nothing)
 -- PresentT 99
 --
--- >>> pl @(HeadDef 43 (Snd Id)) (99,[] :: [Int])
+-- >>> pl @(HeadDef 43 Snd) (99,[] :: [Int])
 -- Present 43 (JustDef Nothing)
 -- PresentT 43
 --
@@ -635,15 +633,15 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 -- >>> pz @(HeadFail "empty list" Id) []
 -- FailT "empty list"
 --
--- >>> pl @(HeadFail "zz" (Fst Id) >> Le 6) ([],True)
+-- >>> pl @(HeadFail "zz" Fst >> Le 6) ([],True)
 -- Error zz
 -- FailT "zz"
 --
--- >>> pl @((HeadFail "failed1" (Fst Id) >> Le 6) || 'False) ([],True)
+-- >>> pl @((HeadFail "failed1" Fst >> Le 6) || 'False) ([],True)
 -- Error failed1 (||)
 -- FailT "failed1"
 --
--- >>> pl @((Fst Id >> HeadFail "failed2" Id >> Le (6 -% 1)) || 'False) ([-9],True)
+-- >>> pl @((Fst >> HeadFail "failed2" Id >> Le (6 -% 1)) || 'False) ([-9],True)
 -- True (True || False)
 -- TrueT
 --
@@ -651,7 +649,7 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 -- Error Asdf (JustFail Nothing)
 -- FailT "Asdf"
 --
--- >>> pl @(HeadFail (PrintF "msg=%s def" (Fst Id)) (Snd Id)) ("Abc" :: String,[]::[Int])
+-- >>> pl @(HeadFail (PrintF "msg=%s def" Fst) Snd) ("Abc" :: String,[]::[Int])
 -- Error msg=Abc def (JustFail Nothing)
 -- FailT "msg=Abc def"
 --
@@ -665,15 +663,15 @@ instance P (HeadFailT msg q) x => P (HeadFail msg q) x where
 
 -- | takes the tail of a list-like object or uses the given default value
 --
--- >>> pl @(TailDef '[9,7] (Fst Id)) ([],True)
+-- >>> pl @(TailDef '[9,7] Fst) ([],True)
 -- Present [9,7] (JustDef Nothing)
 -- PresentT [9,7]
 --
--- >>> pl @(TailDef '[9,7] (Fst Id)) ([1..5],True)
+-- >>> pl @(TailDef '[9,7] Fst) ([1..5],True)
 -- Present [2,3,4,5] (JustDef Just)
 -- PresentT [2,3,4,5]
 --
--- >>> pl @(TailDef '[3] (Fst Id)) ([10..15],True)
+-- >>> pl @(TailDef '[3] Fst) ([10..15],True)
 -- Present [11,12,13,14,15] (JustDef Just)
 -- PresentT [11,12,13,14,15]
 --
@@ -688,7 +686,7 @@ instance P (TailDefT p q) x => P (TailDef p q) x where
 
 -- | takes the tail of a list-like object or fails with the given message
 --
--- >>> pl @(TailFail (PrintT "a=%d b=%s" (Snd Id)) (Fst Id)) ([]::[()],(4::Int,"someval" :: String))
+-- >>> pl @(TailFail (PrintT "a=%d b=%s" Snd) Fst) ([]::[()],(4::Int,"someval" :: String))
 -- Error a=4 b=someval (JustFail Nothing)
 -- FailT "a=4 b=someval"
 --
@@ -702,15 +700,15 @@ instance P (TailFailT msg q) x => P (TailFail msg q) x where
 
 -- | takes the last value of a list-like object or a default value
 --
--- >>> pl @(LastDef 9 (Fst Id)) ([],True)
+-- >>> pl @(LastDef 9 Fst) ([],True)
 -- Present 9 (JustDef Nothing)
 -- PresentT 9
 --
--- >>> pl @(LastDef 9 (Fst Id)) ([1..5],True)
+-- >>> pl @(LastDef 9 Fst) ([1..5],True)
 -- Present 5 (JustDef Just)
 -- PresentT 5
 --
--- >>> pl @(LastDef 3 (Fst Id)) ([10..15],True)
+-- >>> pl @(LastDef 3 Fst) ([10..15],True)
 -- Present 15 (JustDef Just)
 -- PresentT 15
 --
@@ -740,15 +738,15 @@ instance P (LastFailT msg q) x => P (LastFail msg q) x where
 
 -- | takes the init of a list-like object or uses the given default value
 --
--- >>> pl @(InitDef '[9,7] (Fst Id)) ([],True)
+-- >>> pl @(InitDef '[9,7] Fst) ([],True)
 -- Present [9,7] (JustDef Nothing)
 -- PresentT [9,7]
 --
--- >>> pl @(InitDef '[9,7] (Fst Id)) ([1..5],True)
+-- >>> pl @(InitDef '[9,7] Fst) ([1..5],True)
 -- Present [1,2,3,4] (JustDef Just)
 -- PresentT [1,2,3,4]
 --
--- >>> pl @(InitDef '[3] (Fst Id)) ([10..15],True)
+-- >>> pl @(InitDef '[3] Fst) ([10..15],True)
 -- Present [10,11,12,13,14] (JustDef Just)
 -- PresentT [10,11,12,13,14]
 --
@@ -958,13 +956,13 @@ instance P (ProxyT t) x where
 
 -- | run an expression \'p\' and on failure run \'q\'
 --
--- >>> pz @(Catch (Succ Id) (Fst Id >> Second (ShowP Id) >> PrintT "%s %s" Id >> 'LT)) GT
+-- >>> pz @(Catch (Succ Id) (Fst >> Second (ShowP Id) >> PrintT "%s %s" Id >> 'LT)) GT
 -- PresentT LT
 --
 -- >>> pz @(Len > 1 && Catch (Id !! 3 == 66) 'False) [1,2]
 -- FalseT
 --
--- >>> pl @(Catch (Resplit "\\d+(" Id) (Snd Id >> MEmptyP)) "123"
+-- >>> pl @(Catch (Resplit "\\d+(") (Snd >> MEmptyP)) "123"
 -- Present [] (Catch caught exception[Regex failed to compile])
 -- PresentT []
 --
@@ -1016,7 +1014,7 @@ data Catch p q
 --
 data Catch' p s
 type CatchT' p s = Catch p (FailCatchT s) -- eg set eg s=PrintF "%d" Id or PrintF "%s" (ShowP Id)
-type FailCatchT s = Fail (Snd Id >> Unproxy) (Fst Id >> s)
+type FailCatchT s = Fail (Snd >> Unproxy) (Fst >> s)
 
 instance P (CatchT' p s) x => P (Catch' p s) x where
   type PP (Catch' p s) x = PP (CatchT' p s) x
@@ -1042,7 +1040,7 @@ instance (P p x
 
 -- | compose simple functions
 --
--- >>> pl @(Dot '[Thd,Snd,Fst] Id) ((1,(2,9,10)),(3,4))
+-- >>> pl @(Dot '[L3,L2,L1] Id) ((1,(2,9,10)),(3,4))
 -- Present 10 (Thd 10 | (2,9,10))
 -- PresentT 10
 --
@@ -1058,11 +1056,11 @@ type family DotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 
 -- | reversed version of 'Dot'
 --
--- >>> pl @(RDot '[Fst,Snd,Thd] Id) ((1,(2,9,10)),(3,4))
+-- >>> pl @(RDot '[L1,L2,L3] Id) ((1,(2,9,10)),(3,4))
 -- Present 10 (Thd 10 | (2,9,10))
 -- PresentT 10
 --
--- >>> pl @(RDot '[Fst,Snd] Id) (('a',2),(True,"zy"))
+-- >>> pl @(RDot '[L1,L2] Id) (('a',2),(True,"zy"))
 -- Present 2 (Snd 2 | ('a',2))
 -- PresentT 2
 --
@@ -1078,11 +1076,11 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 
 -- | creates a constant expression ignoring the second argument:types dont need to match on rhs!
 --
--- >>> pl @(RDot '[Fst,Snd,Thd,K "xxx"] Id) 12345
+-- >>> pl @(RDot '[L1,L2,L3,K "xxx"] Id) 12345
 -- Present "xxx" (K '"xxx")
 -- PresentT "xxx"
 --
--- >>> pl @(RDot '[Fst,Snd,Thd,K '("abc",Id)] Id) ()
+-- >>> pl @(RDot '[L1,L2,L3,K '("abc",Id)] Id) ()
 -- Present ("abc",()) (K '("abc",()))
 -- PresentT ("abc",())
 --
@@ -1090,15 +1088,15 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 -- Present "skip" (K '"skip")
 -- PresentT "skip"
 --
--- >>> pl @(Thd $ Snd $ Fst $ K Id "dud") ((1,("W",9,'a')),(3,4))
+-- >>> pl @(L3 $ L2 $ L1 $ K Id "dud") ((1,("W",9,'a')),(3,4))
 -- Present 'a' (Thd 'a' | ("W",9,'a'))
 -- PresentT 'a'
 --
--- >>> pl @((Thd $ Snd $ Fst $ K Id "dud") >> Pred Id) ((1,("W",9,'a')),(3,4))
+-- >>> pl @((L3 $ L2 $ L1 $ K Id "dud") >> Pred Id) ((1,("W",9,'a')),(3,4))
 -- Present '`' ((>>) '`' | {Pred '`' | 'a'})
 -- PresentT '`'
 --
--- >>> pl @(K "ss" $ Thd $ Thd $ Fst Id) ()
+-- >>> pl @(K "ss" $ L3 $ L3 $ Fst) ()
 -- Present "ss" (K '"ss")
 -- PresentT "ss"
 --
@@ -1109,7 +1107,7 @@ instance P p a => P (K p q) a where
 
 -- | Lift a no arg Adt to a function of one argument (for use with 'Dot' and 'RDot')
 --
--- >>> pl @(Lift Len (Snd Id)) (True,"abcdef")
+-- >>> pl @(Lift Len Snd) (True,"abcdef")
 -- Present 6 ((>>) 6 | {Len 6 | "abcdef"})
 -- PresentT 6
 --
@@ -1126,15 +1124,15 @@ instance P (LiftT p q) x => P (Lift p q) x where
 -- Present "there" (hello W '"there")
 -- PresentT "there"
 --
--- >>> pl @(Apply1 Length) (Proxy @(Snd Id),(True,"abcdef"))
+-- >>> pl @(Apply1 Length) (Proxy @Snd,(True,"abcdef"))
 -- Present 6 (Length 6 | "abcdef")
 -- PresentT 6
 --
--- >>> pl @(Apply1 ((+) 4)) (Proxy @(Fst Id),(5,"abcdef"))
+-- >>> pl @(Apply1 ((+) 4)) (Proxy @Fst,(5,"abcdef"))
 -- Present 9 (4 + 5 = 9)
 -- PresentT 9
 --
--- >>> pl @(Apply1 Fst) (Proxy @Id, (123,"asfd"))
+-- >>> pl @(Apply1 L1) (Proxy @Id, (123,"asfd"))
 -- Present 123 (Fst 123 | (123,"asfd"))
 -- PresentT 123
 --
@@ -1156,7 +1154,7 @@ instance forall p q x . (P (p q) x)
 
 -- | application using a Proxy: \'q\' and \'r\' must be of kind Type else ambiguous k0 error
 --
--- >>> pl @(Apply2 (+)) ((Proxy @(Fst Id),Proxy @(Length (Snd Id))),(5,"abcdef"))
+-- >>> pl @(Apply2 (+)) ((Proxy @Fst,Proxy @(Length Snd)),(5,"abcdef"))
 -- Present 11 (5 + 6 = 11)
 -- PresentT 11
 --

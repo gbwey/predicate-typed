@@ -43,10 +43,10 @@ Left FalseT
 
 6. reads in a string as time and does simple validation
 ```haskell
->prtRefinedIO @OL @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
+>prtRefinedIO @OL @(Resplit ":" >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
 Right (Refined "12:01:05")
 ```
-  * `Resplit ":" Id`
+  * `Resplit ":"`
      split using regex using a colon as a delimiter  ["12","01","05"]
   * `Map (ReadP Int Id) Id`
      Read in the values as Ints                      [12,1,5]
@@ -59,9 +59,9 @@ _pab_ does not have that restriction so you can run the whole thing or the indiv
 for less detail use _pl_\
 
 ```haskell
->pu @(Resplit ":" Id >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
+>pu @(Resplit ":" >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
 
->pu @(Resplit ":" Id) "12:01:05"
+>pu @(Resplit ":") "12:01:05"
 
 >pu @(Map (ReadP Int Id) Id) ["12","01","05"]
 
@@ -130,7 +130,7 @@ False False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
 ```
 
 ```haskell
->$$(refinedTH @OU @(Re "^[A-Z][a-z]+$" Id) "smith")
+>$$(refinedTH @OU @(Re "^[A-Z][a-z]+$") "smith")
 
 <interactive>:32:4: error:
     * refinedTH: predicate failed with FalseT (Re (^[A-Z][a-z]+$))
@@ -141,18 +141,18 @@ False Re (^[A-Z][a-z]+$)
 `- P Id "smith"
 
     * In the Template Haskell splice
-        $$(refinedTH @OAN @(Re "^[A-Z][a-z]+$" Id) "smith")
+        $$(refinedTH @OAN @(Re "^[A-Z][a-z]+$") "smith")
       In the expression:
-        $$(refinedTH @OAN @(Re "^[A-Z][a-z]+$" Id) "smith")
+        $$(refinedTH @OAN @(Re "^[A-Z][a-z]+$") "smith")
 ```
 
 ```haskell
->$$(refinedTH @OU @(Re "^[A-Z][a-z]+$" Id) "Smith")
+>$$(refinedTH @OU @(Re "^[A-Z][a-z]+$") "Smith")
 Refined "Smith"
 ```
 
 ```haskell
->$$(refinedTH @OU @(Msg "expected title case" $ Re "^[A-Z][a-z]+$" Id) "smith")
+>$$(refinedTH @OU @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
 
 <interactive>:34:4: error:
     * refinedTH: predicate failed with FalseT (expected title case Re (^[A-Z][a-z]+$))
@@ -164,14 +164,14 @@ False expected title case Re (^[A-Z][a-z]+$)
 
     * In the Template Haskell splice
         $$(refinedTH
-             @OAN @(Msg "expected title case" $ Re "^[A-Z][a-z]+$" Id) "smith")
+             @OAN @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
       In the expression:
         $$(refinedTH
-             @OAN @(Msg "expected title case" $ Re "^[A-Z][a-z]+$" Id) "smith")
+             @OAN @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
 ```
 
 ```haskell
->$$(refinedTH @OU @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$" Id)) "smith")
+>$$(refinedTH @OU @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$")) "smith")
 
 <interactive>:22:4: error:
     * refinedTH: predicate failed with FailT expected title case (GuardBool (Re (^[A-Z][a-z]+$)))
@@ -187,10 +187,10 @@ False expected title case Re (^[A-Z][a-z]+$)
 
     * In the Template Haskell splice
         $$(refinedTH
-             @OAN @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$" Id))
+             @OAN @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$"))
              "smith")
       In the expression:
         $$(refinedTH
-             @OAN @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$" Id))
+             @OAN @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$"))
              "smith")
 ```
