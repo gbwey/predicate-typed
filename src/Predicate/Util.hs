@@ -1528,16 +1528,25 @@ type family ConsT s where
 -- | a typeclass for choosing which monad to run in
 class Monad m => MonadEval m where
   runIO :: IO a -> m (Maybe a)
-  catchit :: E.Exception e => a -> m (Either String a)
-  catchitNF :: (E.Exception e, NFData a) => a -> m (Either String a)
+  catchit :: a -> m (Either String a)
+  catchitNF :: NFData a => a -> m (Either String a)
   liftEval :: m a -> IO a
 
 -- | 'Identity' instance for evaluating the expression
 instance MonadEval Identity where
   runIO _ = Identity Nothing
-  catchit v = Identity $ unsafePerformIO $ catchit @IO @E.SomeException v
-  catchitNF v = Identity $ unsafePerformIO $ catchitNF @IO @E.SomeException v
+  catchit = catchitIdentityUnsafe
+  catchitNF = catchitNFIdentityUnsafe
   liftEval = return . runIdentity
+
+{-# NOINLINE catchitIdentityUnsafe #-}
+catchitIdentityUnsafe :: a -> Identity (Either String a)
+catchitIdentityUnsafe v = Identity $ unsafePerformIO $ catchit @IO v
+
+{-# NOINLINE catchitNFIdentityUnsafe #-}
+catchitNFIdentityUnsafe :: NFData a => a -> Identity (Either String a)
+catchitNFIdentityUnsafe v = Identity $ unsafePerformIO $ catchitNF @IO v
+
 
 -- | 'IO' instance for evaluating the expression
 instance MonadEval IO where

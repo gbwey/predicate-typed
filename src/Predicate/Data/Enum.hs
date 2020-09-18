@@ -54,7 +54,6 @@ import Predicate.Core
 import Predicate.Util
 import Safe (succMay, predMay, toEnumMay)
 import Data.Proxy
-import qualified Control.Exception as E
 import Data.Kind (Type)
 
 -- $setup
@@ -197,7 +196,7 @@ instance (Show a
     case getValueLR opts msg0 pp [] of
       Left e -> pure e
       Right p -> do
-        lr <- catchit @_ @E.SomeException (succ p)
+        lr <- catchit (succ p)
         pure $ case lr of
           Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (showL opts p) [hh pp]
           Right n -> mkNode opts (PresentT n) (show01 opts msg0 n p) [hh pp]
@@ -233,7 +232,7 @@ instance (Show a
     case lr of
       Left e -> pure e
       Right (n,p,nn,pp) -> do
-        lr1 <- catchit @_ @E.SomeException (toEnum (fromEnum p + fromIntegral n))
+        lr1 <- catchit (toEnum (fromEnum p + fromIntegral n))
         pure $ case lr1 of
           Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (litL opts (msg0 <> " " <> show (fromIntegral @_ @Integer n) <> " " <> show p)) [hh nn, hh pp]
           Right r -> mkNode opts (PresentT r) (litL opts (msg0 <> " " <> show (fromIntegral @_ @Integer n) <> " " <> show p)) [hh nn, hh pp]
@@ -261,7 +260,7 @@ instance (Show a
     case getValueLR opts msg0 pp [] of
       Left e -> pure e
       Right p -> do
-        lr <- catchit @_ @E.SomeException (pred p)
+        lr <- catchit (pred p)
         pure $ case lr of
           Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (showL opts p) [hh pp]
           Right n -> mkNode opts (PresentT n) (show01 opts msg0 n p) [hh pp]
@@ -348,7 +347,7 @@ instance (PP p x ~ a
     case getValueLR opts msg0 pp [] of
       Left e -> pure e
       Right p -> do
-        lr <- catchit @_ @E.SomeException (toEnum $! fromIntegral p)
+        lr <- catchit (toEnum $! fromIntegral p)
         pure $ case lr of
           Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (showL opts p) [hh pp]
           Right n -> mkNode opts (PresentT n) (show01 opts msg0 n p) [hh pp]

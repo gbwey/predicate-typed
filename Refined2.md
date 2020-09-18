@@ -29,7 +29,7 @@ Left "Step 2. False Boolean Check(op) | {8190 <= 255}"
 >import qualified Data.Aeson as A
 >import qualified Data.ByteString.Lazy as BL8 (ByteString)
 
->type Js = '(OL, ParseJson (Int,String) Id, Msg "0-255:" (Between 0 255 (Fst Id)) && Msg "length:" (Length (Snd Id) == 3), BL8.ByteString)
+>type Js = '(OL, ParseJson (Int,String) Id, Msg "0-255:" (Between 0 255 Fst) && Msg "length:" (Length Snd == 3), BL8.ByteString)
 
 >newRefined2P (Proxy @Js) "[10,\"Abc\"]"
 Right (Refined2 {r2In = (10,"Abc"), r2Out = "[10,\"Abc\"]"})

@@ -96,32 +96,32 @@ FalseT
 ```
 
 ```haskell
->pu @(Resplit "\\s+" >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+"))) "Fred Abel Bart Jimmy"
+>pu @(Resplit "\\s+" >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+") Id)) "Fred Abel Bart Jimmy"
 ...
 PresentT ["Fred","Abel","Bart","Jimmy"]
 ```
 
 ```haskell
->pu @(Resplit "\\s+" >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+"))) "Fred Abel bart Jimmy"
+>pu @(Resplit "\\s+" >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+") Id)) "Fred Abel bart Jimmy"
 ...
 FailT "(True && False | (All(4) i=2 (Re' [] (^[[:upper:]][[:lower:]]+) | bart)))"
 ```
 
 ```haskell
->pu @(ReadP Day Id >> ToWeekDate Id >> Snd Id == "Monday") "2020-07-13"
+>pu @(ReadP Day Id >> ToWeekDate Id >> Snd == "Monday") "2020-07-13"
 ...
 TrueT
 ```
 
 ```haskell
->pu @(ReadP Day Id >> ToWeekDate Id >> Snd Id == "Monday") "2020-07-14"
+>pu @(ReadP Day Id >> ToWeekDate Id >> Snd == "Monday") "2020-07-14"
 ...
 False (>>) False | {"Tuesday" == "Monday"}
 FalseT
 ```
 
 ```haskell
->pu @(ReadP Day Id >> ToWeekDate Id >> GuardSimple (Snd Id == "Monday")) "2020-07-13"
+>pu @(ReadP Day Id >> ToWeekDate Id >> GuardSimple (Snd == "Monday")) "2020-07-13"
 ...
 PresentT (1,"Monday")
 ```

@@ -45,7 +45,6 @@ import qualified GHC.TypeLits as GL
 import Data.Proxy
 import Data.Kind (Type)
 import Text.Printf
-import qualified Control.Exception as E
 import Data.Typeable
 -- $setup
 -- >>> :set -XDataKinds
@@ -235,7 +234,7 @@ instance (PrintfArg (PP p x)
     case lrx of
       Left e -> pure e
       Right (s,p,ss,pp) -> do
-        lr <- catchitNF @_ @E.SomeException (printf s p)
+        lr <- catchitNF (printf s p)
         pure $ case lr of
           Left e -> mkNode opts (FailT (msg0 <> " (" <> e <> ")")) (showL opts p <> " s=" <> s) [hh ss, hh pp]
           Right ret -> mkNode opts (PresentT ret) (msg0 <> " [" <> litL opts ret <> "]" <> showVerbose opts " | p=" p <> litVerbose opts " | s=" s) [hh ss, hh pp]
@@ -327,7 +326,7 @@ instance (PrintC bs
       Left e -> pure e
       Right (s,y,ss,pp) -> do
         let hhs = [hh ss, hh pp]
-        lr <- catchitNF @_ @E.SomeException (prtC @bs s (inductTupleC y))
+        lr <- catchitNF (prtC @bs s (inductTupleC y))
         pure $ case lr of
           Left e -> mkNode opts (FailT (msg0 <> "(" <> e <> ")")) (msg0 <> " " <> s) hhs
           Right ret -> mkNode opts (PresentT ret) (msg0 <> " [" <> litL opts ret <> "] | s=" <> litL opts s) hhs
@@ -405,7 +404,7 @@ instance (KnownNat n
         let hhs = [hh ss, hh pp]
         if length p /= n then pure $ mkNode opts (FailT (msg0 <> " arg count=" ++ show (length p))) ("wrong length " ++ show (length p)) hhs
         else do
-          lr <- catchitNF @_ @E.SomeException (prtC @bs s (inductListC @n @a p))
+          lr <- catchitNF (prtC @bs s (inductListC @n @a p))
           pure $ case lr of
             Left e -> mkNode opts (FailT (msg0 <> "(" <> e <> ")")) ("s=" <> s) hhs
             Right ret -> mkNode opts (PresentT ret) (msg0 <> " [" <> litL opts ret <> "] | s=" <> litL opts s) hhs
