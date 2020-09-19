@@ -63,7 +63,7 @@ import qualified Data.Type.Equality as DE
 -- >>> import qualified Data.Text as T
 
 
--- | similar to an if statement: if \'p\' then run \'q\' else run \'r\'
+-- | similar to an if statement: if @p@ then run @q@ else run @r@
 --
 -- >>> pz @(If (Gt 4) "greater than 4" "less than or equal to 4") 10
 -- PresentT "greater than 4"
@@ -74,7 +74,7 @@ import qualified Data.Type.Equality as DE
 -- >>> pz @(If (Snd == "a") '("xxx",Fst + 13) (If (Snd == "b") '("yyy",Fst + 7) (Failt _ "oops"))) (99,"b")
 -- PresentT ("yyy",106)
 --
--- >>> pl @(If (Len > 2) (Map (Succ Id) Id) (FailS "someval")) [12,15,16]
+-- >>> pl @(If (Len > 2) (Map Succ Id) (FailS "someval")) [12,15,16]
 -- Present [13,16,17] (If 'True [13,16,17])
 -- PresentT [13,16,17]
 --
@@ -174,7 +174,7 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- r = the value
 -- e = otherwise  -- leave til later
 
--- | tries to match the value \'r\' with a condition in \'ps\' and if there is a match calls the associated \'qs\' entry else run \'e\'
+-- | tries to match the value @r@ with a condition in @ps@ and if there is a match calls the associated @qs@ entry else run @e@
 --
 -- >>> pl @(Case (Snd >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 15
 -- Present "gt3" (Case(0 of 2) "gt3" | 15)
@@ -206,7 +206,7 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 --
 data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 
--- | like 'Case' but uses a generic error message (skips the \'e\' parameter)
+-- | like 'Case' but uses a generic error message (skips the @e@ parameter)
 --
 -- >>> pl @(Case' '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Error Case:no match (Case:otherwise failed:Proxy)
@@ -344,13 +344,13 @@ instance (KnownNat n
 
 data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 
--- isbn 10 tests (dont need first guard as Zip enforces same length: handles case insensitive \'x\' as check digit)
+-- isbn 10 tests (dont need first guard as Zip enforces same length: handles case insensitive @x@ as check digit)
 
 
 -- | Guards contain a type level list of tuples the action to run on failure of the predicate and the predicate itself
 --   Each tuple validating against the corresponding value in a value list
 --
--- \'prt\' receives (Int,a) as input which is the position and value if there is a failure
+-- @prt@ receives (Int,a) as input which is the position and value if there is a failure
 --
 -- >>> pz @(Guards '[ '("arg1 failed",Gt 4), '("arg2 failed", Same 4)]) [17,4]
 -- PresentT [17,4]
@@ -753,7 +753,7 @@ instance ( x ~ [a]
   type PP (GuardsN prt n p) x = PP (GuardsNT prt n p) x
   eval _ = eval (Proxy @(GuardsNT prt n p))
 
--- | \'p\' is the predicate and on failure of the predicate runs \'prt\'
+-- | @p@ is the predicate and on failure of the predicate runs @prt@
 --
 -- >>> pz @(Guard "expected > 3" (Gt 3)) 17
 -- PresentT 17
@@ -784,15 +784,15 @@ instance ( x ~ [a]
 -- Error someval(8) (Map(i=2, a=3) excnt=8)
 -- FailT "someval(8)"
 --
--- >>> pl @(Guard "oops" (Len > 2) >> Map (Succ Id) Id) [12,15,16]
+-- >>> pl @(Guard "oops" (Len > 2) >> Map Succ Id) [12,15,16]
 -- Present [13,16,17] ((>>) [13,16,17] | {Map [13,16,17] | [12,15,16]})
 -- PresentT [13,16,17]
 --
--- >>> pl @(Guard "err" (Len > 2) >> Map (Succ Id) Id) [12]
+-- >>> pl @(Guard "err" (Len > 2) >> Map Succ Id) [12]
 -- Error err
 -- FailT "err"
 --
--- >>> pl @(Guard (PrintF "err found len=%d" Len) (Len > 5) >> Map (Succ Id) Id) [12,15,16]
+-- >>> pl @(Guard (PrintF "err found len=%d" Len) (Len > 5) >> Map Succ Id) [12,15,16]
 -- Error err found len=3
 -- FailT "err found len=3"
 --
@@ -844,7 +844,7 @@ instance (P prt a
           Right ee -> mkNode opts (FailT ee) (msg0 <> nullSpace (topMessage pp)) [hh pp, hh qq]
       Right True -> pure $ mkNode opts TrueT "" [hh pp]  -- dont show the guard message if successful
 
--- | uses 'Guard' but negates \'p\'
+-- | uses 'Guard' but negates @p@
 --
 -- >>> pl @(HeadFail "failedn" Id &&& (Len == 1 >> ExitWhen "ExitWhen" Id) >> Fst) [3]
 -- Error ExitWhen
@@ -878,11 +878,11 @@ instance (P prt a
 -- Present [False,False,True,True,True] (Map [False,False,True,True,True] | [1,2,3,4,5])
 -- PresentT [False,False,True,True,True]
 --
--- >>> pl @(ExitWhen "err" (Len > 2) >> Map (Succ Id) Id) [12,15,16]
+-- >>> pl @(ExitWhen "err" (Len > 2) >> Map Succ Id) [12,15,16]
 -- Error err
 -- FailT "err"
 --
--- >>> pl @(ExitWhen "err" (Len > 2) >> Map (Succ Id) Id) [12]
+-- >>> pl @(ExitWhen "err" (Len > 2) >> Map Succ Id) [12]
 -- Present [13] ((>>) [13] | {Map [13] | [12]})
 -- PresentT [13]
 --

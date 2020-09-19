@@ -40,10 +40,10 @@ suite =
 allTests :: [IO ()]
 allTests =
   [ expectPE (PresentT [False,True,True,False]) $ pl @'[Gt 5, Lt 9, Same 4, W 'False] 4
-  , expectPE (PresentT [21,19,20,40,60,2]) $ pl @'[Succ Id, Pred Id, Id, Id + Id, Id * 3, Id `Mod` 3] 20
+  , expectPE (PresentT [21,19,20,40,60,2]) $ pl @'[Succ, Pred, Id, Id + Id, Id * 3, Id `Mod` 3] 20
   , expectPE (PresentT [False,False,False,True]) $ pl @(Map (Mod Id 3) Fst >> Map (Gt 1) Id) ([10,12,3,5],"ss")
   , expectPE (PresentT 5) $ pl @(Snd >> Snd >> Snd >> Snd >> Id) (9,(1,(2,(3,5))))
-  , expectPE (PresentT (-1.0)) $ pl @(Negate Id >> Dup >> First (Succ Id) >> Swap >> Fst - Snd) 4
+  , expectPE (PresentT (-1.0)) $ pl @(Negate Id >> Dup >> First Succ >> Swap >> Fst - Snd) 4
   , expectPE (PresentT False) $ pl @(Msg "someval4" (Gt 4 >> Id)) 4
   , expectPE (PresentT ()) $ pl @(Snd >> Snd >> Snd >> Snd >> Id) (1,('a',(3,(True,()))))
   , expectPE (PresentT True) $ pl @(Thd >> Fst) (1,2,(True,4))
@@ -52,7 +52,7 @@ allTests =
   , expectPE (PresentT [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 -% 1 ) >> Wrap (MM.First _) Id)) Id >> Map SapA Id >> Map ('Just (Unwrap Id)) Id) [Nothing,Just 10,Just 20,Nothing,Just 30]
 
   , expectPE (PresentT (True,3.4)) $ pl @(Thd >> Snd >> Fst) (1,'a',('x',((True,3.4),999)))
-  , expectPE (PresentT [13,16,17]) $ pl @(Guard "err" (Len > 2) >> Map (Succ Id) Id) [12,15,16]
+  , expectPE (PresentT [13,16,17]) $ pl @(Guard "err" (Len > 2) >> Map Succ Id) [12,15,16]
   , expectPE (PresentT 55) $ pl @(Map (Wrap (SG.Sum _) Id) Id >> MConcat Id >> Unwrap Id) [1..10]
   , expectPE (PresentT 9) $ pl @((Wrap _ Id *** Wrap (SG.Sum _) Id) >> SapA >> Unwrap Id) (4,5)
   , expectPE (PresentT (SG.Sum 9)) $ pl @((Wrap _ Id *** Wrap _ Id) >> SapA) (4,5)
@@ -62,13 +62,13 @@ allTests =
   , expectPE (PresentT [1,2,3,244]) $ pl @(Rescan Ip4RE >> OneP >> Map (ReadBase Int 10 Id) Snd >| Ip4op) "1.2.3.244"
   , expectPE (FailT "octet 1 out of range 0-255 found 256") $ pl @(Rescan Ip4RE >> OneP >> Map (ReadBase Int 10 Id) Snd >| Ip4op) "1.256.3.244"
   , expectPE (FailT "Guards:invalid length(5) expected 4") $ pl @(Rescan "(\\d+)\\.?" >> ConcatMap Snd Id >> Map (ReadBase Int 10 Id) Id >| Ip4op) "1.22.244.66.77"
-  , expectPE (PresentT 256) $ pl @(Rescan "(?i)^\\\\x([0-9a-f]{2})$" >> OneP >> Snd >> OneP >> ReadBase Int 16 Id >> Succ Id) "\\xfF"
-  , expectPE (PresentT 256) $ pl @(Rescan "(?i)^\\\\x(.{2})$" >> OneP >> Snd >> OneP >> ReadBase Int 16 Id >> Succ Id) "\\xfF"
+  , expectPE (PresentT 256) $ pl @(Rescan "(?i)^\\\\x([0-9a-f]{2})$" >> OneP >> Snd >> OneP >> ReadBase Int 16 Id >> Succ) "\\xfF"
+  , expectPE (PresentT 256) $ pl @(Rescan "(?i)^\\\\x(.{2})$" >> OneP >> Snd >> OneP >> ReadBase Int 16 Id >> Succ) "\\xfF"
   , expectPE (PresentT (("fF",(255,"ff")),False)) $ pl @(Rescan "(?i)^\\\\x([0-9a-f]{2})$" >> OneP >> Snd >> OneP >> (Id &&& (ReadBase Int 16 Id >> (Id &&& ShowBase 16 Id))) >> (Id &&& ((Id *** Snd) >> Fst == Snd))) "\\xfF"
   , expectPE (PresentT [31,11,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> Map (ReadBase Int 10 Id) Snd >| Ddmmyyyyop) "31-11-1999"
   , expectPE (PresentT (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE) >> ReadP TimeOfDay Id) "23:13:59"
   , expectPE (FailT "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE) >> ReadP TimeOfDay Id) "23:13:60"
-  , expectPE (PresentT (124,["1","2","2"])) $ pl @(Left' >> (Succ Id &&& (Pred Id >> ShowP Id >> Ones))) (Left 123)
+  , expectPE (PresentT (124,["1","2","2"])) $ pl @(Left' >> (Succ &&& (Pred >> ShowP Id >> Ones))) (Left 123)
   , expectPE (PresentT (1,("asdf",True))) $ pl @'(1,'("asdf",'True)) ()
   , expectPE (PresentT (12, False)) $ pl @('These Id (Not Id)) (These 12 True)
     --- have to wrap with W cos different kinds
@@ -96,7 +96,7 @@ allTests =
   , (@?=) (Just ()) ((_TrueT # ()) ^? _TrueT)
   , (@?=) (Just ()) ((_FalseT # ()) ^? _FalseT)
   , (@?=) (Just 'x') ((_PresentT # 'x') ^? _PresentT)
-  , expectPE (PresentT (111,'b')) $ pl @('(123,Char1 "c") >> (Id - 12 *** Pred Id)) ()
+  , expectPE (PresentT (111,'b')) $ pl @('(123,Char1 "c") >> (Id - 12 *** Pred)) ()
   , expectPE (FailT "'Nothing found Just") $ pl @'Nothing (Just 12)
 
   -- need to fill in the types for both even in ghci
@@ -113,7 +113,7 @@ allTests =
   , expectPE (PresentT 23) $ pl @(Fst + (Snd >> Last)) (10,[12,13])
   , expectPE (PresentT 157) $ pl @(Fst * (Snd >> Fst) + (Snd >> Snd) `Div` 2) (12,(13,3))
   , expectPE (PresentT (Proxy @'["xy","xy","xy","xy"])) $ pl @(Proxy (RepeatT 4 "xy")) 3
-  , expectPE (PresentT (66788,26232)) $ pl @(Last >> Id * 123 >> Dup >> (Pred Id *** (ShowP Id >> Rescan "(\\d{2})" >> Concat (ConcatMap Snd Id) >> ReadBase Int 16 Id))) [12,13,543::Int]
+  , expectPE (PresentT (66788,26232)) $ pl @(Last >> Id * 123 >> Dup >> (Pred *** (ShowP Id >> Rescan "(\\d{2})" >> Concat (ConcatMap Snd Id) >> ReadBase Int 16 Id))) [12,13,543::Int]
 
 
   , expectPE (PresentT ('x',('x',"someval"))) $ pl @Duplicate ('x',"someval")
@@ -156,13 +156,13 @@ allTests =
   , expectPE (PresentT (4,"helo|oleh")) $ pl @'(Len, Id <> "|" <> Reverse) "helo"
   , expectPE (PresentT (123,"helo")) $ pl @'(Snd, Fst) ("helo",123)
   , expectPE (PresentT (4,"helo","oleh")) $ pl @'(Len, Id, Reverse) "helo"
-  , expectPE (PresentT [1,2,3,1000,998]) $ pl @'[W 1, W 2, W 3, Succ Id, Pred Id] 999
-  , expectPE (PresentT [3996,998]) $ pl @'[Id * 4, Pred Id] 999
+  , expectPE (PresentT [1,2,3,1000,998]) $ pl @'[W 1, W 2, W 3, Succ, Pred] 999
+  , expectPE (PresentT [3996,998]) $ pl @'[Id * 4, Pred] 999
 
 
   -- test semigroup interaction
   , expectEQR (These (PresentT 6) (FailT "xyzhello")) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(FailS "xyz") 5) <> fmap That (pz @(FailS "hello") 1)
-  , expectEQR (These (PresentT 6) (PresentT ("5",6))) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(ShowP Id &&& Succ Id) 5)
+  , expectEQR (These (PresentT 6) (PresentT ("5",6))) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(ShowP Id &&& Succ) 5)
 -- test options
   , oRecursion testopts1 @?= 11
   , oDebug testopts1 @?= DVerbose

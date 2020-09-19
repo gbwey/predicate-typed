@@ -255,7 +255,7 @@ instance (P prt a
          Left e -> pure e
          Right msg -> prefixMsg msg <$> eval (Proxy @p) opts a
 
--- | run the expression \'p\' but remove the subtrees
+-- | run the expression @p@ but remove the subtrees
 data Hide p
 -- type H p = Hide p -- doesnt work with %   -- unsaturated!
 
@@ -277,7 +277,7 @@ instance Typeable t => P (Hole t) a where
     let msg0 = "Hole(" <> showT @t <> ")"
     in pure $ mkNode opts (FailT msg0) "you probably meant to get access to the type of PP only and not evaluate" []
 
--- | override the display width for the expression \'p\'
+-- | override the display width for the expression @p@
 data Width (n :: Nat) p
 
 instance (KnownNat n
@@ -687,7 +687,7 @@ instance (Show a
           Just d -> mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
 
 -- | expects Nothing otherwise it fails
---   if the value is Nothing then it returns \'Proxy a\' as this provides type information
+--   if the value is Nothing then it returns @Proxy a@ as this provides type information
 --
 -- >>> pz @'Nothing Nothing
 -- PresentT Proxy
@@ -704,7 +704,7 @@ instance P 'Nothing (Maybe a) where
          Just _ -> mkNode opts (FailT (msg0 <> " found Just")) "" []
 
 -- omitted Show x so we can have less ambiguity
--- | extracts the \'a\' from type level \'Either a b\' if the value exists
+-- | extracts the @a@ from type level @Either a b@ if the value exists
 --
 -- >>> pz @('Left Id) (Left 123)
 -- PresentT 123
@@ -738,7 +738,7 @@ instance ( PP p x ~ Either a b
           Left a -> mkNode opts (PresentT a) "Left" [hh pp]
           Right _b -> mkNode opts (FailT (msg0 <> " found Right")) "" [hh pp]
 
--- | extracts the \'b\' from type level \'Either a b\' if the value exists
+-- | extracts the @b@ from type level @Either a b@ if the value exists
 --
 -- >>> pl @('Right Id) (Right 123)
 -- Present 123 (Right)
@@ -771,7 +771,7 @@ instance ( PP p x ~ Either a b
 
 -- removed Show x: else ambiguity errors in TestPredicate
 
--- | extracts the \'a\' from type level \'These a b\' if the value exists
+-- | extracts the @a@ from type level @These a b@ if the value exists
 --
 -- >>> pl @('This Id) (This 12)
 -- Present 12 (This)
@@ -803,7 +803,7 @@ instance ( PP p x ~ These a b
           That _b -> mkNode opts (FailT (msg0 <> " found That")) "" [hh pp]
           These _a _b -> mkNode opts (FailT (msg0 <> " found These")) "" [hh pp]
 
--- | extracts the \'b\' from type level \'These a b\' if the value exists
+-- | extracts the @b@ from type level @These a b@ if the value exists
 --
 -- >>> pz @('That Id) (That 123)
 -- PresentT 123
@@ -831,7 +831,7 @@ instance ( PP p x ~ These a b
           These _a _b -> mkNode opts (FailT (msg0 <> " found These")) "" [hh pp]
 
 
--- | extracts the (a,b) from type level \'These a b\' if the value exists
+-- | extracts the (a,b) from type level @These a b@ if the value exists
 --
 -- >>> pz @('These Id Id) (These 123 "abc")
 -- PresentT (123,"abc")
@@ -1379,7 +1379,7 @@ instance (Foldable t
 --type OneP = Guard "expected list of length 1" (Len == 1) >> Head
 --type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head
 
--- | A predicate that determines if the value is between \'p\' and \'q\'
+-- | A predicate that determines if the value is between @p@ and @q@
 --
 -- >>> pz @(Between 5 8 Len) [1,2,3,4,5,5,7]
 -- TrueT
@@ -1423,7 +1423,7 @@ instance (Ord (PP p x)
                else mkNodeB opts False (showL opts r <> " <= " <> showL opts q) hhs
 
 
--- | A operator predicate that determines if the value is between \'p\' and \'q\'
+-- | A operator predicate that determines if the value is between @p@ and @q@
 --
 -- >>> pz @(5 <..> 8) 6
 -- TrueT
@@ -1779,7 +1779,7 @@ instance (Show (ExtractL6T (PP p x))
 
 -- | similar to 'map'
 --
--- >>> pz @(Map (Pred Id) Id) [1..5]
+-- >>> pz @(Map Pred Id) [1..5]
 -- PresentT [0,1,2,3,4]
 --
 data Map p q
@@ -1811,17 +1811,17 @@ instance (Show (PP p a)
 
 -- | processes a type level list predicates running each in sequence: see 'Predicate.>>'
 --
--- >>> pz @(Do [Pred Id, ShowP Id, Id &&& Len]) 9876543
+-- >>> pz @(Do [Pred, ShowP Id, Id &&& Len]) 9876543
 -- PresentT ("9876542",7)
 --
--- >>> pz @(Do '[W 123, W "xyz", Len &&& Id, Pred Id *** Id<>Id]) ()
+-- >>> pz @(Do '[W 123, W "xyz", Len &&& Id, Pred *** Id<>Id]) ()
 -- PresentT (2,"xyzxyz")
 --
--- >>> pl @(Do '[Succ Id,Id,ShowP Id,Ones,Map (ReadBase Int 8 Id) Id]) 1239
+-- >>> pl @(Do '[Succ,Id,ShowP Id,Ones,Map (ReadBase Int 8 Id) Id]) 1239
 -- Present [1,2,4,0] ((>>) [1,2,4,0] | {Map [1,2,4,0] | ["1","2","4","0"]})
 -- PresentT [1,2,4,0]
 --
--- >>> pl @(Do '[Pred Id,Id,ShowP Id,Ones,Map (ReadBase Int 8 Id) Id]) 1239
+-- >>> pl @(Do '[Pred,Id,ShowP Id,Ones,Map (ReadBase Int 8 Id) Id]) 1239
 -- Error invalid base 8 (1238)
 -- FailT "invalid base 8"
 --

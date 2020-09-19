@@ -301,7 +301,7 @@ instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
   eval _ = eval (Proxy @(ConcatMapT p q))
 
 
--- | similar to 'cycle' but for a fixed number \'n\'
+-- | similar to 'cycle' but for a fixed number @n@
 --
 -- >>> pz @(Cycle 5 Id) [1,2]
 -- PresentT [1,2,1,2,1]
@@ -497,68 +497,58 @@ instance P (FoldMapT t p) x => P (FoldMap t p) x where
 
 -- | similar to 'Data.Foldable.and'
 --
--- >>> pz @(Ands Id) [True,True,True]
+-- >>> pz @Ands [True,True,True]
 -- TrueT
 --
--- >>> pl @(Ands Id) [True,True,True,False]
+-- >>> pl @Ands [True,True,True,False]
 -- False (Ands(4) i=3 | [True,True,True,False])
 -- FalseT
 --
--- >>> pz @(Ands Id) []
+-- >>> pz @Ands []
 -- TrueT
 --
-data Ands p
+data Ands
 
-instance (PP p x ~ t a
-        , P p x
+instance (x ~ t a
         , Show (t a)
         , Foldable t
         , a ~ Bool
-        ) => P (Ands p) x where
-  type PP (Ands p) x = Bool
-  eval _ opts x = do
+        ) => P Ands x where
+  type PP Ands x = Bool
+  eval _ opts x =
     let msg0 = "Ands"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let msg1 = msg0 ++ "(" ++ show (length p) ++ ")"
-            w = case findIndex not (toList p) of
-                  Nothing -> ""
-                  Just i -> " i="++show i
-        in mkNodeB opts (and p) (msg1 <> w <> showVerbose opts " | " p) [hh pp]
+        msg1 = msg0 ++ "(" ++ show (length x) ++ ")"
+        w = case findIndex not (toList x) of
+              Nothing -> ""
+              Just i -> " i="++show i
+    in pure $ mkNodeB opts (and x) (msg1 <> w <> showVerbose opts " | " x) []
 
 -- | similar to 'Data.Foldable.or'
 --
--- >>> pz @(Ors Id) [False,False,False]
+-- >>> pz @Ors [False,False,False]
 -- FalseT
 --
--- >>> pl @(Ors Id) [True,True,True,False]
+-- >>> pl @Ors [True,True,True,False]
 -- True (Ors(4) i=0 | [True,True,True,False])
 -- TrueT
 --
--- >>> pl @(Ors Id) []
+-- >>> pl @Ors []
 -- False (Ors(0) | [])
 -- FalseT
 --
-data Ors p
+data Ors
 
-instance (PP p x ~ t a
-        , P p x
+instance (x ~ t a
         , Show (t a)
         , Foldable t
         , a ~ Bool
-        ) => P (Ors p) x where
-  type PP (Ors p) x = Bool
-  eval _ opts x = do
+        ) => P Ors x where
+  type PP Ors x = Bool
+  eval _ opts x =
     let msg0 = "Ors"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let msg1 = msg0 ++ "(" ++ show (length p) ++ ")"
-            w = case findIndex id (toList p) of
-                  Nothing -> ""
-                  Just i -> " i=" ++ show i
-        in mkNodeB opts (or p) (msg1 <> w <> showVerbose opts " | " p) [hh pp]
+        msg1 = msg0 ++ "(" ++ show (length x) ++ ")"
+        w = case findIndex id (toList x) of
+              Nothing -> ""
+              Just i -> " i=" ++ show i
+    in pure $ mkNodeB opts (or x) (msg1 <> w <> showVerbose opts " | " x) []
 

@@ -61,6 +61,7 @@ module Predicate.Data.Extra (
 
   , IsPrime
   , PrimeNext
+  , PrimePrev
   , PrimeFactors
   , Primes
   , IsLuhn
@@ -498,7 +499,7 @@ instance Functor f => P FMapSnd (f (x,a)) where
   eval _ opts mb = pure $ mkNode opts (PresentT (snd <$> mb)) "FMapSnd" []
 
 -- | just run the effect ignoring the result passing the original value through
--- for example for use with Stdout so it doesnt interfere with the \'a\' on the rhs unless there is an failure
+-- for example for use with Stdout so it doesnt interfere with the @a@ on the rhs unless there is an failure
 data Skip p
 
 instance ( Show (PP p a)
@@ -512,7 +513,7 @@ instance ( Show (PP p a)
       Left e -> e
       Right p -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts p) [hh pp]
 
--- | run \'p\' for the effect and then run \'q\' using that original value
+-- | run @p@ for the effect and then run @q@ using that original value
 data p |> q
 type SkipLT p q = Skip p >> q
 infixr 1 |>
@@ -521,7 +522,7 @@ instance P (SkipLT p q) x => P (p |> q) x where
   type PP (p |> q) x = PP (SkipLT p q) x
   eval _ = eval (Proxy @(SkipLT p q))
 
--- | run run \'p\' and then \'q\' for the effect but using the result from \'p\'
+-- | run run @p@ and then @q@ for the effect but using the result from @p@
 data p >| q
 type SkipRT p q = p >> Skip q
 infixr 1 >|
@@ -530,7 +531,7 @@ instance P (SkipRT p q) x => P (p >| q) x where
   type PP (p >| q) x = PP (SkipRT p q) x
   eval _ = eval (Proxy @(SkipRT p q))
 
--- | run both \'p\' and \'q\' for their effects but ignoring the results
+-- | run both @p@ and @q@ for their effects but ignoring the results
 data p >|> q
 type SkipBothT p q = Skip p >> Skip q
 infixr 1 >|>
@@ -796,30 +797,51 @@ instance (x ~ a
 
 -- | get the next prime number
 --
--- >>> pz @(PrimeNext Id) 6
+-- >>> pz @PrimeNext 6
 -- PresentT 7
 --
--- >>> pz @(ScanN 4 (PrimeNext Id) Id) 3
+-- >>> pz @(ScanN 4 PrimeNext Id) 3
 -- PresentT [3,5,7,11,13]
 --
-data PrimeNext p
+data PrimeNext
 
-instance (PP p x ~ a
-        , P p x
-        , Show a
-        , Integral a
-        ) => P (PrimeNext p) x where
-  type PP (PrimeNext p) x = Integer
-  eval _ opts x = do
+instance ( Show x
+         , Integral x
+         ) => P PrimeNext x where
+  type PP PrimeNext x = Integer
+  eval _ opts x =
     let msg0 = "PrimeNext"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let ret = Safe.headNote msg0 $ dropWhile (<= fromIntegral p) primes
-        in mkNode opts (PresentT ret) (msg0 <> showVerbose opts " | " p) [hh pp]
+        ret = Safe.headNote msg0 $ dropWhile (<= fromIntegral x) primes
+    in pure $ mkNode opts (PresentT ret) (msg0 <> showVerbose opts " | " x) []
 
--- | get list of \'n\' primes
+-- | get the next prime number
+--
+-- >>> pz @PrimePrev 6
+-- PresentT 5
+--
+-- >>> pz @PrimePrev 5
+-- PresentT 3
+--
+-- >>> pz @PrimePrev (-206)
+-- PresentT 2
+--
+-- >>> pz @(ScanN 6 PrimePrev Id) 11
+-- PresentT [11,7,5,3,2,2,2]
+--
+data PrimePrev
+
+instance ( Show x
+         , Integral x
+         ) => P PrimePrev x where
+  type PP PrimePrev x = Integer
+  eval _ opts x =
+    let msg0 = "PrimePrev"
+        ret = case unsnoc $ takeWhile (< fromIntegral x) primes of
+                Just (_,p) -> p
+                Nothing -> 2
+    in pure $ mkNode opts (PresentT ret) (msg0 <> showVerbose opts " | " x) []
+
+-- | get list of @n@ primes
 --
 -- >>> pz @(Primes Id) 5
 -- PresentT [2,3,5,7,11]
@@ -952,9 +974,9 @@ instance P (ProxyT t) x where
 -- now takes the FailT string and x so you can print more detail if you want
 -- need the proxy so we can fail without having to explicitly specify a type
 
--- | run an expression \'p\' and on failure run \'q\'
+-- | run an expression @p@ and on failure run @q@
 --
--- >>> pz @(Catch (Succ Id) (Fst >> Second (ShowP Id) >> PrintT "%s %s" Id >> 'LT)) GT
+-- >>> pz @(Catch Succ (Fst >> Second (ShowP Id) >> PrintT "%s %s" Id >> 'LT)) GT
 -- PresentT LT
 --
 -- >>> pz @(Len > 1 && Catch (Id !! 3 == 66) 'False) [1,2]
@@ -986,12 +1008,12 @@ instance P (ProxyT t) x where
 --
 data Catch p q
 
--- | run an expression \'p\' and on failure print a custom error \'s\' using the error string and the input value
+-- | run an expression @p@ and on failure print a custom error @s@ using the error string and the input value
 --
--- >>> pz @(Catch' (Succ Id) (Second (ShowP Id) >> PrintT "%s %s" Id)) GT
+-- >>> pz @(Catch' Succ (Second (ShowP Id) >> PrintT "%s %s" Id)) GT
 -- FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument GT"
 --
--- >>> pz @(Catch' (Succ Id) (Second (ShowP Id) >> PrintT "%s %s" Id)) LT
+-- >>> pz @(Catch' Succ (Second (ShowP Id) >> PrintT "%s %s" Id)) LT
 -- PresentT EQ
 --
 -- >>> pl @(Catch' (Failt Int "someval") (PrintT "msg=%s caught(%03d)" Id)) (44 :: Int)
@@ -1082,7 +1104,7 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 -- Present ("abc",()) (K '("abc",()))
 -- PresentT ("abc",())
 --
--- >>> pl @(Dot '[K "skip",L6,Lift Dup,Succ] Id) ()
+-- >>> pl @(Dot '[K "skip",L6,Lift Dup,Lift Succ] Id) ()
 -- Present "skip" (K '"skip")
 -- PresentT "skip"
 --
@@ -1090,7 +1112,7 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 -- Present 'a' (Thd 'a' | ("W",9,'a'))
 -- PresentT 'a'
 --
--- >>> pl @((L3 $ L2 $ L1 $ K Id "dud") >> Pred Id) ((1,("W",9,'a')),(3,4))
+-- >>> pl @((L3 $ L2 $ L1 $ K Id "dud") >> Pred) ((1,("W",9,'a')),(3,4))
 -- Present '`' ((>>) '`' | {Pred '`' | 'a'})
 -- PresentT '`'
 --
@@ -1116,7 +1138,7 @@ instance P (LiftT p q) x => P (Lift p q) x where
   type PP (Lift p q) x = PP (LiftT p q) x
   eval _ = eval (Proxy @(LiftT p q))
 
--- | application using a Proxy: \'q\' must be of kind Type else ambiguous k0 error
+-- | application using a Proxy: @q@ must be of kind Type else ambiguous k0 error
 --
 -- >>> pl @(Apply1 (MsgI "hello ")) (Proxy @(W "there"),()) -- have to wrap Symbol
 -- Present "there" (hello W '"there")
@@ -1137,7 +1159,7 @@ instance P (LiftT p q) x => P (Lift p q) x where
 -- >>> pz @('(Proxy (W 12),9) >> Apply1 ((+) Id)) ()
 -- PresentT 21
 --
--- >>> pz @('(Proxy (W 5),()) >> Apply1 Succ) ()
+-- >>> pz @('(Proxy (W 5),()) >> Apply1 (Lift Succ)) ()
 -- PresentT 6
 --
 -- >>> pz @('(Proxy (W 12),Id) >> Apply1 ((+) Id)) 9
@@ -1150,7 +1172,7 @@ instance forall p q x . (P (p q) x)
   eval _ opts (Proxy, x) =
     eval (Proxy @(p q)) opts x
 
--- | application using a Proxy: \'q\' and \'r\' must be of kind Type else ambiguous k0 error
+-- | application using a Proxy: @q@ and @r@ must be of kind Type else ambiguous k0 error
 --
 -- >>> pl @(Apply2 (+)) ((Proxy @Fst,Proxy @(Length Snd)),(5,"abcdef"))
 -- Present 11 (5 + 6 = 11)

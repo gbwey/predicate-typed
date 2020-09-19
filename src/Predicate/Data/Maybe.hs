@@ -62,10 +62,10 @@ import Data.Maybe
 
 -- | similar to 'Data.Maybe.fromJust'
 --
--- >>> pz @(Just' >> Succ Id) (Just 20)
+-- >>> pz @(Just' >> Succ) (Just 20)
 -- PresentT 21
 --
--- >>> pz @(Just' >> Succ Id) Nothing
+-- >>> pz @(Just' >> Succ) Nothing
 -- FailT "Just' found Nothing"
 --
 data Just'
@@ -117,12 +117,12 @@ instance ( PP p x ~ a
 
 -- | similar to 'Data.Maybe.maybe'
 --
--- provides a Proxy to the result of \'q\' but does not provide the surrounding context
+-- provides a Proxy to the result of @q@ but does not provide the surrounding context
 --
--- >>> pz @(MaybeIn "foundnothing" (ShowP (Pred Id))) (Just 20)
+-- >>> pz @(MaybeIn "foundnothing" (ShowP Pred)) (Just 20)
 -- PresentT "19"
 --
--- >>> pz @(MaybeIn "found nothing" (ShowP (Pred Id))) Nothing
+-- >>> pz @(MaybeIn "found nothing" (ShowP Pred)) Nothing
 -- PresentT "found nothing"
 --
 -- >>> pl @(MaybeIn 'True Id) (Nothing @Bool) -- need @() else breaks
@@ -145,15 +145,15 @@ instance ( PP p x ~ a
 -- Present [] (MaybeIn(Nothing) [] | Proxy)
 -- PresentT []
 --
--- >>> pl @(MaybeIn (Failp "err") (Succ Id)) (Just 116)
+-- >>> pl @(MaybeIn (Failp "err") Succ) (Just 116)
 -- Present 117 (MaybeIn(Just) 117 | 116)
 -- PresentT 117
 --
--- >>> pl @(MaybeIn 99 (Succ Id)) (Nothing @Int)
+-- >>> pl @(MaybeIn 99 Succ) (Nothing @Int)
 -- Present 99 (MaybeIn(Nothing) 99 | Proxy)
 -- PresentT 99
 --
--- >>> pl @(MaybeIn (Failp "someval") (Succ Id)) (Nothing @())
+-- >>> pl @(MaybeIn (Failp "someval") Succ) (Nothing @())
 -- Error someval (MaybeIn(Nothing))
 -- FailT "someval"
 --
@@ -335,8 +335,8 @@ instance P (CatMaybesT q) x => P (CatMaybes q) x where
   type PP (CatMaybes q) x = PP (CatMaybesT q) x
   eval _ = eval (Proxy @(CatMaybesT q))
 
--- | Convenient method to convert a value \'p\' to a 'Maybe' based on a predicate \'b\'
--- if \'b\' then Just \'p\' else Nothing
+-- | Convenient method to convert a value @p@ to a 'Maybe' based on a predicate @b@
+-- if @b@ then Just @p@ else Nothing
 --
 -- >>> pz @(MaybeBool (Id > 4) Id) 24
 -- PresentT (Just 24)

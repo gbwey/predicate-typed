@@ -331,7 +331,7 @@ instance (Show (ConsT s)
         b = as ^? _Snoc
     in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
 
--- | rotate a list \'p\' \'n\' units
+-- | rotate a list @p@ @n@ units
 --
 -- >>> pz @(Rotate 0 Id) [1,2,3,4]
 -- PresentT [1,2,3,4]
@@ -845,7 +845,7 @@ instance (P n a
                      else q <> replicate diff p
             in mkNode opts (PresentT bs) (show01 opts msg1 bs q) (hhs <> [hh qq])
 
--- | left pad \'q\' with \'n\' values from \'p\'
+-- | left pad @q@ with @n@ values from @p@
 --
 -- >>> pl @(PadL 5 0 Id) [1..3]
 -- Present [0,0,1,2,3] (PadL 5 pad=0 [0,0,1,2,3] | [1,2,3])
@@ -871,7 +871,7 @@ instance P (PadLT n p q) x => P (PadL n p q) x where
   type PP (PadL n p q) x = PP (PadLT n p q) x
   eval _ = eval (Proxy @(PadLT n p q))
 
--- | right pad \'q\' with \'n\' values from \'p\'
+-- | right pad @q@ with @n@ values from @p@
 --
 -- >>> pl @(PadR 5 8 Id) [1..3]
 -- Present [1,2,3,8,8] (PadR 5 pad=8 [1,2,3,8,8] | [1,2,3])
@@ -892,7 +892,7 @@ instance P (PadRT n p q) x => P (PadR n p q) x where
   type PP (PadR n p q) x = PP (PadRT n p q) x
   eval _ = eval (Proxy @(PadRT n p q))
 
--- | split a list \'p\' into parts using the lengths in the type level list \'ns\'
+-- | split a list @p@ into parts using the lengths in the type level list @ns@
 --
 -- >>> pz @(SplitAts '[2,3,1,1] Id) "hello world"
 -- PresentT ["he","llo"," ","w","orld"]
@@ -991,7 +991,7 @@ instance P (DropT n p) x => P (Drop n p) x where
   type PP (Drop n p) x = PP (DropT n p) x
   eval _ = eval (Proxy @(DropT n p))
 
--- | splits a list pointed to by \'p\' into lists of size \'n\'
+-- | splits a list pointed to by @p@ into lists of size @n@
 --
 -- >>> pz @(ChunksOf 2) "abcdef"
 -- PresentT ["ab","cd","ef"]
@@ -1018,7 +1018,7 @@ instance P (ChunksOfT n) x => P (ChunksOf n) x where
   type PP (ChunksOf n) x = PP (ChunksOfT n) x
   eval _ = eval (Proxy @(ChunksOfT n))
 
--- | splits a list pointed to by \'p\' into lists of size \'n\' with a gap of \'i\'
+-- | splits a list pointed to by @p@ into lists of size @n@ with a gap of @i@
 --
 -- >>> pz @(Unfoldr (If Null (MkNothing _) (MkJust '(Take 3 Id,Drop 2 Id))) Id) [1..10]
 -- PresentT [[1,2,3],[3,4,5],[5,6,7],[7,8,9],[9,10]]
@@ -1078,7 +1078,7 @@ instance (GetBool keep
         let ret = filter (bool not id keep . (`elem` p)) q
         in mkNode opts (PresentT ret) (show01' opts msg0 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
--- | filters a list \'q\' keeping those elements in \'p\'
+-- | filters a list @q@ keeping those elements in @p@
 --
 -- >>> pz @(Keep '[5] '[1,5,5,2,5,2]) ()
 -- PresentT [5,5,5]
@@ -1093,7 +1093,7 @@ instance P (KeepT p q) x => P (Keep p q) x where
   type PP (Keep p q) x = PP (KeepT p q) x
   eval _ = eval (Proxy @(KeepT p q))
 
--- | filters a list \'q\' removing those elements in \'p\'
+-- | filters a list @q@ removing those elements in @p@
 --
 -- >>> pz @(Remove '[5] '[1,5,5,2,5,2]) ()
 -- PresentT [1,2,2]

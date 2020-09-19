@@ -377,7 +377,7 @@ instance (P q a
 -- Present 'c' ((>>) 'c' | {IxL(2) 'c' | p="abcdef" | q=2})
 -- PresentT 'c'
 --
--- >>> pl @((Len >> Pred Id) &&& Id >> Snd !! Fst) "abcdef"
+-- >>> pl @((Len >> Pred) &&& Id >> Snd !! Fst) "abcdef"
 -- Present 'f' ((>>) 'f' | {IxL(5) 'f' | p="abcdef" | q=5})
 -- PresentT 'f'
 --

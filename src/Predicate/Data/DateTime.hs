@@ -104,7 +104,7 @@ instance (PP p x ~ String
             b = formatTime defaultTimeLocale p q
         in mkNode opts (PresentT b) (msg1 <> " " <> litL opts b <> showVerbose opts " | " q) [hh pp, hh qq]
 
--- | similar to 'Data.Time.parseTimeM' where \'t\' is the 'Data.Time.ParseTime' type, \'p\' is the datetime format and \'q\' points to the content to parse
+-- | similar to 'Data.Time.parseTimeM' where @t@ is the 'Data.Time.ParseTime' type, @p@ is the datetime format and @q@ points to the content to parse
 --
 -- >>> pz @(ParseTimeP LocalTime "%F %T" Id) "2019-05-24 05:19:59"
 -- PresentT 2019-05-24 05:19:59
@@ -112,7 +112,7 @@ instance (PP p x ~ String
 -- >>> pz @(ParseTimeP LocalTime "%F %T" "2019-05-24 05:19:59") (Right "never used")
 -- PresentT 2019-05-24 05:19:59
 --
--- keeping \'q\' as we might want to extract from a tuple
+-- keeping @q@ as we might want to extract from a tuple
 data ParseTimeP' t p q
 
 instance (ParseTime (PP t a)

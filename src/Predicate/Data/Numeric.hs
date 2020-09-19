@@ -113,7 +113,7 @@ instance (Num (PP t a)
         let b = fromInteger (fromIntegral n)
         in mkNode opts (PresentT b) (msg0 <> " " <> showL opts b) [hh nn]
 
--- | 'fromInteger' function where you need to provide the type \'t\' of the result
+-- | 'fromInteger' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(FromInteger (SG.Sum _) Id) 23
 -- PresentT (Sum {getSum = 23})
@@ -148,7 +148,7 @@ instance P (FromIntegerT t p) x => P (FromInteger t p) x where
   type PP (FromInteger t p) x = PP (FromIntegerT t p) x
   eval _ = eval (Proxy @(FromIntegerT t p))
 
--- | 'fromIntegral' function where you need to provide the type \'t\' of the result
+-- | 'fromIntegral' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(FromIntegral (SG.Sum _) Id) 23
 -- PresentT (Sum {getSum = 23})
@@ -216,7 +216,7 @@ instance (a ~ PP p x
         let r = toRational a
         in mkNode opts (PresentT r) (show01 opts msg0 r a) [hh pp]
 
--- | 'fromRational' function where you need to provide the type \'t\' of the result
+-- | 'fromRational' function where you need to provide the type @t@ of the result
 --
 -- >>> pl @(FromRational' Fst Snd) (1::Float,2 % 5)
 -- Present 0.4 (FromRational 0.4 | 2 % 5)
@@ -239,7 +239,7 @@ instance (P r a
         let b = fromRational @(PP t a) r
         in mkNode opts (PresentT b) (show01 opts msg0 b r) [hh rr]
 
--- | 'fromRational' function where you need to provide the type \'t\' of the result
+-- | 'fromRational' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(FromRational Rational Id) 23.5
 -- PresentT (47 % 2)
@@ -255,7 +255,7 @@ instance P (FromRationalT t p) x => P (FromRational t p) x where
   type PP (FromRational t p) x = PP (FromRationalT t p) x
   eval _ = eval (Proxy @(FromRationalT t p))
 
--- | 'truncate' function where you need to provide the type \'t\' of the result
+-- | 'truncate' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(Truncate Int Id) (23 % 5)
 -- PresentT 4
@@ -293,7 +293,7 @@ instance P (TruncateT t p) x => P (Truncate t p) x where
   type PP (Truncate t p) x = PP (TruncateT t p) x
   eval _ = eval (Proxy @(TruncateT t p))
 
--- | 'ceiling' function where you need to provide the type \'t\' of the result
+-- | 'ceiling' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(Ceiling Int Id) (23 % 5)
 -- PresentT 5
@@ -322,7 +322,7 @@ instance P (CeilingT t p) x => P (Ceiling t p) x where
   type PP (Ceiling t p) x = PP (CeilingT t p) x
   eval _ = eval (Proxy @(CeilingT t p))
 
--- | 'floor' function where you need to provide the type \'t\' of the result
+-- | 'floor' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(Floor Int Id) (23 % 5)
 -- PresentT 4

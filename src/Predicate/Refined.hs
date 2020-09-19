@@ -96,7 +96,7 @@ import Control.Arrow (left)
 -- >>> :set -XNoOverloadedLists
 -- >>> :m + Predicate.Prelude
 
--- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'
+-- | a simple refinement type that ensures the predicate @p@ holds for the type @a@
 --
 newtype Refined (opts :: Opt) p a = Refined a
   deriving (Show, Eq, Generic, TH.Lift)
@@ -376,7 +376,7 @@ convertRefinedT f ma = do
   Refined a <- ma -- you already got a refined in there so no need to check RefinedC
   newRefinedT @opts @p1 (f a)
 
--- | invokes the callback with the 'Refined' value if \'a\' is valid for the predicate \'p\'
+-- | invokes the callback with the 'Refined' value if @a@ is valid for the predicate @p@
 withRefinedT :: forall opts p m a b
      . ( Monad m
        , RefinedC opts p a
@@ -459,7 +459,7 @@ prtRefinedIO a = do
     Right True -> Right (Refined a)
     _ -> Left r
 
--- | returns a 'Refined' value if \'a\' is valid for the predicate \'p\'
+-- | returns a 'Refined' value if @a@ is valid for the predicate @p@
 --
 -- >>> newRefined @OL @(ReadP Int Id > 99) "123"
 -- Right (Refined "123")
@@ -527,7 +527,7 @@ newRefinedTImpl f a = do
     Right True -> return (Refined a) -- FalseP is also a failure!
     _ -> throwError $ colorBoolT' o (_ttBool tt)
 
--- | returns a wrapper 'RefinedT' around a possible 'Refined' value if \'a\' is valid for the predicate \'p\'
+-- | returns a wrapper 'RefinedT' around a possible 'Refined' value if @a@ is valid for the predicate @p@
 newRefinedT :: forall opts p a m
   . ( RefinedC opts p a
     , Monad m)

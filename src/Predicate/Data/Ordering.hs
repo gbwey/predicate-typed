@@ -77,7 +77,7 @@ import Data.Function
 -- >>> :set -XNoOverloadedLists
 -- >>> import Predicate.Prelude
 
--- | compare if expression \'p\' is greater than \'q\'
+-- | compare if expression @p@ is greater than @q@
 --
 -- >>> pl @(Gt 4) 5
 -- True (5 > 4)
@@ -90,7 +90,7 @@ type Le n = I <= n
 type Lt n = I < n
 type Ne n = I /= n
 
--- | compare if expression \'p\' is greater than \'q\'
+-- | compare if expression @p@ is greater than @q@
 --
 -- >>> pl @(Id > "xx") "abc"
 -- False ("abc" > "xx")
@@ -111,7 +111,7 @@ instance P (Cmp 'CGt p q) x => P (p > q) x where
   type PP (p > q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CGt p q))
 
--- | compare if expression \'p\' is greater than or equal to \'q\'
+-- | compare if expression @p@ is greater than or equal to @q@
 data p >= q
 infix 4 >=
 
@@ -119,7 +119,7 @@ instance P (Cmp 'CGe p q) x => P (p >= q) x where
   type PP (p >= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CGe p q))
 
--- | compare if expression \'p\' is equal to \'q\'
+-- | compare if expression @p@ is equal to @q@
 --
 -- >>> pl @(Fst == Snd) ("ab","xyzabw")
 -- False ("ab" == "xyzabw")
@@ -151,7 +151,7 @@ instance P (Cmp 'CEq p q) x => P (p == q) x where
   type PP (p == q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CEq p q))
 
--- | compare if expression \'p\' is less than or equal to \'q\'
+-- | compare if expression @p@ is less than or equal to @q@
 --
 -- >>> pl @(Not (Fst >> Len <= 6)) ([2..7],True)
 -- False (Not ((>>) True | {6 <= 6}))
@@ -176,7 +176,7 @@ instance P (Cmp 'CLe p q) x => P (p <= q) x where
   type PP (p <= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CLe p q))
 
--- | compare if expression \'p\' is less than \'q\'
+-- | compare if expression @p@ is less than @q@
 data p < q
 infix 4 <
 
@@ -184,7 +184,7 @@ instance P (Cmp 'CLt p q) x => P (p < q) x where
   type PP (p < q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CLt p q))
 
--- | compare if expression \'p\' is not equal to \'q\'
+-- | compare if expression @p@ is not equal to @q@
 --
 -- >>> pl @(Fst /= Snd) ("ab","xyzabw")
 -- True ("ab" /= "xyzabw")
@@ -197,7 +197,7 @@ instance P (Cmp 'CNe p q) x => P (p /= q) x where
   type PP (p /= q) x = Bool
   eval _ = evalBool (Proxy @(Cmp 'CNe p q))
 
--- | case-insensitive compare if string expression \'p\' is greater than \'q\'
+-- | case-insensitive compare if string expression @p@ is greater than @q@
 --
 data p >~ q
 infix 4 >~
@@ -206,7 +206,7 @@ instance P (CmpI 'CGt p q) x => P (p >~ q) x where
   type PP (p >~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CGt p q))
 
--- | case-insensitive compare if string expression \'p\' is greater than or equal to \'q\'
+-- | case-insensitive compare if string expression @p@ is greater than or equal to @q@
 data p >=~ q
 infix 4 >=~
 
@@ -214,7 +214,7 @@ instance P (CmpI 'CGe p q) x => P (p >=~ q) x where
   type PP (p >=~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CGe p q))
 
--- | case-insensitive compare if string expression \'p\' is equal to \'q\'
+-- | case-insensitive compare if string expression @p@ is equal to @q@
 data p ==~ q
 infix 4 ==~
 
@@ -222,7 +222,7 @@ instance P (CmpI 'CEq p q) x => P (p ==~ q) x where
   type PP (p ==~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CEq p q))
 
--- | case-insensitive compare if string expression \'p\' is less than or equal to \'q\'
+-- | case-insensitive compare if string expression @p@ is less than or equal to @q@
 data p <=~ q
 infix 4 <=~
 
@@ -230,7 +230,7 @@ instance P (CmpI 'CLe p q) x => P (p <=~ q) x where
   type PP (p <=~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CLe p q))
 
--- | case-insensitive compare if string expression \'p\' is less than \'q\'
+-- | case-insensitive compare if string expression @p@ is less than @q@
 data p <~ q
 infix 4 <~
 
@@ -238,7 +238,7 @@ instance P (CmpI 'CLt p q) x => P (p <~ q) x where
   type PP (p <~ q) x = Bool
   eval _ = evalBool (Proxy @(CmpI 'CLt p q))
 
--- | case-insensitive compare if string expression \'p\' is not equal to \'q\'
+-- | case-insensitive compare if string expression @p@ is not equal to @q@
 data p /=~ q
 infix 4 /=~
 
@@ -268,7 +268,7 @@ instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
 -- Present LT ((==!) "aa" < "aaaa")
 -- PresentT LT
 --
--- >>> pl @(Pairs >> Map (First (Succ Id >> Succ Id) >> Fst ==! Snd) Id) [1,2,3,6,8]
+-- >>> pl @(Pairs >> Map (First (Succ >> Succ) >> Fst ==! Snd) Id) [1,2,3,6,8]
 -- Present [GT,GT,LT,EQ] ((>>) [GT,GT,LT,EQ] | {Map [GT,GT,LT,EQ] | [(1,2),(2,3),(3,6),(6,8)]})
 -- PresentT [GT,GT,LT,EQ]
 --
@@ -382,7 +382,7 @@ instance (PP p a ~ String
         let d = on compare (map toLower) p q
         in mkNode opts (PresentT d) (msg0 <> " " <> p <> " " <> prettyOrd d <> " " <> q) [hh pp, hh qq]
 
--- | compare two values using the given ordering \'o\'
+-- | compare two values using the given ordering @o@
 --
 -- >>> pl @(Lt 4) 123
 -- False (123 < 4)
@@ -419,7 +419,7 @@ instance (GetOrd o
         let b = fn p q
         in mkNodeB opts b (showL opts p <> " " <> sfn <> " " <> showL opts q) [hh pp, hh qq]
 
--- | compare two strings ignoring case using the given ordering \'o\'
+-- | compare two strings ignoring case using the given ordering @o@
 data CmpI (o :: OrderingP) p q
 
 instance (PP p a ~ String

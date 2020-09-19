@@ -382,7 +382,7 @@ instance ( Typeable a
                           return (PresentT a2)))
 
 
--- | extracts the \'BoolT a\' constructors from the typelevel
+-- | extracts the @BoolT a@ constructors from the typelevel
 class GetBoolT a (x :: BoolT a) | x -> a where
   getBoolT :: BoolT Bool
 instance GetBoolT Bool 'TrueT where
@@ -1514,7 +1514,7 @@ type family MapT (f :: k -> k1) (xs :: [k]) :: [k1] where
   MapT f '[] = '[]
   MapT f (x ': xs) = f x ': MapT f xs
 
--- | Extract \'a\' from a list-like container
+-- | Extract @a@ from a list-like container
 type family ConsT s where
   ConsT [a] = a
   ConsT (ZipList a) = a
@@ -1745,32 +1745,32 @@ type OUNV = 'OUNV -- 'OUnicode ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
 getOpt :: forall o . OptC o => POpts
 getOpt = reifyOpts (getOptC @o)
 
--- | extract \'opts\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
+-- | extract @opts@ part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_1 x where
   T4_1 '(opts,_,_,_) = opts
--- | extract \'ip\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
+-- | extract @ip@ part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_2 x where
   T4_2 '(_,ip,_,_) = ip
--- | extract \'op\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
+-- | extract @op@ part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_3 x where
   T4_3 '(_,_,op,_) = op
--- | extract \'i\' part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
+-- | extract @i@ part of 4 tuple from the type level for use with 'Predicate.Refined2.Refined2'
 type family T4_4 x where
   T4_4 '(_,_,_,i) = i
 
--- | extract \'opts\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
+-- | extract @opts@ part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_1 x where
   T5_1 '(opts,_,_,_,_) = opts
--- | extract \'ip\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
+-- | extract @ip@ part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_2 x where
   T5_2 '(_,ip,_,_,_) = ip
--- | extract \'op\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
+-- | extract @op@ part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_3 x where
   T5_3 '(_,_,op,_,_) = op
--- | extract \'fmt\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
+-- | extract @fmt@ part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_4 x where
   T5_4 '(_,_,_,fmt,_) = fmt
--- | extract \'i\' part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
+-- | extract @i@ part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_5 x where
   T5_5 '(_,_,_,_,i) = i
 
@@ -1903,7 +1903,7 @@ badLength :: Foldable t
           -> String
 badLength as n = ":invalid length(" <> show (length as) <> ") expected " ++ show n
 
--- | type family to extract \'a\' from \'t a\'
+-- | type family to extract @a@ from @t a@
 type family ExtractAFromTA (ta :: Type) :: Type where
   ExtractAFromTA (t a) = a
   ExtractAFromTA z = GL.TypeError (
@@ -1912,7 +1912,7 @@ type family ExtractAFromTA (ta :: Type) :: Type where
       ':<>: 'GL.ShowType z)
 
 -- todo: get ExtractAFromList failure to fire if wrong Type
--- | type family to extract \'a\' from a list of \'a\'
+-- | type family to extract @a@ from a list of @a@
 type family ExtractAFromList (as :: Type) :: Type where
   ExtractAFromList [a] = a
   ExtractAFromList z = GL.TypeError (

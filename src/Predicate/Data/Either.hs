@@ -69,10 +69,10 @@ import Data.Either
 
 -- | extracts the left value from an 'Either'
 --
--- >>> pz @(Left' >> Succ Id) (Left 20)
+-- >>> pz @(Left' >> Succ) (Left 20)
 -- PresentT 21
 --
--- >>> pz @(Left' >> Succ Id) (Right 'a')
+-- >>> pz @(Left' >> Succ) (Right 'a')
 -- FailT "Left' found Right"
 --
 data Left'
@@ -86,10 +86,10 @@ instance Show a => P Left' (Either a x) where
 
 -- | extracts the right value from an 'Either'
 --
--- >>> pz @(Right' >> Succ Id) (Right 20)
+-- >>> pz @(Right' >> Succ) (Right 20)
 -- PresentT 21
 --
--- >>> pz @(Right' >> Succ Id) (Left 'a')
+-- >>> pz @(Right' >> Succ) (Left 'a')
 -- FailT "Right' found Left"
 --
 data Right'
@@ -104,7 +104,7 @@ instance (Show a
 
 -- | similar 'Control.Arrow.|||'
 --
--- >>> pz @(Pred Id ||| Id) (Left 13)
+-- >>> pz @(Pred ||| Id) (Left 13)
 -- PresentT 12
 --
 -- >>> pz @(ShowP Id ||| Id) (Right "hello")
@@ -118,11 +118,11 @@ instance (Show a
 -- False ((|||) Right False | "someval")
 -- FalseT
 --
--- >>> pl @(ShowP (Succ Id) ||| ShowP Id) (Left 123)
+-- >>> pl @(ShowP Succ ||| ShowP Id) (Left 123)
 -- Present "124" ((|||) Left "124" | 123)
 -- PresentT "124"
 --
--- >>> pl @(ShowP (Succ Id) ||| ShowP Id) (Right True)
+-- >>> pl @(ShowP Succ ||| ShowP Id) (Right True)
 -- Present "True" ((|||) Right "True" | True)
 -- PresentT "True"
 --
@@ -196,7 +196,7 @@ instance x ~ Either a b
 
 -- | similar 'Control.Arrow.+++'
 --
--- >>> pz @(Pred Id +++ Id) (Left 13)
+-- >>> pz @(Pred +++ Id) (Left 13)
 -- PresentT (Left 12)
 --
 -- >>> pz @(ShowP Id +++ Reverse) (Right "hello")
@@ -292,8 +292,8 @@ instance ( Show a
         b = partitionEithers as
     in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
 
--- | Convenient method to convert a \'p\' or \'q\' to a 'Either' based on a predicate \'b\'
---   if \'b\' then Right \'p\' else Left \'q\'
+-- | Convenient method to convert a @p@ or @q@ to a 'Either' based on a predicate @b@
+--   if @b@ then Right @p@ else Left @q@
 --
 -- >>> pz @(EitherBool (Fst > 4) (Snd >> Fst) (Snd >> Snd)) (24,(-1,999))
 -- PresentT (Right 999)
@@ -343,7 +343,7 @@ instance (Show (PP p a)
           Left e -> e
           Right q -> mkNode opts (PresentT (Right q)) (msg0 <> "(True) Right " <> showL opts q) [hh bb, hh qq]
 
--- | similar to 'Control.Arrow.|||' but additionally gives \'p\' and \'q\' the original input
+-- | similar to 'Control.Arrow.|||' but additionally gives @p@ and @q@ the original input
 --
 -- >>> pz @(EitherX (ShowP (L1 Fst + Snd)) (ShowP Id) Snd) (9,Left 123)
 -- PresentT "132"
@@ -351,7 +351,7 @@ instance (Show (PP p a)
 -- >>> pz @(EitherX (ShowP (L1 Fst + Snd)) (ShowP Id) Snd) (9,Right 'x')
 -- PresentT "((9,Right 'x'),'x')"
 --
--- >>> pz @(EitherX (ShowP Id) (ShowP (Second (Succ Id))) Snd) (9,Right 'x')
+-- >>> pz @(EitherX (ShowP Id) (ShowP (Second Succ)) Snd) (9,Right 'x')
 -- PresentT "((9,Right 'x'),'y')"
 --
 data EitherX p q r

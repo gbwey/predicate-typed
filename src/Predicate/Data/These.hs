@@ -176,7 +176,7 @@ instance ( Show a
         b = TheseC.catThere as
     in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
 
--- | similar to 'Data.These.mergeTheseWith' but additionally provides \'p\', \'q\' and \'r\' the original input as the first element in the tuple
+-- | similar to 'Data.These.mergeTheseWith' but additionally provides @p@, @q@ and @r@ the original input as the first element in the tuple
 --
 -- >>> pz @(TheseX ((L1 Fst + Snd) >> ShowP Id) (ShowP Id) (L2 Snd) Snd) (9,This 123)
 -- PresentT "132"
@@ -190,15 +190,15 @@ instance ( Show a
 -- >>> pz @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (These 123 "fromthese")
 -- PresentT (123,"fromthese")
 --
--- >>> pl @(TheseX (PrintF "a=%d" (Succ Snd)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (These @Int 9 "rhs")
+-- >>> pl @(TheseX (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (These @Int 9 "rhs")
 -- Present "a=9 b=rhs" (TheseX(These))
 -- PresentT "a=9 b=rhs"
 --
--- >>> pl @(TheseX (PrintF "a=%d" (Succ Snd)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (This @Int 9)
+-- >>> pl @(TheseX (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (This @Int 9)
 -- Present "a=10" (TheseX(This))
 -- PresentT "a=10"
 --
--- >>> pl @(TheseX (PrintF "a=%d" (Succ Snd)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (That @Int "rhs")
+-- >>> pl @(TheseX (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (That @Int "rhs")
 -- Present "b=rhs" (TheseX(That))
 -- PresentT "b=rhs"
 --
@@ -965,10 +965,10 @@ instance ( AssocC p
 
 -- | tries to extract a value from the 'Data.These.This' constructor
 --
--- >>> pz @(This' >> Succ Id) (This 20)
+-- >>> pz @(This' >> Succ) (This 20)
 -- PresentT 21
 --
--- >>> pz @(This' >> Succ Id) (That 'a')
+-- >>> pz @(This' >> Succ) (That 'a')
 -- FailT "This' found That"
 --
 data This'
@@ -984,10 +984,10 @@ instance (Show a
 
 -- | tries to extract a value from the 'Data.These.That' constructor
 --
--- >>> pz @(That' >> Succ Id) (That 20)
+-- >>> pz @(That' >> Succ) (That 20)
 -- PresentT 21
 --
--- >>> pz @(That' >> Succ Id) (This 'a')
+-- >>> pz @(That' >> Succ) (This 'a')
 -- FailT "That' found This"
 --
 data That'
@@ -1003,13 +1003,13 @@ instance (Show a
 
 -- | tries to extract the values from the 'Data.These.These' constructor
 --
--- >>> pz @(These' >> Second (Succ Id)) (These 1 'a')
+-- >>> pz @(These' >> Second Succ) (These 1 'a')
 -- PresentT (1,'b')
 --
--- >>> pz @(That' >> Succ Id) (This 'a')
+-- >>> pz @(That' >> Succ) (This 'a')
 -- FailT "That' found This"
 --
--- >>> pz @(These' >> Second (Succ Id)) (That 8)
+-- >>> pz @(These' >> Second Succ) (That 8)
 -- FailT "These' found That"
 --
 data These'

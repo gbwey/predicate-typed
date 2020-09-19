@@ -349,7 +349,7 @@ instance ToStringC BL8.ByteString where
 instance ToStringC BS8.ByteString where
   toStringC = BS8.unpack
 
--- | 'fromString' function where you need to provide the type \'t\' of the result
+-- | 'fromString' function where you need to provide the type @t@ of the result
 data FromString' t s
 
 instance (P s a
@@ -367,7 +367,7 @@ instance (P s a
         let b = fromString @(PP t a) s
         in mkNode opts (PresentT b) (msg0 <> " " <> showL opts b) [hh ss]
 
--- | 'fromString' function where you need to provide the type \'t\' of the result
+-- | 'fromString' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(FromString (Identity _) Id) "abc"
 -- PresentT (Identity "abc")

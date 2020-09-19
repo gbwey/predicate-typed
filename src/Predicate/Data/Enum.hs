@@ -163,41 +163,35 @@ instance (PP q x ~ a
 
 -- | unbounded 'succ' function
 --
--- >>> pz @(Succ Id) 13
+-- >>> pz @Succ 13
 -- PresentT 14
 --
--- >>> pz @(Succ Id) LT
+-- >>> pz @Succ LT
 -- PresentT EQ
 --
--- >>> pz @(Succ Id) GT
+-- >>> pz @Succ GT
 -- FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument"
 --
--- >>> pl @(Succ Id) 10
+-- >>> pl @Succ 10
 -- Present 11 (Succ 11 | 10)
 -- PresentT 11
 --
--- >>> pl @(Succ Id) True -- captures the exception
+-- >>> pl @Succ True -- captures the exception
 -- Error Succ IO e=Prelude.Enum.Bool.succ: bad argument (True)
 -- FailT "Succ IO e=Prelude.Enum.Bool.succ: bad argument"
 --
-data Succ p
+data Succ
 
-instance (Show a
-        , Enum a
-        , PP p x ~ a
-        , P p x
-        ) => P (Succ p) x where
-  type PP (Succ p) x = PP p x
+instance (Show x
+        , Enum x
+        ) => P Succ x where
+  type PP Succ x = x
   eval _ opts x = do
     let msg0 = "Succ"
-    pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
-      Left e -> pure e
-      Right p -> do
-        lr <- catchit (succ p)
-        pure $ case lr of
-          Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (showL opts p) [hh pp]
-          Right n -> mkNode opts (PresentT n) (show01 opts msg0 n p) [hh pp]
+    lr <- catchit (succ x)
+    pure $ case lr of
+      Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (showL opts x) []
+      Right n -> mkNode opts (PresentT n) (show01 opts msg0 n x) []
 
 -- | SuccN n p (unsafe) increments an enum p by the given integral n
 --
@@ -238,30 +232,24 @@ instance (Show a
 
 -- | unbounded 'pred' function
 --
--- >>> pz @(Pred Id) 13
+-- >>> pz @Pred 13
 -- PresentT 12
 --
--- >>> pz @(Pred Id) LT
+-- >>> pz @Pred LT
 -- FailT "Pred IO e=Prelude.Enum.Ordering.pred: bad argument"
 --
-data Pred p
+data Pred
 
-instance (Show a
-        , Enum a
-        , PP p x ~ a
-        , P p x
-        ) => P (Pred p) x where
-  type PP (Pred p) x = PP p x
+instance (Show x
+        , Enum x
+        ) => P Pred x where
+  type PP Pred x = x
   eval _ opts x = do
     let msg0 = "Pred"
-    pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
-      Left e -> pure e
-      Right p -> do
-        lr <- catchit (pred p)
-        pure $ case lr of
-          Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (showL opts p) [hh pp]
-          Right n -> mkNode opts (PresentT n) (show01 opts msg0 n p) [hh pp]
+    lr <- catchit (pred x)
+    pure $ case lr of
+      Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (showL opts x) []
+      Right n -> mkNode opts (PresentT n) (show01 opts msg0 n x) []
 
 -- | bounded 'pred' function
 --
@@ -427,7 +415,7 @@ instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
 -- >>> pz @(EnumFromTo 'GT 'LT) ()
 -- PresentT []
 --
--- >>> pz @(EnumFromTo (Pred Id) (Succ Id)) (SG.Max 10)
+-- >>> pz @(EnumFromTo Pred Succ) (SG.Max 10)
 -- PresentT [Max {getMax = 9},Max {getMax = 10},Max {getMax = 11}]
 --
 -- >>> pz @(EnumFromTo 1 20 >> Map '(Id, (If (Id `Mod` 3 == 0) "Fizz" "" <> If (Id `Mod` 5 == 0) "Buzz" "")) Id) 123
@@ -510,7 +498,7 @@ instance (P p x
           Right r ->
             mkNode opts (PresentT (enumFromThenTo p q r)) (msg0 <> " [" <> showL opts p <> ", " <> showL opts q <> " .. " <> showL opts r <> "]") [hh pp, hh qq, hh rr]
 
--- | universe of enum using the type pointed to by \'p\'
+-- | universe of enum using the type pointed to by @p@
 --
 -- >>> pl @(Universe' Id) LT
 -- Present [LT,EQ,GT] (Universe [LT .. GT])
@@ -531,7 +519,7 @@ instance ( PP p x ~ a
         mx = maxBound @a
     in pure $ mkNode opts (PresentT u) (msg0 <> " [" <> showL opts mn <> " .. " <> showL opts mx <> "]") []
 
--- | get universe of an enum of type \'t\'
+-- | get universe of an enum of type @t@
 --
 -- >>> pz @(Universe Ordering) ()
 -- PresentT [LT,EQ,GT]

@@ -124,19 +124,19 @@ instance (PP p (b,a) ~ b
 
 -- | iterates n times keeping all the results
 --
--- >>> pz @(ScanN 4 (Succ Id) Id) 'c'
+-- >>> pz @(ScanN 4 Succ Id) 'c'
 -- PresentT "cdefg"
 --
--- >>> pz @(Dup >> ScanN 4 (Pred Id *** Succ Id) Id) 'g'
+-- >>> pz @(Dup >> ScanN 4 (Pred *** Succ) Id) 'g'
 -- PresentT [('g','g'),('f','h'),('e','i'),('d','j'),('c','k')]
 --
--- >>> pz @(ScanN 4 (Succ Id) Id) 4
+-- >>> pz @(ScanN 4 Succ Id) 4
 -- PresentT [4,5,6,7,8]
 --
 -- >>> pz @('(0,1) >> ScanN 20 '(Snd, Fst + Snd) Id >> Map Fst Id) "sdf"
 -- PresentT [0,1,1,2,3,5,8,13,21,34,55,89,144,233,377,610,987,1597,2584,4181,6765]
 --
--- >>> pl @(ScanN 2 (Succ Id) Id) 4
+-- >>> pl @(ScanN 2 Succ Id) 4
 -- Present [4,5,6] (Scanl [4,5,6] | b=4 | as=[1,2])
 -- PresentT [4,5,6]
 --
@@ -144,11 +144,11 @@ instance (PP p (b,a) ~ b
 -- Present [4,4,4,4,4,4] (Scanl [4,4,4,4,4,4] | b=4 | as=[1,2,3,4,5])
 -- PresentT [4,4,4,4,4,4]
 --
--- >>> pl @(ScanN 2 (Succ Id) Id >> PadR 10 (MEmptyT Ordering) Id) LT
+-- >>> pl @(ScanN 2 Succ Id >> PadR 10 (MEmptyT Ordering) Id) LT
 -- Present [LT,EQ,GT,EQ,EQ,EQ,EQ,EQ,EQ,EQ] ((>>) [LT,EQ,GT,EQ,EQ,EQ,EQ,EQ,EQ,EQ] | {PadR 10 pad=EQ [LT,EQ,GT,EQ,EQ,EQ,EQ,EQ,EQ,EQ] | [LT,EQ,GT]})
 -- PresentT [LT,EQ,GT,EQ,EQ,EQ,EQ,EQ,EQ,EQ]
 --
--- >>> pl @(ScanN 4 (Pred Id) Id) 99
+-- >>> pl @(ScanN 4 Pred Id) 99
 -- Present [99,98,97,96,95] (Scanl [99,98,97,96,95] | b=99 | as=[1,2,3,4])
 -- PresentT [99,98,97,96,95]
 --
@@ -161,7 +161,7 @@ instance P (ScanNT n p q) x => P (ScanN n p q) x where
 
 -- | tuple version of 'ScanN'
 --
--- >>> pl @(ScanNA (Succ Id)) (4,'a')
+-- >>> pl @(ScanNA Succ) (4,'a')
 -- Present "abcde" (Scanl "abcde" | b='a' | as=[1,2,3,4])
 -- PresentT "abcde"
 --
@@ -182,33 +182,33 @@ instance P (ScanNAT q) x => P (ScanNA q) x where
 
 -- | iterates n times keeping only the last result
 --
--- >>> pz @(FoldN 4 (Succ Id) Id) 'c'
+-- >>> pz @(FoldN 4 Succ Id) 'c'
 -- PresentT 'g'
 --
--- >>> pz @(ReadP Day Id >> Id ... FoldN 5 (Succ Id) Id) "2020-07-27"
+-- >>> pz @(ReadP Day Id >> Id ... FoldN 5 Succ Id) "2020-07-27"
 -- PresentT [2020-07-27,2020-07-28,2020-07-29,2020-07-30,2020-07-31,2020-08-01]
 --
--- >>> pl @(FoldN 2 (Succ Id) Id) LT
+-- >>> pl @(FoldN 2 Succ Id) LT
 -- Present GT ((>>) GT | {Last GT | [LT,EQ,GT]})
 -- PresentT GT
 --
--- >>> pl @(FoldN 30 (Succ Id) Id) LT
+-- >>> pl @(FoldN 30 Succ Id) LT
 -- Error Succ IO e=Prelude.Enum.Ordering.succ: bad argument
 -- FailT "Succ IO e=Prelude.Enum.Ordering.succ: bad argument"
 --
--- >>> pl @(FoldN 6 (Succ Id) Id) 'a'
+-- >>> pl @(FoldN 6 Succ Id) 'a'
 -- Present 'g' ((>>) 'g' | {Last 'g' | "abcdefg"})
 -- PresentT 'g'
 --
--- >>> pl @(FoldN 6 (Pred Id) Id) 'a'
+-- >>> pl @(FoldN 6 Pred Id) 'a'
 -- Present '[' ((>>) '[' | {Last '[' | "a`_^]\\["})
 -- PresentT '['
 --
--- >>> pl @(FoldN 0 (Succ Id) Id) LT
+-- >>> pl @(FoldN 0 Succ Id) LT
 -- Present LT ((>>) LT | {Last LT | [LT]})
 -- PresentT LT
 --
--- >>> pl @(FoldN 2 (Succ Id) Id >> FoldN 2 (Pred Id) Id) LT
+-- >>> pl @(FoldN 2 Succ Id >> FoldN 2 Pred Id) LT
 -- Present LT ((>>) LT | {Last LT | [GT,EQ,LT]})
 -- PresentT LT
 --
@@ -362,9 +362,9 @@ instance (PP q a ~ s
 type family UnfoldrT mbs where
   UnfoldrT (Maybe (b,s)) = b
 
--- | unfolds a value applying \'f\' until the condition \'p\' is true
+-- | unfolds a value applying @f@ until the condition @p@ is true
 --
--- >>> pl @(IterateUntil (Id < 90) (Pred Id)) 94
+-- >>> pl @(IterateUntil (Id < 90) Pred) 94
 -- Present [94,93,92,91,90] (Unfoldr 94 [94,93,92,91,90] | s=94)
 -- PresentT [94,93,92,91,90]
 --
@@ -375,9 +375,9 @@ instance P (IterateUntilT p f) x => P (IterateUntil p f) x where
   type PP (IterateUntil p f) x = PP (IterateUntilT p f) x
   eval _ = eval (Proxy @(IterateUntilT p f))
 
--- | unfolds a value applying \'f\' while the condition \'p\' is true
+-- | unfolds a value applying @f@ while the condition @p@ is true
 --
--- >>> pl @(IterateWhile (Id > 90) (Pred Id)) 94
+-- >>> pl @(IterateWhile (Id > 90) Pred) 94
 -- Present [94,93,92,91] (Unfoldr 94 [94,93,92,91] | s=94)
 -- PresentT [94,93,92,91]
 --
@@ -388,30 +388,30 @@ instance P (IterateWhileT p f) x => P (IterateWhile p f) x where
   type PP (IterateWhile p f) x = PP (IterateWhileT p f) x
   eval _ = eval (Proxy @(IterateWhileT p f))
 
--- | unfolds a value applying \'f\' while the condition \'p\' is true or \'n\' times
+-- | unfolds a value applying @f@ while the condition @p@ is true or @n@ times
 --
--- >>> pl @(IterateNWhile 10 (Id > 90) (Pred Id)) 95
+-- >>> pl @(IterateNWhile 10 (Id > 90) Pred) 95
 -- Present [95,94,93,92,91] ((>>) [95,94,93,92,91] | {Map [95,94,93,92,91] | [(10,95),(9,94),(8,93),(7,92),(6,91)]})
 -- PresentT [95,94,93,92,91]
 --
--- >>> pl @(IterateNWhile 3 (Id > 90) (Pred Id)) 95
+-- >>> pl @(IterateNWhile 3 (Id > 90) Pred) 95
 -- Present [95,94,93] ((>>) [95,94,93] | {Map [95,94,93] | [(3,95),(2,94),(1,93)]})
 -- PresentT [95,94,93]
 --
 data IterateNWhile n p f
-type IterateNWhileT n p f = '(n, Id) >> IterateWhile (Fst > 0 && (Snd >> p)) (Pred Id *** f) >> Map Snd Id
+type IterateNWhileT n p f = '(n, Id) >> IterateWhile (Fst > 0 && (Snd >> p)) (Pred *** f) >> Map Snd Id
 
 instance P (IterateNWhileT n p f) x => P (IterateNWhile n p f) x where
   type PP (IterateNWhile n p f) x = PP (IterateNWhileT n p f) x
   eval _ = eval (Proxy @(IterateNWhileT n p f))
 
--- | unfolds a value applying \'f\' until the condition \'p\' is true or \'n\' times
+-- | unfolds a value applying @f@ until the condition @p@ is true or @n@ times
 --
--- >>> pl @(IterateNUntil 10 (Id <= 90) (Pred Id)) 95
+-- >>> pl @(IterateNUntil 10 (Id <= 90) Pred) 95
 -- Present [95,94,93,92,91] ((>>) [95,94,93,92,91] | {Map [95,94,93,92,91] | [(10,95),(9,94),(8,93),(7,92),(6,91)]})
 -- PresentT [95,94,93,92,91]
 --
--- >>> pl @(IterateNUntil 3 (Id <= 90) (Pred Id)) 95
+-- >>> pl @(IterateNUntil 3 (Id <= 90) Pred) 95
 -- Present [95,94,93] ((>>) [95,94,93] | {Map [95,94,93] | [(3,95),(2,94),(1,93)]})
 -- PresentT [95,94,93]
 --
@@ -523,13 +523,13 @@ instance (KnownNat n
 
 -- | leverages 'Para' for repeating expressions (passthrough method)
 --
--- >>> pz @(ParaN 4 (Succ Id)) [1..4]
+-- >>> pz @(ParaN 4 Succ) [1..4]
 -- PresentT [2,3,4,5]
 --
--- >>> pz @(ParaN 4 (Succ Id)) "azwxm"
+-- >>> pz @(ParaN 4 Succ) "azwxm"
 -- FailT "Para:invalid length(5) expected 4"
 --
--- >>> pz @(ParaN 4 (Succ Id)) "azwx"
+-- >>> pz @(ParaN 4 Succ) "azwx"
 -- PresentT "b{xy"
 --
 -- >>> pl @(ParaN 5 (Guard "0-255" (Between 0 255 Id))) [1,2,3,4,12]
@@ -555,7 +555,7 @@ instance ( P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) x
 
 -- | creates a promoted list of predicates and then evaluates them into a list. see PP instance for '[k]
 --
--- >>> pz @(Repeat 4 (Succ Id)) 'c'
+-- >>> pz @(Repeat 4 Succ) 'c'
 -- PresentT "dddd"
 --
 -- >>> pz @(Repeat 4 "abc") ()
@@ -573,7 +573,7 @@ instance P (RepeatT n p) a => P (Repeat n p) a where
 -- | leverages 'Do' for repeating predicates (passthrough method)
 -- same as @DoN n p == FoldN n p Id@ but more efficient
 --
--- >>> pz @(DoN 4 (Succ Id)) 'c'
+-- >>> pz @(DoN 4 Succ) 'c'
 -- PresentT 'g'
 --
 -- >>> pz @(DoN 4 (Id <> " | ")) "abc"

@@ -80,7 +80,7 @@ instance ( Show (PP p x)
         let d = show p
         in mkNode opts (PresentT d) (msg0 <> " " <> litL opts d <> showVerbose opts " | " p) [hh pp]
 
--- | uses the 'Read' of the given type \'t\' and \'p\' which points to the content to read
+-- | uses the 'Read' of the given type @t@ and @p@ which points to the content to read
 data ReadP' t p
 
 instance (P p x
@@ -102,7 +102,7 @@ instance (P p x
            [(b,"")] -> mkNode opts (PresentT b) (msg0 <> " " ++ showL opts b) hhs
            o -> mkNode opts (FailT (msg0 <> " (" ++ s ++ ")")) (showVerbose opts "" o) hhs
 
--- | uses the 'Read' of the given type \'t\' and \'p\' which points to the content to read
+-- | uses the 'Read' of the given type @t@ and @p@ which points to the content to read
 --
 -- >>> pz @(ReadP Rational Id) "4 % 5"
 -- PresentT (4 % 5)
