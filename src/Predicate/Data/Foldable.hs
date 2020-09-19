@@ -60,7 +60,7 @@ import qualified Data.List.NonEmpty as N
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified GHC.Exts as GE
 import Data.List (findIndex)
-
+import qualified Safe (cycleNote)
 -- $setup
 -- >>> import Predicate.Prelude
 -- >>> :set -XDataKinds
@@ -328,7 +328,7 @@ instance (Show a
             Left e ->  e
             Right _ ->
               let msg1 = msg0 <> "(" <> show n <> ")"
-                  d = take n (cycle (toList p))
+                  d = take n (Safe.cycleNote msg0 (toList p))
               in mkNode opts (PresentT d) (show01 opts msg1 d p) hhs
 
 

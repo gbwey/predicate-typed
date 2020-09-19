@@ -81,11 +81,11 @@ import Data.List (elemIndex, unfoldr)
 import Data.Proxy
 import Data.Typeable
 import Data.Kind (Type)
-import Data.Maybe
 import qualified Numeric
 import Data.Char
 import Data.Ratio
 import GHC.Real (Ratio((:%)))
+import qualified Safe (fromJustNote)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -956,7 +956,7 @@ instance (Typeable (PP t x)
                         _ -> (id,p)
         in case Numeric.readInt (fromIntegral n)
             ((`elem` xs) . toLower)
-            (fromJust . (`elemIndex` xs) . toLower)
+            (Safe.fromJustNote "ReadBase" . (`elemIndex` xs) . toLower)
             p1 of
              [(b,"")] -> mkNode opts (PresentT (ff b)) (msg0 <> " " <> showL opts (ff b) <> showVerbose opts " | " p) [hh pp]
              o -> mkNode opts (FailT ("invalid base " <> show n)) (msg0 <> " as=" <> p <> " err=" <> showL opts o) [hh pp]

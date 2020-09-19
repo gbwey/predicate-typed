@@ -87,7 +87,7 @@ import Data.Kind (Type)
 import Control.Comonad
 import Data.Coerce
 import Control.Lens hiding (iall)
-
+import qualified Safe (headNote, cycleNote)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -816,8 +816,7 @@ instance (PP p x ~ a
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
       Right p ->
-        --let ret = head $ dropWhile (not . isPrime) [max 0 (fromIntegral p + 1) ..]
-        let ret = head $ dropWhile (<= fromIntegral p) primes
+        let ret = Safe.headNote msg0 $ dropWhile (<= fromIntegral p) primes
         in mkNode opts (PresentT ret) (msg0 <> showVerbose opts " | " p) [hh pp]
 
 -- | get list of \'n\' primes
@@ -899,7 +898,7 @@ instance x ~ [Int]
     in pure $ case chkSize opts msg0 x [] of
          Left e -> e
          Right _ ->
-          let xs = zipWith (*) (reverse x) (cycle [1,2])
+          let xs = zipWith (*) (reverse x) (Safe.cycleNote msg0 [1,2])
               ys = map (\w -> if w>=10 then w-9 else w) xs
               z = sum ys
               ret = z `mod` 10

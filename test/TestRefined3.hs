@@ -34,6 +34,7 @@ import Data.Aeson
 import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree.Lens
+import qualified Safe (readNote)
 
 suite :: TestTree
 suite =
@@ -44,15 +45,15 @@ namedTests :: [TestTree]
 namedTests =
   [ testCase "ip9" $ (@?=) (newRefined3 "121.0.12.13" :: Either Msg3 (MakeR3 Ip9)) (Right (unsafeRefined3 [121,0,12,13] "121.000.012.013"))
   , testCase "luhn check" $ (@?=) (newRefined3 "12345678903" :: Either Msg3 (MakeR3 (Luhn11 OAN))) (Right (unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903"))
-  , testCase "datetime utctime" $ (@?=) (newRefined3 "2019-01-04 23:00:59" :: Either Msg3 (MakeR3 (DateTime1 OZ UTCTime))) (Right (unsafeRefined3 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59"))
-  , testCase "datetime localtime" $ (@?=) (newRefined3 "2019-01-04 09:12:30" :: Either Msg3 (MakeR3 (DateTime1 OZ LocalTime))) (Right (unsafeRefined3 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30"))
+  , testCase "datetime utctime" $ (@?=) (newRefined3 "2019-01-04 23:00:59" :: Either Msg3 (MakeR3 (DateTime1 OZ UTCTime))) (Right (unsafeRefined3 (Safe.readNote "testrefined3: utc date" "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59"))
+  , testCase "datetime localtime" $ (@?=) (newRefined3 "2019-01-04 09:12:30" :: Either Msg3 (MakeR3 (DateTime1 OZ LocalTime))) (Right (unsafeRefined3 (Safe.readNote "testrefined3: localtime" "2019-01-04 09:12:30") "2019-01-04 09:12:30"))
   , testCase "hms" $ (@?=) (newRefined3 "12:0:59" :: Either Msg3 (MakeR3 (Hms OAN))) (Right (unsafeRefined3 [12,0,59] "12:00:59"))
   , testCase "between5and9" $ (@?=) (newRefined3 "7" :: Either Msg3 (Refined3 OAN (ReadP Int Id) (Between 5 9 Id) (PrintF "%03d" Id) String)) (Right (unsafeRefined3 7 "007"))
   , testCase "ssn" $ (@?=) (newRefined3 "123-45-6789" :: Either Msg3 (MakeR3 (Ssn OAN))) (Right (unsafeRefined3 [123,45,6789] "123-45-6789"))
   , testCase "base16" $ (@?=) (newRefined3 "12f" :: Either Msg3 (MakeR3 (BaseN OAN 16))) (Right (unsafeRefined3 303 "12f"))
-  , testCase "daten1" $ (@?=) (newRefined3 "June 25 1900" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "1900-06-25") "1900-06-25"))
-  , testCase "daten2" $ (@?=) (newRefined3 "12/02/99" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "1999-12-02") "1999-12-02"))
-  , testCase "daten3" $ (@?=) (newRefined3 "2011-12-02" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (read "2011-12-02") "2011-12-02"))
+  , testCase "daten1" $ (@?=) (newRefined3 "June 25 1900" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (Safe.readNote "testrefined3: daten1" "1900-06-25") "1900-06-25"))
+  , testCase "daten2" $ (@?=) (newRefined3 "12/02/99" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (Safe.readNote "testrefined3: daten2" "1999-12-02") "1999-12-02"))
+  , testCase "daten3" $ (@?=) (newRefined3 "2011-12-02" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (Safe.readNote "testrefined3: daten3" "2011-12-02") "2011-12-02"))
   , testCase "ccn123" $ (@?=) (newRefined3 "123455" :: Either Msg3 (MakeR3 (Luhn OAN '[1,2,3]))) (Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455"))
   , testCase "readshow" $ (@?=) (newRefined3 "12 % 5" :: Either Msg3 (ReadShowR OAN Rational)) (Right (unsafeRefined3 (12 % 5) "12 % 5"))
   ]
@@ -183,7 +184,7 @@ allProps :: [TestTree]
 allProps =
   [
     testProperty "base16" $ forAll (genRefined3P (mkProxy3 @'(OAN, ReadBase Int 16 Id, 'True, ShowBase 16 Id, String)) arbitrary) (\r -> evalQuick @OL @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
-  , testProperty "readshow" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN)) (\r -> read @(HexLtR3 OAN) (show r) === r)
+  , testProperty "readshow" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN)) (\r -> Safe.readNote @(HexLtR3 OAN) "testrefined3: readshow" (show r) === r)
   , testProperty "jsonroundtrip1" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN))
       (\r -> testRefined3PJ Proxy (r3Out r) === Right r)
   ]
@@ -240,8 +241,8 @@ www3' = newRefined3
         @((Len == 4) && All (Between 0 255 Id))
         @(Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id)
 
-data G4 = G4 { g4Age :: MakeR3 Age
-             , g4Ip :: MakeR3 Ip9
+data G4 = G4 { g4Age :: !(MakeR3 Age)
+             , g4Ip :: !(MakeR3 Ip9)
              } deriving (Show,Generic,Eq)
 
 --type MyAge = Refined3 OAN (ReadP Int Id) (Gt 4) (ShowP Id) String
@@ -341,11 +342,11 @@ testRefined3PIO p i =
     Left (msg, e) -> putStrLn e >> return (Left msg)
 -}
 data Results3 a =
-       XF String        -- Left e
-     | XTF a String     -- Right a + Left e
-     | XTFalse a String -- Right a + Right False
-     | XTTrueF a String -- Right a + Right True + Left e
-     | XTTrueT a        -- Right a + Right True + Right b
+       XF !String        -- Left e
+     | XTF !a !String     -- Right a + Left e
+     | XTFalse !a !String -- Right a + Right False
+     | XTTrueF !a !String -- Right a + Right True + Left e
+     | XTTrueT !a        -- Right a + Right True + Right b
      deriving (Show,Eq)
 
 toRResults3 :: RResults3 a -> Results3 a

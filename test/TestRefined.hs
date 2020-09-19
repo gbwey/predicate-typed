@@ -24,6 +24,7 @@ import Predicate
 import Control.Lens
 import Data.Aeson
 import Control.Monad.IO.Class (MonadIO)
+import qualified Safe (readNote)
 
 suite :: TestTree
 suite =
@@ -62,7 +63,7 @@ unnamedTests = [
 allProps :: [TestTree]
 allProps =
   [
-    testProperty "readshow" $ forAll (genRefined @OAN @(Between 10 45 Id) (choose (1,100))) (\r -> read @(Refined OAN (Between 10 45 Id) Int) (show r) === r)
+    testProperty "readshow" $ forAll (genRefined @OAN @(Between 10 45 Id) (choose (1,100))) (\r -> Safe.readNote @(Refined OAN (Between 10 45 Id) Int) "testrefined: readshow" (show r) === r)
   , testProperty "jsonroundtrip" $ forAll (genRefined @OAN @(Between 10 45 Id) (choose (1,100))) (\r -> testRefinedJ @OAN @(Between 10 45 Id) (unRefined r) === Right r)
   ]
 

@@ -184,7 +184,7 @@ module Predicate.Util (
   , T5_4
   , T5_5
 
- -- primes
+ -- ** primes
   , isPrime
   , primes
   , primeFactors
@@ -263,7 +263,7 @@ import Data.Coerce
 import Data.Foldable (toList)
 import Data.Containers.ListUtils (nubOrd)
 import Data.Char (isSpace)
-
+import qualified Safe (fromJustNote, headNote)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -664,12 +664,12 @@ otherDef = coerce (True, Default, Default)
 
 nocolor, colorDef :: (String, PColor)
 nocolor = ("nocolor", PColor $ flip const)
-colorDef = fromJust $ getLast $ oColor $ getOptC @Color5
+colorDef = Safe.fromJustNote "colorDef" $ getLast $ oColor $ getOptC @Color5
 
 -- | how much detail to show in the expression tree
 data Debug =
        DZero -- ^ one line summary used mainly for testing
-     | DLite -- ^ one line summary with additional context from the head of the evaluation tree
+     | DLite -- ^ one line summary with additional context from the top of the evaluation tree
      | DNormal  -- ^ outputs the evaluation tree but skips noisy subtrees
      | DVerbose -- ^ outputs the entire evaluation tree
      deriving (Read, Ord, Show, Eq, Enum, Bounded)
@@ -1856,7 +1856,7 @@ primeFactors :: Integer -> [Integer]
 primeFactors n =
   case factors of
     [] -> [n]
-    _  -> factors ++ primeFactors (n `div` head factors)
+    _  -> factors ++ primeFactors (n `div` Safe.headNote "primeFactors" factors)
   where factors = take 1 $ filter (\x -> (n `mod` x) == 0) [2 .. n-1]
 
 -- | primes stream
@@ -2019,7 +2019,7 @@ showIndex i = show (i+0)
 -- FalseT
 --
 mapB :: Typeable b => (a -> b) -> BoolT a -> BoolT b
-mapB f = over _BoolT f
+mapB = over _BoolT
 
 -- | convenience method for running 'mapB' inside a functor
 fmapB :: (Typeable b, Functor f) => (a -> b) -> f (BoolT a) -> f (BoolT b)

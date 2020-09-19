@@ -35,6 +35,7 @@ import Text.Show.Functions ()
 import Data.Tree.Lens
 import Control.Lens
 import Control.Arrow (left)
+import qualified Safe (readNote)
 
 suite :: TestTree
 suite =
@@ -45,15 +46,15 @@ namedTests :: [TestTree]
 namedTests =
   [ testCase "ip9" $ (@?=) (newRefined2 "121.0.12.13" :: Either Msg2 (MakeR2 (Ip9 OAN))) (Right (unsafeRefined2 [121,0,12,13] "121.0.12.13"))
   , testCase "luhn check" $ (@?=) (newRefined2 "12345678903" :: Either Msg2 (MakeR2 (Luhn OAN 11))) (Right (unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "12345678903"))
-  , testCase "datetime utctime" $ (@?=) (newRefined2 "2019-01-04 23:00:59" :: Either Msg2 (MakeR2 (DateTime1 OAN UTCTime))) (Right (unsafeRefined2 (read "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59"))
-  , testCase "datetime localtime" $ (@?=) (newRefined2 "2019-01-04 09:12:30" :: Either Msg2 (MakeR2 (DateTime1 OAN LocalTime))) (Right (unsafeRefined2 (read "2019-01-04 09:12:30") "2019-01-04 09:12:30"))
+  , testCase "datetime utctime" $ (@?=) (newRefined2 "2019-01-04 23:00:59" :: Either Msg2 (MakeR2 (DateTime1 OAN UTCTime))) (Right (unsafeRefined2 (Safe.readNote "testrefined2: utc date" "2019-01-04 23:00:59 UTC") "2019-01-04 23:00:59"))
+  , testCase "datetime localtime" $ (@?=) (newRefined2 "2019-01-04 09:12:30" :: Either Msg2 (MakeR2 (DateTime1 OAN LocalTime))) (Right (unsafeRefined2 (Safe.readNote "testrefined2: localtime" "2019-01-04 09:12:30") "2019-01-04 09:12:30"))
   , testCase "hms" $ (@?=) (newRefined2 "12:0:59" :: Either Msg2 (MakeR2 (Hms OAN))) (Right (unsafeRefined2 [12,0,59] "12:0:59"))
   , testCase "between5and9" $ (@?=) (newRefined2 "7" :: Either Msg2 (Refined2 OAN (ReadP Int Id) (Between 5 9 Id) String)) (Right (unsafeRefined2 7 "7"))
   , testCase "ssn" $ (@?=) (newRefined2 "123-45-6789" :: Either Msg2 (MakeR2 (Ssn OAN))) (Right (unsafeRefined2 [123,45,6789] "123-45-6789"))
   , testCase "base16" $ (@?=) (newRefined2 "12f" :: Either Msg2 (MakeR2 (BaseN OAN 16))) (Right (unsafeRefined2 303 "12f"))
-  , testCase "daten1" $ (@?=) (newRefined2 "June 25 1900" :: Either Msg2 (MakeR2 (DateN OAN))) (Right (unsafeRefined2 (read "1900-06-25") "June 25 1900"))
-  , testCase "daten2" $ (@?=) (newRefined2 "12/02/99" :: Either Msg2 (MakeR2 (DateN OAN))) (Right (unsafeRefined2 (read "1999-12-02") "12/02/99"))
-  , testCase "daten3" $ (@?=) (newRefined2 "2011-12-02" :: Either Msg2 (MakeR2 (DateN OAN))) (Right (unsafeRefined2 (read "2011-12-02") "2011-12-02"))
+  , testCase "daten1" $ (@?=) (newRefined2 "June 25 1900" :: Either Msg2 (MakeR2 (DateN OAN))) (Right (unsafeRefined2 (Safe.readNote "testrefined2: daten1" "1900-06-25") "June 25 1900"))
+  , testCase "daten2" $ (@?=) (newRefined2 "12/02/99" :: Either Msg2 (MakeR2 (DateN OAN))) (Right (unsafeRefined2 (Safe.readNote "testrefined2: daten2" "1999-12-02") "12/02/99"))
+  , testCase "daten3" $ (@?=) (newRefined2 "2011-12-02" :: Either Msg2 (MakeR2 (DateN OAN))) (Right (unsafeRefined2 (Safe.readNote "testrefined2: daten3" "2011-12-02") "2011-12-02"))
   , testCase "ccn123" $ (@?=) (newRefined2 "123455" :: Either Msg2 (MakeR2 (Luhn OAN 6))) (Right (unsafeRefined2 [1,2,3,4,5,5] "123455"))
   ]
 
@@ -192,8 +193,9 @@ www3' = newRefined2
         @(Map (ReadP Int Id) (Resplit "\\."))
         @((Len == 4) && All (Between 0 255 Id))
 
-data G4 (opts :: Opt) = G4 { g4Age :: MakeR2 (Age opts)
-             , g4Ip :: MakeR2 (Ip9 opts)
+data G4 (opts :: Opt) = G4
+             { g4Age :: !(MakeR2 (Age opts))
+             , g4Ip :: !(MakeR2 (Ip9 opts))
              } deriving (Show,Generic,Eq)
 
 --type MyAge (opts :: Opt) = Refined2 opts (ReadP Int Id) (Gt 4) String
@@ -215,7 +217,7 @@ tst0a =
   , newRefined2P (daten @OL) "12/02/19" @?= Right (unsafeRefined2 (fromGregorian 2019 12 2) "12/02/19")
   , newRefined2P (Proxy @(Luhn OL 4)) "1230" @?= Right (unsafeRefined2 [1,2,3,0] "1230")
   , newRefined2P (Proxy @(Luhn OL 6)) "123455" @?= Right (unsafeRefined2 [1,2,3,4,5,5] "123455")
-  , ((runIdentity $ unRavelT $ tst1a @OL @Identity) ^. _1) @?= Right ((163,"a3"),(12,"12"))
+  , (runIdentity (unRavelT (tst1a @OL @Identity)) ^. _1) @?= Right ((163,"a3"),(12,"12"))
   , test2a @?= Right (unsafeRefined2 254 "0000fe")
   , test2b @?= Right (unsafeRefined2 [123,211,122,1] "123.211.122.1")
   , test2c @?= Right (unsafeRefined2 [200,2,3,4] "200.2.3.4")
@@ -290,10 +292,10 @@ testRefined2PIO p i =
     Left (msg, e) -> putStrLn e >> return (Left msg)
 -}
 data Results2 a =
-       XF String        -- Left e
-     | XTF a String     -- Right a + Left e
-     | XTFalse a String -- Right a + Right False
-     | XTTrue a
+       XF !String        -- Left e
+     | XTF !a !String     -- Right a + Left e
+     | XTFalse !a !String -- Right a + Right False
+     | XTTrue !a
      deriving (Show,Eq)
 
 toRResults2 :: RResults2 a -> Results2 a

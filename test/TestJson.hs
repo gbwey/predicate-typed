@@ -27,6 +27,7 @@ import Data.Text (Text)
 import Data.Aeson
 import qualified Data.ByteString as BS
 import Control.Lens
+import qualified Safe (readNote)
 
 suite :: TestTree
 suite = testGroup "testjson"
@@ -46,7 +47,7 @@ suite = testGroup "testjson"
                            (x ^? _PresentT . to (R3.r3Out . ipaddress1)) @?= Just "124.001.012.223"
   , testCase "getRow2" $ do
                            x <- pz @(ParseJsonFile [Person1 OAN] "test2.json" >> Id !! 2) ()
-                           x @?= PresentT (Person1 {firstName1 = unsafeRefined "John", lastName1 = unsafeRefined "Doe", age1 = unsafeRefined 45, likesPizza1 = False, date1 = R3.unsafeRefined3 (read "2003-01-12 04:05:33 UTC") "2003-01-12 04:05:33", ipaddress1 = R3.unsafeRefined3 [124,1,12,223] "124.001.012.223"})
+                           x @?= PresentT (Person1 {firstName1 = unsafeRefined "John", lastName1 = unsafeRefined "Doe", age1 = unsafeRefined 45, likesPizza1 = False, date1 = R3.unsafeRefined3 (Safe.readNote "testjson: utc date" "2003-01-12 04:05:33 UTC") "2003-01-12 04:05:33", ipaddress1 = R3.unsafeRefined3 [124,1,12,223] "124.001.012.223"})
   ]
 
 testPerson :: IO (Either String [Person])
@@ -61,19 +62,19 @@ data Person = Person {
        firstName :: !Text
      , lastName :: !Text
      , age :: !Int
-     , likesPizza :: Bool
+     , likesPizza :: !Bool
      } deriving (Show,Generic,Eq)
 
 instance ToJSON Person
 instance FromJSON Person
 
 data Person1 (opts :: Opt) = Person1 {
-       firstName1 :: NameR2 (opts ':# 'OMsg "person1 firstname1")
-     , lastName1 :: NameR1 (opts ':# 'OMsg "person1 lastname1")
-     , age1 :: AgeR (opts ':# 'OMsg "age1 errors")
-     , likesPizza1 :: Bool
-     , date1 :: R3.DateTimeNR (opts ':# 'OMsg "person date1")
-     , ipaddress1 :: R3.Ip4R (opts ':# 'OMsg "ipaddress1 errors")
+       firstName1 :: !(NameR2 (opts ':# 'OMsg "person1 firstname1"))
+     , lastName1 :: !(NameR1 (opts ':# 'OMsg "person1 lastname1"))
+     , age1 :: !(AgeR (opts ':# 'OMsg "age1 errors"))
+     , likesPizza1 :: !Bool
+     , date1 :: !(R3.DateTimeNR (opts ':# 'OMsg "person date1"))
+     , ipaddress1 :: !(R3.Ip4R (opts ':# 'OMsg "ipaddress1 errors"))
      } deriving (Show,Generic,Eq)
 
 instance OptC opts => ToJSON (Person1 opts)
