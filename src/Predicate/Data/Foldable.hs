@@ -489,7 +489,7 @@ instance P NullT a => P Null a where
 --
 
 data FoldMap (t :: Type) p
-type FoldMapT (t :: Type) p = Map (Wrap t Id) p >> Unwrap (MConcat Id)
+type FoldMapT (t :: Type) p = Map (Wrap t Id) p >> MConcat Id >> Unwrap
 
 instance P (FoldMapT t p) x => P (FoldMap t p) x where
   type PP (FoldMap t p) x = PP (FoldMapT t p) x

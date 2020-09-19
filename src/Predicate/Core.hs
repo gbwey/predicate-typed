@@ -1084,30 +1084,24 @@ topMessageEgregious pp = innermost (_ttString pp)
 
 -- | unwraps a value (see '_Wrapped'')
 --
--- >>> pz @(Unwrap Id) (SG.Sum (-13))
+-- >>> pz @Unwrap (SG.Sum (-13))
 -- PresentT (-13)
 --
--- >>> pl @(Unwrap Id >> '(Id, 'True)) (SG.Sum 13)
+-- >>> pl @(Unwrap >> '(Id, 'True)) (SG.Sum 13)
 -- Present (13,True) ((>>) (13,True) | {'(13,True)})
 -- PresentT (13,True)
 --
-data Unwrap p
+data Unwrap
 
-instance (PP p x ~ s
-        , P p x
-        , Show s
-        , Show (Unwrapped s)
-        , Wrapped s
-        ) => P (Unwrap p) x where
-  type PP (Unwrap p) x = Unwrapped (PP p x)
-  eval _ opts x = do
+instance (Show x
+        , Show (Unwrapped x)
+        , Wrapped x
+        ) => P Unwrap x where
+  type PP Unwrap x = Unwrapped x
+  eval _ opts x =
     let msg0 = "Unwrap"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let d = p ^. _Wrapped'
-        in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
+        d = x ^. _Wrapped'
+    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d x) []
 
 data Wrap' t p
 

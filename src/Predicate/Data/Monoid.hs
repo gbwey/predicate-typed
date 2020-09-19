@@ -82,7 +82,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 -- >>> pz @(SapA' (SG.Sum _)) (10,12)
 -- PresentT (Sum {getSum = 22})
 --
--- >>> pl @((Id <> Id) >> Unwrap Id) (SG.Sum 12)
+-- >>> pl @((Id <> Id) >> Unwrap) (SG.Sum 12)
 -- Present 24 ((>>) 24 | {getSum = 24})
 -- PresentT 24
 --
@@ -107,7 +107,7 @@ instance (Semigroup (PP p x)
 
 -- | semigroup append both sides of a tuple (ie uncurry (<>)) using 'Wrap'
 --
--- >>> pl @(SapA' (SG.Sum _) >> Unwrap Id) (4,5)
+-- >>> pl @(SapA' (SG.Sum _) >> Unwrap) (4,5)
 -- Present 9 ((>>) 9 | {getSum = 9})
 -- PresentT 9
 --
@@ -216,7 +216,7 @@ instance P (MEmpty2T t) x => P (MEmpty2 t) x where
 -- Present Nothing (MEmptyT Nothing)
 -- PresentT Nothing
 --
--- >>> pl @(MEmptyT (SG.Sum _) >> Unwrap Id >> Id + 4) ()
+-- >>> pl @(MEmptyT (SG.Sum _) >> Unwrap >> Id + 4) ()
 -- Present 4 ((>>) 4 | {0 + 4 = 4})
 -- PresentT 4
 --

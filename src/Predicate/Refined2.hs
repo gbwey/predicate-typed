@@ -264,7 +264,7 @@ instance ( Refined2C opts ip op i
 -- | 'Arbitrary' instance for 'Refined2'
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
--- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined2 OAN (ToEnum Day Id) (L2 (ToWeekDate Id) == "Tuesday") Int)))
+-- >>> xs <- generate (vectorOf 10 (arbitrary @(Refined2 OAN (ToEnum Day) (L2 (ToWeekDate Id) == "Tuesday") Int)))
 -- >>> all (\x -> let y = toEnum @Day (r2Out x) in view _3 (toWeekDate y) == 2 && r2In x == y) xs
 -- True
 --
@@ -276,7 +276,7 @@ instance ( Arbitrary i
 
 -- | create a 'Refined2' generator using a generator to restrict the values (so it completes)
 --
--- >>> g = genRefined2 @OAN @(ToEnum Day Id) @(UnMkDay Id >> Snd == 10) arbitrary
+-- >>> g = genRefined2 @OAN @(ToEnum Day) @(UnMkDay Id >> Snd == 10) arbitrary
 -- >>> xs <- generate (vectorOf 10 g)
 -- >>> all (\x -> let y = toEnum @Day (fromIntegral (r2Out x)) in view _2 (toGregorian y) == 10 && y == r2In x) xs
 -- True

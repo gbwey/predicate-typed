@@ -397,7 +397,7 @@ instance (P q a
 -- Present (3,Any {getAny = True}) (W '(3,Any {getAny = True}))
 -- PresentT (3,Any {getAny = True})
 --
--- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd >> Gt 3 >> Wrap SG.Any Id) (IToList _ Id) >> MConcat Id >> Unwrap Id)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
+-- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd >> Gt 3 >> Wrap SG.Any Id) (IToList _ Id) >> MConcat Id >> Unwrap)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
 -- Present (3,True) (W '(3,True))
 -- PresentT (3,True)
 --

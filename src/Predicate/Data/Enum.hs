@@ -278,11 +278,11 @@ instance P (PredBT' q) x => P (PredB' q) x where
 -- False ((>>) False | {0 == 1})
 -- FalseT
 --
--- >>> pl @(FromEnum ("aa" ==! Id) >> ToEnum OrderingP Id) "aaaa"
+-- >>> pl @(FromEnum ("aa" ==! Id) >> ToEnum OrderingP) "aaaa"
 -- Present CGt ((>>) CGt | {ToEnum CGt | 0})
 -- PresentT CGt
 --
--- >>> pl @(Map (FromEnum Id) Id >> Map (ToEnum Char Id) Id) ("abcd" :: String)
+-- >>> pl @(Map (FromEnum Id) Id >> Map (ToEnum Char) Id) ("abcd" :: String)
 -- Present "abcd" ((>>) "abcd" | {Map "abcd" | [97,98,99,100]})
 -- PresentT "abcd"
 --
@@ -306,14 +306,14 @@ instance (Show a
 
 -- | unsafe 'toEnum' function
 --
--- >>> pz @(ToEnum Char Id) 120
+-- >>> pz @(ToEnum Char) 120
 -- PresentT 'x'
 --
--- >>> pl @(Map (FromEnum Id) Id >> Map (Id - 97 >> ToEnum Ordering Id) Id) ("abcde" :: String)
+-- >>> pl @(Map (FromEnum Id) Id >> Map (Id - 97 >> ToEnum Ordering) Id) ("abcde" :: String)
 -- Error ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2) ([97,98,99,100,101])
 -- FailT "ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2)"
 --
--- >>> pl @((ToEnum Day Id *** ToEnum Day Id) >> EnumFromTo Fst Snd) (0,5)
+-- >>> pl @((ToEnum Day *** ToEnum Day) >> EnumFromTo Fst Snd) (0,5)
 -- Present [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] ((>>) [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] | {1858-11-17 ... 1858-11-22})
 -- PresentT [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22]
 --
@@ -338,12 +338,13 @@ instance (PP p x ~ a
           Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (showL opts p) [hh pp]
           Right n -> mkNode opts (PresentT n) (show01 opts msg0 n p) [hh pp]
 
-data ToEnum (t :: Type) p
-type ToEnumT (t :: Type) p = ToEnum' (Hole t) p
+data ToEnum (t :: Type)
+type ToEnumT (t :: Type) = ToEnum' (Hole t) Id
 
-instance P (ToEnumT t p) x => P (ToEnum t p) x where
-  type PP (ToEnum t p) x = PP (ToEnumT t p) x
-  eval _ = eval (Proxy @(ToEnumT t p))
+instance P (ToEnumT t) x => P (ToEnum t) x where
+  type PP (ToEnum t) x = PP (ToEnumT t) x
+  eval _ = eval (Proxy @(ToEnumT t))
+
 data ToEnumBDef' t def
 
 instance (P def (Proxy (PP t a))
@@ -468,7 +469,7 @@ instance (P p x
 
 -- | similar to 'enumFromThenTo'
 --
--- >>> pz @(EnumFromThenTo (ToEnum Day 10) (ToEnum Day 20) (ToEnum Day 70)) ()
+-- >>> pz @(EnumFromThenTo (10 >> ToEnum Day) (20 >> ToEnum Day) (70 >> ToEnum Day)) ()
 -- PresentT [1858-11-27,1858-12-07,1858-12-17,1858-12-27,1859-01-06,1859-01-16,1859-01-26]
 --
 -- >>> pz @(EnumFromThenTo (ReadP Day "2020-01-12") (ReadP Day "2020-02-12") (ReadP Day "2020-08-12")) ()
