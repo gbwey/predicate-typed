@@ -1147,10 +1147,10 @@ instance P (RemoveT p q) x => P (Remove p q) x where
 
 data Head
 
-instance (Show (ConsT x)
-        , Show x
-        , Cons x x (ConsT x) (ConsT x)
-        ) => P Head x where
+instance ( Cons x x (ConsT x) (ConsT x)
+         , Show (ConsT x)
+         , Show x
+         ) => P Head x where
   type PP Head x = ConsT x
   eval _ opts x =
     let msg0 = "Head"
@@ -1174,10 +1174,9 @@ instance (Show (ConsT x)
 
 data Tail
 
-instance (Show s
-        , Cons s s (ConsT s) (ConsT s)
-        , x ~ s
-        ) => P Tail x where
+instance ( Cons x x (ConsT x) (ConsT x)
+         , Show x
+         ) => P Tail x where
   type PP Tail x = x
   eval _ opts x = do
     let msg0 = "Tail"
@@ -1233,10 +1232,10 @@ instance ( Snoc x x (ConsT x) (ConsT x)
 --
 data Init
 
-instance (Show s
-        , Snoc s s (ConsT s) (ConsT s)
-        , x ~ s
-        ) => P Init x where
+instance ( Snoc s s (ConsT s) (ConsT s)
+         , x ~ s
+         , Show s
+         ) => P Init x where
   type PP Init x = x
   eval _ opts x = do
     let msg0 = "Init"
@@ -1416,8 +1415,8 @@ instance P (SortOnDescT p q) x => P (SortOnDesc p q) x where
 --
 data Reverse
 
-instance ( Show a
-         , as ~ [a]
+instance ( as ~ [a]
+         , Show a
          ) => P Reverse as where
   type PP Reverse as = as
   eval _ opts as =
@@ -1439,8 +1438,8 @@ instance ( Show a
 --
 data ReverseL
 
-instance ( Show t
-         , Reversing t
+instance ( Reversing t
+         , Show t
          ) => P ReverseL t where
   type PP ReverseL t = t
   eval _ opts as =

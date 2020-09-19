@@ -271,12 +271,12 @@ instance P (FromRationalT t p) x => P (FromRational t p) x where
 --
 data Truncate' t p
 
-instance (Show (PP p x)
-        , P p x
-        , Show (PP t x)
-        , RealFrac (PP p x)
-        , Integral (PP t x)
-        ) => P (Truncate' t p) x where
+instance ( P p x
+         , RealFrac (PP p x)
+         , Integral (PP t x)
+         , Show (PP t x)
+         , Show (PP p x)
+         ) => P (Truncate' t p) x where
   type PP (Truncate' t p) x = PP t x
   eval _ opts x = do
     let msg0 = "Truncate"
@@ -300,12 +300,12 @@ instance P (TruncateT t p) x => P (Truncate t p) x where
 -- PresentT 5
 data Ceiling' t p
 
-instance (Show (PP p x)
-        , P p x
-        , Show (PP t x)
-        , RealFrac (PP p x)
-        , Integral (PP t x)
-        ) => P (Ceiling' t p) x where
+instance ( P p x
+         , RealFrac (PP p x)
+         , Integral (PP t x)
+         , Show (PP t x)
+         , Show (PP p x)
+         ) => P (Ceiling' t p) x where
   type PP (Ceiling' t p) x = PP t x
   eval _ opts x = do
     let msg0 = "Ceiling"
@@ -329,12 +329,12 @@ instance P (CeilingT t p) x => P (Ceiling t p) x where
 -- PresentT 4
 data Floor' t p
 
-instance (Show (PP p x)
-        , P p x
-        , Show (PP t x)
-        , RealFrac (PP p x)
-        , Integral (PP t x)
-        ) => P (Floor' t p) x where
+instance ( P p x
+         , RealFrac (PP p x)
+         , Integral (PP t x)
+         , Show (PP t x)
+         , Show (PP p x)
+         ) => P (Floor' t p) x where
   type PP (Floor' t p) x = PP t x
   eval _ opts x = do
     let msg0 = "Floor"
@@ -664,9 +664,9 @@ instance P (NegateRatioT p q) x => P (p -% q) x where
 --
 data Negate p
 
-instance ( Show (PP p x)
-         , Num (PP p x)
+instance ( Num (PP p x)
          , P p x
+         , Show (PP p x)
          ) => P (Negate p) x where
   type PP (Negate p) x = PP p x
   eval _ opts x = do
@@ -695,9 +695,9 @@ instance ( Show (PP p x)
 --
 data Abs p
 
-instance ( Show (PP p x)
-         , Num (PP p x)
+instance ( Num (PP p x)
          , P p x
+         , Show (PP p x)
          ) => P (Abs p) x where
   type PP (Abs p) x = PP p x
   eval _ opts x = do
@@ -917,9 +917,9 @@ instance P OddT x => P Odd x where
 --
 data Signum p
 
-instance ( Show (PP p x)
-         , Num (PP p x)
+instance ( Num (PP p x)
          , P p x
+         , Show (PP p x)
          ) => P (Signum p) x where
   type PP (Signum p) x = PP p x
   eval _ opts x = do

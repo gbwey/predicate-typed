@@ -252,8 +252,8 @@ type family TheseXT lr x p where
 --
 data MkThis' t p
 
-instance ( Show (PP p x)
-         , P p x
+instance ( P p x
+         , Show (PP p x)
          ) => P (MkThis' t p) x where
   type PP (MkThis' t p) x = These (PP p x) (PP t x)
   eval _ opts x = do

@@ -472,11 +472,11 @@ instance GL.TypeError ('GL.Text "ParaImpl '[] invalid: requires at least one val
   type PP (ParaImpl n ('[] :: [k])) x = Void
   eval _ _ _ = errorInProgram "ParaImpl empty list"
 
-instance (Show (PP p a)
-        , KnownNat n
-        , Show a
-        , P p a
-        ) => P (ParaImpl n '[p]) [a] where
+instance ( KnownNat n
+         , Show a
+         , Show (PP p a)
+         , P p a
+         ) => P (ParaImpl n '[p]) [a] where
   type PP (ParaImpl n '[p]) [a] = [PP p a]
   eval _ opts as' = do
     let msgbase0 = "Para"

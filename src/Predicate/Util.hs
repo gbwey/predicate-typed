@@ -217,7 +217,7 @@ module Predicate.Util (
   , ExtractL4C(..)
   , ExtractL5C(..)
   , ExtractL6C(..)
-    ) where
+  ) where
 import qualified GHC.TypeNats as GN
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
@@ -1587,14 +1587,14 @@ readField fieldName readVal = do
 -- eg sqlhandler.encode/decode and parsejson* etc
 -- | Display options
 data Opt =
-    OWidth !Nat           -- ^ set display width
+    OEmpty                -- ^ mempty
+  | OWidth !Nat           -- ^ set display width
   | OMsg !Symbol          -- ^ set text to add context to a failure message for refined types
   | ORecursion !Nat       -- ^ set recursion limit eg for regex
   | OOther                -- ^ set effects for messages
      !Bool    -- ^ set underline
      !Color   -- ^ set foreground color
      !Color   -- ^ set background color
-  | OEmpty                -- ^ mempty
   | !Opt :# !Opt        -- ^ mappend
   | OColor    -- ^ set color palette
      !Symbol  -- ^ name of color palette

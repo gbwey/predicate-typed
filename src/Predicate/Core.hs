@@ -1050,11 +1050,11 @@ evalHide opts =
 data p >> q
 infixr 1 >>
 
-instance (Show (PP p a)
-        , Show (PP q (PP p a))
-        , P p a
-        , P q (PP p a)
-        ) => P (p >> q) a where
+instance ( P p a
+         , P q (PP p a)
+         , Show (PP p a)
+         , Show (PP q (PP p a))
+         ) => P (p >> q) a where
   type PP (p >> q) a = PP q (PP p a)
   eval _ opts a = do
     let msg0 = "(>>)"
@@ -1568,13 +1568,13 @@ instance (P p a
 --
 data Any p
 
-instance (P p a
-        , PP p a ~ Bool
-        , x ~ f a
-        , Show a
-        , Foldable f
-        ) => P (Any p) x where
-  type PP (Any p ) x = Bool
+instance ( P p a
+         , PP p a ~ Bool
+         , x ~ f a
+         , Show a
+         , Foldable f
+         ) => P (Any p) x where
+  type PP (Any p) x = Bool
   eval _ opts x = do
     let msg0 = "Any"
     case chkSize opts msg0 x [] of

@@ -112,9 +112,9 @@ unnamedTests = [
                   $ runIdentity $ eval2M @OAN
                   @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10 Id) Snd)
                   @(GuardBool "expected 3" (Len == 3)
-                 && GuardBool "3 digits" (Ix' 0 >> Between 0 999 Id)
-                 && GuardBool "2 digits" (Ix' 1 >> Between 0 99 Id)
-                 && GuardBool "4 digits" (Ix' 2 >> Between 0 9999 Id)
+                  && GuardBool "3 digits" (Between 0 999 (Ix' 0))
+                  && GuardBool "2 digits" (Between 0 99 (Ix' 1))
+                  && GuardBool "4 digits" (Between 0 9999 (Ix' 2))
                    )
                    "123-45-6789"
 

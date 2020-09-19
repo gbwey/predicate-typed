@@ -72,7 +72,7 @@ allTests =
   , expectPE (PresentT (1,("asdf",True))) $ pl @'(1,'("asdf",'True)) ()
   , expectPE (PresentT (12, False)) $ pl @('These Id (Not Id)) (These 12 True)
     --- have to wrap with W cos different kinds
-  , expectPE TrueT $ pl @('PresentT I >> Not 'FalseT) False
+  , expectPE TrueT $ pl @('PresentT Id >> Not 'FalseT) False
   -- IxL "d" doesnt work cos is Text not String
   -- use Fromstring
   , expectPE (PresentT [7,9,9,2,7,3,9,8,7,1,3]) $ pl @(Map (ReadP Int Id) Ones >> Guard "invalid checkdigit" IsLuhn) "79927398713"
@@ -118,8 +118,8 @@ allTests =
 
   , expectPE (PresentT ('x',('x',"someval"))) $ pl @Duplicate ('x',"someval")
   , expectPE (PresentT "someval") $ pl @Extract ('x',"someval")
-  , expectPE (PresentT (9,"abc")) $ pl @(I $$ 9 $$ "abc") (,)
-  , expectPE (PresentT ("abc",9)) $ pl @(9 $& "abc" $& I) (,)
+  , expectPE (PresentT (9,"abc")) $ pl @(Id $$ 9 $$ "abc") (,)
+  , expectPE (PresentT ("abc",9)) $ pl @(9 $& "abc" $& Id) (,)
   , expectPE (PresentT "28") $ pl @(Fst $$ Snd) (show . (7*),4)
   , expectPE (PresentT (12,"12")) $ pl @(Fst $$ Snd $$ ShowP Snd) ((,),12)
   , expectPE (PresentT (4,("aa",'x'))) $ pl @'(4,'(Fst,Snd)) ("aa",'x')

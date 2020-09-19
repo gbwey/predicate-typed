@@ -416,8 +416,8 @@ instance ToTimeC CP.SystemTime where
 -- PresentT 2020-07-06
 --
 data ToDay
-instance ( Show x
-         , ToDayC x
+instance ( ToDayC x
+         , Show x
          ) => P ToDay x where
   type PP ToDay x = Day
   eval _ opts x =
@@ -432,8 +432,8 @@ instance ( Show x
 --
 data ToTime
 
-instance ( Show x
-         , ToTimeC x
+instance ( ToTimeC x
+         , Show x
          ) => P ToTime x where
   type PP ToTime x = TimeOfDay
   eval _ opts x =
