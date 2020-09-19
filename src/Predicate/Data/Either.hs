@@ -18,7 +18,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
      promoted 'Either' functions
@@ -64,7 +63,6 @@ import Data.Either
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> :set -XNoOverloadedLists
 -- >>> import qualified Data.Text as T
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG

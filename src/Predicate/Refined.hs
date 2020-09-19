@@ -93,6 +93,7 @@ import Control.Arrow (left)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
+-- >>> :set -XNoOverloadedLists
 -- >>> :m + Predicate.Prelude
 
 -- | a simple refinement type that ensures the predicate \'p\' holds for the type \'a\'

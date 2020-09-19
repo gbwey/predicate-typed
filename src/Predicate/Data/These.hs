@@ -18,7 +18,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
      promoted 'These' functions

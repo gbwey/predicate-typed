@@ -19,7 +19,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
           promoted 'Semigroup' and 'Monoid' functions

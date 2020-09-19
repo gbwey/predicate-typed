@@ -18,7 +18,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
      promoted iterator functions
@@ -64,7 +63,6 @@ import Data.Void
 -- >>> :set -XTypeOperators
 -- >>> :set -XAllowAmbiguousTypes
 -- >>> :set -XOverloadedStrings
--- >>> :set -XNoOverloadedLists
 -- >>> :set -XFlexibleContexts
 -- >>> import Data.Time
 
@@ -490,7 +488,9 @@ instance ( KnownNat n
           Left e -> e
           -- showVerbose opts " " [b]  fails but using 'b' is ok and (b : []) also works!
           -- GE.List problem
-          Right b -> mkNode opts (PresentT [b]) (msgbase1 <> " " <> showL opts [b] <> showVerbose opts " | " a) [hh pp]
+          Right b ->
+            let ret = [b]
+            in mkNode opts (PresentT ret) (msgbase1 <> " " <> showL opts ret <> showVerbose opts " | " a) [hh pp]
       _ -> errorInProgram $ "ParaImpl base case should have exactly one element but found " ++ show as'
 
 instance (KnownNat n

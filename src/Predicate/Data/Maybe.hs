@@ -18,7 +18,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
      promoted 'Maybe' functions
@@ -57,7 +56,6 @@ import Data.Maybe
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> :set -XNoOverloadedLists
 -- >>> import qualified Data.Map.Strict as M
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG

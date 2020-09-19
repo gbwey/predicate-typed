@@ -18,7 +18,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
      promoted conditional functions
@@ -60,7 +59,6 @@ import qualified Data.Type.Equality as DE
 -- >>> :set -XTypeOperators
 -- >>> :set -XAllowAmbiguousTypes
 -- >>> :set -XOverloadedStrings
--- >>> :set -XNoOverloadedLists
 -- >>> :set -XFlexibleContexts
 -- >>> import qualified Data.Text as T
 
@@ -299,7 +297,7 @@ instance (P r x
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR opts msgbase0 qq [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (PresentT b) (show01 opts msgbase0 b a) (hh rr : hh pp : [hh qq | isVerbose opts])
+              Right b -> mkNode opts (PresentT b) (show01 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ee <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
             pure $ case getValueLR opts ("Case:otherwise failed" <> nullIf ":" (_ttString ee)) ee [hh rr, hh pp] of
@@ -336,7 +334,7 @@ instance (KnownNat n
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR opts msgbase0 qq [hh pp, hh rr] of
               Left e -> e
-              Right b -> mkNode opts (PresentT b) (show01 opts msgbase0 b a) (hh rr : hh pp : [hh qq | isVerbose opts])
+              Right b -> mkNode opts (PresentT b) (show01 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
             pure $ case getValueLR opts (_ttString ww) ww [hh rr, hh pp] of
@@ -436,7 +434,7 @@ instance (PP prt (Int, a) ~ String
                    qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
                    pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                       Left e -> e
-                      Right msgx -> mkNode opts (FailT msgx) (msgbase1 <> " " <> showL opts a) (hh pp : [hh qq | isVerbose opts])
+                      Right msgx -> mkNode opts (FailT msgx) (msgbase1 <> " " <> showL opts a) (hh pp : verboseList opts qq)
                  Right True ->
                    if pos == 0 then -- we are at the bottom of the tree
                       pure $ mkNode opts (PresentT [a]) msgbase2 [hh pp]
@@ -586,7 +584,7 @@ instance (PP prt (Int, a) ~ String
                    qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
                    pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                       Left e -> e
-                      Right msgx -> mkNode opts (FailT (msgbase1 <> " [" <> msgx <> "]" <> nullSpace (topMessage pp))) "" (hh pp : [hh qq | isVerbose opts])
+                      Right msgx -> mkNode opts (FailT (msgbase1 <> " [" <> msgx <> "]" <> nullSpace (topMessage pp))) "" (hh pp : verboseList opts qq)
                  Right True ->
                    if pos == 0 then -- we are at the bottom of the tree
                       pure $ mkNodeB opts True msgbase2 [hh pp]
@@ -706,7 +704,7 @@ instance (PP prt a ~ String
                    qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
                    pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
                       Left e -> e
-                      Right msgx -> mkNode opts (FailT msgx) (msgbase1 <> ":" <> showL opts a) (hh pp : [hh qq | isVerbose opts])
+                      Right msgx -> mkNode opts (FailT msgx) (msgbase1 <> ":" <> showL opts a) (hh pp : verboseList opts qq)
                  Right True -> do
                    ss <- eval (Proxy @(GuardsImplX n ps)) opts as
                    pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
@@ -817,7 +815,7 @@ instance (Show a
         qq <- eval (Proxy @prt) opts a
         pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
-          Right ee -> mkNode opts (FailT ee) (msg0 <> " | " <> showL opts a) (hh pp : [hh qq | isVerbose opts])
+          Right ee -> mkNode opts (FailT ee) (msg0 <> " | " <> showL opts a) (hh pp : verboseList opts qq)
       Right True -> pure $ mkNode opts (PresentT a) (msg0 <> "(ok) | " <> showL opts a) [hh pp]  -- dont show the guard message if successful
 
 -- | boolean guard

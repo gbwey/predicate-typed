@@ -21,7 +21,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
      promoted list functions
@@ -544,7 +543,8 @@ instance (Show x
           Right _ ->
              case q of
                [] -> pure $ mkNode opts (PresentT []) (show01' opts msg0 q "s=" q) [hh qq]
-               [_] -> pure $ mkNode opts (PresentT [q]) (show01' opts msg0 [q] "s=" q) [hh qq]
+               [_] -> let ret = [q]
+                      in pure $ mkNode opts (PresentT ret) (show01' opts msg0 ret "s=" q) [hh qq]
                x:xs -> do
                  ts <- zipWithM (\i (a,b) -> ((i, b),) <$> evalBoolHide @p opts (a,b)) [0::Int ..] (zip (x:xs) xs)
                  pure $ case splitAndAlign opts msg0 ts of

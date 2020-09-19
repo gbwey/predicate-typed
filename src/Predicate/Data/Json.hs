@@ -18,7 +18,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
      promoted json encoding and decoding functions
@@ -47,7 +46,6 @@ import System.Directory (doesFileExist)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> :set -XNoOverloadedLists
 -- >>> import Predicate.Prelude
 
 -- | parse json data using the type \'t\'

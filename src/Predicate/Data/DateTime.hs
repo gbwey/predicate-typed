@@ -20,7 +20,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
-{-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
      promoted date time functions
@@ -69,7 +68,6 @@ import qualified Data.Time.Clock.POSIX as P
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> :set -XNoOverloadedLists
 -- >>> import qualified Data.Text as T
 -- >>> import Predicate.Prelude
 -- >>> import Safe (readNote)

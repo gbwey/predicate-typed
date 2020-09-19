@@ -126,6 +126,7 @@ import qualified Data.Semigroup as SG
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
+-- >>> :set -XNoOverloadedLists
 -- >>> import Predicate.Prelude
 -- >>> import Data.Time
 
@@ -622,7 +623,7 @@ instance ( Show (PP p a)
     let msg0 = ""
     pure $ case getValueLR opts msg0 pp [] of
        Left e -> e
-       Right b -> mkNode opts (PresentT [b]) ("'" <> showL opts [b] <> showVerbose opts " | " a) [hh pp]
+       Right b -> mkNode opts (PresentT [b]) ("'" <> showL opts ([b] :: [PP p a]) <> showVerbose opts " | " a) [hh pp]
 
 instance (Show (PP p a)
         , Show a
@@ -644,7 +645,7 @@ instance (Show (PP p a)
           Right q ->
             let ret = p:q
             -- no gap between ' and ret!
-            in mkNode opts (PresentT ret) ("'" <> showL opts ret <> litVerbose opts " " (topMessage pp) <> showVerbose opts " | " a) ([hh pp | isVerbose opts] <> [hh qq])
+            in mkNode opts (PresentT ret) ("'" <> showL opts ret <> litVerbose opts " " (topMessage pp) <> showVerbose opts " | " a) (verboseList opts pp <> [hh qq])
 
 -- | tries to extract @a@ from @Maybe a@ otherwise it fails: similar to 'Data.Maybe.fromJust'
 --
@@ -1025,9 +1026,9 @@ evalBoolHide :: forall p a m
   => POpts
   -> a
   -> m (TT (PP p a))
-evalBoolHide opts =
-  if isVerbose opts then evalBool (Proxy @p) opts
-  else evalBool (Proxy @(Hide p)) opts
+evalBoolHide opts
+  | isVerbose opts = evalBool (Proxy @p) opts
+  | otherwise = evalBool (Proxy @(Hide p)) opts
 
 -- | evaluate a expressions but hide the results unless verbose
 evalHide :: forall p a m
@@ -1035,9 +1036,9 @@ evalHide :: forall p a m
   => POpts
   -> a
   -> m (TT (PP p a))
-evalHide opts =
-  if isVerbose opts then eval (Proxy @p) opts
-  else eval (Proxy @(Hide p)) opts
+evalHide opts
+  | isVerbose opts = eval (Proxy @p) opts
+  | otherwise = eval (Proxy @(Hide p)) opts
 
 
 -- advantage of (>>) over 'Do [k] is we can use different kinds for (>>) without having to wrap with 'W'
@@ -1293,7 +1294,7 @@ instance (P prt a
     pp <- eval (Proxy @prt) opts a
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right s -> mkNode opts (FailT s) "" [hh pp | isVerbose opts]
+      Right s -> mkNode opts (FailT s) "" (verboseList opts pp)
 
 -- | Fails the computation with a message for simple failures: doesnt preserve types
 --

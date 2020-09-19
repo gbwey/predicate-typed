@@ -18,7 +18,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE NoOverloadedLists #-}
 {-# LANGUAGE NoStarIsType #-}
 {- |
      promoted character functions
@@ -69,7 +68,6 @@ import Data.Char
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> :set -XNoOverloadedLists
 -- >>> import qualified Data.Text as T
 -- >>> import Predicate.Prelude
 
@@ -104,7 +102,7 @@ instance ( x ~ Char
     let msg0 = "Is" ++ drop 1 (show cs)
         (cs,f) = getCharSet @cs
         b = f c
-    in pure $ mkNodeB opts b (msg0 <> showVerbose opts " | " [c]) []
+    in pure $ mkNodeB opts b (msg0 <> showVerbose opts " | " ([c] :: String)) []
 
 -- | predicate similar to 'Data.Char.isLower'
 --

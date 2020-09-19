@@ -61,6 +61,7 @@ module Predicate.Util (
   , fixit
   , prefixMsg
   , splitAndAlign
+  , verboseList
 
  -- ** display options
   , POpts
@@ -2166,3 +2167,7 @@ instance TupleC 6 a where
                 a:b:c:d:e:f:_ -> Right (a,b,c,d,e,f)
                 o -> Left o
 
+verboseList :: POpts -> TT a -> [Holder]
+verboseList o tt
+  | isVerbose o = [hh tt]
+  | otherwise = []
