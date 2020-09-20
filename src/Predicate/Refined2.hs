@@ -171,13 +171,13 @@ instance ( i ~ String
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined2'
 --
--- >>> reads @(Refined2 OZ (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 254, r2Out = \"fe\"}"
+-- >>> reads @(Refined2 OZ (ReadBase Int 16) (Between 0 255 Id) String) "Refined2 {r2In = 254, r2Out = \"fe\"}"
 -- [(Refined2 {r2In = 254, r2Out = "fe"},"")]
 --
--- >>> reads @(Refined2 OZ (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 300, r2Out = \"12c\"}"
+-- >>> reads @(Refined2 OZ (ReadBase Int 16) (Between 0 255 Id) String) "Refined2 {r2In = 300, r2Out = \"12c\"}"
 -- []
 --
--- >>> reads @(Refined2 OZ (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
+-- >>> reads @(Refined2 OZ (ReadBase Int 16) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
 -- [(Refined2 {r2In = -1234, r2Out = "-4d2"},"")]
 --
 -- >>> reads @(Refined2 OZ (Map (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
@@ -213,7 +213,7 @@ instance ( Refined2C opts ip op i
 -- | 'ToJSON' instance for 'Refined2'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined2 @OZ @(ReadBase Int 16 Id) @(Between 0 255 Id) 254 "fe")
+-- >>> A.encode (unsafeRefined2 @OZ @(ReadBase Int 16) @(Between 0 255 Id) 254 "fe")
 -- "\"fe\""
 --
 -- >>> A.encode (unsafeRefined2 @OZ @Id @'True @Int 123 123)
@@ -226,10 +226,10 @@ instance ToJSON i => ToJSON (Refined2 opts ip op i) where
 -- | 'FromJSON' instance for 'Refined2'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.eitherDecode' @(Refined2 OZ (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe\""
+-- >>> A.eitherDecode' @(Refined2 OZ (ReadBase Int 16) (Id > 10 && Id < 256) String) "\"00fe\""
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> removeAnsi $ A.eitherDecode' @(Refined2 OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe443a\""
+-- >>> removeAnsi $ A.eitherDecode' @(Refined2 OAN (ReadBase Int 16) (Id > 10 && Id < 256) String) "\"00fe443a\""
 -- Error in $: Refined2:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
 -- P ReadBase(Int,16) 16663610
@@ -381,12 +381,12 @@ withRefined2TIO = (>>=) . newRefined2TIO @opts @ip @op @i
 -- This first example reads a hex string and makes sure it is between 100 and 200 and then
 -- reads a binary string and adds the values together
 --
--- >>> prtRefinedTIO $ withRefined2T @OZ @(ReadBase Int 16 Id) @(Between 100 200 Id) "a3" $ \x -> withRefined2T @OZ @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (r2In x + r2In y)
+-- >>> prtRefinedTIO $ withRefined2T @OZ @(ReadBase Int 16) @(Between 100 200 Id) "a3" $ \x -> withRefined2T @OZ @(ReadBase Int 2) @'True "1001110111" $ \y -> pure (r2In x + r2In y)
 -- 794
 --
 -- this example fails as the the hex value is out of range
 --
--- >>> prtRefinedTIO $ withRefined2T @OAN @(ReadBase Int 16 Id) @(Between 100 200 Id) "a388" $ \x -> withRefined2T @OAN @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (x,y)
+-- >>> prtRefinedTIO $ withRefined2T @OAN @(ReadBase Int 16) @(Between 100 200 Id) "a388" $ \x -> withRefined2T @OAN @(ReadBase Int 2) @'True "1001110111" $ \y -> pure (x,y)
 -- *** Step 1. Success Initial Conversion(ip) (41864) ***
 -- P ReadBase(Int,16) 41864
 -- |
@@ -513,13 +513,13 @@ newRefined2P' _ i = do
 
 -- | pure version for extracting Refined2
 --
--- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(Lt 255) "00fe"
+-- >>> newRefined2 @OZ @(ReadBase Int 16) @(Lt 255) "00fe"
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) "00fe"
+-- >>> newRefined2 @OZ @(ReadBase Int 16) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) "00fe"
 -- Left Step 2. Failed Boolean Check(op) | 0xFE is too large
 --
--- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(Lt 255) "00fg"
+-- >>> newRefined2 @OZ @(ReadBase Int 16) @(Lt 255) "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
 -- >>> newRefined2 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"

@@ -18,7 +18,7 @@ converts a base 16 String to an Int and validates that the number is between 0 a
 internally Refined2 holds the internal value r2In as an Int and the original String in r2Out
 
 ```haskell
->type Hex = '(OL, ReadBase Int 16 Id, Between 0 0xff Id, String)
+>type Hex = '(OL, ReadBase Int 16, Between 0 0xff Id, String)
 
 >newRefined2P (Proxy @Hex) "0000fe"
 Refined2 {r2In = 254, r2Out = "0000fe"}
@@ -42,7 +42,7 @@ Left "Step 2. False Boolean Check(op) | {False && False | (0-255:0 <= -10) && (l
 ```
 
 ```haskell
-type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 255 Id, String)
+type Hex opts = '(opts, ReadBase Int 16, Between 0 255 Id, String)
 
 $$(refined2TH "0000fe") :: MakeR2 (Hex OL)
 Refined2 {r2In = 254, r2Out = "0000fe"}
@@ -50,7 +50,7 @@ Refined2 {r2In = 254, r2Out = "0000fe"}
 
 Here is an example where the predicate fails at compile-time and we choose to show the details using OU
 ```haskell
->type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 255 Id, String)
+>type Hex opts = '(opts, ReadBase Int 16, Between 0 255 Id, String)
 
 >$$(refined2TH "000ffff") :: MakeR2 (Hex OU)
 
@@ -103,13 +103,13 @@ refined2TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP 
 
 #### This example is successful as it is a valid hexadecimal and is between 10 though 256
 ```haskell
->eitherDecode' @(Refined2 OU (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe\""
+>eitherDecode' @(Refined2 OU (ReadBase Int 16) (Id > 10 && Id < 256) String) "\"00fe\""
 Right (Refined2 {r2In = 254, r2Out = "00fe"})
 ```
 
 #### This example fails as the value is not a valid hexadecimal string
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined2 OU (ReadBase Int 16 Id) 'True String) "\"00feg\""
+>either putStrLn print $ eitherDecode' @(Refined2 OU (ReadBase Int 16) 'True String) "\"00feg\""
 Error in $: Refined2:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 *** Step 1. Initial Conversion(ip) Failed ***
@@ -122,7 +122,7 @@ Error in $: Refined2:Step 1. Initial Conversion(ip) Failed | invalid base 16
 #### This example fails as the hexadecimal value is valid but is not between 10 and 256
 
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined2 OU (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "\"00fe443a\""
+>either putStrLn print $ eitherDecode' @(Refined2 OU (ReadBase Int 16) (Id > 10 && Id < 256) String) "\"00fe443a\""
 Error in $: Refined2:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 
 *** Step 1. Success Initial Conversion(ip) [16663610] ***

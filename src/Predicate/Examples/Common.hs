@@ -155,10 +155,10 @@ type Ip4StrictRE = "^" <%> IntersperseT "\\." (RepeatT 4 OctetRE) <%> "$"
 -- | @ip@ type for reading in an ip6 address
 type Ip6ip = Resplit ":"
          >> Map (If (Id == "") "0" Id) Id
-         >> Map (ReadBase Int 16 Id) Id
+         >> Map (ReadBase Int 16) Id
          >> PadL 8 0 Id
 
---type Ip6ip' = Map (If (Id == "") 0 (ReadBase Int 16 Id)) (Resplit ":") >> PadL 8 0 Id
+--type Ip6ip' = Map (If (Id == "") 0 (ReadBase Int 16)) (Resplit ":") >> PadL 8 0 Id
 
 -- | @op@ type for validating an ip6 address using predicates
 type Ip6op = Msg "count is bad:" (Len == 8)

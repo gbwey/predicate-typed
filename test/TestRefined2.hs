@@ -60,9 +60,9 @@ namedTests =
 
 unnamedTests :: [IO ()]
 unnamedTests = [
-    (@?=) [(unsafeRefined2 255 "ff", "")] (reads @(Refined2 OAN (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 255, r2Out = \"ff\"}") -- escape quotes cos read instance for String
-  , (@?=) [] (reads @(Refined2 OAN (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined2 {r2In = 256, r2Out = \"100\"}")
-  , (@?=) [(unsafeRefined2 (-1234) "-4d2", "")] (reads @(Refined2 OAN (ReadBase Int 16 Id) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}")
+    (@?=) [(unsafeRefined2 255 "ff", "")] (reads @(Refined2 OAN (ReadBase Int 16) (Between 0 255 Id) String) "Refined2 {r2In = 255, r2Out = \"ff\"}") -- escape quotes cos read instance for String
+  , (@?=) [] (reads @(Refined2 OAN (ReadBase Int 16) (Between 0 255 Id) String) "Refined2 {r2In = 256, r2Out = \"100\"}")
+  , (@?=) [(unsafeRefined2 (-1234) "-4d2", "")] (reads @(Refined2 OAN (ReadBase Int 16) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}")
   , (@?=) (Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")) (newRefined2 "1.2.3.4" :: Either Msg2 (Ip4R OAN))
   , expectJ (Right (G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))) (toFrom $ G4 @OAN (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))
   , expectJ (Left ["Error in $.g4Ip", "False Boolean Check"]) (toFrom $ G4 @OAN (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.400"))
@@ -110,7 +110,7 @@ unnamedTests = [
 
   , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789")
                   $ runIdentity $ eval2M @OAN
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10 Id) Snd)
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10) Snd)
                   @(GuardBool "expected 3" (Len == 3)
                   && GuardBool "3 digits" (Between 0 999 (Ix' 0))
                   && GuardBool "2 digits" (Between 0 99 (Ix' 1))
@@ -120,7 +120,7 @@ unnamedTests = [
 
   , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789")
                   $ runIdentity $ eval2M @OAN
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10 Id) Snd)
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10) Snd)
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   "123-45-6789"
 
@@ -145,11 +145,11 @@ unnamedTests = [
                   "123::Ffff:::11"
 
   , expect2 (Right $ unsafeRefined2 [31,11,1999] "31-11-1999")
-                  $ runIdentity $ eval2M @OAN @(Rescan DdmmyyyyRE >> OneP >> Map (ReadBase Int 10 Id) Snd)
+                  $ runIdentity $ eval2M @OAN @(Rescan DdmmyyyyRE >> OneP >> Map (ReadBase Int 10) Snd)
                            @Ddmmyyyyop
                            "31-11-1999"
   , expect2 (Right $ unsafeRefined2 [123,45,6789] "123-45-6789") $ runIdentity $ eval2M @OAN
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10 Id) Snd)
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10) Snd)
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   "123-45-6789"
 
@@ -231,13 +231,13 @@ tst0a =
 
 -- prtRefinedTIO $ tst1a @'OAN
 tst1a :: forall (opts :: Opt) m . (OptC opts, Monad m) => RefinedT m ((Int,String),(Int,String))
-tst1a = withRefined2T @opts @(ReadBase Int 16 Id) @(Between 100 200 Id) @String "a3"
+tst1a = withRefined2T @opts @(ReadBase Int 16) @(Between 100 200 Id) @String "a3"
   $ \r1 -> withRefined2T @opts @(ReadP Int Id) @'True @String "12"
      $ \r2 -> return ((r2In r1, r2Out r1), (r2In r2, r2Out r2))
 
 -- prtRefinedTIO $ tst2a @'OAN
 tst2a :: forall (opts :: Opt) m . (OptC opts, MonadIO m) => RefinedT m ((Int,String),(Int,String))
-tst2a = withRefined2TIO @opts @(ReadBase Int 16 Id) @(Stderr "start" |> Between 100 200 Id >| Stdout "end") @String "a3"
+tst2a = withRefined2TIO @opts @(ReadBase Int 16) @(Stderr "start" |> Between 100 200 Id >| Stdout "end") @String "a3"
   $ \r1 -> withRefined2TIO @opts @(ReadP Int Id) @'True @String "12"
      $ \r2 -> return ((r2In r1, r2Out r1), (r2In r2, r2Out r2))
 {-

@@ -19,16 +19,16 @@ converts a base 16 String to an Int and validates that the number is between 0 a
 and then roundtrips the value to a string
 
 ```haskell
->type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
+>type Hex opts = '(opts, ReadBase Int 16, Between 0 0xff Id, ShowBase 16, String)
 
 >newRefined3P (Proxy @(Hex OL)) "0000fe"
 Refined3 {r3In = 254, r3Out = "fe"}
 ```
-1. `ReadBase Int 16 Id`
+1. `ReadBase Int 16`
     reads a hexadecimal string and returns 254
 2. `Between 0 255 Id`
     checks to make sure the predicate holds ie the number is between 0 and 255
-3. `ShowBase 16 Id`
+3. `ShowBase 16`
     formats the output as "fe" which is compatible with the input
 
 run this to get details in color of each evaluation step on failure:
@@ -52,26 +52,26 @@ False 4094 <= 255
 
 Read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as output
 ```haskell
->pu @(ReadBase Int 16 Id) "0000fe"
+>pu @(ReadBase Int 16) "0000fe"
 PresentT 254
 
 >pu @(Between 0 255 Id) 254
 TrueT
 
->pu @(ShowBase 16 Id) 254 = "fe"
+>pu @(ShowBase 16) 254 = "fe"
 PresentT "fe"
 ```
 
 
 ```haskell
-type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
+type Hex opts = '(opts, ReadBase Int 16, Between 0 0xff Id, ShowBase 16, String)
 
 $$(refined3TH "0000fe") :: MakeR3 (Hex OL)
 ```
 
 Here is an example where the predicate fails at compile-time and we choose to show the details using OU
 ```haskell
->type Hex opts = '(opts, ReadBase Int 16 Id, Between 0 0xff Id, ShowBase 16 Id, String)
+>type Hex opts = '(opts, ReadBase Int 16, Between 0 0xff Id, ShowBase 16, String)
 
 >$$(refined3TH "000ffff") :: MakeR3 (Hex OU)
 
@@ -123,13 +123,13 @@ refined3TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP 
 
 #### This example is successful as it is a valid hexadecimal and is between 10 though 256
 ```haskell
->eitherDecode' @(Refined3 OU (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
+>eitherDecode' @(Refined3 OU (ReadBase Int 16) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
 Right (Refined3 {r3In = 254, r3Out = "254"})
 ```
 
 #### This example fails as the value is not a valid hexadecimal string
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined3 OU (ReadBase Int 16 Id) 'True (ShowP Id) String) "\"00feg\""
+>either putStrLn print $ eitherDecode' @(Refined3 OU (ReadBase Int 16) 'True (ShowP Id) String) "\"00feg\""
 Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 ***Step 1. Initial Conversion(ip) Failed ***
@@ -142,7 +142,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 #### This example fails as the hexadecimal value is valid but is not between 10 and 256
 
 ```haskell
->either putStrLn print $ eitherDecode' @(Refined3 OU (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
+>either putStrLn print $ eitherDecode' @(Refined3 OU (ReadBase Int 16) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe443a\""
 Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 *** Step 1. Success Initial Conversion(ip) (16663610) ***
 P ReadBase(Int,16) 16663610

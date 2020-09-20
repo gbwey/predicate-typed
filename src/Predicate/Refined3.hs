@@ -201,13 +201,13 @@ instance (Refined3C opts ip op fmt String, Show (PP ip String))
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
 --
--- >>> reads @(Refined3 OZ (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
+-- >>> reads @(Refined3 OZ (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
 -- [(Refined3 {r3In = 254, r3Out = "fe"},"")]
 --
--- >>> reads @(Refined3 OZ (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
+-- >>> reads @(Refined3 OZ (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
 -- []
 --
--- >>> reads @(Refined3 OZ (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
+-- >>> reads @(Refined3 OZ (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
 -- [(Refined3 {r3In = -1234, r3Out = "-4d2"},"")]
 --
 -- >>> reads @(Refined3 OZ (Map (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
@@ -244,7 +244,7 @@ instance ( Eq i
 -- | 'ToJSON' instance for 'Refined3'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined3' @OZ @(ReadBase Int 16 Id) @(Between 0 255 Id) @(ShowBase 16 Id) "fe")
+-- >>> A.encode (unsafeRefined3' @OZ @(ReadBase Int 16) @(Between 0 255 Id) @(ShowBase 16) "fe")
 -- "\"fe\""
 --
 -- >>> A.encode (unsafeRefined3' @OZ @Id @'True @Id 123)
@@ -257,10 +257,10 @@ instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 opts ip op fmt i) where
 -- | 'FromJSON' instance for 'Refined3'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.eitherDecode' @(Refined3 OZ (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe\""
+-- >>> A.eitherDecode' @(Refined3 OZ (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe\""
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> removeAnsi $ A.eitherDecode' @(Refined3 OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) (ShowBase 16 Id) String) "\"00fe443a\""
+-- >>> removeAnsi $ A.eitherDecode' @(Refined3 OAN (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe443a\""
 -- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
 -- P ReadBase(Int,16) 16663610
@@ -444,8 +444,8 @@ withRefined3TIO = (>>=) . newRefined3TPIO (Proxy @'(opts,ip,op,fmt,i))
 --
 -- >>> :set -XPolyKinds
 -- >>> :set -XRankNTypes
--- >>> b16 :: forall opts . Proxy '(opts, ReadBase Int 16 Id, Between 100 200 Id, ShowBase 16 Id, String); b16 = Proxy
--- >>> b2 :: forall opts . Proxy '(opts, ReadBase Int 2 Id, 'True, ShowBase 2 Id, String); b2 = Proxy
+-- >>> b16 :: forall opts . Proxy '(opts, ReadBase Int 16, Between 100 200 Id, ShowBase 16, String); b16 = Proxy
+-- >>> b2 :: forall opts . Proxy '(opts, ReadBase Int 2, 'True, ShowBase 2, String); b2 = Proxy
 -- >>> prtRefinedTIO $ withRefined3TP (b16 @OZ) "a3" $ \x -> withRefined3TP (b2 @OZ) "1001110111" $ \y -> pure (r3In x + r3In y)
 -- 794
 --
@@ -679,13 +679,13 @@ newRefined3P' _ i = do
 
 -- | same as 'newRefined3P' but skips the proxy and allows you to set each parameter individually using type application
 --
--- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fe"
+-- >>> newRefined3 @OZ @(ReadBase Int 16) @(Lt 255) @(PrintF "%x" Id) "00fe"
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
--- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) @(PrintF "%x" Id) "00fe"
+-- >>> newRefined3 @OZ @(ReadBase Int 16) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) @(PrintF "%x" Id) "00fe"
 -- Left Step 2. Failed Boolean Check(op) | 0xFE is too large
 --
--- >>> newRefined3 @OZ @(ReadBase Int 16 Id) @(Lt 255) @(PrintF "%x" Id) "00fg"
+-- >>> newRefined3 @OZ @(ReadBase Int 16) @(Lt 255) @(PrintF "%x" Id) "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
 -- >>> newRefined3 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"

@@ -247,20 +247,20 @@ luhn11 = Proxy
 
 -- | convert a string from a given base \'i\' and store it internally as an base 10 integer
 --
--- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @'True "00fe"
+-- >>> newRefined2 @OZ @(ReadBase Int 16) @'True "00fe"
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(Between 100 400 Id) "00fe"
+-- >>> newRefined2 @OZ @(ReadBase Int 16) @(Between 100 400 Id) "00fe"
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
--- >>> newRefined2 @OZ @(ReadBase Int 16 Id) @(GuardSimple (Id < 400) >> 'True) "f0fe"
+-- >>> newRefined2 @OZ @(ReadBase Int 16) @(GuardSimple (Id < 400) >> 'True) "f0fe"
 -- Left Step 2. Failed Boolean Check(op) | (61694 < 400)
 --
--- >>> newRefined2 @OL @(ReadBase Int 16 Id) @(Id < 400) "f0fe" -- todo: why different parens vs braces
+-- >>> newRefined2 @OL @(ReadBase Int 16) @(Id < 400) "f0fe" -- todo: why different parens vs braces
 -- Left Step 2. False Boolean Check(op) | {61694 < 400}
 --
 type BaseN (opts :: Opt) (n :: Nat) = BaseN' opts n 'True
-type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n Id, p, String)
+type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n, p, String)
 
 
 -- | Luhn check
@@ -281,13 +281,13 @@ type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n Id, p, String)
 -- >>> newRefined2 @OZ @(BaseIJip 16 2) @'True "fge"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> newRefined2 @OL @(BaseIJip 16 2) @(ReadBase Int 2 Id < 1000) "ffe"
+-- >>> newRefined2 @OL @(BaseIJip 16 2) @(ReadBase Int 2 < 1000) "ffe"
 -- Left Step 2. False Boolean Check(op) | {4094 < 1000}
 --
-type BaseIJip (i :: Nat) (j :: Nat) = ReadBase Int i Id >> ShowBase j Id
+type BaseIJip (i :: Nat) (j :: Nat) = ReadBase Int i >> ShowBase j
 
 type BaseIJ (i :: Nat) (j :: Nat) = BaseIJ' i j 'True
-type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, String)
+type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, String)
 
 -- | take any valid Read/Show instance and turn it into a valid 'Predicate.Refined2.Refined2'
 --
@@ -307,7 +307,7 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i Id >> ShowBase j Id, p, 
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @(Id > (15 % 1)) "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> newRefined2 @OL @(ReadP Rational Id) @(Msg (PrintF "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1))) "13 % 3"
+-- >>> newRefined2 @OL @(ReadP Rational Id) @(Msg (PrintF "invalid=%3.2f" (FromRational Double)) (Id > (15 % 1))) "13 % 3"
 -- Left Step 2. False Boolean Check(op) | {invalid=4.33 13 % 3 > 15 % 1}
 --
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @(Id > (11 % 1)) "13 % 3"

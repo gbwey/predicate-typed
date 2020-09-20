@@ -159,13 +159,13 @@ instance ( i ~ String
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined5'
 --
--- >>> reads @(Refined5 OZ (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined5 254"
+-- >>> reads @(Refined5 OZ (ReadBase Int 16) (Between 0 255 Id) String) "Refined5 254"
 -- [(Refined5 254,"")]
 --
--- >>> reads @(Refined5 OZ (ReadBase Int 16 Id) (Between 0 255 Id) String) "Refined5 300"
+-- >>> reads @(Refined5 OZ (ReadBase Int 16) (Between 0 255 Id) String) "Refined5 300"
 -- []
 --
--- >>> reads @(Refined5 OZ (ReadBase Int 16 Id) (Id < 0) String) "Refined5 -1234"
+-- >>> reads @(Refined5 OZ (ReadBase Int 16) (Id < 0) String) "Refined5 -1234"
 -- [(Refined5 (-1234),"")]
 --
 -- >>> reads @(Refined5 OZ (Map (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) String) "Refined5 [192,168,0,1]"
@@ -197,7 +197,7 @@ instance ( Refined2C opts ip op i
 -- | 'ToJSON' instance for 'Refined5'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined5' @OZ @(ReadBase Int 16 Id) @(Between 0 255 Id) 254)
+-- >>> A.encode (unsafeRefined5' @OZ @(ReadBase Int 16) @(Between 0 255 Id) 254)
 -- "254"
 --
 -- >>> A.encode (unsafeRefined5 @OZ @Id @'True @Int 123)
@@ -209,17 +209,17 @@ instance ToJSON (PP ip i) => ToJSON (Refined5 opts ip op i) where
 -- | 'FromJSON' instance for 'Refined5'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.eitherDecode' @(Refined5 OZ (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "123"
+-- >>> A.eitherDecode' @(Refined5 OZ (ReadBase Int 16) (Id > 10 && Id < 256) String) "123"
 -- Right (Refined5 123)
 --
--- >>> removeAnsi $ A.eitherDecode' @(Refined5 OL (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "9"
+-- >>> removeAnsi $ A.eitherDecode' @(Refined5 OL (ReadBase Int 16) (Id > 10 && Id < 256) String) "9"
 -- Error in $: Refined5:false boolean check | {False && True | (9 > 10)}
 -- False
 --
--- >>> A.eitherDecode' @(Refined5 OZ (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "254"
+-- >>> A.eitherDecode' @(Refined5 OZ (ReadBase Int 16) (Id > 10 && Id < 256) String) "254"
 -- Right (Refined5 254)
 --
--- >>> removeAnsi $ A.eitherDecode' @(Refined5 OAN (ReadBase Int 16 Id) (Id > 10 && Id < 256) String) "12345"
+-- >>> removeAnsi $ A.eitherDecode' @(Refined5 OAN (ReadBase Int 16) (Id > 10 && Id < 256) String) "12345"
 -- Error in $: Refined5:false boolean check | {True && False | (12345 < 256)}
 -- False True && False | (12345 < 256)
 -- |
@@ -323,12 +323,12 @@ withRefined5TIO = (>>=) . newRefined5TIO @opts @ip @op @i
 -- This first example reads a hex string and makes sure it is between 100 and 200 and then
 -- reads a binary string and adds the values together
 --
--- >>> prtRefinedTIO $ withRefined5T @OZ @(ReadBase Int 16 Id) @(Between 100 200 Id) "a3" $ \x -> withRefined5T @OZ @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (unRefined5 x + unRefined5 y)
+-- >>> prtRefinedTIO $ withRefined5T @OZ @(ReadBase Int 16) @(Between 100 200 Id) "a3" $ \x -> withRefined5T @OZ @(ReadBase Int 2) @'True "1001110111" $ \y -> pure (unRefined5 x + unRefined5 y)
 -- 794
 --
 -- this example fails as the the hex value is out of range
 --
--- >>> prtRefinedTIO $ withRefined5T @OAN @(ReadBase Int 16 Id) @(Between 100 200 Id) "a388" $ \x -> withRefined5T @OAN @(ReadBase Int 2 Id) @'True "1001110111" $ \y -> pure (x,y)
+-- >>> prtRefinedTIO $ withRefined5T @OAN @(ReadBase Int 16) @(Between 100 200 Id) "a388" $ \x -> withRefined5T @OAN @(ReadBase Int 2) @'True "1001110111" $ \y -> pure (x,y)
 -- *** Step 1. Success Initial Conversion(ip) (41864) ***
 -- P ReadBase(Int,16) 41864
 -- |
@@ -447,13 +447,13 @@ newRefined5P' _ i = do
 
 -- | pure version for extracting Refined5
 --
--- >>> newRefined5 @OZ @(ReadBase Int 16 Id) @(Lt 255) "00fe"
+-- >>> newRefined5 @OZ @(ReadBase Int 16) @(Lt 255) "00fe"
 -- Right (Refined5 254)
 --
--- >>> newRefined5 @OZ @(ReadBase Int 16 Id) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) "00fe"
+-- >>> newRefined5 @OZ @(ReadBase Int 16) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) "00fe"
 -- Left Step 2. Failed Boolean Check(op) | 0xFE is too large
 --
--- >>> newRefined5 @OZ @(ReadBase Int 16 Id) @(Lt 255) "00fg"
+-- >>> newRefined5 @OZ @(ReadBase Int 16) @(Lt 255) "00fg"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
 -- >>> newRefined5 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"

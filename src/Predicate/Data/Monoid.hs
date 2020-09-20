@@ -67,13 +67,13 @@ import Data.List.NonEmpty (NonEmpty(..))
 -- >>> pz @("abcd" <> "ef" <> Id) "ghi"
 -- PresentT "abcdefghi"
 --
--- >>> pz @(Wrap (SG.Sum _) Id <> FromInteger _ 10) 13
+-- >>> pz @(Wrap (SG.Sum _) Id <> (10 >> FromInteger _)) 13
 -- PresentT (Sum {getSum = 23})
 --
--- >>> pz @(Wrap (SG.Product _) Id <> FromInteger _ 10) 13
+-- >>> pz @(Wrap (SG.Product _) Id <> Lift (FromInteger _) 10) 13
 -- PresentT (Product {getProduct = 130})
 --
--- >>> pz @('(FromInteger _ 10,"def") <> Id) (SG.Sum 12, "_XYZ")
+-- >>> pz @('(10 >> FromInteger _,"def") <> Id) (SG.Sum 12, "_XYZ")
 -- PresentT (Sum {getSum = 22},"def_XYZ")
 --
 -- >>> pz @(SapA' (SG.Max _)) (10,12)

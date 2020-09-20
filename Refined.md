@@ -26,19 +26,19 @@ Left (FailT "ReadP Int (1x2y3) failed")
 3. reads in a hexadecimal string and checks to see that it is between 99 and 256
 ```haskell
 --  (>>) forward composition
->prtRefinedIO @OL @(ReadBase Int 16 Id >> Between 99 256 Id) "000fe"
+>prtRefinedIO @OL @(ReadBase Int 16 >> Between 99 256 Id) "000fe"
 Right (Refined "000fe")
 ```
 
 4. reads in a hexadecimal string but fails the predicate check
 ```haskell
->prtRefinedIO @OL @(ReadBase Int 16 Id >> Between 99 253 Id) "000fe"
+>prtRefinedIO @OL @(ReadBase Int 16 >> Between 99 253 Id) "000fe"
 Left FalseT
 ```
 
 5. same as 4. above but now we get details of where it went wrong
 ```haskell
->prtRefinedIO @OU @(ReadBase Int 16 Id >> Between 99 253 Id) "000fe"
+>prtRefinedIO @OU @(ReadBase Int 16 >> Between 99 253 Id) "000fe"
 ```
 
 6. reads in a string as time and does simple validation

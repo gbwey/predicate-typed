@@ -299,7 +299,7 @@ isbn13 = Proxy
 -- Left Step 2. False Boolean Check(op) | {61694 < 400}
 --
 type BaseN (opts :: Opt) (n :: Nat) = BaseN' opts n 'True
-type BaseN' (opts :: Opt) (n :: Nat) p = '(opts, ReadBase Int n Id, p, ShowBase n Id, String)
+type BaseN' (opts :: Opt) (n :: Nat) p = '(opts, ReadBase Int n, p, ShowBase n, String)
 
 base16 :: Proxy (BaseN opts 16)
 base16 = basen
@@ -393,11 +393,11 @@ oknot = mkProxy3
 -- >>> newRefined3P (Proxy @(BaseIJ OZ 16 2)) "fge"
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
--- >>> newRefined3P (Proxy @(BaseIJ' OL 16 2 (ReadBase Int 2 Id < 1000))) "ffe"
+-- >>> newRefined3P (Proxy @(BaseIJ' OL 16 2 (ReadBase Int 2 < 1000))) "ffe"
 -- Left Step 2. False Boolean Check(op) | {4094 < 1000}
 --
 type BaseIJ (opts :: Opt) (i :: Nat) (j :: Nat) = BaseIJ' opts i j 'True
-type BaseIJ' (opts :: Opt) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id >> ShowBase j Id, p, ReadBase Int j Id >> ShowBase i Id, String)
+type BaseIJ' (opts :: Opt) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i >> ShowBase j, p, ReadBase Int j >> ShowBase i, String)
 
 -- | take any valid Read/Show instance and turn it into a valid 'Refined3'
 --
@@ -417,7 +417,7 @@ type BaseIJ' (opts :: Opt) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i Id >
 -- >>> newRefined3P (Proxy @(ReadShow' OZ Rational (Id > (15 % 1)))) "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
--- >>> newRefined3P (Proxy @(ReadShow' OL Rational (Msg (PrintF "invalid=%3.2f" (FromRational Double Id)) (Id > (15 % 1))))) "13 % 3"
+-- >>> newRefined3P (Proxy @(ReadShow' OL Rational (Msg (PrintF "invalid=%3.2f" (FromRational Double)) (Id > (15 % 1))))) "13 % 3"
 -- Left Step 2. False Boolean Check(op) | {invalid=4.33 13 % 3 > 15 % 1}
 --
 -- >>> newRefined3P (Proxy @(ReadShow' OZ Rational (Id > (11 % 1)))) "13 % 3"

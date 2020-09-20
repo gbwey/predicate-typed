@@ -115,42 +115,42 @@ instance (Num (PP t a)
 
 -- | 'fromInteger' function where you need to provide the type @t@ of the result
 --
--- >>> pz @(FromInteger (SG.Sum _) Id) 23
+-- >>> pz @(FromInteger (SG.Sum _)) 23
 -- PresentT (Sum {getSum = 23})
 --
--- >>> pz @(FromInteger Rational 44) 12
+-- >>> pz @(44 >> FromInteger Rational) 12
 -- PresentT (44 % 1)
 --
--- >>> pz @(FromInteger Rational Id) 12
+-- >>> pz @(FromInteger Rational) 12
 -- PresentT (12 % 1)
 --
--- >>> pl @((FromInteger _ 12 &&& Id) >> Fst + Snd) (SG.Min 7)
+-- >>> pl @((Lift (FromInteger _) 12 &&& Id) >> Fst + Snd) (SG.Min 7)
 -- Present Min {getMin = 19} ((>>) Min {getMin = 19} | {getMin = 19})
 -- PresentT (Min {getMin = 19})
 --
--- >>> pl @((FromInteger _ 12 &&& Id) >> SapA) (SG.Product 7)
+-- >>> pl @((Lift (FromInteger _) 12 &&& Id) >> SapA) (SG.Product 7)
 -- Present Product {getProduct = 84} ((>>) Product {getProduct = 84} | {getProduct = 84})
 -- PresentT (Product {getProduct = 84})
 --
--- >>> pl @(FromInteger (SG.Sum _) Fst) (3,"A")
--- Present Sum {getSum = 3} (FromInteger Sum {getSum = 3})
+-- >>> pl @(Fst >> FromInteger (SG.Sum _)) (3,"A")
+-- Present Sum {getSum = 3} ((>>) Sum {getSum = 3} | {getSum = 3})
 -- PresentT (Sum {getSum = 3})
 --
--- >>> pl @(FromInteger DiffTime 123) 'x'
--- Present 123s (FromInteger 123s)
+-- >>> pl @(Lift (FromInteger DiffTime) 123) 'x'
+-- Present 123s ((>>) 123s | {FromInteger 123s})
 -- PresentT 123s
 --
-data FromInteger (t :: Type) p
-type FromIntegerT (t :: Type) p = FromInteger' (Hole t) p
+data FromInteger (t :: Type)
+type FromIntegerT (t :: Type) = FromInteger' (Hole t) Id
 --type FromIntegerP n = FromInteger' Unproxy n
 
-instance P (FromIntegerT t p) x => P (FromInteger t p) x where
-  type PP (FromInteger t p) x = PP (FromIntegerT t p) x
-  eval _ = eval (Proxy @(FromIntegerT t p))
+instance P (FromIntegerT t) x => P (FromInteger t) x where
+  type PP (FromInteger t) x = PP (FromIntegerT t) x
+  eval _ = eval (Proxy @(FromIntegerT t))
 
 -- | 'fromIntegral' function where you need to provide the type @t@ of the result
 --
--- >>> pz @(FromIntegral (SG.Sum _) Id) 23
+-- >>> pz @(FromIntegral (SG.Sum _)) 23
 -- PresentT (Sum {getSum = 23})
 data FromIntegral' t n
 
@@ -170,12 +170,12 @@ instance (Num (PP t a)
         let b = fromIntegral n
         in mkNode opts (PresentT b) (show01 opts msg0 b n) [hh nn]
 
-data FromIntegral (t :: Type) p
-type FromIntegralT (t :: Type) p = FromIntegral' (Hole t) p
+data FromIntegral (t :: Type)
+type FromIntegralT (t :: Type) = FromIntegral' (Hole t) Id
 
-instance P (FromIntegralT t p) x => P (FromIntegral t p) x where
-  type PP (FromIntegral t p) x = PP (FromIntegralT t p) x
-  eval _ = eval (Proxy @(FromIntegralT t p))
+instance P (FromIntegralT t) x => P (FromIntegral t) x where
+  type PP (FromIntegral t) x = PP (FromIntegralT t) x
+  eval _ = eval (Proxy @(FromIntegralT t))
 
 -- | 'toRational' function
 --
@@ -222,43 +222,40 @@ instance (a ~ PP p x
 -- Present 0.4 (FromRational 0.4 | 2 % 5)
 -- PresentT 0.4
 --
-data FromRational' t r
+data FromRational' t p
 
-instance (P r a
-        , PP r a ~ Rational
+instance (P p a
+        , PP p a ~ Rational
         , Show (PP t a)
         , Fractional (PP t a)
-        ) => P (FromRational' t r) a where
-  type PP (FromRational' t r) a = PP t a
+        ) => P (FromRational' t p) a where
+  type PP (FromRational' t p) a = PP t a
   eval _ opts a = do
     let msg0 = "FromRational"
-    rr <- eval (Proxy @r) opts a
-    pure $ case getValueLR opts msg0 rr [] of
+    pp <- eval (Proxy @p) opts a
+    pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right r ->
-        let b = fromRational @(PP t a) r
-        in mkNode opts (PresentT b) (show01 opts msg0 b r) [hh rr]
+      Right p ->
+        let b = fromRational @(PP t a) p
+        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
 -- | 'fromRational' function where you need to provide the type @t@ of the result
 --
--- >>> pz @(FromRational Rational Id) 23.5
+-- >>> pz @(FromRational Rational) 23.5
 -- PresentT (47 % 2)
 --
--- >>> pl @(FromRational Float (4 % 5)) ()
+-- >>> pl @(FromRational Float) (4 % 5)
 -- Present 0.8 (FromRational 0.8 | 4 % 5)
 -- PresentT 0.8
 --
-data FromRational (t :: Type) p
-type FromRationalT (t :: Type) p = FromRational' (Hole t) p
+data FromRational (t :: Type)
+type FromRationalT (t :: Type) = FromRational' (Hole t) Id
 
-instance P (FromRationalT t p) x => P (FromRational t p) x where
-  type PP (FromRational t p) x = PP (FromRationalT t p) x
-  eval _ = eval (Proxy @(FromRationalT t p))
+instance P (FromRationalT t) x => P (FromRational t) x where
+  type PP (FromRational t) x = PP (FromRationalT t) x
+  eval _ = eval (Proxy @(FromRationalT t))
 
 -- | 'truncate' function where you need to provide the type @t@ of the result
---
--- >>> pz @(Truncate Int Id) (23 % 5)
--- PresentT 4
 --
 -- >>> pl @(Truncate' (Fst >> Unproxy) Snd) (Proxy @Integer,2.3)
 -- Present 2 (Truncate 2 | 2.3)
@@ -286,17 +283,19 @@ instance ( P p x
         let b = truncate p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
-data Truncate (t :: Type) p
-type TruncateT (t :: Type) p = Truncate' (Hole t) p
+-- | 'truncate' function where you need to provide the type @t@ of the result
+--
+-- >>> pz @(Truncate Int) (23 % 5)
+-- PresentT 4
+--
+data Truncate (t :: Type)
+type TruncateT (t :: Type) = Truncate' (Hole t) Id
 
-instance P (TruncateT t p) x => P (Truncate t p) x where
-  type PP (Truncate t p) x = PP (TruncateT t p) x
-  eval _ = eval (Proxy @(TruncateT t p))
+instance P (TruncateT t) x => P (Truncate t) x where
+  type PP (Truncate t) x = PP (TruncateT t) x
+  eval _ = eval (Proxy @(TruncateT t))
 
 -- | 'ceiling' function where you need to provide the type @t@ of the result
---
--- >>> pz @(Ceiling Int Id) (23 % 5)
--- PresentT 5
 data Ceiling' t p
 
 instance ( P p x
@@ -315,17 +314,19 @@ instance ( P p x
         let b = ceiling p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
-data Ceiling (t :: Type) p
-type CeilingT (t :: Type) p = Ceiling' (Hole t) p
+-- | 'ceiling' function where you need to provide the type @t@ of the result
+--
+-- >>> pz @(Ceiling Int) (23 % 5)
+-- PresentT 5
+--
+data Ceiling (t :: Type)
+type CeilingT (t :: Type) = Ceiling' (Hole t) Id
 
-instance P (CeilingT t p) x => P (Ceiling t p) x where
-  type PP (Ceiling t p) x = PP (CeilingT t p) x
-  eval _ = eval (Proxy @(CeilingT t p))
+instance P (CeilingT t) x => P (Ceiling t) x where
+  type PP (Ceiling t) x = PP (CeilingT t) x
+  eval _ = eval (Proxy @(CeilingT t))
 
 -- | 'floor' function where you need to provide the type @t@ of the result
---
--- >>> pz @(Floor Int Id) (23 % 5)
--- PresentT 4
 data Floor' t p
 
 instance ( P p x
@@ -344,12 +345,17 @@ instance ( P p x
         let b = floor p
         in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
 
-data Floor (t :: Type) p
-type FloorT (t :: Type) p = Floor' (Hole t) p
+-- | 'floor' function where you need to provide the type @t@ of the result
+--
+-- >>> pz @(Floor Int) (23 % 5)
+-- PresentT 4
+--
+data Floor (t :: Type)
+type FloorT (t :: Type) = Floor' (Hole t) Id
 
-instance P (FloorT t p) x => P (Floor t p) x where
-  type PP (Floor t p) x = PP (FloorT t p) x
-  eval _ = eval (Proxy @(FloorT t p))
+instance P (FloorT t) x => P (Floor t) x where
+  type PP (Floor t) x = PP (FloorT t) x
+  eval _ = eval (Proxy @(FloorT t))
 
 data BinOp = BMult | BSub | BAdd deriving (Read, Show, Eq)
 
@@ -416,7 +422,7 @@ instance (P p a
 -- >>> pz @(Fst ** Snd) (10,4)
 -- PresentT 10000.0
 --
--- >>> pz @'(IsPrime,Id ^ 3,(FromIntegral _ Id) ** (FromRational _ (1 % 2))) 4
+-- >>> pz @'(IsPrime,Id ^ 3,(FromIntegral _) ** (Lift (FromRational _) (1 % 2))) 4
 -- PresentT (False,64,2.0)
 --
 data p ** q
@@ -444,7 +450,7 @@ instance (PP p a ~ PP q a
 
 -- | similar to 'logBase'
 --
--- >>> pz @(Fst `LogBase` Snd >> Truncate Int Id) (10,12345)
+-- >>> pz @(Fst `LogBase` Snd >> Truncate Int) (10,12345)
 -- PresentT 4
 --
 data LogBase p q
@@ -564,7 +570,7 @@ instance (PP p a ~ PP q a
 -- >>> pz @(14 % 3) ()
 -- PresentT (14 % 3)
 --
--- >>> pz @(Negate (14 % 3) ==! FromIntegral _ (Negate 5)) ()
+-- >>> pz @(Negate (14 % 3) ==! Lift (FromIntegral _) (Negate 5)) ()
 -- PresentT GT
 --
 -- >>> pz @(14 -% 3 ==! 5 -% 1) "aa"
@@ -615,15 +621,15 @@ instance (Integral (PP p x)
 -- Present [1 % 1,(-3) % 2,(-3) % 1] ('[1 % 1,(-3) % 2,(-3) % 1] (1 % 1) | ())
 -- PresentT [1 % 1,(-3) % 2,(-3) % 1]
 --
--- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Floor _ Id) Id) ()
+-- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Floor _) Id) ()
 -- Present [1,-5,5,-1] ((>>) [1,-5,5,-1] | {Map [1,-5,5,-1] | [1 % 1,(-33) % 7,21 % 4,(-1) % 1]})
 -- PresentT [1,-5,5,-1]
 --
--- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Ceiling _ Id) Id) ()
+-- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Ceiling _) Id) ()
 -- Present [1,-4,6,-1] ((>>) [1,-4,6,-1] | {Map [1,-4,6,-1] | [1 % 1,(-33) % 7,21 % 4,(-1) % 1]})
 -- PresentT [1,-4,6,-1]
 --
--- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Truncate _ Id) Id) ()
+-- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Truncate _) Id) ()
 -- Present [1,-4,5,-1] ((>>) [1,-4,5,-1] | {Map [1,-4,5,-1] | [1 % 1,(-33) % 7,21 % 4,(-1) % 1]})
 -- PresentT [1,-4,5,-1]
 --
@@ -963,56 +969,56 @@ instance (Typeable (PP t x)
 
 -- | Read a number using base 2 through a maximum of 36
 --
--- >>> pz @(ReadBase Int 16 Id) "00feD"
+-- >>> pz @(ReadBase Int 16) "00feD"
 -- PresentT 4077
 --
--- >>> pz @(ReadBase Int 16 Id) "-ff"
+-- >>> pz @(ReadBase Int 16) "-ff"
 -- PresentT (-255)
 --
--- >>> pz @(ReadBase Int 2 Id) "10010011"
+-- >>> pz @(ReadBase Int 2) "10010011"
 -- PresentT 147
 --
--- >>> pz @(ReadBase Int 8 Id) "Abff"
+-- >>> pz @(ReadBase Int 8) "Abff"
 -- FailT "invalid base 8"
 --
--- >>> pl @(ReadBase Int 16 Id >> GuardSimple (Id > 0xffff) >> ShowBase 16 Id) "12344"
+-- >>> pl @(ReadBase Int 16 >> GuardSimple (Id > 0xffff) >> ShowBase 16) "12344"
 -- Present "12344" ((>>) "12344" | {ShowBase(16) 12344 | 74564})
 -- PresentT "12344"
 --
 -- >>> :set -XBinaryLiterals
--- >>> pz @(ReadBase Int 16 Id >> GuardSimple (Id > 0b10011111) >> ShowBase 16 Id) "7f"
+-- >>> pz @(ReadBase Int 16 >> GuardSimple (Id > 0b10011111) >> ShowBase 16) "7f"
 -- FailT "(127 > 159)"
 --
--- >>> pl @(ReadBase Int 16 Id) "fFe0"
+-- >>> pl @(ReadBase Int 16) "fFe0"
 -- Present 65504 (ReadBase(Int,16) 65504 | "fFe0")
 -- PresentT 65504
 --
--- >>> pl @(ReadBase Int 16 Id) "-ff"
+-- >>> pl @(ReadBase Int 16) "-ff"
 -- Present -255 (ReadBase(Int,16) -255 | "-ff")
 -- PresentT (-255)
 --
--- >>> pl @(ReadBase Int 16 Id) "ff"
+-- >>> pl @(ReadBase Int 16) "ff"
 -- Present 255 (ReadBase(Int,16) 255 | "ff")
 -- PresentT 255
 --
--- >>> pl @(ReadBase Int 22 Id) "zzz"
+-- >>> pl @(ReadBase Int 22) "zzz"
 -- Error invalid base 22 (ReadBase(Int,22) as=zzz err=[])
 -- FailT "invalid base 22"
 --
--- >>> pl @((ReadBase Int 16 Id &&& Id) >> First (ShowBase 16 Id)) "fFe0"
+-- >>> pl @((ReadBase Int 16 &&& Id) >> First (ShowBase 16)) "fFe0"
 -- Present ("ffe0","fFe0") ((>>) ("ffe0","fFe0") | {(***) ("ffe0","fFe0") | (65504,"fFe0")})
 -- PresentT ("ffe0","fFe0")
 --
--- >>> pl @(ReadBase Int 2 Id) "101111"
+-- >>> pl @(ReadBase Int 2) "101111"
 -- Present 47 (ReadBase(Int,2) 47 | "101111")
 -- PresentT 47
 --
-data ReadBase (t :: Type) (n :: Nat) p
-type ReadBaseT (t :: Type) (n :: Nat) p = ReadBase' (Hole t) n p
+data ReadBase (t :: Type) (n :: Nat)
+type ReadBaseT (t :: Type) (n :: Nat) = ReadBase' (Hole t) n Id
 
-instance P (ReadBaseT t n p) x => P (ReadBase t n p) x where
-  type PP (ReadBase t n p) x = PP (ReadBaseT t n p) x
-  eval _ = eval (Proxy @(ReadBaseT t n p))
+instance P (ReadBaseT t n) x => P (ReadBase t n) x where
+  type PP (ReadBase t n) x = PP (ReadBaseT t n) x
+  eval _ = eval (Proxy @(ReadBaseT t n))
 
 getValidBase :: Int -> String
 getValidBase n =
@@ -1023,52 +1029,48 @@ getValidBase n =
 
 -- | Display a number at base 2 to 36, similar to 'Numeric.showIntAtBase' but passes the sign through
 --
--- >>> pz @(ShowBase 16 Id) 4077
+-- >>> pz @(ShowBase 16) 4077
 -- PresentT "fed"
 --
--- >>> pz @(ShowBase 16 Id) (-255)
+-- >>> pz @(ShowBase 16) (-255)
 -- PresentT "-ff"
 --
--- >>> pz @(ShowBase 2 Id) 147
+-- >>> pz @(ShowBase 2) 147
 -- PresentT "10010011"
 --
--- >>> pz @(ShowBase 2 (Negate 147)) "whatever"
+-- >>> pz @(Lift (ShowBase 2) (Negate 147)) "whatever"
 -- PresentT "-10010011"
 --
--- >>> pl @(ShowBase 16 Id) (-123)
+-- >>> pl @(ShowBase 16) (-123)
 -- Present "-7b" (ShowBase(16) -7b | -123)
 -- PresentT "-7b"
 --
--- >>> pl @(ShowBase 16 Id) 123
+-- >>> pl @(ShowBase 16) 123
 -- Present "7b" (ShowBase(16) 7b | 123)
 -- PresentT "7b"
 --
--- >>> pl @(ShowBase 16 Id) 65504
+-- >>> pl @(ShowBase 16) 65504
 -- Present "ffe0" (ShowBase(16) ffe0 | 65504)
 -- PresentT "ffe0"
 --
 
-data ShowBase (n :: Nat) p
+data ShowBase (n :: Nat)
 
-instance (PP p x ~ a
-        , P p x
-        , 2 GL.<= n
+instance (2 GL.<= n
         , n GL.<= 36
         , KnownNat n
-        , Integral a
-        ) => P (ShowBase n p) x where
-  type PP (ShowBase n p) x = String
-  eval _ opts x = do
+        , Integral x
+        ) => P (ShowBase n) x where
+  type PP (ShowBase n) x = String
+  eval _ opts x =
     let n = nat @n
         xs = getValidBase n
         msg0 = "ShowBase(" <> show n <> ")"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right (fromIntegral -> p :: Integer) ->
-        let (ff,a') = if p < 0 then (('-':), abs p) else (id,p)
-            b = Numeric.showIntAtBase (fromIntegral n) (xs !!) a' ""
-        in mkNode opts (PresentT (ff b)) (msg0 <> " " <> litL opts (ff b) <> showVerbose opts " | " p) [hh pp]
+        p :: Integer
+        p = fromIntegral x
+        (ff,a') = if p < 0 then (('-':), abs p) else (id,p)
+        b = Numeric.showIntAtBase (fromIntegral n) (xs !!) a' ""
+    in pure $ mkNode opts (PresentT (ff b)) (msg0 <> " " <> litL opts (ff b) <> showVerbose opts " | " p) []
 
 -- | Display a number at base >= 2 but just show as a list of ints: ignores the sign
 --
@@ -1099,7 +1101,7 @@ instance (PP p x ~ a
 
 -- | convert to bits
 --
--- >>> pl @(Bits 123 >> UnShowBaseN 2 Id) ()
+-- >>> pl @(Bits 123 >> UnShowBaseN 2) ()
 -- Present 123 ((>>) 123 | {UnShowBaseN | 2 | [1,1,1,1,0,1,1]})
 -- PresentT 123
 --
@@ -1113,41 +1115,41 @@ instance P (BitsT p) x => P (Bits p) x where
 
 -- | reverse 'ShowBaseN'
 --
--- >>> pz @(UnShowBaseN 2 Id) [1,0,0,1,0]
+-- >>> pz @(UnShowBaseN 2) [1,0,0,1,0]
 -- PresentT 18
 --
--- >>> pz @(UnShowBaseN 2 Id) [1,1,1]
+-- >>> pz @(UnShowBaseN 2) [1,1,1]
 -- PresentT 7
 --
--- >>> pz @(UnShowBaseN 16 Id) [7,0,3,1]
+-- >>> pz @(UnShowBaseN 16) [7,0,3,1]
 -- PresentT 28721
 --
--- >>> pz @(UnShowBaseN 16 Id) [0]
+-- >>> pz @(UnShowBaseN 16) [0]
 -- PresentT 0
 --
--- >>> pz @(UnShowBaseN 16 Id) []
+-- >>> pz @(UnShowBaseN 16) []
 -- PresentT 0
 --
-data UnShowBaseN n p
+data UnShowBaseN n
 
-instance (PP p x ~ [a]
-        , P p x
+instance (x ~ [a]
         , PP n x ~ b
         , P n x
         , Integral a
         , Integral b
-        ) => P (UnShowBaseN n p) x where
-  type PP (UnShowBaseN n p) x = Integer
+        ) => P (UnShowBaseN n) x where
+  type PP (UnShowBaseN n) x = Integer
   eval _ opts x = do
     let msg0 = "UnShowBaseN"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts x []
-    pure $ case lr of
+    nn <- eval (Proxy @n) opts x
+    pure $ case getValueLR opts msg0 nn [] of
       Left e -> e
-      Right (fromIntegral -> n,map fromIntegral -> p,nn,pp) ->
-         let hhs = [hh nn, hh pp]
+      Right (fromIntegral -> n) ->
+         let xs = map fromIntegral x
+             hhs = [hh nn]
          in if n < 2 then mkNode opts (FailT (msg0 <> " base must be greater than 1")) "" hhs
-            else let b = snd $ foldr (\a (m,tot) -> (m*n, a*m+tot)) (1,0) p
-                 in mkNode opts (PresentT b) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " p) hhs
+            else let b = snd $ foldr (\a (m,tot) -> (m*n, a*m+tot)) (1,0) xs
+                 in mkNode opts (PresentT b) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " xs) hhs
 
 
 -- | calculate the amount to roundup to next n

@@ -60,9 +60,9 @@ namedTests =
 
 unnamedTests :: [IO ()]
 unnamedTests = [
-    (@?=) [(unsafeRefined3 255 "ff", "")] (reads @(Refined3 OAN (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 255, r3Out = \"ff\"}") -- escape quotes cos read instance for String
-  , (@?=) [] (reads @(Refined3 OAN (ReadBase Int 16 Id) (Between 0 255 Id) (ShowBase 16 Id) String) "Refined3 {r3In = 256, r3Out = \"100\"}")
-  , (@?=) [(unsafeRefined3 (-1234) "-4d2", "")] (reads @(Refined3 OAN (ReadBase Int 16 Id) (Id < 0) (ShowBase 16 Id) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}")
+    (@?=) [(unsafeRefined3 255 "ff", "")] (reads @(Refined3 OAN (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 {r3In = 255, r3Out = \"ff\"}") -- escape quotes cos read instance for String
+  , (@?=) [] (reads @(Refined3 OAN (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 {r3In = 256, r3Out = \"100\"}")
+  , (@?=) [(unsafeRefined3 (-1234) "-4d2", "")] (reads @(Refined3 OAN (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}")
 
   , (@?=) (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) (newRefined3 "1.2.3.4" :: Either Msg3 (Ip4R OAN))
 
@@ -116,7 +116,7 @@ unnamedTests = [
 
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "def")
                   $ runIdentity $ eval3M
-                  @OAN @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10 Id) Snd)
+                  @OAN @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10) Snd)
                   @(GuardBool "expected 3" (Len == 3)
                  && GuardBool "3 digits" (Between 0 999 (Ix' 0))
                  && GuardBool "2 digits" (Between 0 99 (Ix' 1))
@@ -127,7 +127,7 @@ unnamedTests = [
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz")
                   $ runIdentity $ eval3M
                   @OAN
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10 Id) Snd)
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10) Snd)
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   @"xyz"
                   "123-45-6789"
@@ -149,12 +149,12 @@ unnamedTests = [
                   "123::Ffff:::11"
 
   , expect3 (Right $ unsafeRefined3 [31,11,1999] "xyz")
-                  $ runIdentity $ eval3M @OAN @(Rescan DdmmyyyyRE >> OneP >> Map (ReadBase Int 10 Id) Snd)
+                  $ runIdentity $ eval3M @OAN @(Rescan DdmmyyyyRE >> OneP >> Map (ReadBase Int 10) Snd)
                            @Ddmmyyyyop
                            @"xyz"
                            "31-11-1999"
   , expect3 (Right $ unsafeRefined3 [123,45,6789] "xyz") $ runIdentity $ eval3M @OAN
-                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10 Id) Snd)
+                  @(Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Map (ReadBase Int 10) Snd)
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   @"xyz"
                   "123-45-6789"
@@ -183,13 +183,13 @@ unnamedTests = [
 allProps :: [TestTree]
 allProps =
   [
-    testProperty "base16" $ forAll (genRefined3P (mkProxy3 @'(OAN, ReadBase Int 16 Id, 'True, ShowBase 16 Id, String)) arbitrary) (\r -> evalQuick @OL @(ReadBase Int 16 Id) (r3Out r) === Right (r3In r))
+    testProperty "base16" $ forAll (genRefined3P (mkProxy3 @'(OAN, ReadBase Int 16, 'True, ShowBase 16, String)) arbitrary) (\r -> evalQuick @OL @(ReadBase Int 16) (r3Out r) === Right (r3In r))
   , testProperty "readshow" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN)) (\r -> Safe.readNote @(HexLtR3 OAN) "testrefined3: readshow" (show r) === r)
   , testProperty "jsonroundtrip1" $ forAll (genRefined3 arbitrary :: Gen (HexLtR3 OAN))
       (\r -> testRefined3PJ Proxy (r3Out r) === Right r)
   ]
 
-type HexLtR3 (opts :: Opt) = Refined3 opts (ReadBase Int 16 Id) (Id < 500) (ShowBase 16 Id) String
+type HexLtR3 (opts :: Opt) = Refined3 opts (ReadBase Int 16) (Id < 500) (ShowBase 16) String
 --type IntLtR3 (opts :: Opt) = Refined3 opts (ReadP Int Id) (Id < 10) (ShowP Id) String
 
 type Tst1 = '(OAN, ReadP Int Id, Between 1 7 Id, PrintF "someval val=%03d" Id, String)
@@ -280,13 +280,13 @@ tstextras =
 
 -- prtRefinedTIO $ tst1a @OZ
 tst1a :: forall (opts :: Opt) m . (OptC opts, Monad m) => RefinedT m ((Int,String),(Int,String))
-tst1a = withRefined3T @opts @(ReadBase Int 16 Id) @(Between 100 200 Id) @(ShowBase 16 Id) @String "a3"
+tst1a = withRefined3T @opts @(ReadBase Int 16) @(Between 100 200 Id) @(ShowBase 16) @String "a3"
   $ \r1 -> withRefined3T @opts @(ReadP Int Id) @'True @(ShowP Id) @String "12"
      $ \r2 -> return ((r3In r1, r3Out r1), (r3In r2, r3Out r2))
 
 -- prtRefinedTIO $ tst2a @OZ
 tst2a :: forall (opts :: Opt) m . (OptC opts, MonadIO m) => RefinedT m ((Int,String),(Int,String))
-tst2a = withRefined3TIO @opts @(ReadBase Int 16 Id) @(Stderr "start" |> Between 100 200 Id >| Stdout "end") @(ShowBase 16 Id) @String "a3"
+tst2a = withRefined3TIO @opts @(ReadBase Int 16) @(Stderr "start" |> Between 100 200 Id >| Stdout "end") @(ShowBase 16) @String "a3"
   $ \r1 -> withRefined3TIO @opts @(ReadP Int Id) @'True @(ShowP Id) @String "12"
      $ \r2 -> return ((r3In r1, r3Out r1), (r3In r2, r3Out r2))
 
