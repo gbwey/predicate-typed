@@ -452,13 +452,13 @@ instance P (ReplaceOneT' rs p q r) x => P (ReplaceOne' rs p q r) x where
 -- Present "123def456abc" (ReplaceOne (abc) 123abc456abc | 123def456abc)
 -- PresentT "123def456abc"
 --
--- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1530144000123+0530)"
+-- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z") "Date(1530144000123+0530)"
 -- PresentT 2018-06-28 05:30:00.123 +0530
 --
--- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1593460089052+0800)"
+-- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z") "Date(1593460089052+0800)"
 -- PresentT 2020-06-30 03:48:09.052 +0800
 --
--- >>> pz @(Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z" Id) "Date(1593460089052+0800)"
+-- >>> pz @(Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z") "Date(1593460089052+0800)"
 -- PresentT 2020-06-30 03:48:09.052 +0800
 --
 data ReplaceOne p q r

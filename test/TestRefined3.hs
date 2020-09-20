@@ -205,9 +205,9 @@ yy4 = rapply3 (+) yy1 yy2 -- pure ()
 hms2E :: Proxy '(OAN, Hmsip2, Hmsop2, Hmsfmt2, String)
 hms2E = mkProxy3
 
-type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S" Id
+type Hmsip2 = Hmsip &&& ParseTimeP TimeOfDay "%H:%M:%S"
 type Hmsop2 = Fst >> Hmsop
-type Hmsfmt2 = Snd >> FormatTimeP "%T" Id
+type Hmsfmt2 = FormatTimeP' "%T" Snd
 
 -- use GuardBool for op boolean check to get better errormessages
 -- 1. packaged up as a promoted tuple

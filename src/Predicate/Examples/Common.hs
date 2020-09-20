@@ -90,9 +90,9 @@ type Luhnfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat
 
 -- now that time is actually validated we dont need Dtop*
 -- | @ip@ type for reading in a date time
-type Dtip t = ParseTimeP t "%F %T" Id
+type Dtip t = ParseTimeP t "%F %T"
 -- | @fmt@ type for formatting the date time compatible ith 'Dtip'
-type Dtfmt = FormatTimeP "%F %T" Id
+type Dtfmt = FormatTimeP "%F %T"
 
 -- | @ip@ type for reading in a ssn
 type Ssnip = Map (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd)
@@ -241,9 +241,9 @@ type Luhn' (n :: Nat) =
         ])
 
 -- convert json microsoft datetime to zonedtime
---type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z" Id
+--type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z"
 
--- type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z" Id
+-- type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z"
 
 -- jam the values together
 -- eg pu @JsonMicrosoftDateTime "Date(1593460089052+0800)"
@@ -252,5 +252,5 @@ type JsonMicrosoftDateTime =
       , Head
       , Snd
       , Id !! 0 <> "." <> Id !! 1
-      , ParseTimeP ZonedTime "%s%Q%z" Id
+      , ParseTimeP ZonedTime "%s%Q%z"
       ]

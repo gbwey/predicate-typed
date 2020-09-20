@@ -707,10 +707,10 @@ newRefined3P' _ i = do
 -- >>> newRefined3 @OZ @(MkDayExtra' Fst Snd Thd >> 'Just Id) @(GuardBool "expected a Sunday" (Thd == 7)) @(UnMkDay Fst) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
--- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:15:7"
+-- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S") @'True @(FormatTimeP "%H:%M:%S") "1:15:7"
 -- Right (Refined3 {r3In = 01:15:07, r3Out = "01:15:07"})
 --
--- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S" Id) @'True @(FormatTimeP "%H:%M:%S" Id) "1:2:x"
+-- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S") @'True @(FormatTimeP "%H:%M:%S") "1:2:x"
 -- Left Step 1. Initial Conversion(ip) Failed | ParseTimeP TimeOfDay (%-H:%-M:%-S) failed to parse
 --
 -- >>> newRefined3 @OL @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" >> L2 Head >> Map (ReadP Int Id) Id) @(All (0 <..> 59) && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"

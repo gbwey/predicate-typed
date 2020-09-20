@@ -28,6 +28,7 @@ module Predicate.Data.DateTime (
 
   -- ** format
     FormatTimeP
+  , FormatTimeP'
 
   -- ** constructors
   , ParseTimeP
@@ -73,27 +74,20 @@ import qualified Data.Time.Clock.POSIX as P
 -- >>> import Safe (readNote)
 
 -- | type level expression representing a formatted time
--- similar to 'Data.Time.formatTime' using a type level 'GHC.TypeLits.Symbol' to get the formatting string
+--   similar to 'Data.Time.formatTime' using a type level 'GHC.TypeLits.Symbol' to get the formatting string
 --
--- >>> pz @(FormatTimeP "%F %T" Id) (readNote @LocalTime "invalid localtime" "2019-05-24 05:19:59")
--- PresentT "2019-05-24 05:19:59"
---
--- >>> pz @(FormatTimeP Fst Snd) ("the date is %d/%m/%Y", readNote @Day "invalid day" "2019-05-24")
+-- >>> pz @(FormatTimeP' Fst Snd) ("the date is %d/%m/%Y", readNote @Day "invalid day" "2019-05-24")
 -- PresentT "the date is 24/05/2019"
 --
--- >>> pl @(FormatTimeP "%Y-%m-%d" Id) (readNote @Day "invalid day" "2019-08-17")
--- Present "2019-08-17" (FormatTimeP (%Y-%m-%d) 2019-08-17 | 2019-08-17)
--- PresentT "2019-08-17"
---
-data FormatTimeP p q
+data FormatTimeP' p q
 
 instance (PP p x ~ String
         , FormatTime (PP q x)
         , P p x
         , Show (PP q x)
         , P q x
-        ) => P (FormatTimeP p q) x where
-  type PP (FormatTimeP p q) x = String
+        ) => P (FormatTimeP' p q) x where
+  type PP (FormatTimeP' p q) x = String
   eval _ opts x = do
     let msg0 = "FormatTimeP"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
@@ -104,14 +98,25 @@ instance (PP p x ~ String
             b = formatTime defaultTimeLocale p q
         in mkNode opts (PresentT b) (msg1 <> " " <> litL opts b <> showVerbose opts " | " q) [hh pp, hh qq]
 
+-- | type level expression representing a formatted time
+--
+-- >>> pz @(FormatTimeP "%F %T") (readNote @LocalTime "invalid localtime" "2019-05-24 05:19:59")
+-- PresentT "2019-05-24 05:19:59"
+--
+-- >>> pl @(FormatTimeP "%Y-%m-%d") (readNote @Day "invalid day" "2019-08-17")
+-- Present "2019-08-17" (FormatTimeP (%Y-%m-%d) 2019-08-17 | 2019-08-17)
+-- PresentT "2019-08-17"
+--
+data FormatTimeP p
+type FormatTimePT p = FormatTimeP' p Id
+
+instance P (FormatTimePT p) x => P (FormatTimeP p) x where
+  type PP (FormatTimeP p) x = PP (FormatTimePT p) x
+  eval _ = eval (Proxy @(FormatTimePT p))
+
+
+
 -- | similar to 'Data.Time.parseTimeM' where @t@ is the 'Data.Time.ParseTime' type, @p@ is the datetime format and @q@ points to the content to parse
---
--- >>> pz @(ParseTimeP LocalTime "%F %T" Id) "2019-05-24 05:19:59"
--- PresentT 2019-05-24 05:19:59
---
--- >>> pz @(ParseTimeP LocalTime "%F %T" "2019-05-24 05:19:59") (Right "never used")
--- PresentT 2019-05-24 05:19:59
---
 -- keeping @q@ as we might want to extract from a tuple
 data ParseTimeP' t p q
 
@@ -138,21 +143,30 @@ instance (ParseTime (PP t a)
              Nothing -> mkNode opts (FailT (msg1 <> " failed to parse")) "" hhs
 -- | similar to 'Date.Time.parseTimeM'
 --
--- >>> pl @(ParseTimeP TimeOfDay "%H:%M%S" Id) "14:04:61"
+-- >>> pz @(ParseTimeP LocalTime "%F %T") "2019-05-24 05:19:59"
+-- PresentT 2019-05-24 05:19:59
+--
+-- >>> pz @("2019-05-24 05:19:59" >> ParseTimeP LocalTime "%F %T") (Right "never used")
+-- PresentT 2019-05-24 05:19:59
+--
+-- >>> pl @(ParseTimeP TimeOfDay "%H:%M%S") "14:04:61"
 -- Error ParseTimeP TimeOfDay (%H:%M%S) failed to parse
 -- FailT "ParseTimeP TimeOfDay (%H:%M%S) failed to parse"
 --
--- >>> pl @(ParseTimeP UTCTime "%F %T" Id) "1999-01-01 12:12:12"
+-- >>> pl @(ParseTimeP UTCTime "%F %T") "1999-01-01 12:12:12"
 -- Present 1999-01-01 12:12:12 UTC (ParseTimeP UTCTime (%F %T) 1999-01-01 12:12:12 UTC | fmt=%F %T | "1999-01-01 12:12:12")
 -- PresentT 1999-01-01 12:12:12 UTC
 --
+-- >>> pz @(ParseTimeP ZonedTime "%s%Q%z")  "153014400.000+0530"
+-- PresentT 1974-11-07 05:30:00 +0530
+--
 
-data ParseTimeP (t :: Type) p q
-type ParseTimePT (t :: Type) p q = ParseTimeP' (Hole t) p q
+data ParseTimeP (t :: Type) p
+type ParseTimePT (t :: Type) p = ParseTimeP' (Hole t) p Id
 
-instance P (ParseTimePT t p q) x => P (ParseTimeP t p q) x where
-  type PP (ParseTimeP t p q) x = PP (ParseTimePT t p q) x
-  eval _ = eval (Proxy @(ParseTimePT t p q))
+instance P (ParseTimePT t p) x => P (ParseTimeP t p) x where
+  type PP (ParseTimeP t p) x = PP (ParseTimePT t p) x
+  eval _ = eval (Proxy @(ParseTimePT t p))
 
 -- | A convenience method to match against many different datetime formats to find the first match
 data ParseTimes' t p q
@@ -562,11 +576,6 @@ instance ( PP p x ~ Rational
 --
 -- >>> pz @(Rescan "^Date\\((\\d+)([^\\)]+)\\)" >> Head >> Snd >> ((ReadP Integer (Id !! 0) >> PosixToUTCTime (Id % 1000)) &&& ReadP TimeZone (Id !! 1))) "Date(1530144000000+0530)"
 -- PresentT (2018-06-28 00:00:00 UTC,+0530)
---
--- not so useful: instead use ParseTimeP FormatTimeP with %s %q %z etc
---
--- >>> pz @(ParseTimeP ZonedTime "%s%Q%z" Id)  "153014400.000+0530"
--- PresentT 1974-11-07 05:30:00 +0530
 --
 data UTCTimeToPosix p
 

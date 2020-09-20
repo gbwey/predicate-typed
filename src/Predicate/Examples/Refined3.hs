@@ -179,10 +179,10 @@ type DateTime1 (opts :: Opt) (t :: Type) = '(opts, Dtip t, 'True, Dtfmt, String)
 --    2018-09-14 99:00:96 becomes 2018-09-18 03:01:36
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
-type DateN (opts :: Opt) = '(opts, ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d" Id, String)
+type DateN (opts :: Opt) = '(opts, ParseTimes Day DateFmts Id, 'True, FormatTimeP "%Y-%m-%d", String)
 
 type DateTimeNR (opts :: Opt) = MakeR3 (DateTimeN opts)
-type DateTimeN (opts :: Opt) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" Id, String)
+type DateTimeN (opts :: Opt) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True, FormatTimeP "%Y-%m-%d %H:%M:%S" , String)
 
 ssn :: OptC opts => Proxy (Ssn opts)
 ssn = mkProxy3'
