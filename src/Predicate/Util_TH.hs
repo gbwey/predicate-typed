@@ -7,6 +7,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NoStarIsType #-}
@@ -77,7 +78,7 @@ refinedTH i =
        Nothing ->
          let msg1 = if hasNoTree (getOpt @opts) || null e then "" else "\n" ++ e
          in fail $ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top ++ msg1
-       Just r -> TH.TExp <$> TH.lift r
+       Just r -> [||r||]
 
 refinedTHIO :: forall opts p i
   . (TH.Lift i, RefinedC opts p i)
@@ -85,12 +86,12 @@ refinedTHIO :: forall opts p i
   -> TH.Q (TH.TExp (Refined opts p i))
 refinedTHIO i = do
   let msg0 = "refinedTHIO"
-  ((bp,(top,e)),mr) <- TH.runIO (newRefinedM @opts @p i)
+  ((bp,(top,e)),mr) <- TH.runIO (newRefinedM i)
   case mr of
        Nothing ->
          let msg1 = if hasNoTree (getOpt @opts) || null e then "" else "\n" ++ e
          in fail $ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top ++ msg1
-       Just r -> TH.TExp <$> TH.lift r
+       Just r -> [||r||]
 
 -- | creates a 'Refined2.Refined2' refinement type
 --
@@ -127,9 +128,9 @@ refined2TH :: forall opts ip op i
   => i
   -> TH.Q (TH.TExp (Refined2 opts ip op i))
 refined2TH i =
-  case newRefined2 @opts @ip @op i of
+  case newRefined2 i of
     Left e -> fail $ show e
-    Right r -> TH.TExp <$> TH.lift r
+    Right r -> [||r||]
 
 -- | creates a 'Refined2.Refined2' refinement type using IO
 refined2THIO :: forall opts ip op i
@@ -141,10 +142,10 @@ refined2THIO :: forall opts ip op i
   => i
   -> TH.Q (TH.TExp (Refined2 opts ip op i))
 refined2THIO i = do
-  x <- TH.runIO (newRefined2' @opts @ip @op i)
+  x <- TH.runIO (newRefined2' i)
   case x of
     Left e -> fail $ show e
-    Right a -> TH.TExp <$> TH.lift a
+    Right r -> [||r||]
 
 -- | creates a 'Refined3.Refined3' refinement type
 --
@@ -184,9 +185,9 @@ refined3TH :: forall opts ip op fmt i
   => i
   -> TH.Q (TH.TExp (Refined3 opts ip op fmt i))
 refined3TH i =
-  case newRefined3 @opts @ip @op @fmt i of
+  case newRefined3 i of
     Left e -> fail $ show e
-    Right r -> TH.TExp <$> TH.lift r
+    Right r -> [||r||]
 
 -- | creates a 'Refined3.Refined3' refinement type using IO
 refined3THIO :: forall opts ip op fmt i
@@ -198,10 +199,10 @@ refined3THIO :: forall opts ip op fmt i
   => i
   -> TH.Q (TH.TExp (Refined3 opts ip op fmt i))
 refined3THIO i = do
-  x <- TH.runIO (newRefined3' @opts @ip @op @fmt i)
+  x <- TH.runIO (newRefined3' i)
   case x of
     Left e -> fail $ show e
-    Right a -> TH.TExp <$> TH.lift a
+    Right r -> [||r||]
 
 -- | creates a 'Refined5.Refined5' refinement type
 --
@@ -237,9 +238,9 @@ refined5TH :: forall opts ip op i
   => i
   -> TH.Q (TH.TExp (Refined5 opts ip op i))
 refined5TH i =
-  case newRefined5 @opts @ip @op i of
+  case newRefined5 i of
     Left e -> fail $ show e
-    Right r -> TH.TExp <$> TH.lift r
+    Right r -> [||r||]
 
 -- | creates a 'Refined5.Refined5' refinement type using IO
 refined5THIO :: forall opts ip op i
@@ -250,8 +251,8 @@ refined5THIO :: forall opts ip op i
   => i
   -> TH.Q (TH.TExp (Refined5 opts ip op i))
 refined5THIO i = do
-  x <- TH.runIO (newRefined5' @opts @ip @op i)
+  x <- TH.runIO (newRefined5' i)
   case x of
     Left e -> fail $ show e
-    Right a -> TH.TExp <$> TH.lift a
+    Right r -> [||r||]
 

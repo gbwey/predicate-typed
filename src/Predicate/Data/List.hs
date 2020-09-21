@@ -48,6 +48,7 @@ module Predicate.Data.List (
   , SortBy
   , SortOn
   , SortOnDesc
+  , Sort
 
  -- ** zip related
   , Unzip
@@ -60,7 +61,10 @@ module Predicate.Data.List (
  -- ** higher order methods
   , Partition
   , PartitionBy
+  , Group
   , GroupBy
+  , GroupCnt
+  , GroupStable
   , Filter
   , Break
   , Span
@@ -84,6 +88,7 @@ module Predicate.Data.List (
   , Keep
   , Reverse
   , ReverseL
+  , Nub
 
   , Sum
   , Product
@@ -101,7 +106,7 @@ import Predicate.Data.Ordering (type (==), OrdA)
 import Predicate.Data.Numeric (Mod)
 import Predicate.Data.Monoid (type (<>))
 import Control.Lens hiding (iall)
-import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf, sortOn, group)
 import Data.Proxy
 import Control.Monad
 import Data.Kind (Type)
@@ -111,7 +116,7 @@ import qualified Data.Sequence as Seq
 import Data.Bool
 import qualified Data.Map.Strict as M
 import Control.Applicative
-
+import Data.Containers.ListUtils (nubOrd)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -553,6 +558,55 @@ instance (Show x
                      let ret = gp1 x abcs
                          itts = map (view _2 &&& view _3) abcs
                      in mkNode opts (PresentT ret) (show01' opts msg0 ret "s=" q ) (hh qq : map (hh . fixit) itts)
+
+-- | version of 'GroupCnt' that retains the original ordering
+--
+-- >>> pz @GroupStable "bcdeaaaaaaaaaf"
+-- PresentT [('b',1),('c',1),('d',1),('e',1),('a',9),('f',1)]
+--
+data GroupStable
+
+instance ( a ~ [x]
+         , Ord x
+         ) => P GroupStable a where
+  type PP GroupStable a = [(ExtractAFromList a, Int)]
+  eval _ opts zs =
+    let msg0 = "GroupStable"
+        xs = map (head &&& length) $ group $ sortOn (ys M.!) zs
+        ys = M.fromList $ zip (nubOrd zs) [1::Int ..]
+    in pure $ mkNode opts (PresentT xs) msg0 []
+
+
+-- | similar to 'Data.List.group'
+--
+-- >>> pz @Group [1,3,4,5,1,5,5]
+-- PresentT [[1],[3],[4],[5],[1],[5,5]]
+--
+-- >>> pz @(Sort >> Group) [1,3,4,5,1,5,5]
+-- PresentT [[1,1],[3],[4],[5,5,5]]
+--
+data Group
+type GroupT = GroupBy (Fst == Snd) Id
+
+instance P GroupT x => P Group x where
+  type PP Group x = PP GroupT x
+  eval _ = eval (Proxy @GroupT)
+
+
+-- | similar to 'Group' but returns the value and count
+--
+-- >>> pz @GroupCnt [1,3,4,5,1,5,5]
+-- PresentT [(1,1),(3,1),(4,1),(5,1),(1,1),(5,2)]
+--
+-- >>> pz @(Sort >> GroupCnt) [1,3,4,5,1,5,5]
+-- PresentT [(1,2),(3,1),(4,1),(5,3)]
+--
+data GroupCnt
+type GroupCntT = Group >> Map '(Head,Len) Id
+
+instance P GroupCntT x => P GroupCnt x where
+  type PP GroupCnt x = PP GroupCntT x
+  eval _ = eval (Proxy @GroupCntT)
 
 gp1 :: x -> [(Bool, (Int, x), TT Bool)] -> [[x]]
 gp1 b = go [b]
@@ -1405,6 +1459,13 @@ instance P (SortOnDescT p q) x => P (SortOnDesc p q) x where
   type PP (SortOnDesc p q) x = PP (SortOnDescT p q) x
   eval _ = eval (Proxy @(SortOnDescT p q))
 
+data Sort
+type SortT = SortOn Id Id
+
+instance P SortT x => P Sort x where
+  type PP Sort x = PP SortT x
+  eval _ = eval (Proxy @SortT)
+
 -- | similar to 'reverse'
 --
 -- >>> pz @Reverse [1,2,4]
@@ -1953,4 +2014,27 @@ type IsSuffixT p q = IsFixImpl 'GT p q
 instance P (IsSuffixT p q) x => P (IsSuffix p q) x where
   type PP (IsSuffix p q) x = PP (IsSuffixT p q) x
   eval _ = evalBool (Proxy @(IsSuffixT p q))
+
+-- | similar to 'nub'
+--
+-- >>> pz @Nub "abcdbc"
+-- PresentT "abcd"
+--
+-- >>> pz @Nub []
+-- PresentT []
+--
+-- >>> pz @Nub [1,4,1,1,1,1,1]
+-- PresentT [1,4]
+--
+data Nub
+
+instance ( x ~ [a]
+         , Show a
+         , Ord a
+         ) => P Nub x where
+  type PP Nub x = x
+  eval _ opts x =
+    let msg0 = "Nub"
+        ret = nubOrd x
+    in pure $ mkNode opts (PresentT ret) (show01 opts msg0 ret x) []
 

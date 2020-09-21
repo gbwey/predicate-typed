@@ -149,10 +149,7 @@ unsafeRefined3' :: forall opts ip op fmt i
                   , Refined3C opts ip op fmt i)
                 => i
                 -> Refined3 opts ip op fmt i
-unsafeRefined3' i =
-  case newRefined3 @opts @ip @op @fmt i of
-    Left e -> error $ show e
-    Right r -> r
+unsafeRefined3' = either (error . show) id . newRefined3
 
 -- | directly load values into 'Refined3' without any checking
 unsafeRefined3 ::
@@ -179,6 +176,9 @@ deriving instance ( Show (PP ip i)
 deriving instance ( Eq (PP ip i)
                   , Eq (PP fmt (PP ip i))
                   ) => Eq (Refined3 opts ip op fmt i)
+deriving instance ( Ord (PP ip i)
+                  , Ord (PP fmt (PP ip i))
+                  ) => Ord (Refined3 opts ip op fmt i)
 deriving instance ( TH.Lift (PP ip i)
                   , TH.Lift (PP fmt (PP ip i))
                   ) => TH.Lift (Refined3 opts ip op fmt i)
@@ -194,7 +194,7 @@ deriving instance ( TH.Lift (PP ip i)
 instance (Refined3C opts ip op fmt String, Show (PP ip String))
   => IsString (Refined3 opts ip op fmt String) where
   fromString s =
-    case newRefined3 @opts @ip @op @fmt s of
+    case newRefined3 s of
       Left e -> error $ "Refined3(fromString):" ++ show e
       Right r -> r
 
@@ -288,7 +288,7 @@ instance ( Refined3C opts ip op fmt i
          ) => FromJSON (Refined3 opts ip op fmt i) where
   parseJSON z = do
                   i <- parseJSON @i z
-                  case newRefined3 @opts @ip @op @fmt i of
+                  case newRefined3 i of
                     Left e -> fail $ "Refined3:" ++ show e
                     Right r -> return r
 
@@ -380,7 +380,7 @@ instance ( Refined3C opts ip op fmt i
          ) => Binary (Refined3 opts ip op fmt i) where
   get = do
           i <- B.get @i
-          case newRefined3 @opts @ip @op @fmt i of
+          case newRefined3 i of
             Left e -> fail $ "Refined3:" ++ show e
             Right r -> return r
   put (Refined3 _ r) = B.put @i r

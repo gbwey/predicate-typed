@@ -67,11 +67,11 @@ import Predicate.Core
 import Predicate.Util
 import Control.Lens
 import Data.Proxy
-import Control.Monad.Except -- (MonadError, ExceptT(..), runExceptT, throwError, catchError)
+import Control.Monad.Except (ExceptT(..), MonadError, runExceptT, throwError, catchError)
 import Control.Monad.Writer (WriterT(..), runWriterT, MonadWriter, tell)
 import Control.Monad.Cont
 import Data.Aeson (ToJSON(..), FromJSON(..))
-import GHC.Generics (Generic)
+import GHC.Generics (Generic, Generic1)
 import qualified Language.Haskell.TH.Syntax as TH
 import Test.QuickCheck
 import qualified GHC.Read as GR
@@ -82,7 +82,6 @@ import Data.Binary (Binary)
 import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
-import Data.Maybe (fromMaybe)
 import Data.Char (isSpace)
 import Data.Tree.Lens (root)
 import Data.Coerce
@@ -99,7 +98,7 @@ import Control.Arrow (left)
 -- | a simple refinement type that ensures the predicate @p@ holds for the type @a@
 --
 newtype Refined (opts :: Opt) p a = Refined a
-  deriving (Show, Eq, Generic, TH.Lift)
+  deriving (Show, Eq, Ord, TH.Lift)
 
 -- | extract the value from Refined
 unRefined :: forall k (opts :: Opt) (p :: k) a. Refined opts p a -> a
@@ -118,7 +117,9 @@ type role Refined phantom nominal nominal
 instance RefinedC opts p String => IsString (Refined opts p String) where
   fromString s =
     let (w,mr) = runIdentity $ newRefinedM @opts @p s
-    in fromMaybe (error $ "Refined(fromString):" ++ errorDisplay (getOpt @opts) w) mr
+    in case mr of
+        Nothing -> error $ "Refined(fromString):" ++ errorDisplay (getOpt @opts) w
+        Just r -> r
 
 errorDisplay :: POpts -> (String, (String, String)) -> String
 errorDisplay o (bp,(top,e)) =
@@ -545,7 +546,7 @@ newRefinedTIO = newRefinedTImpl liftIO
 
 -- | effect wrapper for the refinement value
 newtype RefinedT m a = RefinedT { unRefinedT :: ExceptT String (WriterT [String] m) a }
-  deriving (Functor, Applicative, Monad, MonadCont, MonadWriter [String], Show, MonadIO)
+  deriving (Generic, Generic1, Show, Eq, Ord, Functor, Applicative, Monad, MonadCont, MonadWriter [String], MonadIO)
 
 instance MonadTrans RefinedT where
   lift ma = RefinedT $ ExceptT $ WriterT $ do

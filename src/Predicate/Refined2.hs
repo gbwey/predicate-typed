@@ -1,6 +1,6 @@
 -- tojson binary hash arbitrary all use i not PP ip i
 -- all instances work with the original input [ie not the internal values]
---   cos we have no way to get i from PP ip i (unlike Refined3)
+--   we have no way to get back to i from PP ip i (unlike Refined3)
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
@@ -127,10 +127,7 @@ unsafeRefined2' :: forall opts ip op i
                   )
                 => i
                 -> Refined2 opts ip op i
-unsafeRefined2' i =
-  case newRefined2 @opts @ip @op i of
-    Left e -> error $ show e
-    Right r -> r
+unsafeRefined2' = either (error . show) id . newRefined2
 
 -- | directly load values into 'Refined2' without any checking
 unsafeRefined2 :: forall opts ip op i
@@ -149,6 +146,7 @@ type Refined2C opts ip op i =
 
 deriving instance (Show i, Show (PP ip i)) => Show (Refined2 opts ip op i)
 deriving instance (Eq i, Eq (PP ip i)) => Eq (Refined2 opts ip op i)
+deriving instance (Ord i, Ord (PP ip i)) => Ord (Refined2 opts ip op i)
 deriving instance (TH.Lift (PP ip i), TH.Lift i) => TH.Lift (Refined2 opts ip op i)
 
 -- | 'IsString' instance for Refined2
@@ -164,7 +162,7 @@ instance ( i ~ String
          , Show (PP ip i)
          ) => IsString (Refined2 opts ip op i) where
   fromString i =
-    case newRefined2 @opts @ip @op i of
+    case newRefined2 i of
       Left e -> error $ "Refined2(fromString):" ++ show e
       Right r -> r
 
@@ -257,7 +255,7 @@ instance ( Refined2C opts ip op i
          ) => FromJSON (Refined2 opts ip op i) where
   parseJSON z = do
                   i <- parseJSON @i z
-                  case newRefined2 @opts @ip @op i of
+                  case newRefined2 i of
                     Left e -> fail $ "Refined2:" ++ show e
                     Right r -> return r
 
@@ -311,9 +309,8 @@ genRefined2P _ g =
              if cnt >= oRecursion o
              then error $ setOtherEffects o ("genRefined2P recursion exceeded(" ++ show (oRecursion o) ++ ")")
              else f (cnt+1)
-          Just i -> do
-             let lr = newRefined2 @opts @ip @op i
-             case lr of
+          Just i ->
+             case newRefined2 i of
                Left e -> errorInProgram $ "conversion failed:" ++ show e
                Right r -> pure r
   in f 0
@@ -354,7 +351,7 @@ instance ( Refined2C opts ip op i
          ) => Binary (Refined2 opts ip op i) where
   get = do
           i <- B.get @i
-          case newRefined2 @opts @ip @op i of
+          case newRefined2 i of
             Left e -> fail $ "Refined2:" ++ show e
             Right r -> return r
   put (Refined2 _ r) = B.put @i r
@@ -374,7 +371,7 @@ withRefined2TIO :: forall opts ip op i m b
   => i
   -> (Refined2 opts ip op i -> RefinedT m b)
   -> RefinedT m b
-withRefined2TIO = (>>=) . newRefined2TIO @opts @ip @op @i
+withRefined2TIO = (>>=) . newRefined2TIO
 
 -- | create a 'Refined2' value using a continuation
 --

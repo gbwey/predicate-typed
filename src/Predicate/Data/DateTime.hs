@@ -42,6 +42,8 @@ module Predicate.Data.DateTime (
   , MkTime
   , MkTime'
   , PosixToUTCTime
+  , DiffUTCTime
+  , DiffLocalTime
 
  -- ** destructors
   , UnMkDay
@@ -51,6 +53,7 @@ module Predicate.Data.DateTime (
   , ToTime
   , UnMkTime
   , UTCTimeToPosix
+  , LocalTimeToUTC
 
  ) where
 import Predicate.Core
@@ -590,5 +593,76 @@ instance ( PP p x ~ UTCTime
       Left e -> e
       Right p ->
         let d = toRational $ P.utcTimeToPOSIXSeconds p
+        in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
+
+
+-- | similar to 'Data.Time.diffUTCTime'
+--
+-- >>> pz @(DiffUTCTime Fst Snd) (read "2020-11-08 12:12:03Z", read "2020-11-08 11:12:00Z")
+-- PresentT 3603s
+--
+data DiffUTCTime p q
+
+instance (PP p x ~ UTCTime
+        , PP q x ~ UTCTime
+        , P p x
+        , P q x
+        ) => P (DiffUTCTime p q) x where
+  type PP (DiffUTCTime p q) x = NominalDiffTime
+  eval _ opts x = do
+    let msg0 = "DiffUTCTime"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let b = diffUTCTime p q
+        in mkNode opts (PresentT b) (msg0 <> " " <> showL opts b <> showVerbose opts " | " p <> showVerbose opts " | " q) [hh pp, hh qq]
+
+-- | similar to 'Data.Time.diffLocalTime'
+--
+-- >>> pz @(DiffLocalTime Fst Snd) (read "2020-11-08 12:12:03", read "2020-11-05 15:12:00")
+-- PresentT 248403s
+--
+{-
+data DiffLocalTime p q
+
+instance (PP p x ~ LocalTime
+        , PP q x ~ LocalTime
+        , P p x
+        , P q x
+        ) => P (DiffLocalTime p q) x where
+  type PP (DiffLocalTime p q) x = NominalDiffTime
+  eval _ opts x = do
+    let msg0 = "DiffLocalTime"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let b = diffUTCTime (localTimeToUTC utc p) (localTimeToUTC utc q)
+        in mkNode opts (PresentT b) (msg0 <> " " <> showL opts b <> showVerbose opts " | " p <> showVerbose opts " | " q) [hh pp, hh qq]
+-}
+
+data DiffLocalTime p q
+type DiffLocalTimeT p q = DiffUTCTime (LocalTimeToUTC p) (LocalTimeToUTC q)
+
+instance P (DiffLocalTimeT p q) x => P (DiffLocalTime p q) x where
+  type PP (DiffLocalTime p q) x = PP (DiffLocalTimeT p q) x
+  eval _ = eval (Proxy @(DiffLocalTimeT p q))
+
+
+-- | similar to 'Data.Time.localTimeToUTC'
+data LocalTimeToUTC p
+
+instance ( PP p x ~ LocalTime
+         , P p x
+         ) => P (LocalTimeToUTC p) x where
+  type PP (LocalTimeToUTC p) x = UTCTime
+  eval _ opts x = do
+    let msg0 = "LocalTimeToUTC"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let d = localTimeToUTC utc p
         in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
 

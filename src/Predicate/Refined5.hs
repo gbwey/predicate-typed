@@ -137,6 +137,7 @@ unsafeRefined5 = Refined5
 
 deriving instance Show (PP ip i) => Show (Refined5 opts ip op i)
 deriving instance Eq (PP ip i) => Eq (Refined5 opts ip op i)
+deriving instance Ord (PP ip i) => Ord (Refined5 opts ip op i)
 deriving instance TH.Lift (PP ip i) => TH.Lift (Refined5 opts ip op i)
 
 -- | 'IsString' instance for Refined5
@@ -152,7 +153,7 @@ instance ( i ~ String
          , Show (PP ip i)
          ) => IsString (Refined5 opts ip op i) where
   fromString i =
-    case newRefined5 @opts @ip @op i of
+    case newRefined5 i of
       Left e -> error $ "Refined5(fromString):" ++ show e
       Right r -> r
 
@@ -316,7 +317,7 @@ withRefined5TIO :: forall opts ip op i m b
   => i
   -> (Refined5 opts ip op i -> RefinedT m b)
   -> RefinedT m b
-withRefined5TIO = (>>=) . newRefined5TIO @opts @ip @op @i
+withRefined5TIO = (>>=) . newRefined5TIO
 
 -- | create a 'Refined5' value using a continuation
 --
