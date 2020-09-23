@@ -66,7 +66,7 @@ import qualified Data.ByteString.Char8 as BS8
 -- >>> :set -XOverloadedStrings
 -- >>> import Predicate.Prelude
 
--- | similar to 'readFile'
+-- | similar to 'System.IO.readFile'
 --
 -- >>> pz @(ReadFile "LICENSE" >> 'Just Id >> Len > 0) ()
 -- TrueT
@@ -122,11 +122,11 @@ instance P (FileExistsT p) x => P (FileExists p) x where
   type PP (FileExists p) x = PP (FileExistsT p) x
   eval _ = evalBool (Proxy @(FileExistsT p))
 
--- | similar to 'doesFileExist'
+-- | similar to 'System.Directory.doesFileExist'
 data FileExists p
 type FileExistsT p = ReadFile p >> IsJust
 
--- | similar to 'doesDirectoryExist'
+-- | similar to 'System.Directory.doesDirectoryExist'
 --
 -- >>> pz @(DirExists ".") ()
 -- TrueT
@@ -141,7 +141,7 @@ instance P (DirExistsT p) x => P (DirExists p) x where
   type PP (DirExists p) x = PP (DirExistsT p) x
   eval _ = evalBool (Proxy @(DirExistsT p))
 
--- | similar to 'listDirectory'
+-- | similar to 'System.Directory.listDirectory'
 data ReadDir p
 instance ( PP p x ~ String
          , P p x
@@ -163,7 +163,7 @@ instance ( PP p x ~ String
           Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> showL opts b) [hh pp]
 
--- | read an environment variable: similar to 'getEnv'
+-- | read an environment variable: similar to 'System.Environment.getEnv'
 --
 -- >>> pz @(ReadEnv "PATH" >> 'Just Id >> 'True) ()
 -- TrueT
@@ -187,7 +187,7 @@ instance ( PP p x ~ String
           Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just v) -> mkNode opts (PresentT (Just v)) (msg1 <> " " <> litL opts v) [hh pp]
 
--- | read all the environment variables as key value pairs: similar to 'getEnvironment'
+-- | read all the environment variables as key value pairs: similar to 'System.Environment.getEnvironment'
 data ReadEnvAll
 
 instance P ReadEnvAll a where

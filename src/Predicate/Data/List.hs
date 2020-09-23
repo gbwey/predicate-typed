@@ -64,7 +64,7 @@ module Predicate.Data.List (
   , Group
   , GroupBy
   , GroupCnt
-  , GroupStable
+  , GroupCntStable
   , Filter
   , Break
   , Span
@@ -358,7 +358,7 @@ instance P (RotateT n p) x => P (Rotate n p) x where
   eval _ = eval (Proxy @(RotateT n p))
 
 
--- | similar to 'partition'
+-- | similar to 'Data.List.partition'
 --
 -- >>> pz @(Partition (Ge 3) Id) [10,4,1,7,3,1,3,5]
 -- PresentT ([10,4,7,3,3,5],[1,1])
@@ -561,19 +561,19 @@ instance (Show x
 
 -- | version of 'GroupCnt' that retains the original ordering
 --
--- >>> pz @GroupStable "bcdeaaaaaaaaaf"
+-- >>> pz @GroupCntStable "bcdeaaaaaaaaaf"
 -- PresentT [('b',1),('c',1),('d',1),('e',1),('a',9),('f',1)]
 --
-data GroupStable
+data GroupCntStable
 
 instance ( a ~ [x]
          , Ord x
-         ) => P GroupStable a where
-  type PP GroupStable a = [(ExtractAFromList a, Int)]
+         ) => P GroupCntStable a where
+  type PP GroupCntStable a = [(ExtractAFromList a, Int)]
   eval _ opts zs =
-    let msg0 = "GroupStable"
+    let msg0 = "GroupCntStable"
         xs = map (head &&& length) $ group $ sortOn (ys M.!) zs
-        ys = M.fromList $ zip (nubOrd zs) [1::Int ..]
+        ys = M.fromListWith (flip const) $ zip zs [0::Int ..]
     in pure $ mkNode opts (PresentT xs) msg0 []
 
 
@@ -601,6 +601,9 @@ instance P GroupT x => P Group x where
 -- >>> pz @(Sort >> GroupCnt) [1,3,4,5,1,5,5]
 -- PresentT [(1,2),(3,1),(4,1),(5,3)]
 --
+-- >>> pz @(Sort >> GroupCnt) "xyabxaaaz"
+-- PresentT [('a',4),('b',1),('x',2),('y',1),('z',1)]
+--
 data GroupCnt
 type GroupCntT = Group >> Map '(Head,Len) Id
 
@@ -617,6 +620,11 @@ gp1 b = go [b]
        (tf, (_, a), _):as -> if tf then go (ret <> [a]) as
                              else ret : go [a] as
 
+-- | similar to 'Data.List.filter'
+--
+-- >>> pz @(Filter (Gt 4) Id) [10,1,3,5,-10,12,1]
+-- PresentT [10,5,12]
+--
 data Filter p q
 type FilterT p q = Partition p q >> Fst
 
@@ -624,7 +632,7 @@ instance P (FilterT p q) x => P (Filter p q) x where
   type PP (Filter p q) x = PP (FilterT p q) x
   eval _ = eval (Proxy @(FilterT p q))
 
--- | similar to 'break'
+-- | similar to 'Data.List.break'
 --
 -- >>> pz @(Break (Ge 3) Id) [10,4,1,7,3,1,3,5]
 -- PresentT ([],[10,4,1,7,3,1,3,5])
@@ -660,7 +668,6 @@ instance P (FilterT p q) x => P (Filter p q) x where
 -- Present ([],[(1,True),(2,True),(3,True),(4,True)]) (Break cnt=(0,4))
 -- PresentT ([],[(1,True),(2,True),(3,True),(4,True)])
 --
-
 data Break p q
 
 -- only process up to the pivot! only process while Right False
@@ -704,7 +711,7 @@ instance (P p x
                      Right False -> errorInProgram "Break"
                      Left e -> e
 
--- | similar to 'span'
+-- | similar to 'Data.List.span'
 --
 -- >>> pl @(Span (Lt 4) Id) [1..11]
 -- Present ([1,2,3],[4,5,6,7,8,9,10,11]) (Break cnt=(3,8))
@@ -987,7 +994,7 @@ instance (P ns x
                    ) (\as -> if null as then [] else [as]) ns p
         in mkNode opts (PresentT zs) (show01' opts msg0 zs "ns=" ns <> showVerbose opts " | " p) [hh nn, hh pp]
 
--- | similar to 'splitAt'
+-- | similar to 'Data.List.splitAt'
 --
 -- >>> pz @(SplitAt 4 Id) "hello world"
 -- PresentT ("hell","o world")
@@ -1174,7 +1181,7 @@ instance P (RemoveT p q) x => P (Remove p q) x where
   type PP (Remove p q) x = PP (RemoveT p q) x
   eval _ = eval (Proxy @(RemoveT p q))
 
--- | takes the head of a list-like container: similar to 'head'
+-- | takes the head of a list-like container: similar to 'Data.List.head'
 --
 -- >>> pz @Head "abcd"
 -- PresentT 'a'
@@ -1212,7 +1219,7 @@ instance ( Cons x x (ConsT x) (ConsT x)
         Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" []
         Just (a,_) -> mkNode opts (PresentT a) (show01 opts msg0 a x) []
 
--- | takes the tail of a list-like container: similar to 'tail'
+-- | takes the tail of a list-like container: similar to 'Data.List.tail'
 --
 -- >>> pz @Tail "abcd"
 -- PresentT "bcd"
@@ -1239,7 +1246,7 @@ instance ( Cons x x (ConsT x) (ConsT x)
       Just (_,as) -> mkNode opts (PresentT as) (show01 opts msg0 as x) []
 
 
--- | takes the last of a list-like container: similar to 'last'
+-- | takes the last of a list-like container: similar to 'Data.List.last'
 --
 -- >>> pz @Last "abcd"
 -- PresentT 'd'
@@ -1265,7 +1272,7 @@ instance ( Snoc x x (ConsT x) (ConsT x)
           Nothing -> mkNode opts (FailT (msg0 <> "(empty)")) "" []
           Just (_,a) -> mkNode opts (PresentT a) (show01 opts msg0 a x) []
 
--- | takes the init of a list-like container: similar to 'init'
+-- | takes the init of a list-like container: similar to 'Data.List.init'
 --
 -- >>> pz @Init "abcd"
 -- PresentT "abc"
@@ -1466,7 +1473,7 @@ instance P SortT x => P Sort x where
   type PP Sort x = PP SortT x
   eval _ = eval (Proxy @SortT)
 
--- | similar to 'reverse'
+-- | similar to 'Data.List.reverse'
 --
 -- >>> pz @Reverse [1,2,4]
 -- PresentT [4,2,1]
@@ -1830,7 +1837,7 @@ instance (PP p a ~ [x]
                  _ -> let msg1 = msg0 ++ show lls
                       in mkNode opts (FailT (msg1 <> " length mismatch")) (showVerbose opts "p=" p <> showVerbose opts " | q=" q) hhs
 
--- | similar to 'empty'
+-- | similar to 'Data.List.empty'
 --
 -- >>> pz @(EmptyT Maybe) ()
 -- PresentT Nothing
@@ -1854,7 +1861,7 @@ instance Alternative t => P (EmptyT t) x where
     in pure $ mkNode opts (PresentT b) msg0 []
 
 
--- | similar to 'sum'
+-- | similar to 'Data.List.sum'
 --
 -- >>> pz @Sum [10,4,5,12,3,4]
 -- PresentT 38
@@ -1873,7 +1880,7 @@ instance ( Num a
         v = sum as
     in pure $ mkNode opts (PresentT v) (show01 opts msg0 v as) []
 
--- | similar to 'product'
+-- | similar to 'Data.List.product'
 --
 -- >>> pz @Product [10,4,5,12,3,4]
 -- PresentT 28800
@@ -1892,7 +1899,7 @@ instance ( Num a
         v = product as
     in pure $ mkNode opts (PresentT v) (show01 opts msg0 v as) []
 
--- | similar to 'minimum'
+-- | similar to 'Data.List.minimum'
 --
 -- >>> pz @Min [10,4,5,12,3,4]
 -- PresentT 3
@@ -1914,7 +1921,7 @@ instance ( Ord a
        let v = minimum as
        in mkNode opts (PresentT v) (show01 opts msg0 v as) []
 
--- | similar to 'maximum'
+-- | similar to 'Data.List.maximum'
 --
 -- >>> pz @Max [10,4,5,12,3,4]
 -- PresentT 12
@@ -1964,7 +1971,7 @@ instance ( P p x
             Left e -> e
             Right s1 -> mkNodeB opts (ff s0 s1) (msg1 <> " " <> showL opts s1) [hh pp, hh qq]
 
--- | similar to 'isPrefixOf'
+-- | similar to 'Data.List.isPrefixOf'
 --
 -- >>> pl @(IsPrefix '[2,3] Id) [2,3,4]
 -- True (IsPrefix | [2,3] [2,3,4])
@@ -1981,7 +1988,7 @@ instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
   type PP (IsPrefix p q) x = PP (IsPrefixT p q) x
   eval _ = evalBool (Proxy @(IsPrefixT p q))
 
--- | similar to 'isInfixOf'
+-- | similar to 'Data.List.isInfixOf'
 --
 -- >>> pl @(IsInfix '[2,3] Id) [1,2,3]
 -- True (IsInfix | [2,3] [1,2,3])
@@ -1998,7 +2005,7 @@ instance P (IsInfixT p q) x => P (IsInfix p q) x where
   type PP (IsInfix p q) x = PP (IsInfixT p q) x
   eval _ = evalBool (Proxy @(IsInfixT p q))
 
--- | similar to 'isSuffixOf'
+-- | similar to 'Data.List.isSuffixOf'
 --
 -- >>> pl @(IsSuffix '[2,3] Id) [1,2,3]
 -- True (IsSuffix | [2,3] [1,2,3])
@@ -2015,7 +2022,7 @@ instance P (IsSuffixT p q) x => P (IsSuffix p q) x where
   type PP (IsSuffix p q) x = PP (IsSuffixT p q) x
   eval _ = evalBool (Proxy @(IsSuffixT p q))
 
--- | similar to 'nub'
+-- | similar to 'Data.List.nub'
 --
 -- >>> pz @Nub "abcdbc"
 -- PresentT "abcd"

@@ -4,6 +4,8 @@
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -546,12 +548,9 @@ newRefinedTIO = newRefinedTImpl liftIO
 
 -- | effect wrapper for the refinement value
 newtype RefinedT m a = RefinedT { unRefinedT :: ExceptT String (WriterT [String] m) a }
-  deriving (Generic, Generic1, Show, Eq, Ord, Functor, Applicative, Monad, MonadCont, MonadWriter [String], MonadIO)
-
-instance MonadTrans RefinedT where
-  lift ma = RefinedT $ ExceptT $ WriterT $ do
-              a <- ma
-              return (Right a, [])
+  deriving stock (Generic, Generic1, Show, Eq, Ord)
+  deriving newtype (Functor, Applicative, Monad, MonadCont, MonadWriter [String], MonadIO)
+  deriving MonadTrans via RefinedT
 
 instance Monad m => MonadError String (RefinedT m) where
   throwError e = RefinedT $ ExceptT $ WriterT $ return (Left e,[])

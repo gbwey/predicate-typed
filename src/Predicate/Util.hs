@@ -210,6 +210,8 @@ module Predicate.Util (
   , showIndex
   , mapB
   , fmapB
+  , groupBy'
+  , groupBy''
 
  -- ** tuple classes
   , ExtractL1C(..)
@@ -2171,3 +2173,24 @@ verboseList :: POpts -> TT a -> [Holder]
 verboseList o tt
   | isVerbose o = [hh tt]
   | otherwise = []
+
+groupBy' :: (a -> a -> Bool) -> [a] -> [[a]]
+groupBy' p =
+  \case
+    [] -> []
+    x:xs ->
+       foldr (\a k (a',zs) -> if p a' a then k (a,zs++[a]) else zs:k (a,[a]))
+             (pure . snd)
+             xs
+             (x,[x])
+
+-- dlist version
+groupBy'' :: (a -> a -> Bool) -> [a] -> [[a]]
+groupBy'' p =
+  \case
+    [] -> []
+    x:xs ->
+       foldr (\a k (a',zs) -> if p a' a then k (a,zs . (a:)) else zs []:k (a,(a:)))
+             (\(_,b) -> [b []])
+             xs
+             (x,(x:))
