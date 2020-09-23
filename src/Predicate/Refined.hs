@@ -34,9 +34,10 @@ module Predicate.Refined (
   , unRefined
   , RefinedC
   , RefinedT(..)
-  , evalBoolP
+  , MsgT(..)
 
   -- ** print methods
+  , prtRefinedT
   , prtRefinedIO
   , prtRefinedTIO
 
@@ -54,6 +55,8 @@ module Predicate.Refined (
   -- ** manipulate RefinedT values
   , convertRefinedT
   , unRavelT
+  , unRavelTBoolP
+  , unRavelTString
   , rapply
   , rapplyLift
 
@@ -85,8 +88,8 @@ import Data.String
 import Data.Hashable (Hashable(..))
 import GHC.Stack
 import Data.Char (isSpace)
-import Data.Tree.Lens (root)
 import Data.Coerce
+import Data.List (intercalate)
 import Control.Arrow (left)
 
 -- $setup
@@ -483,22 +486,6 @@ newRefined a =
                     _ -> Left e
        Just r -> Right r
 
-evalBoolP :: forall opts p a
-   . RefinedC opts p a
-   => a
-   -> Either String a
-evalBoolP i =
-  let pp = runIdentity $ evalBool (Proxy @p) (getOpt @opts) i
-      opts = getOpt @opts
-      (lr,p2) = getValAndPE pp
-      z = let zz = p2 ^. root . pString
-          in if all isSpace zz then "FalseP" else "{" <> zz <> "}"
-      w = case lr of
-            Right True -> Right i
-            Right False -> Left $ "false boolean check" ++ nullIf " | " z
-            Left e -> Left $ "failed boolean check " ++ nullIf " | " e
-  in left (++ ("\n" ++ prtTreePure opts p2)) w
-
 newRefinedM :: forall opts p a m
    . ( MonadEval m
      , RefinedC opts p a
@@ -528,7 +515,7 @@ newRefinedTImpl f a = do
   unlessNullM (prtTree o tt) (tell . pure)
   case getValueLR o "" tt [] of
     Right True -> return (Refined a) -- FalseP is also a failure!
-    _ -> throwError $ colorBoolT' o (_ttBool tt)
+    _ -> throwError (_ttBool tt ^. boolT2P, colorBoolT' o (_ttBool tt))
 
 -- | returns a wrapper 'RefinedT' around a possible 'Refined' value if @a@ is valid for the predicate @p@
 newRefinedT :: forall opts p a m
@@ -546,37 +533,61 @@ newRefinedTIO :: forall opts p a m
   -> RefinedT m (Refined opts p a)
 newRefinedTIO = newRefinedTImpl liftIO
 
+data MsgT = MsgT { mtBoolP :: !(Maybe BoolP)
+                 , mtShort :: !String
+                 , mtLong :: !String
+                 } deriving Eq
+
+instance Show MsgT where
+  show (MsgT _a b c) = nullIf "\n" c <> b
+
 -- | effect wrapper for the refinement value
-newtype RefinedT m a = RefinedT { unRefinedT :: ExceptT String (WriterT [String] m) a }
+newtype RefinedT m a = RefinedT { unRefinedT :: ExceptT (BoolP,String) (WriterT [String] m) a }
   deriving stock (Generic, Generic1, Show, Eq, Ord)
   deriving newtype (Functor, Applicative, Monad, MonadCont, MonadWriter [String], MonadIO)
   deriving MonadTrans via RefinedT
 
-instance Monad m => MonadError String (RefinedT m) where
+instance Monad m => MonadError (BoolP, String) (RefinedT m) where
   throwError e = RefinedT $ ExceptT $ WriterT $ return (Left e,[])
   catchError (RefinedT (ExceptT (WriterT ma))) ema =
     RefinedT $ ExceptT $ WriterT $ do
       (lr,ss) <- ma
       case lr of
-        Left e -> unRavelT (tell ss >> ema e) -- keep the old messages??
+        Left e -> runWriterT . runExceptT . unRefinedT $ (tell ss >> ema e) -- keep the old messages??
         Right _ -> ma
 
 -- | unwrap the 'RefinedT' value
-unRavelT :: RefinedT m a -> m (Either String a, [String])
-unRavelT = runWriterT . runExceptT . unRefinedT
+unRavelTInternal :: RefinedT m a -> m (Either (BoolP, String) a, [String])
+unRavelTInternal = runWriterT . runExceptT . unRefinedT
+
+prtRefinedT :: (Either (BoolP,String) r, [String]) -> (MsgT, Maybe r)
+prtRefinedT (lr,xs) =
+  let y = intercalate "\n" (filter (not . all isSpace) xs)
+  in case lr of
+    Left (bp,s) -> (MsgT (Just bp) s y, Nothing)
+    Right r -> (MsgT Nothing "" y, Just r)
+
+unRavelT :: Functor m => RefinedT m a -> m (MsgT, Maybe a)
+unRavelT = fmap prtRefinedT . unRavelTInternal
+
+unRavelTBoolP :: Functor m => RefinedT m a -> m (Either BoolP a)
+unRavelTBoolP = fmap (left fst . fst) . unRavelTInternal
+
+unRavelTString :: Functor m => RefinedT m a -> m (Either String a)
+unRavelTString = fmap (left snd . fst) . unRavelTInternal
 
 prtRefinedTImpl :: forall n m a
-  . (MonadIO n, Show a)
+  . (MonadIO n, Functor m, Show a)
   => (forall x . m x -> n x)
   -> RefinedT m a
   -> n ()
 prtRefinedTImpl f rt = do
-  (lr,ws) <-  f $ unRavelT rt
+  (msgt,mr) <-  f $ unRavelT rt
   liftIO $ do
-    forM_ (zip [1::Int ..] ws) $ \(_,y) -> unlessNullM y putStrLn
-    case lr of
-      Left e -> putStrLn $ "failure msg[" <> e <> "]"
-      Right a -> print a
+    unlessNullM (mtLong msgt) putStrLn
+    case mr of
+      Nothing -> putStrLn $ "failure msg[" <> mtShort msgt <> "]"
+      Just a -> print a
 
 prtRefinedTIO :: (MonadIO m, Show a) => RefinedT m a -> m ()
 prtRefinedTIO = prtRefinedTImpl id

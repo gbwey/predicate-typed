@@ -70,7 +70,7 @@ module Predicate.Refined5 (
   , appendOpt5
 
  ) where
-import Predicate.Refined2 (Msg2(..), RResults2(..), prt2Impl, Refined2C)
+import Predicate.Refined2 (Msg2(..), RResults2(..), prt2Impl, Refined2C, getBoolP2)
 import Predicate.Refined
 import Predicate.Core
 import Predicate.Util
@@ -91,7 +91,9 @@ import GHC.Stack
 import Test.QuickCheck
 import Data.Coerce
 import Data.Either (isRight)
--- import Data.Maybe (isJust)
+import Data.Char (isSpace)
+import Control.Arrow (left)
+import Data.Tree.Lens (root)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -420,7 +422,7 @@ newRefined5TImpl f i = do
   let m2 = prt2Impl (getOpt @opts) ret
   unlessNullM (m2Long m2) (tell . pure)
   case mr of
-    Nothing -> throwError $ m2Desc m2 <> nullIf " | " (m2Short m2)
+    Nothing -> throwError (getBoolP2 ret, m2Desc m2 <> nullIf " | " (m2Short m2))
     Just r -> return r
 
 
@@ -559,3 +561,20 @@ appendOpt5 :: forall (opts :: Opt) opt0 ip op i
    . Refined5 opt0 ip op i
   -> Refined5 (opt0 ':# opts) ip op i
 appendOpt5 = coerce
+
+evalBoolP :: forall opts p a
+   . RefinedC opts p a
+   => a
+   -> Either String a
+evalBoolP i =
+  let pp = runIdentity $ evalBool (Proxy @p) (getOpt @opts) i
+      opts = getOpt @opts
+      (lr,p2) = getValAndPE pp
+      z = let zz = p2 ^. root . pString
+          in if all isSpace zz then "FalseP" else "{" <> zz <> "}"
+      w = case lr of
+            Right True -> Right i
+            Right False -> Left $ "false boolean check" ++ nullIf " | " z
+            Left e -> Left $ "failed boolean check " ++ nullIf " | " e
+  in left (++ ("\n" ++ prtTreePure opts p2)) w
+

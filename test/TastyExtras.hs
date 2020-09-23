@@ -20,6 +20,13 @@ import Data.Aeson
 import Data.List
 import Text.Show.Functions ()
 
+expectIO' :: (HasCallStack, Show a, Show e) => IO (Either e a) -> (Either e a -> Either e ()) -> IO ()
+expectIO' iolr p = do
+  lr <- iolr
+  case p lr of
+    Left e -> assertFailure $ "expectIO: " <> show e <> " lr=" <> show lr
+    Right () -> pure ()
+
 expectIO :: (HasCallStack, Show a) => IO (Either String a) -> (Either String a -> Either String ()) -> IO ()
 expectIO iolr p = do
   lr <- iolr

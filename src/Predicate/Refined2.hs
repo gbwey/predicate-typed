@@ -40,6 +40,7 @@ module Predicate.Refined2 (
   , Msg2 (..)
   , RResults2 (..)
   , prt2Impl
+  , getBoolP2
 
   -- ** evaluation methods
   , eval2P
@@ -474,7 +475,7 @@ newRefined2TImpl f i = do
   let m2 = prt2Impl (getOpt @opts) ret
   unlessNullM (m2Long m2) (tell . pure)
   case mr of
-    Nothing -> throwError $ m2Desc m2 <> nullIf " | " (m2Short m2)
+    Nothing -> throwError (getBoolP2 ret, m2Desc m2 <> nullIf " | " (m2Short m2))
     Just r -> return r
 
 -- | An ADT that summarises the results of evaluating Refined2 representing all possible states
@@ -484,6 +485,15 @@ data RResults2 a =
      | RTFalse !a !(Tree PE) !(Tree PE)        -- op false
      | RTTrue !a !(Tree PE) !(Tree PE) -- op true
      deriving Show
+
+getBoolP2 :: RResults2 a -> BoolP
+getBoolP2 r =
+  let z = case r of
+            RF _ t -> t
+            RTF _ _ _ t -> t
+            RTFalse _ _ t -> t
+            RTTrue _ _ t -> t
+  in z ^. root . pBool
 
 
 newRefined2' :: forall opts ip op i m

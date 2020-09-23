@@ -217,7 +217,7 @@ tst0a =
   , newRefined2P (daten @OL) "12/02/19" @?= Right (unsafeRefined2 (fromGregorian 2019 12 2) "12/02/19")
   , newRefined2P (Proxy @(Luhn OL 4)) "1230" @?= Right (unsafeRefined2 [1,2,3,0] "1230")
   , newRefined2P (Proxy @(Luhn OL 6)) "123455" @?= Right (unsafeRefined2 [1,2,3,4,5,5] "123455")
-  , (runIdentity (unRavelT (tst1a @OL @Identity)) ^. _1) @?= Right ((163,"a3"),(12,"12"))
+  , runIdentity (unRavelTBoolP (tst1a @OL @Identity)) @?= Right ((163,"a3"),(12,"12"))
   , test2a @?= Right (unsafeRefined2 254 "0000fe")
   , test2b @?= Right (unsafeRefined2 [123,211,122,1] "123.211.122.1")
   , test2c @?= Right (unsafeRefined2 [200,2,3,4] "200.2.3.4")
@@ -226,7 +226,7 @@ tst0a =
   , www2 "1.2.3.4" @?= Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")
   , www3 "1.2.3.4" @?= Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")
   , www3' "1.2.3.4" @?= Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")
-  , expectIO (fst <$> unRavelT (tst2a @'OL)) (either Left (\x -> if x == ((163,"a3"),(12,"12")) then Right () else Left "tst2a failed to match"))
+  , expectIO' (unRavelTBoolP (tst2a @'OL)) (either Left (\x -> if x == ((163,"a3"),(12,"12")) then Right () else Left (FailP "tst2a failed to match")))
   ]
 
 -- prtRefinedTIO $ tst1a @'OAN

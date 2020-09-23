@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 84546ab745c9c8eaec3e00e9b352cd0cdd044e67f41c2341bc410af44b42cdfc
+-- hash: e563154cd6955acd207b3568990b59ed3afb8e636399e774d52f8441bbf92dd1
 
 name:           predicate-typed
 version:        0.7.3.0
@@ -81,7 +81,6 @@ library
     , mtl
     , pcre-heavy >=1.0.0.2
     , pcre-light
-    , pretty
     , pretty-terminal >=0.1.0.0
     , safe
     , string-conversions
@@ -91,7 +90,6 @@ library
     , these >=0.8
     , time
     , transformers
-    , tree-view >=0.5
   if impl(ghc >= 8.8)
     ghc-options: -fwrite-ide-info -hiedir=.hie
   default-language: Haskell2010
@@ -157,7 +155,6 @@ test-suite doctests
     , pcre-heavy >=1.0.0.2
     , pcre-light
     , predicate-typed
-    , pretty
     , pretty-terminal >=0.1.0.0
     , safe
     , string-conversions
@@ -167,7 +164,6 @@ test-suite doctests
     , these >=0.8
     , time
     , transformers
-    , tree-view >=0.5
   if impl(ghc >= 8.8)
     ghc-options: -fwrite-ide-info -hiedir=.hie
   default-language: Haskell2010
@@ -238,7 +234,6 @@ test-suite predicate-typed-test
     , pcre-heavy >=1.0.0.2
     , pcre-light
     , predicate-typed
-    , pretty
     , pretty-terminal >=0.1.0.0
     , safe
     , stm
@@ -252,7 +247,6 @@ test-suite predicate-typed-test
     , these >=0.8
     , time
     , transformers
-    , tree-view >=0.5
   if impl(ghc >= 8.8)
     ghc-options: -fwrite-ide-info -hiedir=.hie
   default-language: Haskell2010

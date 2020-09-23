@@ -534,8 +534,8 @@ newRefined3TP = newRefined3TPImpl (return . runIdentity)
 -- >>> prtRefinedTIO $ newRefined3TIO @OL @(Hide (Rescan "(\\d+)" >> ConcatMap Snd Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff)) @(ShowP Id) "|23|99|255|254.911."
 -- failure msg[Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}]
 --
--- >>> unRavelT $ newRefined3TIO @OL @(Hide (Rescan "(\\d+)" >> ConcatMap Snd Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff)) @(ShowP Id) "|23|99|255|254.911."
--- (Left "Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}",[])
+-- >>> unRavelTString $ newRefined3TIO @OL @(Hide (Rescan "(\\d+)" >> ConcatMap Snd Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff)) @(ShowP Id) "|23|99|255|254.911."
+-- Left "Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}"
 --
 newRefined3TIO :: forall opts ip op fmt i m
    . ( Refined3C opts ip op fmt i
@@ -571,7 +571,7 @@ newRefined3TPImpl f _ i = do
   let m3 = prt3Impl (getOpt @opts) ret
   unlessNullM (m3Long m3) (tell . pure)
   case mr of
-    Nothing -> throwError $ m3Desc m3 <> nullIf " | " (m3Short m3)
+    Nothing -> throwError (getBoolP3 ret, m3Desc m3 <> nullIf " | " (m3Short m3))
     Just r -> return r
 
 newRefined3TPSkipIPImpl :: forall n m opts ip op fmt i proxy
@@ -589,7 +589,7 @@ newRefined3TPSkipIPImpl f _ a = do
   let m3 = prt3Impl (getOpt @opts) ret
   unlessNullM (m3Long m3) (tell . pure)
   case mr of
-    Nothing -> throwError $ m3Desc m3 <> nullIf " | " (m3Short m3)
+    Nothing -> throwError (getBoolP3 ret, m3Desc m3 <> nullIf " | " (m3Short m3))
     Just r -> return r
 
 -- | attempts to cast a wrapped 'Refined3' to another 'Refined3' with different predicates
@@ -653,6 +653,16 @@ data RResults3 a =
      | RTTrueF !a !(Tree PE) !(Tree PE) !String !(Tree PE) -- Right a + Right True + Left e
      | RTTrueT !a !(Tree PE) !(Tree PE) !(Tree PE)      -- Right a + Right True + Right b
      deriving Show
+
+getBoolP3 :: RResults3 a -> BoolP
+getBoolP3 r =
+  let z = case r of
+            RF _ t -> t
+            RTF _ _ _ t -> t
+            RTFalse _ _ t -> t
+            RTTrueF _ _ _ _ t -> t
+            RTTrueT _ _ _ t -> t
+  in z ^. root . pBool
 
 -- | same as 'newRefined3P'' but passes in the proxy
 newRefined3' :: forall opts ip op fmt i m

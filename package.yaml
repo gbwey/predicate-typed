@@ -26,7 +26,6 @@ dependencies:
 - mtl
 - pcre-heavy >= 1.0.0.2
 - pcre-light
-- pretty
 - pretty-terminal >= 0.1.0.0
 - safe
 - string-conversions
@@ -36,7 +35,6 @@ dependencies:
 - these >= 0.8
 - time
 - transformers
-- tree-view >= 0.5
 
 library:
   source-dirs: src

@@ -266,16 +266,16 @@ tstextras =
   , newRefined3P (daten @OAN) "12/02/19" @?= Right (unsafeRefined3 (fromGregorian 2019 12 2) "2019-12-02")
   , newRefined3P (Proxy @(Luhn OAN '[1,1,1,1])) "1230" @?= Right (unsafeRefined3 [1,2,3,0] "1-2-3-0")
   , newRefined3P (Proxy @(Luhn OAN '[1,2,3])) "123455" @?= Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
-  , (runIdentity (unRavelT $ tst1a @OAN @Identity) ^. _1) @?= Right ((163,"a3"),(12,"12"))
-  , runIdentity (unRavelT yy1) ^? _1 . _Right @?= Just (unsafeRefined3 4 "someval val=004")
-  , runIdentity (unRavelT yy2) ^? _1 . _Right @?= Just (unsafeRefined3 3 "someval val=003")
-  , runIdentity (unRavelT yy3) ^? _1 . _Left @?= Just "Step 2. False Boolean Check(op) | {12 <= 7}"
-  , runIdentity (unRavelT yy4) ^? _1 . _Right @?= Just (unsafeRefined3 7 "someval val=007")
+  , runIdentity (unRavelTBoolP $ tst1a @OAN @Identity) @?= Right ((163,"a3"),(12,"12"))
+  , runIdentity (unRavelTBoolP yy1) ^? _Right @?= Just (unsafeRefined3 4 "someval val=004")
+  , runIdentity (unRavelTBoolP yy2) ^? _Right @?= Just (unsafeRefined3 3 "someval val=003")
+  , runIdentity (unRavelTString yy3) ^? _Left @?= Just "Step 2. False Boolean Check(op) | {12 <= 7}"
+  , runIdentity (unRavelTBoolP yy4) ^? _Right @?= Just (unsafeRefined3 7 "someval val=007")
   , www1 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
   , www2 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
   , www3 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
   , www3' "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
-  , expectIO (fst <$> unRavelT (tst2a @'OAN)) (either Left (\x -> if x == ((163,"a3"),(12,"12")) then Right () else Left "tst2a failed to match"))
+  , expectIO' (unRavelTBoolP (tst2a @'OAN)) (either Left (\x -> if x == ((163,"a3"),(12,"12")) then Right () else Left $ FailP "tst2a failed to match"))
   ]
 
 -- prtRefinedTIO $ tst1a @OZ

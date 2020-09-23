@@ -44,8 +44,11 @@ module Predicate.Util (
   , _BoolT
 
  -- ** PE
+  , BoolP(..)
   , PE
+  , pBool
   , pString
+  , boolT2P
 
  -- ** create tree functions
   , mkNode
@@ -227,7 +230,6 @@ import qualified GHC.TypeLits as GL
 import Control.Lens
 import Control.Arrow
 import Data.List (intercalate, unfoldr)
-import qualified Data.Tree.View as TV
 import Data.Tree
 import Data.Tree.Lens
 import Data.Proxy
@@ -422,7 +424,7 @@ data BoolP =
   | FalseP       -- ^ False predicate
   | TrueP        -- ^ True predicate
   | PresentP     -- ^ Any value
-  deriving (Show, Eq, Read)
+  deriving (Show, Ord, Eq, Read)
 
 -- | represents the untyped evaluation tree for final display
 data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
@@ -1326,7 +1328,7 @@ showImpl :: POpts
          -> String
 showImpl o =
   case oDisp o of
-    Unicode -> TV.showTree
+    Unicode -> drawTreeU
     Ansi -> drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
 
 -- | render numbered tree
@@ -2194,3 +2196,18 @@ groupBy'' p =
              (\(_,b) -> [b []])
              xs
              (x,(x:))
+
+-- https://github.com/haskell/containers/pull/344
+drawTreeU :: Tree String -> String
+drawTreeU  = unlines . drawU
+
+drawU :: Tree String -> [String]
+drawU (Node x ts0) = x : drawSubTrees ts0
+  where
+    drawSubTrees [] = []
+    drawSubTrees [t] =
+        shift "\x2514\x2500" "  " (drawU t)
+    drawSubTrees (t:ts) =
+        shift "\x251c\x2500" "\x2502 " (drawU t) ++ drawSubTrees ts
+
+    shift one other = zipWith (++) (one : repeat other)

@@ -106,7 +106,7 @@ import Predicate.Data.Ordering (type (==), OrdA)
 import Predicate.Data.Numeric (Mod)
 import Predicate.Data.Monoid (type (<>))
 import Control.Lens hiding (iall)
-import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf, sortOn, group)
+import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf)
 import Data.Proxy
 import Control.Monad
 import Data.Kind (Type)
@@ -567,13 +567,12 @@ instance (Show x
 data GroupCntStable
 
 instance ( a ~ [x]
-         , Ord x
+         , Eq x
          ) => P GroupCntStable a where
   type PP GroupCntStable a = [(ExtractAFromList a, Int)]
   eval _ opts zs =
     let msg0 = "GroupCntStable"
-        xs = map (head &&& length) $ group $ sortOn (ys M.!) zs
-        ys = M.fromListWith (flip const) $ zip zs [0::Int ..]
+        xs = map (head &&& length) $ groupBy'' (==) zs
     in pure $ mkNode opts (PresentT xs) msg0 []
 
 
