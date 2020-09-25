@@ -113,18 +113,15 @@ allTests =
   , expectPE (PresentT 23) $ pl @(Fst + (Snd >> Last)) (10,[12,13])
   , expectPE (PresentT 157) $ pl @(Fst * L21 + L22 `Div` 2) (12,(13,3))
   , expectPE (PresentT (Proxy @'["xy","xy","xy","xy"])) $ pl @(Proxy (RepeatT 4 "xy")) 3
-  , expectPE (PresentT (66788,26232)) $ pl @(Last >> Id * 123 >> Dup >> (Pred *** (ShowP Id >> Rescan "(\\d{2})" >> Concat (ConcatMap Snd Id) >> ReadBase Int 16))) [12,13,543::Int]
+  , expectPE (PresentT (66788,26232)) $ pl @(Last >> Id * 123 >> Dup >> (Pred *** (ShowP Id >> Rescan "(\\d{2})" >> ConcatMap Snd Id >> Concat >> ReadBase Int 16))) [12,13,543::Int]
 
-
-  , expectPE (PresentT ('x',('x',"someval"))) $ pl @Duplicate ('x',"someval")
-  , expectPE (PresentT "someval") $ pl @Extract ('x',"someval")
   , expectPE (PresentT (9,"abc")) $ pl @(Id $$ 9 $$ "abc") (,)
   , expectPE (PresentT ("abc",9)) $ pl @(9 $& "abc" $& Id) (,)
   , expectPE (PresentT "28") $ pl @(Fst $$ Snd) (show . (7*),4)
   , expectPE (PresentT (12,"12")) $ pl @(Fst $$ Snd $$ ShowP Snd) ((,),12)
   , expectPE (PresentT (4,("aa",'x'))) $ pl @'(4,'(Fst,Snd)) ("aa",'x')
   , expectPE (PresentT (4,"aa",'x')) $ pl @'(4,Fst,Snd) ("aa",'x')
-  , expectPE (PresentT (map ModifiedJulianDay [0,1,2,3,4,5])) $ pl @(EnumFromTo Fst Snd) (ModifiedJulianDay 0, ModifiedJulianDay 5)
+  , expectPE (PresentT (map ModifiedJulianDay [0,1,2,3,4,5])) $ pl @(Fst ... Snd) (ModifiedJulianDay 0, ModifiedJulianDay 5)
   , expectPE (PresentT (4,'x')) $ pl @('(,) 4 %% Char1 "x") ()
   , expectPE (PresentT (4,"abc")) $ pl @('(,) %% 4 %% "abc") ()
   , expectPE (PresentT ("abc",4)) $ pl @(4 %& "abc" %& '(,)) ()
@@ -139,7 +136,7 @@ allTests =
                        '( 'False, L12 )
                     ) Fst)
                    '( 'True, Head) Tail) [1,4,7,6,16]
-  , expectPE (PresentT [10,12,13]) $ pl @(CatMaybes Id) [Just 10, Just 12, Nothing, Just 13]
+  , expectPE (PresentT [10,12,13]) $ pl @CatMaybes [Just 10, Just 12, Nothing, Just 13]
 
 
   , expectPE (FailT "abcsomeval") $ pl @(Fail (Snd >> Unproxy) (Fst <> "someval")) ("abc",Proxy @Int)

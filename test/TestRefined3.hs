@@ -173,11 +173,11 @@ unnamedTests = [
   , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ runIdentity $ eval3P hms2E "12:13:14"
 --  , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "seconds invalid: found 99")) $ runIdentity $ eval3P hms2E "12:13:99"
 
-  , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) "1.2.3.4"
-  , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Concat (Intercalate '["__"] Id)) "1.2.3.4"
+  , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Intercalate '["."] Id >> Concat) "1.2.3.4"
+  , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Intercalate '["__"] Id >> Concat) "1.2.3.4"
 
   -- keep the original value
-  , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ runIdentity $ eval3M @OAN @(Id &&& Ip4ip) @(Snd >> Ip4op') @(Snd >> ParaN 4 (PrintF "%03d" Id) >> Concat (Intercalate '["."] Id)) "1.2.3.4"
+  , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ runIdentity $ eval3M @OAN @(Id &&& Ip4ip) @(Snd >> Ip4op') @(Snd >> ParaN 4 (PrintF "%03d" Id) >> Intercalate '["."] Id >> Concat) "1.2.3.4"
   ]
 
 allProps :: [TestTree]
@@ -211,7 +211,7 @@ type Hmsfmt2 = FormatTimeP' "%T" Snd
 
 -- use GuardBool for op boolean check to get better errormessages
 -- 1. packaged up as a promoted tuple
-type Tst3 = '(OAN, Map (ReadP Int Id) (Resplit "\\."), (Len == 4) && All (Between 0 255 Id), Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id, String)
+type Tst3 = '(OAN, Map (ReadP Int Id) (Resplit "\\."), (Len == 4) && All (Between 0 255 Id), Lift Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id, String)
 
 www1, www2 :: String -> Either Msg3 (MakeR3 Tst3)
 www1 = newRefined3P (mkProxy3 @Tst3)
@@ -223,7 +223,7 @@ www2 = newRefined3P tst3
 tst3 :: Proxy
         '(OAN, Map (ReadP Int Id) (Resplit "\\.")
         ,(Len == 4) && All (Between 0 255 Id)
-        ,Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id
+        ,Lift Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id
         ,String)
 tst3 = mkProxy3
 
@@ -231,7 +231,7 @@ tst3 = mkProxy3
 www3, www3' :: String -> Either Msg3 (Refined3 OAN
                                (Map (ReadP Int Id) (Resplit "\\."))
                                ((Len == 4) && All (Between 0 255 Id))
-                               (Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id)
+                               (Lift Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id)
                                String)
 www3 = newRefined3
 
@@ -239,7 +239,7 @@ www3' = newRefined3
         @OAN
         @(Map (ReadP Int Id) (Resplit "\\."))
         @((Len == 4) && All (Between 0 255 Id))
-        @(Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id)
+        @(Lift Concat $ Intercalate '["."] $ Map (PrintF "%03d" Id) Id)
 
 data G4 = G4 { g4Age :: !(MakeR3 Age)
              , g4Ip :: !(MakeR3 Ip9)

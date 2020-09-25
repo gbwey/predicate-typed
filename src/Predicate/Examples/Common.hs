@@ -87,7 +87,7 @@ type Luhnip = Map (ReadP Int Id) (Remove "-" Id >> Ones)
 type Luhnop (n :: Nat) = GuardBool (PrintT "expected %d digits but found %d" '(n,Len)) (Len == n) && GuardBool "invalid checkdigit" IsLuhn
 
 -- | @fmt@ type for formatting a credit card using @ns@ as the format
-type Luhnfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Concat (Intercalate '["-"] Id)
+type Luhnfmt (ns :: [Nat]) = ConcatMap (ShowP Id) Id >> SplitAts ns Id >> Intercalate '["-"] Id >> Concat
 
 -- now that time is actually validated we dont need Dtop*
 -- | @ip@ type for reading in a date time
@@ -170,7 +170,7 @@ type Ip6fmt = PrintL 8 "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x" Id
 
 
 type Isbn10ip = Resplit "-"
-             >> Concat Id
+             >> Concat
              >> 'Just Unsnoc
              >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id))
 
@@ -184,7 +184,7 @@ type Isbn10fmt = ConcatMap (ShowP Id) Id *** If (Id == 10) "X" (ShowP Id)
 
 
 type Isbn13ip = Resplit "-"
-             >> Concat Id
+             >> Concat
              >> Map (ReadP Int (Singleton Id)) Id
 
 type Isbn13op = ZipWith (Fst * Snd) (Cycle 13 [1,3] >> Reverse) Id

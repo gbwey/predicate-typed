@@ -131,72 +131,65 @@ instance ( Show as
     let b = has _Empty as
     in pure $ mkNodeB opts b ("IsEmpty" <> showVerbose opts " | " as) []
 
-data IToList' t p
+data IToList' t
 
-instance (Show x
-        , P p x
-        , Typeable (PP t (PP p x))
-        , Show (PP t (PP p x))
-        , FoldableWithIndex (PP t (PP p x)) f
-        , PP p x ~ f a
+instance (Show (f a)
+        , Typeable (PP t x)
+        , Show (PP t x)
+        , FoldableWithIndex (PP t x) f
+        , x ~ f a
         , Show a
-        ) => P (IToList' t p) x where
-  type PP (IToList' t p) x = [(PP t (PP p x), ExtractAFromTA (PP p x))]
-  eval _ opts x = do
+        ) => P (IToList' t) x where
+  type PP (IToList' t) x = [(PP t x, ExtractAFromTA x)]
+  eval _ opts x =
     let msg0 = "IToList"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = itoList p
-            t = showT @(PP t (PP p x))
-        in mkNode opts (PresentT b) (msg0 <> "(" <> t <> ") " <> showL opts b <> showVerbose opts " | " x) [hh pp]
-
-
+        b = itoList x
+        t = showT @(PP t x)
+    in pure $ mkNode opts (PresentT b) (msg0 <> "(" <> t <> ") " <> showL opts b <> showVerbose opts " | " x) []
 
 -- | similar to 'Control.Lens.itoList'
 --
--- >>> pz @(IToList _ Id) ("aBc" :: String)
+-- >>> pz @(IToList _) ("aBc" :: String)
 -- PresentT [(0,'a'),(1,'B'),(2,'c')]
 --
--- >>> pl @(IToList _ Id) ("abcd" :: String)
+-- >>> pl @(IToList _) ("abcd" :: String)
 -- Present [(0,'a'),(1,'b'),(2,'c'),(3,'d')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c'),(3,'d')] | "abcd")
 -- PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]
 --
--- >>> pl @(IToList _ Id) (M.fromList $ itoList ("abcd" :: String))
+-- >>> pl @(IToList _) (M.fromList $ itoList ("abcd" :: String))
 -- Present [(0,'a'),(1,'b'),(2,'c'),(3,'d')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c'),(3,'d')] | fromList [(0,'a'),(1,'b'),(2,'c'),(3,'d')])
 -- PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]
 --
--- >>> pl @(IToList _ Id) [9,2,7,4]
+-- >>> pl @(IToList _) [9,2,7,4]
 -- Present [(0,9),(1,2),(2,7),(3,4)] (IToList(Int) [(0,9),(1,2),(2,7),(3,4)] | [9,2,7,4])
 -- PresentT [(0,9),(1,2),(2,7),(3,4)]
 --
--- >>> pl @(IToList _ Id) (M.fromList (zip ['a'..] [9,2,7,4]))
+-- >>> pl @(IToList _) (M.fromList (zip ['a'..] [9,2,7,4]))
 -- Present [('a',9),('b',2),('c',7),('d',4)] (IToList(Char) [('a',9),('b',2),('c',7),('d',4)] | fromList [('a',9),('b',2),('c',7),('d',4)])
 -- PresentT [('a',9),('b',2),('c',7),('d',4)]
 --
--- >>> pl @(IToList _ Id) (Just 234)
+-- >>> pl @(IToList _) (Just 234)
 -- Present [((),234)] (IToList(()) [((),234)] | Just 234)
 -- PresentT [((),234)]
 --
--- >>> pl @(IToList _ Id) (Nothing @Double)
+-- >>> pl @(IToList _) (Nothing @Double)
 -- Present [] (IToList(()) [] | Nothing)
 -- PresentT []
 --
--- >>> pl @(IToList _ Id) [1..5]
+-- >>> pl @(IToList _) [1..5]
 -- Present [(0,1),(1,2),(2,3),(3,4),(4,5)] (IToList(Int) [(0,1),(1,2),(2,3),(3,4),(4,5)] | [1,2,3,4,5])
 -- PresentT [(0,1),(1,2),(2,3),(3,4),(4,5)]
 --
--- >>> pl @(IToList _ Id) ['a','b','c']
+-- >>> pl @(IToList _) ['a','b','c']
 -- Present [(0,'a'),(1,'b'),(2,'c')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c')] | "abc")
 -- PresentT [(0,'a'),(1,'b'),(2,'c')]
 --
-data IToList (t :: Type) p
-type IToListT (t :: Type) p = IToList' (Hole t) p
+data IToList (t :: Type)
+type IToListT (t :: Type) = IToList' (Hole t)
 
-instance P (IToListT t p) x => P (IToList t p) x where
-  type PP (IToList t p) x = PP (IToListT t p) x
-  eval _ = eval (Proxy @(IToListT t p))
+instance P (IToListT t) x => P (IToList t) x where
+  type PP (IToList t) x = PP (IToListT t) x
+  eval _ = eval (Proxy @(IToListT t))
 
 -- | invokes 'GE.toList'
 --
@@ -268,33 +261,28 @@ instance (Show l
 
 -- | similar to 'concat'
 --
--- >>> pz @(Concat Id) ["abc","D","eF","","G"]
+-- >>> pz @Concat ["abc","D","eF","","G"]
 -- PresentT "abcDeFG"
 --
--- >>> pz @(Concat Snd) ('x',["abc","D","eF","","G"])
+-- >>> pz @(Lift Concat Snd) ('x',["abc","D","eF","","G"])
 -- PresentT "abcDeFG"
 --
-data Concat p
+data Concat
 
 instance (Show a
         , Show (t [a])
-        , PP p x ~ t [a]
-        , P p x
+        , x ~ t [a]
         , Foldable t
-        ) => P (Concat p) x where
-  type PP (Concat p) x = ExtractAFromTA (PP p x)
-  eval _ opts x = do
+        ) => P Concat x where
+  type PP Concat x = ExtractAFromTA x
+  eval _ opts x =
     let msg0 = "Concat"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = concat p
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+        b = concat x
+    in pure $ mkNode opts (PresentT b) (show01 opts msg0 b x) []
 
 -- | similar to 'concatMap'
 data ConcatMap p q
-type ConcatMapT p q = Concat (Map p q)
+type ConcatMapT p q = Map p q >> Concat
 
 instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
   type PP (ConcatMap p q) x = PP (ConcatMapT p q) x

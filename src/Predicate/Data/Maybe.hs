@@ -308,11 +308,11 @@ instance x ~ Maybe a
 -- | like 'Data.Maybe.mapMaybe'
 --
 -- >>> pl @(MapMaybe (MaybeBool (Le 3) Id) Id) [1..5]
--- Present [1,2,3] (Concat [1,2,3] | [[1],[2],[3],[],[]])
+-- Present [1,2,3] ((>>) [1,2,3] | {Concat [1,2,3] | [[1],[2],[3],[],[]]})
 -- PresentT [1,2,3]
 --
 -- >>> pl @(MapMaybe (MaybeBool (Gt 3) Id) Id) [1..5]
--- Present [4,5] (Concat [4,5] | [[],[],[],[4],[5]])
+-- Present [4,5] ((>>) [4,5] | {Concat [4,5] | [[],[],[],[4],[5]]})
 -- PresentT [4,5]
 --
 data MapMaybe p q
@@ -324,16 +324,16 @@ instance P (MapMaybeT p q) x => P (MapMaybe p q) x where
 
 -- | similar to 'Data.Maybe.catMaybes'
 --
--- >>> pl @(CatMaybes Id) [Just 'a',Nothing,Just 'c',Just 'd',Nothing]
--- Present "acd" (Concat "acd" | ["a","","c","d",""])
+-- >>> pl @CatMaybes [Just 'a',Nothing,Just 'c',Just 'd',Nothing]
+-- Present "acd" ((>>) "acd" | {Concat "acd" | ["a","","c","d",""]})
 -- PresentT "acd"
 --
-data CatMaybes q
-type CatMaybesT q = MapMaybe Id q
+data CatMaybes
+type CatMaybesT = MapMaybe Id Id
 
-instance P (CatMaybesT q) x => P (CatMaybes q) x where
-  type PP (CatMaybes q) x = PP (CatMaybesT q) x
-  eval _ = eval (Proxy @(CatMaybesT q))
+instance P CatMaybesT x => P CatMaybes x where
+  type PP CatMaybes x = PP CatMaybesT x
+  eval _ = eval (Proxy @CatMaybesT)
 
 -- | Convenient method to convert a value @p@ to a 'Maybe' based on a predicate @b@
 -- if @b@ then Just @p@ else Nothing
