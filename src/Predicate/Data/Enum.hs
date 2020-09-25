@@ -4,6 +4,7 @@
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -223,11 +224,11 @@ instance (Show a
     lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts x []
     case lr of
       Left e -> pure e
-      Right (n,p,nn,pp) -> do
-        lr1 <- catchit (toEnum (fromEnum p + fromIntegral n))
+      Right (fromIntegral -> n :: Int,p,nn,pp) -> do
+        lr1 <- catchit (toEnum (fromEnum p + n))
         pure $ case lr1 of
-          Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (litL opts (msg0 <> " " <> show (fromIntegral @_ @Integer n) <> " " <> show p)) [hh nn, hh pp]
-          Right r -> mkNode opts (PresentT r) (litL opts (msg0 <> " " <> show (fromIntegral @_ @Integer n) <> " " <> show p)) [hh nn, hh pp]
+          Left e -> mkNode opts (FailT (msg0 <> " " <> e)) (litL opts (msg0 <> " " <> show n <> " " <> show p)) [hh nn, hh pp]
+          Right r -> mkNode opts (PresentT r) (litL opts (msg0 <> " " <> show n <> " " <> show p)) [hh nn, hh pp]
 
 
 -- | unbounded 'pred' function

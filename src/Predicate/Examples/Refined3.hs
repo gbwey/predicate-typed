@@ -5,6 +5,7 @@
 {-# OPTIONS -Wredundant-constraints #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wno-unused-imports #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -295,7 +296,7 @@ isbn13 = Proxy
 -- >>> newRefined3P (basen' @OZ @16 @(GuardBool (PrintF "oops bad hex=%d" Id) (Id < 400))) "f0fe"
 -- Left Step 2. Failed Boolean Check(op) | oops bad hex=61694
 --
--- >>> newRefined3P (basen' @OL @16 @(Id < 400)) "f0fe" -- todo: why different parens vs braces
+-- >>> newRefined3P (basen' @OL @16 @(Id < 400)) "f0fe"
 -- Left Step 2. False Boolean Check(op) | {61694 < 400}
 --
 type BaseN (opts :: Opt) (n :: Nat) = BaseN' opts n 'True

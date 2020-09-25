@@ -622,11 +622,11 @@ instance (PP (Bools (ToGuardsT prt ps)) x ~ Bool
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
--- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255 Id)) [121,33,7,256]
+-- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (0 <..> 0xff)) [121,33,7,256]
 -- Error Bool(3) [id=3 must be between 0 and 255, found 256] (256 <= 255)
 -- FailT "Bool(3) [id=3 must be between 0 and 255, found 256] (256 <= 255)"
 --
--- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255 Id)) [121,33,7,44]
+-- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (0 <..> 0xff)) [121,33,7,44]
 -- True (Bools)
 -- TrueT
 --
@@ -726,21 +726,21 @@ type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
--- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255 Id)) [121,33,7,256]
+-- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (0 <..> 0xff)) [121,33,7,256]
 -- FailT "id=3 must be between 0 and 255, found 256"
 --
--- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (Between 0 255 Id)) [121,33,7,44]
+-- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (0 <..> 0xff)) [121,33,7,44]
 -- PresentT [121,33,7,44]
 --
--- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255 Id)) [1,2,3,4::Int]
+-- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3,4::Int]
 -- Present [1,2,3,4] (Guards)
 -- PresentT [1,2,3,4]
 --
--- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255 Id)) [1,2,3,4,5::Int]
+-- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3,4,5::Int]
 -- Error Guards:invalid length(5) expected 4
 -- FailT "Guards:invalid length(5) expected 4"
 --
--- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (Between 0 255 Id)) [1,2,3::Int]
+-- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3::Int]
 -- Error Guards:invalid length(3) expected 4
 -- FailT "Guards:invalid length(3) expected 4"
 --

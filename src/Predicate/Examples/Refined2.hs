@@ -5,6 +5,7 @@
 {-# OPTIONS -Wredundant-constraints #-}
 {-# OPTIONS -Wno-unused-imports #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}

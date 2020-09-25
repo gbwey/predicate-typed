@@ -42,12 +42,12 @@ allTests =
   [ expectPE (PresentT [False,True,True,False]) $ pl @'[Gt 5, Lt 9, Same 4, W 'False] 4
   , expectPE (PresentT [21,19,20,40,60,2]) $ pl @'[Succ, Pred, Id, Id + Id, Id * 3, Id `Mod` 3] 20
   , expectPE (PresentT [False,False,False,True]) $ pl @(Map (Mod Id 3) Fst >> Map (Gt 1) Id) ([10,12,3,5],"ss")
-  , expectPE (PresentT 5) $ pl @(Snd >> Snd >> Snd >> Snd >> Id) (9,(1,(2,(3,5))))
+  , expectPE (PresentT 5) $ pl @(Snd >> Snd >> Snd >> Snd) (9,(1,(2,(3,5))))
   , expectPE (PresentT (-1.0)) $ pl @(Negate Id >> Dup >> First Succ >> Swap >> Fst - Snd) 4
   , expectPE (PresentT False) $ pl @(Msg "someval4" (Gt 4 >> Id)) 4
   , expectPE (PresentT ()) $ pl @(Snd >> Snd >> Snd >> Snd >> Id) (1,('a',(3,(True,()))))
-  , expectPE (PresentT True) $ pl @(Thd >> Fst) (1,2,(True,4))
-  , expectPE (PresentT True) $ pl @(L1 (L3 Id)) (1,2,(True,4))
+  , expectPE (PresentT ()) $ pl @(L22 >> L22) (1,('a',(3,(True,()))))
+  , expectPE (PresentT True) $ pl @L31 (1,2,(True,4))
   , expectPE (FailT "failed3") $ pl @((Fst >> Failt _ "failed3" >> Le (6 -% 1)) || 'False) ([-5],True)
   , expectPE (PresentT [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 -% 1 ) >> Wrap (MM.First _) Id)) Id >> Map SapA Id >> Map ('Just Unwrap) Id) [Nothing,Just 10,Just 20,Nothing,Just 30]
 
@@ -109,9 +109,9 @@ allTests =
   , expectPE (FailT "expected 14 mod 10 = 0 but found 4") $ pl @(Luhn' 4) "1234"
   , expectPE (PresentT [4, 7, 8, 9]) $ pl @'[4,7,8,9] ()
   , expectPE (PresentT ["aa","b","","ddd"]) $ pl @'["aa","b","","ddd"] ()
-  , expectPE (PresentT "abcdef") $ pl @(Fst <> (Snd >> Fst)) ("abc",("def",12))
+  , expectPE (PresentT "abcdef") $ pl @(Fst <> L21) ("abc",("def",12))
   , expectPE (PresentT 23) $ pl @(Fst + (Snd >> Last)) (10,[12,13])
-  , expectPE (PresentT 157) $ pl @(Fst * (Snd >> Fst) + (Snd >> Snd) `Div` 2) (12,(13,3))
+  , expectPE (PresentT 157) $ pl @(Fst * L21 + L22 `Div` 2) (12,(13,3))
   , expectPE (PresentT (Proxy @'["xy","xy","xy","xy"])) $ pl @(Proxy (RepeatT 4 "xy")) 3
   , expectPE (PresentT (66788,26232)) $ pl @(Last >> Id * 123 >> Dup >> (Pred *** (ShowP Id >> Rescan "(\\d{2})" >> Concat (ConcatMap Snd Id) >> ReadBase Int 16))) [12,13,543::Int]
 
@@ -133,10 +133,10 @@ allTests =
   , expectPE (PresentT (-5 % 3)) $ pl @(Snd / Fst) (-3,5)
   , expectPE (FailT "(/) zero denominator") $ pl @(Snd / Fst) (0,5)
   , expectPE (PresentT (False,7))
-     $ pl @(Foldl (If (L1 Fst)
-                    (If (Snd > L2 Fst)
+     $ pl @(Foldl (If L11
+                    (If (Snd > L12)
                        '( 'True, Snd )
-                       '( 'False, L2 Fst )
+                       '( 'False, L12 )
                     ) Fst)
                    '( 'True, Head) Tail) [1,4,7,6,16]
   , expectPE (PresentT [10,12,13]) $ pl @(CatMaybes Id) [Just 10, Just 12, Nothing, Just 13]
@@ -151,8 +151,8 @@ allTests =
   , expectPE (PresentT [Left 1,Left 2,Right "fizz",Left 4,Right "buzz",Right "fizz",Left 7,Left 8,Right "fizz",Right "buzz",Left 11,Right "fizz",Left 13,Left 14,Right "fizzbuzz"]) $ pl @Fizzbuzzs2 [1..15]
   , expectPE (PresentT [Left 1,Left 2,Right "fizz",Left 4,Right "buzz",Right "fizz",Left 7,Left 8,Right "fizz",Right "buzz",Left 11,Right "fizz",Left 13,Left 14,Right "fizzbuzz"]) $ pl @Fizzbuzzs3 [1..15]
 
-  , expectPE (PresentT "abc") $ pl @(L3 (L2 Fst)) (('x',(13,False,"abc")),True,'y')
-  , expectPE (PresentT 9.3) $ pl @(L1 (L2 Thd)) ('x',True,(13,(9.3,False),"def"))
+  , expectPE (PresentT "abc") $ pl @(L3 L12) (('x',(13,False,"abc")),True,'y')
+  , expectPE (PresentT 9.3) $ pl @(L1 L32) ('x',True,(13,(9.3,False),"def"))
   , expectPE (PresentT (4,"helo|oleh")) $ pl @'(Len, Id <> "|" <> Reverse) "helo"
   , expectPE (PresentT (123,"helo")) $ pl @'(Snd, Fst) ("helo",123)
   , expectPE (PresentT (4,"helo","oleh")) $ pl @'(Len, Id, Reverse) "helo"

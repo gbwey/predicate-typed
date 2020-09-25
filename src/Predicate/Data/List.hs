@@ -102,11 +102,11 @@ module Predicate.Data.List (
  ) where
 import Predicate.Core
 import Predicate.Util
-import Predicate.Data.Ordering (type (==), OrdA)
+import Predicate.Data.Ordering (type (==), OrdA')
 import Predicate.Data.Numeric (Mod)
 import Predicate.Data.Monoid (type (<>))
 import Control.Lens hiding (iall)
-import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf, sortOn, group)
 import Data.Proxy
 import Control.Monad
 import Data.Kind (Type)
@@ -561,18 +561,31 @@ instance (Show x
 
 -- | version of 'GroupCnt' that retains the original ordering
 --
--- >>> pz @GroupCntStable "bcdeaaaaaaaaaf"
--- PresentT [('b',1),('c',1),('d',1),('e',1),('a',9),('f',1)]
+-- >>> pz @GroupCntStable "bababab"
+-- PresentT [('b',4),('a',3)]
+--
+-- >>> pz @GroupCntStable "fedbfefa"
+-- PresentT [('f',3),('e',2),('d',1),('b',1),('a',1)]
+--
+-- >>> pz @GroupCntStable "fedc"
+-- PresentT [('f',1),('e',1),('d',1),('c',1)]
+--
+-- >>> pz @GroupCntStable "ffff"
+-- PresentT [('f',4)]
+--
+-- >>> pz @GroupCntStable ""
+-- PresentT []
 --
 data GroupCntStable
 
 instance ( a ~ [x]
-         , Eq x
+         , Ord x
          ) => P GroupCntStable a where
   type PP GroupCntStable a = [(ExtractAFromList a, Int)]
   eval _ opts zs =
     let msg0 = "GroupCntStable"
-        xs = map (head &&& length) $ groupBy'' (==) zs
+        xs = map (head &&& length) $ group $ sortOn (ys M.!) zs
+        ys = M.fromListWith (flip const) $ zip zs [0::Int ..]
     in pure $ mkNode opts (PresentT xs) msg0 []
 
 
@@ -1329,9 +1342,9 @@ instance P Unzip3T x => P Unzip3 x where
   type PP Unzip3 x = PP Unzip3T x
   eval _ = eval (Proxy @Unzip3T)
 
--- | sort a list
+-- | sort a list (stable)
 --
--- >>> pz @(SortBy (OrdP Snd Fst) Id) [(10,"ab"),(4,"x"),(20,"bbb")]
+-- >>> pz @(SortBy (Snd ==! Fst) Id) [(10,"ab"),(4,"x"),(20,"bbb")]
 -- PresentT [(20,"bbb"),(10,"ab"),(4,"x")]
 --
 -- >>> pz @(SortBy 'LT Id) [1,5,2,4,7,0]
@@ -1340,17 +1353,17 @@ instance P Unzip3T x => P Unzip3 x where
 -- >>> pz @(SortBy 'GT Id) [1,5,2,4,7,0]
 -- PresentT [0,7,4,2,5,1]
 --
--- >>> pz @(SortBy ((L1 Fst ==! L1 Snd) <> (L2 Fst ==! L2 Snd)) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
+-- >>> pz @(SortBy ((L11 ==! L21) <> (L12 ==! L22)) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
 -- PresentT [(4,"a"),(4,"x"),(4,"y"),(10,"ab"),(20,"bbb")]
 --
--- >>> pz @(SortBy ((L1 Fst ==! L1 Snd) <> (L2 Snd ==! L2 Fst)) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
+-- >>> pz @(SortBy ((L11 ==! L21) <> (L22 ==! L12)) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
 -- PresentT [(4,"y"),(4,"x"),(4,"a"),(10,"ab"),(20,"bbb")]
 --
--- >>> pl @(SortBy (Swap >> OrdA Fst) Snd) ((),[('z',1),('a',10),('m',22)])
+-- >>> pl @(SortBy (Swap >> OrdA' Fst Fst) Snd) ((),[('z',1),('a',10),('m',22)])
 -- Present [('z',1),('m',22),('a',10)] (SortBy [('z',1),('m',22),('a',10)])
 -- PresentT [('z',1),('m',22),('a',10)]
 --
--- >>> pl @(SortBy (OrdA Reverse) Id) ["az","by","cx","aa"]
+-- >>> pl @(SortBy (OrdA' Reverse Reverse) Id) ["az","by","cx","aa"]
 -- Present ["aa","cx","by","az"] (SortBy ["aa","cx","by","az"])
 -- PresentT ["aa","cx","by","az"]
 --
@@ -1358,7 +1371,7 @@ instance P Unzip3T x => P Unzip3 x where
 -- Error pivot=5 value=3(2) (SortBy)
 -- FailT "pivot=5 value=3(2)"
 --
--- >>> pl @(SortBy (If (Fst==50 && Snd==3) (Failt _ (PrintT "pivot=%d value=%d" Id)) (OrdA Id)) Snd) ((), [5,7,3,1,6,2,1,3])
+-- >>> pl @(SortBy (If (Fst==50 && Snd==3) (Failt _ (PrintT "pivot=%d value=%d" Id)) OrdA) Snd) ((), [5,7,3,1,6,2,1,3])
 -- Present [1,1,2,3,3,5,6,7] (SortBy [1,1,2,3,3,5,6,7])
 -- PresentT [1,1,2,3,3,5,6,7]
 --
@@ -1442,7 +1455,7 @@ instance (P p (a,a)
 -- PresentT [('a',9),('a',10),('m',10),('m',22),('z',1)]
 --
 data SortOn p q
-type SortOnT p q = SortBy (OrdA p) q
+type SortOnT p q = SortBy (OrdA' p p) q
 
 instance P (SortOnT p q) x => P (SortOn p q) x where
   type PP (SortOn p q) x = PP (SortOnT p q) x
@@ -1459,7 +1472,7 @@ instance P (SortOnT p q) x => P (SortOn p q) x where
 -- PresentT [('z',1),('m',22),('a',10)]
 --
 data SortOnDesc p q
-type SortOnDescT p q = SortBy (Swap >> OrdA p) q
+type SortOnDescT p q = SortBy (Swap >> OrdA' p p) q
 
 instance P (SortOnDescT p q) x => P (SortOnDesc p q) x where
   type PP (SortOnDesc p q) x = PP (SortOnDescT p q) x

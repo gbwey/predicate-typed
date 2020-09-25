@@ -245,11 +245,11 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 -- Error 7 not less than 6
 -- FailT "7 not less than 6"
 --
--- >>> pl @(Foldl (If ((Fst >> Fst) && (Snd > L2 Fst)) '( 'True, Snd) '( 'False, L2 Fst)) '( 'True, Head) Tail) [1,4,7,9,16]
+-- >>> pl @(Foldl (If (L11 && (Snd > L12)) '( 'True, Snd) '( 'False, L12)) '( 'True, Head) Tail) [1,4,7,9,16]
 -- Present (True,16) ((>>) (True,16) | {Last (True,16) | [(True,1),(True,4),(True,7),(True,9),(True,16)]})
 -- PresentT (True,16)
 --
--- >>> pl @(Foldl (If ((Fst >> Fst) && (Snd > L2 Fst)) '( 'True, Snd) '( 'False, L2 Fst)) '( 'True, Head) Tail) [1,4,7,9,16,2]
+-- >>> pl @(Foldl (If (L11 && (Snd > L12)) '( 'True, Snd) '( 'False, L12)) '( 'True, Head) Tail) [1,4,7,9,16,2]
 -- Present (False,16) ((>>) (False,16) | {Last (False,16) | [(True,1),(True,4),(True,7),(True,9),(True,16),(False,16)]})
 -- PresentT (False,16)
 --
@@ -257,11 +257,11 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 -- Present [5,4,3,2,1] ((>>) [5,4,3,2,1] | {Last [5,4,3,2,1] | [[],[1],[2,1],[3,2,1],[4,3,2,1],[5,4,3,2,1]]})
 -- PresentT [5,4,3,2,1]
 --
--- >>> pl @('Just Uncons >> Foldl (If (L1 Fst) (If (L2 Fst < Snd) '( 'True,Snd) '( 'False, Snd)) Fst) '( 'True,Fst) Snd) [-10,-2,2,3,4,10,9,11]
+-- >>> pl @('Just Uncons >> Foldl (If L11 (If (L12 < Snd) '( 'True,Snd) '( 'False, Snd)) Fst) '( 'True,Fst) Snd) [-10,-2,2,3,4,10,9,11]
 -- Present (False,9) ((>>) (False,9) | {Last (False,9) | [(True,-10),(True,-2),(True,2),(True,3),(True,4),(True,10),(False,9),(False,9)]})
 -- PresentT (False,9)
 --
--- >>> pl @('Just Uncons >> Foldl (If (L1 Fst) (If (L2 Fst < Snd) '( 'True,Snd) '( 'False, Snd)) Fst) '( 'True,Fst) Snd) [-10,2,3,4,10,11]
+-- >>> pl @('Just Uncons >> Foldl (If L11 (If (L12 < Snd) '( 'True,Snd) '( 'False, Snd)) Fst) '( 'True,Fst) Snd) [-10,2,3,4,10,11]
 -- Present (True,11) ((>>) (True,11) | {Last (True,11) | [(True,-10),(True,2),(True,3),(True,4),(True,10),(True,11)]})
 -- PresentT (True,11)
 --

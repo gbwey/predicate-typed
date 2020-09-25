@@ -91,7 +91,7 @@ False 65535 <= 255
 `- P '255
 
     * In the Template Haskell splice $$(refined3TH "000ffff")
-      In the expression: $$(refined3TH "000ffff") :: MakeR3 (Hex OAN)
+      In the expression: $$(refined3TH "000ffff") :: MakeR3 (Hex OU)
 ```
 
 ### Any valid Read/Show instance can be used with Refined3

@@ -70,7 +70,7 @@ False 65535 <= 255
 `- P '255
 
     * In the Template Haskell splice $$(refined2TH "000ffff")
-      In the expression: $$(refined2TH "000ffff") :: MakeR2 (Hex OAN)
+      In the expression: $$(refined2TH "000ffff") :: MakeR2 (Hex OU)
 ```
 
 ### Any valid Read/Show instance can be used with Refined2
@@ -96,7 +96,7 @@ refined2TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP 
     * In the Template Haskell splice $$(refined2TH "2016-xy-09")
       In the expression:
           $$(refined2TH "2016-xy-09") ::
-            Refined2  OAN (ReadP Day Id) (Id > 'Just (MkDay '(2012, 1, 1))) String
+            Refined2 OU (ReadP Day Id) (Id > 'Just (MkDay '(2012, 1, 1))) String
 ```
 
 ### Json decoding

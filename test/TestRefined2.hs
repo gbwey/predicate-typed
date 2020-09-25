@@ -60,8 +60,8 @@ namedTests =
 
 unnamedTests :: [IO ()]
 unnamedTests = [
-    (@?=) [(unsafeRefined2 255 "ff", "")] (reads @(Refined2 OAN (ReadBase Int 16) (Between 0 255 Id) String) "Refined2 {r2In = 255, r2Out = \"ff\"}") -- escape quotes cos read instance for String
-  , (@?=) [] (reads @(Refined2 OAN (ReadBase Int 16) (Between 0 255 Id) String) "Refined2 {r2In = 256, r2Out = \"100\"}")
+    (@?=) [(unsafeRefined2 255 "ff", "")] (reads @(Refined2 OAN (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 {r2In = 255, r2Out = \"ff\"}") -- escape quotes cos read instance for String
+  , (@?=) [] (reads @(Refined2 OAN (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 {r2In = 256, r2Out = \"100\"}")
   , (@?=) [(unsafeRefined2 (-1234) "-4d2", "")] (reads @(Refined2 OAN (ReadBase Int 16) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}")
   , (@?=) (Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")) (newRefined2 "1.2.3.4" :: Either Msg2 (Ip4R OAN))
   , expectJ (Right (G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))) (toFrom $ G4 @OAN (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))
@@ -79,12 +79,12 @@ unnamedTests = [
 
   , expect2 (Left $ XF "Regex no results")
                   $ runIdentity $ eval2M @OAN @(Rescan Ip4RE >> HeadFail "failedn" Id >> Map (ReadP Int Id) Snd)
-                          @((Len == 4) && All (Between 0 255 Id))
+                          @((Len == 4) && All (0 <..> 0xff))
                           "1.21.x31.4"
 
   , expect2 (Right $ unsafeRefined2 [1,21,31,4] "1.21.31.4")
                   $ runIdentity $ eval2M @OAN @(Rescan Ip4RE >> HeadFail "failedn" Id >> Map (ReadP Int Id) Snd)
-                          @((Len == 4) && All (Between 0 255 Id))
+                          @((Len == 4) && All (0 <..> 0xff))
                           "1.21.31.4"
 
   , expect2 (Left $ XTFalse (-6.5) "(-13) % 2 > (-7) % 3")
@@ -100,7 +100,7 @@ unnamedTests = [
                   $ runIdentity $ eval2M @OAN @Id @(Gt (7 -% 3)) 4.123
 
   , expect2 (Right $ unsafeRefined2 [1,2,3,4] "1.2.3.4")
-                  $ runIdentity $ eval2M @OAN @(Map (ReadP Int Id) (Resplit "\\.")) @(All (Between 0 255 Id) && (Len == 4)) "1.2.3.4"
+                  $ runIdentity $ eval2M @OAN @(Map (ReadP Int Id) (Resplit "\\.")) @(All (0 <..> 0xff) && (Len == 4)) "1.2.3.4"
 
   , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
                   $ runIdentity $ eval2M @OAN @Ip6ip @Ip6op "123:Ffeff:1123:11:1"
@@ -165,7 +165,7 @@ unnamedTests = [
 
 -- better to use Guard for op boolean check cos we get better errormessages
 -- 1. packaged up as a promoted tuple
-type Tst3 (opts :: Opt) = '(opts, Map (ReadP Int Id) (Resplit "\\."), (Len == 4) && All (Between 0 255 Id), String)
+type Tst3 (opts :: Opt) = '(opts, Map (ReadP Int Id) (Resplit "\\."), (Len == 4) && All (0 <..> 0xff), String)
 
 www1, www2 :: String -> Either Msg2 (MakeR2 (Tst3 OAN))
 www1 = newRefined2P (Proxy @(Tst3 OAN))
@@ -176,7 +176,7 @@ www2 = newRefined2P tst3
 -- 2. packaged as a proxy
 tst3 :: Proxy
         '(OAN, Map (ReadP Int Id) (Resplit "\\.")
-        ,(Len == 4) && All (Between 0 255 Id)
+        ,(Len == 4) && All (0 <..> 0xff)
         ,String)
 tst3 = Proxy
 
@@ -184,14 +184,14 @@ tst3 = Proxy
 -- 3. direct
 www3, www3' :: String -> Either Msg2 (Refined2 OAN
                                (Map (ReadP Int Id) (Resplit "\\."))
-                               ((Len == 4) && All (Between 0 255 Id))
+                               ((Len == 4) && All (0 <..> 0xff))
                                String)
 www3 = newRefined2
 
 www3' = newRefined2
         @OAN
         @(Map (ReadP Int Id) (Resplit "\\."))
-        @((Len == 4) && All (Between 0 255 Id))
+        @((Len == 4) && All (0 <..> 0xff))
 
 data G4 (opts :: Opt) = G4
              { g4Age :: !(MakeR2 (Age opts))
@@ -204,7 +204,7 @@ type Age (opts :: Opt) = '(opts, ReadP Int Id, Gt 4, String)
 
 type Ip9 (opts :: Opt) = '(opts,
             Map (ReadP Int Id) (Resplit "\\.") -- split String on "." then convert to [Int]
-           ,Len == 4 && All (Between 0 255 Id) -- process [Int] and make sure length==4 and each octet is between 0 and 255
+           ,Len == 4 && All (0 <..> 0xff) -- process [Int] and make sure length==4 and each octet is between 0 and 255
            ,String -- input type is string which is also the output type
            )
 

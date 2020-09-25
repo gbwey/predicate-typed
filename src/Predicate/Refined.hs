@@ -4,7 +4,6 @@
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -134,10 +133,10 @@ errorDisplay o (bp,(top,e)) =
 
 -- | 'Read' instance for 'Refined'
 --
--- >>> reads @(Refined OZ (Between 0 255 Id) Int) "Refined 254"
+-- >>> reads @(Refined OZ (0 <..> 299) Int) "Refined 254"
 -- [(Refined 254,"")]
 --
--- >>> reads @(Refined OZ (Between 0 255 Id) Int) "Refined 300"
+-- >>> reads @(Refined OZ (0 <..> 299) Int) "Refined 300"
 -- []
 --
 -- >>> reads @(Refined OZ 'True Int) "Refined (-123)xyz"
@@ -422,10 +421,10 @@ withRefinedTIO a k = newRefinedTIO @opts @p a >>= k
 -- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
 -- Left (FailT "bad length: found 3")
 --
--- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id)) "141.213.1.444"
+-- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1.444"
 -- Left (FailT "Bool(3) [octet 3 out of range 444]")
 --
--- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (Between 0 255 Id)) "141.213.1x34.444"
+-- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1x34.444"
 -- Left (FailT "ReadP Int (1x34)")
 --
 -- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12344"

@@ -201,10 +201,10 @@ instance (Refined3C opts ip op fmt String, Show (PP ip String))
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
 --
--- >>> reads @(Refined3 OZ (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
+-- >>> reads @(Refined3 OZ (ReadBase Int 16) (0 <..> 0xff) (ShowBase 16) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
 -- [(Refined3 {r3In = 254, r3Out = "fe"},"")]
 --
--- >>> reads @(Refined3 OZ (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
+-- >>> reads @(Refined3 OZ (ReadBase Int 16) (0 <..> 0xff) (ShowBase 16) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
 -- []
 --
 -- >>> reads @(Refined3 OZ (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
@@ -244,7 +244,7 @@ instance ( Eq i
 -- | 'ToJSON' instance for 'Refined3'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined3' @OZ @(ReadBase Int 16) @(Between 0 255 Id) @(ShowBase 16) "fe")
+-- >>> A.encode (unsafeRefined3' @OZ @(ReadBase Int 16) @(0 <..> 0xff) @(ShowBase 16) "fe")
 -- "\"fe\""
 --
 -- >>> A.encode (unsafeRefined3' @OZ @Id @'True @Id 123)

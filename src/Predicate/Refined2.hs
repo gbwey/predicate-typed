@@ -170,10 +170,10 @@ instance ( i ~ String
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined2'
 --
--- >>> reads @(Refined2 OZ (ReadBase Int 16) (Between 0 255 Id) String) "Refined2 {r2In = 254, r2Out = \"fe\"}"
+-- >>> reads @(Refined2 OZ (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 {r2In = 254, r2Out = \"fe\"}"
 -- [(Refined2 {r2In = 254, r2Out = "fe"},"")]
 --
--- >>> reads @(Refined2 OZ (ReadBase Int 16) (Between 0 255 Id) String) "Refined2 {r2In = 300, r2Out = \"12c\"}"
+-- >>> reads @(Refined2 OZ (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 {r2In = 300, r2Out = \"12c\"}"
 -- []
 --
 -- >>> reads @(Refined2 OZ (ReadBase Int 16) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
@@ -212,7 +212,7 @@ instance ( Refined2C opts ip op i
 -- | 'ToJSON' instance for 'Refined2'
 --
 -- >>> import qualified Data.Aeson as A
--- >>> A.encode (unsafeRefined2 @OZ @(ReadBase Int 16) @(Between 0 255 Id) 254 "fe")
+-- >>> A.encode (unsafeRefined2 @OZ @(ReadBase Int 16) @(0 <..> 0xff) 254 "fe")
 -- "\"fe\""
 --
 -- >>> A.encode (unsafeRefined2 @OZ @Id @'True @Int 123 123)

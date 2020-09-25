@@ -88,6 +88,15 @@ module Predicate.Core (
   , L4
   , L5
   , L6
+  , L11
+  , L12
+  , L13
+  , L21
+  , L22
+  , L23
+  , L31
+  , L32
+  , L33
 
   -- ** boolean expressions
   , type (&&)
@@ -1045,7 +1054,7 @@ evalHide opts
 
 -- | compose expressions
 --
--- >>> pz @(Fst >> Snd) ((11,12),'x')
+-- >>> pz @L12 ((11,12),'x')
 -- PresentT 12
 --
 data p >> q
@@ -1192,7 +1201,7 @@ instance ( Show a
 -- >>> pz @(Length Right') (Right "abcd")
 -- PresentT 4
 --
--- >>> pz @(Length (L3 Snd)) (True,(23,'x',[10,9,1,3,4,2]))
+-- >>> pz @(Length L23) (True,(23,'x',[10,9,1,3,4,2]))
 -- PresentT 6
 --
 data Length p
@@ -1382,11 +1391,11 @@ instance (Foldable t
 -- False (9 <= 8)
 -- FalseT
 --
--- >>> pl @(Between (Fst >> Fst) (Fst >> Snd) Snd) ((1,4),3)
+-- >>> pl @(Between L11 L12 Snd) ((1,4),3)
 -- True (1 <= 3 <= 4)
 -- TrueT
 --
--- >>> pl @(Between (Fst >> Fst) (Fst >> Snd) Snd) ((1,4),10)
+-- >>> pl @(Between L11 L12 Snd) ((1,4),10)
 -- False (10 <= 4)
 -- FalseT
 --
@@ -1702,7 +1711,7 @@ instance P ThdT x => P Thd x where
 -- >>> pz @(L4 Id) (10,"Abc",'x',True)
 -- PresentT True
 --
--- >>> pz @(L4 (L1 Snd)) ('x',((10,"Abc",'x',999),"aa",1),9)
+-- >>> pz @(L4 L21) ('x',((10,"Abc",'x',999),"aa",1),9)
 -- PresentT 999
 --
 -- >>> pl @(L4 Id) (99,'a',False,"someval")
@@ -2262,3 +2271,112 @@ instance GetWeekDay 'Friday where
 instance GetWeekDay 'Saturday where
   getWeekDay = Saturday
 -}
+
+-- | first element in a tuple followed by the first element
+--
+-- >>> pz @L11 ((10,"ss"),2)
+-- PresentT 10
+--
+data L11
+type L11T = L1 (L1 Id)
+
+instance P L11T x => P L11 x where
+  type PP L11 x = PP L11T x
+  eval _ = eval (Proxy @L11T)
+
+-- | first element in a tuple followed by the second element
+--
+-- >>> pz @L12 ((10,"ss"),2)
+-- PresentT "ss"
+--
+data L12
+type L12T = L2 (L1 Id)
+
+instance P L12T x => P L12 x where
+  type PP L12 x = PP L12T x
+  eval _ = eval (Proxy @L12T)
+
+-- | first element in a tuple followed by the third element
+--
+-- >>> pz @L13 ((10,"ss",4.5),2)
+-- PresentT 4.5
+--
+data L13
+type L13T = L3 (L1 Id)
+
+instance P L13T x => P L13 x where
+  type PP L13 x = PP L13T x
+  eval _ = eval (Proxy @L13T)
+
+-- | second element in a tuple followed by the first element
+--
+-- >>> pz @L21 ('x',(10,"ss",4.5),2)
+-- PresentT 10
+--
+data L21
+type L21T = L1 (L2 Id)
+
+instance P L21T x => P L21 x where
+  type PP L21 x = PP L21T x
+  eval _ = eval (Proxy @L21T)
+
+-- | second element in a tuple followed by the second element
+--
+-- >>> pz @L22 ('z',(10,"ss",4.5),2)
+-- PresentT "ss"
+--
+data L22
+type L22T = L2 (L2 Id)
+
+instance P L22T x => P L22 x where
+  type PP L22 x = PP L22T x
+  eval _ = eval (Proxy @L22T)
+
+-- | second element in a tuple followed by the third element
+--
+-- >>> pz @L23 ('x',(10,"ss",4.5),2)
+-- PresentT 4.5
+--
+data L23
+type L23T = L3 (L2 Id)
+
+instance P L23T x => P L23 x where
+  type PP L23 x = PP L23T x
+  eval _ = eval (Proxy @L23T)
+
+-- | third element in a tuple followed by the first element
+--
+-- >>> pz @L31 (1,2,('c',4))
+-- PresentT 'c'
+--
+data L31
+type L31T = L1 (L3 Id)
+
+instance P L31T x => P L31 x where
+  type PP L31 x = PP L31T x
+  eval _ = eval (Proxy @L31T)
+
+-- | third element in a tuple followed by the second element
+--
+-- >>> pz @L32 (1,2,('c',4))
+-- PresentT 4
+--
+data L32
+type L32T = L2 (L3 Id)
+
+instance P L32T x => P L32 x where
+  type PP L32 x = PP L32T x
+  eval _ = eval (Proxy @L32T)
+
+-- | third element in a tuple followed by the third element
+--
+-- >>> pz @L33 (1,2,('c',4,False))
+-- PresentT False
+--
+data L33
+type L33T = L3 (L3 Id)
+
+instance P L33T x => P L33 x where
+  type PP L33 x = PP L33T x
+  eval _ = eval (Proxy @L33T)
+

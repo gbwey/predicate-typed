@@ -4,6 +4,7 @@
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -138,9 +139,9 @@ type Ip4ip' = Map (ReadP Int Id) (Rescan Ip4RE >> OneP >> Snd)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
 
 -- | @op@ type for validating an ip4 address using a predicate
-type Ip4op' = BoolsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255 Id)
+type Ip4op' = BoolsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (0 <..> 0xff)
 -- | @op@ type for validating an ip4 address using a guard
-type Ip4op = GuardsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (Between 0 255 Id) >> 'True
+type Ip4op = GuardsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (0 <..> 0xff) >> 'True
 
 -- | @fmt@ type for formatting an ip4 address
 type Ip4fmt = PrintL 4 "%03d.%03d.%03d.%03d" Id
@@ -162,7 +163,7 @@ type Ip6ip = Resplit ":"
 
 -- | @op@ type for validating an ip6 address using predicates
 type Ip6op = Msg "count is bad:" (Len == 8)
-          && Msg "out of bounds:" (All (Between 0 65535 Id))
+          && Msg "out of bounds:" (All (0 <..> 0xffff))
 
 -- | @fmt@ type for formatting an ip6 address
 type Ip6fmt = PrintL 8 "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x" Id

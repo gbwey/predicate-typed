@@ -258,10 +258,7 @@ instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
 -- >>> pz @(Fst ==! Snd) (10,11)
 -- PresentT LT
 --
--- >>> pz @(Snd ==! (Fst >> Snd >> Head)) (('x',[10,12,13]),10)
--- PresentT EQ
---
--- >>> pz @(Snd ==! (L2 Fst >> Head)) (('x',[10,12,13]),10)
+-- >>> pz @(Snd ==! (L12 >> Head)) (('x',[10,12,13]),10)
 -- PresentT EQ
 --
 -- >>> pl @("aa" ==! Id) "aaaa"
@@ -315,11 +312,11 @@ instance (Ord (PP p a)
         in mkNode opts (PresentT d) (msg0 <> " " <> showL opts p <> " " <> prettyOrd d <> " " <> showL opts q) [hh pp, hh qq]
 
 -- | similar to 'compare' but using a tuple as input
-data OrdA p
+data OrdA
 
-instance P (OrdA' p p) x => P (OrdA p) x where
-  type PP (OrdA p) x = PP (OrdA' p p) x
-  eval _ = eval (Proxy @(OrdA' p p))
+instance P (OrdA' Id Id) x => P OrdA x where
+  type PP OrdA x = PP (OrdA' Id Id) x
+  eval _ = eval (Proxy @(OrdA' Id Id))
 
 data OrdA' p q
 type OrdAT' p q = (Fst >> p) ==! (Snd >> q)

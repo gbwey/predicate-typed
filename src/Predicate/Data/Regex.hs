@@ -359,15 +359,15 @@ instance (GetROpts rs
 -- Present ["123","2","3","5","6"] (Resplit (\.) ["123","2","3","5","6"] | 123.2.3.5.6)
 -- PresentT ["123","2","3","5","6"]
 --
--- >>> pl @(Map (ReadP Int Id) (Resplit "\\.") >> '(Id, '(Len == 4, All (Between 0 255 Id)))) "141.214.125.1.2.3333"
+-- >>> pl @(Map (ReadP Int Id) (Resplit "\\.") >> '(Id, '(Len == 4, All (0 <..> 0xff)))) "141.214.125.1.2.3333"
 -- Present ([141,214,125,1,2,3333],(False,False)) ((>>) ([141,214,125,1,2,3333],(False,False)) | {'([141,214,125,1,2,3333],(False,False))})
 -- PresentT ([141,214,125,1,2,3333],(False,False))
 --
--- >>> pl @(Map (ReadP Int Id) (Resplit "\\.") >> Id &&& ((Len == 4) &&& All (Between 0 255 Id))) "141.214.125.1.2.6"
+-- >>> pl @(Map (ReadP Int Id) (Resplit "\\.") >> Id &&& ((Len == 4) &&& All (0 <..> 0xff))) "141.214.125.1.2.6"
 -- Present ([141,214,125,1,2,6],(False,True)) ((>>) ([141,214,125,1,2,6],(False,True)) | {W '([141,214,125,1,2,6],(False,True))})
 -- PresentT ([141,214,125,1,2,6],(False,True))
 --
--- >>> pl @(Resplit "\\." >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (Between 0 255 Id))) "141.214.125."
+-- >>> pl @(Resplit "\\." >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (0 <..> 0xff))) "141.214.125."
 -- Error ReadP Int () (["141","214","125",""])
 -- FailT "ReadP Int ()"
 --

@@ -74,10 +74,14 @@ module Predicate.Data.Extra (
   , Lift
   , Apply1
   , Apply2
+
+  , PartitionsBy
+
  ) where
 import Predicate.Core
 import Predicate.Util
-import Predicate.Data.List (Uncons, Unsnoc)
+import Predicate.Data.List (Head, Uncons, Unsnoc, SortBy, Zip, GroupBy, SortOn)
+import Predicate.Data.Enum (type (...))
 import Predicate.Data.Maybe (JustDef, JustFail)
 import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
@@ -892,7 +896,7 @@ instance (Integral (PP n x)
       Right (fromIntegral -> n :: Integer)
             | n <= 0 -> mkNode opts (FailT (msg0 <> " number<=0")) "" [hh nn]
             | otherwise ->
-                let ret = primeFactors (fromIntegral n)
+                let ret = primeFactors n
                 in mkNode opts (PresentT ret) (msg0 <> showVerbose opts " | " n) [hh nn]
 
 -- | IsLuhn predicate check on last digit
@@ -1193,3 +1197,33 @@ instance forall p (q :: Type) (r :: Type) x . (P (p q r) x)
   eval _ opts ((Proxy, Proxy), x) =
     eval (Proxy @(p q r)) opts x
 
+-- | experimental: sorts then partitions and then sorts each partitions based on the leftmost occurring value in the original list
+--   if the existing order of data is fine then use 'Predicate.Data.List.GroupBy' as you do not need this
+--
+-- >>> pz @(PartitionsBy (Fst ==! Snd) (L11 == L21) Id) [10,9,9,1,9]
+-- PresentT [[10],[9,9,9],[1]]
+--
+-- >>> pz @(PartitionsBy OrdA (L11 < L21) Id) "efaffabec"
+-- PresentT ["a","f","f","abce","ef"]
+--
+-- >>> pz @(PartitionsBy 'GT 'True Id) "efaffabec"
+-- PresentT ["cebaffafe"]
+--
+-- >>> pz @(PartitionsBy 'GT 'False Id) "efaffabec"
+-- PresentT ["e","f","a","f","f","a","b","e","c"]
+--
+-- >>> pz @(PartitionsBy (Fst ==! Snd) (L12 > L22) Id) [10,9,9,1,9,4]
+-- PresentT [[9],[1],[9,10],[4,9]]
+--
+-- >>> pz @(PartitionsBy (L11 ==! L21) (L12 > L22) Id) "eddadc"
+-- PresentT ["d","a","de","cd"]
+--
+-- >>> pz @(PartitionsBy (L11 ==! L21) (L11 < L21) Id) [10,9,9,1,9,4]
+-- PresentT [[9],[1,4,9],[9,10]]
+--
+data PartitionsBy p q r
+type PartitionsByT p q r = SortBy p (Zip r (1 ... Length r)) >> GroupBy q Id >> SortOn (Head >> Snd) Id >> Map (Map Fst Id) Id
+
+instance P (PartitionsByT p q r) x => P (PartitionsBy p q r) x where
+  type PP (PartitionsBy p q r) x = PP (PartitionsByT p q r) x
+  eval _ = eval (Proxy @(PartitionsByT p q r))

@@ -69,7 +69,7 @@ for less detail use _pl_\
 ```
 
 ```haskell
-ex1 :: Refined OL (ReadP Int Id >> Id > 99) String
+ex1 :: Refined OL (ReadP Int Id > 99) String
 ex1 = $$(refinedTH "123")
 ```
 
@@ -93,8 +93,8 @@ False False || False | (44 < 3) || (44 > 55)
    `- P '55
 
     * In the Template Haskell splice
-        $$(refinedTH @OAN @(Lt 3 || Gt 55) 44)
-      In the expression: $$(refinedTH @OAN @(Lt 3 || Gt 55) 44)
+        $$(refinedTH @OU @(Lt 3 || Gt 55) 44)
+      In the expression: $$(refinedTH @OU @(Lt 3 || Gt 55) 44)
 ```
 
 ```haskell
@@ -124,9 +124,9 @@ False False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
    `- P Id [1,2,3,4,5]
 
     * In the Template Haskell splice
-        $$(refinedTH @OAN @(Len > 7 || Elem 7 Id) [1 .. 5])
+        $$(refinedTH @OU @(Len > 7 || Elem 7 Id) [1 .. 5])
       In the expression:
-        $$(refinedTH @OAN @(Len > 7 || Elem 7 Id) [1 .. 5])
+        $$(refinedTH @OU @(Len > 7 || Elem 7 Id) [1 .. 5])
 ```
 
 ```haskell
@@ -141,9 +141,9 @@ False Re (^[A-Z][a-z]+$)
 `- P Id "smith"
 
     * In the Template Haskell splice
-        $$(refinedTH @OAN @(Re "^[A-Z][a-z]+$") "smith")
+        $$(refinedTH @OU @(Re "^[A-Z][a-z]+$") "smith")
       In the expression:
-        $$(refinedTH @OAN @(Re "^[A-Z][a-z]+$") "smith")
+        $$(refinedTH @OU @(Re "^[A-Z][a-z]+$") "smith")
 ```
 
 ```haskell
@@ -164,10 +164,10 @@ False expected title case Re (^[A-Z][a-z]+$)
 
     * In the Template Haskell splice
         $$(refinedTH
-             @OAN @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
+             @OU @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
       In the expression:
         $$(refinedTH
-             @OAN @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
+             @OU @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
 ```
 
 ```haskell
@@ -187,10 +187,10 @@ False expected title case Re (^[A-Z][a-z]+$)
 
     * In the Template Haskell splice
         $$(refinedTH
-             @OAN @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$"))
+             @OU @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$"))
              "smith")
       In the expression:
         $$(refinedTH
-             @OAN @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$"))
+             @OU @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$"))
              "smith")
 ```

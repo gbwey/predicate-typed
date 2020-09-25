@@ -162,10 +162,10 @@ instance ( i ~ String
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined5'
 --
--- >>> reads @(Refined5 OZ (ReadBase Int 16) (Between 0 255 Id) String) "Refined5 254"
+-- >>> reads @(Refined5 OZ (ReadBase Int 16) (0 <..> 0xff) String) "Refined5 254"
 -- [(Refined5 254,"")]
 --
--- >>> reads @(Refined5 OZ (ReadBase Int 16) (Between 0 255 Id) String) "Refined5 300"
+-- >>> reads @(Refined5 OZ (ReadBase Int 16) (0 <..> 0xff) String) "Refined5 300"
 -- []
 --
 -- >>> reads @(Refined5 OZ (ReadBase Int 16) (Id < 0) String) "Refined5 -1234"

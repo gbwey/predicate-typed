@@ -178,7 +178,7 @@ instance ( Show a
 
 -- | similar to 'Data.These.mergeTheseWith' but additionally provides @p@, @q@ and @r@ the original input as the first element in the tuple
 --
--- >>> pz @(TheseX ((L1 Fst + Snd) >> ShowP Id) (ShowP Id) (L2 Snd) Snd) (9,This 123)
+-- >>> pz @(TheseX ((L11 + Snd) >> ShowP Id) (ShowP Id) L22 Snd) (9,This 123)
 -- PresentT "132"
 --
 -- >>> pz @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (This 123)
