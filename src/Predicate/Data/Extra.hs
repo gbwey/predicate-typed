@@ -85,13 +85,13 @@ import Predicate.Data.Enum (type (...))
 import Predicate.Data.Maybe (JustDef, JustFail)
 import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
-import Data.Proxy
-import Control.Applicative
+import Data.Proxy (Proxy(..))
+import Control.Applicative (Alternative((<|>)))
 import Control.Monad (join)
 import Data.Kind (Type)
-import Control.Comonad
-import Data.Coerce
-import Control.Lens hiding (iall)
+import Control.Comonad (Comonad(duplicate, extract))
+import Data.Coerce (Coercible)
+import Control.Lens
 import qualified Safe (headNote, cycleNote)
 -- $setup
 -- >>> :set -XDataKinds

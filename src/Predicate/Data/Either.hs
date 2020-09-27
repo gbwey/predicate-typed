@@ -54,9 +54,9 @@ import Predicate.Core
 import Predicate.Util
 import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
-import Data.Proxy
+import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
-import Data.Either
+import Data.Either (isLeft, isRight, partitionEithers)
 
 -- $setup
 -- >>> :set -XDataKinds

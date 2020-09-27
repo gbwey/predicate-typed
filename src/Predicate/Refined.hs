@@ -90,7 +90,7 @@ import Data.Char (isSpace)
 import Data.Coerce
 import Data.List (intercalate)
 import Control.Arrow (left)
-
+import Control.DeepSeq (NFData)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -102,7 +102,8 @@ import Control.Arrow (left)
 -- | a simple refinement type that ensures the predicate @p@ holds for the type @a@
 --
 newtype Refined (opts :: Opt) p a = Refined a
-  deriving (Show, Eq, Ord, TH.Lift)
+  deriving stock (Show, TH.Lift)
+  deriving newtype (Eq, Ord, NFData)
 
 -- | extract the value from Refined
 unRefined :: forall k (opts :: Opt) (p :: k) a. Refined opts p a -> a
@@ -542,8 +543,8 @@ instance Show MsgT where
 
 -- | effect wrapper for the refinement value
 newtype RefinedT m a = RefinedT { unRefinedT :: ExceptT (BoolP,String) (WriterT [String] m) a }
-  deriving stock (Generic, Generic1, Show, Eq, Ord)
-  deriving newtype (Functor, Applicative, Monad, MonadCont, MonadWriter [String], MonadIO)
+  deriving stock (Generic, Generic1, Show)
+  deriving newtype (Eq, Ord, Functor, Applicative, Monad, MonadCont, MonadWriter [String], MonadIO)
   deriving MonadTrans via RefinedT
 
 instance Monad m => MonadError (BoolP, String) (RefinedT m) where

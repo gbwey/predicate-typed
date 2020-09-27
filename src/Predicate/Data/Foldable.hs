@@ -51,11 +51,10 @@ module Predicate.Data.Foldable (
 import Predicate.Core
 import Predicate.Util
 import Predicate.Data.Monoid (MConcat)
-import Control.Lens hiding (iall)
-import Data.Proxy
-import Data.Typeable
+import Control.Lens
+import Data.Typeable (Typeable, Proxy(Proxy))
 import Data.Kind (Type)
-import Data.Foldable
+import Data.Foldable (Foldable(toList))
 import qualified Data.List.NonEmpty as N
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified GHC.Exts as GE

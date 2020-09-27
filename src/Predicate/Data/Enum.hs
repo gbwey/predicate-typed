@@ -53,7 +53,7 @@ module Predicate.Data.Enum (
 import Predicate.Core
 import Predicate.Util
 import Safe (succMay, predMay, toEnumMay)
-import Data.Proxy
+import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
 
 -- $setup

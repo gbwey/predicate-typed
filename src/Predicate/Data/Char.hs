@@ -56,11 +56,11 @@ module Predicate.Data.Char (
  ) where
 import Predicate.Core
 import Predicate.Util
-import Control.Lens hiding (iall)
+import Control.Lens
 import qualified Data.Text.Lens as DTL
 import GHC.TypeLits (Symbol, KnownSymbol)
 import qualified GHC.TypeLits as GL
-import Data.Proxy
+import Data.Proxy (Proxy(Proxy))
 import Data.Char
 
 -- $setup

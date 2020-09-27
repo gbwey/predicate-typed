@@ -105,15 +105,15 @@ import Predicate.Util
 import Predicate.Data.Ordering (type (==), OrdA')
 import Predicate.Data.Numeric (Mod)
 import Predicate.Data.Monoid (type (<>))
-import Control.Lens hiding (iall)
+import Control.Lens 
 import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf, sortOn, group)
-import Data.Proxy
-import Control.Monad
+import Data.Proxy (Proxy(Proxy))
+import Control.Monad (zipWithM)
 import Data.Kind (Type)
 import Data.Foldable (toList)
 import Control.Arrow
 import qualified Data.Sequence as Seq
-import Data.Bool
+import Data.Bool (bool)
 import qualified Data.Map.Strict as M
 import Control.Applicative
 import Data.Containers.ListUtils (nubOrd)
@@ -713,12 +713,12 @@ instance (P p x
                    mkNode opts (PresentT (map (snd . fst) (toList ialls), rhs))
                            (msg0 <> " cnt=" <> show (length ialls, length rhs))
                            (map (hh . fixit) (toList ialls))
-                 Just iall@(ia, tt) ->
-                   case getValueLR opts (msg0 <> " predicate failed") tt (hh qq : map (hh . fixit) (toList (ialls Seq.|> iall))) of
+                 Just iatt@(ia, tt) ->
+                   case getValueLR opts (msg0 <> " predicate failed") tt (hh qq : map (hh . fixit) (toList (ialls Seq.|> iatt))) of
                      Right True ->
                        mkNode opts (PresentT (map (snd . fst) (toList ialls), snd ia : rhs))
                                (msg0 <> " cnt=" <> show (length ialls, 1+length rhs))
-                               (hh qq : hh tt : map (hh . fixit) (toList (ialls Seq.|> iall)))
+                               (hh qq : hh tt : map (hh . fixit) (toList (ialls Seq.|> iatt)))
 
                      Right False -> errorInProgram "Break"
                      Left e -> e

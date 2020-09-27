@@ -47,10 +47,10 @@ import Predicate.Util
 import Predicate.Data.ReadShow (PrintT)
 import GHC.TypeLits (Nat,KnownNat,ErrorMessage((:<>:)))
 import qualified GHC.TypeLits as GL
-import Control.Lens hiding (iall)
-import Data.Proxy
+import Control.Lens
+import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
-import Data.Void
+import Data.Void (Void)
 import qualified Data.Type.Equality as DE
 -- $setup
 -- >>> import Predicate.Prelude

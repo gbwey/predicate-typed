@@ -9,7 +9,9 @@
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -94,6 +96,7 @@ import Data.Either (isRight)
 import Data.Char (isSpace)
 import Control.Arrow (left)
 import Data.Tree.Lens (root)
+import Control.DeepSeq (NFData)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -121,7 +124,6 @@ unRefined5 :: forall k k1 (opts :: Opt) (ip :: k) (op :: k1) i
   -> PP ip i
 unRefined5 = coerce
 
-
 -- | directly load values into 'Refined5'. It still checks to see that those values are valid
 unsafeRefined5' :: forall opts ip op i
                 . ( Refined2C opts ip op i
@@ -137,10 +139,11 @@ unsafeRefined5 :: forall opts ip op i
   -> Refined5 opts ip op i
 unsafeRefined5 = Refined5
 
-deriving instance Show (PP ip i) => Show (Refined5 opts ip op i)
-deriving instance Eq (PP ip i) => Eq (Refined5 opts ip op i)
-deriving instance Ord (PP ip i) => Ord (Refined5 opts ip op i)
-deriving instance TH.Lift (PP ip i) => TH.Lift (Refined5 opts ip op i)
+deriving newtype instance NFData (PP ip i) => NFData (Refined5 opts ip op i)
+deriving stock instance Show (PP ip i) => Show (Refined5 opts ip op i)
+deriving stock instance Eq (PP ip i) => Eq (Refined5 opts ip op i)
+deriving stock instance Ord (PP ip i) => Ord (Refined5 opts ip op i)
+deriving stock instance TH.Lift (PP ip i) => TH.Lift (Refined5 opts ip op i)
 
 -- | 'IsString' instance for Refined5
 --

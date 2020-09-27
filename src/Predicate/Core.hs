@@ -121,15 +121,14 @@ module Predicate.Core (
 import Predicate.Util
 import qualified GHC.TypeLits as GL
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
-import Control.Lens -- ((&), (^.), (.~))
+import Control.Lens
 import Data.Foldable (toList)
-import Data.Proxy
-import Data.Typeable
+import Data.Typeable (Typeable, Proxy(..))
 import Data.Kind (Type)
 import Data.These (These(..))
-import Control.Monad
+import Control.Monad (unless, zipWithM)
 import Data.List (find)
-import Data.Coerce
+import Data.Coerce (Coercible)
 import qualified Data.Semigroup as SG
 -- $setup
 -- >>> :set -XDataKinds

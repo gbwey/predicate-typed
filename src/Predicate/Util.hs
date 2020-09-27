@@ -3,6 +3,8 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -254,7 +256,6 @@ import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as N
 import Data.Either
 import qualified Text.Read.Lex as L
-import Text.ParserCombinators.ReadPrec hiding (lift)
 import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified GHC.Read as GR
 import Data.ByteString (ByteString)
@@ -513,6 +514,7 @@ getValueLR opts msg0 tt hs =
 
 -- | wrapper for a Show instance around 'Color'
 newtype SColor = SColor Color
+  deriving newtype Enum
 
 instance Show SColor where
   show (SColor c) =
@@ -1581,8 +1583,8 @@ removeAnsiImpl =
 errorInProgram :: HasCallStack => String -> x
 errorInProgram s = error $ "programmer error:" <> s
 
--- | read a field and value using 'ReadPrec' parser
-readField :: String -> ReadPrec a -> ReadPrec a
+-- | read a field and value using 'PCR.ReadPrec' parser
+readField :: String -> PCR.ReadPrec a -> PCR.ReadPrec a
 readField fieldName readVal = do
         GR.expectP (L.Ident fieldName)
         GR.expectP (L.Punc "=")

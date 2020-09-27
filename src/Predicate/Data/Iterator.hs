@@ -50,11 +50,11 @@ import Predicate.Data.List (Last)
 import Predicate.Data.Maybe (MaybeBool)
 import GHC.TypeLits (Nat, KnownNat)
 import qualified GHC.TypeLits as GL
-import Control.Lens hiding (iall)
-import Data.Proxy
-import Data.Maybe
+import Control.Lens
+import Data.Proxy (Proxy(Proxy))
+import Data.Maybe (catMaybes)
 import Control.Arrow
-import Data.Void
+import Data.Void (Void)
 
 -- $setup
 -- >>> import Predicate.Prelude

@@ -98,7 +98,7 @@ import Data.Hashable (Hashable(..))
 import GHC.Stack
 import Test.QuickCheck
 import Data.Coerce
-
+import Control.DeepSeq (rnf, rnf2, NFData)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -149,6 +149,9 @@ deriving instance (Show i, Show (PP ip i)) => Show (Refined2 opts ip op i)
 deriving instance (Eq i, Eq (PP ip i)) => Eq (Refined2 opts ip op i)
 deriving instance (Ord i, Ord (PP ip i)) => Ord (Refined2 opts ip op i)
 deriving instance (TH.Lift (PP ip i), TH.Lift i) => TH.Lift (Refined2 opts ip op i)
+
+instance (NFData i, NFData (PP ip i)) => NFData (Refined2 opts ip op i) where
+  rnf (Refined2 a b) = rnf2 (a,b)
 
 -- | 'IsString' instance for Refined2
 --

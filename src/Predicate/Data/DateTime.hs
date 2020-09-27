@@ -58,11 +58,10 @@ module Predicate.Data.DateTime (
  ) where
 import Predicate.Core
 import Predicate.Util
-import Control.Lens hiding (iall)
-import Data.Proxy
-import Data.Typeable
+import Control.Lens
+import Data.Typeable (Typeable, Proxy(Proxy))
 import Data.Kind (Type)
-import Data.Maybe
+import Data.Maybe (catMaybes)
 import Data.Time
 import Data.Time.Calendar.WeekDate
 import qualified Data.Time.Clock.System as CP

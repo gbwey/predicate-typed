@@ -39,7 +39,7 @@ module Predicate.Data.Index (
 import Predicate.Core
 import Predicate.Util
 import Predicate.Data.Maybe (JustDef, JustFail)
-import Control.Lens hiding (iall)
+import Control.Lens
 import GHC.TypeLits (Nat, KnownNat)
 import Data.Proxy
 
