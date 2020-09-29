@@ -231,10 +231,9 @@ import qualified GHC.TypeLits as GL
 import Control.Lens
 import Control.Arrow
 import Data.List (intercalate, unfoldr)
-import Data.Tree
-import Data.Tree.Lens
-import Data.Proxy
-import Data.Typeable
+import Data.Tree (drawTree, Forest, Tree(Node))
+import Data.Tree.Lens (root)
+import Data.Typeable (Typeable, Proxy(Proxy), eqT, typeRep)
 import System.Console.Pretty
 import GHC.Exts (Constraint)
 import qualified Text.Regex.PCRE.Heavy as RH
@@ -248,22 +247,22 @@ import Data.Kind (Type)
 import Data.These (These(..))
 import Data.These.Combinators (isThis, isThat, isThese)
 import qualified Control.Exception as E
-import Control.DeepSeq
+import Control.DeepSeq (NFData, ($!!))
 import System.IO.Unsafe (unsafePerformIO)
-import Data.Bool
+import Data.Bool (bool)
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as N
-import Data.Either
+import Data.Either (partitionEithers)
 import qualified Text.Read.Lex as L
 import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified GHC.Read as GR
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.ByteString.Char8 as BS8
-import GHC.Stack
-import Data.Monoid (Last (..))
-import Data.Maybe
-import Data.Coerce
+import GHC.Stack (HasCallStack)
+import Data.Monoid (Last(Last)) 
+import Data.Maybe (fromMaybe)
+import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import Data.Containers.ListUtils (nubOrd)
 import Data.Char (isSpace)
@@ -552,16 +551,16 @@ deriving instance
 -- | combine options ala monoid
 reifyOpts :: HOpts Last -> HOpts Identity
 reifyOpts h =
-  HOpts (fromMaybe (oWidth defOpts) (getLast (oWidth h)))
-        (fromMaybe (oDebug defOpts) (getLast (oDebug h)))
-        (fromMaybe (oDisp defOpts) (getLast (oDisp h)))
-        (if fromMaybe (oNoColor defOpts) (getLast (oNoColor h)) then nocolor
-         else fromMaybe (oColor defOpts) (getLast (oColor h)))
+  HOpts (fromMaybe (oWidth defOpts) (coerce (oWidth h)))
+        (fromMaybe (oDebug defOpts) (coerce (oDebug h)))
+        (fromMaybe (oDisp defOpts) (coerce (oDisp h)))
+        (if fromMaybe (oNoColor defOpts) (coerce (oNoColor h)) then nocolor
+         else fromMaybe (oColor defOpts) (coerce (oColor h)))
         (oMsg defOpts <> oMsg h)
-        (fromMaybe (oRecursion defOpts) (getLast (oRecursion h)))
-        (if fromMaybe (oNoColor defOpts) (getLast (oNoColor h)) then otherDef
-         else fromMaybe (oOther defOpts) (getLast (oOther h)))
-        (fromMaybe (oNoColor defOpts) (getLast (oNoColor h)))
+        (fromMaybe (oRecursion defOpts) (coerce (oRecursion h)))
+        (if fromMaybe (oNoColor defOpts) (coerce (oNoColor h)) then otherDef
+         else fromMaybe (oOther defOpts) (coerce (oOther h)))
+        (fromMaybe (oNoColor defOpts) (coerce (oNoColor h)))
 
 -- | set maximum display width of expressions
 setWidth :: Int -> HOpts Last
@@ -656,7 +655,7 @@ otherDef = coerce (True, Default, Default)
 
 nocolor, colorDef :: (String, PColor)
 nocolor = ("nocolor", PColor $ flip const)
-colorDef = Safe.fromJustNote "colorDef" $ getLast $ oColor $ getOptC @Color5
+colorDef = Safe.fromJustNote "colorDef" $ coerce $ oColor $ getOptC @Color5
 
 -- | how much detail to show in the expression tree
 data Debug =

@@ -41,7 +41,7 @@ module Predicate.Data.Monoid (
  ) where
 import Predicate.Core
 import Predicate.Util
-import Data.Proxy
+import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
 import qualified Data.Semigroup as SG
 import Data.List.NonEmpty (NonEmpty(..))
