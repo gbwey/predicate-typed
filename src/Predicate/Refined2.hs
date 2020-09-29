@@ -50,14 +50,6 @@ module Predicate.Refined2 (
   , newRefined2'
   , newRefined2P'
 
-  -- ** create a wrapped Refined2 value
-  , newRefined2T
-  , newRefined2TP
-  , newRefined2TIO
-  , withRefined2T
-  , withRefined2TP
-  , withRefined2TIO
-
   -- ** proxy methods
   , MakeR2
   , mkProxy2
@@ -75,13 +67,10 @@ module Predicate.Refined2 (
   , appendOpt2
 
  ) where
-import Predicate.Refined
 import Predicate.Core
 import Predicate.Util
 import Data.Tree
 import Data.Proxy
-import Control.Monad.Except
-import Control.Monad.Writer (tell)
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Language.Haskell.TH.Syntax as TH
 import qualified GHC.Read as GR
@@ -132,7 +121,8 @@ unsafeRefined2' = either (error . show) id . newRefined2
 
 -- | directly load values into 'Refined2' without any checking
 unsafeRefined2 :: forall opts ip op i
-   . PP ip i
+   . Refined2C opts ip op i
+   => PP ip i
   -> i
   -> Refined2 opts ip op i
 unsafeRefined2 = Refined2
@@ -145,12 +135,27 @@ type Refined2C opts ip op i =
        , PP op (PP ip i) ~ Bool   -- the internal value needs to pass the predicate check
        )
 
-deriving instance (Show i, Show (PP ip i)) => Show (Refined2 opts ip op i)
-deriving instance (Eq i, Eq (PP ip i)) => Eq (Refined2 opts ip op i)
-deriving instance (Ord i, Ord (PP ip i)) => Ord (Refined2 opts ip op i)
-deriving instance (TH.Lift (PP ip i), TH.Lift i) => TH.Lift (Refined2 opts ip op i)
+deriving instance ( Refined2C opts ip op i
+                  , Show i
+                  , Show (PP ip i)
+                  ) => Show (Refined2 opts ip op i)
+deriving instance ( Refined2C opts ip op i
+                  , Eq i
+                  , Eq (PP ip i)
+                  ) => Eq (Refined2 opts ip op i)
+deriving instance ( Refined2C opts ip op i
+                  , Ord i
+                  , Ord (PP ip i)
+                  ) => Ord (Refined2 opts ip op i)
+deriving instance ( Refined2C opts ip op i
+                  , TH.Lift (PP ip i)
+                  , TH.Lift i
+                  ) => TH.Lift (Refined2 opts ip op i)
 
-instance (NFData i, NFData (PP ip i)) => NFData (Refined2 opts ip op i) where
+instance ( Refined2C opts ip op i
+         , NFData i
+         , NFData (PP ip i)
+         ) => NFData (Refined2 opts ip op i) where
   rnf (Refined2 a b) = rnf2 (a,b)
 
 -- | 'IsString' instance for Refined2
@@ -221,7 +226,9 @@ instance ( Refined2C opts ip op i
 -- >>> A.encode (unsafeRefined2 @OZ @Id @'True @Int 123 123)
 -- "123"
 --
-instance ToJSON i => ToJSON (Refined2 opts ip op i) where
+instance ( Refined2C opts ip op i
+         , ToJSON i
+         ) => ToJSON (Refined2 opts ip op i) where
   toJSON = toJSON . r2Out
 
 
@@ -366,121 +373,6 @@ instance (Refined2C opts ip op i
         ) => Hashable (Refined2 opts ip op i) where
   hashWithSalt s (Refined2 _ b) = s + hash b
 
--- | same as 'withRefined2T' for IO
-withRefined2TIO :: forall opts ip op i m b
-  . ( MonadIO m
-    , Refined2C opts ip op i
-    , Show (PP ip i)
-    )
-  => i
-  -> (Refined2 opts ip op i -> RefinedT m b)
-  -> RefinedT m b
-withRefined2TIO = (>>=) . newRefined2TIO
-
--- | create a 'Refined2' value using a continuation
---
--- This first example reads a hex string and makes sure it is between 100 and 200 and then
--- reads a binary string and adds the values together
---
--- >>> prtRefinedTIO $ withRefined2T @OZ @(ReadBase Int 16) @(Between 100 200 Id) "a3" $ \x -> withRefined2T @OZ @(ReadBase Int 2) @'True "1001110111" $ \y -> pure (r2In x + r2In y)
--- 794
---
--- this example fails as the the hex value is out of range
---
--- >>> prtRefinedTIO $ withRefined2T @OAN @(ReadBase Int 16) @(Between 100 200 Id) "a388" $ \x -> withRefined2T @OAN @(ReadBase Int 2) @'True "1001110111" $ \y -> pure (x,y)
--- *** Step 1. Success Initial Conversion(ip) (41864) ***
--- P ReadBase(Int,16) 41864
--- |
--- `- P Id "a388"
--- *** Step 2. False Boolean Check(op) ***
--- False 41864 <= 200
--- |
--- +- P Id 41864
--- |
--- +- P '100
--- |
--- `- P '200
--- <BLANKLINE>
--- failure msg[Step 2. False Boolean Check(op) | {41864 <= 200}]
---
-withRefined2T :: forall opts ip op i m b
-  . ( Monad m
-    , Refined2C opts ip op i
-    , Show (PP ip i)
-    )
-  => i
-  -> (Refined2 opts ip op i -> RefinedT m b)
-  -> RefinedT m b
-withRefined2T = (>>=) . newRefined2TP (Proxy @'(opts,ip,op,i))
-
-withRefined2TP :: forall opts ip op i b proxy m
-  . ( Monad m
-    , Refined2C opts ip op i
-    , Show (PP ip i)
-    )
-  => proxy '(opts,ip,op,i)
-  -> i
-  -> (Refined2 opts ip op i -> RefinedT m b)
-  -> RefinedT m b
-withRefined2TP p = (>>=) . newRefined2TP p
-
--- | create a wrapped 'Refined2' type
---
--- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Thd == 5) (2019,11,1)
--- Refined2 {r2In = (2019-11-01,44,5), r2Out = (2019,11,1)}
---
--- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Thd == 5) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
---
--- >>> prtRefinedTIO $ newRefined2T @OL @(MkDayExtra Id >> 'Just Id) @(Msg "wrong day:" (Thd == 5)) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
---
--- >>> prtRefinedTIO $ newRefined2TIO @OL @(Hide (Rescan "(\\d+)" >> ConcatMap Snd Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff)) "|23|99|255|254.911."
--- failure msg[Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}]
---
-newRefined2T :: forall opts ip op i m
-   . ( Refined2C opts ip op i
-     , Monad m
-     , Show (PP ip i)
-    ) => i
-      -> RefinedT m (Refined2 opts ip op i)
-newRefined2T = newRefined2TImpl (return . runIdentity)
-
--- | create a wrapped 'Refined2' type with an explicit proxy
-newRefined2TP :: forall opts ip op i proxy m
-   . ( Refined2C opts ip op i
-     , Monad m
-     , Show (PP ip i)
-   ) => proxy '(opts,ip,op,i)
-  -> i
-  -> RefinedT m (Refined2 opts ip op i)
-newRefined2TP _ = newRefined2TImpl (return . runIdentity)
-
--- | create a wrapped 'Refined2' type in IO
-newRefined2TIO :: forall opts ip op i m
-   . ( Refined2C opts ip op i
-     , MonadIO m
-     , Show (PP ip i)
-    ) => i
-      -> RefinedT m (Refined2 opts ip op i)
-newRefined2TIO = newRefined2TImpl @IO @m liftIO
-
-newRefined2TImpl :: forall n m opts ip op i
-   . ( Refined2C opts ip op i
-     , Monad m
-     , MonadEval n
-     , Show (PP ip i)
-   ) => (forall x . n x -> RefinedT m x)
-   -> i
-   -> RefinedT m (Refined2 opts ip op i)
-newRefined2TImpl f i = do
-  (ret,mr) <- f $ eval2M i
-  let m2 = prt2Impl (getOpt @opts) ret
-  unlessNullM (m2Long m2) (tell . pure)
-  case mr of
-    Nothing -> throwError (getBoolP2 ret, m2Desc m2 <> nullIf " | " (m2Short m2))
-    Just r -> return r
-
 -- | An ADT that summarises the results of evaluating Refined2 representing all possible states
 data RResults2 a =
        RF !String !(Tree PE)        -- fails initial conversion
@@ -607,10 +499,11 @@ eval2M i = do
 data Msg2 = Msg2 { m2Desc :: !String
                  , m2Short :: !String
                  , m2Long :: !String
+                 , m2BoolP :: !BoolP
                  } deriving Eq
 
 instance Show Msg2 where
-  show (Msg2 a b c) = a <> nullIf " | " b <> nullIf "\n" c
+  show (Msg2 a b c _d) = a <> nullIf " | " b <> nullIf "\n" c
 
 prt2Impl :: forall a . Show a
   => POpts
@@ -619,21 +512,21 @@ prt2Impl :: forall a . Show a
 prt2Impl opts v =
   let outmsg msg = "*** " <> formatOMsg opts " " <> msg <> " ***\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ showL opts a ++ ")")
-      mkMsg2 m n r | hasNoTree opts = Msg2 m n ""
-                   | otherwise = Msg2 m n r
+      mkMsg2 m n r t | hasNoTree opts = Msg2 m n "" (t ^. root . pBool)
+                     | otherwise = Msg2 m n r (t ^. root . pBool)
   in case v of
        RF e t1 ->
          let (m,n) = ("Step 1. Initial Conversion(ip) Failed", e)
              r = outmsg m
               <> prtTreePure opts t1
-         in mkMsg2 m n r
+         in mkMsg2 m n r t1
        RTF a t1 e t2 ->
          let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg2 m n r
+         in mkMsg2 m n r t2
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", z)
              z = let w = t2 ^. root . pString
@@ -642,16 +535,16 @@ prt2Impl opts v =
               <> fixLite opts a t1
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg2 m n r
+         in mkMsg2 m n r t2
        RTTrue a t1 t2 ->
          let (m,n) = ("Step 2. True Boolean Check(op)", "")
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg2 m n r
+         in mkMsg2 m n r t2
 
--- | creates a 4-tuple proxy (see 'withRefined2TP' 'newRefined2TP' 'eval2P' 'newRefined2P')
+-- | creates a 4-tuple proxy (see 'eval2P' 'newRefined2P')
 --
 -- use type application to set the 4-tuple or set the individual parameters directly
 --

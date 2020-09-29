@@ -30,7 +30,6 @@ import Data.Typeable
 import Data.Time
 import GHC.Generics (Generic)
 import Data.Aeson
-import Control.Monad.Cont
 import Text.Show.Functions ()
 import Data.Tree.Lens
 import Control.Lens
@@ -217,7 +216,7 @@ tst0a =
   , newRefined2P (daten @OL) "12/02/19" @?= Right (unsafeRefined2 (fromGregorian 2019 12 2) "12/02/19")
   , newRefined2P (Proxy @(Luhn OL 4)) "1230" @?= Right (unsafeRefined2 [1,2,3,0] "1230")
   , newRefined2P (Proxy @(Luhn OL 6)) "123455" @?= Right (unsafeRefined2 [1,2,3,4,5,5] "123455")
-  , runIdentity (unRavelTBoolP (tst1a @OL @Identity)) @?= Right ((163,"a3"),(12,"12"))
+--  , runIdentity (unRavelTBoolP (tst1a @OL @Identity)) @?= Right ((163,"a3"),(12,"12"))
   , test2a @?= Right (unsafeRefined2 254 "0000fe")
   , test2b @?= Right (unsafeRefined2 [123,211,122,1] "123.211.122.1")
   , test2c @?= Right (unsafeRefined2 [200,2,3,4] "200.2.3.4")
@@ -226,38 +225,15 @@ tst0a =
   , www2 "1.2.3.4" @?= Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")
   , www3 "1.2.3.4" @?= Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")
   , www3' "1.2.3.4" @?= Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")
-  , expectIO' (unRavelTBoolP (tst2a @'OL)) (either Left (\x -> if x == ((163,"a3"),(12,"12")) then Right () else Left (FailP "tst2a failed to match")))
+  , tst1a @'OAN @=? Right ((163,"a3"),(12,"12"))
   ]
 
--- prtRefinedTIO $ tst1a @'OAN
-tst1a :: forall (opts :: Opt) m . (OptC opts, Monad m) => RefinedT m ((Int,String),(Int,String))
-tst1a = withRefined2T @opts @(ReadBase Int 16) @(Between 100 200 Id) @String "a3"
-  $ \r1 -> withRefined2T @opts @(ReadP Int Id) @'True @String "12"
-     $ \r2 -> return ((r2In r1, r2Out r1), (r2In r2, r2Out r2))
+tst1a :: forall (opts :: Opt) . OptC opts => Either Msg2 ((Int,String),(Int,String))
+tst1a = do
+  r1 <- newRefined2 @opts @(ReadBase Int 16) @(Between 100 200 Id) @String "a3"
+  r2 <- newRefined2 @opts @(ReadP Int Id) @'True @String "12"
+  return ((r2In r1, r2Out r1), (r2In r2, r2Out r2))
 
--- prtRefinedTIO $ tst2a @'OAN
-tst2a :: forall (opts :: Opt) m . (OptC opts, MonadIO m) => RefinedT m ((Int,String),(Int,String))
-tst2a = withRefined2TIO @opts @(ReadBase Int 16) @(Stderr "start" |> Between 100 200 Id >| Stdout "end") @String "a3"
-  $ \r1 -> withRefined2TIO @opts @(ReadP Int Id) @'True @String "12"
-     $ \r2 -> return ((r2In r1, r2Out r1), (r2In r2, r2Out r2))
-{-
--- have to use 'i' as we dont hold onto the input
-testRefined2PJ :: forall opts ip op i proxy
-   . ( ToJSON i
-     , Show (PP ip i)
-     , Show i
-     , Refined2C opts ip op i
-     , FromJSON i)
-   => proxy '(opts,ip,op,i)
-   -> i
-   -> Either String (Refined2 opts ip op i)
-testRefined2PJ _ i =
-  let (ret,mr) = runIdentity $ eval2M @opts @ip @op i
-      m3 = prt2Impl (getOpt @opts) ret
-  in case mr of
-    Just r -> eitherDecode @(Refined2 opts ip op i) $ encode r
-    Nothing -> Left $ show m3
--}
 -- test that roundtripping holds ie i ~ PP (PP ip i)
 testRefined2P :: forall opts ip op i proxy
    . ( Show (PP ip i)

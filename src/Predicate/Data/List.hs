@@ -105,8 +105,8 @@ import Predicate.Util
 import Predicate.Data.Ordering (type (==), OrdA')
 import Predicate.Data.Numeric (Mod)
 import Predicate.Data.Monoid (type (<>))
-import Control.Lens 
-import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf, sortOn, group)
+import Control.Lens
+import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf, sortOn)
 import Data.Proxy (Proxy(Proxy))
 import Control.Monad (zipWithM)
 import Data.Kind (Type)
@@ -117,6 +117,7 @@ import Data.Bool (bool)
 import qualified Data.Map.Strict as M
 import Control.Applicative
 import Data.Containers.ListUtils (nubOrd)
+import qualified Data.List.NonEmpty as NE
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -584,7 +585,7 @@ instance ( a ~ [x]
   type PP GroupCntStable a = [(ExtractAFromList a, Int)]
   eval _ opts zs =
     let msg0 = "GroupCntStable"
-        xs = map (head &&& length) $ group $ sortOn (ys M.!) zs
+        xs = map (NE.head &&& length) $ NE.group $ sortOn (ys M.!) zs
         ys = M.fromListWith (flip const) $ zip zs [0::Int ..]
     in pure $ mkNode opts (PresentT xs) msg0 []
 

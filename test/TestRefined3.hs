@@ -31,7 +31,7 @@ import Control.Lens
 import Data.Time
 import GHC.Generics (Generic)
 import Data.Aeson
-import Control.Monad.Cont
+import Control.Arrow (left)
 import Text.Show.Functions ()
 import Data.Tree.Lens
 import qualified Safe (readNote)
@@ -178,6 +178,8 @@ unnamedTests = [
 
   -- keep the original value
   , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ runIdentity $ eval3M @OAN @(Id &&& Ip4ip) @(Snd >> Ip4op') @(Snd >> ParaN 4 (PrintF "%03d" Id) >> Intercalate '["."] Id >> Concat) "1.2.3.4"
+  , Right (unsafeRefined3 4 "someval val=004") @=? newRefined3P (Proxy @Tst1) "4"
+  , Left FalseP @=? (left m3BoolP (newRefined3P (Proxy @Tst1) "255"))
   ]
 
 allProps :: [TestTree]
@@ -193,14 +195,6 @@ type HexLtR3 (opts :: Opt) = Refined3 opts (ReadBase Int 16) (Id < 500) (ShowBas
 --type IntLtR3 (opts :: Opt) = Refined3 opts (ReadP Int Id) (Id < 10) (ShowP Id) String
 
 type Tst1 = '(OAN, ReadP Int Id, Between 1 7 Id, PrintF "someval val=%03d" Id, String)
-
-yy1, yy2, yy3, yy4 :: RefinedT Identity (MakeR3 Tst1)
-
-yy1 = newRefined3TP (Proxy @Tst1) "4"
-yy2 = newRefined3TP (Proxy @Tst1) "3"
-
-yy3 = rapply3 (*) yy1 yy2 -- fails
-yy4 = rapply3 (+) yy1 yy2 -- pure ()
 
 hms2E :: Proxy '(OAN, Hmsip2, Hmsop2, Hmsfmt2, String)
 hms2E = mkProxy3
@@ -266,29 +260,23 @@ tstextras =
   , newRefined3P (daten @OAN) "12/02/19" @?= Right (unsafeRefined3 (fromGregorian 2019 12 2) "2019-12-02")
   , newRefined3P (Proxy @(Luhn OAN '[1,1,1,1])) "1230" @?= Right (unsafeRefined3 [1,2,3,0] "1-2-3-0")
   , newRefined3P (Proxy @(Luhn OAN '[1,2,3])) "123455" @?= Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
-  , runIdentity (unRavelTBoolP $ tst1a @OAN @Identity) @?= Right ((163,"a3"),(12,"12"))
-  , runIdentity (unRavelTBoolP yy1) ^? _Right @?= Just (unsafeRefined3 4 "someval val=004")
-  , runIdentity (unRavelTBoolP yy2) ^? _Right @?= Just (unsafeRefined3 3 "someval val=003")
-  , runIdentity (unRavelTString yy3) ^? _Left @?= Just "Step 2. False Boolean Check(op) | {12 <= 7}"
-  , runIdentity (unRavelTBoolP yy4) ^? _Right @?= Just (unsafeRefined3 7 "someval val=007")
+--  , runIdentity (unRavelTBoolP $ tst1a @OAN @Identity) @?= Right ((163,"a3"),(12,"12"))
+--  , runIdentity (unRavelTBoolP yy1) ^? _Right @?= Just (unsafeRefined3 4 "someval val=004")
+--  , runIdentity (unRavelTBoolP yy2) ^? _Right @?= Just (unsafeRefined3 3 "someval val=003")
+--  , runIdentity (unRavelTString yy3) ^? _Left @?= Just "Step 2. False Boolean Check(op) | {12 <= 7}"
+--  , runIdentity (unRavelTBoolP yy4) ^? _Right @?= Just (unsafeRefined3 7 "someval val=007")
   , www1 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
   , www2 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
   , www3 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
   , www3' "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
-  , expectIO' (unRavelTBoolP (tst2a @'OAN)) (either Left (\x -> if x == ((163,"a3"),(12,"12")) then Right () else Left $ FailP "tst2a failed to match"))
+  , tst1a @'OAN @=? Right ((163,"a3"),(12,"12"))
   ]
 
--- prtRefinedTIO $ tst1a @OZ
-tst1a :: forall (opts :: Opt) m . (OptC opts, Monad m) => RefinedT m ((Int,String),(Int,String))
-tst1a = withRefined3T @opts @(ReadBase Int 16) @(Between 100 200 Id) @(ShowBase 16) @String "a3"
-  $ \r1 -> withRefined3T @opts @(ReadP Int Id) @'True @(ShowP Id) @String "12"
-     $ \r2 -> return ((r3In r1, r3Out r1), (r3In r2, r3Out r2))
-
--- prtRefinedTIO $ tst2a @OZ
-tst2a :: forall (opts :: Opt) m . (OptC opts, MonadIO m) => RefinedT m ((Int,String),(Int,String))
-tst2a = withRefined3TIO @opts @(ReadBase Int 16) @(Stderr "start" |> Between 100 200 Id >| Stdout "end") @(ShowBase 16) @String "a3"
-  $ \r1 -> withRefined3TIO @opts @(ReadP Int Id) @'True @(ShowP Id) @String "12"
-     $ \r2 -> return ((r3In r1, r3Out r1), (r3In r2, r3Out r2))
+tst1a :: forall (opts :: Opt) . OptC opts => Either Msg3 ((Int,String),(Int,String))
+tst1a = do
+  r1 <- newRefined3 @opts @(ReadBase Int 16) @(Between 100 200 Id) @(ShowBase 16) @String "a3"
+  r2 <- newRefined3 @opts @(ReadP Int Id) @'True @(ShowP Id) @String "12"
+  return ((r3In r1, r3Out r1), (r3In r2, r3Out r2))
 
 -- have to use 'i' as we dont hold onto the input
 testRefined3PJ :: forall opts ip op fmt i proxy
@@ -325,22 +313,7 @@ testRefined3P _ i =
            if r /= r1 then Left ("testRefined3P(3): round trip pure () but values dont match: old(" ++ show i ++ ") new(" ++ show (r3Out r) ++ ")", show (r,r1))
            else Right (r,r1)
     Left e -> Left ("testRefined3P(1): bad initial predicate i=" ++ show i, show e)
-{-
-testRefined3PIO :: forall opts ip op fmt i proxy
-   . ( Show (PP ip i)
-     , Show (PP fmt (PP ip i))
-     , Refined3C opts ip op fmt i
-     , Eq i
-     , Eq (PP ip i)
-     )
-   => proxy '(opts,ip,op,fmt,i)
-   -> i
-   -> IO (Either String (Refined3 opts ip op fmt i, Refined3 opts ip op fmt i))
-testRefined3PIO p i =
-  case testRefined3P p i of
-    Right (r,r1) -> return $ Right (r,r1)
-    Left (msg, e) -> putStrLn e >> return (Left msg)
--}
+
 data Results3 a =
        XF !String        -- Left e
      | XTF !a !String     -- Right a + Left e

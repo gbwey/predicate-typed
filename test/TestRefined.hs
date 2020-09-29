@@ -21,10 +21,10 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
 import Predicate
-import Control.Lens
 import Data.Aeson
-import Control.Monad.IO.Class (MonadIO)
 import qualified Safe (readNote)
+import Control.Applicative (liftA2)
+import Control.Arrow (left)
 
 suite :: TestTree
 suite =
@@ -53,11 +53,12 @@ unnamedTests = [
   , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @OZ @(Between 4 7 Id || Gt 14) 22))
   , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):FailT someval (||)"]) (toFrom (unsafeRefined @OL @(Between 4 7 Id || Gt 14 || Failt _ "someval") 12))
 
-  , unRavelTBoolP (tst2 10 200) >>= (@?= Right (10,200))
-  , unRavelTBoolP (tst2 11 12) >>= (@?= Left FalseP)
+  ,  (tst2' 10 200) >>= (@?= Right (10,200))
+  ,  (tst2' 11 12) >>= (@?= Left FalseT)
 
-  , unRavelTBoolP (tst1 10 200) >>= (@?= Right (10,200))
-  , unRavelTBoolP (tst1 11 12) >>= (@?= Left FalseP)
+  ,  tst1' 10 200 @?= Right (10,200)
+  ,  tst1' 11 12 @?= Left FalseT
+
   ]
 
 allProps :: [TestTree]
@@ -67,15 +68,18 @@ allProps =
   , testProperty "jsonroundtrip" $ forAll (genRefined @OAN @(Between 10 45 Id) (choose (1,100))) (\r -> testRefinedJ @OAN @(Between 10 45 Id) (unRefined r) === Right r)
   ]
 
-tst1 :: Monad m => Int -> Int -> RefinedT m (Int,Int)
-tst1 i j = withRefinedT @OAN @(Between 2 11 Id) i
-  $ \x -> withRefinedT @OAN @(Between 200 211 Id) j
-     $ \y -> return (unRefined x, unRefined y)
+tst1' :: Int -> Int -> Either (BoolT Bool) (Int,Int)
+tst1' i j = left m0BoolT $ do
+  x <- newRefined @OAN @(Between 2 11 Id) i
+  y <- newRefined @OAN @(Between 200 211 Id) j
+  return (unRefined x, unRefined y)
 
-tst2 :: MonadIO m => Int -> Int -> RefinedT m (Int,Int)
-tst2 i j = withRefinedTIO @OAN @(Between 2 11 Id) i
-  $ \x -> withRefinedTIO @OAN @(Stderr "startio..." |> Between 200 211 Id >| Stderr "...endio") j
-     $ \y -> return (unRefined x, unRefined y)
+tst2' :: Int -> Int -> IO (Either (BoolT Bool) (Int,Int))
+tst2' i j = left m0BoolT <$> do
+  x <- newRefined' @OAN @(Between 2 11 Id) i
+  y <- newRefined' @OAN @(Stderr "startio..." |> Between 200 211 Id >| Stderr "...endio") j
+  return $
+      liftA2 (,) (unRefined <$> x) (unRefined <$> y)
 
 -- roundtrip tojson then fromjson
 testRefinedJ :: forall opts p a
@@ -85,7 +89,6 @@ testRefinedJ :: forall opts p a
    => a
    -> Either String (Refined opts p a)
 testRefinedJ a =
-   let ((bp,(_top,e)),mr) = runIdentity $ newRefinedM @opts @p a
-   in case mr of
-        Nothing -> error $ bp ++ "\n" ++ e
-        Just r -> eitherDecode @(Refined opts p a) $ encode r
+   case newRefined @opts @p a of
+     Left (Msg0 _bp _top e bpc) -> error $ bpc ++ "\n" ++ e
+     Right r -> eitherDecode @(Refined opts p a) $ encode r

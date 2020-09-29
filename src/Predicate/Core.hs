@@ -126,7 +126,7 @@ import Data.Foldable (toList)
 import Data.Typeable (Typeable, Proxy(..))
 import Data.Kind (Type)
 import Data.These (These(..))
-import Control.Monad (unless, zipWithM)
+import Control.Monad (zipWithM)
 import Data.List (find)
 import Data.Coerce (Coercible)
 import qualified Data.Semigroup as SG
@@ -964,7 +964,10 @@ run :: forall opts p a
 run a = do
   let opts = getOpt @opts
   pp <- eval (Proxy @p) opts a
-  unless (oDebug opts == DZero) $ putStr $ prtTree opts pp
+  case oDebug opts of
+    DZero -> pure ()
+    DLite -> unlessNullM (prtTree opts pp) putStrLn
+    _ -> unlessNullM (prtTree opts pp) putStr
   return (_ttBool pp)
 
 -- | run expression with multiple options in a list
@@ -2211,7 +2214,7 @@ instance (P p x
         let b = pure a
         in mkNode opts (PresentT b) (show01 opts msg0 b a) [hh pp]
 
--- | similar to 'coerce'
+-- | similar to 'Data.Coerce.coerce'
 --
 -- >>> pz @(Coerce (SG.Sum Integer)) (Identity (-13))
 -- PresentT (Sum {getSum = -13})

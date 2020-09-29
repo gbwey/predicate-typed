@@ -7,9 +7,9 @@
      orphan Lift instances for Data.Time
 -}
 module Predicate.TH_Orphans () where
-import Language.Haskell.TH.Syntax
+import Language.Haskell.TH.Syntax (Lift)
 import Data.Time
-import Data.Fixed
+import Data.Fixed (Fixed(..))
 import qualified Language.Haskell.TH.Lift as TL
 
 deriving instance Lift Day

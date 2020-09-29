@@ -13,37 +13,37 @@ newtype Refined opts p a
 
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
->prtRefinedIO @OL @(ReadP Int Id > 99) "123"
+>newRefined @OL @(ReadP Int Id > 99) "123"
 Right (Refined "123")
 ```
 
 2. tries to read in a number but fails
 ```haskell
->prtRefinedIO @OU @(ReadP Int Id > 99) "1x2y3"
+>newRefined @OU @(ReadP Int Id > 99) "1x2y3"
 Left (FailT "ReadP Int (1x2y3) failed")
 ```
 
 3. reads in a hexadecimal string and checks to see that it is between 99 and 256
 ```haskell
 --  (>>) forward composition
->prtRefinedIO @OL @(ReadBase Int 16 >> Between 99 256 Id) "000fe"
+>newRefined @OL @(ReadBase Int 16 >> Between 99 256 Id) "000fe"
 Right (Refined "000fe")
 ```
 
 4. reads in a hexadecimal string but fails the predicate check
 ```haskell
->prtRefinedIO @OL @(ReadBase Int 16 >> Between 99 253 Id) "000fe"
+>newRefined @OL @(ReadBase Int 16 >> Between 99 253 Id) "000fe"
 Left FalseT
 ```
 
 5. same as 4. above but now we get details of where it went wrong
 ```haskell
->prtRefinedIO @OU @(ReadBase Int 16 >> Between 99 253 Id) "000fe"
+>newRefined @OU @(ReadBase Int 16 >> Between 99 253 Id) "000fe"
 ```
 
 6. reads in a string as time and does simple validation
 ```haskell
->prtRefinedIO @OL @(Resplit ":" >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
+>newRefined @OL @(Resplit ":" >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
 Right (Refined "12:01:05")
 ```
   * `Resplit ":"`

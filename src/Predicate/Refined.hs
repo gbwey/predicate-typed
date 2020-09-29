@@ -31,33 +31,15 @@ module Predicate.Refined (
   -- ** Refined
     Refined
   , unRefined
+  , Msg0(..)
   , RefinedC
-  , RefinedT(..)
-  , MsgT(..)
-
-  -- ** print methods
-  , prtRefinedT
-  , prtRefinedIO
-  , prtRefinedTIO
 
   -- ** create methods
   , newRefined
-  , newRefinedM
-  , withRefinedT
-  , withRefinedTIO
-  , newRefinedT
-  , newRefinedTIO
+  , newRefined'
 
   -- ** QuickCheck method
   , genRefined
-
-  -- ** manipulate RefinedT values
-  , convertRefinedT
-  , unRavelT
-  , unRavelTBoolP
-  , unRavelTString
-  , rapply
-  , rapplyLift
 
   -- ** unsafe create methods
   , unsafeRefined
@@ -71,11 +53,7 @@ import Predicate.Core
 import Predicate.Util
 import Control.Lens
 import Data.Proxy
-import Control.Monad.Except (ExceptT(..), MonadError, runExceptT, throwError, catchError)
-import Control.Monad.Writer (WriterT(..), runWriterT, MonadWriter, tell)
-import Control.Monad.Cont
 import Data.Aeson (ToJSON(..), FromJSON(..))
-import GHC.Generics (Generic, Generic1)
 import qualified Language.Haskell.TH.Syntax as TH
 import Test.QuickCheck
 import qualified GHC.Read as GR
@@ -83,13 +61,10 @@ import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
-import Data.String
+import Data.String (IsString(..))
 import Data.Hashable (Hashable(..))
-import GHC.Stack
-import Data.Char (isSpace)
-import Data.Coerce
-import Data.List (intercalate)
-import Control.Arrow (left)
+import GHC.Stack (HasCallStack)
+import Data.Coerce (coerce)
 import Control.DeepSeq (NFData)
 -- $setup
 -- >>> :set -XDataKinds
@@ -98,6 +73,7 @@ import Control.DeepSeq (NFData)
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
 -- >>> :m + Predicate.Prelude
+-- >>> import qualified Control.Arrow as AR
 
 -- | a simple refinement type that ensures the predicate @p@ holds for the type @a@
 --
@@ -121,14 +97,13 @@ type role Refined phantom nominal nominal
 --
 instance RefinedC opts p String => IsString (Refined opts p String) where
   fromString s =
-    let (w,mr) = runIdentity $ newRefinedM @opts @p s
-    in case mr of
-        Nothing -> error $ "Refined(fromString):" ++ errorDisplay (getOpt @opts) w
-        Just r -> r
+    case newRefined @opts @p s of
+      Left w -> error $ "Refined(fromString):" ++ errorDisplay (getOpt @opts) w
+      Right r -> r
 
-errorDisplay :: POpts -> (String, (String, String)) -> String
-errorDisplay o (bp,(top,e)) =
-     bp
+errorDisplay :: POpts -> Msg0 -> String
+errorDisplay o (Msg0 _bp top e bpc) =
+     bpc
   ++ nullIf " " top
   ++ (if null e || hasNoTree o then "" else "\n" ++ e)
 
@@ -188,10 +163,9 @@ instance ( RefinedC opts p a
          ) => FromJSON (Refined opts p a) where
   parseJSON z = do
     a <- parseJSON z
-    let (w,mr) = runIdentity $ newRefinedM @opts @p a
-    case mr of
-      Nothing -> fail $ "Refined(FromJSON:parseJSON):" ++ errorDisplay (getOpt @opts) w
-      Just r -> return r
+    case newRefined @opts @p a of
+      Left w -> fail $ "Refined(FromJSON:parseJSON):" ++ errorDisplay (getOpt @opts) w
+      Right r -> return r
 
 -- | 'Binary' instance for 'Refined'
 --
@@ -226,10 +200,9 @@ instance ( RefinedC opts p a
          ) => Binary (Refined opts p a) where
   get = do
     fld0 <- B.get @a
-    let (w,mr) = runIdentity $ newRefinedM @opts @p fld0
-    case mr of
-      Nothing -> fail $ "Refined(Binary:get):" ++ errorDisplay (getOpt @opts) w
-      Just r -> return r
+    case newRefined @opts @p fld0 of
+      Left w -> fail $ "Refined(Binary:get):" ++ errorDisplay (getOpt @opts) w
+      Right r -> return r
   put (Refined r) = B.put @a r
 
 -- | 'Hashable' instance for 'Refined'
@@ -273,182 +246,7 @@ genRefined g =
           Just a -> pure $ unsafeRefined a
   in f 0
 
--- | binary operation applied to two 'RefinedT' values
---
--- >>> x = newRefinedT @OAN @(Between 4 12 Id) 4
--- >>> y = newRefinedT @OAN @(Between 4 12 Id) 5
--- >>> prtRefinedTIO (rapply (+) x y)
--- === a ===
--- True 4 <= 4 <= 12
--- |
--- +- P Id 4
--- |
--- +- P '4
--- |
--- `- P '12
--- <BLANKLINE>
--- === b ===
--- True 4 <= 5 <= 12
--- |
--- +- P Id 5
--- |
--- +- P '4
--- |
--- `- P '12
--- <BLANKLINE>
--- === a `op` b ===
--- True 4 <= 9 <= 12
--- |
--- +- P Id 9
--- |
--- +- P '4
--- |
--- `- P '12
--- <BLANKLINE>
--- Refined 9
---
--- >>> x = newRefinedT @OAN @(IsPrime || Id < 3) 3
--- >>> y = newRefinedT @OAN @(IsPrime || Id < 3) 5
--- >>> prtRefinedTIO (rapply (+) x y)
--- === a ===
--- True True || False
--- |
--- +- True IsPrime
--- |
--- `- False 3 < 3
---    |
---    +- P Id 3
---    |
---    `- P '3
--- <BLANKLINE>
--- === b ===
--- True True || False
--- |
--- +- True IsPrime
--- |
--- `- False 5 < 3
---    |
---    +- P Id 5
---    |
---    `- P '3
--- <BLANKLINE>
--- === a `op` b ===
--- False False || False | (IsPrime) || (8 < 3)
--- |
--- +- False IsPrime
--- |
--- `- False 8 < 3
---    |
---    +- P Id 8
---    |
---    `- P '3
--- <BLANKLINE>
--- failure msg[FalseT]
---
-rapply :: forall opts p a opts1 z m . (z ~ (opts ':# opts1), OptC opts1, RefinedC opts p a, Monad m)
-  => (a -> a -> a)
-  -> RefinedT m (Refined opts p a)
-  -> RefinedT m (Refined opts1 p a)
-  -> RefinedT m (Refined z p a)
-rapply f ma mb = do
-  let opts = getOpt @opts
-  let uc = unless (hasNoTree opts)
-  uc $ tell [setOtherEffects opts "=== a ==="]
-  Refined x <- ma
-  let opts1 = getOpt @opts1
-  uc $ tell [setOtherEffects opts1 "=== b ==="]
-  Refined y <- mb
-  let opts2 = getOpt @z
-  uc $ tell [setOtherEffects opts2 "=== a `op` b ==="]
-  newRefinedT @_ @p (f x y)
-
--- | same as 'rapply' except we already have valid 'Refined' values as input
-rapplyLift :: forall opts p a m . (RefinedC opts p a, Monad m)
-  => (a -> a -> a)
-  -> Refined opts p a
-  -> Refined opts p a
-  -> RefinedT m (Refined opts p a)
-rapplyLift f (Refined a) (Refined b) = newRefinedT (f a b)
-
--- | attempts to lift a refinement type to another refinement type by way of transformation function
---   you can control both the predicate and the type
-convertRefinedT :: forall opts p a p1 a1 m
-  . ( RefinedC opts p1 a1
-    , Monad m)
-  => (a -> a1)
-  -> RefinedT m (Refined opts p a)
-  -> RefinedT m (Refined opts p1 a1)
-convertRefinedT f ma = do
-  Refined a <- ma -- you already got a refined in there so no need to check RefinedC
-  newRefinedT @opts @p1 (f a)
-
--- | invokes the callback with the 'Refined' value if @a@ is valid for the predicate @p@
-withRefinedT :: forall opts p m a b
-     . ( Monad m
-       , RefinedC opts p a
-       )
-  => a
-  -> (Refined opts p a -> RefinedT m b)
-  -> RefinedT m b
-withRefinedT a k = newRefinedT @opts @p a >>= k
-
--- | IO version of `withRefinedT`
-withRefinedTIO :: forall opts p m a b
-     . ( MonadIO m
-       , RefinedC opts p a
-       )
-  => a
-  -> (Refined opts p a -> RefinedT m b)
-  -> RefinedT m b
-withRefinedTIO a k = newRefinedTIO @opts @p a >>= k
-
--- | same as 'newRefined' but prints the results
---
--- >>> prtRefinedIO @OZ @(Between 10 14 Id) 13
--- Right (Refined 13)
---
--- >>> prtRefinedIO @OZ @(Between 10 14 Id) 99
--- Left FalseT
---
--- >>> prtRefinedIO @OZ @(Last >> Len == 4) ["one","two","three","four"]
--- Right (Refined ["one","two","three","four"])
---
--- >>> prtRefinedIO @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1.99"
--- Right (Refined "141.213.1.99")
---
--- >>> prtRefinedIO @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1"
--- Left FalseT
---
--- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
--- Left (FailT "bad length: found 3")
---
--- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1.444"
--- Left (FailT "Bool(3) [octet 3 out of range 444]")
---
--- >>> prtRefinedIO @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1x34.444"
--- Left (FailT "ReadP Int (1x34)")
---
--- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12344"
--- Right (Refined "12344")
---
--- >>> prtRefinedIO @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12340"
--- Left FalseT
---
--- >>> prtRefinedIO @OZ @(Any IsPrime) [11,13,17,18]
--- Right (Refined [11,13,17,18])
---
--- >>> prtRefinedIO @OZ @(All IsPrime) [11,13,17,18]
--- Left FalseT
---
--- >>> prtRefinedIO @OZ @(Snd !! Fst >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
--- Right (Refined (2,["abc","defghij","xyzxyazsfd"]))
---
--- >>> prtRefinedIO @OZ @(Snd !! Fst >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
--- Left (FailT "(!!) index not found")
---
--- >>> prtRefinedIO @OZ @(Snd !! Fst >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
--- Left FalseT
---
+{-
 prtRefinedIO :: forall opts p a
    . RefinedC opts p a
    => a
@@ -464,133 +262,117 @@ prtRefinedIO a = do
   pure $ case getValueLR o "" tt [] of
     Right True -> Right (Refined a)
     _ -> Left r
+-}
+data Msg0 = Msg0 { m0BoolT :: !(BoolT Bool)
+                 , m0Short :: !String
+                 , m0Long :: !String
+                 , m0BoolTColor :: !String
+                 } deriving Eq
+
+instance Show Msg0 where
+  show (Msg0 _a _b c _d) = c
+{-
+newRefined' :: forall opts p a m
+   . ( MonadEval m
+     , RefinedC opts p a
+     )
+   => a
+   -> m (Either String (Refined opts p a))
+newRefined' a = do
+  lr <- newRefined' @opts @p a
+  return $ case lr of
+    Left (Msg0 _bp top e bpc) ->
+      case oDebug (getOpt @opts) of
+        DZero -> Left bpc
+        DLite -> Left (bpc <> nullIf " " top)
+        _ -> Left e
+    Right r -> return r
+-}
+newRefinedMInternal :: forall opts p a m
+   . ( MonadEval m
+     , RefinedC opts p a
+     )
+   => a
+   -> m (Msg0, Maybe (Refined opts p a))
+newRefinedMInternal a = do
+  let o = getOpt @opts
+  pp <- evalBool (Proxy @p) o a
+  let r = colorBoolT' o (_ttBool pp)
+      s = prtTree o pp
+      msg0 = Msg0 (_ttBool pp) (topMessage pp) s r
+  pure $ (msg0,) $ case getValueLR o "" pp [] of
+       Right True -> Just (Refined a)
+       _ -> Nothing
+
+newRefined' :: forall opts p a m
+   . ( MonadEval m
+     , RefinedC opts p a
+     )
+   => a
+   -> m (Either Msg0 (Refined opts p a))
+newRefined' = fmap maybeToEither . newRefinedMInternal
 
 -- | returns a 'Refined' value if @a@ is valid for the predicate @p@
 --
 -- >>> newRefined @OL @(ReadP Int Id > 99) "123"
 -- Right (Refined "123")
 --
--- >>> newRefined @OL @(ReadP Int Id > 99) "12"
--- Left "FalseT (12 > 99)"
+-- >>> AR.left m0Long $ newRefined @OL @(ReadP Int Id > 99) "12"
+-- Left "False (12 > 99)"
+--
+-- >>> newRefined @OZ @(Between 10 14 Id) 13
+-- Right (Refined 13)
+--
+-- >>> AR.left m0BoolT $ newRefined @OZ @(Between 10 14 Id) 99
+-- Left FalseT
+--
+-- >>> newRefined @OZ @(Last >> Len == 4) ["one","two","three","four"]
+-- Right (Refined ["one","two","three","four"])
+--
+-- >>> newRefined @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1.99"
+-- Right (Refined "141.213.1.99")
+--
+-- >>> AR.left m0BoolT $ newRefined @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1"
+-- Left FalseT
+--
+-- >>> AR.left m0BoolT $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
+-- Left (FailT "bad length: found 3")
+--
+-- >>> AR.left m0BoolT $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1.444"
+-- Left (FailT "Bool(3) [octet 3 out of range 444]")
+--
+-- >>> AR.left m0BoolT $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1x34.444"
+-- Left (FailT "ReadP Int (1x34)")
+--
+-- >>> newRefined @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12344"
+-- Right (Refined "12344")
+--
+-- >>> AR.left m0BoolT $ newRefined @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12340"
+-- Left FalseT
+--
+-- >>> newRefined @OZ @(Any IsPrime) [11,13,17,18]
+-- Right (Refined [11,13,17,18])
+--
+-- >>> AR.left m0BoolT $ newRefined @OZ @(All IsPrime) [11,13,17,18]
+-- Left FalseT
+--
+-- >>> newRefined @OZ @(Snd !! Fst >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
+-- Right (Refined (2,["abc","defghij","xyzxyazsfd"]))
+--
+-- >>> AR.left m0BoolT $ newRefined @OZ @(Snd !! Fst >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
+-- Left (FailT "(!!) index not found")
+--
+-- >>> AR.left m0BoolT $ newRefined @OZ @(Snd !! Fst >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
+-- Left FalseT
 --
 newRefined :: forall opts p a
-   . RefinedC opts p a
+    . RefinedC opts p a
    => a
-   -> Either String (Refined opts p a)
-newRefined a =
-  let ((bp,(top,e)),mr) = runIdentity $ newRefinedM @opts @p a
-  in case mr of
-       Nothing -> case oDebug (getOpt @opts) of
-                    DZero -> Left bp
-                    DLite -> Left (bp <> nullIf " " top)
-                    _ -> Left e
-       Just r -> Right r
+   -> Either Msg0 (Refined opts p a)
+newRefined = runIdentity . newRefined'
 
-newRefinedM :: forall opts p a m
-   . ( MonadEval m
-     , RefinedC opts p a
-     )
-   => a
-   -> m ((String, (String, String)), Maybe (Refined opts p a))
-newRefinedM a = do
-  let o = getOpt @opts
-  pp <- evalBool (Proxy @p) o a
-  let r = colorBoolT' o (_ttBool pp)
-      s = prtTree o pp
-  pure $ ((r,(topMessage pp, s)),) $ case getValueLR o "" pp [] of
-       Right True -> Just (Refined a)
-       _ -> Nothing
-
-newRefinedTImpl :: forall opts p a n m
-  . ( RefinedC opts p a
-    , Monad m
-    , MonadEval n
-    )
-  => (forall x . n x -> RefinedT m x)
-  -> a
-  -> RefinedT m (Refined opts p a)
-newRefinedTImpl f a = do
-  let o = getOpt @opts
-  tt <- f $ evalBool (Proxy @p) o a
-  unlessNullM (prtTree o tt) (tell . pure)
-  case getValueLR o "" tt [] of
-    Right True -> return (Refined a) -- FalseP is also a failure!
-    _ -> throwError (_ttBool tt ^. boolT2P, colorBoolT' o (_ttBool tt))
-
--- | returns a wrapper 'RefinedT' around a possible 'Refined' value if @a@ is valid for the predicate @p@
-newRefinedT :: forall opts p a m
-  . ( RefinedC opts p a
-    , Monad m)
-  => a
-  -> RefinedT m (Refined opts p a)
-newRefinedT = newRefinedTImpl (return . runIdentity)
-
--- | IO version of 'newRefinedT'
-newRefinedTIO :: forall opts p a m
-  . ( RefinedC opts p a
-    , MonadIO m)
-  => a
-  -> RefinedT m (Refined opts p a)
-newRefinedTIO = newRefinedTImpl liftIO
-
-data MsgT = MsgT { mtBoolP :: !(Maybe BoolP)
-                 , mtShort :: !String
-                 , mtLong :: !String
-                 } deriving Eq
-
-instance Show MsgT where
-  show (MsgT _a b c) = nullIf "\n" c <> b
-
--- | effect wrapper for the refinement value
-newtype RefinedT m a = RefinedT { unRefinedT :: ExceptT (BoolP,String) (WriterT [String] m) a }
-  deriving stock (Generic, Generic1, Show)
-  deriving newtype (Eq, Ord, Functor, Applicative, Monad, MonadCont, MonadWriter [String], MonadIO)
-  deriving MonadTrans via RefinedT
-
-instance Monad m => MonadError (BoolP, String) (RefinedT m) where
-  throwError e = RefinedT $ ExceptT $ WriterT $ return (Left e,[])
-  catchError (RefinedT (ExceptT (WriterT ma))) ema =
-    RefinedT $ ExceptT $ WriterT $ do
-      (lr,ss) <- ma
-      case lr of
-        Left e -> runWriterT . runExceptT . unRefinedT $ (tell ss >> ema e) -- keep the old messages??
-        Right _ -> ma
-
--- | unwrap the 'RefinedT' value
-unRavelTInternal :: RefinedT m a -> m (Either (BoolP, String) a, [String])
-unRavelTInternal = runWriterT . runExceptT . unRefinedT
-
-prtRefinedT :: (Either (BoolP,String) r, [String]) -> (MsgT, Maybe r)
-prtRefinedT (lr,xs) =
-  let y = intercalate "\n" (filter (not . all isSpace) xs)
-  in case lr of
-    Left (bp,s) -> (MsgT (Just bp) s y, Nothing)
-    Right r -> (MsgT Nothing "" y, Just r)
-
-unRavelT :: Functor m => RefinedT m a -> m (MsgT, Maybe a)
-unRavelT = fmap prtRefinedT . unRavelTInternal
-
-unRavelTBoolP :: Functor m => RefinedT m a -> m (Either BoolP a)
-unRavelTBoolP = fmap (left fst . fst) . unRavelTInternal
-
-unRavelTString :: Functor m => RefinedT m a -> m (Either String a)
-unRavelTString = fmap (left snd . fst) . unRavelTInternal
-
-prtRefinedTImpl :: forall n m a
-  . (MonadIO n, Functor m, Show a)
-  => (forall x . m x -> n x)
-  -> RefinedT m a
-  -> n ()
-prtRefinedTImpl f rt = do
-  (msgt,mr) <-  f $ unRavelT rt
-  liftIO $ do
-    unlessNullM (mtLong msgt) putStrLn
-    case mr of
-      Nothing -> putStrLn $ "failure msg[" <> mtShort msgt <> "]"
-      Just a -> print a
-
-prtRefinedTIO :: (MonadIO m, Show a) => RefinedT m a -> m ()
-prtRefinedTIO = prtRefinedTImpl id
+maybeToEither :: (a,Maybe b) -> Either a b
+maybeToEither (a,mb) = maybe (Left a) Right mb
 
 -- | create an unsafe 'Refined' value without running the predicate
 unsafeRefined :: forall opts p a . a -> Refined opts p a

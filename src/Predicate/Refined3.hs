@@ -54,15 +54,6 @@ module Predicate.Refined3 (
   , newRefined3'
   , newRefined3P'
 
-  -- ** create a wrapped Refined3 value
-  , newRefined3T
-  , newRefined3TP
-  , newRefined3TPIO
-  , newRefined3TIO
-  , withRefined3T
-  , withRefined3TIO
-  , withRefined3TP
-
   -- ** proxy methods
   , mkProxy3
   , mkProxy3'
@@ -73,11 +64,6 @@ module Predicate.Refined3 (
   , unsafeRefined3
   , unsafeRefined3'
 
-  -- ** combine Refined3 values
-  , convertRefined3TP
-  , rapply3
-  , rapply3P
-
   -- ** QuickCheck methods
   , genRefined3
   , genRefined3P
@@ -87,14 +73,11 @@ module Predicate.Refined3 (
   , appendOpt3
 
  ) where
-import Predicate.Refined
 import Predicate.Core
 import Predicate.Util
 import Data.Functor.Identity (Identity(..))
-import Data.Tree
-import Data.Proxy
-import Control.Monad.Except
-import Control.Monad.Writer (tell)
+import Data.Tree (Tree)
+import Data.Proxy (Proxy(..))
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Language.Haskell.TH.Syntax as TH
 import Test.QuickCheck
@@ -106,10 +89,10 @@ import Data.Binary (Binary)
 import Control.Lens ((^.))
 import Data.Tree.Lens (root)
 import Data.Char (isSpace)
-import Data.String
+import Data.String (IsString(..))
 import Data.Hashable (Hashable(..))
-import GHC.Stack
-import Data.Coerce
+import GHC.Stack (HasCallStack)
+import Data.Coerce (coerce)
 import Control.DeepSeq (rnf, rnf2, NFData)
 -- $setup
 -- >>> :set -XDataKinds
@@ -139,7 +122,7 @@ import Control.DeepSeq (rnf, rnf2, NFData)
 --
 -- Although a common scenario is String as input, you are free to choose any input type you like
 --
-data Refined3 (opts :: Opt) ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: !(PP fmt (PP ip i)) }
+data Refined3 (opts :: Opt) ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: !i }
 
 type role Refined3 phantom nominal nominal nominal nominal
 
@@ -147,16 +130,17 @@ type role Refined3 phantom nominal nominal nominal nominal
 unsafeRefined3' :: forall opts ip op fmt i
                 . ( HasCallStack
                   , Show (PP ip i)
-                  , Refined3C opts ip op fmt i)
-                => i
-                -> Refined3 opts ip op fmt i
+                  , Refined3C opts ip op fmt i
+                ) => i
+                  -> Refined3 opts ip op fmt i
 unsafeRefined3' = either (error . show) id . newRefined3
 
 -- | directly load values into 'Refined3' without any checking
 unsafeRefined3 ::
     forall opts ip op fmt i
-  . PP ip i
-  -> PP fmt (PP ip i)
+  .  Refined3C opts ip op fmt i
+  => PP ip i
+  -> i
   -> Refined3 opts ip op fmt i
 unsafeRefined3 = Refined3
 
@@ -171,20 +155,27 @@ type Refined3C opts ip op fmt i =
        , PP fmt (PP ip i) ~ i  -- the output type must match the original input type
        )
 
-deriving instance ( Show (PP ip i)
-                  , Show (PP fmt (PP ip i))
+deriving instance ( Refined3C opts ip op fmt i
+                  , Show (PP ip i)
+                  , Show i
                   ) => Show (Refined3 opts ip op fmt i)
-deriving instance ( Eq (PP ip i)
-                  , Eq (PP fmt (PP ip i))
+deriving instance ( Refined3C opts ip op fmt i
+                  , Eq (PP ip i)
+                  , Eq i
                   ) => Eq (Refined3 opts ip op fmt i)
-deriving instance ( Ord (PP ip i)
-                  , Ord (PP fmt (PP ip i))
+deriving instance ( Refined3C opts ip op fmt i
+                  , Ord (PP ip i)
+                  , Ord i
                   ) => Ord (Refined3 opts ip op fmt i)
-deriving instance ( TH.Lift (PP ip i)
-                  , TH.Lift (PP fmt (PP ip i))
+deriving instance ( Refined3C opts ip op fmt i
+                  , TH.Lift (PP ip i)
+                  , TH.Lift i
                   ) => TH.Lift (Refined3 opts ip op fmt i)
 
-instance (NFData (PP fmt (PP ip i)), NFData (PP ip i)) => NFData (Refined3 opts ip op fmt i) where
+instance ( Refined3C opts ip op fmt i
+         , NFData i
+         , NFData (PP ip i)
+         ) => NFData (Refined3 opts ip op fmt i) where
   rnf (Refined3 a b) = rnf2 (a,b)
 
 -- | 'IsString' instance for Refined3
@@ -195,8 +186,9 @@ instance (NFData (PP fmt (PP ip i)), NFData (PP ip i)) => NFData (Refined3 opts 
 -- >>> pureTryTest $ fromString @(Refined3 OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "2"
 -- Left ()
 --
-instance (Refined3C opts ip op fmt String, Show (PP ip String))
-  => IsString (Refined3 opts ip op fmt String) where
+instance ( Refined3C opts ip op fmt String
+         , Show (PP ip String)
+         ) => IsString (Refined3 opts ip op fmt String) where
   fromString s =
     case newRefined3 s of
       Left e -> error $ "Refined3(fromString):" ++ show e
@@ -220,7 +212,7 @@ instance (Refined3C opts ip op fmt String, Show (PP ip String))
 instance ( Eq i
          , Refined3C opts ip op fmt i
          , Read (PP ip i)
-         , Read (PP fmt (PP ip i))
+         , Read i
          ) => Read (Refined3 opts ip op fmt i) where
     readPrec
       = GR.parens
@@ -254,7 +246,9 @@ instance ( Eq i
 -- >>> A.encode (unsafeRefined3' @OZ @Id @'True @Id 123)
 -- "123"
 --
-instance ToJSON (PP fmt (PP ip i)) => ToJSON (Refined3 opts ip op fmt i) where
+instance ( Refined3C opts ip op fmt i
+         , ToJSON i
+         ) => ToJSON (Refined3 opts ip op fmt i) where
   toJSON = toJSON . r3Out
 
 
@@ -395,7 +389,7 @@ instance (Refined3C opts ip op fmt i
         ) => Hashable (Refined3 opts ip op fmt i) where
   hashWithSalt s (Refined3 a _) = s + hash a
 
--- | creates a 5-tuple proxy (see 'withRefined3TP' 'newRefined3TP' 'eval3P' 'newRefined3P')
+-- | creates a 5-tuple proxy (see 'eval3P' 'newRefined3P')
 --
 -- use type application to set the 5-tuple or set the individual parameters directly
 --
@@ -431,224 +425,6 @@ type family MakeR3 p where
 type family MakeR3' opts p where
   MakeR3' opts '(ip,op,fmt,i) = Refined3 opts ip op fmt i
 
-withRefined3TIO :: forall opts ip op fmt i m b
-  . ( MonadIO m
-    , Refined3C opts ip op fmt i
-    , Show (PP ip i)
-    )
-  => i
-  -> (Refined3 opts ip op fmt i -> RefinedT m b)
-  -> RefinedT m b
-withRefined3TIO = (>>=) . newRefined3TPIO (Proxy @'(opts,ip,op,fmt,i))
-
--- | create a 'Refined3' value using a continuation
---
--- This first example reads a hex string and makes sure it is between 100 and 200 and then
--- reads a binary string and adds the values together
---
--- >>> :set -XPolyKinds
--- >>> :set -XRankNTypes
--- >>> b16 :: forall opts . Proxy '(opts, ReadBase Int 16, Between 100 200 Id, ShowBase 16, String); b16 = Proxy
--- >>> b2 :: forall opts . Proxy '(opts, ReadBase Int 2, 'True, ShowBase 2, String); b2 = Proxy
--- >>> prtRefinedTIO $ withRefined3TP (b16 @OZ) "a3" $ \x -> withRefined3TP (b2 @OZ) "1001110111" $ \y -> pure (r3In x + r3In y)
--- 794
---
--- this example fails as the the hex value is out of range
---
--- >>> prtRefinedTIO $ withRefined3TP (b16 @OAN) "a388" $ \x -> withRefined3TP (b2 @OAN) "1001110111" $ \y -> pure (x,y)
--- *** Step 1. Success Initial Conversion(ip) (41864) ***
--- P ReadBase(Int,16) 41864
--- |
--- `- P Id "a388"
--- *** Step 2. False Boolean Check(op) ***
--- False 41864 <= 200
--- |
--- +- P Id 41864
--- |
--- +- P '100
--- |
--- `- P '200
--- <BLANKLINE>
--- failure msg[Step 2. False Boolean Check(op) | {41864 <= 200}]
---
-withRefined3T :: forall opts ip op fmt i m b
-  . ( Monad m
-    , Refined3C opts ip op fmt i
-    , Show (PP ip i)
-    )
-  => i
-  -> (Refined3 opts ip op fmt i -> RefinedT m b)
-  -> RefinedT m b
-withRefined3T = (>>=) . newRefined3TP (Proxy @'(opts,ip,op,fmt,i))
-
-withRefined3TP :: forall opts ip op fmt i b proxy m
-  . ( Monad m
-    , Refined3C opts ip op fmt i
-    , Show (PP ip i)
-    )
-  => proxy '(opts,ip,op,fmt,i)
-  -> i
-  -> (Refined3 opts ip op fmt i -> RefinedT m b)
-  -> RefinedT m b
-withRefined3TP p = (>>=) . newRefined3TP p
-
--- | create a wrapped 'Refined3' type
---
--- >>> prtRefinedTIO $ newRefined3T @OZ @(MkDayExtra Id >> 'Just Id) @(GuardSimple (Thd == 5) >> 'True) @(UnMkDay Fst) (2019,11,1)
--- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
---
--- >>> prtRefinedTIO $ newRefined3T @OL @(MkDayExtra Id >> 'Just Id) @(Thd == 5) @(UnMkDay Fst) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
---
--- >>> prtRefinedTIO $ newRefined3T @OL @(MkDayExtra Id >> 'Just Id) @(Msg "wrong day:" (Thd == 5)) @(UnMkDay Fst) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
---
-newRefined3T :: forall opts ip op fmt i m
-  . ( Refined3C opts ip op fmt i
-    , Monad m
-    , Show (PP ip i)
-    )
-   => i
-   -> RefinedT m (Refined3 opts ip op fmt i)
-newRefined3T = newRefined3TP (Proxy @'(opts,ip,op,fmt,i))
-
--- | create a wrapped 'Refined3' type
---
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(OZ, MkDayExtra Id >> 'Just Id, GuardSimple (Thd == 5) >> 'True, UnMkDay Fst, (Int,Int,Int))) (2019,11,1)
--- Refined3 {r3In = (2019-11-01,44,5), r3Out = (2019,11,1)}
---
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(OL, MkDayExtra Id >> 'Just Id, Thd == 5, UnMkDay Fst, (Int,Int,Int))) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
---
--- >>> prtRefinedTIO $ newRefined3TP (Proxy @'(OL, MkDayExtra Id >> 'Just Id, Msg "wrong day:" (Thd == 5), UnMkDay Fst, (Int,Int,Int))) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
---
-newRefined3TP :: forall opts ip op fmt i proxy m
-   . ( Refined3C opts ip op fmt i
-     , Monad m
-     , Show (PP ip i)
-     )
-  => proxy '(opts,ip,op,fmt,i)
-  -> i
-  -> RefinedT m (Refined3 opts ip op fmt i)
-newRefined3TP = newRefined3TPImpl (return . runIdentity)
-
--- | wrap a Refined3 type using RefinedT and IO
---
--- >>> prtRefinedTIO $ newRefined3TIO @OL @(Hide (Rescan "(\\d+)" >> ConcatMap Snd Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff)) @(ShowP Id) "|23|99|255|254.911."
--- failure msg[Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}]
---
--- >>> unRavelTString $ newRefined3TIO @OL @(Hide (Rescan "(\\d+)" >> ConcatMap Snd Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff)) @(ShowP Id) "|23|99|255|254.911."
--- Left "Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}"
---
-newRefined3TIO :: forall opts ip op fmt i m
-   . ( Refined3C opts ip op fmt i
-     , MonadIO m
-     , Show (PP ip i)
-     )
-  => i
-  -> RefinedT m (Refined3 opts ip op fmt i)
-newRefined3TIO = newRefined3TPImpl liftIO Proxy
-
-newRefined3TPIO :: forall opts ip op fmt i proxy m
-   . ( Refined3C opts ip op fmt i
-     , MonadIO m
-     , Show (PP ip i)
-     )
-  => proxy '(opts,ip,op,fmt,i)
-  -> i
-  -> RefinedT m (Refined3 opts ip op fmt i)
-newRefined3TPIO = newRefined3TPImpl liftIO
-
-newRefined3TPImpl :: forall n m opts ip op fmt i proxy
-   . ( Refined3C opts ip op fmt i
-     , Monad m
-     , MonadEval n
-     , Show (PP ip i)
-     )
-  => (forall x . n x -> RefinedT m x)
-   -> proxy '(opts,ip,op,fmt,i)
-   -> i
-   -> RefinedT m (Refined3 opts ip op fmt i)
-newRefined3TPImpl f _ i = do
-  (ret,mr) <- f $ eval3M i
-  let m3 = prt3Impl (getOpt @opts) ret
-  unlessNullM (m3Long m3) (tell . pure)
-  case mr of
-    Nothing -> throwError (getBoolP3 ret, m3Desc m3 <> nullIf " | " (m3Short m3))
-    Just r -> return r
-
-newRefined3TPSkipIPImpl :: forall n m opts ip op fmt i proxy
-   . ( Refined3C opts ip op fmt i
-     , Monad m
-     , MonadEval n
-     , Show (PP ip i)
-     )
-  => (forall x . n x -> RefinedT m x)
-   -> proxy '(opts,ip,op,fmt,i)
-   -> PP ip i
-   -> RefinedT m (Refined3 opts ip op fmt i)
-newRefined3TPSkipIPImpl f _ a = do
-  (ret,mr) <- f $ eval3MSkip a
-  let m3 = prt3Impl (getOpt @opts) ret
-  unlessNullM (m3Long m3) (tell . pure)
-  case mr of
-    Nothing -> throwError (getBoolP3 ret, m3Desc m3 <> nullIf " | " (m3Short m3))
-    Just r -> return r
-
--- | attempts to cast a wrapped 'Refined3' to another 'Refined3' with different predicates
-convertRefined3TP :: forall opts ip op fmt i ip1 op1 fmt1 i1 m .
-  ( Refined3C opts ip1 op1 fmt1 i1
-  , Monad m
-  , Show (PP ip i)
-  , PP ip i ~ PP ip1 i1
-  )
-  => Proxy '(opts, ip, op, fmt, i)
-  -> Proxy '(opts, ip1, op1, fmt1, i1)
-  -> RefinedT m (Refined3 opts ip op fmt i)
-  -> RefinedT m (Refined3 opts ip1 op1 fmt1 i1)
-convertRefined3TP _ _ ma = do
-  Refined3 x _ <- ma
-  -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  Refined3 a b <- newRefined3TPSkipIPImpl (return . runIdentity) (Proxy @'(opts, ip1, op1, fmt1, i1)) x
-  return (Refined3 a b)
-
--- | applies a binary operation to two wrapped 'Refined3' parameters
-rapply3 :: forall opts ip op fmt i m .
-  ( Refined3C opts ip op fmt i
-  , Monad m
-  , Show (PP ip i)
-  )
-  => (PP ip i -> PP ip i -> PP ip i)
-  -> RefinedT m (Refined3 opts ip op fmt i)
-  -> RefinedT m (Refined3 opts ip op fmt i)
-  -> RefinedT m (Refined3 opts ip op fmt i)
-rapply3 = rapply3P (Proxy @'(opts,ip,op,fmt,i))
-
--- prtRefinedTIO $ rapply3P (base16 @OU) (+) (newRefined3TP Proxy "ff") (newRefined3TP Proxy "22")
-
--- | same as 'rapply3' but uses a 5-tuple proxy instead
-rapply3P :: forall opts ip op fmt i proxy m .
-  ( Refined3C opts ip op fmt i
-  , Monad m
-  , Show (PP ip i)
-  )
-  => proxy '(opts,ip,op,fmt,i)
-  -> (PP ip i -> PP ip i -> PP ip i)
-  -> RefinedT m (Refined3 opts ip op fmt i)
-  -> RefinedT m (Refined3 opts ip op fmt i)
-  -> RefinedT m (Refined3 opts ip op fmt i)
-rapply3P p f ma mb = do
-  let opts = getOpt @opts
-  let uc = unless (hasNoTree opts)
-  uc $ tell [setOtherEffects opts "=== a ==="]
-  Refined3 x _ <- ma
-  uc $ tell [setOtherEffects opts "=== b ==="]
-  Refined3 y _ <- mb
-  -- we skip the input value @Id and go straight to the internal value so PP fmt (PP ip i) /= i for this call
-  uc $ tell [setOtherEffects opts "=== a `op` b ==="]
-  newRefined3TPSkipIPImpl (return . runIdentity) p (f x y)
-
 -- | An ADT that summarises the results of evaluating Refined3 representing all possible states
 data RResults3 a =
        RF !String !(Tree PE)        -- Left e
@@ -657,7 +433,7 @@ data RResults3 a =
      | RTTrueF !a !(Tree PE) !(Tree PE) !String !(Tree PE) -- Right a + Right True + Left e
      | RTTrueT !a !(Tree PE) !(Tree PE) !(Tree PE)      -- Right a + Right True + Right b
      deriving Show
-
+{-
 getBoolP3 :: RResults3 a -> BoolP
 getBoolP3 r =
   let z = case r of
@@ -667,7 +443,7 @@ getBoolP3 r =
             RTTrueF _ _ _ _ t -> t
             RTTrueT _ _ _ t -> t
   in z ^. root . pBool
-
+-}
 -- | same as 'newRefined3P'' but passes in the proxy
 newRefined3' :: forall opts ip op fmt i m
   . ( MonadEval m
@@ -813,10 +589,11 @@ eval3MSkip a = do
 data Msg3 = Msg3 { m3Desc :: !String
                  , m3Short :: !String
                  , m3Long :: !String
+                 , m3BoolP :: !BoolP
                  } deriving Eq
 
 instance Show Msg3 where
-  show (Msg3 a b c) = a <> nullIf " | " b <> nullIf "\n" c
+  show (Msg3 a b c _d) = a <> nullIf " | " b <> nullIf "\n" c
 
 prt3Impl :: forall a . Show a
   => POpts
@@ -825,21 +602,21 @@ prt3Impl :: forall a . Show a
 prt3Impl opts v =
   let outmsg msg = "*** " <> formatOMsg opts " " <> msg <> " ***\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ showL opts a ++ ")")
-      mkMsg3 m n r | hasNoTree opts = Msg3 m n ""
-                   | otherwise = Msg3 m n r
+      mkMsg3 m n r t | hasNoTree opts = Msg3 m n "" (t ^. root . pBool)
+                     | otherwise = Msg3 m n r (t ^. root . pBool)
   in case v of
        RF e t1 ->
          let (m,n) = ("Step 1. Initial Conversion(ip) Failed", e)
              r = outmsg m
               <> prtTreePure opts t1
-         in mkMsg3 m n r
+         in mkMsg3 m n r t1
        RTF a t1 e t2 ->
          let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg3 m n r
+         in mkMsg3 m n r t2
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", z)
              z = let w = t2 ^. root . pString
@@ -848,7 +625,7 @@ prt3Impl opts v =
               <> fixLite opts a t1
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg3 m n r
+         in mkMsg3 m n r t2
        RTTrueF a t1 t2 e t3 ->
          let (m,n) = ("Step 3. Failed Output Conversion(fmt)", e)
              r = msg1 a
@@ -857,7 +634,7 @@ prt3Impl opts v =
               <> prtTreePure opts t2
               <> outmsg m
               <> prtTreePure opts t3
-         in mkMsg3 m n r
+         in mkMsg3 m n r t3
        RTTrueT a t1 t2 t3 ->
          let (m,n) = ("Step 3. Success Output Conversion(fmt)", "")
              r = msg1 a
@@ -866,7 +643,7 @@ prt3Impl opts v =
               <> prtTreePure opts t2
               <> outmsg m
               <> fixLite opts () t3
-         in mkMsg3 m n r
+         in mkMsg3 m n r t3
 
 replaceOpt3 :: forall (opts :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 opts ip op fmt i
 replaceOpt3 = coerce

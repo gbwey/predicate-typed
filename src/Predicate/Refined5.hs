@@ -1,5 +1,5 @@
 -- refined5 doesnt care about the input as it is thrown away so we have no choice but to use PP ip i
--- like Refined2 but ditches the original input value
+-- like Refined2 but discards the original input value
 -- all instances uses the internal values except for IsString [internal value is less likely to be a string!]
 --   but json/binary/hash use internal input (ie PP ip i) as they json and binary have to roundtrip
 -- tojson only has access to PP ip i! so fromjson can only use this!
@@ -47,14 +47,6 @@ module Predicate.Refined5 (
   , newRefined5'
   , newRefined5P'
 
-  -- ** create a wrapped Refined5 value
-  , newRefined5T
-  , newRefined5TP
-  , newRefined5TIO
-  , withRefined5T
-  , withRefined5TP
-  , withRefined5TIO
-
   -- ** proxy methods
   , MakeR5
 
@@ -72,13 +64,11 @@ module Predicate.Refined5 (
   , appendOpt5
 
  ) where
-import Predicate.Refined2 (Msg2(..), RResults2(..), prt2Impl, Refined2C, getBoolP2)
+import Predicate.Refined2 (Msg2(..), RResults2(..), prt2Impl, Refined2C)
 import Predicate.Refined
 import Predicate.Core
 import Predicate.Util
-import Data.Proxy
-import Control.Monad.Except
-import Control.Monad.Writer (tell)
+import Data.Proxy (Proxy(..))
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Language.Haskell.TH.Syntax as TH
 import qualified GHC.Read as GR
@@ -87,11 +77,11 @@ import qualified Text.Read.Lex as RL
 import qualified Data.Binary as B
 import Data.Binary (Binary)
 import Control.Lens
-import Data.String
+import Data.String (IsString(..))
 import Data.Hashable (Hashable(..))
-import GHC.Stack
+import GHC.Stack (HasCallStack)
 import Test.QuickCheck
-import Data.Coerce
+import Data.Coerce (coerce)
 import Data.Either (isRight)
 import Data.Char (isSpace)
 import Control.Arrow (left)
@@ -139,11 +129,21 @@ unsafeRefined5 :: forall opts ip op i
   -> Refined5 opts ip op i
 unsafeRefined5 = Refined5
 
-deriving newtype instance NFData (PP ip i) => NFData (Refined5 opts ip op i)
-deriving stock instance Show (PP ip i) => Show (Refined5 opts ip op i)
-deriving stock instance Eq (PP ip i) => Eq (Refined5 opts ip op i)
-deriving stock instance Ord (PP ip i) => Ord (Refined5 opts ip op i)
-deriving stock instance TH.Lift (PP ip i) => TH.Lift (Refined5 opts ip op i)
+deriving newtype instance ( Refined2C opts ip op i
+                          , NFData (PP ip i)
+                          ) => NFData (Refined5 opts ip op i)
+deriving stock instance  ( Refined2C opts ip op i
+                         , Show (PP ip i)
+                         ) => Show (Refined5 opts ip op i)
+deriving stock instance ( Refined2C opts ip op i
+                        , Eq (PP ip i)
+                        ) => Eq (Refined5 opts ip op i)
+deriving stock instance ( Refined2C opts ip op i
+                        , Ord (PP ip i)
+                        ) => Ord (Refined5 opts ip op i)
+deriving stock instance ( Refined2C opts ip op i
+                        , TH.Lift (PP ip i)
+                        ) => TH.Lift (Refined5 opts ip op i)
 
 -- | 'IsString' instance for Refined5
 --
@@ -209,7 +209,9 @@ instance ( Refined2C opts ip op i
 -- >>> A.encode (unsafeRefined5 @OZ @Id @'True @Int 123)
 -- "123"
 --
-instance ToJSON (PP ip i) => ToJSON (Refined5 opts ip op i) where
+instance ( Refined2C opts ip op i
+         , ToJSON (PP ip i)
+         ) => ToJSON (Refined5 opts ip op i) where
   toJSON (Refined5 x) = toJSON x
 
 -- | 'FromJSON' instance for 'Refined5'
@@ -312,122 +314,6 @@ instance (Refined2C opts ip op i
         , Hashable (PP ip i)
         ) => Hashable (Refined5 opts ip op i) where
   hashWithSalt s (Refined5 b) = s + hash b
-
--- | same as 'withRefined5T' for IO
-withRefined5TIO :: forall opts ip op i m b
-  . ( MonadIO m
-    , Refined2C opts ip op i
-    , Show (PP ip i)
-    )
-  => i
-  -> (Refined5 opts ip op i -> RefinedT m b)
-  -> RefinedT m b
-withRefined5TIO = (>>=) . newRefined5TIO
-
--- | create a 'Refined5' value using a continuation
---
--- This first example reads a hex string and makes sure it is between 100 and 200 and then
--- reads a binary string and adds the values together
---
--- >>> prtRefinedTIO $ withRefined5T @OZ @(ReadBase Int 16) @(Between 100 200 Id) "a3" $ \x -> withRefined5T @OZ @(ReadBase Int 2) @'True "1001110111" $ \y -> pure (unRefined5 x + unRefined5 y)
--- 794
---
--- this example fails as the the hex value is out of range
---
--- >>> prtRefinedTIO $ withRefined5T @OAN @(ReadBase Int 16) @(Between 100 200 Id) "a388" $ \x -> withRefined5T @OAN @(ReadBase Int 2) @'True "1001110111" $ \y -> pure (x,y)
--- *** Step 1. Success Initial Conversion(ip) (41864) ***
--- P ReadBase(Int,16) 41864
--- |
--- `- P Id "a388"
--- *** Step 2. False Boolean Check(op) ***
--- False 41864 <= 200
--- |
--- +- P Id 41864
--- |
--- +- P '100
--- |
--- `- P '200
--- <BLANKLINE>
--- failure msg[Step 2. False Boolean Check(op) | {41864 <= 200}]
---
-withRefined5T :: forall opts ip op i m b
-  . ( Monad m
-    , Refined2C opts ip op i
-    , Show (PP ip i)
-    )
-  => i
-  -> (Refined5 opts ip op i -> RefinedT m b)
-  -> RefinedT m b
-withRefined5T = (>>=) . newRefined5TP (Proxy @'(opts,ip,op,i))
-
-withRefined5TP :: forall opts ip op i b proxy m
-  . ( Monad m
-    , Refined2C opts ip op i
-    , Show (PP ip i)
-    )
-  => proxy '(opts,ip,op,i)
-  -> i
-  -> (Refined5 opts ip op i -> RefinedT m b)
-  -> RefinedT m b
-withRefined5TP p = (>>=) . newRefined5TP p
-
--- | create a wrapped 'Refined5' type
---
--- >>> prtRefinedTIO $ newRefined5T @OL @(MkDayExtra Id >> 'Just Id) @(Thd == 5) (2019,11,1)
--- Refined5 (2019-11-01,44,5)
---
--- >>> prtRefinedTIO $ newRefined5T @OL @(MkDayExtra Id >> 'Just Id) @(Thd == 5) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {6 == 5}]
---
--- >>> prtRefinedTIO $ newRefined5T @OL @(MkDayExtra Id >> 'Just Id) @(Msg "wrong day:" (Thd == 5)) (2019,11,2)
--- failure msg[Step 2. False Boolean Check(op) | {wrong day: 6 == 5}]
---
--- >>> prtRefinedTIO $ newRefined5TIO @OL @(Hide (Rescan "(\\d+)" >> ConcatMap Snd Id) >> Map (ReadP Int Id) Id) @(Len > 0 && All (0 <..> 0xff)) "|23|99|255|254.911."
--- failure msg[Step 2. False Boolean Check(op) | {True && False | (All(5) i=4 (911 <= 255))}]
---
-newRefined5T :: forall opts ip op i m
-   . ( Refined2C opts ip op i
-     , Monad m
-     , Show (PP ip i)
-     ) => i
-      -> RefinedT m (Refined5 opts ip op i)
-newRefined5T = newRefined5TImpl (return . runIdentity)
-
--- | create a wrapped 'Refined5' type with an explicit proxy
-newRefined5TP :: forall opts ip op i proxy m
-   . ( Refined2C opts ip op i
-     , Monad m
-     , Show (PP ip i)
-     ) => proxy '(opts,ip,op,i)
-  -> i
-  -> RefinedT m (Refined5 opts ip op i)
-newRefined5TP _ = newRefined5TImpl (return . runIdentity)
-
--- | create a wrapped 'Refined5' type in IO
-newRefined5TIO :: forall opts ip op i m
-   . ( Refined2C opts ip op i
-     , MonadIO m
-     , Show (PP ip i)
-     ) => i
-      -> RefinedT m (Refined5 opts ip op i)
-newRefined5TIO = newRefined5TImpl @IO @m liftIO
-
-newRefined5TImpl :: forall n m opts ip op i
-   . ( Refined2C opts ip op i
-     , Monad m
-     , MonadEval n
-     , Show (PP ip i)
-     ) => (forall x . n x -> RefinedT m x)
-   -> i
-   -> RefinedT m (Refined5 opts ip op i)
-newRefined5TImpl f i = do
-  (ret,mr) <- f $ eval5M i
-  let m2 = prt2Impl (getOpt @opts) ret
-  unlessNullM (m2Long m2) (tell . pure)
-  case mr of
-    Nothing -> throwError (getBoolP2 ret, m2Desc m2 <> nullIf " | " (m2Short m2))
-    Just r -> return r
-
 
 newRefined5' :: forall opts ip op i m
   . ( MonadEval m
@@ -534,7 +420,7 @@ eval5M i = do
       (Left e,t2) -> (RTF a t1 e t2, Nothing)
    (Left e,t1) -> pure (RF e t1, Nothing)
 
--- | creates a 4-tuple proxy (see 'withRefined5TP' 'newRefined5TP' 'eval5P' 'newRefined5P')
+-- | creates a 4-tuple proxy (see 'eval5P' 'newRefined5P')
 --
 -- use type application to set the 4-tuple or set the individual parameters directly
 --

@@ -40,7 +40,6 @@ import Predicate.Refined3
 import Predicate.Refined5
 
 import qualified Language.Haskell.TH.Syntax as TH
-import Data.Functor.Identity
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -73,12 +72,11 @@ refinedTH :: forall opts p i
   -> TH.Q (TH.TExp (Refined opts p i))
 refinedTH i =
   let msg0 = "refinedTH"
-      ((bp,(top,e)),mr) = runIdentity $ newRefinedM @opts @p i
-  in case mr of
-       Nothing ->
+  in case newRefined @opts @p i of
+       Left (Msg0 _bp top e bpc) ->
          let msg1 = if hasNoTree (getOpt @opts) || null e then "" else "\n" ++ e
-         in fail $ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top ++ msg1
-       Just r -> [||r||]
+         in fail $ msg0 ++ ": predicate failed with " ++ bpc ++ " " ++ top ++ msg1
+       Right r -> [||r||]
 
 refinedTHIO :: forall opts p i
   . (TH.Lift i, RefinedC opts p i)
@@ -86,12 +84,12 @@ refinedTHIO :: forall opts p i
   -> TH.Q (TH.TExp (Refined opts p i))
 refinedTHIO i = do
   let msg0 = "refinedTHIO"
-  ((bp,(top,e)),mr) <- TH.runIO (newRefinedM i)
-  case mr of
-       Nothing ->
-         let msg1 = if hasNoTree (getOpt @opts) || null e then "" else "\n" ++ e
-         in fail $ msg0 ++ ": predicate failed with " ++ bp ++ " " ++ top ++ msg1
-       Just r -> [||r||]
+  lr <- TH.runIO (newRefined' i)
+  case lr of
+    Left (Msg0 _bp top e bpc) ->
+      let msg1 = if hasNoTree (getOpt @opts) || null e then "" else "\n" ++ e
+      in fail $ msg0 ++ ": predicate failed with " ++ bpc ++ " " ++ top ++ msg1
+    Right r -> [||r||]
 
 -- | creates a 'Refined2.Refined2' refinement type
 --

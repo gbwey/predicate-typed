@@ -1979,8 +1979,7 @@ prtTree opts pp =
           <> colorBoolT opts r
           <> " "
           <> topMessage pp
-          <> "\n"
-       _ -> formatOMsg opts "\n"
+       _ -> formatOMsg opts ""
          <> prtTreePure opts (fromTT pp)
 
 showIndex :: (Show i, Num i) => i -> String
