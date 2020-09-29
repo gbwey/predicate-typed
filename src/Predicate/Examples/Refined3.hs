@@ -5,7 +5,6 @@
 {-# OPTIONS -Wredundant-constraints #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wno-unused-imports #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -125,6 +124,7 @@ import Data.Time
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XTemplateHaskell
+-- >>> :set -XTypeApplications
 
 -- | credit card with luhn algorithm
 --

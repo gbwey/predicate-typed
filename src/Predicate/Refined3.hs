@@ -39,7 +39,7 @@
 module Predicate.Refined3 (
 
   -- ** Refined3
-    Refined3(r3In,r3Out)
+    Refined3(r3In, r3Out)
   , Refined3C
 
  -- ** display results
@@ -50,8 +50,8 @@ module Predicate.Refined3 (
   , eval3P
   , eval3M
   , newRefined3
-  , newRefined3P
   , newRefined3'
+  , newRefined3P
   , newRefined3P'
 
   -- ** proxy methods
@@ -433,17 +433,7 @@ data RResults3 a =
      | RTTrueF !a !(Tree PE) !(Tree PE) !String !(Tree PE) -- Right a + Right True + Left e
      | RTTrueT !a !(Tree PE) !(Tree PE) !(Tree PE)      -- Right a + Right True + Right b
      deriving Show
-{-
-getBoolP3 :: RResults3 a -> BoolP
-getBoolP3 r =
-  let z = case r of
-            RF _ t -> t
-            RTF _ _ _ t -> t
-            RTFalse _ _ t -> t
-            RTTrueF _ _ _ _ t -> t
-            RTTrueT _ _ _ t -> t
-  in z ^. root . pBool
--}
+
 -- | same as 'newRefined3P'' but passes in the proxy
 newRefined3' :: forall opts ip op fmt i m
   . ( MonadEval m

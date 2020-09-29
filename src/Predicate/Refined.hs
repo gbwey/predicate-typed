@@ -18,8 +18,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
@@ -32,6 +30,7 @@ module Predicate.Refined (
     Refined
   , unRefined
   , Msg0(..)
+  , showMsg0
   , RefinedC
 
   -- ** create methods
@@ -246,63 +245,17 @@ genRefined g =
           Just a -> pure $ unsafeRefined a
   in f 0
 
-{-
-prtRefinedIO :: forall opts p a
-   . RefinedC opts p a
-   => a
-   -> IO (Either (BoolT Bool) (Refined opts p a))
-prtRefinedIO a = do
-  let o = getOpt @opts
-  tt <- evalBool (Proxy @p) o a
-  let r = _ttBool tt
-  case oDebug o of
-     DZero -> pure ()
-     DLite -> putStrLn $ colorBoolT o r <> " " <> topMessage tt
-     _ -> putStrLn $ prtTree o tt
-  pure $ case getValueLR o "" tt [] of
-    Right True -> Right (Refined a)
-    _ -> Left r
--}
 data Msg0 = Msg0 { m0BoolT :: !(BoolT Bool)
                  , m0Short :: !String
                  , m0Long :: !String
                  , m0BoolTColor :: !String
                  } deriving Eq
 
+showMsg0 :: Msg0 -> String
+showMsg0 (Msg0 a b c d) = "Msg0 [" ++ show a ++ "]\nShort[" ++ b ++ "]\nLong[" ++ c ++ "]\nColor[" ++ d ++ "]"
+
 instance Show Msg0 where
   show (Msg0 _a _b c _d) = c
-{-
-newRefined' :: forall opts p a m
-   . ( MonadEval m
-     , RefinedC opts p a
-     )
-   => a
-   -> m (Either String (Refined opts p a))
-newRefined' a = do
-  lr <- newRefined' @opts @p a
-  return $ case lr of
-    Left (Msg0 _bp top e bpc) ->
-      case oDebug (getOpt @opts) of
-        DZero -> Left bpc
-        DLite -> Left (bpc <> nullIf " " top)
-        _ -> Left e
-    Right r -> return r
--}
-newRefinedMInternal :: forall opts p a m
-   . ( MonadEval m
-     , RefinedC opts p a
-     )
-   => a
-   -> m (Msg0, Maybe (Refined opts p a))
-newRefinedMInternal a = do
-  let o = getOpt @opts
-  pp <- evalBool (Proxy @p) o a
-  let r = colorBoolT' o (_ttBool pp)
-      s = prtTree o pp
-      msg0 = Msg0 (_ttBool pp) (topMessage pp) s r
-  pure $ (msg0,) $ case getValueLR o "" pp [] of
-       Right True -> Just (Refined a)
-       _ -> Nothing
 
 newRefined' :: forall opts p a m
    . ( MonadEval m
@@ -310,7 +263,15 @@ newRefined' :: forall opts p a m
      )
    => a
    -> m (Either Msg0 (Refined opts p a))
-newRefined' = fmap maybeToEither . newRefinedMInternal
+newRefined' a = do
+  let o = getOpt @opts
+  pp <- evalBool (Proxy @p) o a
+  let r = colorBoolT o (_ttBool pp)
+      s = prtTree o pp
+      msg0 = Msg0 (_ttBool pp) (topMessage pp) s r
+  pure $ case getValueLR o "" pp [] of
+       Right True -> Right (Refined a)
+       _ -> Left msg0
 
 -- | returns a 'Refined' value if @a@ is valid for the predicate @p@
 --
@@ -371,9 +332,6 @@ newRefined :: forall opts p a
    -> Either Msg0 (Refined opts p a)
 newRefined = runIdentity . newRefined'
 
-maybeToEither :: (a,Maybe b) -> Either a b
-maybeToEither (a,mb) = maybe (Left a) Right mb
-
 -- | create an unsafe 'Refined' value without running the predicate
 unsafeRefined :: forall opts p a . a -> Refined opts p a
 unsafeRefined = Refined
@@ -389,7 +347,7 @@ unsafeRefined' a =
   in case getValueLR o "" tt [] of
        Right True -> Refined a
        _ -> let s = prtTree o tt
-                bp = colorBoolT' o (_ttBool tt)
+                bp = colorBoolT o (_ttBool tt)
             in case oDebug o of
                  DZero -> error bp
                  DLite -> error $ bp ++ "\n" ++ s

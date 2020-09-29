@@ -38,13 +38,14 @@ module Predicate.Refined5 (
 
   -- ** Refined5
     Refined5
+  , unRefined5
 
   -- ** evaluation methods
   , eval5P
   , eval5M
   , newRefined5
-  , newRefined5P
   , newRefined5'
+  , newRefined5P
   , newRefined5P'
 
   -- ** proxy methods
@@ -57,8 +58,6 @@ module Predicate.Refined5 (
   -- ** unsafe methods for creating Refined5
   , unsafeRefined5
   , unsafeRefined5'
-
-  , unRefined5
 
   , replaceOpt5
   , appendOpt5
@@ -121,7 +120,7 @@ unsafeRefined5' :: forall opts ip op i
                   )
                 => PP ip i
                 -> Refined5 opts ip op i
-unsafeRefined5' = either error Refined5 . evalBoolP @opts @op
+unsafeRefined5' = either error Refined5 . evalBool5 @opts @op
 
 -- | directly load values into 'Refined5' without any checking
 unsafeRefined5 :: forall opts ip op i
@@ -249,7 +248,7 @@ instance ( Refined2C opts ip op i
          ) => FromJSON (Refined5 opts ip op i) where
   parseJSON z = do
                   i <- parseJSON @(PP ip i) z
-                  case evalBoolP @opts @op i of
+                  case evalBool5 @opts @op i of
                     Left e -> fail $ "Refined5:" ++ e
                     Right _ -> return (Refined5 i)
 
@@ -287,7 +286,7 @@ genRefined5P ::
   -> Gen (Refined5 opts ip op i)
 genRefined5P _ g =
   let f !cnt = do
-        mi <- suchThatMaybe g (isRight . evalBoolP @opts @op)
+        mi <- suchThatMaybe g (isRight . evalBool5 @opts @op)
         case mi of
           Nothing ->
              let o = getOpt @opts
@@ -304,7 +303,7 @@ instance ( Refined2C opts ip op i
          ) => Binary (Refined5 opts ip op i) where
   get = do
           i <- B.get @(PP ip i)
-          case evalBoolP @opts @op i of
+          case evalBool5 @opts @op i of
             Left e -> fail $ "Refined5:Binary:" ++ e
             Right _ -> return $ Refined5 i
   put (Refined5 r) = B.put @(PP ip i) r
@@ -451,11 +450,11 @@ appendOpt5 :: forall (opts :: Opt) opt0 ip op i
   -> Refined5 (opt0 ':# opts) ip op i
 appendOpt5 = coerce
 
-evalBoolP :: forall opts p a
+evalBool5 :: forall opts p a
    . RefinedC opts p a
    => a
    -> Either String a
-evalBoolP i =
+evalBool5 i =
   let pp = runIdentity $ evalBool (Proxy @p) (getOpt @opts) i
       opts = getOpt @opts
       (lr,p2) = getValAndPE pp

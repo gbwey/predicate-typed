@@ -22,7 +22,9 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE TemplateHaskell #-}
 {- |
      Utility methods for Predicate / methods for displaying the evaluation tree
 -}
@@ -32,6 +34,7 @@ module Predicate.Util (
   , ttBool
   , ttString
   , ttForest
+  , boolT2P
   , fixBoolT
   , topMessage
   , hasNoTree
@@ -50,7 +53,6 @@ module Predicate.Util (
   , PE
   , pBool
   , pString
-  , boolT2P
 
  -- ** create tree functions
   , mkNode
@@ -75,7 +77,6 @@ module Predicate.Util (
   , Color(..)
   , isVerbose
   , colorBoolT
-  , colorBoolT'
   , setOtherEffects
   , type Color1
   , type Color2
@@ -215,8 +216,6 @@ module Predicate.Util (
   , showIndex
   , mapB
   , fmapB
-  , groupBy'
-  , groupBy''
 
  -- ** tuple classes
   , ExtractL1C(..)
@@ -274,11 +273,22 @@ import qualified Safe (fromJustNote, headNote)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 
--- | represents the evaluation tree for predicates
-data TT a = TT { _ttBool :: !(BoolT a)  -- ^ the value at this root node
-               , _ttString :: !String  -- ^ detailed information eg input and output and text
-               , _ttForest :: !(Forest PE) -- ^ the child nodes
-               } deriving (Read, Show, Eq)
+-- | contains the untyped result from evaluating the expression tree
+data BoolP =
+    FailP !String -- ^ fails the entire evaluation
+  | FalseP       -- ^ False predicate
+  | TrueP        -- ^ True predicate
+  | PresentP     -- ^ Any value
+  deriving (Show, Ord, Eq, Read)
+
+makePrisms ''BoolP
+
+-- | untyped evaluation tree for final display
+data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
+             , _pString :: !String -- ^ optional strings to include in the results
+             } deriving (Show, Read, Eq)
+
+makeLenses ''PE
 
 -- | contains the typed result from evaluating the expression tree
 data BoolT a where
@@ -286,6 +296,8 @@ data BoolT a where
   FalseT :: BoolT Bool        -- false predicate
   TrueT :: BoolT Bool         -- true predicate
   PresentT :: !a -> BoolT a    -- non predicate value
+
+makePrisms ''BoolT
 
 -- | semigroup instance for 'BoolT'
 --
@@ -386,6 +398,13 @@ instance ( Typeable a
                           a2 <- PCR.step GR.readPrec
                           return (PresentT a2)))
 
+-- | evaluation tree for predicates
+data TT a = TT { _ttBool :: !(BoolT a)  -- ^ the value at this root node
+               , _ttString :: !String  -- ^ detailed information eg input and output and text
+               , _ttForest :: !(Forest PE) -- ^ the child nodes
+               } deriving (Read, Show, Eq)
+
+makeLenses ''TT
 
 -- | extracts the @BoolT a@ constructors from the typelevel
 class GetBoolT a (x :: BoolT a) | x -> a where
@@ -399,18 +418,6 @@ instance GetBoolT a ('PresentT b) where
 instance GetBoolT a ('FailT s) where
   getBoolT = FailT ""
 
--- | lens for accessing 'BoolT' in 'TT'
-ttBool :: Lens (TT a) (TT b) (BoolT a) (BoolT b)
-ttBool afb s = (\b -> s { _ttBool = b }) <$> afb (_ttBool s)
-
--- | lens for accessing the message from 'BoolT'
-ttString :: Lens' (TT a) String
-ttString afb s = (\b -> s { _ttString = b }) <$> afb (_ttString s)
-
--- | lens for accessing the subtree from 'BoolT'
-ttForest :: Lens' (TT a) (Forest PE)
-ttForest afb s = (\b -> s { _ttForest = b }) <$> afb (_ttForest s)
-
 -- | a lens from typed 'BoolT' to the untyped 'BoolP'
 boolT2P :: Lens' (BoolT a) BoolP
 boolT2P afb = \case
@@ -418,27 +425,6 @@ boolT2P afb = \case
   TrueT -> TrueT <$ afb TrueP
   FalseT -> FalseT <$ afb FalseP
   PresentT a -> PresentT a <$ afb PresentP
-
--- | contains the untyped result from evaluating the expression tree
-data BoolP =
-    FailP !String -- ^ fails the entire evaluation
-  | FalseP       -- ^ False predicate
-  | TrueP        -- ^ True predicate
-  | PresentP     -- ^ Any value
-  deriving (Show, Ord, Eq, Read)
-
--- | represents the untyped evaluation tree for final display
-data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
-             , _pString :: !String -- ^ optional strings to include in the results
-             } deriving (Show, Read, Eq)
-
--- | lens for accessing '_pBool'
-pBool :: Lens' PE BoolP
-pBool afb s = (\b -> s { _pBool = b }) <$> afb (_pBool s)
-
--- | lens for accessing 'PE'
-pString :: Lens' PE String
-pString afb s = (\b -> s { _pString = b }) <$> afb (_pString s)
 
 -- | creates a Node for the evaluation tree
 mkNode :: POpts
@@ -496,7 +482,7 @@ fromTTH (Holder x) = fromTT x
 hh :: TT w -> Holder
 hh = Holder
 
--- | add more detail to the tree if there are errors
+-- | decorate the tree with more detail when there are errors
 getValueLR :: POpts
            -> String
            -> TT a
@@ -788,26 +774,26 @@ litBS o s =
 -- | Regex options for Rescan Resplit Re etc
 data ROpt =
     Anchored -- ^ Force pattern anchoring
-  | Auto_callout -- ^ Compile automatic callouts
---  | Bsr_anycrlf --  \R matches only CR, LF, or CrlF
---  | Bsr_unicode -- ^ \R matches all Unicode line endings
+  | AutoCallout -- ^ Compile automatic callouts
+--  | BsrAnycrlf --  \R matches only CR, LF, or CrlF
+--  | BsrUnicode -- ^ \R matches all Unicode line endings
   | Caseless -- ^ Do caseless matching
-  | Dollar_endonly -- ^ dollar not to match newline at end
+  | DollarEndonly -- ^ dollar not to match newline at end
   | Dotall -- ^ matches anything including NL
   | Dupnames -- ^ Allow duplicate names for subpatterns
   | Extended -- ^ Ignore whitespace and # comments
   | Extra -- ^ PCRE extra features (not much use currently)
   | Firstline -- ^ Force matching to be before newline
   | Multiline -- ^ caret and dollar match newlines within data
---  | Newline_any -- ^ Recognize any Unicode newline sequence
---  | Newline_anycrlf -- ^ Recognize CR, LF, and CrlF as newline sequences
-  | Newline_cr -- ^ Set CR as the newline sequence
-  | Newline_crlf -- ^ Set CrlF as the newline sequence
-  | Newline_lf -- ^ Set LF as the newline sequence
-  | No_auto_capture -- ^ Disable numbered capturing parentheses (named ones available)
+--  | NewlineAny -- ^ Recognize any Unicode newline sequence
+--  | NewlineAnycrlf -- ^ Recognize CR, LF, and CrlF as newline sequences
+  | NewlineCr -- ^ Set CR as the newline sequence
+  | NewlineCrlf -- ^ Set CrlF as the newline sequence
+  | NewlineLf -- ^ Set LF as the newline sequence
+  | NoAutoCapture -- ^ Disable numbered capturing parentheses (named ones available)
   | Ungreedy -- ^ Invert greediness of quantifiers
   | Utf8 -- ^ Run in UTF--8 mode
-  | No_utf8_check -- ^ Do not check the pattern for UTF-8 validity
+  | NoUtf8Check -- ^ Do not check the pattern for UTF-8 validity
   deriving (Read, Show, Eq, Ord, Enum, Bounded)
 
 -- | compile a regex using the type level symbol
@@ -843,26 +829,26 @@ displayROpts xs = "[" <> intercalate ", " (nubOrd xs) <> "]"
 class GetROpt (o :: ROpt) where
   getROpt :: RL.PCREOption
 instance GetROpt 'Anchored where getROpt = RL.anchored
-instance GetROpt 'Auto_callout where getROpt = RL.auto_callout
---instance GetROpt 'Bsr_anycrlf where getROpt = RL.bsr_anycrlf
---instance GetROpt 'Bsr_unicode where getROpt = RL.bsr_unicode
+instance GetROpt 'AutoCallout where getROpt = RL.auto_callout
+--instance GetROpt 'BsrAnycrlf where getROpt = RL.bsr_anycrlf
+--instance GetROpt 'BsrUnicode where getROpt = RL.bsr_unicode
 instance GetROpt 'Caseless where getROpt = RL.caseless
-instance GetROpt 'Dollar_endonly where getROpt = RL.dollar_endonly
+instance GetROpt 'DollarEndonly where getROpt = RL.dollar_endonly
 instance GetROpt 'Dotall where getROpt = RL.dotall
 instance GetROpt 'Dupnames where getROpt = RL.dupnames
 instance GetROpt 'Extended where getROpt = RL.extended
 instance GetROpt 'Extra where getROpt = RL.extra
 instance GetROpt 'Firstline where getROpt = RL.firstline
 instance GetROpt 'Multiline where getROpt = RL.multiline
---instance GetROpt 'Newline_any where getROpt = RL.newline_any
---instance GetROpt 'Newline_anycrlf where getROpt = RL.newline_anycrlf
-instance GetROpt 'Newline_cr where getROpt = RL.newline_cr
-instance GetROpt 'Newline_crlf where getROpt = RL.newline_crlf
-instance GetROpt 'Newline_lf where getROpt = RL.newline_lf
-instance GetROpt 'No_auto_capture where getROpt = RL.no_auto_capture
+--instance GetROpt 'NewlineAny where getROpt = RL.newline_any
+--instance GetROpt 'NewlineAnycrlf where getROpt = RL.newline_anycrlf
+instance GetROpt 'NewlineCr where getROpt = RL.newline_cr
+instance GetROpt 'NewlineCrlf where getROpt = RL.newline_crlf
+instance GetROpt 'NewlineLf where getROpt = RL.newline_lf
+instance GetROpt 'NoAutoCapture where getROpt = RL.no_auto_capture
 instance GetROpt 'Ungreedy where getROpt = RL.ungreedy
 instance GetROpt 'Utf8 where getROpt = RL.utf8
-instance GetROpt 'No_utf8_check where getROpt = RL.no_utf8_check
+instance GetROpt 'NoUtf8Check where getROpt = RL.no_utf8_check
 
 -- | simple regex string replacement options
 data ReplaceFnSub = RPrepend | ROverWrite | RAppend deriving (Read, Show, Eq, Bounded, Enum)
@@ -979,32 +965,6 @@ _BoolT = prism (case eqT @Bool @b of
               TrueT -> Right True
               FalseT -> Right False
               FailT e -> Left (FailT e)
-
--- | 'FailT' prism
-_FailT :: Prism' (BoolT a) String
-_FailT = prism' FailT $ \case
-                         FailT s -> Just s
-                         _ -> Nothing
-
--- | 'PresentT' prism
-_PresentT :: Prism' (BoolT a) a
-_PresentT = prism' PresentT $ \case
-                                PresentT a -> Just a
-                                _ -> Nothing
-
--- | 'FalseT' prism
-_FalseT :: a ~ Bool => Prism' (BoolT a) ()
-_FalseT = prism' (const FalseT) $
-            \case
-               FalseT -> Just ()
-               _ -> Nothing
-
--- | 'TrueT' prism
-_TrueT :: a ~ Bool => Prism' (BoolT a) ()
-_TrueT = prism' (const TrueT) $
-            \case
-               TrueT -> Just ()
-               _ -> Nothing
 
 -- | boolean implication
 --
@@ -1255,29 +1215,29 @@ colorBoolP o =
     b@FalseP -> colorMe o b "False"
 
 -- | render the 'BoolT' value with colors
-colorBoolT :: Show a
+colorBoolTLite :: Show a
     => POpts
     -> BoolT a
     -> String
-colorBoolT o r =
-  let f = colorMe o (r ^. boolT2P)
-  in case r of
-      FailT e -> f "Error " <> e
-      TrueT -> f "True"
-      FalseT -> f "False"
-      PresentT x -> f "Present " <> show x
+colorBoolTLite o r =
+  colorMe o (r ^. boolT2P)
+  $ case r of
+      FailT e -> "Error " <> e
+      TrueT -> "True"
+      FalseT -> "False"
+      PresentT x -> "Present " <> show x
 
-colorBoolT' :: Show a
+colorBoolT :: Show a
    => POpts
    -> BoolT a
    -> String
-colorBoolT' o r =
-  let f = colorMe o (r ^. boolT2P)
-  in case r of
-      FailT e -> f "FailT " <> e
-      TrueT -> f "TrueT"
-      FalseT -> f "FalseT"
-      PresentT x -> f "PresentT " <> show x
+colorBoolT o r =
+  colorMe o (r ^. boolT2P)
+  $ case r of
+      FailT e -> "FailT " <> e
+      TrueT -> "TrueT"
+      FalseT -> "FalseT"
+      PresentT x -> "PresentT " <> show x
 
 -- | colors the result of the predicate based on the current color palette
 colorMe ::
@@ -1286,8 +1246,9 @@ colorMe ::
   -> String
   -> String
 colorMe o b s =
-  let (_, PColor f) = if oNoColor o then nocolor else oColor o
-  in f b s
+  let (_, f) | oNoColor o = nocolor
+             | otherwise = oColor o
+  in coerce f b s
 
 -- | override PresentP case if there is no tree ie lite or zero mode
 fixLite :: forall a . Show a
@@ -1971,16 +1932,15 @@ type family TheseT lr where
 
 prtTree :: Show x => POpts -> TT x -> String
 prtTree opts pp =
-  let r = pp ^. ttBool
-  in case oDebug opts of
-       DZero -> ""
-       DLite ->
-             formatOMsg opts " >>> "
-          <> colorBoolT opts r
-          <> " "
-          <> topMessage pp
-       _ -> formatOMsg opts ""
-         <> prtTreePure opts (fromTT pp)
+  case oDebug opts of
+     DZero -> ""
+     DLite ->
+           formatOMsg opts " >>> "
+        <> colorBoolTLite opts (pp ^. ttBool)
+        <> " "
+        <> topMessage pp
+     _ -> formatOMsg opts ""
+       <> prtTreePure opts (fromTT pp)
 
 showIndex :: (Show i, Num i) => i -> String
 showIndex i = show (i+0)
@@ -2176,27 +2136,6 @@ verboseList :: POpts -> TT a -> [Holder]
 verboseList o tt
   | isVerbose o = [hh tt]
   | otherwise = []
-
-groupBy' :: (a -> a -> Bool) -> [a] -> [[a]]
-groupBy' p =
-  \case
-    [] -> []
-    x:xs ->
-       foldr (\a k (a',zs) -> if p a' a then k (a,zs++[a]) else zs:k (a,[a]))
-             (pure . snd)
-             xs
-             (x,[x])
-
--- dlist version
-groupBy'' :: (a -> a -> Bool) -> [a] -> [[a]]
-groupBy'' p =
-  \case
-    [] -> []
-    x:xs ->
-       foldr (\a k (a',zs) -> if p a' a then k (a,zs . (a:)) else zs []:k (a,(a:)))
-             (\(_,b) -> [b []])
-             xs
-             (x,(x:))
 
 -- https://github.com/haskell/containers/pull/344
 drawTreeU :: Tree String -> String

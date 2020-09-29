@@ -5,7 +5,6 @@
 {-# OPTIONS -Wredundant-constraints #-}
 {-# OPTIONS -Wno-unused-imports #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -94,6 +93,7 @@ import Data.Proxy
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XTemplateHaskell
+-- >>> :set -XTypeApplications
 
 -- | credit card with luhn algorithm
 --

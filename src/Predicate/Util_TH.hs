@@ -73,9 +73,7 @@ refinedTH :: forall opts p i
 refinedTH i =
   let msg0 = "refinedTH"
   in case newRefined @opts @p i of
-       Left (Msg0 _bp top e bpc) ->
-         let msg1 = if hasNoTree (getOpt @opts) || null e then "" else "\n" ++ e
-         in fail $ msg0 ++ ": predicate failed with " ++ bpc ++ " " ++ top ++ msg1
+       Left m -> fail $ refinedFailMsg @opts msg0 m
        Right r -> [||r||]
 
 refinedTHIO :: forall opts p i
@@ -86,10 +84,14 @@ refinedTHIO i = do
   let msg0 = "refinedTHIO"
   lr <- TH.runIO (newRefined' i)
   case lr of
-    Left (Msg0 _bp top e bpc) ->
-      let msg1 = if hasNoTree (getOpt @opts) || null e then "" else "\n" ++ e
-      in fail $ msg0 ++ ": predicate failed with " ++ bpc ++ " " ++ top ++ msg1
+    Left m -> fail $ refinedFailMsg @opts msg0 m
     Right r -> [||r||]
+
+refinedFailMsg :: forall opts . OptC opts => String -> Msg0 -> String
+refinedFailMsg msg0 (Msg0 _bp top e bpc) =
+  let msg1 | hasNoTree (getOpt @opts) || null e = ""
+           | otherwise = nullIf "\n" e
+  in msg0 ++ ": predicate failed with " ++ bpc ++ " " ++ top ++ msg1
 
 -- | creates a 'Refined2.Refined2' refinement type
 --

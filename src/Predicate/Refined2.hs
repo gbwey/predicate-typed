@@ -33,21 +33,20 @@
 module Predicate.Refined2 (
 
   -- ** Refined2
-    Refined2(r2In,r2Out)
+    Refined2(r2In, r2Out)
   , Refined2C
 
  -- ** display results
   , Msg2 (..)
   , RResults2 (..)
   , prt2Impl
-  , getBoolP2
 
   -- ** evaluation methods
   , eval2P
   , eval2M
   , newRefined2
-  , newRefined2P
   , newRefined2'
+  , newRefined2P
   , newRefined2P'
 
   -- ** proxy methods
@@ -380,16 +379,6 @@ data RResults2 a =
      | RTFalse !a !(Tree PE) !(Tree PE)        -- op false
      | RTTrue !a !(Tree PE) !(Tree PE) -- op true
      deriving Show
-
-getBoolP2 :: RResults2 a -> BoolP
-getBoolP2 r =
-  let z = case r of
-            RF _ t -> t
-            RTF _ _ _ t -> t
-            RTFalse _ _ t -> t
-            RTTrue _ _ t -> t
-  in z ^. root . pBool
-
 
 newRefined2' :: forall opts ip op i m
   . ( MonadEval m
