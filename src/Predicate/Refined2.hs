@@ -238,25 +238,25 @@ instance ( Refined2C opts ip op i
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined2 OAN (ReadBase Int 16) (Id > 10 && Id < 256) String) "\"00fe443a\""
--- Error in $: Refined2:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
+-- Error in $: Refined2:Step 2. False Boolean Check(op) | {False:True && False | (False:16663610 < 256)}
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
--- P ReadBase(Int,16) 16663610
+-- ReadBase(Int,16) 16663610
 -- |
--- `- P Id "00fe443a"
+-- `- Id "00fe443a"
 -- *** Step 2. False Boolean Check(op) ***
--- False True && False | (16663610 < 256)
+-- False:True && False | (False:16663610 < 256)
 -- |
--- +- True 16663610 > 10
+-- +- True:16663610 > 10
 -- |  |
--- |  +- P Id 16663610
+-- |  +- Id 16663610
 -- |  |
--- |  `- P '10
+-- |  `- '10
 -- |
--- `- False 16663610 < 256
+-- `- False:16663610 < 256
 --    |
---    +- P Id 16663610
+--    +- Id 16663610
 --    |
---    `- P '256
+--    `- '256
 -- <BLANKLINE>
 --
 instance ( Refined2C opts ip op i
@@ -336,23 +336,23 @@ genRefined2P _ g =
 -- Refined2 {r2In = 2019-04-23, r2Out = "2019-04-23"}
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined2:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
+-- Refined2:Step 2. False Boolean Check(op) | {False:2019-05-30 <= 2019-04-23}
 -- *** Step 1. Success Initial Conversion(ip) (2019-04-23) ***
--- P ReadP Day 2019-04-23
+-- ReadP Day 2019-04-23
 -- |
--- `- P Id "2019-04-23"
+-- `- Id "2019-04-23"
 -- *** Step 2. False Boolean Check(op) ***
--- False 2019-05-30 <= 2019-04-23
+-- False:2019-05-30 <= 2019-04-23
 -- |
--- +- P Id 2019-04-23
+-- +- Id 2019-04-23
 -- |
--- +- P ReadP Day 2019-05-30
+-- +- ReadP Day 2019-05-30
 -- |  |
--- |  `- P '"2019-05-30"
+-- |  `- '"2019-05-30"
 -- |
--- `- P ReadP Day 2019-06-01
+-- `- ReadP Day 2019-06-01
 --    |
---    `- P '"2019-06-01"
+--    `- '"2019-06-01"
 -- <BLANKLINE>
 --
 instance ( Refined2C opts ip op i
@@ -414,7 +414,7 @@ newRefined2P' _ i = do
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
 -- >>> newRefined2 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
--- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
+-- Left Step 2. False Boolean Check(op) | {length invalid: False:5 == 4}
 --
 -- >>> newRefined2 @OZ @(Map (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
@@ -427,7 +427,7 @@ newRefined2P' _ i = do
 -- Right (Refined2 {r2In = (2019-10-13,41,7), r2Out = (2019,10,13)})
 --
 -- >>> newRefined2 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd == 7)) (2019,10,12)
--- Left Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}
+-- Left Step 2. False Boolean Check(op) | {expected a Sunday: False:6 == 7}
 --
 -- >>> newRefined2 @OZ @(MkDayExtra' Fst Snd Thd >> 'Just Id) @(GuardBool "expected a Sunday" (Thd == 7)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
@@ -439,7 +439,7 @@ newRefined2P' _ i = do
 -- Right (Refined2 {r2In = 2020-05-04 12:13:14 UTC, r2Out = "2020-05-04 12:13:14Z"})
 --
 -- >>> newRefined2 @OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust ToDay)) "2020-05-08 12:13:14Z"
--- Left Step 2. False Boolean Check(op) | {Just 2020-05-08 <= Just 2020-05-07}
+-- Left Step 2. False Boolean Check(op) | {False:Just 2020-05-08 <= Just 2020-05-07}
 --
 newRefined2 :: forall opts ip op i
   . ( Refined2C opts ip op i
@@ -501,21 +501,21 @@ prt2Impl :: forall a . Show a
 prt2Impl opts v =
   let outmsg msg = "*** " <> formatOMsg opts " " <> msg <> " ***\n"
       msg1 a = outmsg ("Step 1. Success Initial Conversion(ip) (" ++ showL opts a ++ ")")
-      mkMsg2 m n r t | hasNoTree opts = Msg2 m n "" (t ^. root . pBool)
-                     | otherwise = Msg2 m n r (t ^. root . pBool)
+      mkMsg2 m n r bp | hasNoTree opts = Msg2 m n "" bp
+                      | otherwise = Msg2 m n r bp
   in case v of
        RF e t1 ->
          let (m,n) = ("Step 1. Initial Conversion(ip) Failed", e)
              r = outmsg m
               <> prtTreePure opts t1
-         in mkMsg2 m n r t1
+         in mkMsg2 m n r (t1 ^. root . pBool)
        RTF a t1 e t2 ->
          let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg2 m n r t2
+         in mkMsg2 m n r (t2 ^. root . pBool)
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", z)
              z = let w = t2 ^. root . pString
@@ -524,14 +524,14 @@ prt2Impl opts v =
               <> fixLite opts a t1
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg2 m n r t2
+         in mkMsg2 m n r FalseP
        RTTrue a t1 t2 ->
          let (m,n) = ("Step 2. True Boolean Check(op)", "")
              r = msg1 a
               <> fixLite opts a t1
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg2 m n r t2
+         in mkMsg2 m n r (t2 ^. root . pBool)
 
 -- | creates a 4-tuple proxy (see 'eval2P' 'newRefined2P')
 --

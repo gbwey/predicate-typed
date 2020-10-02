@@ -78,12 +78,11 @@ import Predicate.Data.Ordering (type (==))
 import GHC.TypeLits (Nat,KnownNat)
 import qualified GHC.TypeLits as GL
 import Data.List (elemIndex, unfoldr)
-import Data.Proxy
-import Data.Typeable
+import Data.Typeable (Typeable, Proxy(Proxy))
 import Data.Kind (Type)
 import qualified Numeric
-import Data.Char
-import Data.Ratio
+import Data.Char (toLower)
+import Data.Ratio ((%))
 import GHC.Real (Ratio((:%)))
 import qualified Safe (fromJustNote)
 -- $setup
@@ -187,8 +186,8 @@ instance P (FromIntegralT t) x => P (FromIntegral t) x where
 -- PresentT (636 % 5)
 --
 -- >>> pl @(Fst >= Snd || Snd > 23 || 12 -% 5 <= ToRational Fst) (12,13)
--- True (False || True)
--- TrueT
+-- Present True (True:False || True)
+-- PresentT True
 --
 -- >>> pl @(ToRational 14) ()
 -- Present 14 % 1 (ToRational 14 % 1 | 14)
@@ -547,10 +546,10 @@ instance (PP p a ~ PP q a
 -- | creates a 'Rational' value
 --
 -- >>> pz @(Id < 21 % 5) (-3.1)
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Id < 21 % 5) 4.5
--- FalseT
+-- PresentT False
 --
 -- >>> pz @(Fst % Snd) (13,2)
 -- PresentT (13 % 2)
@@ -896,14 +895,14 @@ instance P (RemT p q) x => P (Rem p q) x where
 -- PresentT [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
 --
 data Even
-type EvenT = Mod I 2 == 0
+type EvenT = Mod Id 2 == 0
 
 instance P EvenT x => P Even x where
   type PP Even x = Bool
   eval _ = evalBool (Proxy @EvenT)
 
 data Odd
-type OddT = Mod I 2 == 1
+type OddT = Mod Id 2 == 1
 
 instance P OddT x => P Odd x where
   type PP Odd x = Bool
@@ -987,7 +986,7 @@ instance (Typeable (PP t x)
 --
 -- >>> :set -XBinaryLiterals
 -- >>> pz @(ReadBase Int 16 >> GuardSimple (Id > 0b10011111) >> ShowBase 16) "7f"
--- FailT "(127 > 159)"
+-- FailT "(False:127 > 159)"
 --
 -- >>> pl @(ReadBase Int 16) "fFe0"
 -- Present 65504 (ReadBase(Int,16) 65504 | "fFe0")

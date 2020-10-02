@@ -502,24 +502,24 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 -- | boolean guard which checks a given a list of predicates against the list of values
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ]) [12,93,14]
--- Error Bool(1) [mm] (93 <= 59)
--- FailT "Bool(1) [mm] (93 <= 59)"
+-- Error Bool(1) [mm] (False:93 <= 59)
+-- FailT "Bool(1) [mm] (False:93 <= 59)"
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ]) [12,13,94]
--- Error Bool(2) [<<<2 94>>>] (94 <= 59)
--- FailT "Bool(2) [<<<2 94>>>] (94 <= 59)"
+-- Error Bool(2) [<<<2 94>>>] (False:94 <= 59)
+-- FailT "Bool(2) [<<<2 94>>>] (False:94 <= 59)"
 --
 -- >>> pl @(Bools '[ '(W "hh",Between 0 23 Id), '(W "mm",Between 0 59 Id), '(PrintT "<<<%d %d>>>" Id,Between 0 59 Id) ]) [12,13,14]
--- True (Bools)
--- TrueT
+-- Present True (True:Bools)
+-- PresentT True
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id)]) [12,13,14]
--- True (Bools)
--- TrueT
+-- Present True (True:Bools)
+-- PresentT True
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id)]) [12,60,14]
--- Error Bool(1) [minutes] (60 <= 59)
--- FailT "Bool(1) [minutes] (60 <= 59)"
+-- Error Bool(1) [minutes] (False:60 <= 59)
+-- FailT "Bool(1) [minutes] (False:60 <= 59)"
 --
 -- >>> pl @(Bools '[ '("hours",Between 0 23 Id), '("minutes",Between 0 59 Id), '("seconds",Between 0 59 Id)]) [12,60,14,20]
 -- Error Bools:invalid length(4) expected 3
@@ -598,16 +598,16 @@ instance (PP prt (Int, a) ~ String
 -- | boolean guard which checks a given a list of predicates against the list of values
 --
 -- >>> pl @(BoolsQuick "abc" '[Between 0 23 Id, Between 0 59 Id, Between 0 59 Id]) [12,13,14]
--- True (Bools)
--- TrueT
+-- Present True (True:Bools)
+-- PresentT True
 --
 -- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23 Id, Between 0 59 Id, Between 0 59 Id]) [12,13,14]
--- True (Bools)
--- TrueT
+-- Present True (True:Bools)
+-- PresentT True
 --
 -- >>> pl @(BoolsQuick (PrintT "id=%d val=%d" Id) '[Between 0 23 Id, Between 0 59 Id, Between 0 59 Id]) [12,13,99]
--- Error Bool(2) [id=2 val=99] (99 <= 59)
--- FailT "Bool(2) [id=2 val=99] (99 <= 59)"
+-- Error Bool(2) [id=2 val=99] (False:99 <= 59)
+-- FailT "Bool(2) [id=2 val=99] (False:99 <= 59)"
 --
 
 data BoolsQuick (prt :: k) (ps :: [k1])
@@ -623,12 +623,12 @@ instance (PP (Bools (ToGuardsT prt ps)) x ~ Bool
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
 -- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (0 <..> 0xff)) [121,33,7,256]
--- Error Bool(3) [id=3 must be between 0 and 255, found 256] (256 <= 255)
--- FailT "Bool(3) [id=3 must be between 0 and 255, found 256] (256 <= 255)"
+-- Error Bool(3) [id=3 must be between 0 and 255, found 256] (False:256 <= 255)
+-- FailT "Bool(3) [id=3 must be between 0 and 255, found 256] (False:256 <= 255)"
 --
 -- >>> pl @(BoolsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (0 <..> 0xff)) [121,33,7,44]
--- True (Bools)
--- TrueT
+-- Present True (True:Bools)
+-- PresentT True
 --
 data BoolsN prt (n :: Nat) (p :: k1)
 type BoolsNT prt (n :: Nat) (p :: k1) = Bools (ToGuardsT prt (RepeatT n p))
@@ -821,7 +821,7 @@ instance (Show a
 -- | boolean guard
 --
 -- >>> pl @(GuardBool (PrintF "bad length = %d" Len) (Len > 9)) [3..8]
--- Error bad length = 6 (GuardBool (6 > 9))
+-- Error bad length = 6 (GuardBool (False:6 > 9))
 -- FailT "bad length = 6"
 --
 data GuardBool prt p
@@ -842,7 +842,7 @@ instance (P prt a
         pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
           Right ee -> mkNode opts (FailT ee) (msg0 <> nullSpace (topMessage pp)) [hh pp, hh qq]
-      Right True -> pure $ mkNode opts TrueT "" [hh pp]  -- dont show the guard message if successful
+      Right True -> pure $ mkNode opts (PresentT True) "" [hh pp]  -- dont show the guard message if successful
 
 -- | uses 'Guard' but negates @p@
 --
@@ -867,12 +867,12 @@ instance (P prt a
 -- PresentT 3
 --
 -- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head >> Gt (20 -% 1)) [3]
--- True ((>>) True | {3 % 1 > (-20) % 1})
--- TrueT
+-- Present True ((>>) True | {True:3 % 1 > (-20) % 1})
+-- PresentT True
 --
 -- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head >> Gt (20 -% 1)) [-23]
--- False ((>>) False | {(-23) % 1 > (-20) % 1})
--- FalseT
+-- Present False ((>>) False | {False:(-23) % 1 > (-20) % 1})
+-- PresentT False
 --
 -- >>> pl @(Map (ExitWhen "ExitWhen" (Gt 10) >> Gt 2) Id) [1..5]
 -- Present [False,False,True,True,True] (Map [False,False,True,True,True] | [1,2,3,4,5])
@@ -897,29 +897,29 @@ instance P (ExitWhenT prt p) x => P (ExitWhen prt p) x where
 -- | similar to 'Guard' but uses the root message of the False predicate case as the failure message
 --
 -- >>> pz @(GuardSimple IsLuhn) [1..4]
--- FailT "(IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])"
+-- FailT "(False:IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])"
 --
 -- >>> pl @IsLuhn [1..4]
--- False (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])
--- FalseT
+-- Present False (False:IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])
+-- PresentT False
 --
 -- >>> pz @(GuardSimple IsLuhn) [1,2,3,0]
 -- PresentT [1,2,3,0]
 --
 -- >>> pz @(GuardSimple (Len > 30)) [1,2,3,0]
--- FailT "(4 > 30)"
+-- FailT "(False:4 > 30)"
 --
 -- >>> pl @(Map (GuardSimple (Lt 3) >> 'True) Id) [1::Int .. 10]
--- Error (3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3) (Map(i=2, a=3) excnt=8)
--- FailT "(3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3)"
+-- Error (False:3 < 3) | (False:4 < 3) | (False:5 < 3) | (False:6 < 3) | (False:7 < 3) | (False:8 < 3) | (False:9 < 3) | (False:10 < 3) (Map(i=2, a=3) excnt=8)
+-- FailT "(False:3 < 3) | (False:4 < 3) | (False:5 < 3) | (False:6 < 3) | (False:7 < 3) | (False:8 < 3) | (False:9 < 3) | (False:10 < 3)"
 --
 -- >>> pl @(Map (GuardSimple (Ge 1) >> 'True) Id) [1::Int .. 10]
 -- Present [True,True,True,True,True,True,True,True,True,True] (Map [True,True,True,True,True,True,True,True,True,True] | [1,2,3,4,5,6,7,8,9,10])
 -- PresentT [True,True,True,True,True,True,True,True,True,True]
 --
 -- >>> pl @(Map (GuardSimple (Lt 3) >> 'True) Id) [1::Int .. 10]
--- Error (3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3) (Map(i=2, a=3) excnt=8)
--- FailT "(3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3)"
+-- Error (False:3 < 3) | (False:4 < 3) | (False:5 < 3) | (False:6 < 3) | (False:7 < 3) | (False:8 < 3) | (False:9 < 3) | (False:10 < 3) (Map(i=2, a=3) excnt=8)
+-- FailT "(False:3 < 3) | (False:4 < 3) | (False:5 < 3) | (False:6 < 3) | (False:7 < 3) | (False:8 < 3) | (False:9 < 3) | (False:10 < 3)"
 --
 data GuardSimple p
 

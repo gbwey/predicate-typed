@@ -59,15 +59,15 @@ Here is an example where the predicate fails at compile-time and we choose to sh
 *** Step 1. Success Initial Conversion(ip) (65535) ***
 P ReadBase(Int,16) 65535
 |
-`- P Id "000ffff"
+`- Id "000ffff"
 *** Step 2. False Boolean Check(op) ***
-False 65535 <= 255
+False:65535 <= 255
 |
-+- P Id 65535
++- Id 65535
 |
-+- P '0
++- '0
 |
-`- P '255
+`- '255
 
     * In the Template Haskell splice $$(refined2TH "000ffff")
       In the expression: $$(refined2TH "000ffff") :: MakeR2 (Hex OU)
@@ -90,7 +90,7 @@ An example of an invalid refined2TH call
 *** Step 1. Initial Conversion(ip) Failed ***
 [Error ReadP Day (2016-xy-09)]
 |
-`- P Id "2016-xy-09"
+`- Id "2016-xy-09"
 
 refined2TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09)
     * In the Template Haskell splice $$(refined2TH "2016-xy-09")
@@ -115,7 +115,7 @@ Error in $: Refined2:Step 1. Initial Conversion(ip) Failed | invalid base 16
 *** Step 1. Initial Conversion(ip) Failed ***
 [Error invalid base 16] ReadBase(Int,16) as=00feg err=[(254,"g")]
 |
-`- P Id "00feg"
+`- Id "00feg"
 
 ```
 
@@ -128,21 +128,21 @@ Error in $: Refined2:Step 2. False Boolean Check(op) | {True && False | (1666361
 *** Step 1. Success Initial Conversion(ip) [16663610] ***
 P ReadBase(Int,16) 16663610 | "00fe443a"
 |
-`- P Id "00fe443a"
+`- Id "00fe443a"
 
 *** Step 2. False Boolean Check(op) ***
-False True && False | (16663610 < 256)
+False:True && False | (16663610 < 256)
 |
-+- True 16663610 > 10
++- True:16663610 > 10
 |  |
-|  +- P Id 16663610
+|  +- Id 16663610
 |  |
-|  `- P '10
+|  `- '10
 |
-`- False 16663610 < 256
+`- False:16663610 < 256
    |
-   +- P Id 16663610
+   +- Id 16663610
    |
-   `- P '256
+   `- '256
 ```
 

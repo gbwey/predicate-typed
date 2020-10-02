@@ -53,7 +53,7 @@ import qualified GHC.TypeLits as GL
 import Control.Lens
 import Data.Proxy (Proxy(Proxy))
 import Data.Maybe (catMaybes)
-import Control.Arrow
+import Control.Arrow (Arrow((&&&)))
 import Data.Void (Void)
 
 -- $setup
@@ -307,19 +307,19 @@ instance P (FoldLT p q r) x => P (Foldl p q r) x where
 -- PresentT [1,2,3,4,5,6,7,8,9,10]
 --
 -- >>> pan @(Unfoldr (If (Id < 1) (MkNothing _) (MkJust (DivMod Id 2 >> Swap))) Id) 8
--- P Unfoldr 8 [0,0,0,1]
+-- Unfoldr 8 [0,0,0,1]
 -- |
--- +- P Id 8
+-- +- Id 8
 -- |
--- +- P i=1: If 'False Just (0,4)
+-- +- i=1: If 'False Just (0,4)
 -- |
--- +- P i=2: If 'False Just (0,2)
+-- +- i=2: If 'False Just (0,2)
 -- |
--- +- P i=3: If 'False Just (0,1)
+-- +- i=3: If 'False Just (0,1)
 -- |
--- +- P i=4: If 'False Just (1,0)
+-- +- i=4: If 'False Just (1,0)
 -- |
--- `- P i=5: If 'True Nothing
+-- `- i=5: If 'True Nothing
 -- PresentT [0,0,0,1]
 --
 data Unfoldr p q
@@ -415,7 +415,7 @@ instance P (IterateNWhileT n p f) x => P (IterateNWhile n p f) x where
 -- Present [95,94,93] ((>>) [95,94,93] | {Map [95,94,93] | [(3,95),(2,94),(1,93)]})
 -- PresentT [95,94,93]
 --
--- >>> pl @(IterateNUntil 9999 'False I) 1
+-- >>> pl @(IterateNUntil 9999 'False Id) 1
 -- Error Unfoldr (9999,1):recursion limit i=100 ((9999,1))
 -- FailT "Unfoldr (9999,1):recursion limit i=100"
 --

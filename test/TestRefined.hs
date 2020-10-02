@@ -53,11 +53,11 @@ unnamedTests = [
   , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @OZ @(Between 4 7 Id || Gt 14) 22))
   , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):FailT someval (||)"]) (toFrom (unsafeRefined @OL @(Between 4 7 Id || Gt 14 || Failt _ "someval") 12))
 
-  ,  (tst2' 10 200) >>= (@?= Right (10,200))
-  ,  (tst2' 11 12) >>= (@?= Left FalseT)
+  ,  tst2' 10 200 >>= (@?= Right (10,200))
+  ,  tst2' 11 12 >>= (@?= Left (PresentT False))
 
   ,  tst1' 10 200 @?= Right (10,200)
-  ,  tst1' 11 12 @?= Left FalseT
+  ,  tst1' 11 12 @?= Left (PresentT False)
 
   ]
 

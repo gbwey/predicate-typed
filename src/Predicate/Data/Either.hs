@@ -111,12 +111,12 @@ instance (Show a
 -- PresentT "hello"
 --
 -- >>> pl @('True ||| 'False) (Left "someval")
--- True ((|||) Left True | "someval")
--- TrueT
+-- Present True ((|||) Left True | "someval")
+-- PresentT True
 --
 -- >>> pl @('True ||| 'False) (Right "someval")
--- False ((|||) Right False | "someval")
--- FalseT
+-- Present False ((|||) Right False | "someval")
+-- PresentT False
 --
 -- >>> pl @(ShowP Succ ||| ShowP Id) (Left 123)
 -- Present "124" ((|||) Left "124" | 123)
@@ -131,8 +131,8 @@ instance (Show a
 -- PresentT True
 --
 -- >>> pl @(EitherIn (Not Id) Id) (Left True)
--- False ((|||) Left False | True)
--- FalseT
+-- Present False ((|||) Left False | True)
+-- PresentT False
 --
 data p ||| q
 infixr 2 |||
@@ -166,10 +166,10 @@ instance (Show (PP p a)
 -- | similar to 'isLeft'
 --
 -- >>> pz @IsLeft (Right 123)
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsLeft (Left 'a')
--- TrueT
+-- PresentT True
 --
 data IsLeft
 
@@ -181,10 +181,10 @@ instance x ~ Either a b
 -- | similar to 'isRight'
 --
 -- >>> pz @IsRight (Right 123)
--- TrueT
+-- PresentT True
 --
 -- >>> pz @IsRight (Left "aa")
--- FalseT
+-- PresentT False
 --
 data IsRight
 

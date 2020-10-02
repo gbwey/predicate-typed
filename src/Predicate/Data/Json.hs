@@ -33,8 +33,8 @@ module Predicate.Data.Json (
  ) where
 import Predicate.Core
 import Predicate.Util
-import Data.Proxy
-import Data.Typeable
+import Data.Proxy (Proxy(Proxy))
+import Data.Typeable (Typeable)
 import Data.Kind (Type)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP

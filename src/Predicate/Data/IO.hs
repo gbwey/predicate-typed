@@ -49,14 +49,14 @@ import Predicate.Data.Maybe (IsJust)
 import Predicate.Data.Monoid (type (<>))
 import Predicate.Data.ReadShow (ReadP)
 import GHC.TypeLits (Symbol,KnownSymbol)
-import Data.Proxy
+import Data.Proxy (Proxy(Proxy))
 import qualified Control.Exception as E
 import Data.Kind (Type)
-import Control.Arrow
-import Data.Time
-import System.Directory
-import System.IO
-import System.Environment
+import Control.Arrow (ArrowChoice(left))
+import Data.Time (UTCTime, ZonedTime, getCurrentTime, getZonedTime)
+import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
+import System.IO (hPutStr, withFile, IOMode(WriteMode, AppendMode))
+import System.Environment (getEnvironment, lookupEnv)
 import qualified Data.ByteString.Char8 as BS8
 
 -- $setup
@@ -69,10 +69,10 @@ import qualified Data.ByteString.Char8 as BS8
 -- | similar to 'System.IO.readFile'
 --
 -- >>> pz @(ReadFile "LICENSE" >> 'Just Id >> Len > 0) ()
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(FileExists "xyzzy") ()
--- FalseT
+-- PresentT False
 --
 data ReadFile p
 
@@ -129,10 +129,10 @@ type FileExistsT p = ReadFile p >> IsJust
 -- | similar to 'System.Directory.doesDirectoryExist'
 --
 -- >>> pz @(DirExists ".") ()
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(DirExists "xxy") ()
--- FalseT
+-- PresentT False
 --
 data DirExists p
 type DirExistsT p = ReadDir p >> IsJust
@@ -166,7 +166,7 @@ instance ( PP p x ~ String
 -- | read an environment variable: similar to 'System.Environment.getEnv'
 --
 -- >>> pz @(ReadEnv "PATH" >> 'Just Id >> 'True) ()
--- TrueT
+-- PresentT True
 --
 data ReadEnv p
 

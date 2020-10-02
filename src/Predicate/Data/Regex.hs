@@ -49,7 +49,7 @@ module Predicate.Data.Regex (
  ) where
 import Predicate.Core
 import Predicate.Util
-import Data.Proxy
+import Data.Proxy (Proxy(Proxy))
 import qualified Text.Regex.PCRE.Heavy as RH
 
 -- $setup
@@ -64,18 +64,18 @@ import qualified Text.Regex.PCRE.Heavy as RH
 -- | runs a regular expression with given regex options and returns a boolean: see 'RH.=~'
 --
 -- >>> pl @(Re' '[ 'Caseless, 'Dotall ] "ab" Id) "aB"
--- True (Re' ['Caseless, 'Dotall] (ab) | aB)
--- TrueT
+-- Present True (True:Re' ['Caseless, 'Dotall] (ab) | aB)
+-- PresentT True
 --
 -- >>> pl @(Re' '[ 'Caseless, 'Dotall ] "ab." Id) "aB\n"
--- True (Re' ['Caseless, 'Dotall] (ab.) | aB
+-- Present True (True:Re' ['Caseless, 'Dotall] (ab.) | aB
 -- )
--- TrueT
+-- PresentT True
 --
 -- >>> pl @(Re' '[ 'Caseless ] "ab." Id) "aB\n"
--- False (Re' ['Caseless] (ab.) | aB
+-- Present False (False:Re' ['Caseless] (ab.) | aB
 -- )
--- FalseT
+-- PresentT False
 --
 data Re' (rs :: [ROpt]) p q
 
@@ -105,27 +105,27 @@ instance (GetROpts rs
 -- | runs a regular expression and returns a boolean: see 'RH.=~'
 --
 -- >>> pz @(Re "^\\d{2}:\\d{2}:\\d{2}$") "13:05:25"
--- TrueT
+-- PresentT True
 --
 -- >>> pl @(Re "\\d{4}-\\d{3}") "1234-123"
--- True (Re (\d{4}-\d{3}) | 1234-123)
--- TrueT
+-- Present True (True:Re (\d{4}-\d{3}) | 1234-123)
+-- PresentT True
 --
 -- >>> pl @(Re "\\d{4}-\\d{3}") "1234-1x3"
--- False (Re (\d{4}-\d{3}) | 1234-1x3)
--- FalseT
+-- Present False (False:Re (\d{4}-\d{3}) | 1234-1x3)
+-- PresentT False
 --
 -- >>> pl @(Re "(?i)ab") "aB" -- runtime [use 'Caseless instead]
--- True (Re ((?i)ab) | aB)
--- TrueT
+-- Present True (True:Re ((?i)ab) | aB)
+-- PresentT True
 --
 -- >>> pl @(Re "ab") "aB"
--- False (Re (ab) | aB)
--- FalseT
+-- Present False (False:Re (ab) | aB)
+-- PresentT False
 --
 -- >>> pl @(Re "^\\d{1,3}(?:\\.\\d{1,3}){3}$") "123.1.1.21"
--- True (Re (^\d{1,3}(?:\.\d{1,3}){3}$) | 123.1.1.21)
--- TrueT
+-- Present True (True:Re (^\d{1,3}(?:\.\d{1,3}){3}$) | 123.1.1.21)
+-- PresentT True
 --
 -- >>> pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$") >> ReadP Double Id) "13.345"
 -- Present 13.345 ((>>) 13.345 | {ReadP Double 13.345})
@@ -144,22 +144,22 @@ instance (GetROpts rs
 -- FailT "Regex failed to compile"
 --
 -- >>> pl @(Re "^\\d+$") "123\nx"
--- False (Re (^\d+$) | 123
+-- Present False (False:Re (^\d+$) | 123
 -- x)
--- FalseT
+-- PresentT False
 --
 -- >>> pl @(Re "(?m)^\\d+$") "123\nx" -- (?m) anchors match beginning/end of line instead of whole string
--- True (Re ((?m)^\d+$) | 123
+-- Present True (True:Re ((?m)^\d+$) | 123
 -- x)
--- TrueT
+-- PresentT True
 --
 -- >>> pl @(Catch (Re "\\d+(") 'False) "123"
--- False (Catch caught exception[Regex failed to compile])
--- FalseT
+-- Present False (Catch caught exception[Regex failed to compile])
+-- PresentT False
 --
 -- >>> pl @(Catch (Re "\\d+") 'False) "123"
--- True (Catch did not fire)
--- TrueT
+-- Present True (Catch did not fire)
+-- PresentT True
 --
 data Re p
 type ReT p = Re' '[] p Id

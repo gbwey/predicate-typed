@@ -22,9 +22,9 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveTraversable #-}
 {- |
      Utility methods for Predicate / methods for displaying the evaluation tree
 -}
@@ -35,7 +35,6 @@ module Predicate.Util (
   , ttString
   , ttForest
   , boolT2P
-  , fixBoolT
   , topMessage
   , hasNoTree
 
@@ -44,8 +43,6 @@ module Predicate.Util (
   , GetBoolT(..)
   , _FailT
   , _PresentT
-  , _FalseT
-  , _TrueT
   , _BoolT
 
  -- ** PE
@@ -69,6 +66,7 @@ module Predicate.Util (
   , prefixMsg
   , splitAndAlign
   , verboseList
+  , fixEmptyNode
 
  -- ** display options
   , POpts
@@ -76,7 +74,7 @@ module Predicate.Util (
   , Disp(..)
   , Color(..)
   , isVerbose
-  , colorBoolT
+  , colorBoolTBool
   , setOtherEffects
   , type Color1
   , type Color2
@@ -214,8 +212,6 @@ module Predicate.Util (
   , unlessNullM
   , badLength
   , showIndex
-  , mapB
-  , fmapB
 
  -- ** tuple classes
   , ExtractL1C(..)
@@ -233,7 +229,7 @@ import Control.Arrow
 import Data.List (intercalate, unfoldr)
 import Data.Tree (drawTree, Forest, Tree(Node))
 import Data.Tree.Lens (root)
-import Data.Typeable (Typeable, Proxy(Proxy), eqT, typeRep)
+import Data.Typeable
 import System.Console.Pretty
 import GHC.Exts (Constraint)
 import qualified Text.Regex.PCRE.Heavy as RH
@@ -249,7 +245,6 @@ import Data.These.Combinators (isThis, isThat, isThese)
 import qualified Control.Exception as E
 import Control.DeepSeq (NFData, ($!!))
 import System.IO.Unsafe (unsafePerformIO)
-import Data.Bool (bool)
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as N
 import Data.Either (partitionEithers)
@@ -260,13 +255,15 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.ByteString.Char8 as BS8
 import GHC.Stack (HasCallStack)
-import Data.Monoid (Last(Last)) 
+import Data.Monoid (Last(Last))
 import Data.Maybe (fromMaybe)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import Data.Containers.ListUtils (nubOrd)
 import Data.Char (isSpace)
 import qualified Safe (fromJustNote, headNote)
+import Control.Monad (ap)
+import Data.Bool (bool)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -290,18 +287,21 @@ data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
 makeLenses ''PE
 
 -- | contains the typed result from evaluating the expression tree
-data BoolT a where
-  FailT :: !String -> BoolT a  -- failure with string
-  FalseT :: BoolT Bool        -- false predicate
-  TrueT :: BoolT Bool         -- true predicate
-  PresentT :: !a -> BoolT a    -- non predicate value
+data BoolT a = FailT !String | PresentT !a
+  deriving (Show, Eq, Ord, Read, Functor, Foldable, Traversable)
 
 makePrisms ''BoolT
 
+instance Applicative BoolT where
+  pure = PresentT
+  (<*>) = ap
+
+instance Monad BoolT where
+  return = pure
+  PresentT a >>= amb = amb a
+  FailT s >>= _ = FailT s
+
 -- | semigroup instance for 'BoolT'
---
--- >>> PresentT False <> (PresentT True <> FalseT) == (PresentT False <> PresentT True) <> FalseT
--- True
 --
 -- >>> PresentT 123 <> (PresentT 456 <> PresentT 789) == (PresentT 123 <> PresentT 456) <> PresentT 789
 -- True
@@ -325,30 +325,12 @@ instance Semigroup (BoolT a) where
    FailT s <> FailT s1 = FailT (s <> s1)
    FailT s <> _ = FailT s
    _ <> FailT s = FailT s
-   FalseT <> _ = FalseT
-   _ <> FalseT = FalseT
-   TrueT <> TrueT = TrueT
-   TrueT <> PresentT a = PresentT a
-   PresentT a <> TrueT = PresentT a
    PresentT _a <> PresentT b = PresentT b
-
-deriving instance Show a => Show (BoolT a)
-deriving instance Eq a => Eq (BoolT a)
-deriving instance Ord a => Ord (BoolT a)
 
 -- | 'Read' instance for BoolT
 --
 -- >>> reads @(BoolT Int) "PresentT 123"
 -- [(PresentT 123,"")]
---
--- >>> reads @(BoolT Int) "TrueT"
--- []
---
--- >>> reads @(BoolT Bool) "TrueT"
--- [(TrueT,"")]
---
--- >>> reads @(BoolT Bool) "FalseT"
--- [(FalseT,"")]
 --
 -- >>> reads @(BoolT Bool) "PresentT False abc"
 -- [(PresentT False," abc")]
@@ -360,58 +342,28 @@ deriving instance Ord a => Ord (BoolT a)
 -- [(FailT "some error message","")]
 --
 
-instance ( Typeable a
-         , Read a
-         ) => Read (BoolT a) where
-  readPrec
-      = case eqT @a @Bool of
-          Just Refl ->
-           GR.parens
-            (GR.choose
-             [("FalseT", return FalseT),
-              ("TrueT", return TrueT)]
-             PCR.+++
-               (PCR.prec
-                  10
-                  (do GR.expectP (L.Ident "FailT")
-                      a1 <- PCR.step GR.readPrec
-                      return (FailT a1))
-                  PCR.+++
-                    PCR.prec
-                      10
-                      (do GR.expectP (L.Ident "PresentT")
-                          a2 <- PCR.step GR.readPrec
-                          return (PresentT a2))))
-
-          Nothing ->
-           GR.parens
-             (PCR.prec
-                  10
-                  (do GR.expectP (L.Ident "FailT")
-                      a1 <- PCR.step GR.readPrec
-                      return (FailT a1))
-                  PCR.+++
-                    PCR.prec
-                      10
-                      (do GR.expectP (L.Ident "PresentT")
-                          a2 <- PCR.step GR.readPrec
-                          return (PresentT a2)))
-
 -- | evaluation tree for predicates
 data TT a = TT { _ttBool :: !(BoolT a)  -- ^ the value at this root node
                , _ttString :: !String  -- ^ detailed information eg input and output and text
                , _ttForest :: !(Forest PE) -- ^ the child nodes
-               } deriving (Read, Show, Eq)
+               } deriving (Functor, Read, Show, Eq, Foldable, Traversable)
 
 makeLenses ''TT
+
+instance Applicative TT where
+  pure a = TT (pure a) "" []
+  (<*>) = ap
+
+instance Monad TT where
+  return = pure
+  TT (PresentT a) y z >>= amb =
+    let TT w _y1 z1 = amb a
+    in TT w (y++ nullIf " | " _y1) (z <> z1)
+  TT (FailT s) y z >>= _ = TT (FailT s) y z
 
 -- | extracts the @BoolT a@ constructors from the typelevel
 class GetBoolT a (x :: BoolT a) | x -> a where
   getBoolT :: BoolT Bool
-instance GetBoolT Bool 'TrueT where
-  getBoolT = TrueT
-instance GetBoolT Bool 'FalseT where
-  getBoolT = FalseT
 instance GetBoolT a ('PresentT b) where
   getBoolT = PresentT False
 instance GetBoolT a ('FailT s) where
@@ -421,8 +373,6 @@ instance GetBoolT a ('FailT s) where
 boolT2P :: Lens' (BoolT a) BoolP
 boolT2P afb = \case
   FailT e -> FailT e <$ afb (FailP e)
-  TrueT -> TrueT <$ afb TrueP
-  FalseT -> FalseT <$ afb FalseP
   PresentT a -> PresentT a <$ afb PresentP
 
 -- | creates a Node for the evaluation tree
@@ -447,7 +397,10 @@ mkNodeB :: POpts
         -> String
         -> [Holder]
         -> TT Bool
-mkNodeB opts = mkNode opts . bool FalseT TrueT
+mkNodeB opts b s =
+  let (bp,tf) = bool (FalseP,"False") (TrueP,"True") b
+      c = colorMe opts bp tf
+  in mkNode opts (PresentT b) (c <> nullIf ":" s)
 
 mkNodeSkipP :: Tree PE
 mkNodeSkipP = Node (PE TrueP "skipped PP ip i = Id") []
@@ -462,8 +415,6 @@ getValLRFromTT = getValLR  . _ttBool
 getValLR :: BoolT a -> Either String a
 getValLR = \case
     FailT e -> Left e
-    TrueT -> Right True
-    FalseT -> Right False
     PresentT a -> Right a
 
 -- | converts a typed tree to an untyped tree for display
@@ -678,10 +629,6 @@ type Color5 = 'OColor "color5" 'Blue 'Default 'Red 'Default 'Cyan 'Default 'Yell
 
 type Other1 = 'OOther 'True 'Yellow 'Default
 type Other2 = 'OOther 'True 'Default 'Default
-
--- | fix PresentT Bool to TrueT or FalseT
-fixBoolT :: TT Bool -> TT Bool
-fixBoolT = ttBool . _BoolT %~ id
 
 show01 :: (Show a1, Show a2)
   => POpts
@@ -900,8 +847,6 @@ partitionTTExtended (s, t) =
   case _ttBool t of
     FailT e -> Left ((s, t & ttBool .~ FailT e), e)
     PresentT a -> Right (a,s,t)
-    TrueT -> Right (True,s,t)
-    FalseT -> Right (False,s,t)
 
 formatList :: forall x z . Show x
   => POpts
@@ -909,32 +854,14 @@ formatList :: forall x z . Show x
   -> String
 formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts DLite ", a=" a <> ")")
 
-instance Foldable TT where
-  foldMap am = foldMap am . _ttBool
-
-instance Foldable BoolT where
-  foldMap am = either (const mempty) am . getValLR
-
 -- (_BoolT %~ length) <$> pz @Pairs [1..4]
 -- (over _BoolT length) <$> pz @Pairs [1..4]
 -- fmapB length $ pz @Pairs [1..4]
 
 -- | BoolT prism
 --
--- >>> _BoolT # True
--- TrueT
---
--- >>> _BoolT # False
--- FalseT
---
 -- >>> _BoolT # 123
 -- PresentT 123
---
--- >>> TrueT ^? _BoolT
--- Just True
---
--- >>> FalseT ^? _BoolT
--- Just False
 --
 -- >>> PresentT 123 ^? _BoolT
 -- Just 123
@@ -943,26 +870,18 @@ instance Foldable BoolT where
 -- Nothing
 --
 -- >>> PresentT 1 & _BoolT .~ True
--- TrueT
+-- PresentT True
 --
 -- >>> PresentT False & _BoolT %~ not
--- TrueT
---
--- >>> TrueT & _BoolT .~ 123
--- PresentT 123
+-- PresentT True
 --
 -- >>> FailT "asdF" & _BoolT .~ True
 -- FailT "asdF"
 --
-_BoolT :: forall a b . Typeable b => Prism (BoolT a) (BoolT b) a b
-_BoolT = prism (case eqT @Bool @b of
-                    Just Refl -> bool FalseT TrueT
-                    Nothing -> PresentT
-                 )
+_BoolT :: forall a b . Prism (BoolT a) (BoolT b) a b
+_BoolT = prism PresentT
          $ \case
               PresentT a -> Right a
-              TrueT -> Right True
-              FalseT -> Right False
               FailT e -> Left (FailT e)
 
 -- | boolean implication
@@ -1183,7 +1102,7 @@ toNodeString :: POpts
 toNodeString opts bpe =
   if hasNoTree opts
   then errorInProgram $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
-  else colorBoolP opts (_pBool bpe) <> " " <> _pString bpe
+  else colorBoolP opts (_pBool bpe) <> _pString bpe
 
 hasNoTree :: POpts -> Bool
 hasNoTree opts =
@@ -1206,12 +1125,13 @@ colorBoolP ::
      POpts
   -> BoolP
   -> String
-colorBoolP o =
-  \case
-    b@(FailP e) -> "[" <> colorMe o b "Error" <> nullSpace e <> "]"
-    b@PresentP -> colorMe o b "P"
-    b@TrueP -> colorMe o b "True"
-    b@FalseP -> colorMe o b "False"
+colorBoolP o b =
+  case b of
+    FailP e -> "[" <> f "Error" <> nullSpace e <> "] "
+    PresentP -> "" -- f "P "
+    TrueP -> f "True "
+    FalseP -> f "False "
+  where f = colorMe o b
 
 -- | render the 'BoolT' value with colors
 colorBoolTLite :: Show a
@@ -1222,21 +1142,17 @@ colorBoolTLite o r =
   colorMe o (r ^. boolT2P)
   $ case r of
       FailT e -> "Error " <> e
-      TrueT -> "True"
-      FalseT -> "False"
       PresentT x -> "Present " <> show x
 
-colorBoolT :: Show a
-   => POpts
-   -> BoolT a
+colorBoolTBool ::
+      POpts
+   -> BoolT Bool
    -> String
-colorBoolT o r =
-  colorMe o (r ^. boolT2P)
-  $ case r of
-      FailT e -> "FailT " <> e
-      TrueT -> "TrueT"
-      FalseT -> "FalseT"
-      PresentT x -> "PresentT " <> show x
+colorBoolTBool o r =
+  case r of
+      FailT e -> colorMe o (FailP e) ("FailT " <> e)
+      PresentT True -> colorMe o TrueP "TrueT"
+      PresentT False -> colorMe o FalseP "FalseT"
 
 -- | colors the result of the predicate based on the current color palette
 colorMe ::
@@ -1933,61 +1849,19 @@ prtTree :: Show x => POpts -> TT x -> String
 prtTree opts pp =
   case oDebug opts of
      DZero -> ""
+
      DLite ->
            formatOMsg opts " >>> "
-        <> colorBoolTLite opts (pp ^. ttBool)
-        <> " "
-        <> topMessage pp
+           <> colorBoolTLite opts (pp ^. ttBool)
+           <> " "
+           <> topMessage pp
+
      _ -> formatOMsg opts ""
-       <> prtTreePure opts (fromTT pp)
+          <> prtTreePure opts (fromTT pp)
 
 showIndex :: (Show i, Num i) => i -> String
 showIndex i = show (i+0)
 
--- | map over 'BoolT'
---
--- >>> mapB show (PresentT 123)
--- PresentT "123"
---
--- >>> mapB show TrueT
--- PresentT "True"
---
--- >>> mapB not TrueT
--- FalseT
---
--- >>> mapB head (PresentT [1..5])
--- PresentT 1
---
--- >>> mapB head (PresentT [True,False])
--- TrueT
---
--- >>> mapB null (PresentT "asf")
--- FalseT
---
--- >>> mapB head (FailT "some error")
--- FailT "some error"
---
--- >>> mapB id (PresentT False)
--- FalseT
---
--- >>> mapB succ (PresentT False)
--- TrueT
---
--- >>> mapB head (PresentT [False,True,False])
--- FalseT
---
--- >>> mapB id (PresentT True)
--- TrueT
---
--- >>> mapB id FalseT
--- FalseT
---
-mapB :: Typeable b => (a -> b) -> BoolT a -> BoolT b
-mapB = over _BoolT
-
--- | convenience method for running 'mapB' inside a functor
-fmapB :: (Typeable b, Functor f) => (a -> b) -> f (BoolT a) -> f (BoolT b)
-fmapB = fmap . mapB
 
 class ExtractL1C tp where
   type ExtractL1T tp
@@ -2150,3 +2024,11 @@ drawU (Node x ts0) = x : drawSubTrees ts0
         shift "\x251c\x2500" "\x2502 " (drawU t) ++ drawSubTrees ts
 
     shift one other = zipWith (++) (one : repeat other)
+
+fixEmptyNode :: String -> TT a -> TT a
+fixEmptyNode s = over (ttForest . traverse) (fixEmptyNode' s)
+
+fixEmptyNode' :: String -> Tree PE -> Tree PE
+fixEmptyNode' s = go
+ where go (Node (PE PresentP "") []) = Node (PE PresentP s) []
+       go (Node p xs) = Node p (map go xs)

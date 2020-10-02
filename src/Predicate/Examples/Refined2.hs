@@ -104,7 +104,7 @@ import Data.Proxy
 -- Right (Refined2 {r2In = [1,2,3,4,5,6,7,8,9,0,3], r2Out = "1234-5678-903"})
 --
 -- >>> pz @(Luhnip >> Luhnop 11) "79927398713"
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Luhnip >> Luhnop 10) "79927398713"
 -- FailT "expected 10 digits but found 11"
@@ -142,10 +142,10 @@ type DateTimeN (opts :: Opt) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True
 -- Right (Refined2 {r2In = [134,1,2211], r2Out = "134-01-2211"})
 --
 -- >>> newRefined2 @OL @Ssnip @Ssnop "666-01-2211"
--- Left Step 2. Failed Boolean Check(op) | Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))
+-- Left Step 2. Failed Boolean Check(op) | Bool(0) [number for group 0 invalid: found 666] (False:True && False | (False:666 /= 666))
 --
 -- >>> newRefined2 @OL @Ssnip @Ssnop "667-00-2211"
--- Left Step 2. Failed Boolean Check(op) | Bool(1) [number for group 1 invalid: found 0] (1 <= 0)
+-- Left Step 2. Failed Boolean Check(op) | Bool(1) [number for group 1 invalid: found 0] (False:1 <= 0)
 --
 
 ssn :: OptC opts => Proxy (Ssn opts)
@@ -161,10 +161,10 @@ type Ssn (opts :: Opt) = '(opts, Ssnip, Ssnop, String)
 -- Right (Refined2 {r2In = [23,13,59], r2Out = "23:13:59"})
 --
 -- >>> newRefined2 @OL @Hmsip @Hmsop' "23:13:60"
--- Left Step 2. Failed Boolean Check(op) | Bool(2) [seconds] (60 <= 59)
+-- Left Step 2. Failed Boolean Check(op) | Bool(2) [seconds] (False:60 <= 59)
 --
 -- >>> newRefined2 @OL @Hmsip @Hmsop' "26:13:59"
--- Left Step 2. Failed Boolean Check(op) | Bool(0) [hours] (26 <= 23)
+-- Left Step 2. Failed Boolean Check(op) | Bool(0) [hours] (False:26 <= 23)
 --
 hms :: OptC opts => Proxy (Hms opts)
 hms = mkProxy2'
@@ -184,7 +184,7 @@ type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', String)
 -- Right (Refined2 {r2In = [1,223,14,1], r2Out = "001.223.14.1"})
 --
 -- >>> newRefined2 @OL @Ip4ip @Ip4op' "001.223.14.999"
--- Left Step 2. Failed Boolean Check(op) | Bool(3) [octet 3 out of range 0-255 found 999] (999 <= 255)
+-- Left Step 2. Failed Boolean Check(op) | Bool(3) [octet 3 out of range 0-255 found 999] (False:999 <= 255)
 --
 -- >>> newRefined2P (ip4 @OL) "001.223.14.999"
 -- Left Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 999
@@ -255,10 +255,10 @@ luhn11 = Proxy
 -- Right (Refined2 {r2In = 254, r2Out = "00fe"})
 --
 -- >>> newRefined2 @OZ @(ReadBase Int 16) @(GuardSimple (Id < 400) >> 'True) "f0fe"
--- Left Step 2. Failed Boolean Check(op) | (61694 < 400)
+-- Left Step 2. Failed Boolean Check(op) | (False:61694 < 400)
 --
 -- >>> newRefined2 @OL @(ReadBase Int 16) @(Id < 400) "f0fe" -- todo: why different parens vs braces
--- Left Step 2. False Boolean Check(op) | {61694 < 400}
+-- Left Step 2. False Boolean Check(op) | {False:61694 < 400}
 --
 type BaseN (opts :: Opt) (n :: Nat) = BaseN' opts n 'True
 type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n, p, String)
@@ -283,7 +283,7 @@ type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n, p, String)
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
 -- >>> newRefined2 @OL @(BaseIJip 16 2) @(ReadBase Int 2 < 1000) "ffe"
--- Left Step 2. False Boolean Check(op) | {4094 < 1000}
+-- Left Step 2. False Boolean Check(op) | {False:4094 < 1000}
 --
 type BaseIJip (i :: Nat) (j :: Nat) = ReadBase Int i >> ShowBase j
 
@@ -309,7 +309,7 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, String
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
 -- >>> newRefined2 @OL @(ReadP Rational Id) @(Msg (PrintF "invalid=%3.2f" (FromRational Double)) (Id > (15 % 1))) "13 % 3"
--- Left Step 2. False Boolean Check(op) | {invalid=4.33 13 % 3 > 15 % 1}
+-- Left Step 2. False Boolean Check(op) | {invalid=4.33 False:13 % 3 > 15 % 1}
 --
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @(Id > (11 % 1)) "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP

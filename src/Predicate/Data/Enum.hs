@@ -66,6 +66,19 @@ import Data.Kind (Type)
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Time
 
+-- | bounded 'succ' function
+--
+-- >>> pz @(SuccB 'LT Id) GT
+-- PresentT LT
+--
+-- >>> pz @(SuccB 'LT 'GT) ()
+-- PresentT LT
+--
+-- >>> pz @(SuccB 'GT 'LT) ()
+-- PresentT EQ
+--
+data SuccB p q
+
 instance (PP q x ~ a
         , P q x
         , P p (Proxy a)
@@ -83,20 +96,24 @@ instance (PP q x ~ a
       Left e -> pure e
       Right q ->
         case succMay q of
-          Nothing -> do
-             let msg1 = msg0 <> " out of range"
-             pp <- eval (Proxy @p) opts (Proxy @a)
-             pure $ case getValueLR opts msg1 pp [hh qq] of
-               Left e -> e
-               Right _ -> mkNode opts (_ttBool pp) msg1 [hh qq, hh pp]
+          Nothing -> _enumDefault @p @a opts msg0 (hh qq)
           Just n -> pure $ mkNode opts (PresentT n) (show01 opts msg0 n q) [hh qq]
 
--- | bounded 'succ' function
---
--- >>> pz @(SuccB 'LT Id) GT
--- PresentT LT
---
-data SuccB p q
+_enumDefault :: forall p a m
+  . ( MonadEval m
+    , P p (Proxy a)
+    , PP p (Proxy a) ~ a
+    )
+  => POpts
+  -> String
+  -> Holder
+  -> m (TT a)
+_enumDefault opts msg0 hhqq = do
+   let msg1 = msg0 <> " out of range"
+   pp <- eval (Proxy @p) opts (Proxy @a)
+   pure $ case getValueLR opts msg1 pp [hhqq] of
+     Left e -> e
+     Right _ -> mkNode opts (_ttBool pp) msg1 [hhqq, hh pp]
 
 -- | bounded 'succ' function
 --
@@ -153,12 +170,7 @@ instance (PP q x ~ a
       Left e -> pure e
       Right q ->
         case predMay q of
-          Nothing -> do
-             let msg1 = msg0 <> " out of range"
-             pp <- eval (Proxy @p) opts (Proxy @a)
-             pure $ case getValueLR opts msg1 pp [hh qq] of
-               Left e -> e
-               Right _ -> mkNode opts (_ttBool pp) msg1 [hh qq, hh pp]
+          Nothing -> _enumDefault @p @a opts msg0 (hh qq)
           Just n -> pure $ mkNode opts (PresentT n) (show01 opts msg0 n q) [hh qq]
 
 
@@ -276,8 +288,8 @@ instance P (PredBT' q) x => P (PredB' q) x where
 -- PresentT 120
 --
 -- >>> pl @(FromEnum ("aa" ==! Id) >> Same 1) "aaaa"
--- False ((>>) False | {0 == 1})
--- FalseT
+-- Present False ((>>) False | {False:0 == 1})
+-- PresentT False
 --
 -- >>> pl @(FromEnum ("aa" ==! Id) >> ToEnum OrderingP) "aaaa"
 -- Present CGt ((>>) CGt | {ToEnum CGt | 0})

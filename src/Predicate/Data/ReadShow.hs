@@ -41,10 +41,10 @@ import Predicate.Core
 import Predicate.Util
 import GHC.TypeLits (Nat,KnownNat)
 import qualified GHC.TypeLits as GL
-import Data.Proxy
+import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
 import Text.Printf
-import Data.Typeable
+import Data.Typeable (Typeable)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -108,10 +108,10 @@ instance (P p x
 -- PresentT (4 % 5)
 --
 -- >>> pz @(Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30") (ReadP Day Id)) "2018-10-12"
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30") (ReadP Day Id)) "2016-10-12"
--- FalseT
+-- PresentT False
 --
 -- >>> pl @(ReadP Rational Id) "123 % 4"
 -- Present 123 % 4 (ReadP Ratio Integer 123 % 4)

@@ -25,7 +25,6 @@ module Predicate.Core (
  -- ** basic types
     Id
   , IdT
-  , I
   , W
   , Msg
   , MsgI
@@ -155,7 +154,7 @@ evalBool :: ( MonadEval m
               -> POpts
               -> a
               -> m (TT (PP p a))
-evalBool p opts a = fixBoolT <$> eval p opts a
+evalBool p opts a = eval p opts a
 
 evalQuick :: forall opts p i
   . ( OptC opts
@@ -164,19 +163,6 @@ evalQuick :: forall opts p i
     => i
     -> Either String (PP p i)
 evalQuick = getValLRFromTT . runIdentity . eval @_ (Proxy @p) (getOpt @opts)
-
--- | identity function without Show instance of 'Id'
---
--- >>> pz @I 23
--- PresentT 23
---
-data I
-instance P I a where
-  type PP I a = a
-  eval _ opts a =
-    let msg0 = "I"
-    in pure $ mkNode opts (PresentT a) msg0 []
-
 
 -- | identity function
 --
@@ -220,11 +206,11 @@ instance P p a => P (W p) a where
 -- | add a message to give more context to the evaluation tree
 --
 -- >>> pan @(Msg "[somemessage]" Id) 999
--- P [somemessage] Id 999
+-- [somemessage] Id 999
 -- PresentT 999
 --
 -- >>> pan @(Msg Id 999) "info message:"
--- P info message: '999
+-- info message: '999
 -- PresentT 999
 --
 data Msg prt p
@@ -243,11 +229,11 @@ instance (P prt a
 -- | add a message to give more context to the evaluation tree
 --
 -- >>> pan @(MsgI "[somemessage] " Id) 999
--- P [somemessage] Id 999
+-- [somemessage] Id 999
 -- PresentT 999
 --
 -- >>> pan @(MsgI Id 999) "info message:"
--- P info message:'999
+-- info message:'999
 -- PresentT 999
 --
 data MsgI prt p
@@ -330,10 +316,10 @@ instance P (Proxy t) a where
 -- | pulls the type level 'Bool' to the value level
 --
 -- >>> pz @'True "not used"
--- TrueT
+-- PresentT True
 --
 -- >>> pz @'False ()
--- FalseT
+-- PresentT False
 instance GetBool b => P (b :: Bool) a where
   type PP b a = Bool
   eval _ opts _ =
@@ -376,13 +362,13 @@ instance ( P p a
 -- PresentT (4,"hello","goodbye")
 --
 -- >>> pan @'( 'True, 'False, 123) True
--- P '(,,)
+-- '(,,)
 -- |
--- +- True 'True
+-- +- True:'True
 -- |
--- +- False 'False
+-- +- False:'False
 -- |
--- `- P '123
+-- `- '123
 -- PresentT (True,False,123)
 --
 instance (P p a
@@ -890,12 +876,6 @@ instance Show a => P 'Proxy a where
 
 -- | get the constructor used for the typelevel 'BoolT'
 --
--- >>> pz @'TrueT ()
--- TrueT
---
--- >>> pz @'FalseT ()
--- FalseT
---
 -- >>> pz @('PresentT 123) ()
 -- PresentT False
 --
@@ -907,8 +887,6 @@ instance GetBoolT x b => P (b :: BoolT x) a where
   eval _ opts _ = do
     let ret = getBoolT @x @b
     pure $ case ret of
-      TrueT -> mkNodeB opts True "'TrueT" []
-      FalseT -> mkNodeB opts False "'FalseT" []
       PresentT {} -> mkNode opts (PresentT False) "'PresentT _" []
       FailT {} -> mkNode opts (FailT "'FailT _") "" []
 
@@ -1226,21 +1204,21 @@ instance (PP p x ~ t a
 -- | 'not' function
 --
 -- >>> pz @(Not Id) False
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Not Id) True
--- FalseT
+-- PresentT False
 --
 -- >>> pz @(Not Fst) (True,22)
--- FalseT
+-- PresentT False
 --
 -- >>> pl @(Not (Lt 3)) 13
--- True (Not (13 < 3))
--- TrueT
+-- Present True (True:Not (False:13 < 3))
+-- PresentT True
 --
 -- >>> pl @(Not 'True) ()
--- False (Not ('True))
--- FalseT
+-- Present False (False:Not (True:'True))
+-- PresentT False
 --
 data Not p
 
@@ -1260,10 +1238,10 @@ instance ( PP p x ~ Bool
 -- | 'id' function on a boolean
 --
 -- >>> pz @('[ 'True] >> Head >> IdBool) ()
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Fst >> IdBool) (False,22)
--- FalseT
+-- PresentT False
 --
 data IdBool
 
@@ -1307,9 +1285,9 @@ instance (P prt a
 -- FailT "value=099 string=somedata"
 --
 data FailS p
-instance P (Fail I p) x => P (FailS p) x where
-  type PP (FailS p) x = PP (Fail I p) x
-  eval _ = eval (Proxy @(Fail I p))
+instance P (Fail Id p) x => P (FailS p) x where
+  type PP (FailS p) x = PP (Fail Id p) x
+  eval _ = eval (Proxy @(Fail Id p))
 
 -- | Fails the computation with a message (wraps the type in 'Hole')
 --
@@ -1387,19 +1365,19 @@ instance (Foldable t
 -- | A predicate that determines if the value is between @p@ and @q@
 --
 -- >>> pz @(Between 5 8 Len) [1,2,3,4,5,5,7]
--- TrueT
+-- PresentT True
 --
 -- >>> pl @(Between 5 8 Id) 9
--- False (9 <= 8)
--- FalseT
+-- Present False (False:9 <= 8)
+-- PresentT False
 --
 -- >>> pl @(Between L11 L12 Snd) ((1,4),3)
--- True (1 <= 3 <= 4)
--- TrueT
+-- Present True (True:1 <= 3 <= 4)
+-- PresentT True
 --
 -- >>> pl @(Between L11 L12 Snd) ((1,4),10)
--- False (10 <= 4)
--- FalseT
+-- Present False (False:10 <= 4)
+-- PresentT False
 --
 data Between p q r -- reify as it is used a lot! nicer specific messages at the top level!
 
@@ -1431,13 +1409,13 @@ instance (Ord (PP p x)
 -- | A operator predicate that determines if the value is between @p@ and @q@
 --
 -- >>> pz @(5 <..> 8) 6
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(10 % 4 <..> 40 % 5) 4
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(10 % 4 <..> 40 % 5) 33
--- FalseT
+-- PresentT False
 --
 data p <..> q
 infix 4 <..>
@@ -1451,76 +1429,76 @@ instance P (BetweenT p q) x => P (p <..> q) x where
 -- | similar to 'all'
 --
 -- >>> pl @(All (Between 1 8 Id)) [7,3,4,1,2,9,0,1]
--- False (All(8) i=5 (9 <= 8))
--- FalseT
+-- Present False (False:All(8) i=5 (False:9 <= 8))
+-- PresentT False
 --
 -- >>> pz @(All Odd) [1,5,11,5,3]
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(All Odd) []
--- TrueT
+-- PresentT True
 --
 -- >>> run @OANV @(All Even) [1,5,11,5,3]
--- False All(5) i=0 (1 == 0)
+-- False:All(5) i=0 (False:1 == 0)
 -- |
--- +- False i=0: 1 == 0
+-- +- i=0: False:1 == 0
 -- |  |
--- |  +- P 1 `mod` 2 = 1
+-- |  +- 1 `mod` 2 = 1
 -- |  |  |
--- |  |  +- P I
+-- |  |  +- Id 1
 -- |  |  |
--- |  |  `- P '2
+-- |  |  `- '2
 -- |  |
--- |  `- P '0
+-- |  `- '0
 -- |
--- +- False i=1: 1 == 0
+-- +- i=1: False:1 == 0
 -- |  |
--- |  +- P 5 `mod` 2 = 1
+-- |  +- 5 `mod` 2 = 1
 -- |  |  |
--- |  |  +- P I
+-- |  |  +- Id 5
 -- |  |  |
--- |  |  `- P '2
+-- |  |  `- '2
 -- |  |
--- |  `- P '0
+-- |  `- '0
 -- |
--- +- False i=2: 1 == 0
+-- +- i=2: False:1 == 0
 -- |  |
--- |  +- P 11 `mod` 2 = 1
+-- |  +- 11 `mod` 2 = 1
 -- |  |  |
--- |  |  +- P I
+-- |  |  +- Id 11
 -- |  |  |
--- |  |  `- P '2
+-- |  |  `- '2
 -- |  |
--- |  `- P '0
+-- |  `- '0
 -- |
--- +- False i=3: 1 == 0
+-- +- i=3: False:1 == 0
 -- |  |
--- |  +- P 5 `mod` 2 = 1
+-- |  +- 5 `mod` 2 = 1
 -- |  |  |
--- |  |  +- P I
+-- |  |  +- Id 5
 -- |  |  |
--- |  |  `- P '2
+-- |  |  `- '2
 -- |  |
--- |  `- P '0
+-- |  `- '0
 -- |
--- `- False i=4: 1 == 0
+-- `- i=4: False:1 == 0
 --    |
---    +- P 3 `mod` 2 = 1
+--    +- 3 `mod` 2 = 1
 --    |  |
---    |  +- P I
+--    |  +- Id 3
 --    |  |
---    |  `- P '2
+--    |  `- '2
 --    |
---    `- P '0
--- FalseT
+--    `- '0
+-- PresentT False
 --
 -- >>> pl @(Fst >> All (Gt 3)) ([10,12,3,5],"ss")
--- False ((>>) False | {All(4) i=2 (3 > 3)})
--- FalseT
+-- Present False ((>>) False | {False:All(4) i=2 (False:3 > 3)})
+-- PresentT False
 --
 -- >>> pl @(All (Lt 3)) [1::Int .. 10]
--- False (All(10) i=2 (3 < 3))
--- FalseT
+-- Present False (False:All(10) i=2 (False:3 < 3))
+-- PresentT False
 --
 data All p
 
@@ -1550,27 +1528,27 @@ instance (P p a
 -- | similar to 'any'
 --
 -- >>> pl @(Any Even) [1,5,11,5,3]
--- False (Any(5))
--- FalseT
+-- Present False (False:Any(5))
+-- PresentT False
 --
 -- >>> pl @(Any Even) [1,5,112,5,3]
--- True (Any(5) i=2 (0 == 0))
--- TrueT
+-- Present True (True:Any(5) i=2 (True:0 == 0))
+-- PresentT True
 --
 -- >>> pz @(Any Even) []
--- FalseT
+-- PresentT False
 --
 -- >>> pl @(Fst >> Any (Gt 3)) ([10,12,3,5],"ss")
--- True ((>>) True | {Any(4) i=0 (10 > 3)})
--- TrueT
+-- Present True ((>>) True | {True:Any(4) i=0 (True:10 > 3)})
+-- PresentT True
 --
 -- >>> pl @(Any (Same 2)) [1,4,5]
--- False (Any(3))
--- FalseT
+-- Present False (False:Any(3))
+-- PresentT False
 --
 -- >>> pl @(Any (Same 2)) [1,4,5,2,1]
--- True (Any(5) i=3 (2 == 2))
--- TrueT
+-- Present True (True:Any(5) i=3 (True:2 == 2))
+-- PresentT True
 --
 data Any p
 
@@ -1846,13 +1824,13 @@ instance (Show (PP p a)
 -- Present (-3) % 1 ((>>) (-3) % 1 | {Negate (-3) % 1 | 3 % 1})
 -- PresentT ((-3) % 1)
 --
--- >>> pl @(Do '[W ('PresentT I), W 'FalseT, Not Id]) False
--- True ((>>) True | {Not (Id False)})
--- TrueT
+-- >>> pl @(Do '[W ('PresentT Id), W ('PresentT 'False), Not Id]) False
+-- Present True ((>>) True | {True:Not (Id False)})
+-- PresentT True
 --
--- >>> pl @(Do '[W ('PresentT Id), W 'FalseT]) True -- have to wrap them cos BoolT a vs BoolT Bool ie different types
--- False ((>>) False | {W 'FalseT})
--- FalseT
+-- >>> pl @(Do '[W ('PresentT Id), W ('PresentT 'False)]) True -- have to wrap them cos BoolT a vs BoolT Bool ie different types
+-- Present False ((>>) False | {W 'PresentT _})
+-- PresentT False
 --
 -- >>> pl @(Do '[1,2,3]) ()
 -- Present 3 ((>>) 3 | {'3})
@@ -1868,25 +1846,25 @@ instance (P (DoExpandT ps) a) => P (Do ps) a where
 type family DoExpandT (ps :: [k]) :: Type where
   DoExpandT '[] = GL.TypeError ('GL.Text "'[] invalid: requires at least one predicate in the list")
   DoExpandT '[p] = Id >> p -- need this else fails cos 1 is nat and would mean that the result is nat not Type!
-  -- if p >> Id then turns TrueT to PresentT True
+  -- if p >> Id then turns PresentT True to PresentT True
   DoExpandT (p ': p1 ': ps) = p >> DoExpandT (p1 ': ps)
 
 -- | similar to 'Prelude.&&'
 --
 -- >>> pz @(Fst && Snd) (True, True)
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Id > 15 && Id < 17) 16
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Id > 15 && Id < 17) 30
--- FalseT
+-- PresentT False
 --
 -- >>> pz @(Fst && (Length Snd >= 4)) (True,[11,12,13,14])
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Fst && (Length Snd == 4)) (True,[12,11,12,13,14])
--- FalseT
+-- PresentT False
 --
 data p && q
 infixr 3 &&
@@ -1913,16 +1891,16 @@ instance (P p a
 -- | short circuit version of boolean And
 --
 -- >>> pl @(Id > 10 &&~ Failt _ "ss") 9
--- False (False &&~ _ | (9 > 10))
--- FalseT
+-- Present False (False:False &&~ _ | (False:9 > 10))
+-- PresentT False
 --
 -- >>> pl @(Id > 10 &&~ Id == 12) 11
--- False (True &&~ False | (11 == 12))
--- FalseT
+-- Present False (False:True &&~ False | (False:11 == 12))
+-- PresentT False
 --
 -- >>> pl @(Id > 10 &&~ Id == 11) 11
--- True (True &&~ True)
--- TrueT
+-- Present True (True:True &&~ True)
+-- PresentT True
 --
 data p &&~ q
 infixr 3 &&~
@@ -1952,10 +1930,10 @@ instance (P p a
 -- | similar to 'Prelude.||'
 --
 -- >>> pz @(Fst || (Length Snd >= 4)) (False,[11,12,13,14])
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Not Fst || (Length Snd == 4)) (True,[12,11,12,13,14])
--- FalseT
+-- PresentT False
 --
 data p || q
 infixr 2 ||
@@ -1980,15 +1958,15 @@ instance (P p a
 -- | short circuit version of boolean Or
 --
 -- >>> pl @(Id > 10 ||~ Failt _ "ss") 11
--- True (True ||~ _ | (11 > 10))
--- TrueT
+-- Present True (True:True ||~ _ | (True:11 > 10))
+-- PresentT True
 --
 -- >>> pz @(Id > 10 ||~ Id == 9) 9
--- TrueT
+-- PresentT True
 --
 -- >>> pl @(Id > 10 ||~ Id > 9) 9
--- False (False ||~ False | (9 > 10) ||~ (9 > 9))
--- FalseT
+-- Present False (False:False ||~ False | (False:9 > 10) ||~ (False:9 > 9))
+-- PresentT False
 --
 data p ||~ q
 infixr 2 ||~
@@ -2018,16 +1996,16 @@ instance (P p a
 -- | boolean implication
 --
 -- >>> pz @(Fst ~> (Length Snd >= 4)) (True,[11,12,13,14])
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Fst ~> (Length Snd == 4)) (True,[12,11,12,13,14])
--- FalseT
+-- PresentT False
 --
 -- >>> pz @(Fst ~> (Length Snd == 4)) (False,[12,11,12,13,14])
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Fst ~> (Length Snd >= 4)) (False,[11,12,13,14])
--- TrueT
+-- PresentT True
 --
 data p ~> q
 infixr 1 ~>
@@ -2128,8 +2106,8 @@ instance (Show (p a b)
 -- PresentT 3
 --
 -- >>> pl @((<=) 4 $ L1 $ L2 $ Id) ((1,2),(3,4))
--- False (4 <= 3)
--- FalseT
+-- Present False (False:4 <= 3)
+-- PresentT False
 --
 data (p :: k -> k1) $ (q :: k)
 infixr 0 $

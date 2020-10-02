@@ -44,14 +44,14 @@ module Predicate.Data.String (
 import Predicate.Core
 import Predicate.Util
 import qualified GHC.TypeLits as GL
-import Control.Lens hiding (iall)
+import Control.Lens
 import Data.List (dropWhileEnd, isInfixOf, isPrefixOf, isSuffixOf)
 import qualified Data.Text.Lens as DTL
-import Data.Proxy
+import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
-import Data.String
-import Data.Char
-import Data.Function
+import Data.String (IsString(..))
+import Data.Char (isSpace, toLower)
+import Data.Function (on)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Text as T
@@ -230,15 +230,15 @@ instance (GetBool ignore
 -- | similar to 'isPrefixOf' for strings
 --
 -- >>> pl @(IsPrefixC "xy" Id) "xyzabw"
--- True (IsPrefixC | xy xyzabw)
--- TrueT
+-- Present True (True:IsPrefixC | xy xyzabw)
+-- PresentT True
 --
 -- >>> pl @(IsPrefixC "ab" Id) "xyzbaw"
--- False (IsPrefixC | ab xyzbaw)
--- FalseT
+-- Present False (False:IsPrefixC | ab xyzbaw)
+-- PresentT False
 --
 -- >>> pz @(IsPrefixC "abc" "aBcbCd") ()
--- FalseT
+-- PresentT False
 --
 data IsPrefixC p q
 type IsPrefixCT p q = IsFixImplC 'LT 'False p q
@@ -250,20 +250,20 @@ instance P (IsPrefixCT p q) x => P (IsPrefixC p q) x where
 -- | similar to 'isInfixOf' for strings
 --
 -- >>> pl @(IsInfixC "ab" Id) "xyzabw"
--- True (IsInfixC | ab xyzabw)
--- TrueT
+-- Present True (True:IsInfixC | ab xyzabw)
+-- PresentT True
 --
 -- >>> pl @(IsInfixC "aB" Id) "xyzAbw"
--- False (IsInfixC | aB xyzAbw)
--- FalseT
+-- Present False (False:IsInfixC | aB xyzAbw)
+-- PresentT False
 --
 -- >>> pl @(IsInfixC "ab" Id) "xyzbaw"
--- False (IsInfixC | ab xyzbaw)
--- FalseT
+-- Present False (False:IsInfixC | ab xyzbaw)
+-- PresentT False
 --
 -- >>> pl @(IsInfixC Fst Snd) ("ab","xyzabw")
--- True (IsInfixC | ab xyzabw)
--- TrueT
+-- Present True (True:IsInfixC | ab xyzabw)
+-- PresentT True
 --
 
 data IsInfixC p q
@@ -276,15 +276,15 @@ instance P (IsInfixCT p q) x => P (IsInfixC p q) x where
 -- | similar to 'isSuffixOf' for strings
 --
 -- >>> pl @(IsSuffixC "bw" Id) "xyzabw"
--- True (IsSuffixC | bw xyzabw)
--- TrueT
+-- Present True (True:IsSuffixC | bw xyzabw)
+-- PresentT True
 --
 -- >>> pl @(IsSuffixC "bw" Id) "xyzbaw"
--- False (IsSuffixC | bw xyzbaw)
--- FalseT
+-- Present False (False:IsSuffixC | bw xyzbaw)
+-- PresentT False
 --
 -- >>> pz @(IsSuffixC "bCd" "aBcbCd") ()
--- TrueT
+-- PresentT True
 --
 data IsSuffixC p q
 type IsSuffixCT p q = IsFixImplC 'GT 'False p q
@@ -296,7 +296,7 @@ instance P (IsSuffixCT p q) x => P (IsSuffixC p q) x where
 -- | similar to case insensitive 'isPrefixOf' for strings
 --
 -- >>> pz @(IsPrefixCI "abc" "aBcbCd") ()
--- TrueT
+-- PresentT True
 --
 data IsPrefixCI p q
 type IsPrefixCIT p q = IsFixImplC 'LT 'True p q
@@ -308,11 +308,11 @@ instance P (IsPrefixCIT p q) x => P (IsPrefixCI p q) x where
 -- | similar to case insensitive 'isInfixOf' for strings
 --
 -- >>> pl @(IsInfixCI "aB" Id) "xyzAbw"
--- True (IsInfixCI | aB xyzAbw)
--- TrueT
+-- Present True (True:IsInfixCI | aB xyzAbw)
+-- PresentT True
 --
 -- >>> pz @(IsInfixCI "abc" "axAbCd") ()
--- TrueT
+-- PresentT True
 --
 data IsInfixCI p q
 type IsInfixCIT p q = IsFixImplC 'EQ 'True p q

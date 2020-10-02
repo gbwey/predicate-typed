@@ -47,9 +47,9 @@ import Predicate.Core
 import Predicate.Util
 import Predicate.Data.Foldable (ConcatMap)
 import Predicate.Data.Monoid (MEmptyP)
-import Data.Proxy
+import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
-import Data.Maybe
+import Data.Maybe (isJust, isNothing)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -126,16 +126,16 @@ instance ( PP p x ~ a
 -- PresentT "found nothing"
 --
 -- >>> pl @(MaybeIn 'True Id) (Nothing @Bool) -- need @() else breaks
--- True (MaybeIn(Nothing) True | Proxy)
--- TrueT
+-- Present True (MaybeIn(Nothing) True | Proxy)
+-- PresentT True
 --
 -- >>> pl @(MaybeIn (Failt _ "failed4") Id) (Just 10)
 -- Present 10 (MaybeIn(Just) 10 | 10)
 -- PresentT 10
 --
 -- >>> pl @(MaybeIn 'False Id) (Nothing @Bool) -- breaks otherwise
--- False (MaybeIn(Nothing) False | Proxy)
--- FalseT
+-- Present False (MaybeIn(Nothing) False | Proxy)
+-- PresentT False
 --
 -- >>> pl @(MaybeIn MEmptyP Id) (Just [1,2,3])
 -- Present [1,2,3] (MaybeIn(Just) [1,2,3] | [1,2,3])
@@ -158,12 +158,12 @@ instance ( PP p x ~ a
 -- FailT "someval"
 --
 -- >>> pl @(MaybeIn 'True 'False) (Nothing @())
--- True (MaybeIn(Nothing) True | Proxy)
--- TrueT
+-- Present True (MaybeIn(Nothing) True | Proxy)
+-- PresentT True
 --
 -- >>> pl @(MaybeIn 'True 'False) (Just "aa")
--- False (MaybeIn(Just) False | "aa")
--- FalseT
+-- Present False (MaybeIn(Just) False | "aa")
+-- PresentT False
 --
 -- >>> pl @(MaybeIn MEmptyP (Fst ==! Snd)) (Just ('x','z'))
 -- Present LT (MaybeIn(Just) LT | ('x','z'))
@@ -270,10 +270,10 @@ instance (P q a
 -- | similar to 'Data.Maybe.isJust'
 --
 -- >>> pz @IsJust Nothing
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsJust (Just 'a')
--- TrueT
+-- PresentT True
 --
 data IsJust
 
@@ -285,10 +285,10 @@ instance x ~ Maybe a
 -- | similar to 'Data.Maybe.isNothing'
 --
 -- >>> pz @IsNothing (Just 123)
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsNothing Nothing
--- TrueT
+-- PresentT True
 --
 -- >>> pl @(Not IsNothing &&& ('Just Id >> Id + 12)) (Just 1)
 -- Present (True,13) (W '(True,13))

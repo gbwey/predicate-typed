@@ -33,7 +33,7 @@ Right (Refined "000fe")
 4. reads in a hexadecimal string but fails the predicate check
 ```haskell
 >newRefined @OL @(ReadBase Int 16 >> Between 99 253 Id) "000fe"
-Left FalseT
+Left PresentT False
 ```
 
 5. same as 4. above but now we get details of where it went wrong
@@ -77,20 +77,20 @@ ex1 = $$(refinedTH "123")
 >$$(refinedTH @OU @(Lt 3 || Gt 55) 44)
 
 <interactive>:36:4: error:
-    * refinedTH: predicate failed with FalseT (False || False | (44 < 3) || (44 > 55))
-False False || False | (44 < 3) || (44 > 55)
+    * refinedTH: predicate failed with PresentT False (False || False | (44 < 3) || (44 > 55))
+False:False || False | (44 < 3) || (44 > 55)
 |
-+- False 44 < 3
++- False:44 < 3
 |  |
-|  +- P I
+|  +- I
 |  |
-|  `- P '3
+|  `- '3
 |
-`- False 44 > 55
+`- False:44 > 55
    |
-   +- P I
+   +- I
    |
-   `- P '55
+   `- '55
 
     * In the Template Haskell splice
         $$(refinedTH @OU @(Lt 3 || Gt 55) 44)
@@ -108,20 +108,20 @@ it :: Refined ((Len > 7) || Elem 3 Id) [Int]
 
 
 <interactive>:31:4: error:
-    * refinedTH: predicate failed with FalseT (False || False | (5 > 7) || (7 `elem` [1,2,3,4,5]))
-False False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
+    * refinedTH: predicate failed with PresentT False (False || False | (5 > 7) || (7 `elem` [1,2,3,4,5]))
+False:False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
 |
-+- False 5 > 7
++- False:5 > 7
 |  |
-|  +- P Len 5
+|  +- Len 5
 |  |
-|  `- P '7
+|  `- '7
 |
-`- False 7 `elem` [1,2,3,4,5]
+`- False:7 `elem` [1,2,3,4,5]
    |
-   +- P '7
+   +- '7
    |
-   `- P Id [1,2,3,4,5]
+   `- Id [1,2,3,4,5]
 
     * In the Template Haskell splice
         $$(refinedTH @OU @(Len > 7 || Elem 7 Id) [1 .. 5])
@@ -133,12 +133,12 @@ False False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
 >$$(refinedTH @OU @(Re "^[A-Z][a-z]+$") "smith")
 
 <interactive>:32:4: error:
-    * refinedTH: predicate failed with FalseT (Re (^[A-Z][a-z]+$))
-False Re (^[A-Z][a-z]+$)
+    * refinedTH: predicate failed with PresentT False (Re (^[A-Z][a-z]+$))
+False:Re (^[A-Z][a-z]+$)
 |
-+- P '"^[A-Z][a-z]+$"
++- '"^[A-Z][a-z]+$"
 |
-`- P Id "smith"
+`- Id "smith"
 
     * In the Template Haskell splice
         $$(refinedTH @OU @(Re "^[A-Z][a-z]+$") "smith")
@@ -155,12 +155,12 @@ Refined "Smith"
 >$$(refinedTH @OU @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
 
 <interactive>:34:4: error:
-    * refinedTH: predicate failed with FalseT (expected title case Re (^[A-Z][a-z]+$))
-False expected title case Re (^[A-Z][a-z]+$)
+    * refinedTH: predicate failed with PresentT False (expected title case Re (^[A-Z][a-z]+$))
+False:expected title case Re (^[A-Z][a-z]+$)
 |
-+- P '"^[A-Z][a-z]+$"
++- '"^[A-Z][a-z]+$"
 |
-`- P Id "smith"
+`- Id "smith"
 
     * In the Template Haskell splice
         $$(refinedTH
@@ -177,13 +177,13 @@ False expected title case Re (^[A-Z][a-z]+$)
     * refinedTH: predicate failed with FailT expected title case (GuardBool (Re (^[A-Z][a-z]+$)))
 [Error expected title case] GuardBool (Re (^[A-Z][a-z]+$))
 |
-+- False Re (^[A-Z][a-z]+$)
++- False:Re (^[A-Z][a-z]+$)
 |  |
-|  +- P '"^[A-Z][a-z]+$"
+|  +- '"^[A-Z][a-z]+$"
 |  |
-|  `- P Id "smith"
+|  `- Id "smith"
 |
-`- P '"expected title case"
+`- '"expected title case"
 
     * In the Template Haskell splice
         $$(refinedTH

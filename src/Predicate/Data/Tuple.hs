@@ -42,7 +42,7 @@ module Predicate.Data.Tuple (
  ) where
 import Predicate.Core
 import Predicate.Util
-import Data.Proxy
+import Data.Proxy (Proxy(Proxy))
 import GHC.TypeNats (Nat, KnownNat)
 
 -- $setup
@@ -113,8 +113,8 @@ instance Show a => P Pairs [a] where
 -- | similar to 'Control.Arrow.&&&'
 --
 -- >>> pl @(Min &&& Max >> Id >> Fst < Snd) [10,4,2,12,14]
--- True ((>>) True | {2 < 14})
--- TrueT
+-- Present True ((>>) True | {True:2 < 14})
+-- PresentT True
 --
 -- >>> pl @((123 &&& Id) >> Fst + Snd) 4
 -- Present 127 ((>>) 127 | {123 + 4 = 127})
@@ -189,7 +189,7 @@ instance (Show (PP p a)
 -- PresentT (13,True)
 --
 data First p
-type FirstT p = p *** I
+type FirstT p = p *** Id
 
 instance P (FirstT p) x => P (First p) x where
   type PP (First p) x = PP (FirstT p) x
@@ -201,7 +201,7 @@ instance P (FirstT p) x => P (First p) x where
 -- PresentT (12,True)
 --
 data Second q
-type SecondT q = I *** q
+type SecondT q = Id *** q
 
 instance P (SecondT q) x => P (Second q) x where
   type PP (Second q) x = PP (SecondT q) x
@@ -210,8 +210,8 @@ instance P (SecondT q) x => P (Second q) x where
 -- | applies @p@ to lhs of the tuple and @q@ to the rhs and then @ands@ them together: see '&*'
 --
 -- >>> pl @(AndA (Gt 3) (Lt 10) Id) (1,2)
--- False (False (&*) True | (1 > 3))
--- FalseT
+-- Present False (False:False (&*) True | (False:1 > 3))
+-- PresentT False
 --
 data AndA p q r
 instance (PP r x ~ (a,b)
@@ -246,8 +246,8 @@ instance (PP r x ~ (a,b)
 -- | applies @p@ to lhs of the tuple and @q@ to the rhs and then @Ands@ them together
 --
 -- >>> pl @(SplitAt 4 "abcdefg" >> Len > 4 &* Len < 5) ()
--- False ((>>) False | {False (&*) True | (4 > 4)})
--- FalseT
+-- Present False ((>>) False | {False:False (&*) True | (False:4 > 4)})
+-- PresentT False
 --
 data p &* q
 type AndAT p q = AndA p q Id
@@ -260,8 +260,8 @@ instance P (AndAT p q) x => P (p &* q) x where
 -- | applies @p@ to lhs of the tuple and @q@ to the rhs and then @ors@ them together: see '|+'
 --
 -- >>> pl @(OrA (Gt 3) (Lt 10) Id) (1,2)
--- True (False (|+) True)
--- TrueT
+-- Present True (True:False (|+) True)
+-- PresentT True
 --
 data OrA p q r
 instance (PP r x ~ (a,b)
@@ -294,16 +294,16 @@ instance (PP r x ~ (a,b)
 -- | applies @p@ to lhs of the tuple and @q@ to the rhs and then @Ors@ them together
 --
 -- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,8,14,44],9)
--- True (True (|+) False)
--- TrueT
+-- Present True (True:True (|+) False)
+-- PresentT True
 --
 -- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,14],9)
--- False (False (|+) False | (32 > 44) (|+) (9 < 2))
--- FalseT
+-- Present False (False:False (|+) False | (False:32 > 44) (|+) (False:9 < 2))
+-- PresentT False
 --
 -- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,14],1)
--- True (False (|+) True)
--- TrueT
+-- Present True (True:False (|+) True)
+-- PresentT True
 --
 data p |+ q
 type OrAT p q = OrA p q Id

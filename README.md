@@ -39,10 +39,8 @@ To run the examples you will need these settings (ghc>=8.6)
   * OAN ascii without colors
   * OU unicode plus colors (for Windows: chcp 65001)
 
-* BoolT is a GADT that holds the return value from evaluating the type level expression
-   * TrueT : predicate is true
-   * FalseT : predicate is false
-   * PresentT a : 'a' is any other value
+* BoolT is an ADT that holds the return value from evaluating the type level expression
+   * PresentT a : 'a' is any value
    * FailT String : indicates a failure with an error message
 
 # testing the dsl
@@ -54,45 +52,45 @@ To run the examples you will need these settings (ghc>=8.6)
 
 ```haskell
 >pu @(Between 4 10 Id) 7
-True 4 <= 7 <= 10
+True:4 <= 7 <= 10
 |
-+- P Id 7
++- Id 7
 |
-+- P '4
++- '4
 |
-`- P '10
-TrueT
+`- '10
+PresentT True
 ```
 
 ```haskell
 >pu @(Between 4 10 Id) 11
-False 11 <= 10
+False:11 <= 10
 |
-+- P Id 11
++- Id 11
 |
-+- P '4
++- '4
 |
-`- P '10
-FalseT
+`- '10
+PresentT False
 ```
 
 ```haskell
 >pu @(Between (4 % 7) (10 % 2) Id) 7
 ...
 False (7 % 1 <= 5 % 1)
-FalseT
+PresentT False
 ```
 
 ```haskell
 >pu @(Re "^[[:upper:]][[:lower:]]+") "Fred"
 ...
-TrueT
+PresentT True
 ```
 
 ```haskell
 pu @(Re "^[[:upper:]][[:lower:]]+") "fred"
 ...
-FalseT
+PresentT False
 ```
 
 ```haskell
@@ -110,14 +108,14 @@ FailT "(True && False | (All(4) i=2 (Re' [] (^[[:upper:]][[:lower:]]+) | bart)))
 ```haskell
 >pu @(ReadP Day Id >> ToWeekDate Id >> Snd == "Monday") "2020-07-13"
 ...
-TrueT
+PresentT True
 ```
 
 ```haskell
 >pu @(ReadP Day Id >> ToWeekDate Id >> Snd == "Monday") "2020-07-14"
 ...
 False (>>) False | {"Tuesday" == "Monday"}
-FalseT
+PresentT False
 ```
 
 ```haskell

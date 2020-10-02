@@ -63,7 +63,7 @@ module Predicate.Data.These (
  ) where
 import Predicate.Core
 import Predicate.Util
-import Data.Proxy
+import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
 import Data.These (partitionThese, These(..))
 import qualified Data.These.Combinators as TheseC
@@ -362,14 +362,14 @@ instance (x ~ These a b
 -- | predicate on 'Data.These.This'
 --
 -- >>> pz @IsThis (This "aBc")
--- TrueT
+-- PresentT True
 --
 -- >>> pz @IsThis (These 1 'a')
--- FalseT
+-- PresentT False
 --
 -- >>> pl @IsThis (This 12)
--- True (IsThis | This 12)
--- TrueT
+-- Present True (True:IsThis | This 12)
+-- PresentT True
 --
 data IsThis
 type IsThisT = IsTh ('This '())
@@ -381,8 +381,8 @@ instance P IsThisT x => P IsThis x where
 -- | predicate on 'Data.These.That'
 --
 -- >>> pl @IsThat (This 12)
--- False (IsThat | This 12)
--- FalseT
+-- Present False (False:IsThat | This 12)
+-- PresentT False
 --
 data IsThat
 type IsThatT = IsTh ('That '())
@@ -394,23 +394,23 @@ instance P IsThatT x => P IsThat x where
 -- | predicate on 'Data.These.These'
 --
 -- >>> pl @IsThese (This 12)
--- False (IsThese | This 12)
--- FalseT
+-- Present False (False:IsThese | This 12)
+-- PresentT False
 --
 -- >>> pz @IsThese (These 1 'a')
--- TrueT
+-- PresentT True
 --
 -- >>> pl @IsThese (These 'x' 12)
--- True (IsThese | These 'x' 12)
--- TrueT
+-- Present True (True:IsThese | These 'x' 12)
+-- PresentT True
 --
 -- >>> pl @IsThese (That (SG.Sum 12))
--- False (IsThese | That (Sum {getSum = 12}))
--- FalseT
+-- Present False (False:IsThese | That (Sum {getSum = 12}))
+-- PresentT False
 --
 -- >>> pl @IsThese (These 1 (SG.Sum 12))
--- True (IsThese | These 1 (Sum {getSum = 12}))
--- TrueT
+-- Present True (True:IsThese | These 1 (Sum {getSum = 12}))
+-- PresentT True
 --
 data IsThese
 type IsTheseT = IsTh ('These '() '())
@@ -509,7 +509,7 @@ instance (Show a
 -- PresentT ("abc",False)
 --
 data TheseId p q
-type TheseIdT p q = TheseIn '(I, q) '(p, I) I
+type TheseIdT p q = TheseIn '(Id, q) '(p, Id) Id
 
 instance P (TheseIdT p q) x => P (TheseId p q) x where
   type PP (TheseId p q) x = PP (TheseIdT p q) x

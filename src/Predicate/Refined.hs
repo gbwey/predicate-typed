@@ -147,14 +147,14 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 -- Right (Refined 13)
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined OAN (Between 10 14 Id) Int) "16"
--- Error in $: Refined(FromJSON:parseJSON):FalseT (16 <= 14)
--- False 16 <= 14
+-- Error in $: Refined(FromJSON:parseJSON):FalseT (False:16 <= 14)
+-- False:16 <= 14
 -- |
--- +- P Id 16
+-- +- Id 16
 -- |
--- +- P '10
+-- +- '10
 -- |
--- `- P '14
+-- `- '14
 -- <BLANKLINE>
 --
 instance ( RefinedC opts p a
@@ -178,20 +178,20 @@ instance ( RefinedC opts p a
 -- Refined "2019-04-23"
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined(Binary:get):FalseT (2019-05-30 <= 2019-04-23)
--- False 2019-05-30 <= 2019-04-23
+-- Refined(Binary:get):FalseT (False:2019-05-30 <= 2019-04-23)
+-- False:2019-05-30 <= 2019-04-23
 -- |
--- +- P ReadP Day 2019-04-23
+-- +- ReadP Day 2019-04-23
 -- |  |
--- |  `- P Id "2019-04-23"
+-- |  `- Id "2019-04-23"
 -- |
--- +- P ReadP Day 2019-05-30
+-- +- ReadP Day 2019-05-30
 -- |  |
--- |  `- P '"2019-05-30"
+-- |  `- '"2019-05-30"
 -- |
--- `- P ReadP Day 2019-06-01
+-- `- ReadP Day 2019-06-01
 --    |
---    `- P '"2019-06-01"
+--    `- '"2019-06-01"
 -- <BLANKLINE>
 --
 instance ( RefinedC opts p a
@@ -266,7 +266,7 @@ newRefined' :: forall opts p a m
 newRefined' a = do
   let o = getOpt @opts
   pp <- evalBool (Proxy @p) o a
-  let r = colorBoolT o (_ttBool pp)
+  let r = colorBoolTBool o (_ttBool pp)
       s = prtTree o pp
       msg0 = Msg0 (_ttBool pp) (topMessage pp) s r
   pure $ case getValueLR o "" pp [] of
@@ -279,13 +279,13 @@ newRefined' a = do
 -- Right (Refined "123")
 --
 -- >>> AR.left m0Long $ newRefined @OL @(ReadP Int Id > 99) "12"
--- Left "False (12 > 99)"
+-- Left "Present False (False:12 > 99)"
 --
 -- >>> newRefined @OZ @(Between 10 14 Id) 13
 -- Right (Refined 13)
 --
 -- >>> AR.left m0BoolT $ newRefined @OZ @(Between 10 14 Id) 99
--- Left FalseT
+-- Left (PresentT False)
 --
 -- >>> newRefined @OZ @(Last >> Len == 4) ["one","two","three","four"]
 -- Right (Refined ["one","two","three","four"])
@@ -294,7 +294,7 @@ newRefined' a = do
 -- Right (Refined "141.213.1.99")
 --
 -- >>> AR.left m0BoolT $ newRefined @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1"
--- Left FalseT
+-- Left (PresentT False)
 --
 -- >>> AR.left m0BoolT $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
 -- Left (FailT "bad length: found 3")
@@ -309,13 +309,13 @@ newRefined' a = do
 -- Right (Refined "12344")
 --
 -- >>> AR.left m0BoolT $ newRefined @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12340"
--- Left FalseT
+-- Left (PresentT False)
 --
 -- >>> newRefined @OZ @(Any IsPrime) [11,13,17,18]
 -- Right (Refined [11,13,17,18])
 --
 -- >>> AR.left m0BoolT $ newRefined @OZ @(All IsPrime) [11,13,17,18]
--- Left FalseT
+-- Left (PresentT False)
 --
 -- >>> newRefined @OZ @(Snd !! Fst >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Right (Refined (2,["abc","defghij","xyzxyazsfd"]))
@@ -324,7 +324,7 @@ newRefined' a = do
 -- Left (FailT "(!!) index not found")
 --
 -- >>> AR.left m0BoolT $ newRefined @OZ @(Snd !! Fst >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
--- Left FalseT
+-- Left (PresentT False)
 --
 newRefined :: forall opts p a
     . RefinedC opts p a
@@ -347,7 +347,7 @@ unsafeRefined' a =
   in case getValueLR o "" tt [] of
        Right True -> Refined a
        _ -> let s = prtTree o tt
-                bp = colorBoolT o (_ttBool tt)
+                bp = colorBoolTBool o (_ttBool tt)
             in case oDebug o of
                  DZero -> error bp
                  DLite -> error $ bp ++ "\n" ++ s

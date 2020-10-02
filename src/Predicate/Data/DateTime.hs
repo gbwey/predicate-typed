@@ -63,7 +63,7 @@ import Data.Typeable (Typeable, Proxy(Proxy))
 import Data.Kind (Type)
 import Data.Maybe (catMaybes)
 import Data.Time
-import Data.Time.Calendar.WeekDate
+import Data.Time.Calendar.WeekDate (toWeekDate)
 import qualified Data.Time.Clock.System as CP
 import qualified Data.Time.Clock.POSIX as P
 -- $setup

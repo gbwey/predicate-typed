@@ -65,9 +65,9 @@ module Predicate.Data.Ordering (
 import Predicate.Core
 import Predicate.Util
 import Predicate.Data.Tuple (Pairs)
-import Data.Proxy
-import Data.Char
-import Data.Function
+import Data.Proxy (Proxy(Proxy))
+import Data.Char (toLower)
+import Data.Function (on)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -80,29 +80,29 @@ import Data.Function
 -- | compare if expression @p@ is greater than @q@
 --
 -- >>> pl @(Gt 4) 5
--- True (5 > 4)
--- TrueT
+-- Present True (True:5 > 4)
+-- PresentT True
 --
-type Gt n = I > n
-type Ge n = I >= n
-type Same n = I == n
-type Le n = I <= n
-type Lt n = I < n
-type Ne n = I /= n
+type Gt n = Id > n
+type Ge n = Id >= n
+type Same n = Id == n
+type Le n = Id <= n
+type Lt n = Id < n
+type Ne n = Id /= n
 
 -- | compare if expression @p@ is greater than @q@
 --
 -- >>> pl @(Id > "xx") "abc"
--- False ("abc" > "xx")
--- FalseT
+-- Present False (False:"abc" > "xx")
+-- PresentT False
 --
 -- >>> pl @(Id > "aa") "abc"
--- True ("abc" > "aa")
--- TrueT
+-- Present True (True:"abc" > "aa")
+-- PresentT True
 --
 -- >>> pl @(Fst > Snd) (True,False)
--- True (True > False)
--- TrueT
+-- Present True (True:True > False)
+-- PresentT True
 --
 data p > q
 infix 4 >
@@ -122,27 +122,27 @@ instance P (Cmp 'CGe p q) x => P (p >= q) x where
 -- | compare if expression @p@ is equal to @q@
 --
 -- >>> pl @(Fst == Snd) ("ab","xyzabw")
--- False ("ab" == "xyzabw")
--- FalseT
+-- Present False (False:"ab" == "xyzabw")
+-- PresentT False
 --
 -- >>> pl @(Fst == Snd) ("aBc","AbC")
--- False ("aBc" == "AbC")
--- FalseT
+-- Present False (False:"aBc" == "AbC")
+-- PresentT False
 --
 -- >>> pz @(Fst == Snd) ("aBc","aBc")
--- TrueT
+-- PresentT True
 --
 -- >>> pl @(Id == "Abc") "abc"
--- False ("abc" == "Abc")
--- FalseT
+-- Present False (False:"abc" == "Abc")
+-- PresentT False
 --
 -- >>> pl @(Fst == Snd) (True,False)
--- False (True == False)
--- FalseT
+-- Present False (False:True == False)
+-- PresentT False
 --
 -- >>> pl @(Not Id *** Id >> Fst == Snd) (True,False)
--- True ((>>) True | {False == False})
--- TrueT
+-- Present True ((>>) True | {True:False == False})
+-- PresentT True
 --
 data p == q
 infix 4 ==
@@ -154,20 +154,20 @@ instance P (Cmp 'CEq p q) x => P (p == q) x where
 -- | compare if expression @p@ is less than or equal to @q@
 --
 -- >>> pl @(Not (Fst >> Len <= 6)) ([2..7],True)
--- False (Not ((>>) True | {6 <= 6}))
--- FalseT
+-- Present False (False:Not ((>>) True | {True:6 <= 6}))
+-- PresentT False
 --
 -- >>> pl @(Fst >> Len <= 6) ([2..7],True)
--- True ((>>) True | {6 <= 6})
--- TrueT
+-- Present True ((>>) True | {True:6 <= 6})
+-- PresentT True
 --
 -- >>> pl @(Length Fst <= 6) ([2..7],True)
--- True (6 <= 6)
--- TrueT
+-- Present True (True:6 <= 6)
+-- PresentT True
 --
 -- >>> pl @(Fst >> (Len <= 6)) ([2..7],True)
--- True ((>>) True | {6 <= 6})
--- TrueT
+-- Present True ((>>) True | {True:6 <= 6})
+-- PresentT True
 --
 data p <= q
 infix 4 <=
@@ -187,8 +187,8 @@ instance P (Cmp 'CLt p q) x => P (p < q) x where
 -- | compare if expression @p@ is not equal to @q@
 --
 -- >>> pl @(Fst /= Snd) ("ab","xyzabw")
--- True ("ab" /= "xyzabw")
--- TrueT
+-- Present True (True:"ab" /= "xyzabw")
+-- PresentT True
 --
 data p /= q
 infix 4 /=
@@ -348,16 +348,16 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 --
 --
 -- >>> pl @("Abc" ==~ Id) "abc"
--- True (Abc ==~ abc)
--- TrueT
+-- Present True (True:Abc ==~ abc)
+-- PresentT True
 --
 -- >>> pl @(Fst ==~ Snd) ("aBc","AbC")
--- True (aBc ==~ AbC)
--- TrueT
+-- Present True (True:aBc ==~ AbC)
+-- PresentT True
 --
 -- >>> pl @(Fst ==~ Snd && Fst == Snd) ("Abc","Abc")
--- True (True && True)
--- TrueT
+-- Present True (True:True && True)
+-- PresentT True
 --
 
 type OrdI p q = p ===~ q
@@ -382,20 +382,20 @@ instance (PP p a ~ String
 -- | compare two values using the given ordering @o@
 --
 -- >>> pl @(Lt 4) 123
--- False (123 < 4)
--- FalseT
+-- Present False (False:123 < 4)
+-- PresentT False
 --
 -- >>> pl @(Lt 4) 1
--- True (1 < 4)
--- TrueT
+-- Present True (True:1 < 4)
+-- PresentT True
 --
 -- >>> pl @(Negate 7 <..> 20) (-4)
--- True (-7 <= -4 <= 20)
--- TrueT
+-- Present True (True:-7 <= -4 <= 20)
+-- PresentT True
 --
 -- >>> pl @(Negate 7 <..> 20) 21
--- False (21 <= 20)
--- FalseT
+-- Present False (False:21 <= 20)
+-- PresentT False
 --
 data Cmp (o :: OrderingP) p q
 
@@ -439,14 +439,14 @@ instance (PP p a ~ String
 -- | a type level predicate for a monotonic increasing list
 --
 -- >>> pl @Asc "aaacdef"
--- True ((>>) True | {All(6)})
--- TrueT
+-- Present True ((>>) True | {True:All(6)})
+-- PresentT True
 --
 -- >>> pz @Asc [1,2,3,4,5,5,7]
--- TrueT
+-- PresentT True
 --
 -- >>> pz @Asc "axacdef"
--- FalseT
+-- PresentT False
 --
 data Asc
 type AscT = Pairs >> All (Fst <= Snd)
@@ -458,13 +458,13 @@ instance P AscT x => P Asc x where
 -- | a type level predicate for a strictly increasing list
 --
 -- >>> pz @Asc' [1,2,3,4,5,5,7]
--- FalseT
+-- PresentT False
 --
 -- >>> pz @Asc' []
--- TrueT
+-- PresentT True
 --
 -- >>> pz @Asc' [-10]
--- TrueT
+-- PresentT True
 --
 data Asc'
 type AscT' = Pairs >> All (Fst < Snd)
@@ -495,13 +495,13 @@ instance P DescT' x => P Desc' x where
 -- | a type level predicate for all positive elements in a list
 --
 -- >>> pz @AllPositive [1,5,10,2,3]
--- TrueT
+-- PresentT True
 --
 -- >>> pz @AllPositive [0,1,5,10,2,3]
--- FalseT
+-- PresentT False
 --
 -- >>> pz @AllPositive [3,1,-5,10,2,3]
--- FalseT
+-- PresentT False
 --
 data AllPositive
 type AllPositiveT = All Positive
@@ -513,7 +513,7 @@ instance P AllPositiveT x => P AllPositive x where
 -- | a type level predicate for all negative elements in a list
 --
 -- >>> pz @AllNegative [-1,-5,-10,-2,-3]
--- TrueT
+-- PresentT True
 --
 data AllNegative
 type AllNegativeT = All Negative

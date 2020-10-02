@@ -41,7 +41,7 @@ import Predicate.Util
 import Predicate.Data.Maybe (JustDef, JustFail)
 import Control.Lens
 import GHC.TypeLits (Nat, KnownNat)
-import Data.Proxy
+import Data.Proxy (Proxy(..))
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -122,7 +122,7 @@ instance P (LookupDefT' v w p q) x => P (LookupDef' v w p q) x where
 -- PresentT (Min {getMin = 9223372036854775807})
 --
 data LookupDef v w p
-type LookupDefT v w p = LookupDef' v w p I
+type LookupDefT v w p = LookupDef' v w p Id
 
 instance P (LookupDefT v w p) x => P (LookupDef v w p) x where
   type PP (LookupDef v w p) x = PP (LookupDefT v w p) x
@@ -147,7 +147,7 @@ instance P (LookupFailT' msg v w q) x => P (LookupFail' msg v w q) x where
 -- FailT "char=x"
 --
 data LookupFail msg v w
-type LookupFailT msg v w = LookupFail' msg v w I
+type LookupFailT msg v w = LookupFail' msg v w Id
 
 instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
   type PP (LookupFail msg v w) x = PP (LookupFailT msg v w) x
@@ -166,32 +166,32 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- PresentT (12,5)
 --
 -- >>> pl @(Fst >> Dup >> (Ix 1 (Failp "failed5") *** Ix 3 (Failp "failed5")) >> Fst < Snd) ([10,12,3,5],"ss")
--- False ((>>) False | {12 < 5})
--- FalseT
+-- Present False ((>>) False | {False:12 < 5})
+-- PresentT False
 --
 -- >>> pl @(Fst >> Dup >> (Ix 1 (Failp "failed5") *** Ix 3 (Failp "failed5")) >> Fst > Snd) ([10,12,3,5],"ss")
--- True ((>>) True | {12 > 5})
--- TrueT
+-- Present True ((>>) True | {True:12 > 5})
+-- PresentT True
 --
 -- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval1") >> Fst == Snd) ('x',[1..5])
--- False ((>>) False | {5 == 4})
--- FalseT
+-- Present False ((>>) False | {False:5 == 4})
+-- PresentT False
 --
 -- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval2") >> Fst < Snd) ('x',[1..5])
--- False ((>>) False | {5 < 4})
--- FalseT
+-- Present False ((>>) False | {False:5 < 4})
+-- PresentT False
 --
 -- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval3") >> Fst > Snd) ('x',[1..5])
--- True ((>>) True | {5 > 4})
--- TrueT
+-- Present True ((>>) True | {True:5 > 4})
+-- PresentT True
 --
 -- >>> pl @(Map Len Id >> Ix 3 (Failp "lhs") &&& Ix 0 5 >> Fst == Snd) [[1..4],[4..5]]
 -- Error lhs ([4,2])
 -- FailT "lhs"
 --
 -- >>> pl @(Map Len Id >> Ix 0 (Failp "lhs") &&& Ix 1 5 >> Fst == Snd) [[1..4],[4..5]]
--- False ((>>) False | {4 == 2})
--- FalseT
+-- Present False ((>>) False | {False:4 == 2})
+-- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 1 (Failp "lhs") &&& Ix 3 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- Error rhs ([4,2])
@@ -206,24 +206,24 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- FailT "rhs"
 --
 -- >>> pl @(Map Len Id >> Ix 10 3 &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
--- False ((>>) False | {3 == 2})
--- FalseT
+-- Present False ((>>) False | {False:3 == 2})
+-- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 3 3 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
--- False ((>>) False | {3 == 2})
--- FalseT
+-- Present False ((>>) False | {False:3 == 2})
+-- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 10 3 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
--- False ((>>) False | {3 == 2})
--- FalseT
+-- Present False ((>>) False | {False:3 == 2})
+-- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 10 5 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
--- False ((>>) False | {5 == 2})
--- FalseT
+-- Present False ((>>) False | {False:5 == 2})
+-- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 10 2 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
--- True ((>>) True | {2 == 2})
--- TrueT
+-- Present True ((>>) True | {True:2 == 2})
+-- PresentT True
 --
 data Ix (n :: Nat) def
 
@@ -500,11 +500,11 @@ instance (P q a
 -- | type operator version of 'Lookup'
 --
 -- >>> pl @((Id !!? Char1 "d") > MkJust 99 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
--- False (False || False | (Just 4 > Just 99) || (4 <= 3))
--- FalseT
+-- Present False (False:False || False | (False:Just 4 > Just 99) || (False:4 <= 3))
+-- PresentT False
 --
 -- >>> pz @((Id !!? Char1 "d") > MkJust 2 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
--- TrueT
+-- PresentT True
 --
 data p !!? q
 type BangBangQT p q = Lookup p q

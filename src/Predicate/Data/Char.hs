@@ -107,13 +107,13 @@ instance ( x ~ Char
 -- | predicate similar to 'Data.Char.isLower'
 --
 -- >>> pz @IsLower 'X'
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsLower '1'
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsLower 'a'
--- TrueT
+-- PresentT True
 --
 
 data IsLower
@@ -135,10 +135,10 @@ instance P IsUpperT x => P IsUpper x where
 -- | predicate similar to 'Data.Char.isDigit'
 --
 -- >>> pz @IsDigit 'g'
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsDigit '9'
--- TrueT
+-- PresentT True
 --
 data IsDigit
 type IsDigitT = IsCharSet 'CNumber
@@ -149,13 +149,13 @@ instance P IsDigitT x => P IsDigit x where
 -- | predicate similar to 'Data.Char.isSpace'
 --
 -- >>> pz @IsSpace '\t'
--- TrueT
+-- PresentT True
 --
 -- >>> pz @IsSpace ' '
--- TrueT
+-- PresentT True
 --
 -- >>> pz @IsSpace 'x'
--- FalseT
+-- PresentT False
 --
 data IsSpace
 type IsSpaceT = IsCharSet 'CSpace
@@ -182,10 +182,10 @@ instance P IsControlT x => P IsControl x where
 -- | predicate similar to 'Data.Char.isHexDigit'
 --
 -- >>> pz @IsHexDigit 'A'
--- TrueT
+-- PresentT True
 --
 -- >>> pz @IsHexDigit 'g'
--- FalseT
+-- PresentT False
 --
 data IsHexDigit
 type IsHexDigitT = IsCharSet 'CHexDigit
@@ -221,20 +221,20 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "AbcdE"
--- False ((>>) False | {True (&*) False | (IsLowerAll | "bcdE")})
--- FalseT
+-- Present False ((>>) False | {False:True (&*) False | (False:IsLowerAll | "bcdE")})
+-- PresentT False
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "Abcde"
--- True ((>>) True | {True (&*) True})
--- TrueT
+-- Present True ((>>) True | {True:True (&*) True})
+-- PresentT True
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "xbcde"
--- False ((>>) False | {False (&*) True | (IsUpper | "x")})
--- FalseT
+-- Present False ((>>) False | {False:False (&*) True | (False:IsUpper | "x")})
+-- PresentT False
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "X"
--- True ((>>) True | {True (&*) True})
--- TrueT
+-- Present True ((>>) True | {True:True (&*) True})
+-- PresentT True
 --
 -- >>> pz @( '(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsDigitAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll)) "abc134"
 -- PresentT (False,True,True,False,False,False,False,False)
@@ -244,16 +244,16 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- PresentT [True,False,False]
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll]) "a98efghi"
--- Error Bool(2) [] (IsUpperAll | "efghi") (["a","98","efghi"])
--- FailT "Bool(2) [] (IsUpperAll | \"efghi\")"
+-- Error Bool(2) [] (False:IsUpperAll | "efghi") (["a","98","efghi"])
+-- FailT "Bool(2) [] (False:IsUpperAll | \"efghi\")"
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll]) "a98efghi"
--- True ((>>) True | {Bools})
--- TrueT
+-- Present True ((>>) True | {True:Bools})
+-- PresentT True
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll]) "a98efgHi"
--- Error Bool(2) [] (False || False | (IsUpperAll | "efgHi") || (IsLowerAll | "efgHi")) (["a","98","efgHi"])
--- FailT "Bool(2) [] (False || False | (IsUpperAll | \"efgHi\") || (IsLowerAll | \"efgHi\"))"
+-- Error Bool(2) [] (False:False || False | (False:IsUpperAll | "efgHi") || (False:IsLowerAll | "efgHi")) (["a","98","efgHi"])
+-- FailT "Bool(2) [] (False:False || False | (False:IsUpperAll | \"efgHi\") || (False:IsLowerAll | \"efgHi\"))"
 --
 data IsCharSetAll (cs :: CharSet)
 
@@ -306,19 +306,19 @@ instance GetCharSet 'CLatin1 where
 -- | predicate for determining if a string is all lowercase
 --
 -- >>> pz @IsLowerAll "abc"
--- TrueT
+-- PresentT True
 --
 -- >>> pz @IsLowerAll "abcX"
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsLowerAll (T.pack "abcX")
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsLowerAll "abcdef213"
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsLowerAll ""
--- TrueT
+-- PresentT True
 --
 data IsLowerAll
 type IsLowerAllT = IsCharSetAll 'CLower
@@ -337,10 +337,10 @@ instance P IsUpperAllT x => P IsUpperAll x where
 -- | predicate for determining if the string is all digits
 --
 -- >>> pz @IsDigitAll "213G"
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsDigitAll "929"
--- TrueT
+-- PresentT True
 --
 data IsDigitAll
 type IsDigitAllT = IsCharSetAll 'CNumber
@@ -351,13 +351,13 @@ instance P IsDigitAllT x => P IsDigitAll x where
 -- | predicate for determining if the string is all spaces
 --
 -- >>> pz @IsSpaceAll "213G"
--- FalseT
+-- PresentT False
 --
 -- >>> pz @IsSpaceAll "    "
--- TrueT
+-- PresentT True
 --
 -- >>> pz @IsSpaceAll ""
--- TrueT
+-- PresentT True
 --
 data IsSpaceAll
 type IsSpaceAllT = IsCharSetAll 'CSpace
@@ -380,10 +380,10 @@ instance P IsControlAllT x => P IsControlAll x where
 -- | predicate for determining if the string is all hex digits
 --
 -- >>> pz @IsHexDigitAll "01efA"
--- TrueT
+-- PresentT True
 --
 -- >>> pz @IsHexDigitAll "01egfA"
--- FalseT
+-- PresentT False
 --
 data IsHexDigitAll
 type IsHexDigitAllT = IsCharSetAll 'CHexDigit

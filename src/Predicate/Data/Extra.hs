@@ -29,8 +29,6 @@ module Predicate.Data.Extra (
   , type (<$)
   , type (<*)
   , type (*>)
-  , FMapFst
-  , FMapSnd
   , Sequence
   , Traverse
   , Join
@@ -54,6 +52,11 @@ module Predicate.Data.Extra (
   , InitDef
   , InitFail
 
+  , HeadMay
+  , LastMay
+  , TailMay
+  , InitMay
+
   , Coerce2
 
   , ProxyT
@@ -76,17 +79,23 @@ module Predicate.Data.Extra (
   , Apply2
 
   , PartitionsBy
+  , IMap
+  , IList
+  , FMap
+  , FApp
+  , FBind
 
  ) where
 import Predicate.Core
 import Predicate.Util
-import Predicate.Data.List (Head, Uncons, Unsnoc, SortBy, Zip, GroupBy, SortOn)
+import Predicate.Data.List (Head, Uncons, Unsnoc, SortBy, Zip, GroupBy, SortOn, ZipWith)
 import Predicate.Data.Enum (type (...))
+import Predicate.Data.Numeric (type (-))
 import Predicate.Data.Maybe (JustDef, JustFail)
 import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
 import Data.Proxy (Proxy(..))
-import Control.Applicative (Alternative((<|>)))
+import Control.Applicative (liftA2, Alternative((<|>)))
 import Control.Monad (join)
 import Data.Kind (Type)
 import Control.Comonad (Comonad(duplicate, extract))
@@ -452,56 +461,6 @@ instance P (TraverseT p q) x => P (Traverse p q) x where
   type PP (Traverse p q) x = PP (TraverseT p q) x
   eval _ = eval (Proxy @(TraverseT p q))
 
--- | similar to fmap fst
---
--- >>> pz @FMapFst (Just (13,"Asf"))
--- PresentT (Just 13)
---
--- >>> pl @FMapFst (Just (1,'x'))
--- Present Just 1 (FMapFst)
--- PresentT (Just 1)
---
--- >>> pl @FMapFst [(1,'x'), (2,'y'), (3,'z')]
--- Present [1,2,3] (FMapFst)
--- PresentT [1,2,3]
---
-
--- to make this work we grab the fst or snd out of the Maybe so it is a head or not/ is a tail or not etc!
--- we still have access to the whole original list so we dont lose anything!
-data FMapFst
-
-instance Functor f => P FMapFst (f (a,x)) where
-  type PP FMapFst (f (a,x)) = f a
-  eval _ opts mb = pure $ mkNode opts (PresentT (fst <$> mb)) "FMapFst" []
-
--- | similar to fmap snd
---
--- >>> pz @FMapSnd (Just ("asf",13))
--- PresentT (Just 13)
---
--- >>> pl @FMapSnd (Just (1,'x'))
--- Present Just 'x' (FMapSnd)
--- PresentT (Just 'x')
---
--- >>> pl @FMapSnd (Nothing @(Char,Int))
--- Present Nothing (FMapSnd)
--- PresentT Nothing
---
--- >>> pl @FMapSnd (Right (1,'x'))
--- Present Right 'x' (FMapSnd)
--- PresentT (Right 'x')
---
--- >>> pl @FMapSnd (Left @_ @(Int,Double) "x")
--- Present Left "x" (FMapSnd)
--- PresentT (Left "x")
---
-
-data FMapSnd
-
-instance Functor f => P FMapSnd (f (x,a)) where
-  type PP FMapSnd (f (x,a)) = f a
-  eval _ opts mb = pure $ mkNode opts (PresentT (snd <$> mb)) "FMapSnd" []
-
 -- | just run the effect ignoring the result passing the original value through
 -- for example for use with Stdout so it doesnt interfere with the @a@ on the rhs unless there is an failure
 data Skip p
@@ -588,16 +547,16 @@ instance P (SkipBothT p q) x => P (p >|> q) x where
 -- PresentT 10
 --
 -- >>> pl @(HeadDef 12 Fst >> Le 6) ([],True)
--- False ((>>) False | {12 <= 6})
--- FalseT
+-- Present False ((>>) False | {False:12 <= 6})
+-- PresentT False
 --
 -- >>> pl @(HeadDef 1 Fst >> Le 6) ([],True)
--- True ((>>) True | {1 <= 6})
--- TrueT
+-- Present True ((>>) True | {True:1 <= 6})
+-- PresentT True
 --
 -- >>> pl @(HeadDef 10 Fst >> Le 6) ([],True)
--- False ((>>) False | {10 <= 6})
--- FalseT
+-- Present False ((>>) False | {False:10 <= 6})
+-- PresentT False
 --
 -- >>> pl @(HeadDef (MEmptyT _) Id) (map (:[]) ([] :: [Int]))
 -- Present [] (JustDef Nothing)
@@ -620,7 +579,7 @@ instance P (SkipBothT p q) x => P (p >|> q) x where
 -- PresentT 43
 --
 data HeadDef p q
-type HeadDefT p q = JustDef p (q >> Uncons >> FMapFst)
+type HeadDefT p q = JustDef p (q >> Uncons >> FMap Fst)
 
 instance P (HeadDefT p q) x => P (HeadDef p q) x where
   type PP (HeadDef p q) x = PP (HeadDefT p q) x
@@ -646,8 +605,8 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 -- FailT "failed1"
 --
 -- >>> pl @((Fst >> HeadFail "failed2" Id >> Le (6 -% 1)) || 'False) ([-9],True)
--- True (True || False)
--- TrueT
+-- Present True (True:True || False)
+-- PresentT True
 --
 -- >>> pl @(HeadFail "Asdf" Id) ([] :: [()]) -- breaks otherwise
 -- Error Asdf (JustFail Nothing)
@@ -659,7 +618,7 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 --
 
 data HeadFail msg q
-type HeadFailT msg q = JustFail msg (q >> Uncons >> FMapFst)
+type HeadFailT msg q = JustFail msg (q >> Uncons >> FMap Fst)
 
 instance P (HeadFailT msg q) x => P (HeadFail msg q) x where
   type PP (HeadFail msg q) x = PP (HeadFailT msg q) x
@@ -681,7 +640,7 @@ instance P (HeadFailT msg q) x => P (HeadFail msg q) x where
 --
 
 data TailDef p q
-type TailDefT p q = JustDef p (q >> Uncons >> FMapSnd)
+type TailDefT p q = JustDef p (q >> Uncons >> FMap Snd)
 
 instance P (TailDefT p q) x => P (TailDef p q) x where
   type PP (TailDef p q) x = PP (TailDefT p q) x
@@ -696,7 +655,7 @@ instance P (TailDefT p q) x => P (TailDef p q) x where
 --
 
 data TailFail msg q
-type TailFailT msg q = JustFail msg (q >> Uncons >> FMapSnd)
+type TailFailT msg q = JustFail msg (q >> Uncons >> FMap Snd)
 
 instance P (TailFailT msg q) x => P (TailFail msg q) x where
   type PP (TailFail msg q) x = PP (TailFailT msg q) x
@@ -726,7 +685,7 @@ instance P (TailFailT msg q) x => P (TailFail msg q) x where
 --
 
 data LastDef p q
-type LastDefT p q = JustDef p (q >> Unsnoc >> FMapSnd)
+type LastDefT p q = JustDef p (q >> Unsnoc >> FMap Snd)
 
 instance P (LastDefT p q) x => P (LastDef p q) x where
   type PP (LastDef p q) x = PP (LastDefT p q) x
@@ -734,7 +693,7 @@ instance P (LastDefT p q) x => P (LastDef p q) x where
 
 -- | takes the init of a list-like object or fails with the given message
 data LastFail msg q
-type LastFailT msg q = JustFail msg (q >> Unsnoc >> FMapSnd)
+type LastFailT msg q = JustFail msg (q >> Unsnoc >> FMap Snd)
 
 instance P (LastFailT msg q) x => P (LastFail msg q) x where
   type PP (LastFail msg q) x = PP (LastFailT msg q) x
@@ -755,7 +714,7 @@ instance P (LastFailT msg q) x => P (LastFail msg q) x where
 -- PresentT [10,11,12,13,14]
 --
 data InitDef p q
-type InitDefT p q = JustDef p (q >> Unsnoc >> FMapFst)
+type InitDefT p q = JustDef p (q >> Unsnoc >> FMap Fst)
 
 instance P (InitDefT p q) x => P (InitDef p q) x where
   type PP (InitDef p q) x = PP (InitDefT p q) x
@@ -763,7 +722,7 @@ instance P (InitDefT p q) x => P (InitDef p q) x where
 
 -- | takes the init of a list-like object or fails with the given message
 data InitFail msg q
-type InitFailT msg q = JustFail msg (q >> Unsnoc >> FMapFst)
+type InitFailT msg q = JustFail msg (q >> Unsnoc >> FMap Fst)
 
 instance P (InitFailT msg q) x => P (InitFail msg q) x where
   type PP (InitFail msg q) x = PP (InitFailT msg q) x
@@ -782,7 +741,7 @@ type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
 -- | a predicate on prime numbers
 --
 -- >>> pz @IsPrime 2
--- TrueT
+-- PresentT True
 --
 -- >>> pz @(Map '(Id,IsPrime) Id) [0..12]
 -- PresentT [(0,False),(1,False),(2,True),(3,True),(4,False),(5,True),(6,False),(7,True),(8,False),(9,False),(10,False),(11,True),(12,False)]
@@ -902,17 +861,17 @@ instance (Integral (PP n x)
 -- | IsLuhn predicate check on last digit
 --
 -- >>> pz @IsLuhn [1,2,3,0]
--- TrueT
+-- PresentT True
 --
 -- >>> pz @IsLuhn [1,2,3,4]
--- FalseT
+-- PresentT False
 --
 -- >>> pz @(GuardSimple IsLuhn) [15,4,3,1,99]
--- FailT "(IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])"
+-- FailT "(False:IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])"
 --
 -- >>> pl @IsLuhn [15,4,3,1,99]
--- False (IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])
--- FalseT
+-- Present False (False:IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])
+-- PresentT False
 --
 data IsLuhn
 
@@ -984,7 +943,7 @@ instance P (ProxyT t) x where
 -- PresentT LT
 --
 -- >>> pz @(Len > 1 && Catch (Id !! 3 == 66) 'False) [1,2]
--- FalseT
+-- PresentT False
 --
 -- >>> pl @(Catch (Resplit "\\d+(") (Snd >> MEmptyP)) "123"
 -- Present [] (Catch caught exception[Regex failed to compile])
@@ -998,17 +957,17 @@ instance P (ProxyT t) x where
 -- Present 10 (Catch did not fire)
 -- PresentT 10
 --
--- >>> pl @(Catch OneP 'True) [False]  -- cant know that this is FalseT cos is driven by type of the list not the 'True part
+-- >>> pl @(Catch OneP 'True) [False]  -- cant know that this is PresentT False cos is driven by type of the list not the 'True part
 -- Present False (Catch did not fire)
 -- PresentT False
 --
 -- >>> pl @(Catch OneP 'False) [True,True,False]
--- False (Catch caught exception[OneP:expected one element(3)])
--- FalseT
+-- Present False (Catch caught exception[OneP:expected one element(3)])
+-- PresentT False
 --
 -- >>> pl @(Catch OneP 'True) []
--- True (Catch caught exception[OneP:expected one element(empty)])
--- TrueT
+-- Present True (Catch caught exception[OneP:expected one element(empty)])
+-- PresentT True
 --
 data Catch p q
 
@@ -1222,8 +1181,193 @@ instance forall p (q :: Type) (r :: Type) x . (P (p q r) x)
 -- PresentT [[9],[1,4,9],[9,10]]
 --
 data PartitionsBy p q r
-type PartitionsByT p q r = SortBy p (Zip r (1 ... Length r)) >> GroupBy q Id >> SortOn (Head >> Snd) Id >> Map (Map Fst Id) Id
+type PartitionsByT p q r = SortBy p (Zip r (0 ... (Length r - 1))) >> GroupBy q Id >> SortOn (Head >> Snd) Id >> Map (Map Fst Id) Id
 
 instance P (PartitionsByT p q r) x => P (PartitionsBy p q r) x where
   type PP (PartitionsBy p q r) x = PP (PartitionsByT p q r) x
   eval _ = eval (Proxy @(PartitionsByT p q r))
+
+-- | add an index to map
+--
+-- >>> pz @(Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Map (Snd >> IMap (GuardBool (PrintT "bad value=%d %s" Id) (Snd >> ReadP Int Id < 255)) Id) Id) "123.222.999.3"
+-- FailT "bad value=2 999"
+--
+-- >>> pz @(Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Map (Snd >> IMap (GuardBool (PrintT "bad value=%d %s" Id) (Snd >> ReadP Int Id < 255)) Id) Id) "123.222.99.3"
+-- PresentT [[True,True,True,True]]
+--
+data IMap p q
+type IMapT p q = ZipWith p (0 ... (Length q - 1)) q
+
+instance P (IMapT p q) x => P (IMap p q) x where
+  type PP (IMap p q) x = PP (IMapT p q) x
+  eval _ = eval (Proxy @(IMapT p q))
+
+-- | add an index to list
+--
+-- >>> pz @IList "abcdef"
+-- PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d'),(4,'e'),(5,'f')]
+--
+data IList
+type IListT = Zip (0 ... (Len - 1)) Id
+
+instance P IListT x => P IList x where
+  type PP IList x = PP IListT x
+  eval _ = eval (Proxy @IListT)
+
+-- | fmap
+--
+-- >>> pz @(FMap (MkDay Id) >> Join) (Just (2020,01,01))
+-- PresentT (Just 2020-01-01)
+--
+-- >>> pz @(FMap (MkDay Id) >> Join) (Just (2020,01,32))
+-- PresentT Nothing
+--
+-- >>> pz @(FMap Succ) (Just LT)
+-- PresentT (Just EQ)
+--
+-- >>> pz @(FMap Pred) (Just LT)
+-- FailT "Pred IO e=Prelude.Enum.Ordering.pred: bad argument"
+--
+-- >>> pz @(FMap (ShowP Id)) (Just 10)
+-- PresentT (Just "10")
+--
+-- >>> pan @(FMap $ FMap $ FMap Succ) [Just "abcdefG",Nothing,Just "X"]
+-- FMap
+-- |
+-- `- FMap | FMap | FMap
+--    |
+--    +- FMap
+--    |  |
+--    |  `- Succ 'b' | Succ 'c' | Succ 'd' | Succ 'e' | Succ 'f' | Succ 'g' | Succ 'H'
+--    |
+--    +- FMap <skipped>
+--    |
+--    `- FMap
+--       |
+--       `- Succ 'Y'
+-- PresentT [Just "bcdefgH",Nothing,Just "Y"]
+--
+data FMap p
+
+instance (Traversable n, P p a, PP p a ~ b) => P (FMap p) (n a) where
+  type PP (FMap p) (n a) = n (PP p a)
+  eval _ opts na = do
+    let msg0 = "FMap"
+    nttb <- traverse (eval (Proxy @p) opts) na
+    let ttnb = sequenceA nttb
+    pure $ case getValueLR opts msg0 ttnb [] of
+      Left e -> e
+      Right ret -> mkNode opts (PresentT ret) msg0 [hh (fixEmptyNode (msg0 <> " <skipped>") ttnb)]
+
+type family JoinT x y where
+  JoinT (t a) (t b) = t (a, b)
+  JoinT ta tb = GL.TypeError (
+       'GL.Text "JoinT: expected (t a) (t b) but found something else"
+       ':$$: 'GL.Text "t a = "
+       ':<>: 'GL.ShowType ta
+       ':$$: 'GL.Text "t b = "
+       ':<>: 'GL.ShowType tb)
+
+-- | runs liftA2 (,) against two values
+--
+-- >>> pz @(FApp Fst Snd) (Just 10, Just True)
+-- PresentT (Just (10,True))
+--
+-- >>> pz @(FApp Fst Snd >> FMap (ShowP Fst <> "---" <> ShowP Snd)) (Just 10, Just True)
+-- PresentT (Just "10---True")
+--
+-- >>> pz @(FApp Fst Snd >> FMap (Fst + Snd)) (Just 10, Just 13)
+-- PresentT (Just 23)
+--
+data FApp p q
+
+instance ( Applicative n
+         , PP p a ~ n x
+         , PP q a ~ n y
+         , JoinT (PP p a) (PP q a) ~ n (x,y)
+         , P p a
+         , P q a
+         )
+    => P (FApp p q) a where
+  type PP (FApp p q) a = JoinT (PP p a) (PP q a)
+  eval _ opts a = do
+    let msg0 = "FApp"
+    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq)  ->
+        let d = liftA2 (,) p q
+        in mkNode opts (PresentT d) msg0 [hh pp, hh qq]
+
+-- | similar to fish operator 'Control.Monad.>=>'
+--
+-- >>> pz @(FBind Uncons (Snd >> Uncons) "abcdef") ()
+-- PresentT (Just ('b',"cdef"))
+--
+-- >>> :m + Data.Time
+-- >>> pz @(FBind (ReadMaybe Day Id >> FMap Fst) (MkJust Succ) "2020-02-02") ()
+-- PresentT (Just 2020-02-03)
+--
+-- >>> pz @(FBind Uncons (Fst >> Lookup "abcdef" Id) [3,14,12]) ()
+-- PresentT (Just 'd')
+--
+data FBind p q r
+type FBindT p q r = r >> p >> FMap q >> Join
+
+instance P (FBindT p q r) x => P (FBind p q r) x where
+  type PP (FBind p q r) x = PP (FBindT p q r) x
+  eval _ = eval (Proxy @(FBindT p q r))
+
+-- | similar to 'Safe.headMay'
+--
+-- >>> pl @HeadMay []
+-- Present Nothing ((>>) Nothing | {FMap})
+-- PresentT Nothing
+--
+-- >>> pl @HeadMay [99,7,3]
+-- Present Just 99 ((>>) Just 99 | {FMap})
+-- PresentT (Just 99)
+--
+data HeadMay
+type HeadMayT = Uncons >> FMap Fst
+
+instance P HeadMayT x => P HeadMay x where
+  type PP HeadMay x = PP HeadMayT x
+  eval _ = eval (Proxy @HeadMayT)
+
+-- | similar to 'Safe.lastMay'
+--
+-- >>> pz @LastMay "hello"
+-- PresentT (Just 'o')
+--
+data LastMay
+type LastMayT = Unsnoc >> FMap Snd
+
+instance P LastMayT x => P LastMay x where
+  type PP LastMay x = PP LastMayT x
+  eval _ = eval (Proxy @LastMayT)
+
+-- | similar to 'Safe.tailMay'
+--
+-- >>> pz @TailMay "hello"
+-- PresentT (Just "ello")
+--
+data TailMay
+type TailMayT = Uncons >> FMap Snd
+
+instance P TailMayT x => P TailMay x where
+  type PP TailMay x = PP TailMayT x
+  eval _ = eval (Proxy @TailMayT)
+
+-- | similar to 'Safe.initMay'
+--
+-- >>> pz @InitMay "hello"
+-- PresentT (Just "hell")
+--
+data InitMay
+type InitMayT = Unsnoc >> FMap Fst
+
+instance P InitMayT x => P InitMay x where
+  type PP InitMay x = PP InitMayT x
+  eval _ = eval (Proxy @InitMayT)
+

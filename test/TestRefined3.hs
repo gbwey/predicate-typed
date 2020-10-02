@@ -91,7 +91,7 @@ unnamedTests = [
                           @(PrintL 4 "%03d.%03d.%03d.%03d" Id)
                           "1.21.31.4"
 
-  , expect3 (Left $ XTFalse (-6.5) "(-13) % 2 > (-7) % 3")
+  , expect3 (Left $ XTFalse (-6.5) "False:(-13) % 2 > (-7) % 3")
                   $ runIdentity $ eval3M @OAN @(ReadP Double Id)
                           @(ToRational Id > 7 -% 3)
                           @(PrintF "%5.3f" Id)
@@ -108,7 +108,7 @@ unnamedTests = [
                   $ runIdentity $ eval3M @OAN @(Map (ReadP Int Id) (Resplit "\\.")) @(All (Between 0 255 Id) && (Len == 4)) @""
                   "1.2.3.4"
 
-  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
+  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "False:True && False | (out of bounds: False:All(8) i=4 (False:1048319 <= 65535))")
                   $ runIdentity $ eval3M @OAN @Ip6ip @Ip6op @"" "123:Ffeff:1123:11:1"
 
   , expect3 (Right $ unsafeRefined3 [12,2,0,255] "abc")
@@ -132,7 +132,7 @@ unnamedTests = [
                   @"xyz"
                   "123-45-6789"
 
-  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
+  , expect3 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "False:True && False | (out of bounds: False:All(8) i=4 (False:1048319 <= 65535))")
                   $ runIdentity $ eval3M @OAN @Ip6ip @Ip6op @"xyz"
                   "123:Ffeff:1123:11:1"
 
@@ -166,7 +166,7 @@ unnamedTests = [
   , expect3 (Left $ XTF [1,2,3,4,5] "Bools:invalid length(5) expected 4") $ runIdentity $ eval3P (ip4' @OZ) "1.2.3.4.5"
   , expect3 (Left $ XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300]") $ runIdentity $ eval3P (ip4' @OZ) "1.2.300.4"
 
-  , expect3 (Left (XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ runIdentity $ eval3P (ip4' @OL) "1.2.300.4"
+  , expect3 (Left (XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (False:300 <= 255)")) $ runIdentity $ eval3P (ip4' @OL) "1.2.300.4"
   , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ runIdentity $ eval3P (luhn11 @OAN) "12345678903"
   , expect3 (Left $ XTF [1,2,3,4,5,6,7,8,9,0,1] "invalid checkdigit") $ runIdentity $ eval3P (luhn11 @OZ) "12345678901"
 
@@ -179,7 +179,7 @@ unnamedTests = [
   -- keep the original value
   , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ runIdentity $ eval3M @OAN @(Id &&& Ip4ip) @(Snd >> Ip4op') @(Snd >> ParaN 4 (PrintF "%03d" Id) >> Intercalate '["."] Id >> Concat) "1.2.3.4"
   , Right (unsafeRefined3 4 "someval val=004") @=? newRefined3P (Proxy @Tst1) "4"
-  , Left FalseP @=? (left m3BoolP (newRefined3P (Proxy @Tst1) "255"))
+  , Left FalseP @=? left m3BoolP (newRefined3P (Proxy @Tst1) "255")
   ]
 
 allProps :: [TestTree]
