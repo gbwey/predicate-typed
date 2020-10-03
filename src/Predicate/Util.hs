@@ -40,7 +40,6 @@ module Predicate.Util (
 
  -- ** BoolT
   , BoolT(..)
-  , GetBoolT(..)
   , _FailT
   , _PresentT
   , _BoolT
@@ -150,6 +149,7 @@ module Predicate.Util (
   , AnyT
   , ExtractAFromList
   , ExtractAFromTA
+  , ExtractTFromTA
   , MaybeT
   , LeftT
   , RightT
@@ -360,14 +360,6 @@ instance Monad TT where
     let TT w _y1 z1 = amb a
     in TT w (y++ nullIf " | " _y1) (z <> z1)
   TT (FailT s) y z >>= _ = TT (FailT s) y z
-
--- | extracts the @BoolT a@ constructors from the typelevel
-class GetBoolT a (x :: BoolT a) | x -> a where
-  getBoolT :: BoolT Bool
-instance GetBoolT a ('PresentT b) where
-  getBoolT = PresentT False
-instance GetBoolT a ('FailT s) where
-  getBoolT = FailT ""
 
 -- | a lens from typed 'BoolT' to the untyped 'BoolP'
 boolT2P :: Lens' (BoolT a) BoolP
@@ -1792,6 +1784,15 @@ type family ExtractAFromTA (ta :: Type) :: Type where
       'GL.Text "ExtractAFromTA: expected (t a) but found something else"
       ':$$: 'GL.Text "t a = "
       ':<>: 'GL.ShowType z)
+
+-- | type family to extract @t@ from @t a@
+type family ExtractTFromTA (ta :: Type) :: (Type -> Type) where
+  ExtractTFromTA (t a) = t
+  ExtractTFromTA z = GL.TypeError (
+      'GL.Text "ExtractTFromTA: expected (t a) but found something else"
+      ':$$: 'GL.Text "t a = "
+      ':<>: 'GL.ShowType z)
+
 
 -- todo: get ExtractAFromList failure to fire if wrong Type
 -- | type family to extract @a@ from a list of @a@

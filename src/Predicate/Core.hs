@@ -874,22 +874,6 @@ instance Show a => P 'Proxy a where
     let b = Proxy @a
     in pure $ mkNode opts (PresentT b) ("'Proxy" <> showVerbose opts " | " a) []
 
--- | get the constructor used for the typelevel 'BoolT'
---
--- >>> pz @('PresentT 123) ()
--- PresentT False
---
--- >>> pz @('FailT '[]) ()
--- FailT "'FailT _"
---
-instance GetBoolT x b => P (b :: BoolT x) a where
-  type PP b a = Bool
-  eval _ opts _ = do
-    let ret = getBoolT @x @b
-    pure $ case ret of
-      PresentT {} -> mkNode opts (PresentT False) "'PresentT _" []
-      FailT {} -> mkNode opts (FailT "'FailT _") "" []
-
 pu, pl, pa, pan, panv, pab, pub, pav, puv, pz
   :: forall p a
   . ( Show (PP p a)
@@ -929,9 +913,9 @@ puv = run @OUV @p
 -- field1 >>> Error 'Left found Right
 -- FailT "'Left found Right"
 --
--- >>> run @(OptT '[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"]) @('FailT '[]) ()
--- test | field2 >>> Error 'FailT _
--- FailT "'FailT _"
+-- >>> run @(OptT '[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"]) @(Failt _ "oops") ()
+-- test | field2 >>> Error oops
+-- FailT "oops"
 --
 run :: forall opts p a
         . ( OptC opts
@@ -954,9 +938,9 @@ run a = do
 -- field2 >>> Present (True,False) ('(True,False))
 -- PresentT (True,False)
 --
--- >>> runs @'[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"] @('FailT '[]) ()
--- test | field2 >>> Error 'FailT _
--- FailT "'FailT _"
+-- >>> runs @'[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"] @(Failt _ "oops") ()
+-- test | field2 >>> Error oops
+-- FailT "oops"
 --
 runs :: forall optss p a
         . ( OptC (OptT optss)
@@ -1243,6 +1227,27 @@ instance ( PP p x ~ Bool
 -- >>> pz @(Fst >> IdBool) (False,22)
 -- PresentT False
 --
+-- >>> pl @(Head >> IdBool) [True]
+-- Present True ((>>) True | {True:IdBool})
+-- PresentT True
+--
+-- >>> pan @(Head >> Id) [True]
+-- (>>) True
+-- |
+-- +- Head True
+-- |
+-- `- Id True
+-- PresentT True
+--
+-- >>> pan @(Head >> IdBool) [True]
+-- (>>) True
+-- |
+-- +- Head True
+-- |
+-- `- True:IdBool
+-- PresentT True
+--
+
 data IdBool
 
 instance x ~ Bool
@@ -1823,14 +1828,6 @@ instance (Show (PP p a)
 -- >>> pl @(Do '[4 % 4,22 % 1 ,12 -% 4]) ()
 -- Present (-3) % 1 ((>>) (-3) % 1 | {Negate (-3) % 1 | 3 % 1})
 -- PresentT ((-3) % 1)
---
--- >>> pl @(Do '[W ('PresentT Id), W ('PresentT 'False), Not Id]) False
--- Present True ((>>) True | {True:Not (Id False)})
--- PresentT True
---
--- >>> pl @(Do '[W ('PresentT Id), W ('PresentT 'False)]) True -- have to wrap them cos BoolT a vs BoolT Bool ie different types
--- Present False ((>>) False | {W 'PresentT _})
--- PresentT False
 --
 -- >>> pl @(Do '[1,2,3]) ()
 -- Present 3 ((>>) 3 | {'3})

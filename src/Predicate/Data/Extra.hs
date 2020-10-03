@@ -82,8 +82,11 @@ module Predicate.Data.Extra (
   , IMap
   , IList
   , FMap
-  , FApp
-  , FBind
+  , type (<$>)
+  , FPair
+  , FFish
+  , type (>>=)
+  , type (<:>)
 
  ) where
 import Predicate.Core
@@ -430,36 +433,36 @@ instance (Show (f (t a))
 
 -- | like 'traverse'
 --
--- >>> pl @(Traverse (If (Gt 3) (Pure Maybe Id) (EmptyT Maybe)) Id) [1..5]
+-- >>> pl @(Traverse (If (Gt 3) (Pure Maybe Id) (EmptyT Maybe))) [1..5]
 -- Present Nothing ((>>) Nothing | {Sequence Nothing | [Nothing,Nothing,Nothing,Just 4,Just 5]})
 -- PresentT Nothing
 --
--- >>> pl @(Traverse (MaybeBool (Le 3) Id) Id) [1..5]
+-- >>> pl @(Traverse (MaybeBool (Le 3) Id)) [1..5]
 -- Present Nothing ((>>) Nothing | {Sequence Nothing | [Just 1,Just 2,Just 3,Nothing,Nothing]})
 -- PresentT Nothing
 --
--- >>> pl @(Traverse (If (Gt 0) (Pure Maybe Id) (EmptyT Maybe)) Id) [1..5]
+-- >>> pl @(Traverse (If (Gt 0) (Pure Maybe Id) (EmptyT Maybe))) [1..5]
 -- Present Just [1,2,3,4,5] ((>>) Just [1,2,3,4,5] | {Sequence Just [1,2,3,4,5] | [Just 1,Just 2,Just 3,Just 4,Just 5]})
 -- PresentT (Just [1,2,3,4,5])
 --
--- >>> pl @(Traverse (If (Gt 0) (Pure Maybe Id) (MkNothing _)) Id) [1..5]
+-- >>> pl @(Traverse (If (Gt 0) (Pure Maybe Id) (MkNothing _))) [1..5]
 -- Present Just [1,2,3,4,5] ((>>) Just [1,2,3,4,5] | {Sequence Just [1,2,3,4,5] | [Just 1,Just 2,Just 3,Just 4,Just 5]})
 -- PresentT (Just [1,2,3,4,5])
 --
--- >>> pl @(Traverse (MaybeBool (Id >= 0) Id) Id) [1..5]
+-- >>> pl @(Traverse (MaybeBool (Id >= 0) Id)) [1..5]
 -- Present Just [1,2,3,4,5] ((>>) Just [1,2,3,4,5] | {Sequence Just [1,2,3,4,5] | [Just 1,Just 2,Just 3,Just 4,Just 5]})
 -- PresentT (Just [1,2,3,4,5])
 --
--- >>> pl @(Traverse (MaybeBool (Id <= 3) Id) Id) [1..5]
+-- >>> pl @(Traverse (MaybeBool (Id <= 3) Id)) [1..5]
 -- Present Nothing ((>>) Nothing | {Sequence Nothing | [Just 1,Just 2,Just 3,Nothing,Nothing]})
 -- PresentT Nothing
 --
-data Traverse p q
-type TraverseT p q = Map p q >> Sequence
+data Traverse p
+type TraverseT p = FMap p >> Sequence
 
-instance P (TraverseT p q) x => P (Traverse p q) x where
-  type PP (Traverse p q) x = PP (TraverseT p q) x
-  eval _ = eval (Proxy @(TraverseT p q))
+instance P (TraverseT p) x => P (Traverse p) x where
+  type PP (Traverse p) x = PP (TraverseT p) x
+  eval _ = eval (Proxy @(TraverseT p))
 
 -- | just run the effect ignoring the result passing the original value through
 -- for example for use with Stdout so it doesnt interfere with the @a@ on the rhs unless there is an failure
@@ -1268,18 +1271,52 @@ type family JoinT x y where
        ':$$: 'GL.Text "t b = "
        ':<>: 'GL.ShowType tb)
 
+-- | see 'FMap'
+--
+-- >>> pz @(Len <$> Snd) (1,Just "abcdef")
+-- PresentT (Just 6)
+--
+-- >>> pz @(Len <$> (Id <> Id <> "extra" <$> Snd)) (1,Just "abcdef")
+-- PresentT (Just 17)
+--
+-- >>> pz @(Len <$> (Id <> Id <> "extra" <$> Snd)) (1,Right "abcdef")
+-- PresentT (Right 17)
+--
+-- >>> pz @(FMap $ FMap (Succ <$> Id)) (True,Just (These 12 'c'))
+-- PresentT (True,Just (These 12 'd'))
+--
+-- >>> pz @(FMap (Second (Succ <$> Id))) [(True, (These 12 'c'))]
+-- PresentT [(True,These 12 'd')]
+--
+data p <$> q
+infixl 4 <$>
+
+instance (Traversable n, P q a, P p b, PP q a ~ n b, PP p b ~ c) => P (p <$> q) a where
+  type PP (p <$> q) a = (ExtractTFromTA (PP q a)) (PP p (ExtractAFromTA (PP q a)))
+  eval _ opts x = do
+    let msg0 = "(<$>)"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        nttb <- traverse (eval (Proxy @p) opts) q
+        let ttnb = sequenceA nttb
+        pure $ case getValueLR opts msg0 ttnb [hh qq] of
+          Left e -> e
+          Right ret -> mkNode opts (PresentT ret) msg0 [hh qq, hh (fixEmptyNode (msg0 <> " <skipped>") ttnb)]
+
 -- | runs liftA2 (,) against two values
 --
--- >>> pz @(FApp Fst Snd) (Just 10, Just True)
+-- >>> pz @(FPair Fst Snd) (Just 10, Just True)
 -- PresentT (Just (10,True))
 --
--- >>> pz @(FApp Fst Snd >> FMap (ShowP Fst <> "---" <> ShowP Snd)) (Just 10, Just True)
+-- >>> pz @(FPair Fst Snd >> FMap (ShowP Fst <> "---" <> ShowP Snd)) (Just 10, Just True)
 -- PresentT (Just "10---True")
 --
--- >>> pz @(FApp Fst Snd >> FMap (Fst + Snd)) (Just 10, Just 13)
+-- >>> pz @(FPair Fst Snd >> FMap (Fst + Snd)) (Just 10, Just 13)
 -- PresentT (Just 23)
 --
-data FApp p q
+data FPair p q
 
 instance ( Applicative n
          , PP p a ~ n x
@@ -1288,10 +1325,10 @@ instance ( Applicative n
          , P p a
          , P q a
          )
-    => P (FApp p q) a where
-  type PP (FApp p q) a = JoinT (PP p a) (PP q a)
+    => P (FPair p q) a where
+  type PP (FPair p q) a = JoinT (PP p a) (PP q a)
   eval _ opts a = do
-    let msg0 = "FApp"
+    let msg0 = "FPair"
     lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
@@ -1299,24 +1336,57 @@ instance ( Applicative n
         let d = liftA2 (,) p q
         in mkNode opts (PresentT d) msg0 [hh pp, hh qq]
 
--- | similar to fish operator 'Control.Monad.>=>'
+-- | see 'FPair'
 --
--- >>> pz @(FBind Uncons (Snd >> Uncons) "abcdef") ()
+-- >>> pz @(Fst <:> Snd) (Just 10, Just True)
+-- PresentT (Just (10,True))
+--
+-- >>> pz @(Fst <:> Snd) ("abc" :: String,[10,12,14])
+-- PresentT [('a',10),('a',12),('a',14),('b',10),('b',12),('b',14),('c',10),('c',12),('c',14)]
+--
+data p <:> q
+type FPairT p q = FPair p q
+infixl 6 <:>
+
+instance P (FPairT p q) x => P (p <:> q) x where
+  type PP (p <:> q) x = PP (FPairT p q) x
+  eval _ = eval (Proxy @(FPairT p q))
+
+
+-- | similar to monad operator 'Control.Monad.>=>'
+--
+-- >>> pz @(FFish Uncons (Snd >> Uncons) "abcdef") ()
 -- PresentT (Just ('b',"cdef"))
 --
 -- >>> :m + Data.Time
--- >>> pz @(FBind (ReadMaybe Day Id >> FMap Fst) (MkJust Succ) "2020-02-02") ()
+-- >>> pz @(FFish (ReadMaybe Day Id >> FMap Fst) (MkJust Succ) "2020-02-02") ()
 -- PresentT (Just 2020-02-03)
 --
--- >>> pz @(FBind Uncons (Fst >> Lookup "abcdef" Id) [3,14,12]) ()
+-- >>> pz @(FFish Uncons (Fst >> Lookup "abcdef" Id) [3,14,12]) ()
 -- PresentT (Just 'd')
 --
-data FBind p q r
-type FBindT p q r = r >> p >> FMap q >> Join
+data FFish amb bmc a
+type FFishT amb bmc a = a >> amb >> FMap bmc >> Join
 
-instance P (FBindT p q r) x => P (FBind p q r) x where
-  type PP (FBind p q r) x = PP (FBindT p q r) x
-  eval _ = eval (Proxy @(FBindT p q r))
+instance P (FFishT p q r) x => P (FFish p q r) x where
+  type PP (FFish p q r) x = PP (FFishT p q r) x
+  eval _ = eval (Proxy @(FFishT p q r))
+
+-- | similar to monad bind operator 'Control.Monad.>>='
+--
+-- >>> pz @(Id >>= HeadMay) (Just "abcdef")
+-- PresentT (Just 'a')
+--
+-- >>> pz @(Uncons >>= (Snd >> HeadMay)) "abcdef"
+-- PresentT (Just 'b')
+--
+data ma >>= amb
+type FBindT ma amb = ma >> FMap amb >> Join
+infixl 1 >>=
+
+instance P (FBindT p q) x => P (p >>= q) x where
+  type PP (p >>= q) x = PP (FBindT p q) x
+  eval _ = eval (Proxy @(FBindT p q))
 
 -- | similar to 'Safe.headMay'
 --
