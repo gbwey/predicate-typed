@@ -1,0 +1,13 @@
+cradle:
+  stack:
+    - path: "src"
+      component: "predicate-typed:lib"
+
+    - path: "src"
+      component: "predicate-typed:test:doctests"
+
+    - path: "doctest"
+      component: "predicate-typed:test:doctests"
+
+    - path: "test"
+      component: "predicate-typed:test:predicate-typed-test"
