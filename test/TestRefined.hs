@@ -49,15 +49,15 @@ unnamedTests = [
   , (@=?) [(unsafeRefined "abcaaaabb", "")] (reads @(Refined OAN (Re "^[abc]+$") String) "Refined \"abcaaaabb\"")
   , (@=?) [] (reads @(Refined OAN (Re "^[abc]+$") String) "Refined \"abcaaaabbx\"")
 
-  , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):PresentT False"]) (toFrom (unsafeRefined @OZ @(Between 4 7 Id || Gt 14) 12))
+  , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):FalseT"]) (toFrom (unsafeRefined @OZ @(Between 4 7 Id || Gt 14) 12))
   , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @OZ @(Between 4 7 Id || Gt 14) 22))
   , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):FailT someval (||)"]) (toFrom (unsafeRefined @OL @(Between 4 7 Id || Gt 14 || Failt _ "someval") 12))
 
   ,  tst2' 10 200 >>= (@?= Right (10,200))
-  ,  tst2' 11 12 >>= (@?= Left (PresentT False))
+  ,  tst2' 11 12 >>= (@?= Left (Right False))
 
   ,  tst1' 10 200 @?= Right (10,200)
-  ,  tst1' 11 12 @?= Left (PresentT False)
+  ,  tst1' 11 12 @?= Left (Right False)
 
   ]
 
@@ -68,14 +68,14 @@ allProps =
   , testProperty "jsonroundtrip" $ forAll (genRefined @OAN @(Between 10 45 Id) (choose (1,100))) (\r -> testRefinedJ @OAN @(Between 10 45 Id) (unRefined r) === Right r)
   ]
 
-tst1' :: Int -> Int -> Either (BoolT Bool) (Int,Int)
-tst1' i j = left m0BoolT $ do
+tst1' :: Int -> Int -> Either (Either String Bool) (Int,Int)
+tst1' i j = left m0BoolE $ do
   x <- newRefined @OAN @(Between 2 11 Id) i
   y <- newRefined @OAN @(Between 200 211 Id) j
   return (unRefined x, unRefined y)
 
-tst2' :: Int -> Int -> IO (Either (BoolT Bool) (Int,Int))
-tst2' i j = left m0BoolT <$> do
+tst2' :: Int -> Int -> IO (Either (Either String Bool) (Int,Int))
+tst2' i j = left m0BoolE <$> do
   x <- newRefined' @OAN @(Between 2 11 Id) i
   y <- newRefined' @OAN @(Stderr "startio..." |> Between 200 211 Id >| Stderr "...endio") j
   return $

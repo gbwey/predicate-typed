@@ -48,7 +48,11 @@ module Predicate.Util (
 
  -- ** PE
   , BoolP(..)
-  , PE
+  , _FailP
+  , _TrueP
+  , _FalseP
+  , _PresentP
+  , PE(..)
   , pBool
   , pString
 
@@ -397,15 +401,16 @@ mkNode' :: POpts
        -> [Holder]
        -> BoolP
        -> TT a
-mkNode' opts bt ss hs bp =
-  case oDebug opts of
-    DZero -> TT bt [] [] bp
-    DLite ->
-    -- keeps the last string so we can use the root to give more details on failure (especially for Refined* types)
-    -- also holds onto any failures
-        let zs = filter (\(Holder x) -> has (ttBoolT . _FailT) x) hs
-        in TT bt ss (map fromTTH zs) bp
-    _ -> TT bt ss (map fromTTH hs) bp
+mkNode' opts bt ss hs bp' =
+  let bp = validateBoolP bt bp'
+  in case oDebug opts of
+      DZero -> TT bt [] [] bp
+      DLite ->
+      -- keeps the last string so we can use the root to give more details on failure (especially for Refined* types)
+      -- also holds onto any failures
+          let zs = filter (\(Holder x) -> has (ttBoolT . _FailT) x) hs
+          in TT bt ss (map fromTTH zs) bp
+      _ -> TT bt ss (map fromTTH hs) bp
 
 validateBoolP :: BoolT a -> BoolP -> BoolP
 validateBoolP bt bp =
@@ -1185,7 +1190,7 @@ colorBoolTLite o bt bp =
                       PresentP -> "Present " <> show x
                       TrueP -> "True"
                       FalseP -> "False"
-                      FailP _ -> errorInProgram "dude"
+                      FailP _ -> errorInProgram $ "colorBoolTLite: unexpected FailP " ++ show (bt,bp)
 
 colorBoolTBool ::
       POpts

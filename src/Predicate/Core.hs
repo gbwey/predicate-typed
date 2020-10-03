@@ -129,6 +129,7 @@ import Control.Monad (zipWithM)
 import Data.List (find)
 import Data.Coerce (Coercible)
 import qualified Data.Semigroup as SG
+import Data.Tree.Lens (root)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -1046,7 +1047,10 @@ instance ( P p a
       Right p -> do
         qq <- eval (Proxy @q) opts p
         pure $ case getValueLR opts (showL opts p) qq [hh pp] of
-          Left e -> e
+        -- need to look inside to see if there is already an exception in ttForest
+          Left e -> if anyOf (ttForest . traverse . root . pBool) (has _FailP) qq
+                    then qq & ttForest %~ (fromTT pp:) -- we still need pp for context
+                    else e
           Right q -> mkNodeCopy opts qq (lit01 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
 
 -- | flipped version of 'Predicate.Core.>>'
@@ -1818,7 +1822,7 @@ instance ( Show (PP p a)
 -- PresentT [1,2,4,0]
 --
 -- >>> pl @(Do '[Pred,Id,ShowP Id,Ones,Map (ReadBase Int 8) Id]) 1239
--- Error invalid base 8 (1238)
+-- Error invalid base 8 (Map(i=3, a="8") excnt=1)
 -- FailT "invalid base 8"
 --
 -- >>> pl @(Do '[4,5,6]) ()

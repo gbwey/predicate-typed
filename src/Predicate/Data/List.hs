@@ -886,7 +886,7 @@ instance x ~ [a] => P Ones x where
           Left e -> e
           Right _ ->
             let d = map pure x
-            in mkNode opts (PresentT d) "" []
+            in mkNode opts (PresentT d) msg0 []
 
 data PadImpl (left :: Bool) n p q
 
@@ -1211,7 +1211,7 @@ instance P (RemoveT p q) x => P (Remove p q) x where
 -- FailT "Head(empty)"
 --
 -- >>> pl @(Fst >> Head >> Le 6) ([]::[Int], True)
--- Error Head(empty) ([])
+-- Error Head(empty)
 -- FailT "Head(empty)"
 --
 -- >>> pl @Head [1,2,3]

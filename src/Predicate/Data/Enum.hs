@@ -323,7 +323,7 @@ instance (Show a
 -- PresentT 'x'
 --
 -- >>> pl @(Map (FromEnum Id) Id >> Map (Id - 97 >> ToEnum Ordering) Id) ("abcde" :: String)
--- Error ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2) ([97,98,99,100,101])
+-- Error ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2) (Map(i=3, a=100) excnt=2)
 -- FailT "ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2)"
 --
 -- >>> pl @((ToEnum Day *** ToEnum Day) >> EnumFromTo Fst Snd) (0,5)

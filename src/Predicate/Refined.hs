@@ -22,6 +22,7 @@
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LambdaCase #-}
 {- |
      Simple refinement type with only one type and a predicate
 -}
@@ -101,10 +102,12 @@ instance RefinedC opts p String => IsString (Refined opts p String) where
       Right r -> r
 
 errorDisplay :: POpts -> Msg0 -> String
-errorDisplay o (Msg0 _bp top e bpc) =
-     bpc
-  ++ nullIf " " top
-  ++ (if null e || hasNoTree o then "" else "\n" ++ e)
+errorDisplay o m =
+     m0BoolTColor m
+  ++ nullIf " " (m0Short m)
+  ++ (if null (m0Long m) || hasNoTree o
+      then ""
+      else "\n" ++ m0Long m)
 
 -- | 'Read' instance for 'Refined'
 --
@@ -245,7 +248,7 @@ genRefined g =
           Just a -> pure $ unsafeRefined a
   in f 0
 
-data Msg0 = Msg0 { m0BoolT :: !(BoolT Bool)
+data Msg0 = Msg0 { m0BoolE :: !(Either String Bool)
                  , m0Short :: !String
                  , m0Long :: !String
                  , m0BoolTColor :: !String
@@ -255,7 +258,7 @@ showMsg0 :: Msg0 -> String
 showMsg0 (Msg0 a b c d) = "Msg0 [" ++ show a ++ "]\nShort[" ++ b ++ "]\nLong[" ++ c ++ "]\nColor[" ++ d ++ "]"
 
 instance Show Msg0 where
-  show (Msg0 _a _b c _d) = c
+  show = m0Long
 
 newRefined' :: forall opts p a m
    . ( MonadEval m
@@ -268,10 +271,16 @@ newRefined' a = do
   pp <- evalBool (Proxy @p) o a
   let r = colorBoolTBool o (_ttBoolT pp)
       s = prtTree o pp
-      msg0 = Msg0 (_ttBoolT pp) (topMessage pp) s r
+      msg0 = Msg0 (boolT2LR (_ttBoolT pp)) (topMessage pp) s r
   pure $ case getValueLR o "" pp [] of
        Right True -> Right (Refined a)
        _ -> Left msg0
+
+boolT2LR :: a ~ Bool => BoolT a -> Either String Bool
+boolT2LR = \case
+             PresentT True -> Right True
+             PresentT False -> Right False
+             FailT e -> Left e
 
 -- | returns a 'Refined' value if @a@ is valid for the predicate @p@
 --
@@ -284,8 +293,8 @@ newRefined' a = do
 -- >>> newRefined @OZ @(Between 10 14 Id) 13
 -- Right (Refined 13)
 --
--- >>> AR.left m0BoolT $ newRefined @OZ @(Between 10 14 Id) 99
--- Left (PresentT False)
+-- >>> AR.left m0BoolE $ newRefined @OZ @(Between 10 14 Id) 99
+-- Left (Right False)
 --
 -- >>> newRefined @OZ @(Last >> Len == 4) ["one","two","three","four"]
 -- Right (Refined ["one","two","three","four"])
@@ -293,38 +302,38 @@ newRefined' a = do
 -- >>> newRefined @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1.99"
 -- Right (Refined "141.213.1.99")
 --
--- >>> AR.left m0BoolT $ newRefined @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1"
--- Left (PresentT False)
+-- >>> AR.left m0BoolE $ newRefined @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1"
+-- Left (Right False)
 --
--- >>> AR.left m0BoolT $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
--- Left (FailT "bad length: found 3")
+-- >>> AR.left m0BoolE $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
+-- Left (Left "bad length: found 3")
 --
--- >>> AR.left m0BoolT $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1.444"
--- Left (FailT "Bool(3) [octet 3 out of range 444]")
+-- >>> AR.left m0BoolE $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1.444"
+-- Left (Left "Bool(3) [octet 3 out of range 444]")
 --
--- >>> AR.left m0BoolT $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1x34.444"
--- Left (FailT "ReadP Int (1x34)")
+-- >>> AR.left m0BoolE $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1x34.444"
+-- Left (Left "ReadP Int (1x34)")
 --
 -- >>> newRefined @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12344"
 -- Right (Refined "12344")
 --
--- >>> AR.left m0BoolT $ newRefined @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12340"
--- Left (PresentT False)
+-- >>> AR.left m0BoolE $ newRefined @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12340"
+-- Left (Right False)
 --
 -- >>> newRefined @OZ @(Any IsPrime) [11,13,17,18]
 -- Right (Refined [11,13,17,18])
 --
--- >>> AR.left m0BoolT $ newRefined @OZ @(All IsPrime) [11,13,17,18]
--- Left (PresentT False)
+-- >>> AR.left m0BoolE $ newRefined @OZ @(All IsPrime) [11,13,17,18]
+-- Left (Right False)
 --
 -- >>> newRefined @OZ @(Snd !! Fst >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Right (Refined (2,["abc","defghij","xyzxyazsfd"]))
 --
--- >>> AR.left m0BoolT $ newRefined @OZ @(Snd !! Fst >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
--- Left (FailT "(!!) index not found")
+-- >>> AR.left m0BoolE $ newRefined @OZ @(Snd !! Fst >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
+-- Left (Left "(!!) index not found")
 --
--- >>> AR.left m0BoolT $ newRefined @OZ @(Snd !! Fst >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
--- Left (PresentT False)
+-- >>> AR.left m0BoolE $ newRefined @OZ @(Snd !! Fst >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
+-- Left (Right False)
 --
 newRefined :: forall opts p a
     . RefinedC opts p a

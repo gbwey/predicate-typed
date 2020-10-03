@@ -88,10 +88,10 @@ refinedTHIO i = do
     Right r -> [||r||]
 
 refinedFailMsg :: forall opts . OptC opts => String -> Msg0 -> String
-refinedFailMsg msg0 (Msg0 _bp top e bpc) =
-  let msg1 | hasNoTree (getOpt @opts) || null e = ""
-           | otherwise = nullIf "\n" e
-  in msg0 ++ ": predicate failed with " ++ bpc ++ " " ++ top ++ msg1
+refinedFailMsg msg m =
+  let msg1 | hasNoTree (getOpt @opts) || null (m0Long m) = ""
+           | otherwise = nullIf "\n" (m0Long m)
+  in msg ++ ": predicate failed with " ++ m0BoolTColor m ++ " " ++ m0Short m ++ msg1
 
 -- | creates a 'Refined2.Refined2' refinement type
 --

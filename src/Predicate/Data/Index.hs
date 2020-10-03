@@ -186,7 +186,7 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- PresentT True
 --
 -- >>> pl @(Map Len Id >> Ix 3 (Failp "lhs") &&& Ix 0 5 >> Fst == Snd) [[1..4],[4..5]]
--- Error lhs ([4,2])
+-- Error lhs
 -- FailT "lhs"
 --
 -- >>> pl @(Map Len Id >> Ix 0 (Failp "lhs") &&& Ix 1 5 >> Fst == Snd) [[1..4],[4..5]]
@@ -194,15 +194,15 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 1 (Failp "lhs") &&& Ix 3 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
--- Error rhs ([4,2])
+-- Error rhs
 -- FailT "rhs"
 --
 -- >>> pl @(Map Len Id >> Ix 10 (Failp "lhs") &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
--- Error lhs ([4,2])
+-- Error lhs
 -- FailT "lhs"
 --
 -- >>> pl @(Map Len Id >> Ix 0 (Failp "lhs") &&& Ix 10 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
--- Error rhs ([4,2])
+-- Error rhs
 -- FailT "rhs"
 --
 -- >>> pl @(Map Len Id >> Ix 10 3 &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]

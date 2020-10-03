@@ -416,7 +416,7 @@ instance P (IterateNWhileT n p f) x => P (IterateNWhile n p f) x where
 -- PresentT [95,94,93]
 --
 -- >>> pl @(IterateNUntil 9999 'False Id) 1
--- Error Unfoldr (9999,1):recursion limit i=100 ((9999,1))
+-- Error Unfoldr (9999,1):recursion limit i=100
 -- FailT "Unfoldr (9999,1):recursion limit i=100"
 --
 data IterateNUntil n p f

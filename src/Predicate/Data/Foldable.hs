@@ -221,7 +221,7 @@ instance (Show l
 -- PresentT False
 --
 -- >>> pl @(FromList (M.Map _ _) >> Id !! Char1 "z") [('x',True),('y',False)]
--- Error (!!) index not found (fromList [('x',True),('y',False)])
+-- Error (!!) index not found (IxL('z'))
 -- FailT "(!!) index not found"
 --
 

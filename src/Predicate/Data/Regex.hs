@@ -368,7 +368,7 @@ instance (GetROpts rs
 -- PresentT ([141,214,125,1,2,6],(False,True))
 --
 -- >>> pl @(Resplit "\\." >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (0 <..> 0xff))) "141.214.125."
--- Error ReadP Int () (["141","214","125",""])
+-- Error ReadP Int ()
 -- FailT "ReadP Int ()"
 --
 data Resplit p
