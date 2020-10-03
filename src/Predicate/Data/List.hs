@@ -386,7 +386,7 @@ instance P (RotateT n p) x => P (Rotate n p) x where
 -- PresentT ([2,4,6],[1,3,5])
 --
 -- >>> pl @(Partition Even Id >> Null *** (Len > 4) >> Fst == Snd) [1..6]
--- Present True ((>>) True | {True:False == False})
+-- True ((>>) True | {False == False})
 -- PresentT True
 --
 -- >>> pl @(Partition (ExitWhen "ExitWhen" (Gt 10) >> Gt 2) Id) [1..11]
@@ -494,39 +494,39 @@ instance (P p x
 -- PresentT [[1,2,3,4],[4],[4,1]]
 --
 -- >>> pan @(GroupBy (Fst == Snd) Id) "hello    goodbye"
--- GroupBy ["h","e","ll","o","    ","g","oo","d","b","y","e"]
+-- P GroupBy ["h","e","ll","o","    ","g","oo","d","b","y","e"]
 -- |
--- +- Id "hello    goodbye"
+-- +- P Id "hello    goodbye"
 -- |
--- +- i=0: False:'h' == 'e'
+-- +- False i=0: 'h' == 'e'
 -- |
--- +- i=1: False:'e' == 'l'
+-- +- False i=1: 'e' == 'l'
 -- |
--- +- i=2: True:'l' == 'l'
+-- +- True i=2: 'l' == 'l'
 -- |
--- +- i=3: False:'l' == 'o'
+-- +- False i=3: 'l' == 'o'
 -- |
--- +- i=4: False:'o' == ' '
+-- +- False i=4: 'o' == ' '
 -- |
--- +- i=5: True:' ' == ' '
+-- +- True i=5: ' ' == ' '
 -- |
--- +- i=6: True:' ' == ' '
+-- +- True i=6: ' ' == ' '
 -- |
--- +- i=7: True:' ' == ' '
+-- +- True i=7: ' ' == ' '
 -- |
--- +- i=8: False:' ' == 'g'
+-- +- False i=8: ' ' == 'g'
 -- |
--- +- i=9: False:'g' == 'o'
+-- +- False i=9: 'g' == 'o'
 -- |
--- +- i=10: True:'o' == 'o'
+-- +- True i=10: 'o' == 'o'
 -- |
--- +- i=11: False:'o' == 'd'
+-- +- False i=11: 'o' == 'd'
 -- |
--- +- i=12: False:'d' == 'b'
+-- +- False i=12: 'd' == 'b'
 -- |
--- +- i=13: False:'b' == 'y'
+-- +- False i=13: 'b' == 'y'
 -- |
--- `- i=14: False:'y' == 'e'
+-- `- False i=14: 'y' == 'e'
 -- PresentT ["h","e","ll","o","    ","g","oo","d","b","y","e"]
 --
 data GroupBy p q
@@ -788,23 +788,23 @@ instance (PP p x ~ [a]
 -- PresentT False
 --
 -- >>> pl @(Elem Id '[2,3,4]) 2
--- Present True (True:2 `elem` [2,3,4])
+-- True (2 `elem` [2,3,4])
 -- PresentT True
 --
 -- >>> pl @(Elem Id '[2,3,4]) 6
--- Present False (False:6 `elem` [2,3,4])
+-- False (6 `elem` [2,3,4])
 -- PresentT False
 --
 -- >>> pl @(Elem Id '[13 % 2]) 6.5
--- Present True (True:13 % 2 `elem` [13 % 2])
+-- True (13 % 2 `elem` [13 % 2])
 -- PresentT True
 --
 -- >>> pl @(Elem Id '[13 % 2, 12 % 1]) 6.5
--- Present True (True:13 % 2 `elem` [13 % 2,12 % 1])
+-- True (13 % 2 `elem` [13 % 2,12 % 1])
 -- PresentT True
 --
 -- >>> pl @(Elem Id '[13 % 2, 12 % 1]) 6
--- Present False (False:6 % 1 `elem` [13 % 2,12 % 1])
+-- False (6 % 1 `elem` [13 % 2,12 % 1])
 -- PresentT False
 --
 
@@ -1025,7 +1025,7 @@ instance (P ns x
 -- PresentT ("hello wor","ld")
 --
 -- >>> pl @(Snd >> SplitAt 2 Id >> Len *** Len >> Fst > Snd) ('x',[1..5])
--- Present False ((>>) False | {False:2 > 3})
+-- False ((>>) False | {2 > 3})
 -- PresentT False
 --
 data SplitAt n p
@@ -1416,7 +1416,7 @@ instance (P p (a,a)
         ret <- ff as
         pure $ case getValueLR opts msg0 ret [hh qq] of
           Left _e -> ret -- dont rewrap else will double up messages: already handled
-          Right xs -> mkNode opts (_ttBool ret) (msg0 <> " " <> showL opts xs) [hh qq, hh ret]
+          Right xs -> mkNodeCopy opts ret (msg0 <> " " <> showL opts xs) [hh qq, hh ret]
 
 -- | similar to 'Data.List.sortOn'
 --
@@ -1987,11 +1987,11 @@ instance ( P p x
 -- | similar to 'Data.List.isPrefixOf'
 --
 -- >>> pl @(IsPrefix '[2,3] Id) [2,3,4]
--- Present True (True:IsPrefix | [2,3] [2,3,4])
+-- True (IsPrefix | [2,3] [2,3,4])
 -- PresentT True
 --
 -- >>> pl @(IsPrefix '[2,3] Id) [1,2,3]
--- Present False (False:IsPrefix | [2,3] [1,2,3])
+-- False (IsPrefix | [2,3] [1,2,3])
 -- PresentT False
 --
 data IsPrefix p q
@@ -2004,11 +2004,11 @@ instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
 -- | similar to 'Data.List.isInfixOf'
 --
 -- >>> pl @(IsInfix '[2,3] Id) [1,2,3]
--- Present True (True:IsInfix | [2,3] [1,2,3])
+-- True (IsInfix | [2,3] [1,2,3])
 -- PresentT True
 --
 -- >>> pl @(IsInfix '[2,3] Id) [1,2,1,3]
--- Present False (False:IsInfix | [2,3] [1,2,1,3])
+-- False (IsInfix | [2,3] [1,2,1,3])
 -- PresentT False
 --
 data IsInfix p q
@@ -2021,11 +2021,11 @@ instance P (IsInfixT p q) x => P (IsInfix p q) x where
 -- | similar to 'Data.List.isSuffixOf'
 --
 -- >>> pl @(IsSuffix '[2,3] Id) [1,2,3]
--- Present True (True:IsSuffix | [2,3] [1,2,3])
+-- True (IsSuffix | [2,3] [1,2,3])
 -- PresentT True
 --
 -- >>> pl @(IsSuffix '[2,3] Id) [2,3,4]
--- Present False (False:IsSuffix | [2,3] [2,3,4])
+-- False (IsSuffix | [2,3] [2,3,4])
 -- PresentT False
 --
 data IsSuffix p q

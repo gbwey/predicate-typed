@@ -113,11 +113,11 @@ instance (Show (t a)
 -- PresentT True
 --
 -- >>> pl @IsEmpty ("failed11" :: T.Text)
--- Present False (False:IsEmpty | "failed11")
+-- False (IsEmpty | "failed11")
 -- PresentT False
 --
 -- >>> pl @IsEmpty ("" :: T.Text)
--- Present True (True:IsEmpty | "")
+-- True (IsEmpty | "")
 -- PresentT True
 --
 data IsEmpty
@@ -443,15 +443,15 @@ instance P NullT a => P Null a where
 -- PresentT 17
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) [1..20]
--- Present True (True:False || True)
+-- True (False || True)
 -- PresentT True
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) [1..19]
--- Present False (False:False || False | ((>>) False | {False:1 == 0})}) || ((>>) False | {False:190 > 200}))
+-- False (False || False | ((>>) False | {1 == 0})}) || ((>>) False | {190 > 200}))
 -- PresentT False
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) []
--- Present True (True:True || False)
+-- True (True || False)
 -- PresentT True
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) &&& FoldMap (SG.Sum _) Id) [1..20]
@@ -488,7 +488,7 @@ instance P (FoldMapT t p) x => P (FoldMap t p) x where
 -- PresentT True
 --
 -- >>> pl @Ands [True,True,True,False]
--- Present False (False:Ands(4) i=3 | [True,True,True,False])
+-- False (Ands(4) i=3 | [True,True,True,False])
 -- PresentT False
 --
 -- >>> pz @Ands []
@@ -516,11 +516,11 @@ instance (x ~ t a
 -- PresentT False
 --
 -- >>> pl @Ors [True,True,True,False]
--- Present True (True:Ors(4) i=0 | [True,True,True,False])
+-- True (Ors(4) i=0 | [True,True,True,False])
 -- PresentT True
 --
 -- >>> pl @Ors []
--- Present False (False:Ors(0) | [])
+-- False (Ors(0) | [])
 -- PresentT False
 --
 data Ors

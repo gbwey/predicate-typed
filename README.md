@@ -52,25 +52,25 @@ To run the examples you will need these settings (ghc>=8.6)
 
 ```haskell
 >pu @(Between 4 10 Id) 7
-True:4 <= 7 <= 10
+True 4 <= 7 <= 10
 |
-+- Id 7
++- P Id 7
 |
-+- '4
++- P '4
 |
-`- '10
+`- P '10
 PresentT True
 ```
 
 ```haskell
 >pu @(Between 4 10 Id) 11
-False:11 <= 10
+False 11 <= 10
 |
-+- Id 11
++- P Id 11
 |
-+- '4
++- P '4
 |
-`- '10
+`- P '10
 PresentT False
 ```
 

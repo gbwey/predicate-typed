@@ -31,7 +31,8 @@
 module Predicate.Util (
   -- ** TT
     TT(..)
-  , ttBool
+  , ttBoolT
+  , ttBoolP
   , ttString
   , ttForest
   , boolT2P
@@ -43,6 +44,7 @@ module Predicate.Util (
   , _FailT
   , _PresentT
   , _BoolT
+  , _BoolTBool
 
  -- ** PE
   , BoolP(..)
@@ -52,6 +54,8 @@ module Predicate.Util (
 
  -- ** create tree functions
   , mkNode
+  , mkNode'
+  , mkNodeCopy
   , mkNodeB
   , mkNodeSkipP
 
@@ -66,6 +70,7 @@ module Predicate.Util (
   , splitAndAlign
   , verboseList
   , fixEmptyNode
+  , fixTTBoolP
 
  -- ** display options
   , POpts
@@ -343,23 +348,24 @@ instance Semigroup (BoolT a) where
 --
 
 -- | evaluation tree for predicates
-data TT a = TT { _ttBool :: !(BoolT a)  -- ^ the value at this root node
+data TT a = TT { _ttBoolT :: !(BoolT a)  -- ^ the value at this root node
                , _ttString :: !String  -- ^ detailed information eg input and output and text
                , _ttForest :: !(Forest PE) -- ^ the child nodes
+               , _ttBoolP :: !BoolP -- ^ display value
                } deriving (Functor, Read, Show, Eq, Foldable, Traversable)
 
 makeLenses ''TT
 
 instance Applicative TT where
-  pure a = TT (pure a) "" []
+  pure a = TT (pure a) "" [] PresentP
   (<*>) = ap
 
 instance Monad TT where
   return = pure
-  TT (PresentT a) y z >>= amb =
-    let TT w _y1 z1 = amb a
-    in TT w (y++ nullIf " | " _y1) (z <> z1)
-  TT (FailT s) y z >>= _ = TT (FailT s) y z
+  TT (PresentT a) y z _p >>= amb =
+    let TT w _y1 z1 p1 = amb a
+    in TT w (y++ nullIf " | " _y1) (z <> z1) p1
+  TT (FailT s) y z _ >>= _ = TT (FailT s) y z (FailP s)
 
 -- | a lens from typed 'BoolT' to the untyped 'BoolP'
 boolT2P :: Lens' (BoolT a) BoolP
@@ -368,20 +374,59 @@ boolT2P afb = \case
   PresentT a -> PresentT a <$ afb PresentP
 
 -- | creates a Node for the evaluation tree
+mkNodeCopy :: POpts
+       -> TT a
+       -> String
+       -> [Holder]
+       -> TT a
+mkNodeCopy opts tt ss hs = mkNode' opts (_ttBoolT tt) ss hs (_ttBoolP tt)
+
+
+-- | creates a Node for the evaluation tree
 mkNode :: POpts
        -> BoolT a
        -> String
        -> [Holder]
        -> TT a
-mkNode opts bt ss hs =
+mkNode opts bt ss hs = mkNode' opts bt ss hs (bt ^. boolT2P)
+
+-- | creates a Node for the evaluation tree
+mkNode' :: POpts
+       -> BoolT a
+       -> String
+       -> [Holder]
+       -> BoolP
+       -> TT a
+mkNode' opts bt ss hs bp =
   case oDebug opts of
-    DZero -> TT bt [] []
+    DZero -> TT bt [] [] bp
     DLite ->
     -- keeps the last string so we can use the root to give more details on failure (especially for Refined* types)
     -- also holds onto any failures
-         let zs = filter (\(Holder x) -> has (ttBool . _FailT) x) hs
-             in TT bt ss (map fromTTH zs)
-    _ -> TT bt ss (map fromTTH hs)
+        let zs = filter (\(Holder x) -> has (ttBoolT . _FailT) x) hs
+        in TT bt ss (map fromTTH zs) bp
+    _ -> TT bt ss (map fromTTH hs) bp
+
+validateBoolP :: BoolT a -> BoolP -> BoolP
+validateBoolP bt bp =
+  case bt of
+    PresentT _a -> case bp of
+                     FailP e -> errorInProgram $ "validateBoolP: found FailP for PresentT in BoolT e=" ++ e
+                     _ -> bp
+    FailT e -> case bp of
+                FailP e1 | e==e1 -> bp
+                         | otherwise -> errorInProgram $ "validateBoolP: found FailT but message mismatch in BoolP " ++ show (e,e1)
+                _ -> errorInProgram $ "validateBoolP: found " ++ show bp ++ " expected FailP e=" ++ e
+
+fixTTBoolP :: TT Bool -> TT Bool
+fixTTBoolP tt = tt { _ttBoolP = getBoolP (_ttBoolT tt) }
+
+getBoolP :: BoolT Bool -> BoolP
+getBoolP bt =
+  case bt of
+    PresentT True -> TrueP
+    PresentT False -> FalseP
+    FailT e -> FailP e
 
 -- | creates a Boolean node for a predicate type
 mkNodeB :: POpts
@@ -389,10 +434,11 @@ mkNodeB :: POpts
         -> String
         -> [Holder]
         -> TT Bool
-mkNodeB opts b s =
-  let (bp,tf) = bool (FalseP,"False") (TrueP,"True") b
-      c = colorMe opts bp tf
-  in mkNode opts (PresentT b) (c <> nullIf ":" s)
+mkNodeB opts b s tt =
+--  let (bp,tf) = bool (FalseP,"False") (TrueP,"True") b
+--      c = colorMe opts bp tf
+--  in mkNode' opts (PresentT b) (c <> nullIf ":" s) tt bp
+  mkNode' opts (PresentT b) s tt (bool FalseP TrueP b)
 
 mkNodeSkipP :: Tree PE
 mkNodeSkipP = Node (PE TrueP "skipped PP ip i = Id") []
@@ -401,7 +447,7 @@ getValAndPE :: TT a -> (Either String a, Tree PE)
 getValAndPE tt = (getValLRFromTT tt, fromTT tt)
 
 getValLRFromTT :: TT a -> Either String a
-getValLRFromTT = getValLR  . _ttBool
+getValLRFromTT = getValLR  . _ttBoolT
 
 -- | get the value from BoolT or fail
 getValLR :: BoolT a -> Either String a
@@ -411,7 +457,7 @@ getValLR = \case
 
 -- | converts a typed tree to an untyped tree for display
 fromTT :: TT a -> Tree PE
-fromTT (TT bt ss tt) = Node (PE (bt ^. boolT2P) ss) tt
+fromTT (TT bt ss tt bp) = Node (PE (validateBoolP bt bp) ss) tt
 
 -- | a monomorphic container of trees
 data Holder = forall w . Holder !(TT w)
@@ -836,8 +882,8 @@ groupErrors =
 
 partitionTTExtended :: (w, TT a) -> Either ((w, TT x), String) (a, w, TT a)
 partitionTTExtended (s, t) =
-  case _ttBool t of
-    FailT e -> Left ((s, t & ttBool .~ FailT e), e)
+  case _ttBoolT t of
+    FailT e -> Left ((s, t & ttBoolT .~ FailT e), e)
     PresentT a -> Right (a,s,t)
 
 formatList :: forall x z . Show x
@@ -1120,7 +1166,7 @@ colorBoolP ::
 colorBoolP o b =
   case b of
     FailP e -> "[" <> f "Error" <> nullSpace e <> "] "
-    PresentP -> "" -- f "P "
+    PresentP -> f "P "
     TrueP -> f "True "
     FalseP -> f "False "
   where f = colorMe o b
@@ -1129,12 +1175,17 @@ colorBoolP o b =
 colorBoolTLite :: Show a
     => POpts
     -> BoolT a
+    -> BoolP
     -> String
-colorBoolTLite o r =
-  colorMe o (r ^. boolT2P)
-  $ case r of
+colorBoolTLite o bt bp =
+  colorMe o bp
+  $ case bt of
       FailT e -> "Error " <> e
-      PresentT x -> "Present " <> show x
+      PresentT x -> case bp of
+                      PresentP -> "Present " <> show x
+                      TrueP -> "True"
+                      FalseP -> "False"
+                      FailP _ -> errorInProgram "dude"
 
 colorBoolTBool ::
       POpts
@@ -1853,7 +1904,7 @@ prtTree opts pp =
 
      DLite ->
            formatOMsg opts " >>> "
-           <> colorBoolTLite opts (pp ^. ttBool)
+           <> colorBoolTLite opts (pp ^. ttBoolT) (pp ^. ttBoolP)
            <> " "
            <> topMessage pp
 
@@ -2033,3 +2084,22 @@ fixEmptyNode' :: String -> Tree PE -> Tree PE
 fixEmptyNode' s = go
  where go (Node (PE PresentP "") []) = Node (PE PresentP s) []
        go (Node p xs) = Node p (map go xs)
+
+-- | prism from BoolT to Bool
+--
+-- >>> let xs = [1,2,3] in PresentT (not (null xs)) ^? _BoolTBool
+-- Just True
+--
+-- >>> let xs = [1,2,3] in PresentT (null xs) ^? _BoolTBool
+-- Just False
+--
+-- >>> FailT "ss" ^? _BoolTBool
+-- Nothing
+--
+_BoolTBool :: a ~ Bool => Prism' (BoolT a) a
+_BoolTBool =
+  prism' PresentT $ \case
+                       PresentT True -> Just True
+                       PresentT False -> Just False
+                       _ -> Nothing
+

@@ -224,19 +224,19 @@ instance (P s x
         pp <- eval (Proxy @p) opts (x,a)
         pure $ case getValueLR opts msg1 pp [hh ss] of
           Left e -> e
-          Right _ -> mkNode opts (_ttBool pp) msg1 [hh ss, hh pp]
+          Right _ -> mkNodeCopy opts pp msg1 [hh ss, hh pp]
       Right (That b) -> do
         let msg1 = msg0 <> "(That)"
         qq <- eval (Proxy @q) opts (x,b)
         pure $ case getValueLR opts msg1 qq [hh ss] of
           Left e -> e
-          Right _ -> mkNode opts (_ttBool qq) msg1 [hh ss, hh qq]
+          Right _ -> mkNodeCopy opts qq msg1 [hh ss, hh qq]
       Right (These a b) -> do
         let msg1 = msg0 <> "(These)"
         rr <- eval (Proxy @r) opts (x,(a,b))
         pure $ case getValueLR opts msg1 rr [hh ss] of
           Left e -> e
-          Right _ -> mkNode opts (_ttBool rr) msg1 [hh ss, hh rr]
+          Right _ -> mkNodeCopy opts rr msg1 [hh ss, hh rr]
 
 type family TheseXT lr x p where
   TheseXT (These a b) x p = PP p (x,a)
@@ -368,7 +368,7 @@ instance (x ~ These a b
 -- PresentT False
 --
 -- >>> pl @IsThis (This 12)
--- Present True (True:IsThis | This 12)
+-- True (IsThis | This 12)
 -- PresentT True
 --
 data IsThis
@@ -381,7 +381,7 @@ instance P IsThisT x => P IsThis x where
 -- | predicate on 'Data.These.That'
 --
 -- >>> pl @IsThat (This 12)
--- Present False (False:IsThat | This 12)
+-- False (IsThat | This 12)
 -- PresentT False
 --
 data IsThat
@@ -394,22 +394,22 @@ instance P IsThatT x => P IsThat x where
 -- | predicate on 'Data.These.These'
 --
 -- >>> pl @IsThese (This 12)
--- Present False (False:IsThese | This 12)
+-- False (IsThese | This 12)
 -- PresentT False
 --
 -- >>> pz @IsThese (These 1 'a')
 -- PresentT True
 --
 -- >>> pl @IsThese (These 'x' 12)
--- Present True (True:IsThese | These 'x' 12)
+-- True (IsThese | These 'x' 12)
 -- PresentT True
 --
 -- >>> pl @IsThese (That (SG.Sum 12))
--- Present False (False:IsThese | That (Sum {getSum = 12}))
+-- False (IsThese | That (Sum {getSum = 12}))
 -- PresentT False
 --
 -- >>> pl @IsThese (These 1 (SG.Sum 12))
--- Present True (True:IsThese | These 1 (Sum {getSum = 12}))
+-- True (IsThese | These 1 (Sum {getSum = 12}))
 -- PresentT True
 --
 data IsThese

@@ -230,11 +230,11 @@ instance (GetBool ignore
 -- | similar to 'isPrefixOf' for strings
 --
 -- >>> pl @(IsPrefixC "xy" Id) "xyzabw"
--- Present True (True:IsPrefixC | xy xyzabw)
+-- True (IsPrefixC | xy xyzabw)
 -- PresentT True
 --
 -- >>> pl @(IsPrefixC "ab" Id) "xyzbaw"
--- Present False (False:IsPrefixC | ab xyzbaw)
+-- False (IsPrefixC | ab xyzbaw)
 -- PresentT False
 --
 -- >>> pz @(IsPrefixC "abc" "aBcbCd") ()
@@ -250,19 +250,19 @@ instance P (IsPrefixCT p q) x => P (IsPrefixC p q) x where
 -- | similar to 'isInfixOf' for strings
 --
 -- >>> pl @(IsInfixC "ab" Id) "xyzabw"
--- Present True (True:IsInfixC | ab xyzabw)
+-- True (IsInfixC | ab xyzabw)
 -- PresentT True
 --
 -- >>> pl @(IsInfixC "aB" Id) "xyzAbw"
--- Present False (False:IsInfixC | aB xyzAbw)
+-- False (IsInfixC | aB xyzAbw)
 -- PresentT False
 --
 -- >>> pl @(IsInfixC "ab" Id) "xyzbaw"
--- Present False (False:IsInfixC | ab xyzbaw)
+-- False (IsInfixC | ab xyzbaw)
 -- PresentT False
 --
 -- >>> pl @(IsInfixC Fst Snd) ("ab","xyzabw")
--- Present True (True:IsInfixC | ab xyzabw)
+-- True (IsInfixC | ab xyzabw)
 -- PresentT True
 --
 
@@ -276,11 +276,11 @@ instance P (IsInfixCT p q) x => P (IsInfixC p q) x where
 -- | similar to 'isSuffixOf' for strings
 --
 -- >>> pl @(IsSuffixC "bw" Id) "xyzabw"
--- Present True (True:IsSuffixC | bw xyzabw)
+-- True (IsSuffixC | bw xyzabw)
 -- PresentT True
 --
 -- >>> pl @(IsSuffixC "bw" Id) "xyzbaw"
--- Present False (False:IsSuffixC | bw xyzbaw)
+-- False (IsSuffixC | bw xyzbaw)
 -- PresentT False
 --
 -- >>> pz @(IsSuffixC "bCd" "aBcbCd") ()
@@ -308,7 +308,7 @@ instance P (IsPrefixCIT p q) x => P (IsPrefixCI p q) x where
 -- | similar to case insensitive 'isInfixOf' for strings
 --
 -- >>> pl @(IsInfixCI "aB" Id) "xyzAbw"
--- Present True (True:IsInfixCI | aB xyzAbw)
+-- True (IsInfixCI | aB xyzAbw)
 -- PresentT True
 --
 -- >>> pz @(IsInfixCI "abc" "axAbCd") ()

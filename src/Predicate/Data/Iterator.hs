@@ -119,7 +119,7 @@ instance (PP p (b,a) ~ b
                    let vals = map (view _1) abcs
                        itts = map (view _2 &&& view _3) abcs
                    in case lrx of
-                        Left e -> mkNode opts (_ttBool e) msg0 (hh qq : hh rr : map (hh . fixit) itts ++ [hh e])
+                        Left e -> mkNodeCopy opts e msg0 (hh qq : hh rr : map (hh . fixit) itts ++ [hh e])
                         Right () -> mkNode opts (PresentT vals) (show01' opts msg0 vals "b=" q <> showVerbose opts " | as=" r) (hh qq : hh rr : map (hh . fixit) itts)
 
 -- | iterates n times keeping all the results
@@ -307,19 +307,19 @@ instance P (FoldLT p q r) x => P (Foldl p q r) x where
 -- PresentT [1,2,3,4,5,6,7,8,9,10]
 --
 -- >>> pan @(Unfoldr (If (Id < 1) (MkNothing _) (MkJust (DivMod Id 2 >> Swap))) Id) 8
--- Unfoldr 8 [0,0,0,1]
+-- P Unfoldr 8 [0,0,0,1]
 -- |
--- +- Id 8
+-- +- P Id 8
 -- |
--- +- i=1: If 'False Just (0,4)
+-- +- P i=1: If 'False Just (0,4)
 -- |
--- +- i=2: If 'False Just (0,2)
+-- +- P i=2: If 'False Just (0,2)
 -- |
--- +- i=3: If 'False Just (0,1)
+-- +- P i=3: If 'False Just (0,1)
 -- |
--- +- i=4: If 'False Just (1,0)
+-- +- P i=4: If 'False Just (1,0)
 -- |
--- `- i=5: If 'True Nothing
+-- `- P i=5: If 'True Nothing
 -- PresentT [0,0,0,1]
 --
 data Unfoldr p q
@@ -354,7 +354,7 @@ instance (PP q a ~ s
                let vals = map (view _1) abcs
                    itts = map (view _2 &&& view _3) abcs
                in case lr of
-                   Left e -> mkNode opts (_ttBool e) msg1 (hh qq : map (hh . fixit) itts ++ [hh e])
+                   Left e -> mkNodeCopy opts e msg1 (hh qq : map (hh . fixit) itts ++ [hh e])
                    Right () ->
                      let ret = fst <$> catMaybes vals
                      in mkNode opts (PresentT ret) (show01' opts msg1 ret "s=" q ) (hh qq : map (hh . fixit) itts)

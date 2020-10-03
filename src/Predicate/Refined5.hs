@@ -220,27 +220,27 @@ instance ( Refined2C opts ip op i
 -- Right (Refined5 123)
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined5 OL (ReadBase Int 16) (Id > 10 && Id < 256) String) "9"
--- Error in $: Refined5:false boolean check | {False:False && True | (False:9 > 10)}
--- <BLANKLINE>
+-- Error in $: Refined5:false boolean check | {False && True | (9 > 10)}
+-- False
 --
 -- >>> A.eitherDecode' @(Refined5 OZ (ReadBase Int 16) (Id > 10 && Id < 256) String) "254"
 -- Right (Refined5 254)
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined5 OAN (ReadBase Int 16) (Id > 10 && Id < 256) String) "12345"
--- Error in $: Refined5:false boolean check | {False:True && False | (False:12345 < 256)}
--- False:True && False | (False:12345 < 256)
+-- Error in $: Refined5:false boolean check | {True && False | (12345 < 256)}
+-- False True && False | (12345 < 256)
 -- |
--- +- True:12345 > 10
+-- +- True 12345 > 10
 -- |  |
--- |  +- Id 12345
+-- |  +- P Id 12345
 -- |  |
--- |  `- '10
+-- |  `- P '10
 -- |
--- `- False:12345 < 256
+-- `- False 12345 < 256
 --    |
---    +- Id 12345
+--    +- P Id 12345
 --    |
---    `- '256
+--    `- P '256
 -- <BLANKLINE>
 --
 instance ( Refined2C opts ip op i
@@ -348,7 +348,7 @@ newRefined5P' _ i = do
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
 -- >>> newRefined5 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
--- Left Step 2. False Boolean Check(op) | {length invalid: False:5 == 4}
+-- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
 --
 -- >>> newRefined5 @OZ @(Map (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
@@ -361,7 +361,7 @@ newRefined5P' _ i = do
 -- Right (Refined5 (2019-10-13,41,7))
 --
 -- >>> newRefined5 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd == 7)) (2019,10,12)
--- Left Step 2. False Boolean Check(op) | {expected a Sunday: False:6 == 7}
+-- Left Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}
 --
 -- >>> newRefined5 @OZ @(MkDayExtra' Fst Snd Thd >> 'Just Id) @(GuardBool "expected a Sunday" (Thd == 7)) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
@@ -373,7 +373,7 @@ newRefined5P' _ i = do
 -- Right (Refined5 2020-05-04 12:13:14 UTC)
 --
 -- >>> newRefined5 @OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust ToDay)) "2020-05-08 12:13:14Z"
--- Left Step 2. False Boolean Check(op) | {False:Just 2020-05-08 <= Just 2020-05-07}
+-- Left Step 2. False Boolean Check(op) | {Just 2020-05-08 <= Just 2020-05-07}
 --
 newRefined5 :: forall opts ip op i
   . ( Refined2C opts ip op i

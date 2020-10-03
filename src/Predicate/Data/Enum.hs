@@ -113,7 +113,7 @@ _enumDefault opts msg0 hhqq = do
    pp <- eval (Proxy @p) opts (Proxy @a)
    pure $ case getValueLR opts msg1 pp [hhqq] of
      Left e -> e
-     Right _ -> mkNode opts (_ttBool pp) msg1 [hhqq, hh pp]
+     Right _ -> mkNodeCopy opts pp msg1 [hhqq, hh pp]
 
 -- | bounded 'succ' function
 --
@@ -288,7 +288,7 @@ instance P (PredBT' q) x => P (PredB' q) x where
 -- PresentT 120
 --
 -- >>> pl @(FromEnum ("aa" ==! Id) >> Same 1) "aaaa"
--- Present False ((>>) False | {False:0 == 1})
+-- False ((>>) False | {0 == 1})
 -- PresentT False
 --
 -- >>> pl @(FromEnum ("aa" ==! Id) >> ToEnum OrderingP) "aaaa"
@@ -377,7 +377,7 @@ instance (P def (Proxy (PP t a))
          pp <- eval (Proxy @def) opts (Proxy @(PP t a))
          pure $ case getValueLR opts msg1 pp [] of
            Left e -> e
-           Right _ -> mkNode opts (_ttBool pp) msg1 [hh pp]
+           Right _ -> mkNodeCopy opts pp msg1 [hh pp]
       Just n -> pure $ mkNode opts (PresentT n) (show01 opts msg0 n a) []
 
 -- | bounded 'toEnum' function

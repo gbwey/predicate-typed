@@ -147,14 +147,14 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 -- Right (Refined 13)
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined OAN (Between 10 14 Id) Int) "16"
--- Error in $: Refined(FromJSON:parseJSON):FalseT (False:16 <= 14)
--- False:16 <= 14
+-- Error in $: Refined(FromJSON:parseJSON):FalseT (16 <= 14)
+-- False 16 <= 14
 -- |
--- +- Id 16
+-- +- P Id 16
 -- |
--- +- '10
+-- +- P '10
 -- |
--- `- '14
+-- `- P '14
 -- <BLANKLINE>
 --
 instance ( RefinedC opts p a
@@ -178,20 +178,20 @@ instance ( RefinedC opts p a
 -- Refined "2019-04-23"
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined(Binary:get):FalseT (False:2019-05-30 <= 2019-04-23)
--- False:2019-05-30 <= 2019-04-23
+-- Refined(Binary:get):FalseT (2019-05-30 <= 2019-04-23)
+-- False 2019-05-30 <= 2019-04-23
 -- |
--- +- ReadP Day 2019-04-23
+-- +- P ReadP Day 2019-04-23
 -- |  |
--- |  `- Id "2019-04-23"
+-- |  `- P Id "2019-04-23"
 -- |
--- +- ReadP Day 2019-05-30
+-- +- P ReadP Day 2019-05-30
 -- |  |
--- |  `- '"2019-05-30"
+-- |  `- P '"2019-05-30"
 -- |
--- `- ReadP Day 2019-06-01
+-- `- P ReadP Day 2019-06-01
 --    |
---    `- '"2019-06-01"
+--    `- P '"2019-06-01"
 -- <BLANKLINE>
 --
 instance ( RefinedC opts p a
@@ -266,9 +266,9 @@ newRefined' :: forall opts p a m
 newRefined' a = do
   let o = getOpt @opts
   pp <- evalBool (Proxy @p) o a
-  let r = colorBoolTBool o (_ttBool pp)
+  let r = colorBoolTBool o (_ttBoolT pp)
       s = prtTree o pp
-      msg0 = Msg0 (_ttBool pp) (topMessage pp) s r
+      msg0 = Msg0 (_ttBoolT pp) (topMessage pp) s r
   pure $ case getValueLR o "" pp [] of
        Right True -> Right (Refined a)
        _ -> Left msg0
@@ -279,7 +279,7 @@ newRefined' a = do
 -- Right (Refined "123")
 --
 -- >>> AR.left m0Long $ newRefined @OL @(ReadP Int Id > 99) "12"
--- Left "Present False (False:12 > 99)"
+-- Left "False (12 > 99)"
 --
 -- >>> newRefined @OZ @(Between 10 14 Id) 13
 -- Right (Refined 13)
@@ -347,7 +347,7 @@ unsafeRefined' a =
   in case getValueLR o "" tt [] of
        Right True -> Refined a
        _ -> let s = prtTree o tt
-                bp = colorBoolTBool o (_ttBool tt)
+                bp = colorBoolTBool o (_ttBoolT tt)
             in case oDebug o of
                  DZero -> error bp
                  DLite -> error $ bp ++ "\n" ++ s

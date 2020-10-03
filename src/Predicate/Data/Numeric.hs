@@ -186,7 +186,7 @@ instance P (FromIntegralT t) x => P (FromIntegral t) x where
 -- PresentT (636 % 5)
 --
 -- >>> pl @(Fst >= Snd || Snd > 23 || 12 -% 5 <= ToRational Fst) (12,13)
--- Present True (True:False || True)
+-- True (False || True)
 -- PresentT True
 --
 -- >>> pl @(ToRational 14) ()
@@ -986,7 +986,7 @@ instance (Typeable (PP t x)
 --
 -- >>> :set -XBinaryLiterals
 -- >>> pz @(ReadBase Int 16 >> GuardSimple (Id > 0b10011111) >> ShowBase 16) "7f"
--- FailT "(False:127 > 159)"
+-- FailT "(127 > 159)"
 --
 -- >>> pl @(ReadBase Int 16) "fFe0"
 -- Present 65504 (ReadBase(Int,16) 65504 | "fFe0")

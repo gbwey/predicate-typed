@@ -550,15 +550,15 @@ instance P (SkipBothT p q) x => P (p >|> q) x where
 -- PresentT 10
 --
 -- >>> pl @(HeadDef 12 Fst >> Le 6) ([],True)
--- Present False ((>>) False | {False:12 <= 6})
+-- False ((>>) False | {12 <= 6})
 -- PresentT False
 --
 -- >>> pl @(HeadDef 1 Fst >> Le 6) ([],True)
--- Present True ((>>) True | {True:1 <= 6})
+-- True ((>>) True | {1 <= 6})
 -- PresentT True
 --
 -- >>> pl @(HeadDef 10 Fst >> Le 6) ([],True)
--- Present False ((>>) False | {False:10 <= 6})
+-- False ((>>) False | {10 <= 6})
 -- PresentT False
 --
 -- >>> pl @(HeadDef (MEmptyT _) Id) (map (:[]) ([] :: [Int]))
@@ -608,7 +608,7 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 -- FailT "failed1"
 --
 -- >>> pl @((Fst >> HeadFail "failed2" Id >> Le (6 -% 1)) || 'False) ([-9],True)
--- Present True (True:True || False)
+-- True (True || False)
 -- PresentT True
 --
 -- >>> pl @(HeadFail "Asdf" Id) ([] :: [()]) -- breaks otherwise
@@ -870,10 +870,10 @@ instance (Integral (PP n x)
 -- PresentT False
 --
 -- >>> pz @(GuardSimple IsLuhn) [15,4,3,1,99]
--- FailT "(False:IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])"
+-- FailT "(IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])"
 --
 -- >>> pl @IsLuhn [15,4,3,1,99]
--- Present False (False:IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])
+-- False (IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])
 -- PresentT False
 --
 data IsLuhn
@@ -965,11 +965,11 @@ instance P (ProxyT t) x where
 -- PresentT False
 --
 -- >>> pl @(Catch OneP 'False) [True,True,False]
--- Present False (Catch caught exception[OneP:expected one element(3)])
+-- False (Catch caught exception[OneP:expected one element(3)])
 -- PresentT False
 --
 -- >>> pl @(Catch OneP 'True) []
--- Present True (Catch caught exception[OneP:expected one element(empty)])
+-- True (Catch caught exception[OneP:expected one element(empty)])
 -- PresentT True
 --
 data Catch p q
@@ -1017,12 +1017,12 @@ instance (P p x
     pp <- eval (Proxy @p) opts x
     case getValueLR opts msg0 pp [] of
       Left e -> do
-         let emsg = e ^?! ttBool . _FailT -- extract the failt string a push back into the fail case
+         let emsg = e ^?! ttBoolT . _FailT -- extract the failt string a push back into the fail case
          qq <- eval (Proxy @q) opts ((emsg, x), Proxy @(PP p x))
          pure $ case getValueLR opts (msg0 <> " default condition failed") qq [hh pp] of
             Left e1 -> e1
-            Right _ -> mkNode opts (_ttBool qq) (msg0 <> " caught exception[" <> emsg <> "]") [hh pp, hh qq]
-      Right _ -> pure $ mkNode opts (_ttBool pp) (msg0 <> " did not fire") [hh pp]
+            Right _ -> mkNodeCopy opts qq (msg0 <> " caught exception[" <> emsg <> "]") [hh pp, hh qq]
+      Right _ -> pure $ mkNodeCopy opts pp (msg0 <> " did not fire") [hh pp]
 
 -- | compose simple functions
 --
@@ -1235,19 +1235,19 @@ instance P IListT x => P IList x where
 -- PresentT (Just "10")
 --
 -- >>> pan @(FMap $ FMap $ FMap Succ) [Just "abcdefG",Nothing,Just "X"]
--- FMap
+-- P FMap
 -- |
--- `- FMap | FMap | FMap
+-- `- P FMap | FMap | FMap
 --    |
---    +- FMap
+--    +- P FMap
 --    |  |
---    |  `- Succ 'b' | Succ 'c' | Succ 'd' | Succ 'e' | Succ 'f' | Succ 'g' | Succ 'H'
+--    |  `- P Succ 'b' | Succ 'c' | Succ 'd' | Succ 'e' | Succ 'f' | Succ 'g' | Succ 'H'
 --    |
---    +- FMap <skipped>
+--    +- P FMap <skipped>
 --    |
---    `- FMap
+--    `- P FMap
 --       |
---       `- Succ 'Y'
+--       `- P Succ 'Y'
 -- PresentT [Just "bcdefgH",Nothing,Just "Y"]
 --
 data FMap p

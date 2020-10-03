@@ -111,11 +111,11 @@ instance (Show a
 -- PresentT "hello"
 --
 -- >>> pl @('True ||| 'False) (Left "someval")
--- Present True ((|||) Left True | "someval")
+-- True ((|||) Left True | "someval")
 -- PresentT True
 --
 -- >>> pl @('True ||| 'False) (Right "someval")
--- Present False ((|||) Right False | "someval")
+-- False ((|||) Right False | "someval")
 -- PresentT False
 --
 -- >>> pl @(ShowP Succ ||| ShowP Id) (Left 123)
@@ -131,7 +131,7 @@ instance (Show a
 -- PresentT True
 --
 -- >>> pl @(EitherIn (Not Id) Id) (Left True)
--- Present False ((|||) Left False | True)
+-- False ((|||) Left False | True)
 -- PresentT False
 --
 data p ||| q
@@ -154,14 +154,14 @@ instance (Show (PP p a)
         pure $ case getValueLR opts msg0 pp [] of
           Left e -> e
           Right a1 -> let msg1 = msg0 ++ " Left"
-                      in mkNode opts (_ttBool pp) (show01 opts msg1 a1 a) [hh pp]
+                      in mkNodeCopy opts pp (show01 opts msg1 a1 a) [hh pp]
       Right a -> do
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts msg0 qq [] of
           Left e -> e
           Right a1 ->
             let msg1 = msg0 ++ " Right"
-            in mkNode opts (_ttBool qq) (show01 opts msg1 a1 a) [hh qq]
+            in mkNodeCopy opts qq (show01 opts msg1 a1 a) [hh qq]
 
 -- | similar to 'isLeft'
 --
@@ -373,13 +373,13 @@ instance (P r x
         pp <- eval (Proxy @p) opts (x,a)
         pure $ case getValueLR opts msg1 pp [hh rr] of
           Left e -> e
-          Right _ -> mkNode opts (_ttBool pp) msg1 [hh rr, hh pp]
+          Right _ -> mkNodeCopy opts pp msg1 [hh rr, hh pp]
       Right (Right b) -> do
         let msg1 = msg0 <> "(Right)"
         qq <- eval (Proxy @q) opts (x,b)
         pure $ case getValueLR opts msg1 qq [hh rr] of
           Left e -> e
-          Right _ -> mkNode opts (_ttBool qq) msg1 [hh rr, hh qq]
+          Right _ -> mkNodeCopy opts qq msg1 [hh rr, hh qq]
 
 type family EitherXT lr x p where
   EitherXT (Either a b) x p = PP p (x,a)

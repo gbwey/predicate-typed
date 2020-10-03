@@ -259,25 +259,25 @@ instance ( Refined3C opts ip op fmt i
 -- Right (Refined3 {r3In = 254, r3Out = "fe"})
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined3 OAN (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe443a\""
--- Error in $: Refined3:Step 2. False Boolean Check(op) | {False:True && False | (False:16663610 < 256)}
+-- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
--- ReadBase(Int,16) 16663610
+-- P ReadBase(Int,16) 16663610
 -- |
--- `- Id "00fe443a"
+-- `- P Id "00fe443a"
 -- *** Step 2. False Boolean Check(op) ***
--- False:True && False | (False:16663610 < 256)
+-- False True && False | (16663610 < 256)
 -- |
--- +- True:16663610 > 10
+-- +- True 16663610 > 10
 -- |  |
--- |  +- Id 16663610
+-- |  +- P Id 16663610
 -- |  |
--- |  `- '10
+-- |  `- P '10
 -- |
--- `- False:16663610 < 256
+-- `- False 16663610 < 256
 --    |
---    +- Id 16663610
+--    +- P Id 16663610
 --    |
---    `- '256
+--    `- P '256
 -- <BLANKLINE>
 --
 instance ( Refined3C opts ip op fmt i
@@ -353,23 +353,23 @@ genRefined3P _ g =
 -- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined3:Step 2. False Boolean Check(op) | {False:2019-05-30 <= 2019-04-23}
+-- Refined3:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
 -- *** Step 1. Success Initial Conversion(ip) (2019-04-23) ***
--- ReadP Day 2019-04-23
+-- P ReadP Day 2019-04-23
 -- |
--- `- Id "2019-04-23"
+-- `- P Id "2019-04-23"
 -- *** Step 2. False Boolean Check(op) ***
--- False:2019-05-30 <= 2019-04-23
+-- False 2019-05-30 <= 2019-04-23
 -- |
--- +- Id 2019-04-23
+-- +- P Id 2019-04-23
 -- |
--- +- ReadP Day 2019-05-30
+-- +- P ReadP Day 2019-05-30
 -- |  |
--- |  `- '"2019-05-30"
+-- |  `- P '"2019-05-30"
 -- |
--- `- ReadP Day 2019-06-01
+-- `- P ReadP Day 2019-06-01
 --    |
---    `- '"2019-06-01"
+--    `- P '"2019-06-01"
 -- <BLANKLINE>
 --
 instance ( Refined3C opts ip op fmt i
@@ -469,7 +469,7 @@ newRefined3P' _ i = do
 -- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
 --
 -- >>> newRefined3 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
--- Left Step 2. False Boolean Check(op) | {length invalid: False:5 == 4}
+-- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
 --
 -- >>> newRefined3 @OZ @(Map (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
@@ -482,7 +482,7 @@ newRefined3P' _ i = do
 -- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
 --
 -- >>> newRefined3 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd == 7)) @(UnMkDay Fst) (2019,10,12)
--- Left Step 2. False Boolean Check(op) | {expected a Sunday: False:6 == 7}
+-- Left Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}
 --
 -- >>> newRefined3 @OZ @(MkDayExtra' Fst Snd Thd >> 'Just Id) @(GuardBool "expected a Sunday" (Thd == 7)) @(UnMkDay Fst) (2019,10,12)
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday

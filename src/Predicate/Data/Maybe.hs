@@ -126,7 +126,7 @@ instance ( PP p x ~ a
 -- PresentT "found nothing"
 --
 -- >>> pl @(MaybeIn 'True Id) (Nothing @Bool) -- need @() else breaks
--- Present True (MaybeIn(Nothing) True | Proxy)
+-- True (MaybeIn(Nothing) True | Proxy)
 -- PresentT True
 --
 -- >>> pl @(MaybeIn (Failt _ "failed4") Id) (Just 10)
@@ -134,7 +134,7 @@ instance ( PP p x ~ a
 -- PresentT 10
 --
 -- >>> pl @(MaybeIn 'False Id) (Nothing @Bool) -- breaks otherwise
--- Present False (MaybeIn(Nothing) False | Proxy)
+-- False (MaybeIn(Nothing) False | Proxy)
 -- PresentT False
 --
 -- >>> pl @(MaybeIn MEmptyP Id) (Just [1,2,3])
@@ -158,11 +158,11 @@ instance ( PP p x ~ a
 -- FailT "someval"
 --
 -- >>> pl @(MaybeIn 'True 'False) (Nothing @())
--- Present True (MaybeIn(Nothing) True | Proxy)
+-- True (MaybeIn(Nothing) True | Proxy)
 -- PresentT True
 --
 -- >>> pl @(MaybeIn 'True 'False) (Just "aa")
--- Present False (MaybeIn(Just) False | "aa")
+-- False (MaybeIn(Just) False | "aa")
 -- PresentT False
 --
 -- >>> pl @(MaybeIn MEmptyP (Fst ==! Snd)) (Just ('x','z'))
@@ -259,13 +259,13 @@ instance (P q a
         pp <- eval (Proxy @p) opts (Proxy @(PP q a))
         pure $ case getValueLR opts msg1 pp [] of
           Left e -> e
-          Right b -> mkNode opts (_ttBool pp) (msg1 <> " " <> showL opts b <> " | Proxy") [hh pp]
+          Right b -> mkNodeCopy opts pp (msg1 <> " " <> showL opts b <> " | Proxy") [hh pp]
       Just a -> do
         let msg1 = msg0 <> "(Just)"
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts msg1 qq [] of
           Left e -> e
-          Right b -> mkNode opts (_ttBool qq) (show01 opts msg1 b a) [hh qq]
+          Right b -> mkNodeCopy opts qq (show01 opts msg1 b a) [hh qq]
 
 -- | similar to 'Data.Maybe.isJust'
 --

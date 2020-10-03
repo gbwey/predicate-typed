@@ -221,19 +221,19 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- | a predicate for determining if a string 'Data.Text.IsText' belongs to the given character set
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "AbcdE"
--- Present False ((>>) False | {False:True (&*) False | (False:IsLowerAll | "bcdE")})
+-- False ((>>) False | {True (&*) False | (IsLowerAll | "bcdE")})
 -- PresentT False
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "Abcde"
--- Present True ((>>) True | {True:True (&*) True})
+-- True ((>>) True | {True (&*) True})
 -- PresentT True
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "xbcde"
--- Present False ((>>) False | {False:False (&*) True | (False:IsUpper | "x")})
+-- False ((>>) False | {False (&*) True | (IsUpper | "x")})
 -- PresentT False
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "X"
--- Present True ((>>) True | {True:True (&*) True})
+-- True ((>>) True | {True (&*) True})
 -- PresentT True
 --
 -- >>> pz @( '(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsDigitAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll)) "abc134"
@@ -244,16 +244,16 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- PresentT [True,False,False]
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll]) "a98efghi"
--- Error Bool(2) [] (False:IsUpperAll | "efghi") (["a","98","efghi"])
--- FailT "Bool(2) [] (False:IsUpperAll | \"efghi\")"
+-- Error Bool(2) [] (IsUpperAll | "efghi") (["a","98","efghi"])
+-- FailT "Bool(2) [] (IsUpperAll | \"efghi\")"
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll]) "a98efghi"
--- Present True ((>>) True | {True:Bools})
+-- True ((>>) True | {Bools})
 -- PresentT True
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll]) "a98efgHi"
--- Error Bool(2) [] (False:False || False | (False:IsUpperAll | "efgHi") || (False:IsLowerAll | "efgHi")) (["a","98","efgHi"])
--- FailT "Bool(2) [] (False:False || False | (False:IsUpperAll | \"efgHi\") || (False:IsLowerAll | \"efgHi\"))"
+-- Error Bool(2) [] (False || False | (IsUpperAll | "efgHi") || (IsLowerAll | "efgHi")) (["a","98","efgHi"])
+-- FailT "Bool(2) [] (False || False | (IsUpperAll | \"efgHi\") || (IsLowerAll | \"efgHi\"))"
 --
 data IsCharSetAll (cs :: CharSet)
 

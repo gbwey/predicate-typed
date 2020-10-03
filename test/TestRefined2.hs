@@ -86,7 +86,7 @@ unnamedTests = [
                           @((Len == 4) && All (0 <..> 0xff))
                           "1.21.31.4"
 
-  , expect2 (Left $ XTFalse (-6.5) "False:(-13) % 2 > (-7) % 3")
+  , expect2 (Left $ XTFalse (-6.5) "(-13) % 2 > (-7) % 3")
                   $ runIdentity $ eval2M @OAN @(ReadP Double Id)
                           @(ToRational Id > 7 -% 3)
                           "-6.5"
@@ -101,7 +101,7 @@ unnamedTests = [
   , expect2 (Right $ unsafeRefined2 [1,2,3,4] "1.2.3.4")
                   $ runIdentity $ eval2M @OAN @(Map (ReadP Int Id) (Resplit "\\.")) @(All (0 <..> 0xff) && (Len == 4)) "1.2.3.4"
 
-  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "False:True && False | (out of bounds: False:All(8) i=4 (False:1048319 <= 65535))")
+  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
                   $ runIdentity $ eval2M @OAN @Ip6ip @Ip6op "123:Ffeff:1123:11:1"
 
   , expect2 (Right $ unsafeRefined2 [12,2,0,255] "12.2.0.255")
@@ -123,11 +123,11 @@ unnamedTests = [
                   @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 999 Id, Between 0 99 Id, Between 0 9999 Id] >> 'True)
                   "123-45-6789"
 
-  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "False:True && False | (out of bounds: False:All(8) i=4 (False:1048319 <= 65535))")
+  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
                   $ runIdentity $ eval2M @OAN @Ip6ip @Ip6op
                   "123:Ffeff:1123:11:1"
 
-  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "False:True && False | (out of bounds: False:All(8) i=4 (False:1048319 <= 65535))")
+  , expect2 (Left $ XTFalse [0,0,0,291,1048319,4387,17,1] "True && False | (out of bounds: All(8) i=4 (1048319 <= 65535))")
                   $ runIdentity $ eval2M @OAN @Ip6ip @Ip6op
                   "123:Ffeff:1123:11:1"
 
@@ -156,7 +156,7 @@ unnamedTests = [
   , expect2 (Left $ XF "ReadP Int (3x)") $ runIdentity $ eval2P (ip4 @OAN) "1.2.3x.4"
   , expect2 (Left $ XTF [1,2,3,4,5] "Bools:invalid length(5) expected 4") $ runIdentity $ eval2P (ip4' @OAN) "1.2.3.4.5"
   , expect2 (Left $ XTF [1,2,3,4,5] "Guards:invalid length(5) expected 4") $ runIdentity $ eval2P (ip4 @OAN) "1.2.3.4.5"
-  , expect2 (Left $ XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (False:300 <= 255)") $ runIdentity $ eval2P (ip4' @OAN) "1.2.300.4"
+  , expect2 (Left $ XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)") $ runIdentity $ eval2P (ip4' @OAN) "1.2.300.4"
   , expect2 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ runIdentity $ eval2P (ip4 @OAN) "1.2.300.4"
   , expect2 (Right $ unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "12345678903") $ runIdentity $ eval2P (luhn11 @OAN) "12345678903"
   , expect2 (Left $ XTF [1,2,3,4,5,6,7,8,9,0,1] "invalid checkdigit") $ runIdentity $ eval2P (luhn11 @OZ) "12345678901"

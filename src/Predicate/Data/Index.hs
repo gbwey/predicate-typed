@@ -166,23 +166,23 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- PresentT (12,5)
 --
 -- >>> pl @(Fst >> Dup >> (Ix 1 (Failp "failed5") *** Ix 3 (Failp "failed5")) >> Fst < Snd) ([10,12,3,5],"ss")
--- Present False ((>>) False | {False:12 < 5})
+-- False ((>>) False | {12 < 5})
 -- PresentT False
 --
 -- >>> pl @(Fst >> Dup >> (Ix 1 (Failp "failed5") *** Ix 3 (Failp "failed5")) >> Fst > Snd) ([10,12,3,5],"ss")
--- Present True ((>>) True | {True:12 > 5})
+-- True ((>>) True | {12 > 5})
 -- PresentT True
 --
 -- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval1") >> Fst == Snd) ('x',[1..5])
--- Present False ((>>) False | {False:5 == 4})
+-- False ((>>) False | {5 == 4})
 -- PresentT False
 --
 -- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval2") >> Fst < Snd) ('x',[1..5])
--- Present False ((>>) False | {False:5 < 4})
+-- False ((>>) False | {5 < 4})
 -- PresentT False
 --
 -- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval3") >> Fst > Snd) ('x',[1..5])
--- Present True ((>>) True | {True:5 > 4})
+-- True ((>>) True | {5 > 4})
 -- PresentT True
 --
 -- >>> pl @(Map Len Id >> Ix 3 (Failp "lhs") &&& Ix 0 5 >> Fst == Snd) [[1..4],[4..5]]
@@ -190,7 +190,7 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- FailT "lhs"
 --
 -- >>> pl @(Map Len Id >> Ix 0 (Failp "lhs") &&& Ix 1 5 >> Fst == Snd) [[1..4],[4..5]]
--- Present False ((>>) False | {False:4 == 2})
+-- False ((>>) False | {4 == 2})
 -- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 1 (Failp "lhs") &&& Ix 3 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
@@ -206,23 +206,23 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- FailT "rhs"
 --
 -- >>> pl @(Map Len Id >> Ix 10 3 &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
--- Present False ((>>) False | {False:3 == 2})
+-- False ((>>) False | {3 == 2})
 -- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 3 3 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
--- Present False ((>>) False | {False:3 == 2})
+-- False ((>>) False | {3 == 2})
 -- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 10 3 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
--- Present False ((>>) False | {False:3 == 2})
+-- False ((>>) False | {3 == 2})
 -- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 10 5 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
--- Present False ((>>) False | {False:5 == 2})
+-- False ((>>) False | {5 == 2})
 -- PresentT False
 --
 -- >>> pl @(Map Len Id >> Ix 10 2 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
--- Present True ((>>) True | {True:2 == 2})
+-- True ((>>) True | {2 == 2})
 -- PresentT True
 --
 data Ix (n :: Nat) def
@@ -242,7 +242,7 @@ instance (P def (Proxy a)
            pp <- eval (Proxy @def) opts (Proxy @a)
            pure $ case getValueLR opts msg1 pp [] of
              Left e -> e
-             Right _ -> mkNode opts (_ttBool pp) msg1 [hh pp]
+             Right _ -> mkNodeCopy opts pp msg1 [hh pp]
          Just a -> pure $ mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
 
 data Ix' (n :: Nat)
@@ -295,7 +295,7 @@ instance (P q a
                 rr <- eval (Proxy @r) opts (Proxy @(IxValue (PP p a)))
                 pure $ case getValueLR opts msg1 rr [hh pp, hh qq] of
                   Left e -> e
-                  Right _ -> mkNode opts (_ttBool rr) (msg1 <> " index not found") [hh pp, hh qq]
+                  Right _ -> mkNodeCopy opts rr (msg1 <> " index not found") [hh pp, hh qq]
              Just ret -> pure $ mkNode opts (PresentT ret) (show01' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to 'Data.List.!!' leveraging 'Ixed'
@@ -500,7 +500,7 @@ instance (P q a
 -- | type operator version of 'Lookup'
 --
 -- >>> pl @((Id !!? Char1 "d") > MkJust 99 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
--- Present False (False:False || False | (False:Just 4 > Just 99) || (False:4 <= 3))
+-- False (False || False | (Just 4 > Just 99) || (4 <= 3))
 -- PresentT False
 --
 -- >>> pz @((Id !!? Char1 "d") > MkJust 2 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])

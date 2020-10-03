@@ -154,7 +154,7 @@ evalBool :: ( MonadEval m
               -> POpts
               -> a
               -> m (TT (PP p a))
-evalBool p opts a = eval p opts a
+evalBool p opts a = fmap fixTTBoolP (eval p opts a)
 
 evalQuick :: forall opts p i
   . ( OptC opts
@@ -206,19 +206,19 @@ instance P p a => P (W p) a where
 -- | add a message to give more context to the evaluation tree
 --
 -- >>> pan @(Msg "[somemessage]" Id) 999
--- [somemessage] Id 999
+-- P [somemessage] Id 999
 -- PresentT 999
 --
 -- >>> pan @(Msg Id 999) "info message:"
--- info message: '999
+-- P info message: '999
 -- PresentT 999
 --
 data Msg prt p
 
-instance (P prt a
-        , PP prt a ~ String
-        , P p a
-        ) => P (Msg prt p) a where
+instance ( P prt a
+         , PP prt a ~ String
+         , P p a
+         ) => P (Msg prt p) a where
   type PP (Msg prt p) a = PP p a
   eval _ opts a = do
     pp <- eval (Proxy @prt) opts a
@@ -229,19 +229,19 @@ instance (P prt a
 -- | add a message to give more context to the evaluation tree
 --
 -- >>> pan @(MsgI "[somemessage] " Id) 999
--- [somemessage] Id 999
+-- P [somemessage] Id 999
 -- PresentT 999
 --
 -- >>> pan @(MsgI Id 999) "info message:"
--- info message:'999
+-- P info message:'999
 -- PresentT 999
 --
 data MsgI prt p
 
-instance (P prt a
-        , PP prt a ~ String
-        , P p a
-        ) => P (MsgI prt p) a where
+instance ( P prt a
+         , PP prt a ~ String
+         , P p a
+         ) => P (MsgI prt p) a where
   type PP (MsgI prt p) a = PP p a
   eval _ opts a = do
     pp <- eval (Proxy @prt) opts a
@@ -274,9 +274,9 @@ instance Typeable t => P (Hole t) a where
 -- | override the display width for the expression @p@
 data Width (n :: Nat) p
 
-instance (KnownNat n
-        , P p a
-        ) => P (Width n p) a where
+instance ( KnownNat n
+         , P p a
+         ) => P (Width n p) a where
   type PP (Width n p) a = PP p a
   eval _ opts a = do
     let opts' = opts { oWidth = nat @n }
@@ -362,19 +362,19 @@ instance ( P p a
 -- PresentT (4,"hello","goodbye")
 --
 -- >>> pan @'( 'True, 'False, 123) True
--- '(,,)
+-- P '(,,)
 -- |
--- +- True:'True
+-- +- True 'True
 -- |
--- +- False:'False
+-- +- False 'False
 -- |
--- `- '123
+-- `- P '123
 -- PresentT (True,False,123)
 --
-instance (P p a
-        , P q a
-        , P r a
-        ) => P '(p,q,r) a where
+instance ( P p a
+         , P q a
+         , P r a
+         ) => P '(p,q,r) a where
   type PP '(p,q,r) a = (PP p a, PP q a, PP r a)
   eval _ opts a = do
     let msg = "'(,,)"
@@ -395,11 +395,11 @@ instance (P p a
 -- >>> pz @'(4, Id, "inj", 999) "hello"
 -- PresentT (4,"hello","inj",999)
 --
-instance (P p a
-        , P q a
-        , P r a
-        , P s a
-        ) => P '(p,q,r,s) a where
+instance ( P p a
+         , P q a
+         , P r a
+         , P s a
+         ) => P '(p,q,r,s) a where
   type PP '(p,q,r,s) a = (PP p a, PP q a, PP r a, PP s a)
   eval _ opts a = do
     let msg = "'(,,,)"
@@ -420,12 +420,12 @@ instance (P p a
 -- >>> pz @'(4, Id, "inj", 999, 'LT) "hello"
 -- PresentT (4,"hello","inj",999,LT)
 --
-instance (P p a
-        , P q a
-        , P r a
-        , P s a
-        , P t a
-        ) => P '(p,q,r,s,t) a where
+instance ( P p a
+         , P q a
+         , P r a
+         , P s a
+         , P t a
+         ) => P '(p,q,r,s,t) a where
   type PP '(p,q,r,s,t) a = (PP p a, PP q a, PP r a, PP s a, PP t a)
   eval _ opts a = do
     let msg = "'(,,,,)"
@@ -451,13 +451,13 @@ instance (P p a
 -- >>> pz @'(4, Id, "inj", 999, 'LT, 1) "hello"
 -- PresentT (4,"hello","inj",999,LT,1)
 --
-instance (P p a
-        , P q a
-        , P r a
-        , P s a
-        , P t a
-        , P u a
-        ) => P '(p,q,r,s,t,u) a where
+instance ( P p a
+         , P q a
+         , P r a
+         , P s a
+         , P t a
+         , P u a
+         ) => P '(p,q,r,s,t,u) a where
   type PP '(p,q,r,s,t,u) a = (PP p a, PP q a, PP r a, PP s a, PP t a, PP u a)
   eval _ opts a = do
     let msg = "'(,,,,,)"
@@ -483,14 +483,14 @@ instance (P p a
 -- >>> pz @'(4, Id, "inj", 999, 'LT, 1, 2) "hello"
 -- PresentT (4,"hello","inj",999,LT,1,2)
 --
-instance (P p a
-        , P q a
-        , P r a
-        , P s a
-        , P t a
-        , P u a
-        , P v a
-        ) => P '(p,q,r,s,t,u,v) a where
+instance ( P p a
+         , P q a
+         , P r a
+         , P s a
+         , P t a
+         , P u a
+         , P v a
+         ) => P '(p,q,r,s,t,u,v) a where
   type PP '(p,q,r,s,t,u,v) a = (PP p a, PP q a, PP r a, PP s a, PP t a, PP u a, PP v a)
   eval _ opts a = do
     let msg = "'(,,,,,,)"
@@ -521,15 +521,15 @@ instance (P p a
 -- >>> pz @'(4, Id, "inj", 999, 'LT, 1, 2, 3) "hello"
 -- PresentT (4,"hello","inj",999,LT,1,2,3)
 --
-instance (P p a
-        , P q a
-        , P r a
-        , P s a
-        , P t a
-        , P u a
-        , P v a
-        , P w a
-        ) => P '(p,q,r,s,t,u,v,w) a where
+instance ( P p a
+         , P q a
+         , P r a
+         , P s a
+         , P t a
+         , P u a
+         , P v a
+         , P w a
+         ) => P '(p,q,r,s,t,u,v,w) a where
   type PP '(p,q,r,s,t,u,v,w) a = (PP p a, PP q a, PP r a, PP s a, PP t a, PP u a, PP v a, PP w a)
   eval _ opts a = do
     let msg = "'(,,,,,,,)"
@@ -619,13 +619,13 @@ instance ( Show (PP p a)
        Left e -> e
        Right b -> mkNode opts (PresentT [b]) ("'" <> showL opts ([b] :: [PP p a]) <> showVerbose opts " | " a) [hh pp]
 
-instance (Show (PP p a)
-        , Show a
-        , P (p1 ': ps) a
-        , PP (p1 ': ps) a ~ [PP p1 a]
-        , P p a
-        , PP p a ~ PP p1 a
-        ) => P (p ': p1 ': ps) a where
+instance ( Show (PP p a)
+         , Show a
+         , P (p1 ': ps) a
+         , PP (p1 ': ps) a ~ [PP p1 a]
+         , P p a
+         , PP p a ~ PP p1 a
+         ) => P (p ': p1 ': ps) a where
   type PP (p ': p1 ': ps) a = [PP p a]
   eval _ opts a = do
     let msg0 = "'(p':q)"
@@ -665,10 +665,10 @@ instance (Show (PP p a)
 -- >>> pz @('Just Fst) (Just 123,'x')
 -- PresentT 123
 --
-instance (Show a
-        , PP p x ~ Maybe a
-        , P p x
-        ) => P ('Just p) x where
+instance ( Show a
+         , PP p x ~ Maybe a
+         , P p x
+         ) => P ('Just p) x where
   type PP ('Just p) x = MaybeT (PP p x)
   eval _ opts x = do
     let msg0 = "'Just"
@@ -719,7 +719,8 @@ instance P 'Nothing (Maybe a) where
 --
 
 instance ( PP p x ~ Either a b
-         , P p x)
+         , P p x
+         )
     => P ('Left p) x where
   type PP ('Left p) x = LeftT (PP p x)
   eval _ opts x = do
@@ -749,7 +750,8 @@ instance ( PP p x ~ Either a b
 -- FailT "'Right found Left"
 --
 instance ( PP p x ~ Either a b
-         , P p x)
+         , P p x
+         )
     => P ('Right p) x where
   type PP ('Right p) x = RightT (PP p x)
   eval _ opts x = do
@@ -783,7 +785,8 @@ instance ( PP p x ~ Either a b
 --
 
 instance ( PP p x ~ These a b
-         , P p x)
+         , P p x
+         )
     => P ('This p) x where
   type PP ('This p) x = ThisT (PP p x)
   eval _ opts x = do
@@ -810,7 +813,8 @@ instance ( PP p x ~ These a b
 --
 
 instance ( PP p x ~ These a b
-         , P p x)
+         , P p x
+         )
     => P ('That p) x where
   type PP ('That p) x = ThatT (PP p x)
   eval _ opts x = do
@@ -839,13 +843,13 @@ instance ( PP p x ~ These a b
 -- >>> pz @('These Id Id) (That "aaa")
 -- FailT "'These found That"
 --
-instance (Show a
-        , Show b
-        , P p a
-        , P q b
-        , Show (PP p a)
-        , Show (PP q b)
-        ) => P ('These p q) (These a b) where
+instance ( Show a
+         , Show b
+         , P p a
+         , P q b
+         , Show (PP p a)
+         , Show (PP q b)
+         ) => P ('These p q) (These a b) where
   type PP ('These p q) (These a b) = (PP p a, PP q b)
   eval _ opts th = do
     let msg0 = "'These"
@@ -920,7 +924,8 @@ puv = run @OUV @p
 run :: forall opts p a
         . ( OptC opts
           , Show (PP p a)
-          , P p a)
+          , P p a
+          )
         => a
         -> IO (BoolT (PP p a))
 run a = do
@@ -930,7 +935,7 @@ run a = do
     DZero -> pure ()
     DLite -> unlessNullM (prtTree opts pp) putStrLn
     _ -> unlessNullM (prtTree opts pp) putStr
-  return (_ttBool pp)
+  return (_ttBoolT pp)
 
 -- | run expression with multiple options in a list
 --
@@ -945,7 +950,8 @@ run a = do
 runs :: forall optss p a
         . ( OptC (OptT optss)
           , Show (PP p a)
-          , P p a)
+          , P p a
+          )
         => a
         -> IO (BoolT (PP p a))
 runs = run @(OptT optss) @p
@@ -1005,7 +1011,9 @@ evalBoolHide opts
 
 -- | evaluate a expressions but hide the results unless verbose
 evalHide :: forall p a m
-  . (MonadEval m, P p a)
+  . ( MonadEval m
+    , P p a
+    )
   => POpts
   -> a
   -> m (TT (PP p a))
@@ -1039,7 +1047,7 @@ instance ( P p a
         qq <- eval (Proxy @q) opts p
         pure $ case getValueLR opts (showL opts p) qq [hh pp] of
           Left e -> e
-          Right q -> mkNode opts (_ttBool qq) (lit01 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
+          Right q -> mkNodeCopy opts qq (lit01 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
 
 -- | flipped version of 'Predicate.Core.>>'
 data p << q
@@ -1066,10 +1074,10 @@ topMessageEgregious pp = innermost (_ttString pp)
 --
 data Unwrap
 
-instance (Show x
-        , Show (Unwrapped x)
-        , Wrapped x
-        ) => P Unwrap x where
+instance ( Show x
+         , Show (Unwrapped x)
+         , Wrapped x
+         ) => P Unwrap x where
   type PP Unwrap x = Unwrapped x
   eval _ opts x =
     let msg0 = "Unwrap"
@@ -1078,12 +1086,12 @@ instance (Show x
 
 data Wrap' t p
 
-instance (Show (PP p x)
-        , P p x
-        , Unwrapped (PP s x) ~ PP p x
-        , Wrapped (PP s x)
-        , Show (PP s x)
-        ) => P (Wrap' s p) x where
+instance ( Show (PP p x)
+         , P p x
+         , Unwrapped (PP s x) ~ PP p x
+         , Wrapped (PP s x)
+         , Show (PP s x)
+         ) => P (Wrap' s p) x where
   type PP (Wrap' s p) x = PP s x
   eval _ opts x = do
     let msg0 = "Wrap"
@@ -1170,11 +1178,11 @@ instance ( Show a
 --
 data Length p
 
-instance (PP p x ~ t a
-        , P p x
-        , Show (t a)
-        , Foldable t
-        ) => P (Length p) x where
+instance ( PP p x ~ t a
+         , P p x
+         , Show (t a)
+         , Foldable t
+         ) => P (Length p) x where
   type PP (Length p) x = Int
   eval _ opts x = do
     let msg0 = "Length"
@@ -1197,11 +1205,11 @@ instance (PP p x ~ t a
 -- PresentT False
 --
 -- >>> pl @(Not (Lt 3)) 13
--- Present True (True:Not (False:13 < 3))
+-- True (Not (13 < 3))
 -- PresentT True
 --
 -- >>> pl @(Not 'True) ()
--- Present False (False:Not (True:'True))
+-- False (Not ('True))
 -- PresentT False
 --
 data Not p
@@ -1228,23 +1236,23 @@ instance ( PP p x ~ Bool
 -- PresentT False
 --
 -- >>> pl @(Head >> IdBool) [True]
--- Present True ((>>) True | {True:IdBool})
+-- True ((>>) True | {IdBool})
 -- PresentT True
 --
 -- >>> pan @(Head >> Id) [True]
--- (>>) True
+-- P (>>) True
 -- |
--- +- Head True
+-- +- P Head True
 -- |
--- `- Id True
+-- `- P Id True
 -- PresentT True
 --
 -- >>> pan @(Head >> IdBool) [True]
--- (>>) True
+-- True (>>) True
 -- |
--- +- Head True
+-- +- P Head True
 -- |
--- `- True:IdBool
+-- `- True IdBool
 -- PresentT True
 --
 
@@ -1273,9 +1281,9 @@ instance x ~ Bool
 --
 data Fail t prt
 
-instance (P prt a
-        , PP prt a ~ String
-        ) => P (Fail t prt) a where
+instance ( P prt a
+         , PP prt a ~ String
+         ) => P (Fail t prt) a where
   type PP (Fail t prt) a = PP t a
   eval _ opts a = do
     let msg0 = "Fail"
@@ -1352,9 +1360,9 @@ instance P (Fail Unproxy p) x => P (Failp p) x where
 -- FailT "OneP:expected one element(empty)"
 --
 data OneP
-instance (Foldable t
-        , x ~ t a
-        ) => P OneP x where
+instance ( Foldable t
+         , x ~ t a
+         ) => P OneP x where
   type PP OneP x = ExtractAFromTA x
   eval _ opts x = do
     let msg0 = "OneP"
@@ -1373,27 +1381,27 @@ instance (Foldable t
 -- PresentT True
 --
 -- >>> pl @(Between 5 8 Id) 9
--- Present False (False:9 <= 8)
+-- False (9 <= 8)
 -- PresentT False
 --
 -- >>> pl @(Between L11 L12 Snd) ((1,4),3)
--- Present True (True:1 <= 3 <= 4)
+-- True (1 <= 3 <= 4)
 -- PresentT True
 --
 -- >>> pl @(Between L11 L12 Snd) ((1,4),10)
--- Present False (False:10 <= 4)
+-- False (10 <= 4)
 -- PresentT False
 --
 data Between p q r -- reify as it is used a lot! nicer specific messages at the top level!
 
-instance (Ord (PP p x)
-       , Show (PP p x)
-       , PP r x ~ PP p x
-       , PP r x ~ PP q x
-       , P p x
-       , P q x
-       , P r x
-       ) => P (Between p q r) x where
+instance ( Ord (PP p x)
+         , Show (PP p x)
+         , PP r x ~ PP p x
+         , PP r x ~ PP q x
+         , P p x
+         , P q x
+         , P r x
+         ) => P (Between p q r) x where
   type PP (Between p q r) x = Bool
   eval _ opts x = do
     let msg0 = "Between"
@@ -1434,7 +1442,7 @@ instance P (BetweenT p q) x => P (p <..> q) x where
 -- | similar to 'all'
 --
 -- >>> pl @(All (Between 1 8 Id)) [7,3,4,1,2,9,0,1]
--- Present False (False:All(8) i=5 (False:9 <= 8))
+-- False (All(8) i=5 (9 <= 8))
 -- PresentT False
 --
 -- >>> pz @(All Odd) [1,5,11,5,3]
@@ -1444,75 +1452,75 @@ instance P (BetweenT p q) x => P (p <..> q) x where
 -- PresentT True
 --
 -- >>> run @OANV @(All Even) [1,5,11,5,3]
--- False:All(5) i=0 (False:1 == 0)
+-- False All(5) i=0 (1 == 0)
 -- |
--- +- i=0: False:1 == 0
+-- +- False i=0: 1 == 0
 -- |  |
--- |  +- 1 `mod` 2 = 1
+-- |  +- P 1 `mod` 2 = 1
 -- |  |  |
--- |  |  +- Id 1
+-- |  |  +- P Id 1
 -- |  |  |
--- |  |  `- '2
+-- |  |  `- P '2
 -- |  |
--- |  `- '0
+-- |  `- P '0
 -- |
--- +- i=1: False:1 == 0
+-- +- False i=1: 1 == 0
 -- |  |
--- |  +- 5 `mod` 2 = 1
+-- |  +- P 5 `mod` 2 = 1
 -- |  |  |
--- |  |  +- Id 5
+-- |  |  +- P Id 5
 -- |  |  |
--- |  |  `- '2
+-- |  |  `- P '2
 -- |  |
--- |  `- '0
+-- |  `- P '0
 -- |
--- +- i=2: False:1 == 0
+-- +- False i=2: 1 == 0
 -- |  |
--- |  +- 11 `mod` 2 = 1
+-- |  +- P 11 `mod` 2 = 1
 -- |  |  |
--- |  |  +- Id 11
+-- |  |  +- P Id 11
 -- |  |  |
--- |  |  `- '2
+-- |  |  `- P '2
 -- |  |
--- |  `- '0
+-- |  `- P '0
 -- |
--- +- i=3: False:1 == 0
+-- +- False i=3: 1 == 0
 -- |  |
--- |  +- 5 `mod` 2 = 1
+-- |  +- P 5 `mod` 2 = 1
 -- |  |  |
--- |  |  +- Id 5
+-- |  |  +- P Id 5
 -- |  |  |
--- |  |  `- '2
+-- |  |  `- P '2
 -- |  |
--- |  `- '0
+-- |  `- P '0
 -- |
--- `- i=4: False:1 == 0
+-- `- False i=4: 1 == 0
 --    |
---    +- 3 `mod` 2 = 1
+--    +- P 3 `mod` 2 = 1
 --    |  |
---    |  +- Id 3
+--    |  +- P Id 3
 --    |  |
---    |  `- '2
+--    |  `- P '2
 --    |
---    `- '0
+--    `- P '0
 -- PresentT False
 --
 -- >>> pl @(Fst >> All (Gt 3)) ([10,12,3,5],"ss")
--- Present False ((>>) False | {False:All(4) i=2 (False:3 > 3)})
+-- False ((>>) False | {All(4) i=2 (3 > 3)})
 -- PresentT False
 --
 -- >>> pl @(All (Lt 3)) [1::Int .. 10]
--- Present False (False:All(10) i=2 (False:3 < 3))
+-- False (All(10) i=2 (3 < 3))
 -- PresentT False
 --
 data All p
 
-instance (P p a
-        , PP p a ~ Bool
-        , x ~ f a
-        , Show a
-        , Foldable f
-        ) => P (All p) x where
+instance ( P p a
+         , PP p a ~ Bool
+         , x ~ f a
+         , Show a
+         , Foldable f
+         ) => P (All p) x where
   type PP (All p) x = Bool
   eval _ opts x = do
     let msg0 = "All"
@@ -1533,26 +1541,26 @@ instance (P p a
 -- | similar to 'any'
 --
 -- >>> pl @(Any Even) [1,5,11,5,3]
--- Present False (False:Any(5))
+-- False (Any(5))
 -- PresentT False
 --
 -- >>> pl @(Any Even) [1,5,112,5,3]
--- Present True (True:Any(5) i=2 (True:0 == 0))
+-- True (Any(5) i=2 (0 == 0))
 -- PresentT True
 --
 -- >>> pz @(Any Even) []
 -- PresentT False
 --
 -- >>> pl @(Fst >> Any (Gt 3)) ([10,12,3,5],"ss")
--- Present True ((>>) True | {True:Any(4) i=0 (True:10 > 3)})
+-- True ((>>) True | {Any(4) i=0 (10 > 3)})
 -- PresentT True
 --
 -- >>> pl @(Any (Same 2)) [1,4,5]
--- Present False (False:Any(3))
+-- False (Any(3))
 -- PresentT False
 --
 -- >>> pl @(Any (Same 2)) [1,4,5,2,1]
--- Present True (True:Any(5) i=3 (True:2 == 2))
+-- True (Any(5) i=3 (2 == 2))
 -- PresentT True
 --
 data Any p
@@ -1597,11 +1605,11 @@ instance ( P p a
 --
 data L1 p
 
-instance (Show (ExtractL1T (PP p x))
-        , ExtractL1C (PP p x)
-        , P p x
-        , Show (PP p x)
-        ) => P (L1 p) x where
+instance ( Show (ExtractL1T (PP p x))
+         , ExtractL1C (PP p x)
+         , P p x
+         , Show (PP p x)
+         ) => P (L1 p) x where
   type PP (L1 p) x = ExtractL1T (PP p x)
   eval _ opts x = do
     let msg0 = "Fst"
@@ -1633,11 +1641,11 @@ instance P FstT x => P Fst x where
 --
 data L2 p
 
-instance (Show (ExtractL2T (PP p x))
-        , ExtractL2C (PP p x)
-        , P p x
-        , Show (PP p x)
-        ) => P (L2 p) x where
+instance ( Show (ExtractL2T (PP p x))
+         , ExtractL2C (PP p x)
+         , P p x
+         , Show (PP p x)
+         ) => P (L2 p) x where
   type PP (L2 p) x = ExtractL2T (PP p x)
   eval _ opts x = do
     let msg0 = "Snd"
@@ -1669,11 +1677,11 @@ instance P SndT x => P Snd x where
 --
 data L3 p
 
-instance (Show (ExtractL3T (PP p x))
-        , ExtractL3C (PP p x)
-        , P p x
-        , Show (PP p x)
-        ) => P (L3 p) x where
+instance ( Show (ExtractL3T (PP p x))
+         , ExtractL3C (PP p x)
+         , P p x
+         , Show (PP p x)
+         ) => P (L3 p) x where
   type PP (L3 p) x = ExtractL3T (PP p x)
   eval _ opts x = do
     let msg0 = "Thd"
@@ -1705,11 +1713,11 @@ instance P ThdT x => P Thd x where
 --
 data L4 p
 
-instance (Show (ExtractL4T (PP p x))
-        , ExtractL4C (PP p x)
-        , P p x
-        , Show (PP p x)
-        ) => P (L4 p) x where
+instance ( Show (ExtractL4T (PP p x))
+         , ExtractL4C (PP p x)
+         , P p x
+         , Show (PP p x)
+         ) => P (L4 p) x where
   type PP (L4 p) x = ExtractL4T (PP p x)
   eval _ opts x = do
     let msg0 = "L4"
@@ -1727,11 +1735,11 @@ instance (Show (ExtractL4T (PP p x))
 --
 data L5 p
 
-instance (Show (ExtractL5T (PP p x))
-        , ExtractL5C (PP p x)
-        , P p x
-        , Show (PP p x)
-        ) => P (L5 p) x where
+instance ( Show (ExtractL5T (PP p x))
+         , ExtractL5C (PP p x)
+         , P p x
+         , Show (PP p x)
+         ) => P (L5 p) x where
   type PP (L5 p) x = ExtractL5T (PP p x)
   eval _ opts x = do
     let msg0 = "L5"
@@ -1750,11 +1758,11 @@ instance (Show (ExtractL5T (PP p x))
 --
 data L6 p
 
-instance (Show (ExtractL6T (PP p x))
-        , ExtractL6C (PP p x)
-        , P p x
-        , Show (PP p x)
-        ) => P (L6 p) x where
+instance ( Show (ExtractL6T (PP p x))
+         , ExtractL6C (PP p x)
+         , P p x
+         , Show (PP p x)
+         ) => P (L6 p) x where
   type PP (L6 p) x = ExtractL6T (PP p x)
   eval _ opts x = do
     let msg0 = "L6"
@@ -1772,14 +1780,14 @@ instance (Show (ExtractL6T (PP p x))
 --
 data Map p q
 
-instance (Show (PP p a)
-        , P p a
-        , PP q x ~ f a
-        , P q x
-        , Show a
-        , Show (f a)
-        , Foldable f
-        ) => P (Map p q) x where
+instance ( Show (PP p a)
+         , P p a
+         , PP q x ~ f a
+         , P q x
+         , Show a
+         , Show (f a)
+         , Foldable f
+         ) => P (Map p q) x where
   type PP (Map p q) x = [PP p (ExtractAFromTA (PP q x))]
   eval _ opts x = do
     let msg0 = "Map"
@@ -1866,11 +1874,11 @@ type family DoExpandT (ps :: [k]) :: Type where
 data p && q
 infixr 3 &&
 
-instance (P p a
-        , P q a
-        , PP p a ~ Bool
-        , PP q a ~ Bool
-        ) => P (p && q) a where
+instance ( P p a
+         , P q a
+         , PP p a ~ Bool
+         , PP q a ~ Bool
+         ) => P (p && q) a where
   type PP (p && q) a = Bool
   eval _ opts a = do
     let msg0 = "&&"
@@ -1888,25 +1896,25 @@ instance (P p a
 -- | short circuit version of boolean And
 --
 -- >>> pl @(Id > 10 &&~ Failt _ "ss") 9
--- Present False (False:False &&~ _ | (False:9 > 10))
+-- False (False &&~ _ | (9 > 10))
 -- PresentT False
 --
 -- >>> pl @(Id > 10 &&~ Id == 12) 11
--- Present False (False:True &&~ False | (False:11 == 12))
+-- False (True &&~ False | (11 == 12))
 -- PresentT False
 --
 -- >>> pl @(Id > 10 &&~ Id == 11) 11
--- Present True (True:True &&~ True)
+-- True (True &&~ True)
 -- PresentT True
 --
 data p &&~ q
 infixr 3 &&~
 
-instance (P p a
-        , P q a
-        , PP p a ~ Bool
-        , PP q a ~ Bool
-        ) => P (p &&~ q) a where
+instance ( P p a
+         , P q a
+         , PP p a ~ Bool
+         , PP q a ~ Bool
+         ) => P (p &&~ q) a where
   type PP (p &&~ q) a = Bool
   eval _ opts a = do
     let msg0 = "&&~"
@@ -1935,11 +1943,11 @@ instance (P p a
 data p || q
 infixr 2 ||
 
-instance (P p a
-        , P q a
-        , PP p a ~ Bool
-        , PP q a ~ Bool
-        ) => P (p || q) a where
+instance ( P p a
+         , P q a
+         , PP p a ~ Bool
+         , PP q a ~ Bool
+         ) => P (p || q) a where
   type PP (p || q) a = Bool
   eval _ opts a = do
     let msg0 = "||"
@@ -1955,24 +1963,24 @@ instance (P p a
 -- | short circuit version of boolean Or
 --
 -- >>> pl @(Id > 10 ||~ Failt _ "ss") 11
--- Present True (True:True ||~ _ | (True:11 > 10))
+-- True (True ||~ _ | (11 > 10))
 -- PresentT True
 --
 -- >>> pz @(Id > 10 ||~ Id == 9) 9
 -- PresentT True
 --
 -- >>> pl @(Id > 10 ||~ Id > 9) 9
--- Present False (False:False ||~ False | (False:9 > 10) ||~ (False:9 > 9))
+-- False (False ||~ False | (9 > 10) ||~ (9 > 9))
 -- PresentT False
 --
 data p ||~ q
 infixr 2 ||~
 
-instance (P p a
-        , P q a
-        , PP p a ~ Bool
-        , PP q a ~ Bool
-        ) => P (p ||~ q) a where
+instance ( P p a
+         , P q a
+         , PP p a ~ Bool
+         , PP q a ~ Bool
+         ) => P (p ||~ q) a where
   type PP (p ||~ q) a = Bool
   eval _ opts a = do
     let msg0 = "||~"
@@ -2007,11 +2015,11 @@ instance (P p a
 data p ~> q
 infixr 1 ~>
 
-instance (P p a
-        , P q a
-        , PP p a ~ Bool
-        , PP q a ~ Bool
-        ) => P (p ~> q) a where
+instance ( P p a
+         , P q a
+         , PP p a ~ Bool
+         , PP q a ~ Bool
+         ) => P (p ~> q) a where
   type PP (p ~> q) a = Bool
   eval _ opts a = do
     let msg0 = "~>"
@@ -2086,10 +2094,10 @@ instance SwapC ((,,,,) a b c) where
 instance SwapC ((,,,,,) a b c d) where
   swapC (a,b,c,d,e,f) = (a,b,c,d,f,e)
 
-instance (Show (p a b)
-        , SwapC p
-        , Show (p b a)
-        ) => P Swap (p a b) where
+instance ( Show (p a b)
+         , SwapC p
+         , Show (p b a)
+         ) => P Swap (p a b) where
   type PP Swap (p a b) = p b a
   eval _ opts pabx =
     let msg0 = "Swap"
@@ -2103,7 +2111,7 @@ instance (Show (p a b)
 -- PresentT 3
 --
 -- >>> pl @((<=) 4 $ L1 $ L2 $ Id) ((1,2),(3,4))
--- Present False (False:4 <= 3)
+-- False (4 <= 3)
 -- PresentT False
 --
 data (p :: k -> k1) $ (q :: k)
@@ -2174,11 +2182,11 @@ instance P (p q) a => P (q & p) a where
 -- PresentT (Left 123)
 --
 data Pure (t :: Type -> Type) p
-instance (P p x
-        , Show (PP p x)
-        , Show (t (PP p x))
-        , Applicative t
-        ) => P (Pure t p) x where
+instance ( P p x
+         , Show (PP p x)
+         , Show (t (PP p x))
+         , Applicative t
+         ) => P (Pure t p) x where
   type PP (Pure t p) x = t (PP p x)
   eval _ opts x = do
     let msg0 = "Pure"
@@ -2204,10 +2212,10 @@ instance (P p x
 --
 data Coerce (t :: k)
 
-instance (Show a
-        , Show t
-        , Coercible t a
-        ) => P (Coerce t) a where
+instance ( Show a
+         , Show t
+         , Coercible t a
+         ) => P (Coerce t) a where
   type PP (Coerce t) a = t
   eval _ opts a =
     let msg0 = "Coerce"

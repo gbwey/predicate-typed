@@ -38,16 +38,16 @@ run this to get details in color of each evaluation step on failure:
 *** Step 1. Success Initial Conversion(ip) [4094] ***
 P ReadBase(Int,16) 4094
 |
-`- Id "0000ffe"
+`- P Id "0000ffe"
 
 *** Step 2. False Boolean Check(op) ***
-False:4094 <= 255
+False 4094 <= 255
 |
-+- Id 4094
++- P Id 4094
 |
-+- '0
++- P '0
 |
-`- '255
+`- P '255
 ```
 
 Read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as output
@@ -80,15 +80,15 @@ Here is an example where the predicate fails at compile-time and we choose to sh
 *** Step 1. Success Initial Conversion(ip) (65535) ***
 P ReadBase(Int,16) 65535
 |
-`- Id "000ffff"
+`- P Id "000ffff"
 *** Step 2. False Boolean Check(op) ***
-False:65535 <= 255
+False 65535 <= 255
 |
-+- Id 65535
++- P Id 65535
 |
-+- '0
++- P '0
 |
-`- '255
+`- P '255
 
     * In the Template Haskell splice $$(refined3TH "000ffff")
       In the expression: $$(refined3TH "000ffff") :: MakeR3 (Hex OU)
@@ -112,7 +112,7 @@ An example of an invalid refined3TH call
 *** Step 1. Initial Conversion(ip) Failed ***
 [Error ReadP Day (2016-xy-09)]
 |
-`- Id "2016-xy-09"
+`- P Id "2016-xy-09"
 
 refined3TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09)
     * In the Template Haskell splice $$(refined3TH "2016-xy-09")
@@ -136,7 +136,7 @@ Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
 
 [Error invalid base 16] ReadBase(Int,16) as=00feg err=[(254,"g")]
 |
-`- Id "00feg"
+`- P Id "00feg"
 ```
 
 #### This example fails as the hexadecimal value is valid but is not between 10 and 256
@@ -147,20 +147,20 @@ Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | (1666361
 *** Step 1. Success Initial Conversion(ip) (16663610) ***
 P ReadBase(Int,16) 16663610
 |
-`- Id "00fe443a"
+`- P Id "00fe443a"
 *** Step 2. False Boolean Check(op) ***
-False:True && False | (16663610 < 256)
+False True && False | (16663610 < 256)
 |
-+- True:16663610 > 10
++- True 16663610 > 10
 |  |
-|  +- Id 16663610
+|  +- P Id 16663610
 |  |
-|  `- '10
+|  `- P '10
 |
-`- False:16663610 < 256
+`- False 16663610 < 256
    |
-   +- Id 16663610
+   +- P Id 16663610
    |
-   `- '256
+   `- P '256
 ```
 
