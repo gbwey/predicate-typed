@@ -45,7 +45,6 @@ module Predicate.Util (
   , _FailT
   , _PresentT
   , _BoolT
-  , _BoolTBool
   , _TrueT
   , _FalseT
   , _BoolTIso
@@ -445,9 +444,6 @@ mkNodeB :: POpts
         -> [Holder]
         -> TT Bool
 mkNodeB opts b s tt =
---  let (bp,tf) = bool (FalseP,"False") (TrueP,"True") b
---      c = colorMe opts bp tf
---  in mkNode' opts (PresentT b) (c <> nullIf ":" s) tt bp
   mkNode' opts (PresentT b) s tt (bool FalseP TrueP b)
 
 mkNodeSkipP :: Tree PE
@@ -930,7 +926,7 @@ formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl op
 -- >>> FailT "asdF" & _BoolT .~ True
 -- FailT "asdF"
 --
-_BoolT :: forall a b . Prism (BoolT a) (BoolT b) a b
+_BoolT :: Prism (BoolT a) (BoolT b) a b
 _BoolT = prism PresentT
          $ \case
               PresentT a -> Right a
@@ -1207,10 +1203,11 @@ colorBoolTBool ::
    -> BoolT Bool
    -> String
 colorBoolTBool o r =
+  uncurry (colorMe o) $
   case r of
-      FailT e -> colorMe o (FailP e) ("FailT " <> e)
-      PresentT True -> colorMe o TrueP "TrueT"
-      PresentT False -> colorMe o FalseP "FalseT"
+      FailT e -> (FailP e, "FailT " <> e)
+      PresentT True -> (TrueP, "TrueT")
+      PresentT False -> (FalseP, "FalseT")
 
 -- | colors the result of the predicate based on the current color palette
 colorMe ::
@@ -1230,19 +1227,12 @@ fixLite :: forall a . Show a
    -> Tree PE
    -> String
 fixLite opts a t
-  | hasNoTree opts = fixPresentP opts (t ^. root . pBool) a <> "\n"
+  | hasNoTree opts =
+      let r = case t ^. root . pBool of
+                PresentP -> colorMe opts PresentP "Present " <> show a
+                bp -> colorBoolP opts bp
+      in r <> "\n"
   | otherwise = prtTreePure opts t
-
--- | override PresentP case with long name
-fixPresentP :: Show a
-  => POpts
-  -> BoolP
-  -> a
-  -> String
-fixPresentP opts bp a =
-  case bp of
-    PresentP -> colorMe opts PresentP "Present " <> show a
-    _ -> colorBoolP opts bp
 
 -- | display tree
 prtTreePure ::
@@ -2099,24 +2089,6 @@ fixEmptyNode' :: String -> Tree PE -> Tree PE
 fixEmptyNode' s = go
  where go (Node (PE PresentP "") []) = Node (PE PresentP s) []
        go (Node p xs) = Node p (map go xs)
-
--- | prism from BoolT to Bool
---
--- >>> let xs = [1,2,3] in PresentT (not (null xs)) ^? _BoolTBool
--- Just True
---
--- >>> let xs = [1,2,3] in PresentT (null xs) ^? _BoolTBool
--- Just False
---
--- >>> FailT "ss" ^? _BoolTBool
--- Nothing
---
-_BoolTBool :: a ~ Bool => Prism' (BoolT a) a
-_BoolTBool =
-  prism' PresentT $ \case
-                       PresentT True -> Just True
-                       PresentT False -> Just False
-                       _ -> Nothing
 
 -- | prism for PresentT True
 --
