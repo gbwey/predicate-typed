@@ -138,7 +138,7 @@ type family GuardsT (ps :: [k]) where
 --type ToGuards (prt :: k) (os :: [k1]) = Proxy (Guards (ToGuardsT prt os))
 
 type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
-  ToGuardsT prt '[] = GL.TypeError ('GL.Text "ToGuardsT cannot be empty")
+  ToGuardsT _prt '[] = GL.TypeError ('GL.Text "ToGuardsT cannot be empty")
   ToGuardsT prt '[p] = '(prt,p) : '[]
   ToGuardsT prt (p ': ps) = '(prt,p) ': ToGuardsT prt ps
 
@@ -722,7 +722,7 @@ instance P (GuardsDetailT prt ps) x => P (GuardsDetail prt ps) x where
 type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
   ToGuardsDetailT prt '[ '(s,p) ] = '(PrintT prt '(s,Id), p) : '[]
   ToGuardsDetailT prt ( '(s,p) ': ps) = '(PrintT prt '(s,Id), p) ': ToGuardsDetailT prt ps
-  ToGuardsDetailT prt '[] = GL.TypeError ('GL.Text "ToGuardsDetailT cannot be empty")
+  ToGuardsDetailT _prt '[] = GL.TypeError ('GL.Text "ToGuardsDetailT cannot be empty")
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --

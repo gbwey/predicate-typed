@@ -111,7 +111,6 @@ module Predicate.Examples.Refined3 (
 
    ) where
 import Predicate.Examples.Common
-import Predicate.Refined
 import Predicate.Refined3
 import Predicate
 import Data.Proxy

@@ -79,7 +79,6 @@ module Predicate.Examples.Refined2 (
   , BaseIJ'
   , BaseIJip
    ) where
-import Predicate.Refined
 import Predicate.Refined2
 import Predicate.Examples.Common
 import Predicate

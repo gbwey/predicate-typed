@@ -76,7 +76,7 @@ module Predicate.Refined3 (
 import Predicate.Core
 import Predicate.Util
 import Data.Functor.Identity (Identity(..))
-import Data.Tree (Tree)
+import Data.Tree (Tree(..))
 import Data.Proxy (Proxy(..))
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Language.Haskell.TH.Syntax as TH
@@ -573,6 +573,9 @@ eval3MSkip a = do
        (Left e,t3) -> (RTTrueF a mkNodeSkipP t2 e t3, Nothing)
     (Right False,t2) -> pure (RTFalse a mkNodeSkipP t2, Nothing)
     (Left e,t2) -> pure (RTF a mkNodeSkipP e t2, Nothing)
+
+mkNodeSkipP :: Tree PE
+mkNodeSkipP = Node (PE TrueP "skipped PP ip i = Id") []
 
 data Msg3 = Msg3 { m3Desc :: !String
                  , m3Short :: !String
