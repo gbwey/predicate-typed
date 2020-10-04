@@ -19,6 +19,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE DerivingStrategies #-}
 {- |
      promoted character functions
 -}
@@ -278,7 +279,7 @@ data CharSet = CLower
              | COctDigit
              | CSeparator
              | CLatin1
-             deriving (Bounded, Show, Read, Eq)
+             deriving stock (Bounded, Enum, Show, Read, Ord, Eq)
 
 class GetCharSet (cs :: CharSet) where
   getCharSet :: (CharSet, Char -> Bool)

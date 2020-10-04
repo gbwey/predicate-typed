@@ -22,7 +22,6 @@
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE LambdaCase #-}
 {- |
      Simple refinement type with only one type and a predicate
 -}
@@ -269,16 +268,10 @@ newRefined' a = do
   pp <- evalBool (Proxy @p) o a
   let r = colorBoolTBool o (_ttBoolT pp)
       s = prtTree o pp
-      msg0 = Msg0 (boolT2LR (_ttBoolT pp)) (topMessage pp) s r
+      msg0 = Msg0 (pp ^. ttBoolT . _BoolTIso) (topMessage pp) s r
   pure $ case getValueLR o "" pp [] of
        Right True -> Right (Refined a)
        _ -> Left msg0
-
-boolT2LR :: a ~ Bool => BoolT a -> Either String Bool
-boolT2LR = \case
-             PresentT True -> Right True
-             PresentT False -> Right False
-             FailT e -> Left e
 
 -- | returns a 'Refined' value if @a@ is valid for the predicate @p@
 --

@@ -25,6 +25,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {- |
      Utility methods for Predicate / methods for displaying the evaluation tree
 -}
@@ -47,6 +48,7 @@ module Predicate.Util (
   , _BoolTBool
   , _TrueT
   , _FalseT
+  , _BoolTIso
 
  -- ** PE
   , BoolP(..)
@@ -275,6 +277,7 @@ import Data.Char (isSpace)
 import qualified Safe (initSafe, fromJustNote, headNote)
 import Control.Monad (ap)
 import Data.Bool (bool)
+import GHC.Generics (Generic, Generic1)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -286,20 +289,20 @@ data BoolP =
   | FalseP       -- ^ False predicate
   | TrueP        -- ^ True predicate
   | PresentP     -- ^ Any value
-  deriving (Show, Ord, Eq, Read)
+  deriving stock (Show, Ord, Eq, Read, Generic)
 
 makePrisms ''BoolP
 
 -- | untyped evaluation tree for final display
 data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
              , _pString :: !String -- ^ optional strings to include in the results
-             } deriving (Show, Read, Eq)
+             } deriving stock (Show, Read, Eq, Generic)
 
 makeLenses ''PE
 
 -- | contains the typed result from evaluating the expression tree
 data BoolT a = FailT !String | PresentT !a
-  deriving (Show, Eq, Ord, Read, Functor, Foldable, Traversable)
+  deriving stock (Show, Eq, Ord, Read, Functor, Foldable, Traversable, Generic, Generic1)
 
 makePrisms ''BoolT
 
@@ -358,7 +361,7 @@ data TT a = TT { _ttBoolT :: !(BoolT a)  -- ^ the value at this root node
                , _ttString :: !String  -- ^ detailed information eg input and output and text
                , _ttForest :: !(Forest PE) -- ^ the child nodes
                , _ttBoolP :: !BoolP -- ^ display value
-               } deriving (Functor, Read, Show, Eq, Foldable, Traversable)
+               } deriving stock (Functor, Read, Show, Eq, Foldable, Traversable, Generic, Generic1)
 
 makeLenses ''TT
 
@@ -535,7 +538,7 @@ data HOpts f =
         , oNoColor :: !(HKD f Bool) -- ^ no colors
         }
 
-deriving instance
+deriving stock instance
   ( Show (HKD f Int)
   , Show (HKD f Debug)
   , Show (HKD f Disp)
@@ -630,7 +633,7 @@ instance Semigroup (HOpts Last) where
 -- | display format for the tree
 data Disp = Ansi -- ^ draw normal tree
           | Unicode  -- ^ use unicode
-          deriving (Show, Eq, Read, Bounded, Enum)
+          deriving stock (Show, Eq, Read, Bounded, Enum)
 
 -- | default options
 defOpts :: POpts
@@ -659,7 +662,7 @@ data Debug =
      | DLite -- ^ one line summary with additional context from the top of the evaluation tree
      | DNormal  -- ^ outputs the evaluation tree but skips noisy subtrees
      | DVerbose -- ^ outputs the entire evaluation tree
-     deriving (Read, Ord, Show, Eq, Enum, Bounded)
+     deriving stock (Read, Ord, Show, Eq, Enum, Bounded)
 
 -- | verbose debug flag
 isVerbose :: POpts -> Bool
@@ -785,7 +788,7 @@ data ROpt =
   | Ungreedy -- ^ Invert greediness of quantifiers
   | Utf8 -- ^ Run in UTF--8 mode
   | NoUtf8Check -- ^ Do not check the pattern for UTF-8 validity
-  deriving (Read, Show, Eq, Ord, Enum, Bounded)
+  deriving stock (Read, Show, Eq, Ord, Enum, Bounded)
 
 -- | compile a regex using the type level symbol
 compileRegex :: forall rs a . GetROpts rs
@@ -842,7 +845,11 @@ instance GetROpt 'Utf8 where getROpt = RL.utf8
 instance GetROpt 'NoUtf8Check where getROpt = RL.no_utf8_check
 
 -- | simple regex string replacement options
-data ReplaceFnSub = RPrepend | ROverWrite | RAppend deriving (Read, Show, Eq, Bounded, Enum)
+data ReplaceFnSub =
+    RPrepend
+  | ROverWrite
+  | RAppend
+  deriving stock (Read, Show, Eq, Bounded, Enum)
 
 -- | extract replacement options from typelevel
 class GetReplaceFnSub (k :: ReplaceFnSub) where
@@ -1127,7 +1134,8 @@ instance GetColor 'Default where
   getColor = Default
 
 -- | all the ways to compare two values
-data OrderingP = CGt | CGe | CEq | CLe | CLt | CNe deriving (Read, Show, Eq, Enum, Bounded)
+data OrderingP = CGt | CGe | CEq | CLe | CLt | CNe
+  deriving stock (Read, Show, Eq, Enum, Bounded)
 
 -- | extract 'OrderingP' from the typelevel
 class GetOrd (k :: OrderingP) where
@@ -2137,3 +2145,28 @@ _FalseT =
   prism' (const (PresentT False)) $ \case
                        PresentT False -> Just ()
                        _ -> Nothing
+
+-- | iso for BoolT
+--
+-- >>> PresentT False ^. _BoolTIso
+-- Right False
+--
+-- >>> PresentT True ^. _BoolTIso
+-- Right True
+--
+-- >>> FailT "abc" ^. _BoolTIso
+-- Left "abc"
+--
+-- >>> Left "abc" ^. from _BoolTIso
+-- FailT "abc"
+--
+-- >>> Right False ^. from _BoolTIso
+-- PresentT False
+--
+_BoolTIso :: a ~ Bool => Iso' (BoolT a) (Either String Bool)
+_BoolTIso = iso fw bw
+  where fw = \case
+               PresentT True -> Right True
+               PresentT False -> Right False
+               FailT e -> Left e
+        bw = either FailT PresentT

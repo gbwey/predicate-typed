@@ -20,6 +20,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE DerivingStrategies #-}
 {- |
      promoted numeric functions
 -}
@@ -357,7 +358,8 @@ instance P (FloorT t) x => P (Floor t) x where
   type PP (Floor t) x = PP (FloorT t) x
   eval _ = eval (Proxy @(FloorT t))
 
-data BinOp = BMult | BSub | BAdd deriving (Read, Show, Eq)
+data BinOp = BMult | BSub | BAdd
+  deriving stock (Read, Show, Eq)
 
 data p + q
 infixl 6 +
