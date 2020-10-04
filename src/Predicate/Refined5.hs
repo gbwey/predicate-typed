@@ -309,9 +309,9 @@ instance ( Refined2C opts ip op i
   put (Refined5 r) = B.put @(PP ip i) r
 
 -- | 'Hashable' instance for 'Refined5'
-instance (Refined2C opts ip op i
-        , Hashable (PP ip i)
-        ) => Hashable (Refined5 opts ip op i) where
+instance ( Refined2C opts ip op i
+         , Hashable (PP ip i)
+         ) => Hashable (Refined5 opts ip op i) where
   hashWithSalt s (Refined5 b) = s + hash b
 
 newRefined5' :: forall opts ip op i m

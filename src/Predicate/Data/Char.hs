@@ -257,10 +257,10 @@ instance P IsLatin1T x => P IsLatin1 x where
 --
 data IsCharSetAll (cs :: CharSet)
 
-instance (GetCharSet cs
-        , Show a
-        , DTL.IsText a
-        ) => P (IsCharSetAll cs) a where
+instance ( GetCharSet cs
+         , Show a
+         , DTL.IsText a
+         ) => P (IsCharSetAll cs) a where
   type PP (IsCharSetAll cs) a = Bool
   eval _ opts as =
     let b = allOf DTL.text f as

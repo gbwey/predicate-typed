@@ -228,7 +228,9 @@ data FHandle s = FStdout | FStderr | FOther !s !WFMode deriving (Read, Show, Eq)
 class GetFHandle (x :: FHandle Symbol) where getFHandle :: FHandle String
 instance GetFHandle 'FStdout where getFHandle = FStdout
 instance GetFHandle 'FStderr where getFHandle = FStderr
-instance (GetMode w, KnownSymbol s) => GetFHandle ('FOther s w) where getFHandle = FOther (symb @s) (getMode @w)
+instance ( GetMode w
+         , KnownSymbol s
+         ) => GetFHandle ('FOther s w) where getFHandle = FOther (symb @s) (getMode @w)
 
 data WFMode = WFAppend | WFWrite | WFWriteForce deriving (Read, Show, Eq)
 
@@ -280,10 +282,10 @@ instance P (StderrT p) x => P (Stderr p) x where
   type PP (Stderr p) x = PP (StderrT p) x
   eval _ = eval (Proxy @(StderrT p))
 
-instance (GetFHandle fh
-        , P p a
-        , PP p a ~ String
-        ) => P (WriteFileImpl fh p) a where
+instance ( GetFHandle fh
+         , P p a
+         , PP p a ~ String
+         ) => P (WriteFileImpl fh p) a where
   type PP (WriteFileImpl fh p) a = ()
   eval _ opts a = do
     let fh = getFHandle @fh

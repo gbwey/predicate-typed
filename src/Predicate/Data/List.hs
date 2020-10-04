@@ -146,12 +146,12 @@ import qualified Data.List.NonEmpty as NE
 data p ++ q
 infixr 5 ++
 
-instance (P p x
-        , P q x
-        , Show (PP p x)
-        , PP p x ~ [a]
-        , PP q x ~ [a]
-        ) => P (p ++ q) x where
+instance ( P p x
+         , P q x
+         , Show (PP p x)
+         , PP p x ~ [a]
+         , PP q x ~ [a]
+         ) => P (p ++ q) x where
   type PP (p ++ q) x = PP q x
   eval _ opts z = do
     let msg0 = "(++)"
@@ -200,12 +200,12 @@ instance (P p x
 data p :+ q
 infixr 5 :+
 
-instance (P p x
-        , P q x
-        , Show (PP p x)
-        , Show (PP q x)
-        , Cons (PP q x) (PP q x) (PP p x) (PP p x)
-        ) => P (p :+ q) x where
+instance ( P p x
+         , P q x
+         , Show (PP p x)
+         , Show (PP q x)
+         , Cons (PP q x) (PP q x) (PP p x) (PP p x)
+         ) => P (p :+ q) x where
   type PP (p :+ q) x = PP q x
   eval _ opts z = do
     let msg0 = "(:+)"
@@ -246,12 +246,12 @@ instance (P p x
 data p +: q
 infixl 5 +:
 
-instance (P p x
-        , P q x
-        , Show (PP q x)
-        , Show (PP p x)
-        , Snoc (PP p x) (PP p x) (PP q x) (PP q x)
-        ) => P (p +: q) x where
+instance ( P p x
+         , P q x
+         , Show (PP q x)
+         , Show (PP p x)
+         , Snoc (PP p x) (PP p x) (PP q x) (PP q x)
+         ) => P (p +: q) x where
   type PP (p +: q) x = PP p x
   eval _ opts z = do
     let msg0 = "(+:)"
@@ -291,10 +291,10 @@ instance (P p x
 
 data Uncons
 
-instance (Show (ConsT s)
-        , Show s
-        , Cons s s (ConsT s) (ConsT s)
-        ) => P Uncons s where
+instance ( Show (ConsT s)
+         , Show s
+         , Cons s s (ConsT s) (ConsT s)
+         ) => P Uncons s where
   type PP Uncons s = Maybe (ConsT s,s)
   eval _ opts as =
     let msg0 = "Uncons"
@@ -327,10 +327,10 @@ instance (Show (ConsT s)
 
 data Unsnoc
 
-instance (Show (ConsT s)
-        , Show s
-        , Snoc s s (ConsT s) (ConsT s)
-        ) => P Unsnoc s where
+instance ( Show (ConsT s)
+         , Show s
+         , Snoc s s (ConsT s) (ConsT s)
+         ) => P Unsnoc s where
   type PP Unsnoc s = Maybe (s,ConsT s)
   eval _ opts as =
     let msg0 = "Unsnoc"
@@ -399,12 +399,12 @@ instance P (RotateT n p) x => P (Rotate n p) x where
 --
 data Partition p q
 
-instance (P p x
-        , Show x
-        , PP q a ~ [x]
-        , PP p x ~ Bool
-        , P q a
-        ) => P (Partition p q) a where
+instance ( P p x
+         , Show x
+         , PP q a ~ [x]
+         , PP p x ~ Bool
+         , P q a
+         ) => P (Partition p q) a where
   type PP (Partition p q) a = (PP q a, PP q a)
   eval _ opts a' = do
     let msg0 = "Partition"
@@ -440,14 +440,14 @@ instance (P p x
 --
 data PartitionBy t p q
 
-instance (P p x
-        , Ord t
-        , Show x
-        , Show t
-        , PP q a ~ [x]
-        , PP p x ~ t
-        , P q a
-        ) => P (PartitionBy t p q) a where
+instance ( P p x
+         , Ord t
+         , Show x
+         , Show t
+         , PP q a ~ [x]
+         , PP p x ~ t
+         , P q a
+         ) => P (PartitionBy t p q) a where
   type PP (PartitionBy t p q) a = M.Map t (PP q a)
   eval _ opts a' = do
     let msg0 = "PartitionBy"
@@ -531,12 +531,12 @@ instance (P p x
 --
 data GroupBy p q
 
-instance (Show x
-        , PP q a ~ [x]
-        , PP p (x,x) ~ Bool
-        , P p (x,x)
-        , P q a
-        ) => P (GroupBy p q) a where
+instance ( Show x
+         , PP q a ~ [x]
+         , PP p (x,x) ~ Bool
+         , P p (x,x)
+         , P q a
+         ) => P (GroupBy p q) a where
   type PP (GroupBy p q) a = [PP q a]
   eval _ opts a' = do
     let msg0 = "GroupBy"
@@ -685,11 +685,11 @@ data Break p q
 
 -- only process up to the pivot! only process while Right False
 -- a predicate can return PresentP not just TrueP
-instance (P p x
-        , PP q a ~ [x]
-        , PP p x ~ Bool
-        , P q a
-        ) => P (Break p q) a where
+instance ( P p x
+         , PP q a ~ [x]
+         , PP p x ~ Bool
+         , P q a
+         ) => P (Break p q) a where
   type PP (Break p q) a = (PP q a, PP q a)
   eval _ opts a' = do
     let msg0 = "Break"
@@ -759,12 +759,12 @@ instance P (SpanT p q) x => P (Span p q) x where
 --
 data Intercalate p q
 
-instance (PP p x ~ [a]
-        , PP q x ~ PP p x
-        , P p x
-        , P q x
-        , Show a
-      ) => P (Intercalate p q) x where
+instance ( PP p x ~ [a]
+         , PP q x ~ PP p x
+         , P p x
+         , P q x
+         , Show a
+         ) => P (Intercalate p q) x where
   type PP (Intercalate p q) x = PP p x
   eval _ opts x = do
     let msg0 = "Intercalate"
@@ -810,7 +810,7 @@ instance (PP p x ~ [a]
 
 data Elem p q
 
-instance ([PP p a] ~ PP q a
+instance ( [PP p a] ~ PP q a
          , P p a
          , P q a
          , Show (PP p a)
@@ -890,14 +890,14 @@ instance x ~ [a] => P Ones x where
 
 data PadImpl (left :: Bool) n p q
 
-instance (P n a
-        , GetBool left
-        , Integral (PP n a)
-        , [PP p a] ~ PP q a
-        , P p a
-        , P q a
-        , Show (PP p a)
-        ) => P (PadImpl left n p q) a where
+instance ( P n a
+         , GetBool left
+         , Integral (PP n a)
+         , [PP p a] ~ PP q a
+         , P p a
+         , P q a
+         , Show (PP p a)
+         ) => P (PadImpl left n p q) a where
   type PP (PadImpl left n p q) a = PP q a
   eval _ opts a = do
     let msg0 = "Pad" <> (if lft then "L" else "R")
@@ -987,14 +987,14 @@ instance P (PadRT n p q) x => P (PadR n p q) x where
 --
 data SplitAts ns p
 
-instance (P ns x
-        , P p x
-        , PP p x ~ [a]
-        , Show n
-        , Show a
-        , PP ns x ~ [n]
-        , Integral n
-        ) => P (SplitAts ns p) x where
+instance ( P ns x
+         , P p x
+         , PP p x ~ [a]
+         , Show n
+         , Show a
+         , PP ns x ~ [n]
+         , Integral n
+         ) => P (SplitAts ns p) x where
   type PP (SplitAts ns p) x = [PP p x]
   eval _ opts x = do
     let msg0 = "SplitAts"
@@ -1003,8 +1003,8 @@ instance (P ns x
       Left e -> e
       Right (ns,p,nn,pp) ->
         let zs = foldr (\n k s -> let (a,b) = splitAtNeg (fromIntegral n) s
-                              in a:k b
-                   ) (\as -> if null as then [] else [as]) ns p
+                                  in a:k b
+                       ) (\as -> [as | not (null as)]) ns p
         in mkNode opts (PresentT zs) (show01' opts msg0 zs "ns=" ns <> showVerbose opts " | " p) [hh nn, hh pp]
 
 -- | similar to 'Data.List.splitAt'
@@ -1030,12 +1030,12 @@ instance (P ns x
 --
 data SplitAt n p
 
-instance (PP p a ~ [b]
-        , P n a
-        , P p a
-        , Show b
-        , Integral (PP n a)
-        ) => P (SplitAt n p) a where
+instance ( PP p a ~ [b]
+         , P n a
+         , P p a
+         , Show b
+         , Integral (PP n a)
+         ) => P (SplitAt n p) a where
   type PP (SplitAt n p) a = (PP p a, PP p a)
   eval _ opts a = do
     let msg0 = "SplitAt"
@@ -1102,14 +1102,14 @@ instance P (ChunksOfT n) x => P (ChunksOf n) x where
 --
 data ChunksOf' n i p
 
-instance (PP p a ~ [b]
-        , P n a
-        , P i a
-        , P p a
-        , Show b
-        , Integral (PP i a)
-        , Integral (PP n a)
-        ) => P (ChunksOf' n i p) a where
+instance ( PP p a ~ [b]
+         , P n a
+         , P i a
+         , P p a
+         , Show b
+         , Integral (PP i a)
+         , Integral (PP n a)
+         ) => P (ChunksOf' n i p) a where
   type PP (ChunksOf' n i p) a = [PP p a]
   eval _ opts a = do
     let msg0 = "ChunksOf"
@@ -1133,14 +1133,14 @@ instance (PP p a ~ [b]
 
 data KeepImpl (keep :: Bool) p q
 
-instance (GetBool keep
-        , Eq a
-        , Show a
-        , P p x
-        , P q x
-        , PP p x ~ PP q x
-        , PP q x ~ [a]
-        ) => P (KeepImpl keep p q) x where
+instance ( GetBool keep
+         , Eq a
+         , Show a
+         , P p x
+         , P q x
+         , PP p x ~ PP q x
+         , PP q x ~ [a]
+         ) => P (KeepImpl keep p q) x where
   type PP (KeepImpl keep p q) x = PP q x
   eval _ opts x = do
     let msg0 = if keep then "Keep" else "Remove"
@@ -1380,12 +1380,12 @@ data SortBy p q
 
 type SortByHelperT p = Partition (p == 'GT) Id
 
-instance (P p (a,a)
-        , P q x
-        , Show a
-        , PP q x ~ [a]
-        , PP p (a,a) ~ Ordering
-        ) => P (SortBy p q) x where
+instance ( P p (a,a)
+         , P q x
+         , Show a
+         , PP q x ~ [a]
+         , PP p (a,a) ~ Ordering
+         ) => P (SortBy p q) x where
   type PP (SortBy p q) x = PP q x
   eval _ opts x = do
     let msg0 = "SortBy"
@@ -1589,15 +1589,15 @@ instance P (EmptyList t) x where
 --
 data ZipWith p q r
 
-instance (PP q a ~ [x]
-        , PP r a ~ [y]
-        , P q a
-        , P r a
-        , P p (x,y)
-        , Show x
-        , Show y
-        , Show (PP p (x,y))
-        ) => P (ZipWith p q r) a where
+instance ( PP q a ~ [x]
+         , PP r a ~ [y]
+         , P q a
+         , P r a
+         , P p (x,y)
+         , Show x
+         , Show y
+         , Show (PP p (x,y))
+         ) => P (ZipWith p q r) a where
   type PP (ZipWith p q r) a = [PP p (ExtractAFromList (PP q a), ExtractAFromList (PP r a))]
   eval _ opts a = do
     let msg0 = "ZipWith"
@@ -1643,17 +1643,17 @@ instance (PP q a ~ [x]
 --
 data ZipPad l r p q
 
-instance (PP l a ~ x
-        , PP r a ~ y
-        , P l a
-        , P r a
-        , PP p a ~ [x]
-        , PP q a ~ [y]
-        , P p a
-        , P q a
-        , Show x
-        , Show y
-        ) => P (ZipPad l r p q) a where
+instance ( PP l a ~ x
+         , PP r a ~ y
+         , P l a
+         , P r a
+         , PP p a ~ [x]
+         , PP q a ~ [y]
+         , P p a
+         , P q a
+         , Show x
+         , Show y
+         ) => P (ZipPad l r p q) a where
   type PP (ZipPad l r p q) a = [(PP l a, PP r a)]
   eval _ opts a = do
     let msg0 = "ZipPad"
@@ -1718,15 +1718,15 @@ instance (PP l a ~ x
 --
 
 data ZipL l p q
-instance (PP l a ~ x
+instance ( PP l a ~ x
         , P l a
-        , PP p a ~ [x]
-        , PP q a ~ [y]
-        , P p a
-        , P q a
-        , Show x
-        , Show y
-        ) => P (ZipL l p q) a where
+         , PP p a ~ [x]
+         , PP q a ~ [y]
+         , P p a
+         , P q a
+         , Show x
+         , Show y
+         ) => P (ZipL l p q) a where
   type PP (ZipL l p q) a = [(ExtractAFromList (PP p a), ExtractAFromList (PP q a))]
   eval _ opts a = do
     let msg0 = "ZipL"
@@ -1774,15 +1774,15 @@ instance (PP l a ~ x
 --
 
 data ZipR r p q
-instance (PP r a ~ y
-        , P r a
-        , PP p a ~ [x]
-        , PP q a ~ [y]
-        , P p a
-        , P q a
-        , Show x
-        , Show y
-        ) => P (ZipR r p q) a where
+instance ( PP r a ~ y
+         , P r a
+         , PP p a ~ [x]
+         , PP q a ~ [y]
+         , P p a
+         , P q a
+         , Show x
+         , Show y
+         ) => P (ZipR r p q) a where
   type PP (ZipR r p q) a = [(ExtractAFromList (PP p a), ExtractAFromList (PP q a))]
   eval _ opts a = do
     let msg0 = "ZipR"
@@ -1825,13 +1825,13 @@ instance (PP r a ~ y
 -- FailT "Zip(3,7) length mismatch"
 --
 data Zip p q
-instance (PP p a ~ [x]
-        , PP q a ~ [y]
-        , P p a
-        , P q a
-        , Show x
-        , Show y
-        ) => P (Zip p q) a where
+instance ( PP p a ~ [x]
+         , PP q a ~ [y]
+         , P p a
+         , P q a
+         , Show x
+         , Show y
+         ) => P (Zip p q) a where
   type PP (Zip p q) a = [(ExtractAFromList (PP p a), ExtractAFromList (PP q a))]
   eval _ opts a = do
     let msg0 = "Zip"

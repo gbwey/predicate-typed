@@ -82,15 +82,15 @@ data Scanl p q r
 -- scanr :: (a -> b -> b) -> b -> [a] -> [b]
 -- result is scanl but signature is flipped ((a,b) -> b) -> b -> [a] -> [b]
 
-instance (PP p (b,a) ~ b
-        , PP q x ~ b
-        , PP r x ~ [a]
-        , P p (b,a)
-        , P q x
-        , P r x
-        , Show b
-        , Show a
-        )
+instance ( PP p (b,a) ~ b
+         , PP q x ~ b
+         , PP r x ~ [a]
+         , P p (b,a)
+         , P q x
+         , P r x
+         , Show b
+         , Show a
+         )
      => P (Scanl p q r) x where
   type PP (Scanl p q r) x = [PP q x]
   eval _ opts z = do
@@ -324,13 +324,13 @@ instance P (FoldLT p q r) x => P (Foldl p q r) x where
 --
 data Unfoldr p q
 
-instance (PP q a ~ s
-        , PP p s ~ Maybe (b,s)
-        , P q a
-        , P p s
-        , Show s
-        , Show b
-          )
+instance ( PP q a ~ s
+         , PP p s ~ Maybe (b,s)
+         , P q a
+         , P p s
+         , Show s
+         , Show b
+         )
      => P (Unfoldr p q) a where
   type PP (Unfoldr p q) a = [UnfoldrT (PP p (PP q a))]
   eval _ opts z = do
@@ -451,10 +451,10 @@ data ParaImpl (n :: Nat) (os :: [k])
 data Para (ps :: [k])
 
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out
-instance ([a] ~ x
-        , GetLen ps
-        , P (ParaImpl (LenT ps) ps) x
-        ) => P (Para ps) x where
+instance ( [a] ~ x
+         , GetLen ps
+         , P (ParaImpl (LenT ps) ps) x
+         ) => P (Para ps) x where
   type PP (Para ps) x = PP (ParaImpl (LenT ps) ps) x
   eval _ opts as = do
     let msg0 = "Para"
@@ -493,14 +493,14 @@ instance ( KnownNat n
             in mkNode opts (PresentT ret) (msgbase1 <> " " <> showL opts ret <> showVerbose opts " | " a) [hh pp]
       _ -> errorInProgram $ "ParaImpl base case should have exactly one element but found " ++ show as'
 
-instance (KnownNat n
-        , GetLen ps
-        , P p a
-        , P (ParaImpl n (p1 ': ps)) [a]
-        , PP (ParaImpl n (p1 ': ps)) [a] ~ [PP p a]
-        , Show a
-        , Show (PP p a)
-        )
+instance ( KnownNat n
+         , GetLen ps
+         , P p a
+         , P (ParaImpl n (p1 ': ps)) [a]
+         , PP (ParaImpl n (p1 ': ps)) [a] ~ [PP p a]
+         , Show a
+         , Show (PP p a)
+         )
      => P (ParaImpl n (p ': p1 ': ps)) [a] where
   type PP (ParaImpl n (p ': p1 ': ps)) [a] = [PP p a]
   eval _ opts as' = do

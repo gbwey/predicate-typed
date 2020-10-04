@@ -83,12 +83,12 @@ import qualified Data.Time.Clock.POSIX as P
 --
 data FormatTimeP' p q
 
-instance (PP p x ~ String
-        , FormatTime (PP q x)
-        , P p x
-        , Show (PP q x)
-        , P q x
-        ) => P (FormatTimeP' p q) x where
+instance ( PP p x ~ String
+         , FormatTime (PP q x)
+         , P p x
+         , Show (PP q x)
+         , P q x
+         ) => P (FormatTimeP' p q) x where
   type PP (FormatTimeP' p q) x = String
   eval _ opts x = do
     let msg0 = "FormatTimeP"
@@ -122,14 +122,14 @@ instance P (FormatTimePT p) x => P (FormatTimeP p) x where
 -- keeping @q@ as we might want to extract from a tuple
 data ParseTimeP' t p q
 
-instance (ParseTime (PP t a)
-        , Typeable (PP t a)
-        , Show (PP t a)
-        , P p a
-        , P q a
-        , PP p a ~ String
-        , PP q a ~ String
-        ) => P (ParseTimeP' t p q) a where
+instance ( ParseTime (PP t a)
+         , Typeable (PP t a)
+         , Show (PP t a)
+         , P p a
+         , P q a
+         , PP p a ~ String
+         , PP q a ~ String
+         ) => P (ParseTimeP' t p q) a where
   type PP (ParseTimeP' t p q) a = PP t a
   eval _ opts a = do
     let msg0 = "ParseTimeP " <> t
@@ -173,14 +173,14 @@ instance P (ParseTimePT t p) x => P (ParseTimeP t p) x where
 -- | A convenience method to match against many different datetime formats to find the first match
 data ParseTimes' t p q
 
-instance (ParseTime (PP t a)
-        , Typeable (PP t a)
-        , Show (PP t a)
-        , P p a
-        , P q a
-        , PP p a ~ [String]
-        , PP q a ~ String
-        ) => P (ParseTimes' t p q) a where
+instance ( ParseTime (PP t a)
+         , Typeable (PP t a)
+         , Show (PP t a)
+         , P p a
+         , P q a
+         , PP p a ~ [String]
+         , PP q a ~ String
+         ) => P (ParseTimes' t p q) a where
   type PP (ParseTimes' t p q) a = PP t a
   eval _ opts a = do
     let msg0 = "ParseTimes " <> t
@@ -225,12 +225,12 @@ instance P (ParseTimesT t p q) x => P (ParseTimes t p q) x where
 --
 data MkDay' p q r
 
-instance (P p x
-        , P q x
-        , P r x
-        , PP p x ~ Int
-        , PP q x ~ Int
-        , PP r x ~ Int
+instance ( P p x
+         , P q x
+         , P r x
+         , PP p x ~ Int
+         , PP q x ~ Int
+         , PP r x ~ Int
         ) => P (MkDay' p q r) x where
   type PP (MkDay' p q r) x = Maybe Day
   eval _ opts x = do
@@ -297,13 +297,13 @@ instance ( PP p x ~ Day
 --
 data MkDayExtra' p q r
 
-instance (P p x
-        , P q x
-        , P r x
-        , PP p x ~ Int
-        , PP q x ~ Int
-        , PP r x ~ Int
-        ) => P (MkDayExtra' p q r) x where
+instance ( P p x
+         , P q x
+         , P r x
+         , PP p x ~ Int
+         , PP q x ~ Int
+         , PP r x ~ Int
+         ) => P (MkDayExtra' p q r) x where
   type PP (MkDayExtra' p q r) x = Maybe (Day, Int, Int)
   eval _ opts x = do
     let msg0 = "MkDayExtra"
@@ -463,13 +463,13 @@ instance ( ToTimeC x
 --
 data MkTime' p q r
 
-instance (P p x
-        , P q x
-        , P r x
-        , PP p x ~ Int
-        , PP q x ~ Int
-        , PP r x ~ Rational
-        ) => P (MkTime' p q r) x where
+instance ( P p x
+         , P q x
+         , P r x
+         , PP p x ~ Int
+         , PP q x ~ Int
+         , PP r x ~ Rational
+         ) => P (MkTime' p q r) x where
   type PP (MkTime' p q r) x = TimeOfDay
   eval _ opts x = do
     let msg0 = "MkTime"
@@ -602,11 +602,11 @@ instance ( PP p x ~ UTCTime
 --
 data DiffUTCTime p q
 
-instance (PP p x ~ UTCTime
-        , PP q x ~ UTCTime
-        , P p x
-        , P q x
-        ) => P (DiffUTCTime p q) x where
+instance ( PP p x ~ UTCTime
+         , PP q x ~ UTCTime
+         , P p x
+         , P q x
+         ) => P (DiffUTCTime p q) x where
   type PP (DiffUTCTime p q) x = NominalDiffTime
   eval _ opts x = do
     let msg0 = "DiffUTCTime"
@@ -622,25 +622,6 @@ instance (PP p x ~ UTCTime
 -- >>> pz @(DiffLocalTime Fst Snd) (read "2020-11-08 12:12:03", read "2020-11-05 15:12:00")
 -- PresentT 248403s
 --
-{-
-data DiffLocalTime p q
-
-instance (PP p x ~ LocalTime
-        , PP q x ~ LocalTime
-        , P p x
-        , P q x
-        ) => P (DiffLocalTime p q) x where
-  type PP (DiffLocalTime p q) x = NominalDiffTime
-  eval _ opts x = do
-    let msg0 = "DiffLocalTime"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
-    pure $ case lr of
-      Left e -> e
-      Right (p,q,pp,qq) ->
-        let b = diffUTCTime (localTimeToUTC utc p) (localTimeToUTC utc q)
-        in mkNode opts (PresentT b) (msg0 <> " " <> showL opts b <> showVerbose opts " | " p <> showVerbose opts " | " q) [hh pp, hh qq]
--}
-
 data DiffLocalTime p q
 type DiffLocalTimeT p q = DiffUTCTime (LocalTimeToUTC p) (LocalTimeToUTC q)
 

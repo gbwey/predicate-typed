@@ -79,15 +79,15 @@ import Data.Kind (Type)
 --
 data SuccB p q
 
-instance (PP q x ~ a
-        , P q x
-        , P p (Proxy a)
-        , PP p (Proxy a) ~ a
-        , Show a
-        , Eq a
-        , Bounded a
-        , Enum a
-        ) => P (SuccB p q) x where
+instance ( PP q x ~ a
+         , P q x
+         , P p (Proxy a)
+         , PP p (Proxy a) ~ a
+         , Show a
+         , Eq a
+         , Bounded a
+         , Enum a
+         ) => P (SuccB p q) x where
   type PP (SuccB p q) x = PP q x
   eval _ opts x = do
     let msg0 = "SuccB"
@@ -153,15 +153,15 @@ instance P (SuccBT' q) x => P (SuccB' q) x where
 data PredB' q
 type PredBT' q = PredB (Failp "Pred bounded") q
 
-instance (PP q x ~ a
-        , P q x
-        , P p (Proxy a)
-        , PP p (Proxy a) ~ a
-        , Show a
-        , Eq a
-        , Bounded a
-        , Enum a
-        ) => P (PredB p q) x where
+instance ( PP q x ~ a
+         , P q x
+         , P p (Proxy a)
+         , PP p (Proxy a) ~ a
+         , Show a
+         , Eq a
+         , Bounded a
+         , Enum a
+         ) => P (PredB p q) x where
   type PP (PredB p q) x = PP q x
   eval _ opts x = do
     let msg0 = "PredB"
@@ -195,9 +195,9 @@ instance (PP q x ~ a
 --
 data Succ
 
-instance (Show x
-        , Enum x
-        ) => P Succ x where
+instance ( Show x
+         , Enum x
+         ) => P Succ x where
   type PP Succ x = x
   eval _ opts x = do
     let msg0 = "Succ"
@@ -223,13 +223,13 @@ instance (Show x
 --
 data SuccN n p
 
-instance (Show a
-        , Enum a
-        , Integral (PP n x)
-        , P n x
-        , PP p x ~ a
-        , P p x
-        ) => P (SuccN n p) x where
+instance ( Show a
+         , Enum a
+         , Integral (PP n x)
+         , P n x
+         , PP p x ~ a
+         , P p x
+         ) => P (SuccN n p) x where
   type PP (SuccN n p) x = PP p x
   eval _ opts x = do
     let msg0 = "SuccN"
@@ -253,9 +253,9 @@ instance (Show a
 --
 data Pred
 
-instance (Show x
-        , Enum x
-        ) => P Pred x where
+instance ( Show x
+         , Enum x
+         ) => P Pred x where
   type PP Pred x = x
   eval _ opts x = do
     let msg0 = "Pred"
@@ -302,11 +302,11 @@ instance P (PredBT' q) x => P (PredB' q) x where
 
 data FromEnum p
 
-instance (Show a
-        , Enum a
-        , PP p x ~ a
-        , P p x
-        ) => P (FromEnum p) x where
+instance ( Show a
+         , Enum a
+         , PP p x ~ a
+         , P p x
+         ) => P (FromEnum p) x where
   type PP (FromEnum p) x = Int
   eval _ opts x = do
     let msg0 = "FromEnum"
@@ -332,13 +332,13 @@ instance (Show a
 --
 data ToEnum' t p
 
-instance (PP p x ~ a
-        , P p x
-        , Show a
-        , Enum (PP t x)
-        , Show (PP t x)
-        , Integral a
-        ) => P (ToEnum' t p) x where
+instance ( PP p x ~ a
+         , P p x
+         , Show a
+         , Enum (PP t x)
+         , Show (PP t x)
+         , Integral a
+         ) => P (ToEnum' t p) x where
   type PP (ToEnum' t p) x = PP t x
   eval _ opts x = do
     let msg0 = "ToEnum"
@@ -360,14 +360,14 @@ instance P (ToEnumT t) x => P (ToEnum t) x where
 
 data ToEnumBDef' t def
 
-instance (P def (Proxy (PP t a))
-        , PP def (Proxy (PP t a)) ~ PP t a
-        , Show a
-        , Show (PP t a)
-        , Bounded (PP t a)
-        , Enum (PP t a)
-        , Integral a
-        ) => P (ToEnumBDef' t def) a where
+instance ( P def (Proxy (PP t a))
+         , PP def (Proxy (PP t a)) ~ PP t a
+         , Show a
+         , Show (PP t a)
+         , Bounded (PP t a)
+         , Enum (PP t a)
+         , Integral a
+         ) => P (ToEnumBDef' t def) a where
   type PP (ToEnumBDef' t def) a = PP t a
   eval _ opts a = do
     let msg0 = "ToEnumBDef"
@@ -465,13 +465,13 @@ instance P (EnumFromToT p q) x => P (p ... q) x where
   type PP (p ... q) x = PP (EnumFromToT p q) x
   eval _ = eval (Proxy @(EnumFromToT p q))
 
-instance (P p x
-        , P q x
-        , PP p x ~ a
-        , Show a
-        , PP q x ~ a
-        , Enum a
-        ) => P (EnumFromTo p q) x where
+instance ( P p x
+         , P q x
+         , PP p x ~ a
+         , Show a
+         , PP q x ~ a
+         , Enum a
+         ) => P (EnumFromTo p q) x where
   type PP (EnumFromTo p q) x = [PP p x]
   eval _ opts z = do
     let msg0 = "..."
@@ -490,15 +490,15 @@ instance (P p x
 --
 data EnumFromThenTo p q r
 
-instance (P p x
-        , P q x
-        , P r x
-        , PP p x ~ a
-        , Show a
-        , PP q x ~ a
-        , PP r x ~ a
-        , Enum a
-        ) => P (EnumFromThenTo p q r) x where
+instance ( P p x
+         , P q x
+         , P r x
+         , PP p x ~ a
+         , Show a
+         , PP q x ~ a
+         , PP r x ~ a
+         , Enum a
+         ) => P (EnumFromThenTo p q r) x where
   type PP (EnumFromThenTo p q r) x = [PP p x]
   eval _ opts z = do
     let msg0 = "EnumFromThenTo"

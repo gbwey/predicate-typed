@@ -89,12 +89,12 @@ import Data.List.NonEmpty (NonEmpty(..))
 data p <> q
 infixr 6 <>
 
-instance (Semigroup (PP p x)
-        , PP p x ~ PP q x
-        , P p x
-        , Show (PP q x)
-        ,P q x
-        ) => P (p <> q) x where
+instance ( Semigroup (PP p x)
+         , PP p x ~ PP q x
+         , P p x
+         , Show (PP q x)
+         , P q x
+         ) => P (p <> q) x where
   type PP (p <> q) x = PP p x
   eval _ opts x = do
     let msg0 = "<>"
@@ -140,11 +140,11 @@ instance P SapAT x => P SapA x where
 --
 data MConcat p
 
-instance (PP p x ~ [a]
-        , P p x
-        , Show a
-        , Monoid a
-        ) => P (MConcat p) x where
+instance ( PP p x ~ [a]
+         , P p x
+         , Show a
+         , Monoid a
+         ) => P (MConcat p) x where
   type PP (MConcat p) x = ExtractAFromList (PP p x)
   eval _ opts x = do
     let msg0 = "MConcat"
@@ -165,11 +165,11 @@ instance (PP p x ~ [a]
 --
 data SConcat p
 
-instance (PP p x ~ NonEmpty a
-        , P p x
-        , Show a
-        , Semigroup a
-        ) => P (SConcat p) x where
+instance ( PP p x ~ NonEmpty a
+         , P p x
+         , Show a
+         , Semigroup a
+         ) => P (SConcat p) x where
   type PP (SConcat p) x = ExtractAFromTA (PP p x)
   eval _ opts x = do
     let msg0 = "SConcat"
@@ -183,11 +183,11 @@ instance (PP p x ~ NonEmpty a
 -- | lift mempty over a Functor
 data MEmpty2' t
 
-instance (Show (f a)
-        , Show (f (PP t (f a)))
-        , Functor f
-        , Monoid (PP t (f a))
-        ) => P (MEmpty2' t) (f a) where
+instance ( Show (f a)
+         , Show (f (PP t (f a)))
+         , Functor f
+         , Monoid (PP t (f a))
+         ) => P (MEmpty2' t) (f a) where
   type PP (MEmpty2' t) (f a) = f (PP t (f a))
   eval _ opts fa =
     let msg0 = "MEmpty2"
@@ -295,12 +295,12 @@ instance P MEmptyPT x => P MEmptyP x where
 --
 
 data STimes n p
-instance (P n a
-        , Integral (PP n a)
-        , Semigroup (PP p a)
-        , P p a
-        , Show (PP p a)
-        ) => P (STimes n p) a where
+instance ( P n a
+         , Integral (PP n a)
+         , Semigroup (PP p a)
+         , P p a
+         , Show (PP p a)
+         ) => P (STimes n p) a where
   type PP (STimes n p) a = PP p a
   eval _ opts a = do
     let msg0 = "STimes"

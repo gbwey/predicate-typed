@@ -367,9 +367,9 @@ instance ( Refined2C opts ip op i
   put (Refined2 _ r) = B.put @i r
 
 -- | 'Hashable' instance for 'Refined2'
-instance (Refined2C opts ip op i
-        , Hashable i
-        ) => Hashable (Refined2 opts ip op i) where
+instance ( Refined2C opts ip op i
+         , Hashable i
+         ) => Hashable (Refined2 opts ip op i) where
   hashWithSalt s (Refined2 _ b) = s + hash b
 
 -- | An ADT that summarises the results of evaluating Refined2 representing all possible states

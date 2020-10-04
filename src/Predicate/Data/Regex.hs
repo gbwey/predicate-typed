@@ -79,12 +79,12 @@ import qualified Text.Regex.PCRE.Heavy as RH
 --
 data Re' (rs :: [ROpt]) p q
 
-instance (GetROpts rs
-        , PP p x ~ String
-        , PP q x ~ String
-        , P p x
-        , P q x
-        ) => P (Re' rs p q) x where
+instance ( GetROpts rs
+         , PP p x ~ String
+         , PP q x ~ String
+         , P p x
+         , P q x
+         ) => P (Re' rs p q) x where
   type PP (Re' rs p q) x = Bool
   eval _ opts x = do
     let msg0 = "Re" <> unlessNull rs ("' " <> displayROpts fs)
@@ -186,12 +186,12 @@ instance P (ReT p) x => P (Re p) x where
 --
 data Rescan' (rs :: [ROpt]) p q
 
-instance (GetROpts rs
-        , PP p x ~ String
-        , PP q x ~ String
-        , P p x
-        , P q x
-        ) => P (Rescan' rs p q) x where
+instance ( GetROpts rs
+         , PP p x ~ String
+         , PP q x ~ String
+         , P p x
+         , P q x
+         ) => P (Rescan' rs p q) x where
   type PP (Rescan' rs p q) x = [(String, [String])]
   eval _ opts x = do
     let msg0 = "Rescan" <> unlessNull rs ("' " <> displayROpts fs)
@@ -282,12 +282,12 @@ instance P (RescanT p) x => P (Rescan p) x where
 --
 data RescanRanges' (rs :: [ROpt]) p q
 
-instance (GetROpts rs
-        , PP p x ~ String
-        , PP q x ~ String
-        , P p x
-        , P q x
-        ) => P (RescanRanges' rs p q) x where
+instance ( GetROpts rs
+         , PP p x ~ String
+         , PP q x ~ String
+         , P p x
+         , P q x
+         ) => P (RescanRanges' rs p q) x where
   type PP (RescanRanges' rs p q) x = [((Int,Int), [(Int,Int)])]
   eval _ opts x = do
     let msg0 = "RescanRanges" <> unlessNull rs ("' " <> displayROpts fs)
@@ -325,12 +325,12 @@ instance P (RescanRangesT p q) x => P (RescanRanges p q) x where
 --
 data Resplit' (rs :: [ROpt]) p q
 
-instance (GetROpts rs
-        , PP p x ~ String
-        , PP q x ~ String
-        , P p x
-        , P q x
-        ) => P (Resplit' rs p q) x where
+instance ( GetROpts rs
+         , PP p x ~ String
+         , PP q x ~ String
+         , P p x
+         , P q x
+         ) => P (Resplit' rs p q) x where
   type PP (Resplit' rs p q) x = [String]
   eval _ opts x = do
     let msg0 = "Resplit" <> unlessNull rs ("' " <> displayROpts fs)
@@ -385,15 +385,15 @@ instance P (ResplitT p) x => P (Resplit p) x where
 --
 data ReplaceImpl (alle :: Bool) (rs :: [ROpt]) p q r
 
-instance (GetBool b
-        , GetROpts rs
-        , PP p x ~ String
-        , PP q x ~ RReplace
-        , PP r x ~ String
-        , P p x
-        , P q x
-        , P r x
-        ) => P (ReplaceImpl b rs p q r) x where
+instance ( GetBool b
+         , GetROpts rs
+         , PP p x ~ String
+         , PP q x ~ RReplace
+         , PP r x ~ String
+         , P p x
+         , P q x
+         , P r x
+         ) => P (ReplaceImpl b rs p q r) x where
   type PP (ReplaceImpl b rs p q r) x = String
   eval _ opts x = do
     let msg0 = "Replace" <> (if alle then "All" else "One") <> unlessNull rs ("' " <> displayROpts fs)
@@ -526,9 +526,10 @@ instance P (ReplaceOneStringT o p q r) x => P (ReplaceOneString o p q r) x where
 --
 data ReplaceFn (o :: ReplaceFnSub) p
 
-instance (GetReplaceFnSub r
-        , PP p x ~ String
-        , P p x) => P (ReplaceFn r p) x where
+instance ( GetReplaceFnSub r
+         , PP p x ~ String
+         , P p x
+         ) => P (ReplaceFn r p) x where
   type PP (ReplaceFn r p) x = RReplace
   eval _ opts x = do
     let msg0 = "ReplaceFn"
@@ -546,8 +547,9 @@ instance (GetReplaceFnSub r
 --
 data ReplaceFn1 p
 
-instance (PP p x ~ (String -> [String] -> String)
-        , P p x) => P (ReplaceFn1 p) x where
+instance ( PP p x ~ (String -> [String] -> String)
+         , P p x
+         ) => P (ReplaceFn1 p) x where
   type PP (ReplaceFn1 p) x = RReplace
   eval _ opts x = do
     let msg0 = "ReplaceFn1 (String -> [String] -> String)"
@@ -567,8 +569,9 @@ instance (PP p x ~ (String -> [String] -> String)
 --
 data ReplaceFn2 p
 
-instance (PP p x ~ (String -> String)
-        , P p x) => P (ReplaceFn2 p) x where
+instance ( PP p x ~ (String -> String)
+         , P p x
+         ) => P (ReplaceFn2 p) x where
   type PP (ReplaceFn2 p) x = RReplace
   eval _ opts x = do
     let msg0 = "ReplaceFn2 (String -> String)"
@@ -589,8 +592,9 @@ instance (PP p x ~ (String -> String)
 --
 data ReplaceFn3 p
 
-instance (PP p x ~ ([String] -> String)
-        , P p x) => P (ReplaceFn3 p) x where
+instance ( PP p x ~ ([String] -> String)
+         , P p x
+         ) => P (ReplaceFn3 p) x where
   type PP (ReplaceFn3 p) x = RReplace
   eval _ opts x = do
     let msg0 = "ReplaceFn3 ([String] -> String)"

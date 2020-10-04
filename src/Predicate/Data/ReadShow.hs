@@ -83,12 +83,12 @@ instance ( Show (PP p x)
 -- | uses the 'Read' of the given type @t@ and @p@ which points to the content to read
 data ReadP' t p
 
-instance (P p x
-        , PP p x ~ String
-        , Typeable (PP t x)
-        , Show (PP t x)
-        , Read (PP t x)
-        ) => P (ReadP' t p) x where
+instance ( P p x
+         , PP p x ~ String
+         , Typeable (PP t x)
+         , Show (PP t x)
+         , Read (PP t x)
+         ) => P (ReadP' t p) x where
   type PP (ReadP' t p) x = PP t x
   eval _ opts x = do
     let msg0 = "ReadP " <> t
@@ -156,12 +156,12 @@ instance P (ReadPT t p) x => P (ReadP t p) x where
 --
 data ReadMaybe' t p
 
-instance (P p x
-        , PP p x ~ String
-        , Typeable (PP t x)
-        , Show (PP t x)
-        , Read (PP t x)
-        ) => P (ReadMaybe' t p) x where
+instance ( P p x
+         , PP p x ~ String
+         , Typeable (PP t x)
+         , Show (PP t x)
+         , Read (PP t x)
+         ) => P (ReadMaybe' t p) x where
   type PP (ReadMaybe' t p) x = Maybe (PP t x, String)
   eval _ opts x = do
     let msg0 = "ReadMaybe " <> t
@@ -220,12 +220,12 @@ instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
 --
 data PrintF s p
 
-instance (PrintfArg (PP p x)
-        , Show (PP p x)
-        , PP s x ~ String
-        , P s x
-        , P p x
-        ) => P (PrintF s p) x where
+instance ( PrintfArg (PP p x)
+         , Show (PP p x)
+         , PP s x ~ String
+         , P s x
+         , P p x
+         ) => P (PrintF s p) x where
   type PP (PrintF s p) x = String
   eval _ opts x = do
     let msg0 = "PrintF"
@@ -307,16 +307,16 @@ instance ( PrintfArg a
 -- PresentT "ipaddress 001.002.003.004"
 --
 data PrintT s p
-instance (PrintC bs
-        , (b,bs) ~ InductTupleP y
-        , InductTupleC y
-        , PrintfArg b
-        , PP s x ~ String
-        , PP p x ~ y
-        , P s x
-        , P p x
-        , CheckT (PP p x) ~ 'True
-        ) => P (PrintT s p) x where
+instance ( PrintC bs
+         , (b,bs) ~ InductTupleP y
+         , InductTupleC y
+         , PrintfArg b
+         , PP s x ~ String
+         , PP p x ~ y
+         , P s x
+         , P p x
+         , CheckT (PP p x) ~ 'True
+         ) => P (PrintT s p) x where
   type PP (PrintT s p) x = String
   eval _ opts x = do
     let msg0 = "PrintT"
@@ -382,16 +382,16 @@ type family CheckT (tp :: Type) :: Bool where
 
 data PrintL (n :: Nat) s p
 
-instance (KnownNat n
-        , PrintC bs
-        , (b,bs) ~ InductListP n a
-        , InductListC n a
-        , PrintfArg b
-        , PP s x ~ String
-        , PP p x ~ [a]
-        , P s x
-        , P p x
-        ) => P (PrintL n s p) x where
+instance ( KnownNat n
+         , PrintC bs
+         , (b,bs) ~ InductListP n a
+         , InductListC n a
+         , PrintfArg b
+         , PP s x ~ String
+         , PP p x ~ [a]
+         , P s x
+         , P p x
+         ) => P (PrintL n s p) x where
   type PP (PrintL n s p) x = String
   eval _ opts x = do
     let msg0 = "PrintL(" ++ show n ++ ")"

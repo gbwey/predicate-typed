@@ -68,12 +68,12 @@ import qualified Data.Text.Lazy as TL
 
 data TrimImpl (left :: Bool) (right :: Bool)
 
-instance (FailUnlessT (OrT l r)
-           ('GL.Text "TrimImpl: left and right cannot both be False")
-        , GetBool l
-        , GetBool r
-        , DTL.IsText x
-        ) => P (TrimImpl l r) x where
+instance ( FailUnlessT (OrT l r)
+            ('GL.Text "TrimImpl: left and right cannot both be False")
+         , GetBool l
+         , GetBool r
+         , DTL.IsText x
+         ) => P (TrimImpl l r) x where
   type PP (TrimImpl l r) x = x
   eval _ opts x =
     let msg0 = "Trim" ++ (if l && r then "Both" else if l then "L" else "R")
@@ -138,12 +138,12 @@ instance P TrimBothT x => P TrimBoth x where
 
 data StripImpl(left :: Bool) p q
 
-instance (GetBool l
-        , PP p x ~ String
-        , P p x
-        , DTL.IsText (PP q x)
-        , P q x
-        ) => P (StripImpl l p q) x where
+instance ( GetBool l
+         , PP p x ~ String
+         , P p x
+         , DTL.IsText (PP q x)
+         , P q x
+         ) => P (StripImpl l p q) x where
   type PP (StripImpl l p q) x = Maybe (PP q x)
   eval _ opts x = do
     let msg0 = "Strip" ++ if l then "L" else "R"
@@ -201,13 +201,13 @@ instance P (StripRT p q) x => P (StripR p q) x where
 
 data IsFixImplC (cmp :: Ordering) (ignore :: Bool) p q
 
-instance (GetBool ignore
-        , P p x
-        , P q x
-        , PP p x ~ String
-        , PP q x ~ String
-        , GetOrdering cmp
-        ) => P (IsFixImplC cmp ignore p q) x where
+instance ( GetBool ignore
+         , P p x
+         , P q x
+         , PP p x ~ String
+         , PP q x ~ String
+         , GetOrdering cmp
+         ) => P (IsFixImplC cmp ignore p q) x where
   type PP (IsFixImplC cmp ignore p q) x = Bool
   eval _ opts x = do
     let cmp = getOrdering @cmp
@@ -352,11 +352,11 @@ instance ToStringC BS8.ByteString where
 -- | 'fromString' function where you need to provide the type @t@ of the result
 data FromString' t s
 
-instance (P s a
-        , PP s a ~ String
-        , Show (PP t a)
-        , IsString (PP t a)
-        ) => P (FromString' t s) a where
+instance ( P s a
+         , PP s a ~ String
+         , Show (PP t a)
+         , IsString (PP t a)
+         ) => P (FromString' t s) a where
   type PP (FromString' t s) a = PP t a
   eval _ opts a = do
     let msg0 = "FromString"

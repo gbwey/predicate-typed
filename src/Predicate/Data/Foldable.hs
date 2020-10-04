@@ -85,9 +85,9 @@ import qualified Safe (cycleNote)
 -- PresentT (1 :| [2,3,4,5])
 --
 data ToNEList
-instance (Show (t a)
-        , Foldable t
-        ) => P ToNEList (t a) where
+instance ( Show (t a)
+         , Foldable t
+         ) => P ToNEList (t a) where
   type PP ToNEList (t a) = NonEmpty a
   eval _ opts as =
     let msg0 = "ToNEList"
@@ -132,13 +132,13 @@ instance ( Show as
 
 data IToList' t
 
-instance (Show (f a)
-        , Typeable (PP t x)
-        , Show (PP t x)
-        , FoldableWithIndex (PP t x) f
-        , x ~ f a
-        , Show a
-        ) => P (IToList' t) x where
+instance ( Show (f a)
+         , Typeable (PP t x)
+         , Show (PP t x)
+         , FoldableWithIndex (PP t x) f
+         , x ~ f a
+         , Show a
+         ) => P (IToList' t) x where
   type PP (IToList' t) x = [(PP t x, ExtractAFromTA x)]
   eval _ opts x =
     let msg0 = "IToList"
@@ -200,10 +200,10 @@ instance P (IToListT t) x => P (IToList t) x where
 --
 data ToListExt
 
-instance (Show l
-        , GE.IsList l
-        , Show (GE.Item l)
-        ) => P ToListExt l where
+instance ( Show l
+         , GE.IsList l
+         , Show (GE.Item l)
+         ) => P ToListExt l where
   type PP ToListExt l = [GE.Item l]
   eval _ opts as =
     let msg0 = "ToListExt"
@@ -227,11 +227,11 @@ instance (Show l
 
 data FromList (t :: Type) -- doesnt work with OverloadedLists unless you cast to [a] explicitly
 
-instance (a ~ GE.Item t
-        , Show t
-        , GE.IsList t
-        , [a] ~ x
-        ) => P (FromList t) x where
+instance ( a ~ GE.Item t
+         , Show t
+         , GE.IsList t
+         , [a] ~ x
+         ) => P (FromList t) x where
   type PP (FromList t) x = t
   eval _ opts as =
     let msg0 = "FromList"
@@ -248,10 +248,10 @@ instance (a ~ GE.Item t
 --
 data FromListExt (t :: Type)
 -- l ~ l' is key
-instance (Show l
-        , GE.IsList l
-        , l ~ l'
-        ) => P (FromListExt l') l where
+instance ( Show l
+         , GE.IsList l
+         , l ~ l'
+         ) => P (FromListExt l') l where
   type PP (FromListExt l') l = l'
   eval _ opts as =
     let msg0 = "FromListExt"
@@ -268,11 +268,11 @@ instance (Show l
 --
 data Concat
 
-instance (Show a
-        , Show (t [a])
-        , x ~ t [a]
-        , Foldable t
-        ) => P Concat x where
+instance ( Show a
+         , Show (t [a])
+         , x ~ t [a]
+         , Foldable t
+         ) => P Concat x where
   type PP Concat x = ExtractAFromTA x
   eval _ opts x =
     let msg0 = "Concat"
@@ -295,14 +295,14 @@ instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
 --
 data Cycle n p
 
-instance (Show a
-        , Show (t a)
-        , PP p x ~ t a
-        , P p x
-        , Integral (PP n x)
-        , P n x
-        , Foldable t
-        ) => P (Cycle n p) x where
+instance ( Show a
+         , Show (t a)
+         , PP p x ~ t a
+         , P p x
+         , Integral (PP n x)
+         , P n x
+         , Foldable t
+         ) => P (Cycle n p) x where
   type PP (Cycle n p) x = [ExtractAFromTA (PP p x)]
   eval _ opts x = do
     let msg0 = "Cycle"
@@ -350,9 +350,9 @@ instance (Show a
 --
 
 data ToList
-instance (Show (t a)
-        , Foldable t
-        ) => P ToList (t a) where
+instance ( Show (t a)
+         , Foldable t
+         ) => P ToList (t a) where
   type PP ToList (t a) = [a]
   eval _ opts as =
     let msg0 = "ToList"
@@ -361,11 +361,11 @@ instance (Show (t a)
 
 data Null' p
 
-instance (Show (t a)
-        , Foldable t
-        , t a ~ PP p x
-        , P p x
-        ) => P (Null' p) x where
+instance ( Show (t a)
+         , Foldable t
+         , t a ~ PP p x
+         , P p x
+         ) => P (Null' p) x where
   type PP (Null' p) x = Bool
   eval _ opts x = do
     let msg0 = "Null"
@@ -496,11 +496,11 @@ instance P (FoldMapT t p) x => P (FoldMap t p) x where
 --
 data Ands
 
-instance (x ~ t a
-        , Show (t a)
-        , Foldable t
-        , a ~ Bool
-        ) => P Ands x where
+instance ( x ~ t a
+         , Show (t a)
+         , Foldable t
+         , a ~ Bool
+         ) => P Ands x where
   type PP Ands x = Bool
   eval _ opts x =
     let msg0 = "Ands"
@@ -525,11 +525,11 @@ instance (x ~ t a
 --
 data Ors
 
-instance (x ~ t a
-        , Show (t a)
-        , Foldable t
-        , a ~ Bool
-        ) => P Ors x where
+instance ( x ~ t a
+         , Show (t a)
+         , Foldable t
+         , a ~ Bool
+         ) => P Ors x where
   type PP Ors x = Bool
   eval _ opts x =
     let msg0 = "Ors"

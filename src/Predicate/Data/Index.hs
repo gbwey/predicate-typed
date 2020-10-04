@@ -227,11 +227,11 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 --
 data Ix (n :: Nat) def
 
-instance (P def (Proxy a)
-        , PP def (Proxy a) ~ a
-        , KnownNat n
-        , Show a
-        ) => P (Ix n def) [a] where
+instance ( P def (Proxy a)
+         , PP def (Proxy a) ~ a
+         , KnownNat n
+         , Show a
+         ) => P (Ix n def) [a] where
   type PP (Ix n def) [a] = a
   eval _ opts as = do
     let n = nat @n
@@ -271,16 +271,16 @@ instance P (IxT' n) x => P (Ix' n) x where
 
 data IxL p q def -- p is the big value and q is the index and def is the default
 
-instance (P q a
-        , P p a
-        , Show (PP p a)
-        , Ixed (PP p a)
-        , PP q a ~ Index (PP p a)
-        , Show (Index (PP p a))
-        , Show (IxValue (PP p a))
-        , P r (Proxy (IxValue (PP p a)))
-        , PP r (Proxy (IxValue (PP p a))) ~ IxValue (PP p a)
-        )
+instance ( P q a
+         , P p a
+         , Show (PP p a)
+         , Ixed (PP p a)
+         , PP q a ~ Index (PP p a)
+         , Show (Index (PP p a))
+         , Show (IxValue (PP p a))
+         , P r (Proxy (IxValue (PP p a)))
+         , PP r (Proxy (IxValue (PP p a))) ~ IxValue (PP p a)
+         )
    => P (IxL p q r) a where
   type PP (IxL p q r) a = IxValue (PP p a)
   eval _ opts a = do
@@ -475,14 +475,14 @@ instance P (BangBangT p q) a => P (p !! q) a where
 --
 data Lookup p q
 
-instance (P q a
-        , P p a
-        , Show (PP p a)
-        , Ixed (PP p a)
-        , PP q a ~ Index (PP p a)
-        , Show (Index (PP p a))
-        , Show (IxValue (PP p a))
-        )
+instance ( P q a
+         , P p a
+         , Show (PP p a)
+         , Ixed (PP p a)
+         , PP q a ~ Index (PP p a)
+         , Show (Index (PP p a))
+         , Show (IxValue (PP p a))
+         )
    => P (Lookup p q) a where
   type PP (Lookup p q) a = Maybe (IxValue (PP p a))
   eval _ opts a = do

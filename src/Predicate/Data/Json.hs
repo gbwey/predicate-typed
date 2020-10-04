@@ -51,12 +51,12 @@ import System.Directory (doesFileExist)
 -- | parse json data using the type @t@
 data ParseJson' t p
 
-instance (P p x
-        , PP p x ~ BL8.ByteString
-        , Typeable (PP t x)
-        , Show (PP t x)
-        , A.FromJSON (PP t x)
-        ) => P (ParseJson' t p) x where
+instance ( P p x
+         , PP p x ~ BL8.ByteString
+         , Typeable (PP t x)
+         , Show (PP t x)
+         , A.FromJSON (PP t x)
+         ) => P (ParseJson' t p) x where
   type PP (ParseJson' t p) x = PP t x
   eval _ opts x = do
     let msg0 = "ParseJson " <> t
@@ -103,12 +103,12 @@ instance P (ParseJsonT t p) x => P (ParseJson t p) x where
 -- | parse json file @p@ using the type @t@
 data ParseJsonFile' t p
 
-instance (P p x
-        , PP p x ~ String
-        , Typeable (PP t x)
-        , Show (PP t x)
-        , A.FromJSON (PP t x)
-        ) => P (ParseJsonFile' t p) x where
+instance ( P p x
+         , PP p x ~ String
+         , Typeable (PP t x)
+         , Show (PP t x)
+         , A.FromJSON (PP t x)
+         ) => P (ParseJsonFile' t p) x where
   type PP (ParseJsonFile' t p) x = PP t x
   eval _ opts x = do
     let msg0 = "ParseJsonFile " <> t

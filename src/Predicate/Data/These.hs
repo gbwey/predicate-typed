@@ -204,15 +204,15 @@ instance ( Show a
 --
 data TheseX p q r s
 
-instance (P s x
-        , P p (x,a)
-        , P q (x,b)
-        , P r (x,(a,b))
-        , PP s x ~ These a b
-        , PP p (x,a) ~ c
-        , PP q (x,b) ~ c
-        , PP r (x,(a,b)) ~ c
-        ) => P (TheseX p q r s) x where
+instance ( P s x
+         , P p (x,a)
+         , P q (x,b)
+         , P r (x,(a,b))
+         , PP s x ~ These a b
+         , PP p (x,a) ~ c
+         , PP q (x,b) ~ c
+         , PP r (x,(a,b)) ~ c
+         ) => P (TheseX p q r s) x where
   type PP (TheseX p q r s) x = TheseXT (PP s x) x p
   eval _ opts x = do
     let msg0 = "TheseX"
@@ -329,11 +329,11 @@ instance P (MkThatT t p) x => P (MkThat t p) x where
 -- PresentT (These 'x' True)
 --
 data MkThese p q
-instance (P p a
-        , P q a
-        , Show (PP p a)
-        , Show (PP q a)
-        ) => P (MkThese p q) a where
+instance ( P p a
+         , P q a
+         , Show (PP p a)
+         , Show (PP q a)
+         ) => P (MkThese p q) a where
   type PP (MkThese p q) a = These (PP p a) (PP q a)
   eval _ opts a = do
     let msg0 = "MkThese"
@@ -347,11 +347,11 @@ instance (P p a
 data IsTh (th :: These x y) -- x y can be anything
 
 -- trying to avoid Show instance cos of ambiguities
-instance (x ~ These a b
-        , Show a
-        , Show b
-        , GetThese th
-        ) => P (IsTh (th :: These x1 x2)) x where
+instance ( x ~ These a b
+         , Show a
+         , Show b
+         , GetThese th
+         ) => P (IsTh (th :: These x1 x2)) x where
   type PP (IsTh th) x = Bool
   eval _ opts x =
     let msg0 = "Is"
@@ -458,15 +458,15 @@ instance P IsTheseT x => P IsThese x where
 
 data TheseIn p q r
 
-instance (Show a
-        , Show b
-        , Show (PP p a)
-        , P p a
-        , P q b
-        , P r (a,b)
-        , PP p a ~ PP q b
-        , PP p a ~ PP r (a,b)
-        , PP q b ~ PP r (a,b)
+instance ( Show a
+         , Show b
+         , Show (PP p a)
+         , P p a
+         , P q b
+         , P r (a,b)
+         , PP p a ~ PP q b
+         , PP p a ~ PP r (a,b)
+         , PP q b ~ PP r (a,b)
          )  => P (TheseIn p q r) (These a b) where
   type PP (TheseIn p q r) (These a b) = PP p a
   eval _ opts th = do
@@ -548,13 +548,13 @@ instance P (TheseIdT p q) x => P (TheseId p q) x where
 
 data ZipThese p q
 
-instance (PP p a ~ [x]
+instance ( PP p a ~ [x]
         , PP q a ~ [y]
-        , P p a
-        , P q a
-        , Show x
-        , Show y
-        ) => P (ZipThese p q) a where
+         , P p a
+         , P q a
+         , Show x
+         , Show y
+         ) => P (ZipThese p q) a where
   type PP (ZipThese p q) a = [These (ExtractAFromList (PP p a)) (ExtractAFromList (PP q a))]
   eval _ opts a = do
     let msg0 = "ZipThese"
@@ -764,7 +764,8 @@ data ThisFail p q
 instance ( PP p x ~ String
          , PP q x ~ These a b
          , P p x
-         , P q x)
+         , P q x
+         )
     => P (ThisFail p q) x where
   type PP (ThisFail p q) x = ThisT (PP q x)
   eval _ opts x = do
@@ -803,7 +804,8 @@ data ThatFail p q
 instance ( PP p x ~ String
          , PP q x ~ These a b
          , P p x
-         , P q x)
+         , P q x
+         )
     => P (ThatFail p q) x where
   type PP (ThatFail p q) x = ThatT (PP q x)
   eval _ opts x = do
@@ -844,7 +846,8 @@ data TheseFail p q
 instance ( PP p x ~ String
          , PP q x ~ These a b
          , P p x
-         , P q x)
+         , P q x
+         )
     => P (TheseFail p q) x where
   type PP (TheseFail p q) x = TheseT (PP q x)
   eval _ opts x = do
@@ -972,8 +975,7 @@ instance ( AssocC p
 -- FailT "This' found That"
 --
 data This'
-instance (Show a
-        ) => P This' (These a x) where
+instance Show a => P This' (These a x) where
   type PP This' (These a x) = a
   eval _ opts lr =
     let msg0 = "This'"
@@ -991,8 +993,7 @@ instance (Show a
 -- FailT "That' found This"
 --
 data That'
-instance (Show a
-        ) => P That' (These x a) where
+instance Show a => P That' (These x a) where
   type PP That' (These x a) = a
   eval _ opts lr =
     let msg0 = "That'"
@@ -1013,7 +1014,8 @@ instance (Show a
 -- FailT "These' found That"
 --
 data These'
-instance (Show a, Show b
+instance ( Show a
+         , Show b
         ) => P These' (These a b) where
   type PP These' (These a b) = (a,b)
   eval _ opts lr =

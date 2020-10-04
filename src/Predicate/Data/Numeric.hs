@@ -97,11 +97,11 @@ import qualified Safe (fromJustNote)
 
 data FromInteger' t n
 
-instance (Num (PP t a)
-        , Integral (PP n a)
-        , P n a
-        , Show (PP t a)
-        ) => P (FromInteger' t n) a where
+instance ( Num (PP t a)
+         , Integral (PP n a)
+         , P n a
+         , Show (PP t a)
+         ) => P (FromInteger' t n) a where
   type PP (FromInteger' t n) a = PP t a
   eval _ opts a = do
     let msg0 = "FromInteger"
@@ -153,12 +153,12 @@ instance P (FromIntegerT t) x => P (FromInteger t) x where
 -- PresentT (Sum {getSum = 23})
 data FromIntegral' t n
 
-instance (Num (PP t a)
-        , Integral (PP n a)
-        , P n a
-        , Show (PP t a)
-        , Show (PP n a)
-        ) => P (FromIntegral' t n) a where
+instance ( Num (PP t a)
+         , Integral (PP n a)
+         , P n a
+         , Show (PP t a)
+         , Show (PP n a)
+         ) => P (FromIntegral' t n) a where
   type PP (FromIntegral' t n) a = PP t a
   eval _ opts a = do
     let msg0 = "FromIntegral"
@@ -200,10 +200,11 @@ instance P (FromIntegralT t) x => P (FromIntegral t) x where
 
 data ToRational p
 
-instance (a ~ PP p x
+instance ( a ~ PP p x
          , Show a
          , Real a
-         , P p x)
+         , P p x
+         )
    => P (ToRational p) x where
   type PP (ToRational p) x = Rational
   eval _ opts x = do
@@ -223,11 +224,11 @@ instance (a ~ PP p x
 --
 data FromRational' t p
 
-instance (P p a
-        , PP p a ~ Rational
-        , Show (PP t a)
-        , Fractional (PP t a)
-        ) => P (FromRational' t p) a where
+instance ( P p a
+         , PP p a ~ Rational
+         , Show (PP t a)
+         , Fractional (PP t a)
+         ) => P (FromRational' t p) a where
   type PP (FromRational' t p) a = PP t a
   eval _ opts a = do
     let msg0 = "FromRational"
@@ -393,13 +394,13 @@ instance P (MultT p q) x => P (p * q) x where
 data p ^ q
 infixr 8 ^
 
-instance (P p a
-        , P q a
-        , Show (PP p a)
-        , Show (PP q a)
-        , Num (PP p a)
-        , Integral (PP q a)
-        ) => P (p ^ q) a where
+instance ( P p a
+         , P q a
+         , Show (PP p a)
+         , Show (PP q a)
+         , Num (PP p a)
+         , Integral (PP q a)
+         ) => P (p ^ q) a where
   type PP (p ^ q) a = PP p a
   eval _ opts a = do
     let msg0 = "Pow"
@@ -427,13 +428,13 @@ instance (P p a
 data p ** q
 infixr 8 **
 
-instance (PP p a ~ PP q a
-        , P p a
-        , P q a
-        , Show (PP p a)
-        , Floating (PP p a)
-        , Ord (PP q a)
-        ) => P (p ** q) a where
+instance ( PP p a ~ PP q a
+         , P p a
+         , P q a
+         , Show (PP p a)
+         , Floating (PP p a)
+         , Ord (PP q a)
+         ) => P (p ** q) a where
   type PP (p ** q) a = PP p a
   eval _ opts a = do
     let msg0 = "Exp"
@@ -453,13 +454,13 @@ instance (PP p a ~ PP q a
 -- PresentT 4
 --
 data LogBase p q
-instance (PP p a ~ PP q a
-        , P p a
-        , P q a
-        , Show (PP q a)
-        , Floating (PP q a)
-        , Ord (PP p a)
-        ) => P (LogBase p q) a where
+instance ( PP p a ~ PP q a
+         , P p a
+         , P q a
+         , Show (PP q a)
+         , Floating (PP q a)
+         , Ord (PP p a)
+         ) => P (LogBase p q) a where
   type PP (LogBase p q) a = PP p a
   eval _ opts a = do
     let msg0 = "LogBase"
@@ -492,13 +493,13 @@ instance GetBinOp 'BAdd where
 --
 data Bin (op :: BinOp) p q
 
-instance (GetBinOp op
-        , PP p a ~ PP q a
-        , P p a
-        , P q a
-        , Show (PP p a)
-        , Num (PP p a)
-        ) => P (Bin op p q) a where
+instance ( GetBinOp op
+         , PP p a ~ PP q a
+         , P p a
+         , P q a
+         , Show (PP p a)
+         , Num (PP p a)
+         ) => P (Bin op p q) a where
   type PP (Bin op p q) a = PP p a
   eval _ opts a = do
     let (s,f) = getBinOp @op
@@ -523,13 +524,13 @@ instance (GetBinOp op
 data p / q
 infixl 7 /
 
-instance (PP p a ~ PP q a
-        , Eq (PP q a)
-        , P p a
-        , P q a
-        , Show (PP p a)
-        , Fractional (PP p a)
-        ) => P (p / q) a where
+instance ( PP p a ~ PP q a
+         , Eq (PP q a)
+         , P p a
+         , P q a
+         , Show (PP p a)
+         , Fractional (PP p a)
+         ) => P (p / q) a where
   type PP (p / q) a = PP p a
   eval _ opts a = do
     let msg0 = "(/)"
@@ -590,14 +591,14 @@ instance (PP p a ~ PP q a
 data p % q
 infixl 8 %
 
-instance (Integral (PP p x)
-        , Integral (PP q x)
-        , Eq (PP q x)
-        , P p x
-        , P q x
-        , Show (PP p x)
-        , Show (PP q x)
-        ) => P (p % q) x where
+instance ( Integral (PP p x)
+         , Integral (PP q x)
+         , Eq (PP q x)
+         , P p x
+         , P q x
+         , Show (PP p x)
+         , Show (PP q x)
+         ) => P (p % q) x where
   type PP (p % q) x = Rational
   eval _ opts x = do
     let msg0 = "(%)"
@@ -722,12 +723,12 @@ instance ( Num (PP p x)
 -- FailT "Div zero denominator"
 --
 data Div p q
-instance (PP p a ~ PP q a
-        , P p a
-        , P q a
-        , Show (PP p a)
-        , Integral (PP p a)
-        ) => P (Div p q) a where
+instance ( PP p a ~ PP q a
+         , P p a
+         , P q a
+         , Show (PP p a)
+         , Integral (PP p a)
+         ) => P (Div p q) a where
   type PP (Div p q) a = PP p a
   eval _ opts a = do
     let msg0 = "Div"
@@ -751,12 +752,12 @@ instance (PP p a ~ PP q a
 -- FailT "Mod zero denominator"
 --
 data Mod p q
-instance (PP p a ~ PP q a
-        , P p a
-        , P q a
-        , Show (PP p a)
-        , Integral (PP p a)
-        ) => P (Mod p q) a where
+instance ( PP p a ~ PP q a
+         , P p a
+         , P q a
+         , Show (PP p a)
+         , Integral (PP p a)
+         ) => P (Mod p q) a where
   type PP (Mod p q) a = PP p a
   eval _ opts a = do
     let msg0 = "Mod"
@@ -806,12 +807,12 @@ instance (PP p a ~ PP q a
 
 data DivMod p q
 
-instance (PP p a ~ PP q a
-        , P p a
-        , P q a
-        , Show (PP p a)
-        , Integral (PP p a)
-        ) => P (DivMod p q) a where
+instance ( PP p a ~ PP q a
+         , P p a
+         , P q a
+         , Show (PP p a)
+         , Integral (PP p a)
+         ) => P (DivMod p q) a where
   type PP (DivMod p q) a = (PP p a, PP p a)
   eval _ opts a = do
     let msg0 = "DivMod"
@@ -853,12 +854,12 @@ instance (PP p a ~ PP q a
 
 data QuotRem p q
 
-instance (PP p a ~ PP q a
-        , P p a
-        , P q a
-        , Show (PP p a)
-        , Integral (PP p a)
-        ) => P (QuotRem p q) a where
+instance ( PP p a ~ PP q a
+         , P p a
+         , P q a
+         , Show (PP p a)
+         , Integral (PP p a)
+         ) => P (QuotRem p q) a where
   type PP (QuotRem p q) a = (PP p a, PP p a)
   eval _ opts a = do
     let msg0 = "QuotRem"
@@ -938,14 +939,14 @@ instance ( Num (PP p x)
 -- supports negative numbers unlike readInt
 data ReadBase' t (n :: Nat) p
 
-instance (Typeable (PP t x)
-        , ZwischenT 2 36 n
-        , Show (PP t x)
-        , Num (PP t x)
-        , KnownNat n
-        , PP p x ~ String
-        , P p x
-        ) => P (ReadBase' t n p) x where
+instance ( Typeable (PP t x)
+         , ZwischenT 2 36 n
+         , Show (PP t x)
+         , Num (PP t x)
+         , KnownNat n
+         , PP p x ~ String
+         , P p x
+         ) => P (ReadBase' t n p) x where
   type PP (ReadBase' t n p) x = PP t x
   eval _ opts x = do
     let n = nat @n
@@ -1055,11 +1056,11 @@ getValidBase n =
 
 data ShowBase (n :: Nat)
 
-instance (2 GL.<= n
-        , n GL.<= 36
-        , KnownNat n
-        , Integral x
-        ) => P (ShowBase n) x where
+instance ( 2 GL.<= n
+         , n GL.<= 36
+         , KnownNat n
+         , Integral x
+         ) => P (ShowBase n) x where
   type PP (ShowBase n) x = String
   eval _ opts x =
     let n = nat @n
@@ -1079,13 +1080,13 @@ instance (2 GL.<= n
 --
 data ShowBaseN n p
 
-instance (PP p x ~ a
-        , P p x
-        , PP n x ~ b
-        , P n x
-        , Integral a
-        , Integral b
-        ) => P (ShowBaseN n p) x where
+instance ( PP p x ~ a
+         , P p x
+         , PP n x ~ b
+         , P n x
+         , Integral a
+         , Integral b
+         ) => P (ShowBaseN n p) x where
   type PP (ShowBaseN n p) x = [Int]
   eval _ opts x = do
     let msg0 = "ShowBaseN"
@@ -1131,12 +1132,12 @@ instance P (BitsT p) x => P (Bits p) x where
 --
 data UnShowBaseN n
 
-instance (x ~ [a]
-        , PP n x ~ b
-        , P n x
-        , Integral a
-        , Integral b
-        ) => P (UnShowBaseN n) x where
+instance ( x ~ [a]
+         , PP n x ~ b
+         , P n x
+         , Integral a
+         , Integral b
+         ) => P (UnShowBaseN n) x where
   type PP (UnShowBaseN n) x = Integer
   eval _ opts x = do
     let msg0 = "UnShowBaseN"

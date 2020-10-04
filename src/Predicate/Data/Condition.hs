@@ -108,13 +108,13 @@ import qualified Data.Type.Equality as DE
 --
 data If p q r
 
-instance (Show (PP r a)
-        , P p a
-        , PP p a ~ Bool
-        , P q a
-        , P r a
-        , PP q a ~ PP r a
-        ) => P (If p q r) a where
+instance ( Show (PP r a)
+         , P p a
+         , PP p a ~ Bool
+         , P q a
+         , P r a
+         , PP q a ~ PP r a
+         ) => P (If p q r) a where
   type PP (If p q r) a = PP q a
   eval _ opts a = do
     let msg0 = "If"
@@ -272,16 +272,16 @@ instance (GL.TypeError ('GL.Text "CaseImpl '[] invalid: lists are both empty"))
   type PP (CaseImpl n e ('[] :: [k]) ('[] :: [k1]) r) x = Void
   eval _ _ _ = errorInProgram "CaseImpl both lists empty"
 
-instance (P r x
-        , P q (PP r x)
-        , Show (PP q (PP r x))
-        , P p (PP r x)
-        , PP p (PP r x) ~ Bool
-        , KnownNat n
-        , Show (PP r x)
-        , P e (PP r x, Proxy (PP q (PP r x)))
-        , PP e (PP r x, Proxy (PP q (PP r x))) ~ PP q (PP r x)
-        ) => P (CaseImpl n e '[p] '[q] r) x where
+instance ( P r x
+         , P q (PP r x)
+         , Show (PP q (PP r x))
+         , P p (PP r x)
+         , PP p (PP r x) ~ Bool
+         , KnownNat n
+         , Show (PP r x)
+         , P e (PP r x, Proxy (PP q (PP r x)))
+         , PP e (PP r x, Proxy (PP q (PP r x))) ~ PP q (PP r x)
+         ) => P (CaseImpl n e '[p] '[q] r) x where
   type PP (CaseImpl n e '[p] '[q] r) x = PP q (PP r x)
   eval _ opts z = do
     let msgbase0 = "Case(" <> show (n-1) <> ")"
@@ -304,17 +304,17 @@ instance (P r x
               Left e -> e
               Right b -> mkNode opts (PresentT b) (show01 opts msgbase0 b a) [hh rr, hh pp, hh ee]
 
-instance (KnownNat n
-        , GetLen ps
-        , P r x
-        , P p (PP r x)
-        , P q (PP r x)
-        , PP p (PP r x) ~ Bool
-        , Show (PP q (PP r x))
-        , Show (PP r x)
-        , P (CaseImpl n e (p1 ': ps) (q1 ': qs) r) x
-        , PP (CaseImpl n e (p1 ': ps) (q1 ': qs) r) x ~ PP q (PP r x)
-        )
+instance ( KnownNat n
+         , GetLen ps
+         , P r x
+         , P p (PP r x)
+         , P q (PP r x)
+         , PP p (PP r x) ~ Bool
+         , Show (PP q (PP r x))
+         , Show (PP r x)
+         , P (CaseImpl n e (p1 ': ps) (q1 ': qs) r) x
+         , PP (CaseImpl n e (p1 ': ps) (q1 ': qs) r) x ~ PP q (PP r x)
+         )
      => P (CaseImpl n e (p ': p1 ': ps) (q ': q1 ': qs) r) x where
   type PP (CaseImpl n e (p ': p1 ': ps) (q ': q1 ': qs) r) x = PP q (PP r x)
   eval _ opts z = do
@@ -406,17 +406,17 @@ instance ( [a] ~ x
     in if not (null as) then errorInProgram $ "GuardsImpl base case has extra data " ++ show as
        else pure $ mkNode opts (PresentT as) (msg0 <> " no data") []
 
-instance (PP prt (Int, a) ~ String
-        , P prt (Int, a)
-        , KnownNat n
-        , GetLen ps
-        , P p a
-        , PP p a ~ Bool
-        , P (GuardsImpl n ps) [a]
-        , PP (GuardsImpl n ps) [a] ~ [a]
-        , Show a
-        , [a] ~ x
-        ) => P (GuardsImpl n ('(prt,p) ': ps)) x where
+instance ( PP prt (Int, a) ~ String
+         , P prt (Int, a)
+         , KnownNat n
+         , GetLen ps
+         , P p a
+         , PP p a ~ Bool
+         , P (GuardsImpl n ps) [a]
+         , PP (GuardsImpl n ps) [a] ~ [a]
+         , Show a
+         , [a] ~ x
+         ) => P (GuardsImpl n ('(prt,p) ': ps)) x where
   type PP (GuardsImpl n ('(prt,p) ': ps)) x = x
   eval _ opts as' = do
      let cpos = n-pos-1
@@ -527,11 +527,11 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 --
 data Bools (ps :: [(k,k1)])
 
-instance ([a] ~ x
-        , GetLen ps
-        , P (BoolsImpl (LenT ps) ps) x
-        , PP (BoolsImpl (LenT ps) ps) x ~ Bool
-        ) => P (Bools ps) x where
+instance ( [a] ~ x
+         , GetLen ps
+         , P (BoolsImpl (LenT ps) ps) x
+         , PP (BoolsImpl (LenT ps) ps) x ~ Bool
+         ) => P (Bools ps) x where
   type PP (Bools ps) x = Bool
   eval _ opts as = do
     let msg0 = "Bools"
@@ -547,10 +547,10 @@ instance ([a] ~ x
 
 data BoolsImpl (n :: Nat) (os :: [(k,k1)])
 
-instance (KnownNat n
-        , Show a
-        , [a] ~ x
-        ) => P (BoolsImpl n ('[] :: [(k,k1)])) x where
+instance ( KnownNat n
+         , Show a
+         , [a] ~ x
+         ) => P (BoolsImpl n ('[] :: [(k,k1)])) x where
   type PP (BoolsImpl n ('[] :: [(k,k1)])) x = Bool
   eval _ opts as =
     let msg0 = "Bool(" <> show (n-1) <> ")"
@@ -558,16 +558,16 @@ instance (KnownNat n
     in if not (null as) then errorInProgram $ "BoolsImpl base case has extra data " ++ show as
        else pure $ mkNodeB opts True (msg0 <> " empty") []
 
-instance (PP prt (Int, a) ~ String
-        , P prt (Int, a)
-        , KnownNat n
-        , GetLen ps
-        , P p a
-        , PP p a ~ Bool
-        , P (BoolsImpl n ps) x
-        , PP (BoolsImpl n ps) [a] ~ Bool
-        , [a] ~ x
-        ) => P (BoolsImpl n ('(prt,p) ': ps)) x where
+instance ( PP prt (Int, a) ~ String
+         , P prt (Int, a)
+         , KnownNat n
+         , GetLen ps
+         , P p a
+         , PP p a ~ Bool
+         , P (BoolsImpl n ps) x
+         , PP (BoolsImpl n ps) [a] ~ Bool
+         , [a] ~ x
+         ) => P (BoolsImpl n ('(prt,p) ': ps)) x where
   type PP (BoolsImpl n ('(prt,p) ': ps)) x = Bool
   eval _ opts as' = do
      let cpos = n-pos-1
@@ -614,9 +614,9 @@ data BoolsQuick (prt :: k) (ps :: [k1])
 type BoolsQuickT (prt :: k) (ps :: [k1]) = Bools (ToGuardsT prt ps)
 
 -- why do we need this? when BoolsN works without [use the x ~ [a] trick in BoolsN]
-instance (PP (Bools (ToGuardsT prt ps)) x ~ Bool
-        , P (BoolsQuickT prt ps) x
-          ) => P (BoolsQuick prt ps) x where
+instance ( PP (Bools (ToGuardsT prt ps)) x ~ Bool
+         , P (BoolsQuickT prt ps) x
+         ) => P (BoolsQuick prt ps) x where
   type PP (BoolsQuick prt ps) x = Bool
   eval _ = evalBool (Proxy @(BoolsQuickT prt ps))
 
@@ -652,10 +652,10 @@ instance ( x ~ [a]
 --
 data GuardsDetailImpl (ps :: [(k,k1)])
 
-instance ([a] ~ x
-        , GetLen ps
-        , P (GuardsImplX (LenT ps) ps) x
-        ) => P (GuardsDetailImpl ps) x where
+instance ( [a] ~ x
+         , GetLen ps
+         , P (GuardsImplX (LenT ps) ps) x
+         ) => P (GuardsDetailImpl ps) x where
   type PP (GuardsDetailImpl ps) x = PP (GuardsImplX (LenT ps) ps) x
   eval _ opts as = do
     let msg0 = "Guards"
@@ -677,17 +677,17 @@ instance ( [a] ~ x
     in if not (null as) then errorInProgram $ "GuardsImplX base case has extra data " ++ show as
        else pure $ mkNode opts (PresentT as) msg0 []
 
-instance (PP prt a ~ String
-        , P prt a
-        , KnownNat n
-        , GetLen ps
-        , P p a
-        , PP p a ~ Bool
-        , P (GuardsImplX n ps) [a]
-        , PP (GuardsImplX n ps) [a] ~ [a]
-        , Show a
-        , [a] ~ x
-        ) => P (GuardsImplX n ('(prt,p) ': ps)) x where
+instance ( PP prt a ~ String
+         , P prt a
+         , KnownNat n
+         , GetLen ps
+         , P p a
+         , PP p a ~ Bool
+         , P (GuardsImplX n ps) [a]
+         , PP (GuardsImplX n ps) [a] ~ [a]
+         , Show a
+         , [a] ~ x
+         ) => P (GuardsImplX n ('(prt,p) ': ps)) x where
   type PP (GuardsImplX n ('(prt,p) ': ps)) x = x
   eval _ opts as' = do
      let cpos = n-pos-1
@@ -799,12 +799,12 @@ instance ( x ~ [a]
 data Guard prt p
 
 
-instance (Show a
-        , P prt a
-        , PP prt a ~ String
-        , P p a
-        , PP p a ~ Bool
-        ) => P (Guard prt p) a where
+instance ( Show a
+         , P prt a
+         , PP prt a ~ String
+         , P p a
+         , PP p a ~ Bool
+         ) => P (Guard prt p) a where
   type PP (Guard prt p) a = a
   eval _ opts a = do
     let msg0 = "Guard"
@@ -826,11 +826,11 @@ instance (Show a
 --
 data GuardBool prt p
 
-instance (P prt a
-        , PP prt a ~ String
-        , P p a
-        , PP p a ~ Bool
-        ) => P (GuardBool prt p) a where
+instance ( P prt a
+         , PP prt a ~ String
+         , P p a
+         , PP p a ~ Bool
+         ) => P (GuardBool prt p) a where
   type PP (GuardBool prt p) a = Bool
   eval _ opts a = do
     let msg0 = "GuardBool"
@@ -923,10 +923,10 @@ instance P (ExitWhenT prt p) x => P (ExitWhen prt p) x where
 --
 data GuardSimple p
 
-instance (Show a
-        , P p a
-        , PP p a ~ Bool
-        ) => P (GuardSimple p) a where
+instance ( Show a
+         , P p a
+         , PP p a ~ Bool
+         ) => P (GuardSimple p) a where
   type PP (GuardSimple p) a = a
   eval _ opts a = do
     let msg0 = "GuardSimple"

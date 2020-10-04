@@ -244,12 +244,12 @@ instance ( PP p x ~ a
 data MaybeIn p q
 
 -- tricky: the nothing case is the proxy of PP q a: ie proxy of the final result
-instance (P q a
-        , Show a
-        , Show (PP q a)
-        , PP p (Proxy (PP q a)) ~ PP q a
-        , P p (Proxy (PP q a))
-        ) => P (MaybeIn p q) (Maybe a) where
+instance ( P q a
+         , Show a
+         , Show (PP q a)
+         , PP p (Proxy (PP q a)) ~ PP q a
+         , P p (Proxy (PP q a))
+         ) => P (MaybeIn p q) (Maybe a) where
   type PP (MaybeIn p q) (Maybe a) = PP q a
   eval _ opts ma = do
     let msg0 = "MaybeIn"
@@ -346,11 +346,11 @@ instance P CatMaybesT x => P CatMaybes x where
 --
 data MaybeBool b p
 
-instance (Show (PP p a)
-        , P b a
-        , P p a
-        , PP b a ~ Bool
-        ) => P (MaybeBool b p) a where
+instance ( Show (PP p a)
+         , P b a
+         , P p a
+         , PP b a ~ Bool
+         ) => P (MaybeBool b p) a where
   type PP (MaybeBool b p) a = Maybe (PP p a)
   eval _ opts z = do
     let msg0 = "MaybeBool"
@@ -414,7 +414,8 @@ data JustDef p q
 instance ( PP p x ~ a
          , PP q x ~ Maybe a
          , P p x
-         , P q x)
+         , P q x
+         )
     => P (JustDef p q) x where
   type PP (JustDef p q) x = MaybeT (PP q x)
   eval _ opts x = do
@@ -451,7 +452,8 @@ data JustFail p q
 instance ( PP p x ~ String
          , PP q x ~ Maybe a
          , P p x
-         , P q x)
+         , P q x
+         )
     => P (JustFail p q) x where
   type PP (JustFail p q) x = MaybeT (PP q x)
   eval _ opts x = do

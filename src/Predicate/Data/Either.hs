@@ -93,8 +93,7 @@ instance Show a => P Left' (Either a x) where
 -- FailT "Right' found Left"
 --
 data Right'
-instance (Show a
-        ) => P Right' (Either x a) where
+instance Show a => P Right' (Either x a) where
   type PP Right' (Either x a) = a
   eval _ opts lr =
     let msg0 = "Right'"
@@ -138,13 +137,13 @@ data p ||| q
 infixr 2 |||
 type EitherIn p q = p ||| q
 
-instance (Show (PP p a)
-        , P p a
-        , P q b
-        , PP p a ~ PP q b
-        , Show a
-        , Show b
-        ) => P (p ||| q) (Either a b) where
+instance ( Show (PP p a)
+         , P p a
+         , P q b
+         , PP p a ~ PP q b
+         , Show a
+         , Show b
+         ) => P (p ||| q) (Either a b) where
   type PP (p ||| q) (Either a b) = PP p a
   eval _ opts lr = do
     let msg0 = "(|||)"
@@ -233,13 +232,13 @@ instance x ~ Either a b
 data p +++ q
 infixr 2 +++
 
-instance (Show (PP p a)
-        , Show (PP q b)
-        , P p a
-        , P q b
-        , Show a
-        , Show b
-        ) => P (p +++ q) (Either a b) where
+instance ( Show (PP p a)
+         , Show (PP q b)
+         , P p a
+         , P q b
+         , Show a
+         , Show b
+         ) => P (p +++ q) (Either a b) where
   type PP (p +++ q) (Either a b) = Either (PP p a) (PP q b)
   eval _ opts lr = do
     let msg0 = "(+++)"
@@ -319,13 +318,13 @@ instance ( Show a
 --
 data EitherBool b p q
 
-instance (Show (PP p a)
-        , P p a
-        , Show (PP q a)
-        , P q a
-        , P b a
-        , PP b a ~ Bool
-        ) => P (EitherBool b p q) a where
+instance ( Show (PP p a)
+         , P p a
+         , Show (PP q a)
+         , P q a
+         , P b a
+         , PP b a ~ Bool
+         ) => P (EitherBool b p q) a where
   type PP (EitherBool b p q) a = Either (PP p a) (PP q a)
   eval _ opts z = do
     let msg0 = "EitherBool"
@@ -355,13 +354,13 @@ instance (Show (PP p a)
 -- PresentT "((9,Right 'x'),'y')"
 --
 data EitherX p q r
-instance (P r x
-        , P p (x,a)
-        , P q (x,b)
-        , PP r x ~ Either a b
-        , PP p (x,a) ~ c
-        , PP q (x,b) ~ c
-        ) => P (EitherX p q r) x where
+instance ( P r x
+         , P p (x,a)
+         , P q (x,b)
+         , PP r x ~ Either a b
+         , PP p (x,a) ~ c
+         , PP q (x,b) ~ c
+         ) => P (EitherX p q r) x where
   type PP (EitherX p q r) x = EitherXT (PP r x) x p
   eval _ opts x = do
     let msg0 = "EitherX"
@@ -568,7 +567,8 @@ data LeftFail p q
 instance ( PP p (b,x) ~ String
          , PP q x ~ Either a b
          , P p (b,x)
-         , P q x)
+         , P q x
+         )
     => P (LeftFail p q) x where
   type PP (LeftFail p q) x = LeftT (PP q x)
   eval _ opts x = do
@@ -607,7 +607,8 @@ data RightFail p q
 instance ( PP p (a,x) ~ String
          , PP q x ~ Either a b
          , P p (a,x)
-         , P q x)
+         , P q x
+         )
     => P (RightFail p q) x where
   type PP (RightFail p q) x = RightT (PP q x)
   eval _ opts x = do

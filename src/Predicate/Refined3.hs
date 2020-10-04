@@ -384,9 +384,9 @@ instance ( Refined3C opts ip op fmt i
   put (Refined3 _ r) = B.put @i r
 
 -- | 'Hashable' instance for 'Refined3'
-instance (Refined3C opts ip op fmt i
-        , Hashable (PP ip i)
-        ) => Hashable (Refined3 opts ip op fmt i) where
+instance ( Refined3C opts ip op fmt i
+         , Hashable (PP ip i)
+         ) => Hashable (Refined3 opts ip op fmt i) where
   hashWithSalt s (Refined3 a _) = s + hash a
 
 -- | creates a 5-tuple proxy (see 'eval3P' 'newRefined3P')

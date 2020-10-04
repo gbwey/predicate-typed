@@ -164,13 +164,13 @@ instance P (WAmpT p q) x => P (p &&& q) x where
 data p *** q
 infixr 3 ***
 
-instance (Show (PP p a)
-        , Show (PP q b)
-        , P p a
-        , P q b
-        , Show a
-        , Show b
-        ) => P (p *** q) (a,b) where
+instance ( Show (PP p a)
+         , Show (PP q b)
+         , P p a
+         , P q b
+         , Show a
+         , Show b
+         ) => P (p *** q) (a,b) where
   type PP (p *** q) (a,b) = (PP p a, PP q b)
   eval _ opts (a,b) = do
     let msg0 = "(***)"
@@ -214,13 +214,13 @@ instance P (SecondT q) x => P (Second q) x where
 -- PresentT False
 --
 data AndA p q r
-instance (PP r x ~ (a,b)
-        , PP p a ~ Bool
-        , PP q b ~ Bool
-        , P p a
-        , P q b
-        , P r x
-        ) => P (AndA p q r) x where
+instance ( PP r x ~ (a,b)
+         , PP p a ~ Bool
+         , PP q b ~ Bool
+         , P p a
+         , P q b
+         , P r x
+         ) => P (AndA p q r) x where
   type PP (AndA p q r) x = Bool
   eval _ opts x = do
     let msg0 = "(&*)"
@@ -264,13 +264,13 @@ instance P (AndAT p q) x => P (p &* q) x where
 -- PresentT True
 --
 data OrA p q r
-instance (PP r x ~ (a,b)
-        , PP p a ~ Bool
-        , PP q b ~ Bool
-        , P p a
-        , P q b
-        , P r x
-        ) => P (OrA p q r) x where
+instance ( PP r x ~ (a,b)
+         , PP p a ~ Bool
+         , PP q b ~ Bool
+         , P p a
+         , P q b
+         , P r x
+         ) => P (OrA p q r) x where
   type PP (OrA p q r) x = Bool
   eval _ opts x = do
     let msg0 = "(|+)"

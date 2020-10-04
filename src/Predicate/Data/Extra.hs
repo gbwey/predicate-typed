@@ -131,11 +131,11 @@ import qualified Safe (headNote, cycleNote)
 --
 data Pure2 (t :: Type -> Type)
 
-instance (Show (f (t a))
-        , Show (f a)
-        , Applicative t
-        , Functor f
-        ) => P (Pure2 t) (f a) where
+instance ( Show (f (t a))
+         , Show (f a)
+         , Applicative t
+         , Functor f
+         ) => P (Pure2 t) (f a) where
   type PP (Pure2 t) (f a) = f (t a)
   eval _ opts fa =
     let msg0 = "Pure2"
@@ -179,13 +179,13 @@ instance (Show (f (t a))
 data p <$ q
 infixl 4 <$
 
-instance (P p x
-        , P q x
-        , Show (PP p x)
-        , Functor t
-        , PP q x ~ t c
-        , ApplyConstT (PP q x) (PP p x) ~ t (PP p x)
-        ) => P (p <$ q) x where
+instance ( P p x
+         , P q x
+         , Show (PP p x)
+         , Functor t
+         , PP q x ~ t c
+         , ApplyConstT (PP q x) (PP p x) ~ t (PP p x)
+         ) => P (p <$ q) x where
   type PP (p <$ q) x = ApplyConstT (PP q x) (PP p x)
   eval _ opts x = do
     let msg0 = "(<$)"
@@ -223,14 +223,14 @@ instance P (ArrowRT p q) x => P (p *> q) x where
   type PP (p *> q) x = PP (ArrowRT p q) x
   eval _ = eval (Proxy @(ArrowRT p q))
 
-instance (Show (t c)
-        , P p x
-        , P q x
-        , Show (t b)
-        , Applicative t
-        , t b ~ PP p x
-        , PP q x ~ t c
-        ) => P (p <* q) x where
+instance ( Show (t c)
+         , P p x
+         , P q x
+         , Show (t b)
+         , Applicative t
+         , t b ~ PP p x
+         , PP q x ~ t c
+         ) => P (p <* q) x where
   type PP (p <* q) x = PP p x
   eval _ opts x = do
     let msg0 = "(<*)"
@@ -263,13 +263,13 @@ instance (Show (t c)
 data p <|> q
 infixl 3 <|>
 
-instance (P p x
-        , P q x
-        , Show (t b)
-        , Alternative t
-        , t b ~ PP p x
-        , PP q x ~ t b
-        ) => P (p <|> q) x where
+instance ( P p x
+         , P q x
+         , Show (t b)
+         , Alternative t
+         , t b ~ PP p x
+         , PP q x ~ t b
+         ) => P (p <|> q) x where
   type PP (p <|> q) x = PP p x
   eval _ opts x = do
     let msg0 = "(<|>)"
@@ -294,10 +294,10 @@ instance (P p x
 -- PresentT "hello"
 --
 data Extract
-instance (Show (t a)
-        , Show a
-        , Comonad t
-        ) => P Extract (t a) where
+instance ( Show (t a)
+         , Show a
+         , Comonad t
+         ) => P Extract (t a) where
   type PP Extract (t a) = a
   eval _ opts ta =
     let msg0 = "Extract"
@@ -311,10 +311,10 @@ instance (Show (t a)
 --
 data Duplicate
 
-instance (Show (t a)
-        , Show (t (t a))
-        , Comonad t
-        ) => P Duplicate (t a) where
+instance ( Show (t a)
+         , Show (t (t a))
+         , Comonad t
+         ) => P Duplicate (t a) where
   type PP Duplicate (t a) = t (t a)
   eval _ opts ta =
     let msg0 = "Duplicate"
@@ -331,10 +331,10 @@ instance (Show (t a)
 --
 data Join
 
-instance (Show (t (t a))
-        , Show (t a)
-        , Monad t
-        ) => P Join (t (t a)) where
+instance ( Show (t (t a))
+         , Show (t a)
+         , Monad t
+         ) => P Join (t (t a)) where
   type PP Join (t (t a)) = t a
   eval _ opts tta =
     let msg0 = "Join"
@@ -353,14 +353,14 @@ instance (Show (t (t a))
 data p $$ q
 infixl 0 $$
 
-instance (P p x
-        , P q x
-        , PP p x ~ (a -> b)
-        , FnT (PP p x) ~ b
-        , PP q x ~ a
-        , Show a
-        , Show b
-        ) => P (p $$ q) x where
+instance ( P p x
+         , P q x
+         , PP p x ~ (a -> b)
+         , FnT (PP p x) ~ b
+         , PP q x ~ a
+         , Show a
+         , Show b
+         ) => P (p $$ q) x where
   type PP (p $$ q) x = FnT (PP p x)
   eval _ opts x = do
     let msg0 = "($$)"
@@ -385,14 +385,14 @@ instance (P p x
 data q $& p -- flips the args eg a & b & (,) = (b,a)
 infixr 1 $&
 
-instance (P p x
-        , P q x
-        , PP p x ~ (a -> b)
-        , FnT (PP p x) ~ b
-        , PP q x ~ a
-        , Show a
-        , Show b
-        ) => P (q $& p) x where
+instance ( P p x
+         , P q x
+         , PP p x ~ (a -> b)
+         , FnT (PP p x) ~ b
+         , PP q x ~ a
+         , Show a
+         , Show b
+         ) => P (q $& p) x where
   type PP (q $& p) x = FnT (PP p x)
   eval _ opts x = do
     let msg0 = "($&)"
@@ -420,11 +420,11 @@ type family FnT ab :: Type where
 --
 data Sequence
 
-instance (Show (f (t a))
-        , Show (t (f a))
-        , Traversable t
-        , Applicative f
-        ) => P Sequence (t (f a)) where
+instance ( Show (f (t a))
+         , Show (t (f a))
+         , Traversable t
+         , Applicative f
+         ) => P Sequence (t (f a)) where
   type PP Sequence (t (f a)) = f (t a)
   eval _ opts tfa =
      let msg = "Sequence"
@@ -751,10 +751,10 @@ type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
 --
 data IsPrime
 
-instance (x ~ a
-        , Show a
-        , Integral a
-        ) => P IsPrime x where
+instance ( x ~ a
+         , Show a
+         , Integral a
+         ) => P IsPrime x where
   type PP IsPrime x = Bool
   eval _ opts x =
     let msg0 = "IsPrime"
@@ -814,9 +814,9 @@ instance ( Show x
 --
 data Primes n
 
-instance (Integral (PP n x)
-        , P n x
-        ) => P (Primes n) x where
+instance ( Integral (PP n x)
+         , P n x
+         ) => P (Primes n) x where
   type PP (Primes n) x = [Integer]
   eval _ opts x = do
     let msg0 = "Primes"
@@ -846,9 +846,9 @@ instance (Integral (PP n x)
 --
 data PrimeFactors n
 
-instance (Integral (PP n x)
-        , P n x
-        ) => P (PrimeFactors n) x where
+instance ( Integral (PP n x)
+         , P n x
+         ) => P (PrimeFactors n) x where
   type PP (PrimeFactors n) x = [Integer]
   eval _ opts x = do
     let msg0 = "PrimeFactors"
@@ -909,11 +909,11 @@ instance x ~ [Int]
 -- PresentT (Just (Sum {getSum = 10}))
 --
 data Coerce2 (t :: k)
-instance (Show (f a)
-        , Show (f t)
-        , Coercible t a
-        , Functor f
-        ) => P (Coerce2 t) (f a) where
+instance ( Show (f a)
+         , Show (f t)
+         , Coercible t a
+         , Functor f
+         ) => P (Coerce2 t) (f a) where
   type PP (Coerce2 t) (f a) = f t
   eval _ opts fa =
     let msg0 = "Coerce2"
@@ -1006,11 +1006,11 @@ instance P (CatchT' p s) x => P (Catch' p s) x where
   type PP (Catch' p s) x = PP (CatchT' p s) x
   eval _ = eval (Proxy @(CatchT' p s))
 
-instance (P p x
-        , P q ((String, x)
-        , Proxy (PP p x))
-        , PP p x ~ PP q ((String, x), Proxy (PP p x))
-        ) => P (Catch p q) x where
+instance ( P p x
+         , P q ((String, x)
+         , Proxy (PP p x))
+         , PP p x ~ PP q ((String, x), Proxy (PP p x))
+         ) => P (Catch p q) x where
   type PP (Catch p q) x = PP p x
   eval _ opts x = do
     let msg0 = "Catch"
@@ -1252,7 +1252,10 @@ instance P IListT x => P IList x where
 --
 data FMap p
 
-instance (Traversable n, P p a, PP p a ~ b) => P (FMap p) (n a) where
+instance ( Traversable n
+         , P p a
+         , PP p a ~ b
+         ) => P (FMap p) (n a) where
   type PP (FMap p) (n a) = n (PP p a)
   eval _ opts na = do
     let msg0 = "FMap"
@@ -1291,7 +1294,12 @@ type family JoinT x y where
 data p <$> q
 infixl 4 <$>
 
-instance (Traversable n, P q a, P p b, PP q a ~ n b, PP p b ~ c) => P (p <$> q) a where
+instance ( Traversable n
+         , P q a
+         , P p b
+         , PP q a ~ n b
+         , PP p b ~ c
+         ) => P (p <$> q) a where
   type PP (p <$> q) a = (ExtractTFromTA (PP q a)) (PP p (ExtractAFromTA (PP q a)))
   eval _ opts x = do
     let msg0 = "(<$>)"

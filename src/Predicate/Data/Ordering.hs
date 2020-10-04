@@ -295,12 +295,12 @@ infix 4 ==!
 
 type OrdP p q = p ==! q
 
-instance (Ord (PP p a)
-        , PP p a ~ PP q a
-        , P p a
-        , Show (PP q a)
-        , P q a
-        ) => P (p ==! q) a where
+instance ( Ord (PP p a)
+         , PP p a ~ PP q a
+         , P p a
+         , Show (PP q a)
+         , P q a
+         ) => P (p ==! q) a where
   type PP (p ==! q) a = Ordering
   eval _ opts a = do
     let msg0 = "(==!)"
@@ -364,11 +364,11 @@ type OrdI p q = p ===~ q
 data p ===~ q
 infix 4 ===~
 
-instance (PP p a ~ String
-        , PP p a ~ PP q a
-        , P p a
-        , P q a
-        ) => P (p ===~ q) a where
+instance ( PP p a ~ String
+         , PP p a ~ PP q a
+         , P p a
+         , P q a
+         ) => P (p ===~ q) a where
   type PP (p ===~ q) a = Ordering
   eval _ opts a = do
     let msg0 = "(===~)"
@@ -399,13 +399,13 @@ instance (PP p a ~ String
 --
 data Cmp (o :: OrderingP) p q
 
-instance (GetOrd o
-        , Ord (PP p a)
-        , Show (PP p a)
-        , PP p a ~ PP q a
-        , P p a
-        , P q a
-        ) => P (Cmp o p q) a where
+instance ( GetOrd o
+         , Ord (PP p a)
+         , Show (PP p a)
+         , PP p a ~ PP q a
+         , P p a
+         , P q a
+         ) => P (Cmp o p q) a where
   type PP (Cmp o p q) a = Bool
   eval _ opts a = do
     let (sfn, fn) = getOrd @o
@@ -419,12 +419,12 @@ instance (GetOrd o
 -- | compare two strings ignoring case using the given ordering @o@
 data CmpI (o :: OrderingP) p q
 
-instance (PP p a ~ String
-        , GetOrd o
-        , PP p a ~ PP q a
-        , P p a
-        , P q a
-        ) => P (CmpI o p q) a where
+instance ( PP p a ~ String
+         , GetOrd o
+         , PP p a ~ PP q a
+         , P p a
+         , P q a
+         ) => P (CmpI o p q) a where
   type PP (CmpI o p q) a = Bool
   eval _ opts a = do
     let (sfn, fn) = getOrd @o
