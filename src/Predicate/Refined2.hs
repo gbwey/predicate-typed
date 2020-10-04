@@ -257,7 +257,6 @@ instance ( Refined2C opts ip op i
 --    +- P Id 16663610
 --    |
 --    `- P '256
--- <BLANKLINE>
 --
 instance ( Refined2C opts ip op i
          , Show (PP ip i)
@@ -353,7 +352,6 @@ genRefined2P _ g =
 -- `- P ReadP Day 2019-06-01
 --    |
 --    `- P '"2019-06-01"
--- <BLANKLINE>
 --
 instance ( Refined2C opts ip op i
          , Show (PP ip i)
@@ -513,6 +511,7 @@ prt2Impl opts v =
          let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
              r = msg1 a
               <> fixLite opts a t1
+              <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
          in mkMsg2 m n r (t2 ^. root . pBool)
@@ -522,6 +521,7 @@ prt2Impl opts v =
                  in if all isSpace w then "FalseP" else "{" <> w <> "}"
              r = msg1 a
               <> fixLite opts a t1
+              <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
          in mkMsg2 m n r FalseP
@@ -529,6 +529,7 @@ prt2Impl opts v =
          let (m,n) = ("Step 2. True Boolean Check(op)", "")
              r = msg1 a
               <> fixLite opts a t1
+              <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
          in mkMsg2 m n r (t2 ^. root . pBool)

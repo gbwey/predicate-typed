@@ -935,7 +935,7 @@ run a = do
   case oDebug opts of
     DZero -> pure ()
     DLite -> unlessNullM (prtTree opts pp) putStrLn
-    _ -> unlessNullM (prtTree opts pp) putStr
+    _ -> unlessNullM (prtTree opts pp) putStrLn
   return (_ttBoolT pp)
 
 -- | run expression with multiple options in a list

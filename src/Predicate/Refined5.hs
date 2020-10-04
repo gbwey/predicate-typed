@@ -241,7 +241,6 @@ instance ( Refined2C opts ip op i
 --    +- P Id 12345
 --    |
 --    `- P '256
--- <BLANKLINE>
 --
 instance ( Refined2C opts ip op i
          , FromJSON (PP ip i)

@@ -346,7 +346,6 @@ datetimen = mkProxy3'
 -- +- P '10
 -- |
 -- `- P '16
--- <BLANKLINE>
 --
 between :: Proxy (BetweenN opts m n)
 between = mkProxy3

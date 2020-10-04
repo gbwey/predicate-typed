@@ -278,7 +278,6 @@ instance ( Refined3C opts ip op fmt i
 --    +- P Id 16663610
 --    |
 --    `- P '256
--- <BLANKLINE>
 --
 instance ( Refined3C opts ip op fmt i
          , Show (PP ip i)
@@ -370,7 +369,6 @@ genRefined3P _ g =
 -- `- P ReadP Day 2019-06-01
 --    |
 --    `- P '"2019-06-01"
--- <BLANKLINE>
 --
 instance ( Refined3C opts ip op fmt i
          , Show (PP ip i)
@@ -604,6 +602,7 @@ prt3Impl opts v =
          let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
              r = msg1 a
               <> fixLite opts a t1
+              <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
          in mkMsg3 m n r (t2 ^. root . pBool)
@@ -613,6 +612,7 @@ prt3Impl opts v =
                  in if all isSpace w then "FalseP" else "{" <> w <> "}"
              r = msg1 a
               <> fixLite opts a t1
+              <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
          in mkMsg3 m n r FalseP
@@ -620,8 +620,10 @@ prt3Impl opts v =
          let (m,n) = ("Step 3. Failed Output Conversion(fmt)", e)
              r = msg1 a
               <> fixLite opts a t1
+              <> "\n"
               <> outmsg "Step 2. Success Boolean Check(op)"
               <> prtTreePure opts t2
+              <> "\n"
               <> outmsg m
               <> prtTreePure opts t3
          in mkMsg3 m n r (t3 ^. root . pBool)
@@ -629,8 +631,10 @@ prt3Impl opts v =
          let (m,n) = ("Step 3. Success Output Conversion(fmt)", "")
              r = msg1 a
               <> fixLite opts a t1
+              <> "\n"
               <> outmsg "Step 2. Success Boolean Check(op)"
               <> prtTreePure opts t2
+              <> "\n"
               <> outmsg m
               <> fixLite opts () t3
          in mkMsg3 m n r (t3 ^. root . pBool)

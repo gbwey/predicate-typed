@@ -45,6 +45,8 @@ module Predicate.Util (
   , _PresentT
   , _BoolT
   , _BoolTBool
+  , _TrueT
+  , _FalseT
 
  -- ** PE
   , BoolP(..)
@@ -270,7 +272,7 @@ import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import Data.Containers.ListUtils (nubOrd)
 import Data.Char (isSpace)
-import qualified Safe (fromJustNote, headNote)
+import qualified Safe (initSafe, fromJustNote, headNote)
 import Control.Monad (ap)
 import Data.Bool (bool)
 -- $setup
@@ -1255,7 +1257,7 @@ showImpl :: POpts
 showImpl o =
   case oDisp o of
     Unicode -> drawTreeU
-    Ansi -> drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
+    Ansi -> Safe.initSafe . drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
 
 -- | render numbered tree
 fixit :: ((Int, x), TT a) -> TT a
@@ -2069,7 +2071,7 @@ verboseList o tt
 
 -- https://github.com/haskell/containers/pull/344
 drawTreeU :: Tree String -> String
-drawTreeU  = unlines . drawU
+drawTreeU  = intercalate "\n" . drawU
 
 drawU :: Tree String -> [String]
 drawU (Node x ts0) = x : drawSubTrees ts0
@@ -2108,3 +2110,30 @@ _BoolTBool =
                        PresentT False -> Just False
                        _ -> Nothing
 
+-- | prism for PresentT True
+--
+-- >>> PresentT True ^? _TrueT
+-- Just ()
+--
+-- >>> PresentT False ^? _TrueT
+-- Nothing
+--
+_TrueT :: a ~ Bool => Prism' (BoolT a) ()
+_TrueT =
+  prism' (const (PresentT True)) $ \case
+                       PresentT True -> Just ()
+                       _ -> Nothing
+
+-- | prism for PresentT False
+--
+-- >>> PresentT False ^? _FalseT
+-- Just ()
+--
+-- >>> PresentT True ^? _FalseT
+-- Nothing
+--
+_FalseT :: a ~ Bool => Prism' (BoolT a) ()
+_FalseT =
+  prism' (const (PresentT False)) $ \case
+                       PresentT False -> Just ()
+                       _ -> Nothing

@@ -158,7 +158,6 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 -- +- P '10
 -- |
 -- `- P '14
--- <BLANKLINE>
 --
 instance ( RefinedC opts p a
          , FromJSON a
@@ -195,7 +194,6 @@ instance ( RefinedC opts p a
 -- `- P ReadP Day 2019-06-01
 --    |
 --    `- P '"2019-06-01"
--- <BLANKLINE>
 --
 instance ( RefinedC opts p a
          , Binary a
@@ -359,8 +357,8 @@ unsafeRefined' a =
                 bp = colorBoolTBool o (_ttBoolT tt)
             in case oDebug o of
                  DZero -> error bp
-                 DLite -> error $ bp ++ "\n" ++ s
-                 _ -> error $ bp ++ "\n" ++ s
+                 DLite -> error $ bp ++ nullIf "\n" s
+                 _ -> error $ bp ++ nullIf "\n" s
 
 replaceOpt :: forall (opts :: Opt) opt0 p a . Refined opt0 p a -> Refined opts p a
 replaceOpt = coerce
