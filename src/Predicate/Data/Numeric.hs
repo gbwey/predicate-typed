@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -74,6 +75,7 @@ module Predicate.Data.Numeric (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Ordering (type (==))
 import GHC.TypeLits (Nat,KnownNat)
@@ -111,34 +113,34 @@ instance ( Num (PP t a)
       Left e -> e
       Right n ->
         let b = fromInteger (fromIntegral n)
-        in mkNode opts (PresentT b) (msg0 <> " " <> showL opts b) [hh nn]
+        in mkNode opts (Val b) (msg0 <> " " <> showL opts b) [hh nn]
 
 -- | 'fromInteger' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(FromInteger (SG.Sum _)) 23
--- PresentT (Sum {getSum = 23})
+-- Val (Sum {getSum = 23})
 --
 -- >>> pz @(44 >> FromInteger Rational) 12
--- PresentT (44 % 1)
+-- Val (44 % 1)
 --
 -- >>> pz @(FromInteger Rational) 12
--- PresentT (12 % 1)
+-- Val (12 % 1)
 --
 -- >>> pl @((Lift (FromInteger _) 12 &&& Id) >> Fst + Snd) (SG.Min 7)
 -- Present Min {getMin = 19} ((>>) Min {getMin = 19} | {getMin = 19})
--- PresentT (Min {getMin = 19})
+-- Val (Min {getMin = 19})
 --
 -- >>> pl @((Lift (FromInteger _) 12 &&& Id) >> SapA) (SG.Product 7)
 -- Present Product {getProduct = 84} ((>>) Product {getProduct = 84} | {getProduct = 84})
--- PresentT (Product {getProduct = 84})
+-- Val (Product {getProduct = 84})
 --
 -- >>> pl @(Fst >> FromInteger (SG.Sum _)) (3,"A")
 -- Present Sum {getSum = 3} ((>>) Sum {getSum = 3} | {getSum = 3})
--- PresentT (Sum {getSum = 3})
+-- Val (Sum {getSum = 3})
 --
 -- >>> pl @(Lift (FromInteger DiffTime) 123) 'x'
 -- Present 123s ((>>) 123s | {FromInteger 123s})
--- PresentT 123s
+-- Val 123s
 --
 data FromInteger (t :: Type)
 type FromIntegerT (t :: Type) = FromInteger' (Hole t) Id
@@ -151,7 +153,7 @@ instance P (FromIntegerT t) x => P (FromInteger t) x where
 -- | 'fromIntegral' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(FromIntegral (SG.Sum _)) 23
--- PresentT (Sum {getSum = 23})
+-- Val (Sum {getSum = 23})
 data FromIntegral' t n
 
 instance ( Num (PP t a)
@@ -168,7 +170,7 @@ instance ( Num (PP t a)
       Left e -> e
       Right n ->
         let b = fromIntegral n
-        in mkNode opts (PresentT b) (show01 opts msg0 b n) [hh nn]
+        in mkNode opts (Val b) (show01 opts msg0 b n) [hh nn]
 
 data FromIntegral (t :: Type)
 type FromIntegralT (t :: Type) = FromIntegral' (Hole t) Id
@@ -180,23 +182,23 @@ instance P (FromIntegralT t) x => P (FromIntegral t) x where
 -- | 'toRational' function
 --
 -- >>> pz @(ToRational Id) 23.5
--- PresentT (47 % 2)
+-- Val (47 % 2)
 --
 -- >>> pl @((ToRational 123 &&& Id) >> Fst + Snd) 4.2
 -- Present 636 % 5 ((>>) 636 % 5 | {123 % 1 + 21 % 5 = 636 % 5})
--- PresentT (636 % 5)
+-- Val (636 % 5)
 --
 -- >>> pl @(Fst >= Snd || Snd > 23 || 12 -% 5 <= ToRational Fst) (12,13)
 -- True (False || True)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(ToRational 14) ()
 -- Present 14 % 1 (ToRational 14 % 1 | 14)
--- PresentT (14 % 1)
+-- Val (14 % 1)
 --
 -- >>> pl @(ToRational 5 / ToRational 3) 'x'
 -- Present 5 % 3 (5 % 1 / 3 % 1 = 5 % 3)
--- PresentT (5 % 3)
+-- Val (5 % 3)
 --
 
 data ToRational p
@@ -215,13 +217,13 @@ instance ( a ~ PP p x
       Left e -> e
       Right a ->
         let r = toRational a
-        in mkNode opts (PresentT r) (show01 opts msg0 r a) [hh pp]
+        in mkNode opts (Val r) (show01 opts msg0 r a) [hh pp]
 
 -- | 'fromRational' function where you need to provide the type @t@ of the result
 --
 -- >>> pl @(FromRational' Fst Snd) (1::Float,2 % 5)
 -- Present 0.4 (FromRational 0.4 | 2 % 5)
--- PresentT 0.4
+-- Val 0.4
 --
 data FromRational' t p
 
@@ -238,16 +240,16 @@ instance ( P p a
       Left e -> e
       Right p ->
         let b = fromRational @(PP t a) p
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
 
 -- | 'fromRational' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(FromRational Rational) 23.5
--- PresentT (47 % 2)
+-- Val (47 % 2)
 --
 -- >>> pl @(FromRational Float) (4 % 5)
 -- Present 0.8 (FromRational 0.8 | 4 % 5)
--- PresentT 0.8
+-- Val 0.8
 --
 data FromRational (t :: Type)
 type FromRationalT (t :: Type) = FromRational' (Hole t) Id
@@ -260,11 +262,11 @@ instance P (FromRationalT t) x => P (FromRational t) x where
 --
 -- >>> pl @(Truncate' (Fst >> Unproxy) Snd) (Proxy @Integer,2.3)
 -- Present 2 (Truncate 2 | 2.3)
--- PresentT 2
+-- Val 2
 --
 -- >>> pl @(Truncate' Fst Snd) (1::Int,2.3)
 -- Present 2 (Truncate 2 | 2.3)
--- PresentT 2
+-- Val 2
 --
 data Truncate' t p
 
@@ -282,12 +284,12 @@ instance ( P p x
       Left e -> e
       Right p ->
         let b = truncate p
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
 
 -- | 'truncate' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(Truncate Int) (23 % 5)
--- PresentT 4
+-- Val 4
 --
 data Truncate (t :: Type)
 type TruncateT (t :: Type) = Truncate' (Hole t) Id
@@ -313,12 +315,12 @@ instance ( P p x
       Left e -> e
       Right p ->
         let b = ceiling p
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
 
 -- | 'ceiling' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(Ceiling Int) (23 % 5)
--- PresentT 5
+-- Val 5
 --
 data Ceiling (t :: Type)
 type CeilingT (t :: Type) = Ceiling' (Hole t) Id
@@ -344,12 +346,12 @@ instance ( P p x
       Left e -> e
       Right p ->
         let b = floor p
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
 
 -- | 'floor' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(Floor Int) (23 % 5)
--- PresentT 4
+-- Val 4
 --
 data Floor (t :: Type)
 type FloorT (t :: Type) = Floor' (Hole t) Id
@@ -391,7 +393,7 @@ instance P (MultT p q) x => P (p * q) x where
 -- | similar to 'GHC.Real.(^)'
 --
 -- >>> pz @(Fst ^ Snd) (10,4)
--- PresentT 10000
+-- Val 10000
 --
 data p ^ q
 infixr 8 ^
@@ -415,17 +417,17 @@ instance ( P p a
           Left e -> e
           Right q ->
                 let hhs = [hh pp, hh qq]
-                in if q < 0 then mkNode opts (FailT (msg0 <> " negative exponent")) "" hhs
+                in if q < 0 then mkNode opts (Fail (msg0 <> " negative exponent")) "" hhs
                    else let d = p ^ q
-                        in mkNode opts (PresentT d) (showL opts p <> " ^ " <> showL opts q <> " = " <> showL opts d) hhs
+                        in mkNode opts (Val d) (showL opts p <> " ^ " <> showL opts q <> " = " <> showL opts d) hhs
 
 -- | similar to 'GHC.Float.(**)'
 --
 -- >>> pz @(Fst ** Snd) (10,4)
--- PresentT 10000.0
+-- Val 10000.0
 --
 -- >>> pz @'(IsPrime,Id ^ 3,(FromIntegral _) ** (Lift (FromRational _) (1 % 2))) 4
--- PresentT (False,64,2.0)
+-- Val (False,64,2.0)
 --
 data p ** q
 infixr 8 **
@@ -445,15 +447,15 @@ instance ( PP p a ~ PP q a
       Left e -> e
       Right (p,q,pp,qq) ->
          let hhs = [hh pp, hh qq]
-         in if q < 0 then mkNode opts (FailT (msg0 <> " negative exponent")) "" hhs
-            else if p == 0 && q == 0 then mkNode opts (FailT (msg0 <> " zero/zero")) "" hhs
+         in if q < 0 then mkNode opts (Fail (msg0 <> " negative exponent")) "" hhs
+            else if p == 0 && q == 0 then mkNode opts (Fail (msg0 <> " zero/zero")) "" hhs
             else let d = p ** q
-                in mkNode opts (PresentT d) (showL opts p <> " ** " <> showL opts q <> " = " <> showL opts d) hhs
+                in mkNode opts (Val d) (showL opts p <> " ** " <> showL opts q <> " = " <> showL opts d) hhs
 
 -- | similar to 'logBase'
 --
 -- >>> pz @(Fst `LogBase` Snd >> Truncate Int) (10,12345)
--- PresentT 4
+-- Val 4
 --
 data LogBase p q
 instance ( PP p a ~ PP q a
@@ -471,9 +473,9 @@ instance ( PP p a ~ PP q a
       Left e -> e
       Right (p,q,pp,qq) ->
          let hhs = [hh pp, hh qq]
-         in if p <= 0 then mkNode opts (FailT (msg0 <> " non-positive base")) "" hhs
+         in if p <= 0 then mkNode opts (Fail (msg0 <> " non-positive base")) "" hhs
             else let d = logBase p q
-                 in mkNode opts (PresentT d) (msg0 <> " " <> showL opts p <> " " <> showL opts q <> " = " <> showL opts d) hhs
+                 in mkNode opts (Val d) (msg0 <> " " <> showL opts p <> " " <> showL opts q <> " = " <> showL opts d) hhs
 
 class GetBinOp (k :: BinOp) where
   getBinOp :: (Num a, a ~ b) => (String, a -> b -> a)
@@ -488,10 +490,10 @@ instance GetBinOp 'BAdd where
 -- | addition, multiplication and subtraction
 --
 -- >>> pz @(Fst * Snd) (13,5)
--- PresentT 65
+-- Val 65
 --
 -- >>> pz @(Fst + 4 * Length Snd - 4) (3,"hello")
--- PresentT 19
+-- Val 19
 --
 data Bin (op :: BinOp) p q
 
@@ -510,18 +512,18 @@ instance ( GetBinOp op
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = p `f` q
-        in mkNode opts (PresentT d) (showL opts p <> " " <> s <> " " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
+        in mkNode opts (Val d) (showL opts p <> " " <> s <> " " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
 
 -- | fractional division
 --
 -- >>> pz @(Fst / Snd) (13,2)
--- PresentT 6.5
+-- Val 6.5
 --
 -- >>> pz @(ToRational 13 / Id) 0
--- FailT "(/) zero denominator"
+-- Fail "(/) zero denominator"
 --
 -- >>> pz @(12 % 7 / 14 % 5 + Id) 12.4
--- PresentT (3188 % 245)
+-- Val (3188 % 245)
 --
 data p / q
 infixl 7 /
@@ -541,54 +543,54 @@ instance ( PP p a ~ PP q a
       Left e -> e
       Right (p,q,pp,qq)
          | q == 0 -> let msg1 = msg0 <> " zero denominator"
-                     in mkNode opts (FailT msg1) "" [hh pp, hh qq]
+                     in mkNode opts (Fail msg1) "" [hh pp, hh qq]
          | otherwise ->
             let d = p / q
-            in mkNode opts (PresentT d) (showL opts p <> " / " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
+            in mkNode opts (Val d) (showL opts p <> " / " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
 
 -- | creates a 'Rational' value
 --
 -- >>> pz @(Id < 21 % 5) (-3.1)
--- PresentT True
+-- Val True
 --
 -- >>> pz @(Id < 21 % 5) 4.5
--- PresentT False
+-- Val False
 --
 -- >>> pz @(Fst % Snd) (13,2)
--- PresentT (13 % 2)
+-- Val (13 % 2)
 --
 -- >>> pz @(13 % Id) 0
--- FailT "(%) zero denominator"
+-- Fail "(%) zero denominator"
 --
 -- >>> pz @(4 % 3 + 5 % 7) "asfd"
--- PresentT (43 % 21)
+-- Val (43 % 21)
 --
 -- >>> pz @(4 -% 7 * 5 -% 3) "asfd"
--- PresentT (20 % 21)
+-- Val (20 % 21)
 --
 -- >>> pz @(Negate (14 % 3)) ()
--- PresentT ((-14) % 3)
+-- Val ((-14) % 3)
 --
 -- >>> pz @(14 % 3) ()
--- PresentT (14 % 3)
+-- Val (14 % 3)
 --
 -- >>> pz @(Negate (14 % 3) ==! Lift (FromIntegral _) (Negate 5)) ()
--- PresentT GT
+-- Val GT
 --
 -- >>> pz @(14 -% 3 ==! 5 -% 1) "aa"
--- PresentT GT
+-- Val GT
 --
 -- >>> pz @(Negate (14 % 3) ==! Negate 5 % 2) ()
--- PresentT LT
+-- Val LT
 --
 -- >>> pz @(14 -% 3 * 5 -% 1) ()
--- PresentT (70 % 3)
+-- Val (70 % 3)
 --
 -- >>> pz @(14 % 3 ==! 5 % 1) ()
--- PresentT LT
+-- Val LT
 --
 -- >>> pz @(15 % 3 / 4 % 2) ()
--- PresentT (5 % 2)
+-- Val (5 % 2)
 --
 data p % q
 infixl 8 %
@@ -609,39 +611,39 @@ instance ( Integral (PP p x)
       Left e -> e
       Right (p,q,pp,qq)
          | q == 0 -> let msg1 = msg0 <> " zero denominator"
-                     in mkNode opts (FailT msg1) "" [hh pp, hh qq]
+                     in mkNode opts (Fail msg1) "" [hh pp, hh qq]
          | otherwise ->
             let z@(p1,q1) = (fromIntegral p, fromIntegral q)
                 d@(dn :% dd) = uncurry (%) z
                 zz = if dn == p1 && dd == q1 then ""
                      else litVerbose opts " | " (show p <> " % " <> show q)
-            in mkNode opts (PresentT d) (showL opts d <> zz) [hh pp, hh qq]
+            in mkNode opts (Val d) (showL opts d <> zz) [hh pp, hh qq]
 
 -- | negate a ratio
 --
 -- >>> pl @'[1 % 1 ,3 -% 2,3 -% 1] ()
 -- Present [1 % 1,(-3) % 2,(-3) % 1] ('[1 % 1,(-3) % 2,(-3) % 1] (1 % 1) | ())
--- PresentT [1 % 1,(-3) % 2,(-3) % 1]
+-- Val [1 % 1,(-3) % 2,(-3) % 1]
 --
 -- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Floor _) Id) ()
 -- Present [1,-5,5,-1] ((>>) [1,-5,5,-1] | {Map [1,-5,5,-1] | [1 % 1,(-33) % 7,21 % 4,(-1) % 1]})
--- PresentT [1,-5,5,-1]
+-- Val [1,-5,5,-1]
 --
 -- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Ceiling _) Id) ()
 -- Present [1,-4,6,-1] ((>>) [1,-4,6,-1] | {Map [1,-4,6,-1] | [1 % 1,(-33) % 7,21 % 4,(-1) % 1]})
--- PresentT [1,-4,6,-1]
+-- Val [1,-4,6,-1]
 --
 -- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Truncate _) Id) ()
 -- Present [1,-4,5,-1] ((>>) [1,-4,5,-1] | {Map [1,-4,5,-1] | [1 % 1,(-33) % 7,21 % 4,(-1) % 1]})
--- PresentT [1,-4,5,-1]
+-- Val [1,-4,5,-1]
 --
 -- >>> pl @(5 % 1 / 3 -% 1) 'x'
 -- Present (-5) % 3 (5 % 1 / (-3) % 1 = (-5) % 3)
--- PresentT ((-5) % 3)
+-- Val ((-5) % 3)
 --
 -- >>> pl @(5 -% 1 / Fst) (3,'x')
 -- Present (-5) % 3 ((-5) % 1 / 3 % 1 = (-5) % 3)
--- PresentT ((-5) % 3)
+-- Val ((-5) % 3)
 --
 data p -% q -- = Negate (p % q)
 infixl 8 -%
@@ -655,19 +657,19 @@ instance P (NegateRatioT p q) x => P (p -% q) x where
 -- | similar to 'negate'
 --
 -- >>> pz @(Negate Id) 14
--- PresentT (-14)
+-- Val (-14)
 --
 -- >>> pz @(Negate (Fst * Snd)) (14,3)
--- PresentT (-42)
+-- Val (-42)
 --
 -- >>> pz @(Negate (15 -% 4)) "abc"
--- PresentT (15 % 4)
+-- Val (15 % 4)
 --
 -- >>> pz @(Negate (15 % 3)) ()
--- PresentT ((-5) % 1)
+-- Val ((-5) % 1)
 --
 -- >>> pz @(Negate (Fst % Snd)) (14,3)
--- PresentT ((-14) % 3)
+-- Val ((-14) % 3)
 --
 data Negate p
 
@@ -683,22 +685,22 @@ instance ( Num (PP p x)
       Left e -> e
       Right p ->
         let d = negate p
-        in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
+        in mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
 
 
 -- | similar to 'abs'
 --
 -- >>> pz @(Abs Id) (-14)
--- PresentT 14
+-- Val 14
 --
 -- >>> pz @(Abs Snd) ("xx",14)
--- PresentT 14
+-- Val 14
 --
 -- >>> pz @(Abs Id) 0
--- PresentT 0
+-- Val 0
 --
 -- >>> pz @(Abs (Negate 44)) "aaa"
--- PresentT 44
+-- Val 44
 --
 data Abs p
 
@@ -714,15 +716,15 @@ instance ( Num (PP p x)
       Left e -> e
       Right p ->
         let d = abs p
-        in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
+        in mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
 
 -- | similar to 'div'
 --
 -- >>> pz @(Div Fst Snd) (10,4)
--- PresentT 2
+-- Val 2
 --
 -- >>> pz @(Div Fst Snd) (10,0)
--- FailT "Div zero denominator"
+-- Fail "Div zero denominator"
 --
 data Div p q
 instance ( PP p a ~ PP q a
@@ -740,18 +742,18 @@ instance ( PP p a ~ PP q a
       Right (p,q,pp,qq) ->
          let hhs = [hh pp, hh qq]
          in case q of
-              0 -> mkNode opts (FailT (msg0 <> " zero denominator")) "" hhs
+              0 -> mkNode opts (Fail (msg0 <> " zero denominator")) "" hhs
               _ -> let d = p `div` q
-                   in mkNode opts (PresentT d) (showL opts p <> " `div` " <> showL opts q <> " = " <> showL opts d) hhs
+                   in mkNode opts (Val d) (showL opts p <> " `div` " <> showL opts q <> " = " <> showL opts d) hhs
 
 
 -- | similar to 'GHC.Real.mod'
 --
 -- >>> pz @(Mod Fst Snd) (10,3)
--- PresentT 1
+-- Val 1
 --
 -- >>> pz @(Mod Fst Snd) (10,0)
--- FailT "Mod zero denominator"
+-- Fail "Mod zero denominator"
 --
 data Mod p q
 instance ( PP p a ~ PP q a
@@ -769,42 +771,42 @@ instance ( PP p a ~ PP q a
       Right (p,q,pp,qq) ->
          let hhs = [hh pp, hh qq]
          in case q of
-              0 -> mkNode opts (FailT (msg0 <> " zero denominator")) "" hhs
+              0 -> mkNode opts (Fail (msg0 <> " zero denominator")) "" hhs
               _ -> let d = p `mod` q
-                   in mkNode opts (PresentT d) (showL opts p <> " `mod` " <> showL opts q <> " = " <> showL opts d) hhs
+                   in mkNode opts (Val d) (showL opts p <> " `mod` " <> showL opts q <> " = " <> showL opts d) hhs
 
 -- | similar to 'divMod'
 --
 -- >>> pz @(DivMod Fst Snd) (10,3)
--- PresentT (3,1)
+-- Val (3,1)
 --
 -- >>> pz @(DivMod Fst Snd) (10,-3)
--- PresentT (-4,-2)
+-- Val (-4,-2)
 --
 -- >>> pz @(DivMod Fst Snd) (-10,3)
--- PresentT (-4,2)
+-- Val (-4,2)
 --
 -- >>> pz @(DivMod Fst Snd) (-10,-3)
--- PresentT (3,-1)
+-- Val (3,-1)
 --
 -- >>> pz @(DivMod Fst Snd) (10,0)
--- FailT "DivMod zero denominator"
+-- Fail "DivMod zero denominator"
 --
 -- >>> pl @(DivMod (Negate Id) 7) 23
 -- Present (-4,5) (-23 `divMod` 7 = (-4,5))
--- PresentT (-4,5)
+-- Val (-4,5)
 --
 -- >>> pl @(DivMod Fst Snd) (10,-3)
 -- Present (-4,-2) (10 `divMod` -3 = (-4,-2))
--- PresentT (-4,-2)
+-- Val (-4,-2)
 --
 -- >>> pl @(DivMod Fst Snd) (10,0)
 -- Error DivMod zero denominator
--- FailT "DivMod zero denominator"
+-- Fail "DivMod zero denominator"
 --
 -- >>> pl @(DivMod (9 - Fst) (Snd >> Last)) (10,[12,13])
 -- Present (-1,12) (-1 `divMod` 13 = (-1,12))
--- PresentT (-1,12)
+-- Val (-1,12)
 --
 
 data DivMod p q
@@ -824,34 +826,34 @@ instance ( PP p a ~ PP q a
       Right (p,q,pp,qq) ->
         let hhs = [hh pp, hh qq]
         in case q of
-             0 -> mkNode opts (FailT (msg0 <> " zero denominator")) "" hhs
+             0 -> mkNode opts (Fail (msg0 <> " zero denominator")) "" hhs
              _ -> let d = p `divMod` q
-                  in mkNode opts (PresentT d) (showL opts p <> " `divMod` " <> showL opts q <> " = " <> showL opts d) hhs
+                  in mkNode opts (Val d) (showL opts p <> " `divMod` " <> showL opts q <> " = " <> showL opts d) hhs
 
 -- | similar to 'quotRem'
 --
 -- >>> pz @(QuotRem Fst Snd) (10,3)
--- PresentT (3,1)
+-- Val (3,1)
 --
 -- >>> pz @(QuotRem Fst Snd) (10,-3)
--- PresentT (-3,1)
+-- Val (-3,1)
 --
 -- >>> pz @(QuotRem Fst Snd) (-10,-3)
--- PresentT (3,-1)
+-- Val (3,-1)
 --
 -- >>> pz @(QuotRem Fst Snd) (-10,3)
--- PresentT (-3,-1)
+-- Val (-3,-1)
 --
 -- >>> pz @(QuotRem Fst Snd) (10,0)
--- FailT "QuotRem zero denominator"
+-- Fail "QuotRem zero denominator"
 --
 -- >>> pl @(QuotRem (Negate Id) 7) 23
 -- Present (-3,-2) (-23 `quotRem` 7 = (-3,-2))
--- PresentT (-3,-2)
+-- Val (-3,-2)
 --
 -- >>> pl @(QuotRem Fst Snd) (10,-3)
 -- Present (-3,1) (10 `quotRem` -3 = (-3,1))
--- PresentT (-3,1)
+-- Val (-3,1)
 --
 
 data QuotRem p q
@@ -871,9 +873,9 @@ instance ( PP p a ~ PP q a
       Right (p,q,pp,qq) ->
         let hhs = [hh pp, hh qq]
         in case q of
-             0 -> mkNode opts (FailT (msg0 <> " zero denominator")) "" hhs
+             0 -> mkNode opts (Fail (msg0 <> " zero denominator")) "" hhs
              _ -> let d = p `quotRem` q
-                  in mkNode opts (PresentT d) (showL opts p <> " `quotRem` " <> showL opts q <> " = " <> showL opts d) hhs
+                  in mkNode opts (Val d) (showL opts p <> " `quotRem` " <> showL opts q <> " = " <> showL opts d) hhs
 
 data Quot p q
 type QuotT p q = QuotRem p q >> Fst
@@ -892,10 +894,10 @@ instance P (RemT p q) x => P (Rem p q) x where
 -- | similar to 'even'
 --
 -- >>> pz @(Map Even Id) [9,-4,12,1,2,3]
--- PresentT [False,True,True,False,True,False]
+-- Val [False,True,True,False,True,False]
 --
 -- >>> pz @(Map '(Even,Odd) Id) [9,-4,12,1,2,3]
--- PresentT [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
+-- Val [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
 --
 data Even
 type EvenT = Mod Id 2 == 0
@@ -914,13 +916,13 @@ instance P OddT x => P Odd x where
 -- | similar to 'signum'
 --
 -- >>> pz @(Signum Id) (-14)
--- PresentT (-1)
+-- Val (-1)
 --
 -- >>> pz @(Signum Id) 14
--- PresentT 1
+-- Val 1
 --
 -- >>> pz @(Signum Id) 0
--- PresentT 0
+-- Val 0
 --
 data Signum p
 
@@ -936,7 +938,7 @@ instance ( Num (PP p x)
       Left e -> e
       Right p ->
         let d = signum p
-        in mkNode opts (PresentT d) (show01 opts msg0 d p) [hh pp]
+        in mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
 
 -- supports negative numbers unlike readInt
 data ReadBase' t (n :: Nat) p
@@ -966,54 +968,54 @@ instance ( Typeable (PP t x)
             ((`elem` xs) . toLower)
             (Safe.fromJustNote "ReadBase" . (`elemIndex` xs) . toLower)
             p1 of
-             [(b,"")] -> mkNode opts (PresentT (ff b)) (msg0 <> " " <> showL opts (ff b) <> showVerbose opts " | " p) [hh pp]
-             o -> mkNode opts (FailT ("invalid base " <> show n)) (msg0 <> " as=" <> p <> " err=" <> showL opts o) [hh pp]
+             [(b,"")] -> mkNode opts (Val (ff b)) (msg0 <> " " <> showL opts (ff b) <> showVerbose opts " | " p) [hh pp]
+             o -> mkNode opts (Fail ("invalid base " <> show n)) (msg0 <> " as=" <> p <> " err=" <> showL opts o) [hh pp]
 
 -- | Read a number using base 2 through a maximum of 36
 --
 -- >>> pz @(ReadBase Int 16) "00feD"
--- PresentT 4077
+-- Val 4077
 --
 -- >>> pz @(ReadBase Int 16) "-ff"
--- PresentT (-255)
+-- Val (-255)
 --
 -- >>> pz @(ReadBase Int 2) "10010011"
--- PresentT 147
+-- Val 147
 --
 -- >>> pz @(ReadBase Int 8) "Abff"
--- FailT "invalid base 8"
+-- Fail "invalid base 8"
 --
 -- >>> pl @(ReadBase Int 16 >> GuardSimple (Id > 0xffff) >> ShowBase 16) "12344"
 -- Present "12344" ((>>) "12344" | {ShowBase(16) 12344 | 74564})
--- PresentT "12344"
+-- Val "12344"
 --
 -- >>> :set -XBinaryLiterals
 -- >>> pz @(ReadBase Int 16 >> GuardSimple (Id > 0b10011111) >> ShowBase 16) "7f"
--- FailT "(127 > 159)"
+-- Fail "(127 > 159)"
 --
 -- >>> pl @(ReadBase Int 16) "fFe0"
 -- Present 65504 (ReadBase(Int,16) 65504 | "fFe0")
--- PresentT 65504
+-- Val 65504
 --
 -- >>> pl @(ReadBase Int 16) "-ff"
 -- Present -255 (ReadBase(Int,16) -255 | "-ff")
--- PresentT (-255)
+-- Val (-255)
 --
 -- >>> pl @(ReadBase Int 16) "ff"
 -- Present 255 (ReadBase(Int,16) 255 | "ff")
--- PresentT 255
+-- Val 255
 --
 -- >>> pl @(ReadBase Int 22) "zzz"
 -- Error invalid base 22 (ReadBase(Int,22) as=zzz err=[])
--- FailT "invalid base 22"
+-- Fail "invalid base 22"
 --
 -- >>> pl @((ReadBase Int 16 &&& Id) >> First (ShowBase 16)) "fFe0"
 -- Present ("ffe0","fFe0") ((>>) ("ffe0","fFe0") | {(***) ("ffe0","fFe0") | (65504,"fFe0")})
--- PresentT ("ffe0","fFe0")
+-- Val ("ffe0","fFe0")
 --
 -- >>> pl @(ReadBase Int 2) "101111"
 -- Present 47 (ReadBase(Int,2) 47 | "101111")
--- PresentT 47
+-- Val 47
 --
 data ReadBase (t :: Type) (n :: Nat)
 type ReadBaseT (t :: Type) (n :: Nat) = ReadBase' (Hole t) n Id
@@ -1032,28 +1034,28 @@ getValidBase n =
 -- | Display a number at base 2 to 36, similar to 'Numeric.showIntAtBase' but passes the sign through
 --
 -- >>> pz @(ShowBase 16) 4077
--- PresentT "fed"
+-- Val "fed"
 --
 -- >>> pz @(ShowBase 16) (-255)
--- PresentT "-ff"
+-- Val "-ff"
 --
 -- >>> pz @(ShowBase 2) 147
--- PresentT "10010011"
+-- Val "10010011"
 --
 -- >>> pz @(Lift (ShowBase 2) (Negate 147)) "whatever"
--- PresentT "-10010011"
+-- Val "-10010011"
 --
 -- >>> pl @(ShowBase 16) (-123)
 -- Present "-7b" (ShowBase(16) -7b | -123)
--- PresentT "-7b"
+-- Val "-7b"
 --
 -- >>> pl @(ShowBase 16) 123
 -- Present "7b" (ShowBase(16) 7b | 123)
--- PresentT "7b"
+-- Val "7b"
 --
 -- >>> pl @(ShowBase 16) 65504
 -- Present "ffe0" (ShowBase(16) ffe0 | 65504)
--- PresentT "ffe0"
+-- Val "ffe0"
 --
 
 data ShowBase (n :: Nat)
@@ -1072,13 +1074,13 @@ instance ( 2 GL.<= n
         p = fromIntegral x
         (ff,a') = if p < 0 then (('-':), abs p) else (id,p)
         b = Numeric.showIntAtBase (fromIntegral n) (xs !!) a' ""
-    in pure $ mkNode opts (PresentT (ff b)) (msg0 <> " " <> litL opts (ff b) <> showVerbose opts " | " p) []
+    in pure $ mkNode opts (Val (ff b)) (msg0 <> " " <> litL opts (ff b) <> showVerbose opts " | " p) []
 
 -- | Display a number at base >= 2 but just show as a list of ints: ignores the sign
 --
 -- >>> pl @(ShowBaseN 16 Id) (256*256*2+256*14+16*7+11)
 -- Present [2,0,14,7,11] (ShowBaseN | 16 | 134779)
--- PresentT [2,0,14,7,11]
+-- Val [2,0,14,7,11]
 --
 data ShowBaseN n p
 
@@ -1097,15 +1099,15 @@ instance ( PP p x ~ a
       Left e -> e
       Right (fromIntegral -> n,fromIntegral -> p,nn,pp) ->
          let hhs = [hh nn, hh pp]
-         in if n < 2 then mkNode opts (FailT (msg0 <> " base must be greater than 1")) "" hhs
+         in if n < 2 then mkNode opts (Fail (msg0 <> " base must be greater than 1")) "" hhs
             else let xs = reverse $ unfoldr (\s -> if s<1 then Nothing else Just (swapC (divMod s n))) (abs p)
-                 in mkNode opts (PresentT xs) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " p) hhs
+                 in mkNode opts (Val xs) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " p) hhs
 
 -- | convert to bits
 --
 -- >>> pl @(Bits 123 >> UnShowBaseN 2) ()
 -- Present 123 ((>>) 123 | {UnShowBaseN | 2 | [1,1,1,1,0,1,1]})
--- PresentT 123
+-- Val 123
 --
 data Bits p
 type BitsT p = ShowBaseN 2 p
@@ -1118,19 +1120,19 @@ instance P (BitsT p) x => P (Bits p) x where
 -- | reverse 'ShowBaseN'
 --
 -- >>> pz @(UnShowBaseN 2) [1,0,0,1,0]
--- PresentT 18
+-- Val 18
 --
 -- >>> pz @(UnShowBaseN 2) [1,1,1]
--- PresentT 7
+-- Val 7
 --
 -- >>> pz @(UnShowBaseN 16) [7,0,3,1]
--- PresentT 28721
+-- Val 28721
 --
 -- >>> pz @(UnShowBaseN 16) [0]
--- PresentT 0
+-- Val 0
 --
 -- >>> pz @(UnShowBaseN 16) []
--- PresentT 0
+-- Val 0
 --
 data UnShowBaseN n
 
@@ -1149,36 +1151,36 @@ instance ( x ~ [a]
       Right (fromIntegral -> n) ->
          let xs = map fromIntegral x
              hhs = [hh nn]
-         in if n < 2 then mkNode opts (FailT (msg0 <> " base must be greater than 1")) "" hhs
+         in if n < 2 then mkNode opts (Fail (msg0 <> " base must be greater than 1")) "" hhs
             else let b = snd $ foldr (\a (m,tot) -> (m*n, a*m+tot)) (1,0) xs
-                 in mkNode opts (PresentT b) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " xs) hhs
+                 in mkNode opts (Val b) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " xs) hhs
 
 
 -- | calculate the amount to roundup to next n
 --
 -- >>> pl @(RoundUp Fst Snd) (3,9)
 -- Present 0 (RoundUp 3 `mod` 3 = 0)
--- PresentT 0
+-- Val 0
 --
 -- >>> pl @(RoundUp Fst Snd) (3,10)
 -- Present 2 (RoundUp 2 `mod` 3 = 2)
--- PresentT 2
+-- Val 2
 --
 -- >>> pl @(RoundUp Fst Snd) (3,11)
 -- Present 1 (RoundUp 1 `mod` 3 = 1)
--- PresentT 1
+-- Val 1
 --
 -- >>> pl @(RoundUp Fst Snd) (3,12)
 -- Present 0 (RoundUp 3 `mod` 3 = 0)
--- PresentT 0
+-- Val 0
 --
 -- >>> pl @(RoundUp 3 0) ()
 -- Present 0 (RoundUp 3 `mod` 3 = 0)
--- PresentT 0
+-- Val 0
 --
 -- >>> pl @(RoundUp 0 10) ()
 -- Error Mod zero denominator (RoundUp Mod)
--- FailT "Mod zero denominator"
+-- Fail "Mod zero denominator"
 --
 data RoundUp n p
 type RoundUpT n p = (n - p `Mod` n) `Mod` n

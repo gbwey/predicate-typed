@@ -216,7 +216,6 @@ tst0a =
   , newRefined2P (daten @OL) "12/02/19" @?= Right (unsafeRefined2 (fromGregorian 2019 12 2) "12/02/19")
   , newRefined2P (Proxy @(Luhn OL 4)) "1230" @?= Right (unsafeRefined2 [1,2,3,0] "1230")
   , newRefined2P (Proxy @(Luhn OL 6)) "123455" @?= Right (unsafeRefined2 [1,2,3,4,5,5] "123455")
---  , runIdentity (unRavelTBoolP (tst1a @OL @Identity)) @?= Right ((163,"a3"),(12,"12"))
   , test2a @?= Right (unsafeRefined2 254 "0000fe")
   , test2b @?= Right (unsafeRefined2 [123,211,122,1] "123.211.122.1")
   , test2c @?= Right (unsafeRefined2 [200,2,3,4] "200.2.3.4")
@@ -278,7 +277,7 @@ toRResults2 :: RResults2 a -> Results2 a
 toRResults2 = \case
    RF e _ -> XF e
    RTF a _ e _ -> XTF a e
-   RTFalse a _ t2 -> XTFalse a (t2 ^. root . pString)
+   RTFalse a _ t2 -> XTFalse a (t2 ^. root . peString)
    RTTrue a _ _ -> XTTrue a
 
 expect2 :: (HasCallStack, Show i, Show r, Eq i, Eq r)

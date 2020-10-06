@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators #-}
@@ -32,34 +33,35 @@
 module Predicate.Util (
   -- ** TT
     TT(..)
-  , ttBoolT
-  , ttBoolP
+  , ttVal
+  , ttValP
   , ttString
   , ttForest
-  , boolT2P
+  , _Val2P
   , topMessage
   , hasNoTree
 
- -- ** BoolT
-  , BoolT(..)
-  , _FailT
-  , _PresentT
-  , _BoolT
-  , _TrueT
-  , _FalseT
-  , _BoolTIso
+ -- ** Val
+  , Val(..)
+  , _Fail
+  , _Val
+  , _ValE
+  , _True
+  , _False
+  , _ValEither
+  , _Val2BoolP
 
  -- ** PE
   , PE(..)
-  , pBool
-  , pString
+  , peValP
+  , peString
 
- -- ** BoolP
-  , BoolP(..)
+ -- ** ValP
+  , ValP(..)
   , _FailP
   , _TrueP
   , _FalseP
-  , _PresentP
+  , _ValP
 
  -- ** create tree
   , mkNode
@@ -78,14 +80,15 @@ module Predicate.Util (
   , splitAndAlign
   , verboseList
   , fixEmptyNode
-  , fixTTBoolP
+  , fixTTValP
 
  -- ** options
   , POpts
   , Debug(..)
   , Disp(..)
+  , Color(..)
   , isVerbose
-  , colorBoolTBool
+  , colorValBool
   , setOtherEffects
   , type Color1
   , type Color2
@@ -125,8 +128,6 @@ module Predicate.Util (
   , litL
   , litBL
   , litBS
-  , nullSpace
-  , nullIf
 
  -- ** printing methods
   , prtTreePure
@@ -141,24 +142,19 @@ module Predicate.Util (
   , MonadEval(..)
   , chkSize
   , chkSize2
-  , pureTryTest
-  , pureTryTestPred
-  , unlessNull
-  , unlessNullM
   , badLength
   , showIndex
-
-  , module Predicate.Misc
 
   ) where
 import Predicate.Misc
 import GHC.TypeLits (Symbol, Nat, KnownSymbol, KnownNat)
 import Control.Lens
-import Control.Arrow
+import Control.Arrow (Arrow((&&&)), ArrowChoice(left))
 import Data.List (intercalate, unfoldr)
 import Data.Tree (drawTree, Forest, Tree(Node))
 import Data.Tree.Lens (root)
-import System.Console.Pretty
+import System.Console.Pretty (Color(..))
+import qualified System.Console.Pretty as C
 import qualified Text.Regex.PCRE.Heavy as RH
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
@@ -174,7 +170,6 @@ import Data.Monoid (Last(Last))
 import Data.Maybe (fromMaybe)
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
-import Data.Char (isSpace)
 import qualified Safe (initSafe, fromJustNote)
 import Control.Monad (ap)
 import Data.Bool (bool)
@@ -185,103 +180,97 @@ import GHC.Generics (Generic, Generic1)
 -- >>> :set -XTypeOperators
 
 -- | contains the untyped result from evaluating the expression tree
-data BoolP =
+data ValP =
     FailP !String -- ^ fails the entire evaluation
   | FalseP       -- ^ False predicate
   | TrueP        -- ^ True predicate
-  | PresentP     -- ^ Any value
+  | ValP     -- ^ Any value
   deriving stock (Show, Ord, Eq, Read, Generic)
 
-makePrisms ''BoolP
+makePrisms ''ValP
 
--- | untyped evaluation tree for final display
-data PE = PE { _pBool :: !BoolP -- ^ holds the result of running the predicate
-             , _pString :: !String -- ^ optional strings to include in the results
+-- | untyped child node for 'TT'
+data PE = PE { _peValP :: !ValP -- ^ holds the result of running the predicate
+             , _peString :: !String -- ^ optional strings to include in the results
              } deriving stock (Show, Read, Eq, Generic)
 
 makeLenses ''PE
 
--- | contains the typed result from evaluating the expression tree
-data BoolT a = FailT !String | PresentT !a
+-- | contains the typed result from evaluating the expression
+data Val a = Fail !String | Val !a
   deriving stock (Show, Eq, Ord, Read, Functor, Foldable, Traversable, Generic, Generic1)
 
-makePrisms ''BoolT
+makePrisms ''Val
 
-instance Applicative BoolT where
-  pure = PresentT
+instance Applicative Val where
+  pure = Val
   (<*>) = ap
 
-instance Monad BoolT where
+instance Monad Val where
   return = pure
-  PresentT a >>= amb = amb a
-  FailT s >>= _ = FailT s
+  Val a >>= amb = amb a
+  Fail s >>= _ = Fail s
 
--- | semigroup instance for 'BoolT'
+-- | semigroup instance for 'Val'
 --
--- >>> PresentT 123 <> (PresentT 456 <> PresentT 789) == (PresentT 123 <> PresentT 456) <> PresentT 789
+-- >>> Val 123 <> (Val 456 <> Val 789) == (Val 123 <> Val 456) <> Val 789
 -- True
 --
--- >>> PresentT True <> PresentT False
--- PresentT False
+-- >>> Val True <> Val False
+-- Val False
 --
--- >>> PresentT True <> PresentT True
--- PresentT True
+-- >>> Val True <> Val True
+-- Val True
 --
--- >>> FailT "abc" <> (PresentT True <> PresentT False) <> FailT "def"
--- FailT "abcdef"
+-- >>> Fail "abc" <> (Val True <> Val False) <> Fail "def"
+-- Fail "abcdef"
 --
--- >>> (FailT "abc" <> PresentT True) <> (PresentT False <> FailT "def")
--- FailT "abcdef"
+-- >>> (Fail "abc" <> Val True) <> (Val False <> Fail "def")
+-- Fail "abcdef"
 --
--- >>> PresentT False <> (PresentT True <> PresentT False) == (PresentT False <> PresentT True) <> PresentT False
+-- >>> Val False <> (Val True <> Val False) == (Val False <> Val True) <> Val False
 -- True
 --
-instance Semigroup (BoolT a) where
-   FailT s <> FailT s1 = FailT (s <> s1)
-   FailT s <> _ = FailT s
-   _ <> FailT s = FailT s
-   PresentT _a <> PresentT b = PresentT b
+instance Semigroup (Val a) where
+   Fail s <> Fail s1 = Fail (s <> s1)
+   Fail s <> _ = Fail s
+   _ <> Fail s = Fail s
+   Val _a <> Val b = Val b
 
--- | 'Read' instance for BoolT
+-- | 'Read' instance for Val
 --
--- >>> reads @(BoolT Int) "PresentT 123"
--- [(PresentT 123,"")]
+-- >>> reads @(Val Int) "Val 123"
+-- [(Val 123,"")]
 --
--- >>> reads @(BoolT Bool) "PresentT False abc"
--- [(PresentT False," abc")]
+-- >>> reads @(Val Bool) "Val False abc"
+-- [(Val False," abc")]
 --
--- >>> reads @(BoolT Bool) "FailT \"some error message\""
--- [(FailT "some error message","")]
+-- >>> reads @(Val Bool) "Fail \"some error message\""
+-- [(Fail "some error message","")]
 --
--- >>> reads @(BoolT Double) "FailT \"some error message\""
--- [(FailT "some error message","")]
+-- >>> reads @(Val Double) "Fail \"some error message\""
+-- [(Fail "some error message","")]
 --
 
 -- | evaluation tree for predicates
-data TT a = TT { _ttBoolT :: !(BoolT a)  -- ^ the value at this root node
+data TT a = TT { _ttVal :: !(Val a)  -- ^ the value at this root node
                , _ttString :: !String  -- ^ detailed information eg input and output and text
                , _ttForest :: !(Forest PE) -- ^ the child nodes
-               , _ttBoolP :: !BoolP -- ^ display value
+               , _ttValP :: !ValP -- ^ display value
                } deriving stock (Functor, Read, Show, Eq, Foldable, Traversable, Generic, Generic1)
 
 makeLenses ''TT
 
 instance Applicative TT where
-  pure a = TT (pure a) "" [] PresentP
+  pure a = TT (pure a) "" [] ValP
   (<*>) = ap
 
 instance Monad TT where
   return = pure
-  TT (PresentT a) y z _p >>= amb =
+  TT (Val a) y z _p >>= amb =
     let TT w _y1 z1 p1 = amb a
     in TT w (y++ nullIf " | " _y1) (z <> z1) p1
-  TT (FailT s) y z _ >>= _ = TT (FailT s) y z (FailP s)
-
--- | a lens from typed 'BoolT' to the untyped 'BoolP'
-boolT2P :: Lens' (BoolT a) BoolP
-boolT2P afb = \case
-  FailT e -> FailT e <$ afb (FailP e)
-  PresentT a -> PresentT a <$ afb PresentP
+  TT (Fail s) y z _ >>= _ = TT (Fail s) y z (FailP s)
 
 -- | creates a Node for the evaluation tree
 mkNodeCopy :: POpts
@@ -289,55 +278,48 @@ mkNodeCopy :: POpts
        -> String
        -> [Holder]
        -> TT a
-mkNodeCopy opts tt ss hs = mkNode' opts (_ttBoolT tt) ss hs (_ttBoolP tt)
+mkNodeCopy opts tt ss hs = mkNode' opts (_ttVal tt) ss hs (_ttValP tt)
 
 
 -- | creates a Node for the evaluation tree
 mkNode :: POpts
-       -> BoolT a
+       -> Val a
        -> String
        -> [Holder]
        -> TT a
-mkNode opts bt ss hs = mkNode' opts bt ss hs (bt ^. boolT2P)
+mkNode opts bt ss hs = mkNode' opts bt ss hs (bt ^. _Val2P)
 
 -- | creates a Node for the evaluation tree
 mkNode' :: POpts
-       -> BoolT a
+       -> Val a
        -> String
        -> [Holder]
-       -> BoolP
+       -> ValP
        -> TT a
 mkNode' opts bt ss hs bp' =
-  let bp = validateBoolP bt bp'
+  let bp = validateValP bt bp'
   in case oDebug opts of
       DZero -> TT bt [] [] bp
       DLite ->
       -- keeps the last string so we can use the root to give more details on failure (especially for Refined* types)
       -- also holds onto any failures
-          let zs = filter (\(Holder x) -> has (ttBoolT . _FailT) x) hs
+          let zs = filter (\(Holder x) -> has (ttVal . _Fail) x) hs
           in TT bt ss (map fromTTH zs) bp
       _ -> TT bt ss (map fromTTH hs) bp
 
-validateBoolP :: BoolT a -> BoolP -> BoolP
-validateBoolP bt bp =
+validateValP :: Val a -> ValP -> ValP
+validateValP bt bp =
   case bt of
-    PresentT _a -> case bp of
-                     FailP e -> errorInProgram $ "validateBoolP: found FailP for PresentT in BoolT e=" ++ e
+    Val _a -> case bp of
+                     FailP e -> errorInProgram $ "validateValP: found FailP for Val in Val e=" ++ e
                      _ -> bp
-    FailT e -> case bp of
+    Fail e -> case bp of
                 FailP e1 | e==e1 -> bp
-                         | otherwise -> errorInProgram $ "validateBoolP: found FailT but message mismatch in BoolP " ++ show (e,e1)
-                _ -> errorInProgram $ "validateBoolP: found " ++ show bp ++ " expected FailP e=" ++ e
+                         | otherwise -> errorInProgram $ "validateValP: found Fail but message mismatch in ValP " ++ show (e,e1)
+                _ -> errorInProgram $ "validateValP: found " ++ show bp ++ " expected FailP e=" ++ e
 
-fixTTBoolP :: TT Bool -> TT Bool
-fixTTBoolP tt = tt { _ttBoolP = getBoolP (_ttBoolT tt) }
-
-getBoolP :: BoolT Bool -> BoolP
-getBoolP bt =
-  case bt of
-    PresentT True -> TrueP
-    PresentT False -> FalseP
-    FailT e -> FailP e
+fixTTValP :: TT Bool -> TT Bool
+fixTTValP tt = tt { _ttValP = tt ^. ttVal . _Val2BoolP }
 
 -- | creates a Boolean node for a predicate type
 mkNodeB :: POpts
@@ -346,23 +328,17 @@ mkNodeB :: POpts
         -> [Holder]
         -> TT Bool
 mkNodeB opts b s tt =
-  mkNode' opts (PresentT b) s tt (bool FalseP TrueP b)
+  mkNode' opts (Val b) s tt (bool FalseP TrueP b)
 
 getValAndPE :: TT a -> (Either String a, Tree PE)
-getValAndPE tt = (getValLRFromTT tt, fromTT tt)
+getValAndPE = getValLRFromTT &&& fromTT
 
 getValLRFromTT :: TT a -> Either String a
-getValLRFromTT = getValLR  . _ttBoolT
-
--- | get the value from BoolT or fail
-getValLR :: BoolT a -> Either String a
-getValLR = \case
-    FailT e -> Left e
-    PresentT a -> Right a
+getValLRFromTT = view (ttVal . _ValEither)
 
 -- | converts a typed tree to an untyped tree for display
 fromTT :: TT a -> Tree PE
-fromTT (TT bt ss tt bp) = Node (PE (validateBoolP bt bp) ss) tt
+fromTT (TT bt ss tt bp) = Node (PE (validateValP bt bp) ss) tt
 
 -- | a monomorphic container of trees
 data Holder = forall w . Holder !(TT w)
@@ -385,7 +361,7 @@ getValueLR opts msg0 tt hs =
   let tt' = hs ++ [hh tt]
   in left (\e -> mkNode
                    opts
-                  (FailT e)
+                  (Fail e)
                    msg0
                   tt'
           )
@@ -412,7 +388,7 @@ data HOpts f =
         }
 
 -- | the color palette for displaying the expression tree
-newtype PColor = PColor (BoolP -> String -> String)
+newtype PColor = PColor (ValP -> String -> String)
 instance Show PColor where
   show PColor {} = "PColor <fn>"
 
@@ -479,10 +455,10 @@ setCreateColor :: String
    -> HOpts Last
 setCreateColor s c1 c2 c3 c4 c5 c6 c7 c8 =
   let pc = \case
-       FailP {} -> color c1 . bgColor c2
-       FalseP -> color c3 . bgColor c4
-       TrueP -> color c5 . bgColor c6
-       PresentP -> color c7 . bgColor c8
+       FailP {} -> C.color c1 . C.bgColor c2
+       FalseP -> C.color c3 . C.bgColor c4
+       TrueP -> C.color c5 . C.bgColor c6
+       ValP -> C.color c7 . C.bgColor c8
   in mempty { oColor = pure (s,PColor pc) }
 
 -- | set debug mode
@@ -651,12 +627,12 @@ compileRegex :: forall rs a . GetROpts rs
   -> [Holder]
   -> Either (TT a) RH.Regex
 compileRegex opts nm s hhs
-  | null s = Left (mkNode opts (FailT "Regex cannot be empty") nm hhs)
+  | null s = Left (mkNode opts (Fail "Regex cannot be empty") nm hhs)
   | otherwise =
       let rs = getROpts @rs
           mm = nm <> " " <> show rs
       in flip left (RH.compileM (TE.encodeUtf8 (T.pack s)) (snd rs))
-            $ \e -> mkNode opts (FailT "Regex failed to compile") (mm <> ":" <> e) hhs
+            $ \e -> mkNode opts (Fail "Regex failed to compile") (mm <> ":" <> e) hhs
 
 -- | extract values from the trees or if there are errors return a tree with context
 splitAndAlign :: Show x =>
@@ -668,7 +644,7 @@ splitAndAlign opts msgs ts =
   case partitionEithers (map partitionTTExtended ts) of
      (excs@(e:_), _) ->
           Left $ mkNode opts
-                       (FailT (groupErrors (map snd excs)))
+                       (Fail (groupErrors (map snd excs)))
                        (msgs <> (formatList opts [fst e] <> " excnt=" <> show (length excs)))
                        (map (hh . snd) ts)
      ([], tfs) -> Right tfs
@@ -681,9 +657,9 @@ groupErrors =
 
 partitionTTExtended :: (w, TT a) -> Either ((w, TT x), String) (a, w, TT a)
 partitionTTExtended (s, t) =
-  case _ttBoolT t of
-    FailT e -> Left ((s, t & ttBoolT .~ FailT e), e)
-    PresentT a -> Right (a,s,t)
+  case _ttVal t of
+    Fail e -> Left ((s, t & ttVal .~ Fail e), e)
+    Val a -> Right (a,s,t)
 
 formatList :: forall x z . Show x
   => POpts
@@ -691,35 +667,9 @@ formatList :: forall x z . Show x
   -> String
 formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts DLite ", a=" a <> ")")
 
--- (_BoolT %~ length) <$> pz @Pairs [1..4]
--- (over _BoolT length) <$> pz @Pairs [1..4]
+-- (_Val %~ length) <$> pz @Pairs [1..4]
+-- (over _Val length) <$> pz @Pairs [1..4]
 -- fmapB length $ pz @Pairs [1..4]
-
--- | BoolT prism
---
--- >>> _BoolT # 123
--- PresentT 123
---
--- >>> PresentT 123 ^? _BoolT
--- Just 123
---
--- >>> FailT "abc" ^? _BoolT
--- Nothing
---
--- >>> PresentT 1 & _BoolT .~ True
--- PresentT True
---
--- >>> PresentT False & _BoolT %~ not
--- PresentT True
---
--- >>> FailT "asdF" & _BoolT .~ True
--- FailT "asdF"
---
-_BoolT :: Prism (BoolT a) (BoolT b) a b
-_BoolT = prism PresentT
-         $ \case
-              PresentT a -> Right a
-              FailT e -> Left (FailT e)
 
 -- | pretty print a tree
 toNodeString :: POpts
@@ -728,7 +678,7 @@ toNodeString :: POpts
 toNodeString opts bpe =
   if hasNoTree opts
   then errorInProgram $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
-  else colorBoolP opts (_pBool bpe) <> _pString bpe
+  else colorValP opts (_peValP bpe) <> _peString bpe
 
 hasNoTree :: POpts -> Bool
 hasNoTree opts =
@@ -738,58 +688,50 @@ hasNoTree opts =
     DNormal -> False
     DVerbose -> False
 
-nullSpace :: String -> String
-nullSpace = nullIf " "
-
-nullIf :: String -> String -> String
-nullIf s t
-  | all isSpace t = ""
-  | otherwise = s <> t
-
--- | render the 'BoolP' value with colors
-colorBoolP ::
+-- | render the 'ValP' value with colors
+colorValP ::
      POpts
-  -> BoolP
+  -> ValP
   -> String
-colorBoolP o b =
+colorValP o b =
   case b of
     FailP e -> "[" <> f "Error" <> nullSpace e <> "] "
-    PresentP -> f "P "
+    ValP -> f "P "
     TrueP -> f "True "
     FalseP -> f "False "
   where f = colorMe o b
 
--- | render the 'BoolT' value with colors
-colorBoolTLite :: Show a
+-- | render the 'Val' value with colors
+colorValLite :: Show a
     => POpts
-    -> BoolT a
-    -> BoolP
+    -> Val a
+    -> ValP
     -> String
-colorBoolTLite o bt bp =
+colorValLite o bt bp =
   let f = colorMe o bp
   in case bt of
-      FailT e -> f "Error " <> e
-      PresentT x -> case bp of
-                      PresentP -> f "Present " <> show x
+      Fail e -> f "Error " <> e
+      Val x -> case bp of
+                      ValP -> f "Present " <> show x
                       TrueP -> f "True"
                       FalseP -> f "False"
-                      FailP _ -> errorInProgram $ "colorBoolTLite: unexpected FailP " ++ show (bt,bp)
+                      FailP _ -> errorInProgram $ "colorValLite: unexpected FailP " ++ show (bt,bp)
 
-colorBoolTBool ::
+colorValBool ::
       POpts
-   -> BoolT Bool
+   -> Val Bool
    -> String
-colorBoolTBool o r =
-  uncurry (colorMe o) $
-  case r of
-      FailT e -> (FailP e, "FailT " <> e)
-      PresentT True -> (TrueP, "TrueT")
-      PresentT False -> (FalseP, "FalseT")
+colorValBool o r =
+  colorMe o (r ^. _Val2BoolP)
+  $ case r of
+      Fail e -> "Fail " <> e
+      Val True -> "TrueT"
+      Val False -> "FalseT"
 
 -- | colors the result of the predicate based on the current color palette
 colorMe ::
      POpts
-  -> BoolP
+  -> ValP
   -> String
   -> String
 colorMe o b s =
@@ -797,7 +739,7 @@ colorMe o b s =
              | otherwise = oColor o
   in coerce f b s
 
--- | override PresentP case if there is no tree ie lite or zero mode
+-- | override ValP case if there is no tree ie lite or zero mode
 fixLite :: forall a . Show a
    => POpts
    -> a
@@ -805,9 +747,9 @@ fixLite :: forall a . Show a
    -> String
 fixLite opts a t
   | hasNoTree opts =
-      let r = case t ^. root . pBool of
-                PresentP -> colorMe opts PresentP "Present " <> show a
-                bp -> colorBoolP opts bp
+      let r = case t ^. root . peValP of
+                ValP -> colorMe opts ValP "Present " <> show a
+                bp -> colorValP opts bp
       in r <> "\n"
   | otherwise = prtTreePure opts t
 
@@ -817,7 +759,7 @@ prtTreePure ::
   -> Tree PE
   -> String
 prtTreePure opts t
-  | hasNoTree opts = colorBoolP opts (t ^. root . pBool)
+  | hasNoTree opts = colorValP opts (t ^. root . peValP)
   | otherwise = showImpl opts $ fmap (toNodeString opts) t
 
 -- | extract message part from tree
@@ -1061,7 +1003,7 @@ chkSize opts msg0 xs hhs =
   let mx = oRecursion opts
   in case splitAt mx (toList xs) of
     (zs,[]) -> Right zs
-    (_,_:_) -> Left $ mkNode opts (FailT (msg0 <> " list size exceeded")) ("max is " ++ show mx) hhs
+    (_,_:_) -> Left $ mkNode opts (Fail (msg0 <> " list size exceeded")) ("max is " ++ show mx) hhs
 
 -- | deal with possible recursion on two lists
 chkSize2 :: (Foldable t, Foldable u)
@@ -1094,20 +1036,7 @@ setOtherEffects o =
   if oNoColor o then id
   else case coerce (oOther o) of
          (False, Default, Default) -> id
-         (b, c1, c2) -> (if b then style Underline else id) . color c1 . bgColor c2
-
-pureTryTest :: a -> IO (Either () a)
-pureTryTest = fmap (left (const ())) . E.try @E.SomeException . E.evaluate
-
-pureTryTestPred :: (String -> Bool)
-                -> a
-                -> IO (Either String (Either () a))
-pureTryTestPred p a = do
-  lr <- left E.displayException <$> E.try @E.SomeException (E.evaluate a)
-  return $ case lr of
-    Left e | p e -> Right (Left ())
-           | otherwise -> Left ("no match found: e=" ++ e)
-    Right r -> Right (Right r)
+         (b, c1, c2) -> (if b then C.style C.Underline else id) . C.color c1 . C.bgColor c2
 
 -- | mconcat 'Opt' options at the type level
 --
@@ -1120,16 +1049,6 @@ pureTryTestPred p a = do
 type family OptT (xs :: [Opt]) where
   OptT '[] = 'OEmpty
   OptT (x ': xs) = x ':# OptT xs
-
--- | convenience method for optional display
-unlessNull :: (Foldable t, Monoid m) => t a -> m -> m
-unlessNull t m | null t = mempty
-               | otherwise = m
-
-unlessNullM :: (Foldable t, Applicative m) => t a -> (t a -> m ()) -> m ()
-unlessNullM t f
-  | null t = pure ()
-  | otherwise = f t
 
 -- | message to display when the length of a foldable is exceeded
 badLength :: Foldable t
@@ -1145,7 +1064,7 @@ prtTree opts pp =
 
      DLite ->
            formatOMsg opts " >>> "
-           <> colorBoolTLite opts (pp ^. ttBoolT) (pp ^. ttBoolP)
+           <> colorValLite opts (pp ^. ttVal) (pp ^. ttValP)
            <> " "
            <> topMessage pp
 
@@ -1180,59 +1099,113 @@ fixEmptyNode s = over (ttForest . traverse) (fixEmptyNode' s)
 
 fixEmptyNode' :: String -> Tree PE -> Tree PE
 fixEmptyNode' s = go
- where go (Node (PE PresentP "") []) = Node (PE PresentP s) []
+ where go (Node (PE ValP "") []) = Node (PE ValP s) []
        go (Node p xs) = Node p (map go xs)
 
--- | prism for PresentT True
+-- | Val prism
 --
--- >>> PresentT True ^? _TrueT
--- Just ()
+-- >>> _ValE # 123
+-- Val 123
 --
--- >>> PresentT False ^? _TrueT
+-- >>> Val 123 ^? _ValE
+-- Just 123
+--
+-- >>> Fail "abc" ^? _ValE
 -- Nothing
 --
-_TrueT :: a ~ Bool => Prism' (BoolT a) ()
-_TrueT =
-  prism' (const (PresentT True)) $ \case
-                       PresentT True -> Just ()
-                       _ -> Nothing
-
--- | prism for PresentT False
+-- >>> Val 1 & _ValE .~ True
+-- Val True
 --
--- >>> PresentT False ^? _FalseT
+-- >>> Val False & _ValE %~ not
+-- Val True
+--
+-- >>> Fail "asdF" & _ValE .~ True
+-- Fail "asdF"
+--
+_ValE :: Prism (Val a) (Val b) a b
+_ValE = prism Val
+         $ \case
+              Val a -> Right a
+              Fail e -> Left (Fail e)
+
+-- | prism for Val True
+--
+-- >>> Val True ^? _True
 -- Just ()
 --
--- >>> PresentT True ^? _FalseT
+-- >>> Val False ^? _True
 -- Nothing
 --
-_FalseT :: a ~ Bool => Prism' (BoolT a) ()
-_FalseT =
-  prism' (const (PresentT False)) $ \case
-                       PresentT False -> Just ()
+_True :: a ~ Bool => Prism' (Val a) ()
+_True =
+  prism' (const (Val True)) $ \case
+                       Val True -> Just ()
                        _ -> Nothing
 
--- | iso for BoolT
+-- | prism for Val False
 --
--- >>> PresentT False ^. _BoolTIso
--- Right False
+-- >>> (_True # ()) ^? _True
+-- Just ()
 --
--- >>> PresentT True ^. _BoolTIso
+-- >>> (_False # ()) ^? _False
+-- Just ()
+--
+-- >>> Val False ^? _False
+-- Just ()
+--
+-- >>> Val True ^? _False
+-- Nothing
+--
+_False :: a ~ Bool => Prism' (Val a) ()
+_False =
+  prism' (const (Val False)) $ \case
+                       Val False -> Just ()
+                       _ -> Nothing
+
+-- | iso for Val
+--
+-- >>> Val 123 ^. _ValEither
+-- Right 123
+--
+-- >>> Val True ^. _ValEither
 -- Right True
 --
--- >>> FailT "abc" ^. _BoolTIso
+-- >>> Fail "abc" ^. _ValEither
 -- Left "abc"
 --
--- >>> Left "abc" ^. from _BoolTIso
--- FailT "abc"
+-- >>> Left "abc" ^. from _ValEither
+-- Fail "abc"
 --
--- >>> Right False ^. from _BoolTIso
--- PresentT False
+-- >>> Right False ^. from _ValEither
+-- Val False
 --
-_BoolTIso :: a ~ Bool => Iso' (BoolT a) (Either String Bool)
-_BoolTIso = iso fw bw
+-- >>> [Just (Val 'x')] ^. mapping (mapping _ValEither)
+-- [Just (Right 'x')]
+--
+-- >>> Just (Fail "abcd") ^. mapping _ValEither
+-- Just (Left "abcd")
+--
+_ValEither :: Iso' (Val a) (Either String a)
+_ValEither = iso fw bw
   where fw = \case
-               PresentT True -> Right True
-               PresentT False -> Right False
-               FailT e -> Left e
-        bw = either FailT PresentT
+               Val a -> Right a
+               Fail e -> Left e
+        bw = either Fail Val
+
+-- | a lens from typed 'Val' to the untyped 'ValP'
+_Val2P :: Lens' (Val a) ValP
+_Val2P afb bt = bt <$ afb r
+  where r = case bt of
+              Fail e -> FailP e
+              Val {} -> ValP
+
+-- | a lens from typed 'Val' Bool to the untyped 'ValP'
+_Val2BoolP :: a ~ Bool => Lens' (Val a) ValP
+_Val2BoolP afb bt = bt <$ afb r
+  where r = case bt of
+              Fail e -> FailP e
+              Val True -> TrueP
+              Val False -> FalseP
+
+
 

@@ -179,7 +179,7 @@ unnamedTests = [
   -- keep the original value
   , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ runIdentity $ eval3M @OAN @(Id &&& Ip4ip) @(Snd >> Ip4op') @(Snd >> ParaN 4 (PrintF "%03d" Id) >> Intercalate '["."] Id >> Concat) "1.2.3.4"
   , Right (unsafeRefined3 4 "someval val=004") @=? newRefined3P (Proxy @Tst1) "4"
-  , Left FalseP @=? left m3BoolP (newRefined3P (Proxy @Tst1) "255")
+  , Left FalseP @=? left m3ValP (newRefined3P (Proxy @Tst1) "255")
   ]
 
 allProps :: [TestTree]
@@ -260,11 +260,11 @@ tstextras =
   , newRefined3P (daten @OAN) "12/02/19" @?= Right (unsafeRefined3 (fromGregorian 2019 12 2) "2019-12-02")
   , newRefined3P (Proxy @(Luhn OAN '[1,1,1,1])) "1230" @?= Right (unsafeRefined3 [1,2,3,0] "1-2-3-0")
   , newRefined3P (Proxy @(Luhn OAN '[1,2,3])) "123455" @?= Right (unsafeRefined3 [1,2,3,4,5,5] "1-23-455")
---  , runIdentity (unRavelTBoolP $ tst1a @OAN @Identity) @?= Right ((163,"a3"),(12,"12"))
---  , runIdentity (unRavelTBoolP yy1) ^? _Right @?= Just (unsafeRefined3 4 "someval val=004")
---  , runIdentity (unRavelTBoolP yy2) ^? _Right @?= Just (unsafeRefined3 3 "someval val=003")
+--  , runIdentity (unRavelTValP $ tst1a @OAN @Identity) @?= Right ((163,"a3"),(12,"12"))
+--  , runIdentity (unRavelTValP yy1) ^? _Right @?= Just (unsafeRefined3 4 "someval val=004")
+--  , runIdentity (unRavelTValP yy2) ^? _Right @?= Just (unsafeRefined3 3 "someval val=003")
 --  , runIdentity (unRavelTString yy3) ^? _Left @?= Just "Step 2. False Boolean Check(op) | {12 <= 7}"
---  , runIdentity (unRavelTBoolP yy4) ^? _Right @?= Just (unsafeRefined3 7 "someval val=007")
+--  , runIdentity (unRavelTValP yy4) ^? _Right @?= Just (unsafeRefined3 7 "someval val=007")
   , www1 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
   , www2 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
   , www3 "1.2.3.4" @?= Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")
@@ -326,7 +326,7 @@ toRResults3 :: RResults3 a -> Results3 a
 toRResults3 = \case
    RF e _ -> XF e
    RTF a _ e _ -> XTF a e
-   RTFalse a _ t2 -> XTFalse a (t2 ^. root . pString)
+   RTFalse a _ t2 -> XTFalse a (t2 ^. root . peString)
    RTTrueF a _ _ e _ -> XTTrueF a e
    RTTrueT a _ _ _ -> XTTrueT a
 

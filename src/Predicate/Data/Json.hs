@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -32,6 +33,7 @@ module Predicate.Data.Json (
   , ParseJsonFile
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Data.Proxy (Proxy(Proxy))
 import Data.Typeable (Typeable)
@@ -68,30 +70,30 @@ instance ( P p x
         let hhs = [hh pp]
             msg1 = msg0 <> "(" ++ litBL opts { oWidth = oWidth opts `div` 3 } s ++ ")"
         in case A.eitherDecode' s of
-           Right b -> mkNode opts (PresentT b) (msg0 <> " " ++ showL opts { oWidth = oWidth opts `div` 2 } b) hhs
-           Left e -> mkNode opts (FailT (msg1 <> " " <> e) ) (litBL opts s) hhs
+           Right b -> mkNode opts (Val b) (msg0 <> " " ++ showL opts { oWidth = oWidth opts `div` 2 } b) hhs
+           Left e -> mkNode opts (Fail (msg1 <> " " <> e) ) (litBL opts s) hhs
 
 -- | parse json data using the type @t@
 --
 -- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\"]"
 -- Present (10,"abc") (ParseJson (Int,[Char]) (10,"abc"))
--- PresentT (10,"abc")
+-- Val (10,"abc")
 --
 -- >>> pl @(ParseJson (Int,String) Id) "[10,\"abc\",99]"
 -- Error ParseJson (Int,[Char])([10,"abc",99]) Error in $: cannot unpack array of length 3 into a tuple of length 2 ([10,"abc",99])
--- FailT "ParseJson (Int,[Char])([10,\"abc\",99]) Error in $: cannot unpack array of length 3 into a tuple of length 2"
+-- Fail "ParseJson (Int,[Char])([10,\"abc\",99]) Error in $: cannot unpack array of length 3 into a tuple of length 2"
 --
 -- >>> pl @(ParseJson (Int,Bool) (FromString _ Id)) ("[1,true]" :: String)
 -- Present (1,True) (ParseJson (Int,Bool) (1,True))
--- PresentT (1,True)
+-- Val (1,True)
 --
 -- >>> pl @(ParseJson (Int,Bool) Id) (A.encode (1,True))
 -- Present (1,True) (ParseJson (Int,Bool) (1,True))
--- PresentT (1,True)
+-- Val (1,True)
 --
 -- >>> pl @(ParseJson () Id) "[1,true]"
 -- Error ParseJson ()([1,true]) Error in $: parsing () failed, expected an empty array ([1,true])
--- FailT "ParseJson ()([1,true]) Error in $: parsing () failed, expected an empty array"
+-- Fail "ParseJson ()([1,true]) Error in $: parsing () failed, expected an empty array"
 --
 data ParseJson (t :: Type) p
 type ParseJsonT (t :: Type) p = ParseJson' (Hole t) p
@@ -124,17 +126,17 @@ instance ( P p x
                 if b then Just <$> BS8.readFile p
                 else pure Nothing
         pure $ case mb of
-          Nothing -> mkNode opts (FailT msg1) "" hhs
-          Just Nothing -> mkNode opts (FailT (msg1 <> " file does not exist")) "" hhs
+          Nothing -> mkNode opts (Fail msg1) "" hhs
+          Just Nothing -> mkNode opts (Fail (msg1 <> " file does not exist")) "" hhs
           Just (Just s) ->
             case A.eitherDecodeStrict' s of
-               Right b -> mkNode opts (PresentT b) (msg1 <> " " ++ showL opts b) hhs
-               Left e -> mkNode opts (FailT (msg1 <> " " <> e)) (litBS opts s) hhs
+               Right b -> mkNode opts (Val b) (msg1 <> " " ++ showL opts b) hhs
+               Left e -> mkNode opts (Fail (msg1 <> " " <> e)) (litBS opts s) hhs
 
 -- | parse a json file @p@ using the type @t@
 --
 -- >>> pz @(ParseJsonFile [A.Value] "test1.json" >> Id !! 2) ()
--- PresentT (Object (fromList [("lastName",String "Doe"),("age",Number 45.0),("firstName",String "John"),("likesPizza",Bool False)]))
+-- Val (Object (fromList [("lastName",String "Doe"),("age",Number 45.0),("firstName",String "John"),("likesPizza",Bool False)]))
 --
 data ParseJsonFile (t :: Type) p
 type ParseJsonFileT (t :: Type) p = ParseJsonFile' (Hole t) p
@@ -147,11 +149,11 @@ instance P (ParseJsonFileT t p) x => P (ParseJsonFile t p) x where
 --
 -- >>> pl @(EncodeJson 'False Id) (10,"def")
 -- Present "[10,\"def\"]" (EncodeJson [10,"def"])
--- PresentT "[10,\"def\"]"
+-- Val "[10,\"def\"]"
 --
 -- >>> pl @(EncodeJson 'False Id >> ParseJson (Int,Bool) Id) (1,True)
 -- Present (1,True) ((>>) (1,True) | {ParseJson (Int,Bool) (1,True)})
--- PresentT (1,True)
+-- Val (1,True)
 --
 data EncodeJson (pretty :: Bool) p
 
@@ -168,7 +170,7 @@ instance ( GetBool pretty
       Left e -> e
       Right p ->
         let d = (if pretty then AP.encodePretty else A.encode) p
-        in mkNode opts (PresentT d) (msg0 <> " " <> litL opts (litBL opts d)) [hh pp]
+        in mkNode opts (Val d) (msg0 <> " " <> litL opts (litBL opts d)) [hh pp]
 
 -- | encode a json file with pretty option
 data EncodeJsonFile (pretty :: Bool) p q
@@ -191,6 +193,6 @@ instance ( GetBool pretty
             hhs = [hh pp, hh qq]
         mb <- runIO $ BL8.writeFile p d
         pure $ case mb of
-          Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" hhs
-          Just () -> mkNode opts (PresentT ()) (msg0 <> " " <> litL opts (litBL opts d)) hhs
+          Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" hhs
+          Just () -> mkNode opts (Val ()) (msg0 <> " " <> litL opts (litBL opts d)) hhs
 

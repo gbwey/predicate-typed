@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -37,6 +38,7 @@ module Predicate.Data.Index (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Maybe (JustDef, JustFail)
 import Control.Lens
@@ -58,27 +60,27 @@ import Data.Proxy (Proxy(..))
 --
 -- >>> pl @(LookupDef' Fst Snd (Char1 "xx") Id) (['a'..'e'],2)
 -- Present 'c' (JustDef Just)
--- PresentT 'c'
+-- Val 'c'
 --
 -- >>> pl @(LookupDef' Fst Snd (Char1 "xx") Id) (['a'..'e'],999)
 -- Present 'x' (JustDef Nothing)
--- PresentT 'x'
+-- Val 'x'
 --
 -- >>> pl @(LookupDef' Fst Snd (Char1 "xx") Id) ([],2)
 -- Present 'x' (JustDef Nothing)
--- PresentT 'x'
+-- Val 'x'
 --
 -- >>> pl @(LookupDef' Fst Snd (Char1 "xx") Snd) ('w',([],2))
 -- Present 'x' (JustDef Nothing)
--- PresentT 'x'
+-- Val 'x'
 --
 -- >>> pl @(LookupDef' Fst Snd Fst Snd) ('x',(['a'..'e'],2))
 -- Present 'c' (JustDef Just)
--- PresentT 'c'
+-- Val 'c'
 --
 -- >>> pl @(LookupDef' Fst Snd (MEmptyT _) Snd) ('x',(map SG.Min [10..15::Int], 3))
 -- Present Min {getMin = 13} (JustDef Just)
--- PresentT (Min {getMin = 13})
+-- Val (Min {getMin = 13})
 --
 data LookupDef' v w p q
 type LookupDefT' v w p q = JustDef p (q >> Lookup v w)
@@ -91,35 +93,35 @@ instance P (LookupDefT' v w p q) x => P (LookupDef' v w p q) x where
 --
 -- >>> pl @(LookupDef '[1,2,3,4,5,6] 4 Id) 23
 -- Present 5 (JustDef Just)
--- PresentT 5
+-- Val 5
 --
 -- >>> pl @(LookupDef '[1,2,3,4,5,6] 4 Fst) (23,'x')
 -- Present 5 (JustDef Just)
--- PresentT 5
+-- Val 5
 --
 -- >>> pl @(LookupDef '[1,2,3,4,5,6] 99 Id) 23
 -- Present 23 (JustDef Nothing)
--- PresentT 23
+-- Val 23
 --
 -- >>> pl @(LookupDef '[1,2,3,4,5,6] 99 Fst) (23,'x')
 -- Present 23 (JustDef Nothing)
--- PresentT 23
+-- Val 23
 --
 -- >>> pl @(LookupDef '[1,2,3,4,5,6] 4 999) (23,'x')
 -- Present 5 (JustDef Just)
--- PresentT 5
+-- Val 5
 --
 -- >>> pl @(LookupDef '[1,2,3,4,5,6] 40 999) (23,'x')
 -- Present 999 (JustDef Nothing)
--- PresentT 999
+-- Val 999
 --
 -- >>> pl @(LookupDef Fst 4 (MEmptyT _)) (map SG.Min [1::Int .. 10],'x')
 -- Present Min {getMin = 5} (JustDef Just)
--- PresentT (Min {getMin = 5})
+-- Val (Min {getMin = 5})
 --
 -- >>> pl @(LookupDef Fst 999 (MEmptyT _)) (map SG.Min [1::Int .. 10],'x')
 -- Present Min {getMin = 9223372036854775807} (JustDef Nothing)
--- PresentT (Min {getMin = 9223372036854775807})
+-- Val (Min {getMin = 9223372036854775807})
 --
 data LookupDef v w p
 type LookupDefT v w p = LookupDef' v w p Id
@@ -140,11 +142,11 @@ instance P (LookupFailT' msg v w q) x => P (LookupFail' msg v w q) x where
 --
 -- >>> pl @(LookupFail "someval" Fst 999) (map SG.Min [1::Int .. 10],'x')
 -- Error someval (JustFail Nothing)
--- FailT "someval"
+-- Fail "someval"
 --
 -- >>> pl @(LookupFail (PrintF "char=%c" Snd) Fst 49) (map SG.Min [1::Int ..10],'x')
 -- Error char=x (JustFail Nothing)
--- FailT "char=x"
+-- Fail "char=x"
 --
 data LookupFail msg v w
 type LookupFailT msg v w = LookupFail' msg v w Id
@@ -156,74 +158,74 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- | similar to 'Data.List.!!' using an 'Ixed' container
 --
 -- >>> pz @(Ix 4 "not found") ["abc","D","eF","","G"]
--- PresentT "G"
+-- Val "G"
 --
 -- >>> pz @(Ix 40 "not found") ["abc","D","eF","","G"]
--- PresentT "not found"
+-- Val "not found"
 --
 -- >>> pl @(Fst >> Dup >> (Ix 1 (Failp "failed5") *** Ix 3 (Failp "failed5")) >> Id) ([10,12,3,5],"ss")
 -- Present (12,5) ((>>) (12,5) | {Id (12,5)})
--- PresentT (12,5)
+-- Val (12,5)
 --
 -- >>> pl @(Fst >> Dup >> (Ix 1 (Failp "failed5") *** Ix 3 (Failp "failed5")) >> Fst < Snd) ([10,12,3,5],"ss")
 -- False ((>>) False | {12 < 5})
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Fst >> Dup >> (Ix 1 (Failp "failed5") *** Ix 3 (Failp "failed5")) >> Fst > Snd) ([10,12,3,5],"ss")
 -- True ((>>) True | {12 > 5})
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval1") >> Fst == Snd) ('x',[1..5])
 -- False ((>>) False | {5 == 4})
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval2") >> Fst < Snd) ('x',[1..5])
 -- False ((>>) False | {5 < 4})
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval3") >> Fst > Snd) ('x',[1..5])
 -- True ((>>) True | {5 > 4})
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Map Len Id >> Ix 3 (Failp "lhs") &&& Ix 0 5 >> Fst == Snd) [[1..4],[4..5]]
 -- Error lhs
--- FailT "lhs"
+-- Fail "lhs"
 --
 -- >>> pl @(Map Len Id >> Ix 0 (Failp "lhs") &&& Ix 1 5 >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {4 == 2})
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Map Len Id >> Ix 1 (Failp "lhs") &&& Ix 3 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- Error rhs
--- FailT "rhs"
+-- Fail "rhs"
 --
 -- >>> pl @(Map Len Id >> Ix 10 (Failp "lhs") &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- Error lhs
--- FailT "lhs"
+-- Fail "lhs"
 --
 -- >>> pl @(Map Len Id >> Ix 0 (Failp "lhs") &&& Ix 10 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- Error rhs
--- FailT "rhs"
+-- Fail "rhs"
 --
 -- >>> pl @(Map Len Id >> Ix 10 3 &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {3 == 2})
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Map Len Id >> Ix 3 3 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {3 == 2})
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Map Len Id >> Ix 10 3 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {3 == 2})
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Map Len Id >> Ix 10 5 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {5 == 2})
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Map Len Id >> Ix 10 2 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
 -- True ((>>) True | {2 == 2})
--- PresentT True
+-- Val True
 --
 data Ix (n :: Nat) def
 
@@ -243,7 +245,7 @@ instance ( P def (Proxy a)
            pure $ case getValueLR opts msg1 pp [] of
              Left e -> e
              Right _ -> mkNodeCopy opts pp msg1 [hh pp]
-         Just a -> pure $ mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+         Just a -> pure $ mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
 data Ix' (n :: Nat)
 type IxT' (n :: Nat) = Ix n (Failp "Ix index not found")
@@ -252,21 +254,21 @@ instance P (IxT' n) x => P (Ix' n) x where
   type PP (Ix' n) x = PP (IxT' n) x
   eval _ = eval (Proxy @(IxT' n))
 
--- | similar to 'Data.List.!!' leveraging 'Ixed': see '!!'
+-- | similar to 'Data.List.!!' leveraging 'Ixed'
 --
 -- >>> pz @(IxL Id 2 "notfound") ["abc","D","eF","","G"]
--- PresentT "eF"
+-- Val "eF"
 --
 -- >>> pz @(IxL Id 20 "notfound") ["abc","D","eF","","G"]
--- PresentT "notfound"
+-- Val "notfound"
 --
 -- >>> pl @(IxL Id 1 (Char1 "x")) ("123" :: T.Text)
 -- Present '2' (IxL(1) '2' | p="123" | q=1)
--- PresentT '2'
+-- Val '2'
 --
 -- >>> pl @(IxL Id 15 (Char1 "x")) ("123" :: T.Text)
 -- Present 'x' (IxL(15) index not found)
--- PresentT 'x'
+-- Val 'x'
 --
 
 data IxL p q def -- p is the big value and q is the index and def is the default
@@ -296,134 +298,134 @@ instance ( P q a
                 pure $ case getValueLR opts msg1 rr [hh pp, hh qq] of
                   Left e -> e
                   Right _ -> mkNodeCopy opts rr (msg1 <> " index not found") [hh pp, hh qq]
-             Just ret -> pure $ mkNode opts (PresentT ret) (show01' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
+             Just ret -> pure $ mkNode opts (Val ret) (show01' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to 'Data.List.!!' leveraging 'Ixed'
 --
 -- >>> pz @(Id !! 2) ["abc","D","eF","","G"]
--- PresentT "eF"
+-- Val "eF"
 --
 -- >>> pz @(Id !! 20) ["abc","D","eF","","G"]
--- FailT "(!!) index not found"
+-- Fail "(!!) index not found"
 --
 -- >>> pz @(Id !! "eF") (M.fromList (flip zip [0..] ["abc","D","eF","","G"]))
--- PresentT 2
+-- Val 2
 --
 -- >>> pl @(Id !! 3) ("asfd" :: T.Text)
 -- Present 'd' (IxL(3) 'd' | p="asfd" | q=3)
--- PresentT 'd'
+-- Val 'd'
 --
 -- >>> pl @(Id !! 4) ("asfd" :: T.Text)
 -- Error (!!) index not found (IxL(4))
--- FailT "(!!) index not found"
+-- Fail "(!!) index not found"
 --
 -- >>> pl @(Id !! MEmptyT _) (Just "a")
 -- Present "a" (IxL(()) "a" | p=Just "a" | q=())
--- PresentT "a"
+-- Val "a"
 --
 -- >>> pl @(Id !! MEmptyT _) (Nothing @()) -- had to add @() to keep this happy: ghci is fine
 -- Error (!!) index not found (IxL(()))
--- FailT "(!!) index not found"
+-- Fail "(!!) index not found"
 --
 -- >>> pl @(Id !! 0) ('a','b','c')
 -- Present 'a' (IxL(0) 'a' | p=('a','b','c') | q=0)
--- PresentT 'a'
+-- Val 'a'
 --
 -- >>> pl @(Id !! Failt _ "err") ('a','b','c')
 -- Error err (IxL)
--- FailT "err"
+-- Fail "err"
 --
 -- >>> pl @(Id !! "d") (M.fromList $ zip (map (:[]) "abcd") [0 ..])
 -- Present 3 (IxL("d") 3 | p=fromList [("a",0),("b",1),("c",2),("d",3)] | q="d")
--- PresentT 3
+-- Val 3
 --
 -- >>> pl @(Id !! ("d" >> Head)) (M.fromList $ zip "abcd" [0 ..]) -- had to String (instead of _) to keep this happy: ghci is fine
 -- Present 3 (IxL('d') 3 | p=fromList [('a',0),('b',1),('c',2),('d',3)] | q='d')
--- PresentT 3
+-- Val 3
 --
 -- >>> pl @(Id !! ("d" >> Head)) (Set.fromList "abcd") -- had to String (instead of _) to keep this happy: ghci is fine
 -- Present () (IxL('d') () | p=fromList "abcd" | q='d')
--- PresentT ()
+-- Val ()
 --
 -- >>> pl @(Id !! HeadFail "failedn" "e") (Set.fromList "abcd") -- had to String (instead of _) to keep this happy: ghci is fine
 -- Error (!!) index not found (IxL('e'))
--- FailT "(!!) index not found"
+-- Fail "(!!) index not found"
 --
 -- >>> pl @(Id !! ("d" >> Head)) (M.fromList $ zip "abcd" [0 ..])   -- use Char1 "d" instead of "d" >> Head
 -- Present 3 (IxL('d') 3 | p=fromList [('a',0),('b',1),('c',2),('d',3)] | q='d')
--- PresentT 3
+-- Val 3
 --
 -- >>> pl @(Id !! MEmptyT _) (Just 10)
 -- Present 10 (IxL(()) 10 | p=Just 10 | q=())
--- PresentT 10
+-- Val 10
 --
 -- >>> pl @(Id !! MEmptyT _) (Nothing @())
 -- Error (!!) index not found (IxL(()))
--- FailT "(!!) index not found"
+-- Fail "(!!) index not found"
 --
 -- >>> pl @(Id !! 6) ['a'..'z']
 -- Present 'g' (IxL(6) 'g' | p="abcdefghijklmnopqrstuvwxyz" | q=6)
--- PresentT 'g'
+-- Val 'g'
 --
 -- >>> pl @(Snd !! Fst) (3,"abcde" :: String)
 -- Present 'd' (IxL(3) 'd' | p="abcde" | q=3)
--- PresentT 'd'
+-- Val 'd'
 --
 -- >>> pl @(Snd !! Fst) (4,[9,8])
 -- Error (!!) index not found (IxL(4))
--- FailT "(!!) index not found"
+-- Fail "(!!) index not found"
 --
 -- >>> pl @(2 &&& Id >> Snd !! Fst) ("abcdef" :: String)
 -- Present 'c' ((>>) 'c' | {IxL(2) 'c' | p="abcdef" | q=2})
--- PresentT 'c'
+-- Val 'c'
 --
 -- >>> pl @((Len >> Pred) &&& Id >> Snd !! Fst) "abcdef"
 -- Present 'f' ((>>) 'f' | {IxL(5) 'f' | p="abcdef" | q=5})
--- PresentT 'f'
+-- Val 'f'
 --
 -- >>> pl @(Id !! 3) ('a','b','c','d','e')
 -- Present 'd' (IxL(3) 'd' | p=('a','b','c','d','e') | q=3)
--- PresentT 'd'
+-- Val 'd'
 --
 -- >>> pl @(Id !! "s") $ M.fromList [("t",1), ("s", 20), ("s", 99)]
 -- Present 99 (IxL("s") 99 | p=fromList [("s",99),("t",1)] | q="s")
--- PresentT 99
+-- Val 99
 --
 -- >>> pl @(Id !! Char1 "d") (M.fromList $ zip "abcd" [0 ..])
 -- Present 3 (IxL('d') 3 | p=fromList [('a',0),('b',1),('c',2),('d',3)] | q='d')
--- PresentT 3
+-- Val 3
 --
 -- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd >> Gt 3 >> Coerce SG.Any) (IToList _) >> MConcat Id)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
 -- Present (3,Any {getAny = True}) (W '(3,Any {getAny = True}))
--- PresentT (3,Any {getAny = True})
+-- Val (3,Any {getAny = True})
 --
 -- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd >> Gt 3 >> Wrap SG.Any Id) (IToList _) >> MConcat Id >> Unwrap)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
 -- Present (3,True) (W '(3,True))
--- PresentT (3,True)
+-- Val (3,True)
 --
 -- >>> pl @(Id !! FromString _ "d") (M.fromList $ zip (map T.singleton "abcd") [0 ..])
 -- Present 3 (IxL("d") 3 | p=fromList [("a",0),("b",1),("c",2),("d",3)] | q="d")
--- PresentT 3
+-- Val 3
 --
 -- >>> pl @(Id !! FromString _ "d") (M.fromList $ zip (map T.singleton "abcd") [0 ..])
 -- Present 3 (IxL("d") 3 | p=fromList [("a",0),("b",1),("c",2),("d",3)] | q="d")
--- PresentT 3
+-- Val 3
 --
 -- >>> pl @(Id !! 2 !! 0) [[1..5],[10..14],[100..110]]
 -- Present 100 (IxL(0) 100 | p=[100,101,102,103,104,105,106,107,108,109,110] | q=0)
--- PresentT 100
+-- Val 100
 --
 -- >>> pl @(Id !! 1 !! 7) [[1..5],[10..14],[100..110]]
 -- Error (!!) index not found (IxL(7))
--- FailT "(!!) index not found"
+-- Fail "(!!) index not found"
 --
 -- >>> pl @(Id !! 1) [('x',14),('y',3),('z',5)]
 -- Present ('y',3) (IxL(1) ('y',3) | p=[('x',14),('y',3),('z',5)] | q=1)
--- PresentT ('y',3)
+-- Val ('y',3)
 --
 -- >>> pl @(Id !! 14) [('x',14),('y',3),('z',5)]
 -- Error (!!) index not found (IxL(14))
--- FailT "(!!) index not found"
+-- Fail "(!!) index not found"
 --
 
 data p !! q
@@ -436,42 +438,42 @@ instance P (BangBangT p q) a => P (p !! q) a where
 -- | 'lookup' leveraging 'Ixed': see '!!?'
 --
 -- >>> pz @(Lookup Id 2) ["abc","D","eF","","G"]
--- PresentT (Just "eF")
+-- Val (Just "eF")
 --
 -- >>> pz @(Lookup Id 20) ["abc","D","eF","","G"]
--- PresentT Nothing
+-- Val Nothing
 --
 -- >>> pl @(FromList (M.Map _ _) >> Lookup Id (Char1 "y")) [('x',True),('y',False)]
 -- Present Just False ((>>) Just False | {Lookup('y') False | p=fromList [('x',True),('y',False)] | q='y'})
--- PresentT (Just False)
+-- Val (Just False)
 --
 -- >>> pl @(FromList (M.Map _ _) >> Lookup Id (Char1 "z")) [('x',True),('y',False)]
 -- Present Nothing ((>>) Nothing | {Lookup('z') not found})
--- PresentT Nothing
+-- Val Nothing
 --
 -- >>> pl @(FromList (M.Map _ _) >> Lookup Id %% Char1 "y") [('x',True),('y',False)]
 -- Present Just False ((>>) Just False | {Lookup('y') False | p=fromList [('x',True),('y',False)] | q='y'})
--- PresentT (Just False)
+-- Val (Just False)
 --
 -- >>> pl @(Lookup Id 1) [('x',14),('y',3),('z',5)]
 -- Present Just ('y',3) (Lookup(1) ('y',3) | p=[('x',14),('y',3),('z',5)] | q=1)
--- PresentT (Just ('y',3))
+-- Val (Just ('y',3))
 --
 -- >>> pl @(Lookup Id 14) [('x',14),('y',3),('z',5)]
 -- Present Nothing (Lookup(14) not found)
--- PresentT Nothing
+-- Val Nothing
 --
 -- >>> pl @(Lookup "abcdef" 3) ()
 -- Present Just 'd' (Lookup(3) 'd' | p="abcdef" | q=3)
--- PresentT (Just 'd')
+-- Val (Just 'd')
 --
 -- >>> pl @(Lookup '[1,2,3,4,5,6] 4) ()
 -- Present Just 5 (Lookup(4) 5 | p=[1,2,3,4,5,6] | q=4)
--- PresentT (Just 5)
+-- Val (Just 5)
 --
 -- >>> pl @(FromList (M.Map _ _)) [(4,"x"),(5,"dd")]
 -- Present fromList [(4,"x"),(5,"dd")] (FromList fromList [(4,"x"),(5,"dd")])
--- PresentT (fromList [(4,"x"),(5,"dd")])
+-- Val (fromList [(4,"x"),(5,"dd")])
 --
 data Lookup p q
 
@@ -494,17 +496,17 @@ instance ( P q a
         let msg1 = msg0 <> "(" <> showL opts q <> ")"
             hhs = [hh pp, hh qq]
         in case p ^? ix q of
-             Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " not found") hhs
-             Just ret -> mkNode opts (PresentT (Just ret)) (show01' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) hhs
+             Nothing -> mkNode opts (Val Nothing) (msg1 <> " not found") hhs
+             Just ret -> mkNode opts (Val (Just ret)) (show01' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) hhs
 
 -- | type operator version of 'Lookup'
 --
 -- >>> pl @((Id !!? Char1 "d") > MkJust 99 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
 -- False (False || False | (Just 4 > Just 99) || (4 <= 3))
--- PresentT False
+-- Val False
 --
 -- >>> pz @((Id !!? Char1 "d") > MkJust 2 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
--- PresentT True
+-- Val True
 --
 data p !!? q
 type BangBangQT p q = Lookup p q

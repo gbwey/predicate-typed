@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -56,6 +57,7 @@ module Predicate.Data.Char (
   , ToLower
  ) where
 import Predicate.Core
+import Predicate.Misc 
 import Predicate.Util
 import Control.Lens
 import qualified Data.Text.Lens as DTL
@@ -75,7 +77,7 @@ import Data.Char
 -- | extracts the first character from a non empty 'GHC.TypeLits.Symbol'
 --
 -- >>> pz @(Char1 "aBc") ()
--- PresentT 'a'
+-- Val 'a'
 --
 data Char1 (s :: Symbol)  -- gets the first char from the Symbol [requires that Symbol is not empty]
 instance ( KnownSymbol s
@@ -85,13 +87,13 @@ instance ( KnownSymbol s
   eval _ opts _ =
      case symb @s of
        [] -> errorInProgram "Char1: found empty Symbol/string"
-       c:_ -> pure $ mkNode opts (PresentT c) ("Char1 " <> showL opts c) []
+       c:_ -> pure $ mkNode opts (Val c) ("Char1 " <> showL opts c) []
 
 
 -- | a predicate for determining if a character belongs to the given character set
 --
 -- >>> pz @(Map '(IsControl, IsLatin1, IsHexDigit, IsOctDigit, IsDigit, IsPunctuation, IsSeparator, IsSpace) Id) "abc134"
--- PresentT [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
+-- Val [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
 --
 data IsCharSet (cs :: CharSet)
 
@@ -108,13 +110,13 @@ instance ( x ~ Char
 -- | predicate similar to 'Data.Char.isLower'
 --
 -- >>> pz @IsLower 'X'
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsLower '1'
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsLower 'a'
--- PresentT True
+-- Val True
 --
 
 data IsLower
@@ -136,10 +138,10 @@ instance P IsUpperT x => P IsUpper x where
 -- | predicate similar to 'Data.Char.isDigit'
 --
 -- >>> pz @IsDigit 'g'
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsDigit '9'
--- PresentT True
+-- Val True
 --
 data IsDigit
 type IsDigitT = IsCharSet 'CNumber
@@ -150,13 +152,13 @@ instance P IsDigitT x => P IsDigit x where
 -- | predicate similar to 'Data.Char.isSpace'
 --
 -- >>> pz @IsSpace '\t'
--- PresentT True
+-- Val True
 --
 -- >>> pz @IsSpace ' '
--- PresentT True
+-- Val True
 --
 -- >>> pz @IsSpace 'x'
--- PresentT False
+-- Val False
 --
 data IsSpace
 type IsSpaceT = IsCharSet 'CSpace
@@ -183,10 +185,10 @@ instance P IsControlT x => P IsControl x where
 -- | predicate similar to 'Data.Char.isHexDigit'
 --
 -- >>> pz @IsHexDigit 'A'
--- PresentT True
+-- Val True
 --
 -- >>> pz @IsHexDigit 'g'
--- PresentT False
+-- Val False
 --
 data IsHexDigit
 type IsHexDigitT = IsCharSet 'CHexDigit
@@ -223,38 +225,38 @@ instance P IsLatin1T x => P IsLatin1 x where
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "AbcdE"
 -- False ((>>) False | {True (&*) False | (IsLowerAll | "bcdE")})
--- PresentT False
+-- Val False
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "Abcde"
 -- True ((>>) True | {True (&*) True})
--- PresentT True
+-- Val True
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "xbcde"
 -- False ((>>) False | {False (&*) True | (IsUpper | "x")})
--- PresentT False
+-- Val False
 --
 -- >>> pl @('Just Uncons >> IsUpper &* IsLowerAll) "X"
 -- True ((>>) True | {True (&*) True})
--- PresentT True
+-- Val True
 --
 -- >>> pz @( '(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsDigitAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll)) "abc134"
--- PresentT (False,True,True,False,False,False,False,False)
+-- Val (False,True,True,False,False,False,False,False)
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> Para '[IsLowerAll, IsDigitAll, IsUpperAll]) "abdefghi"
 -- Present [True,False,False] ((>>) [True,False,False] | {Para(0) [True,False,False] | ["a","bd","efghi"]})
--- PresentT [True,False,False]
+-- Val [True,False,False]
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll]) "a98efghi"
 -- Error Bool(2) [] (IsUpperAll | "efghi")
--- FailT "Bool(2) [] (IsUpperAll | \"efghi\")"
+-- Fail "Bool(2) [] (IsUpperAll | \"efghi\")"
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll]) "a98efghi"
 -- True ((>>) True | {Bools})
--- PresentT True
+-- Val True
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> BoolsQuick "" '[IsLowerAll, IsDigitAll, IsUpperAll || IsLowerAll]) "a98efgHi"
 -- Error Bool(2) [] (False || False | (IsUpperAll | "efgHi") || (IsLowerAll | "efgHi"))
--- FailT "Bool(2) [] (False || False | (IsUpperAll | \"efgHi\") || (IsLowerAll | \"efgHi\"))"
+-- Fail "Bool(2) [] (False || False | (IsUpperAll | \"efgHi\") || (IsLowerAll | \"efgHi\"))"
 --
 data IsCharSetAll (cs :: CharSet)
 
@@ -307,19 +309,19 @@ instance GetCharSet 'CLatin1 where
 -- | predicate for determining if a string is all lowercase
 --
 -- >>> pz @IsLowerAll "abc"
--- PresentT True
+-- Val True
 --
 -- >>> pz @IsLowerAll "abcX"
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsLowerAll (T.pack "abcX")
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsLowerAll "abcdef213"
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsLowerAll ""
--- PresentT True
+-- Val True
 --
 data IsLowerAll
 type IsLowerAllT = IsCharSetAll 'CLower
@@ -338,10 +340,10 @@ instance P IsUpperAllT x => P IsUpperAll x where
 -- | predicate for determining if the string is all digits
 --
 -- >>> pz @IsDigitAll "213G"
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsDigitAll "929"
--- PresentT True
+-- Val True
 --
 data IsDigitAll
 type IsDigitAllT = IsCharSetAll 'CNumber
@@ -352,13 +354,13 @@ instance P IsDigitAllT x => P IsDigitAll x where
 -- | predicate for determining if the string is all spaces
 --
 -- >>> pz @IsSpaceAll "213G"
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsSpaceAll "    "
--- PresentT True
+-- Val True
 --
 -- >>> pz @IsSpaceAll ""
--- PresentT True
+-- Val True
 --
 data IsSpaceAll
 type IsSpaceAllT = IsCharSetAll 'CSpace
@@ -381,10 +383,10 @@ instance P IsControlAllT x => P IsControlAll x where
 -- | predicate for determining if the string is all hex digits
 --
 -- >>> pz @IsHexDigitAll "01efA"
--- PresentT True
+-- Val True
 --
 -- >>> pz @IsHexDigitAll "01egfA"
--- PresentT False
+-- Val False
 --
 data IsHexDigitAll
 type IsHexDigitAllT = IsCharSetAll 'CHexDigit
@@ -414,7 +416,7 @@ instance P IsLatin1AllT x => P IsLatin1All x where
 -- | converts a string 'Data.Text.Lens.IsText' value to lower case
 --
 -- >>> pz @ToLower "HeLlO wOrld!"
--- PresentT "hello world!"
+-- Val "hello world!"
 --
 data ToLower
 
@@ -425,12 +427,12 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "ToLower"
         xs = as & DTL.text %~ toLower
-    in pure $ mkNode opts (PresentT xs) (show01 opts msg0 xs as) []
+    in pure $ mkNode opts (Val xs) (show01 opts msg0 xs as) []
 
 -- | converts a string 'Data.Text.Lens.IsText' value to upper case
 --
 -- >>> pz @ToUpper "HeLlO wOrld!"
--- PresentT "HELLO WORLD!"
+-- Val "HELLO WORLD!"
 --
 data ToUpper
 
@@ -441,17 +443,17 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "ToUpper"
         xs = as & DTL.text %~ toUpper
-    in pure $ mkNode opts (PresentT xs) (show01 opts msg0 xs as) []
+    in pure $ mkNode opts (Val xs) (show01 opts msg0 xs as) []
 
 
 -- | converts a string 'Data.Text.Lens.IsText' value to title case
 --
 -- >>> pz @ToTitle "HeLlO wOrld!"
--- PresentT "Hello world!"
+-- Val "Hello world!"
 --
 -- >>> data Color = Red | White | Blue | Green | Black deriving (Show,Eq,Enum,Bounded,Read)
 -- >>> pz @(ToTitle >> ReadP Color Id) "red"
--- PresentT Red
+-- Val Red
 --
 data ToTitle
 
@@ -462,7 +464,7 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "ToTitle"
         xs = toTitleAll (as ^. DTL.unpacked) ^. DTL.packed
-    in pure $ mkNode opts (PresentT xs) (show01 opts msg0 xs as) []
+    in pure $ mkNode opts (Val xs) (show01 opts msg0 xs as) []
 
 
 toTitleAll :: String -> String

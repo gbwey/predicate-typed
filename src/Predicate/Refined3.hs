@@ -5,6 +5,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wno-redundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -74,6 +75,7 @@ module Predicate.Refined3 (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Data.Functor.Identity (Identity(..))
 import Data.Tree (Tree(..))
@@ -580,7 +582,7 @@ mkNodeSkipP = Node (PE TrueP "skipped PP ip i = Id") []
 data Msg3 = Msg3 { m3Desc :: !String
                  , m3Short :: !String
                  , m3Long :: !String
-                 , m3BoolP :: !BoolP
+                 , m3ValP :: !ValP
                  } deriving Eq
 
 instance Show Msg3 where
@@ -600,7 +602,7 @@ prt3Impl opts v =
          let (m,n) = ("Step 1. Initial Conversion(ip) Failed", e)
              r = outmsg m
               <> prtTreePure opts t1
-         in mkMsg3 m n r (t1 ^. root . pBool)
+         in mkMsg3 m n r (t1 ^. root . peValP)
        RTF a t1 e t2 ->
          let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
              r = msg1 a
@@ -608,10 +610,10 @@ prt3Impl opts v =
               <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg3 m n r (t2 ^. root . pBool)
+         in mkMsg3 m n r (t2 ^. root . peValP)
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", z)
-             z = let w = t2 ^. root . pString
+             z = let w = t2 ^. root . peString
                  in if all isSpace w then "FalseP" else "{" <> w <> "}"
              r = msg1 a
               <> fixLite opts a t1
@@ -629,7 +631,7 @@ prt3Impl opts v =
               <> "\n"
               <> outmsg m
               <> prtTreePure opts t3
-         in mkMsg3 m n r (t3 ^. root . pBool)
+         in mkMsg3 m n r (t3 ^. root . peValP)
        RTTrueT a t1 t2 t3 ->
          let (m,n) = ("Step 3. Success Output Conversion(fmt)", "")
              r = msg1 a
@@ -640,7 +642,7 @@ prt3Impl opts v =
               <> "\n"
               <> outmsg m
               <> fixLite opts () t3
-         in mkMsg3 m n r (t3 ^. root . pBool)
+         in mkMsg3 m n r (t3 ^. root . peValP)
 
 replaceOpt3 :: forall (opts :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 opts ip op fmt i
 replaceOpt3 = coerce

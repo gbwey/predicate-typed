@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -62,6 +63,7 @@ module Predicate.Data.These (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
@@ -80,15 +82,15 @@ import qualified Data.These.Combinators as TheseC
 -- | similar to 'partitionThese'. returns a 3-tuple with the results so use 'Fst' 'Snd' 'Thd' to extract
 --
 -- >>> pz @PartitionThese [This 'a', That 2, This 'c', These 'z' 1, That 4, These 'a' 2, That 99]
--- PresentT ("ac",[2,4,99],[('z',1),('a',2)])
+-- Val ("ac",[2,4,99],[('z',1),('a',2)])
 --
 -- >>> pl @PartitionThese [This 4, That 'x', That 'y',These 3 'b', This 99, These 5 'x']
 -- Present ([4,99],"xy",[(3,'b'),(5,'x')]) (PartitionThese ([4,99],"xy",[(3,'b'),(5,'x')]) | [This 4,That 'x',That 'y',These 3 'b',This 99,These 5 'x'])
--- PresentT ([4,99],"xy",[(3,'b'),(5,'x')])
+-- Val ([4,99],"xy",[(3,'b'),(5,'x')])
 --
 -- >>> pl @PartitionThese [This 1,That 'x',This 4,That 'y',These 9 'z',This 10,These 8 'y']
 -- Present ([1,4,10],"xy",[(9,'z'),(8,'y')]) (PartitionThese ([1,4,10],"xy",[(9,'z'),(8,'y')]) | [This 1,That 'x',This 4,That 'y',These 9 'z',This 10,These 8 'y'])
--- PresentT ([1,4,10],"xy",[(9,'z'),(8,'y')])
+-- Val ([1,4,10],"xy",[(9,'z'),(8,'y')])
 --
 data PartitionThese
 
@@ -99,18 +101,18 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "PartitionThese"
         b = partitionThese as
-    in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
+    in pure $ mkNode opts (Val b) (show01 opts msg0 b as) []
 
 -- | similar to 'TheseC.catThis'
 --
 -- >>> pz @(Thiss) [That 1, This 'a', These 'b' 33, This 'd', That 4]
--- PresentT "ad"
+-- Val "ad"
 --
 -- >>> pz @(Thiss) [That 1, This 'a', These 'b' 33]
--- PresentT "a"
+-- Val "a"
 --
 -- >>> pz @(Thiss) [That 1, That 9, These 1 33]
--- PresentT []
+-- Val []
 --
 data Thiss
 type ThissT = PartitionThese >> Fst
@@ -123,7 +125,7 @@ instance P ThissT x => P Thiss x where
 --
 -- >>> pl @Thats [This 1, This 10,That 'x', This 99, That 'y']
 -- Present "xy" ((>>) "xy" | {Snd "xy" | ([1,10,99],"xy",[])})
--- PresentT "xy"
+-- Val "xy"
 --
 data Thats
 type ThatsT = PartitionThese >> Snd
@@ -135,7 +137,7 @@ instance P ThatsT x => P Thats x where
 -- | similar to 'TheseC.catThese'
 --
 -- >>> pz @(ZipThese Id Tail >> Theses) [1..10]
--- PresentT [(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,8),(8,9),(9,10)]
+-- Val [(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,8),(8,9),(9,10)]
 --
 data Theses
 type ThesesT = PartitionThese >> Thd
@@ -147,7 +149,7 @@ instance P ThesesT x => P Theses x where
 -- | similar to 'TheseC.catHere'
 --
 -- >>> pz @(ZipThese Id Tail >> Heres) [1..10]
--- PresentT [1,2,3,4,5,6,7,8,9,10]
+-- Val [1,2,3,4,5,6,7,8,9,10]
 --
 data Heres
 
@@ -158,12 +160,12 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "Heres"
         b = TheseC.catHere as
-    in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
+    in pure $ mkNode opts (Val b) (show01 opts msg0 b as) []
 
 -- | similar to 'TheseC.catThere'
 --
 -- >>> pz @(ZipThese Id Tail >> Theres) [1..10]
--- PresentT [2,3,4,5,6,7,8,9,10]
+-- Val [2,3,4,5,6,7,8,9,10]
 --
 data Theres
 
@@ -174,33 +176,33 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "Theres"
         b = TheseC.catThere as
-    in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
+    in pure $ mkNode opts (Val b) (show01 opts msg0 b as) []
 
 -- | similar to 'Data.These.mergeTheseWith' but additionally provides @p@, @q@ and @r@ the original input as the first element in the tuple
 --
 -- >>> pz @(TheseX ((L11 + Snd) >> ShowP Id) (ShowP Id) L22 Snd) (9,This 123)
--- PresentT "132"
+-- Val "132"
 --
 -- >>> pz @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (This 123)
--- PresentT (123,"fromthis")
+-- Val (123,"fromthis")
 --
 -- >>> pz @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (That "fromthat")
--- PresentT (-99,"fromthat")
+-- Val (-99,"fromthat")
 --
 -- >>> pz @(TheseX '(Snd,"fromthis") '(Negate 99,Snd) Snd Id) (These 123 "fromthese")
--- PresentT (123,"fromthese")
+-- Val (123,"fromthese")
 --
 -- >>> pl @(TheseX (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (These @Int 9 "rhs")
 -- Present "a=9 b=rhs" (TheseX(These))
--- PresentT "a=9 b=rhs"
+-- Val "a=9 b=rhs"
 --
 -- >>> pl @(TheseX (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (This @Int 9)
 -- Present "a=10" (TheseX(This))
--- PresentT "a=10"
+-- Val "a=10"
 --
 -- >>> pl @(TheseX (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id) (That @Int "rhs")
 -- Present "b=rhs" (TheseX(That))
--- PresentT "b=rhs"
+-- Val "b=rhs"
 --
 data TheseX p q r s
 
@@ -239,15 +241,15 @@ instance ( P s x
           Right _ -> mkNodeCopy opts rr msg1 [hh ss, hh rr]
 
 type family TheseXT lr x p where
-  TheseXT (These a b) x p = PP p (x,a)
+  TheseXT (These a _b) x p = PP p (x,a)
 
 -- | 'Data.These.This' constructor
 --
 -- >>> pz @(MkThis _ Id) 44
--- PresentT (This 44)
+-- Val (This 44)
 --
 -- >>> pz @(Proxy Int >> MkThis' Unproxy 10) []
--- PresentT (This 10)
+-- Val (This 10)
 --
 data MkThis' t p
 
@@ -262,17 +264,17 @@ instance ( P p x
       Left e -> e
       Right p ->
         let d = This p
-        in mkNode opts (PresentT d) (msg0 <> " This " <> showL opts p) [hh pp]
+        in mkNode opts (Val d) (msg0 <> " This " <> showL opts p) [hh pp]
 
 -- | 'Data.These.This' constructor
 --
 -- >>> pl @(MkThis () Id) 'x'
 -- Present This 'x' (MkThis This 'x')
--- PresentT (This 'x')
+-- Val (This 'x')
 --
 -- >>> pl @(MkThis () Fst) ('x',True)
 -- Present This 'x' (MkThis This 'x')
--- PresentT (This 'x')
+-- Val (This 'x')
 --
 
 data MkThis (t :: Type) p
@@ -285,14 +287,14 @@ instance P (MkThisT t p) x => P (MkThis t p) x where
 -- | 'Data.These.That' constructor
 --
 -- >>> pz @(MkThat _ Id) 44
--- PresentT (That 44)
+-- Val (That 44)
 --
 -- >>> pz @(MkThat _ "Abc" <> MkThis _ '[1,2] <> MkThese [3,4] "def") ()
--- PresentT (These [1,2,3,4] "Abcdef")
+-- Val (These [1,2,3,4] "Abcdef")
 --
 -- >>> pl @(MkThat () Id) 'x'
 -- Present That 'x' (MkThat That 'x')
--- PresentT (That 'x')
+-- Val (That 'x')
 --
 data MkThat' t p
 
@@ -307,7 +309,7 @@ instance ( Show (PP p x)
       Left e -> e
       Right p ->
         let d = That p
-        in mkNode opts (PresentT d) (msg0 <> " That " <> showL opts p) [hh pp]
+        in mkNode opts (Val d) (msg0 <> " That " <> showL opts p) [hh pp]
 
 data MkThat (t :: Type) p
 type MkThatT (t :: Type) p = MkThat' (Hole t) p
@@ -322,11 +324,11 @@ instance P (MkThatT t p) x => P (MkThat t p) x where
 -- | 'Data.These.These' constructor
 --
 -- >>> pz @(MkThese Fst Snd) (44,'x')
--- PresentT (These 44 'x')
+-- Val (These 44 'x')
 --
 -- >>> pl @(MkThese Id 'True) 'x'
 -- Present These 'x' True (MkThese These 'x' True)
--- PresentT (These 'x' True)
+-- Val (These 'x' True)
 --
 data MkThese p q
 instance ( P p a
@@ -342,7 +344,7 @@ instance ( P p a
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = These p q
-        in mkNode opts (PresentT d) (msg0 <> " " <> showL opts d) [hh pp, hh qq]
+        in mkNode opts (Val d) (msg0 <> " " <> showL opts d) [hh pp, hh qq]
 
 data IsTh (th :: These x y) -- x y can be anything
 
@@ -362,14 +364,14 @@ instance ( x ~ These a b
 -- | predicate on 'Data.These.This'
 --
 -- >>> pz @IsThis (This "aBc")
--- PresentT True
+-- Val True
 --
 -- >>> pz @IsThis (These 1 'a')
--- PresentT False
+-- Val False
 --
 -- >>> pl @IsThis (This 12)
 -- True (IsThis | This 12)
--- PresentT True
+-- Val True
 --
 data IsThis
 type IsThisT = IsTh ('This '())
@@ -382,7 +384,7 @@ instance P IsThisT x => P IsThis x where
 --
 -- >>> pl @IsThat (This 12)
 -- False (IsThat | This 12)
--- PresentT False
+-- Val False
 --
 data IsThat
 type IsThatT = IsTh ('That '())
@@ -395,22 +397,22 @@ instance P IsThatT x => P IsThat x where
 --
 -- >>> pl @IsThese (This 12)
 -- False (IsThese | This 12)
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsThese (These 1 'a')
--- PresentT True
+-- Val True
 --
 -- >>> pl @IsThese (These 'x' 12)
 -- True (IsThese | These 'x' 12)
--- PresentT True
+-- Val True
 --
 -- >>> pl @IsThese (That (SG.Sum 12))
 -- False (IsThese | That (Sum {getSum = 12}))
--- PresentT False
+-- Val False
 --
 -- >>> pl @IsThese (These 1 (SG.Sum 12))
 -- True (IsThese | These 1 (Sum {getSum = 12}))
--- PresentT True
+-- Val True
 --
 data IsThese
 type IsTheseT = IsTh ('These '() '())
@@ -422,38 +424,38 @@ instance P IsTheseT x => P IsThese x where
 -- | similar to 'Data.These.these'
 --
 -- >>> pz @(TheseIn Id Len (Fst + Length Snd)) (This 13)
--- PresentT 13
+-- Val 13
 --
 -- >>> pz @(TheseIn Id Len (Fst + Length Snd)) (That "this is a long string")
--- PresentT 21
+-- Val 21
 --
 -- >>> pz @(TheseIn Id Len (Fst + Length Snd)) (These 20 "somedata")
--- PresentT 28
+-- Val 28
 --
 -- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (That "this is a long string")
--- PresentT (Right "this is a long string")
+-- Val (Right "this is a long string")
 --
 -- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 1 "this is a long string")
--- PresentT (Right "this is a long string")
+-- Val (Right "this is a long string")
 --
 -- >>> pz @(TheseIn (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 100 "this is a long string")
--- PresentT (Left 100)
+-- Val (Left 100)
 --
 -- >>> pl @(TheseIn "this" "that" "these") (This (SG.Sum 12))
 -- Present "this" (TheseIn "this" | This Sum {getSum = 12})
--- PresentT "this"
+-- Val "this"
 --
 -- >>> pl @(TheseIn (Id &&& 999) ("no value" &&& Id) Id) (These "Ab" 13)
 -- Present ("Ab",13) (TheseIn ("Ab",13) | These "Ab" 13)
--- PresentT ("Ab",13)
+-- Val ("Ab",13)
 --
 -- >>> pl @(TheseIn (Id &&& 999) ("no value" &&& Id) Id) (This "Ab")
 -- Present ("Ab",999) (TheseIn ("Ab",999) | This "Ab")
--- PresentT ("Ab",999)
+-- Val ("Ab",999)
 --
 -- >>> pl @(TheseIn (Id &&& 999) ("no value" &&& Id) Id) (That 13)
 -- Present ("no value",13) (TheseIn ("no value",13) | That 13)
--- PresentT ("no value",13)
+-- Val ("no value",13)
 --
 
 data TheseIn p q r
@@ -478,35 +480,35 @@ instance ( Show a
           pp <- eval (Proxy @p) opts a
           pure $ case getValueLR opts (msg2 <> "p failed") pp [] of
                Left e -> e
-               Right c -> mkNode opts (PresentT c) (show01' opts msg0 c msg1 a) [hh pp]
+               Right c -> mkNode opts (Val c) (show01' opts msg0 c msg1 a) [hh pp]
         That b -> do
           let msg1 = "That "
               msg2 = msg0 <> msg1
           qq <- eval (Proxy @q) opts b
           pure $ case getValueLR opts (msg2 <> "q failed") qq [] of
                Left e -> e
-               Right c -> mkNode opts (PresentT c) (show01' opts msg0 c msg1 b) [hh qq]
+               Right c -> mkNode opts (Val c) (show01' opts msg0 c msg1 b) [hh qq]
         These a b -> do
           let msg1 = "These "
               msg2 = msg0 <> msg1
           rr <- eval (Proxy @r) opts (a,b)
           pure $ case getValueLR opts (msg2 <> "r failed") rr [] of
                Left e -> e
-               Right c -> mkNode opts (PresentT c) (show01 opts msg0 c (These a b)) [hh rr]
+               Right c -> mkNode opts (Val c) (show01 opts msg0 c (These a b)) [hh rr]
 
 -- | TheseId: given a 'These' returns a tuple but you need to provide default values for both sides
 --
 -- >>> pl @(TheseId "xyz" 'True ) (This "abc")
 -- Present ("abc",True) (TheseIn ("abc",True) | This "abc")
--- PresentT ("abc",True)
+-- Val ("abc",True)
 --
 -- >>> pl @(TheseId "xyz" 'True) (That False)
 -- Present ("xyz",False) (TheseIn ("xyz",False) | That False)
--- PresentT ("xyz",False)
+-- Val ("xyz",False)
 --
 -- >>> pl @(TheseId "xyz" 'True) (These "abc" False)
 -- Present ("abc",False) (TheseIn ("abc",False) | These "abc" False)
--- PresentT ("abc",False)
+-- Val ("abc",False)
 --
 data TheseId p q
 type TheseIdT p q = TheseIn '(Id, q) '(p, Id) Id
@@ -520,30 +522,30 @@ instance P (TheseIdT p q) x => P (TheseId p q) x where
 -- the key is that all information about both lists are preserved
 --
 -- >>> pz @(ZipThese Fst Snd) ("aBc", [1..5])
--- PresentT [These 'a' 1,These 'B' 2,These 'c' 3,That 4,That 5]
+-- Val [These 'a' 1,These 'B' 2,These 'c' 3,That 4,That 5]
 --
 -- >>> pz @(ZipThese Fst Snd) ("aBcDeF", [1..3])
--- PresentT [These 'a' 1,These 'B' 2,These 'c' 3,This 'D',This 'e',This 'F']
+-- Val [These 'a' 1,These 'B' 2,These 'c' 3,This 'D',This 'e',This 'F']
 --
 -- >>> pz @(ZipThese Id Reverse) "aBcDeF"
--- PresentT [These 'a' 'F',These 'B' 'e',These 'c' 'D',These 'D' 'c',These 'e' 'B',These 'F' 'a']
+-- Val [These 'a' 'F',These 'B' 'e',These 'c' 'D',These 'D' 'c',These 'e' 'B',These 'F' 'a']
 --
 -- >>> pz @(ZipThese Id '[]) "aBcDeF"
--- PresentT [This 'a',This 'B',This 'c',This 'D',This 'e',This 'F']
+-- Val [This 'a',This 'B',This 'c',This 'D',This 'e',This 'F']
 --
 -- >>> pz @(ZipThese '[] Id) "aBcDeF"
--- PresentT [That 'a',That 'B',That 'c',That 'D',That 'e',That 'F']
+-- Val [That 'a',That 'B',That 'c',That 'D',That 'e',That 'F']
 --
 -- >>> pz @(ZipThese '[] '[]) "aBcDeF"
--- PresentT []
+-- Val []
 --
 -- >>> pl @(ZipThese Fst Snd >> Map (TheseIn Id Id Fst) Id) (['w'..'y'],['a'..'f'])
 -- Present "wxydef" ((>>) "wxydef" | {Map "wxydef" | [These 'w' 'a',These 'x' 'b',These 'y' 'c',That 'd',That 'e',That 'f']})
--- PresentT "wxydef"
+-- Val "wxydef"
 --
 -- >>> pl @(("sdf" &&& Id) >> ZipThese Fst Snd >> Map (TheseIn (Id &&& 0) (("x" >> Head) &&& Id) Id) Id) [1..5]
 -- Present [('s',1),('d',2),('f',3),('x',4),('x',5)] ((>>) [('s',1),('d',2),('f',3),('x',4),('x',5)] | {Map [('s',1),('d',2),('f',3),('x',4),('x',5)] | [These 's' 1,These 'd' 2,These 'f' 3,That 4,That 5]})
--- PresentT [('s',1),('d',2),('f',3),('x',4),('x',5)]
+-- Val [('s',1),('d',2),('f',3),('x',4),('x',5)]
 --
 
 data ZipThese p q
@@ -567,7 +569,7 @@ instance ( PP p a ~ [x]
           Left e -> e
           Right _ ->
             let d = simpleAlign p q
-            in mkNode opts (PresentT d) (show01' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
+            in mkNode opts (Val d) (show01' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
 
 
 simpleAlign :: [a] -> [b] -> [These a b]
@@ -581,30 +583,30 @@ simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
 -- if there is no This value then \p\ is passed the whole context only
 --
 -- >>> pz @(ThisDef (1 % 4) Id) (This 20.4)
--- PresentT (102 % 5)
+-- Val (102 % 5)
 --
 -- >>> pz @(ThisDef (1 % 4) Id) (That "aa")
--- PresentT (1 % 4)
+-- Val (1 % 4)
 --
 -- >>> pz @(ThisDef (1 % 4) Id) (These 2.3 "aa")
--- PresentT (1 % 4)
+-- Val (1 % 4)
 --
 -- >>> pz @(ThisDef (PrintT "found %s fst=%d" '(ShowP Snd, Fst)) Snd) (123,That "xy")
--- PresentT "found That \"xy\" fst=123"
+-- Val "found That \"xy\" fst=123"
 --
 -- >>> pz @(ThisDef (MEmptyT _) Id) (That 222)
--- PresentT ()
+-- Val ()
 --
 -- >>> pz @(ThisDef (MEmptyT (SG.Sum _)) Id) (These 222 'x')
--- PresentT (Sum {getSum = 0})
+-- Val (Sum {getSum = 0})
 --
 -- >>> pl @(ThisDef (MEmptyT _) Id) (This (SG.Sum 12))
 -- Present Sum {getSum = 12} (ThisDef This)
--- PresentT (Sum {getSum = 12})
+-- Val (Sum {getSum = 12})
 --
 -- >>> pl @(ThisDef (MEmptyT _) Id) (That 12)
 -- Present () (ThisDef That)
--- PresentT ()
+-- Val ()
 --
 
 data ThisDef p q
@@ -622,12 +624,12 @@ instance ( PP q x ~ These a b
       Left e -> pure e
       Right q ->
         case q of
-          This a -> pure $ mkNode opts (PresentT a) (msg0 <> " This") [hh qq]
+          This a -> pure $ mkNode opts (Val a) (msg0 <> " This") [hh qq]
           _ -> do
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (PresentT p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
+              Right p -> mkNode opts (Val p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
 
 
 -- | extract the That value from an 'These' otherwise use the default value
@@ -635,22 +637,22 @@ instance ( PP q x ~ These a b
 -- if there is no That value then \p\ is passed the whole context only
 --
 -- >>> pz @(ThatDef (1 % 4) Id) (That 20.4)
--- PresentT (102 % 5)
+-- Val (102 % 5)
 --
 -- >>> pz @(ThatDef (1 % 4) Id) (This "aa")
--- PresentT (1 % 4)
+-- Val (1 % 4)
 --
 -- >>> pz @(ThatDef (1 % 4) Id) (These "aa" 2.3)
--- PresentT (1 % 4)
+-- Val (1 % 4)
 --
 -- >>> pz @(ThatDef (PrintT "found %s fst=%d" '(ShowP Snd, Fst)) Snd) (123,This "xy")
--- PresentT "found This \"xy\" fst=123"
+-- Val "found This \"xy\" fst=123"
 --
 -- >>> pz @(ThatDef (MEmptyT _) Id) (This 222)
--- PresentT ()
+-- Val ()
 --
 -- >>> pz @(ThatDef (MEmptyT (SG.Sum _)) Id) (These 'x' 1120)
--- PresentT (Sum {getSum = 0})
+-- Val (Sum {getSum = 0})
 --
 data ThatDef p q
 
@@ -667,46 +669,46 @@ instance ( PP q x ~ These a b
       Left e -> pure e
       Right q ->
         case q of
-          That a -> pure $ mkNode opts (PresentT a) (msg0 <> " That") [hh qq]
+          That a -> pure $ mkNode opts (Val a) (msg0 <> " That") [hh qq]
           _ -> do
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (PresentT p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
+              Right p -> mkNode opts (Val p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
 
 -- | extract the These value from an 'These' otherwise use the default value
 --
 -- if there is no These value then \p\ is passed the whole context only
 --
 -- >>> pz @(TheseDef '(1 % 4,"zz") Id) (These 20.4 "x")
--- PresentT (102 % 5,"x")
+-- Val (102 % 5,"x")
 --
 -- >>> pz @(TheseDef '(1 % 4,"zz") Id) (This 20.4)
--- PresentT (1 % 4,"zz")
+-- Val (1 % 4,"zz")
 --
 -- >>> pz @(TheseDef '(1 % 4,"zz") Id) (That "x")
--- PresentT (1 % 4,"zz")
+-- Val (1 % 4,"zz")
 --
 -- >>> pz @(TheseDef '(PrintT "found %s fst=%d" '(ShowP Snd, Fst),999) Snd) (123,This "xy")
--- PresentT ("found This \"xy\" fst=123",999)
+-- Val ("found This \"xy\" fst=123",999)
 --
 -- >>> pz @(TheseDef (MEmptyT (SG.Sum _, String)) Id) (This 222)
--- PresentT (Sum {getSum = 0},"")
+-- Val (Sum {getSum = 0},"")
 --
 -- >>> pz @(TheseDef (MEmptyT _) Id) (These (222 :: SG.Sum Int) "aa")
--- PresentT (Sum {getSum = 222},"aa")
+-- Val (Sum {getSum = 222},"aa")
 --
 -- >>> pl @(TheseDef '("xyz",'True) Id) (This "abc")
 -- Present ("xyz",True) (TheseDef This)
--- PresentT ("xyz",True)
+-- Val ("xyz",True)
 --
 -- >>> pl @(TheseDef '("xyz",'True) Id) (That False)
 -- Present ("xyz",True) (TheseDef That)
--- PresentT ("xyz",True)
+-- Val ("xyz",True)
 --
 -- >>> pl @(TheseDef '("xyz",'True) Id) (These "abc" False)
 -- Present ("abc",False) (TheseDef These)
--- PresentT ("abc",False)
+-- Val ("abc",False)
 --
 data TheseDef p q
 
@@ -723,12 +725,12 @@ instance ( PP q x ~ These a b
       Left e -> pure e
       Right q ->
         case q of
-          These a b -> pure $ mkNode opts (PresentT (a,b)) (msg0 <> " These") [hh qq]
+          These a b -> pure $ mkNode opts (Val (a,b)) (msg0 <> " These") [hh qq]
           _ -> do
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (PresentT p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
+              Right p -> mkNode opts (Val p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
 
 
 -- | extract the This value from a 'These' otherwise fail with a message
@@ -736,28 +738,28 @@ instance ( PP q x ~ These a b
 -- if there is no This value then \p\ is passed the whole context only
 --
 -- >>> pz @(ThisFail "oops" Id) (This 20.4)
--- PresentT 20.4
+-- Val 20.4
 --
 -- >>> pz @(ThisFail "oops" Id) (That "aa")
--- FailT "oops"
+-- Fail "oops"
 --
 -- >>> pz @(ThisFail (PrintT "found %s fst=%d" '(ShowP Snd,Fst)) Snd) (123,That "xy")
--- FailT "found That \"xy\" fst=123"
+-- Fail "found That \"xy\" fst=123"
 --
 -- >>> pz @(ThisFail (MEmptyT _) Id) (That 222)
--- FailT ""
+-- Fail ""
 --
 -- >>> pl @(ThisFail "sdf" Id) (This (SG.Sum 12))
 -- Present Sum {getSum = 12} (This)
--- PresentT (Sum {getSum = 12})
+-- Val (Sum {getSum = 12})
 --
 -- >>> pl @(ThisFail "sdf" Id) (That (SG.Sum 12))
 -- Error sdf (ThisFail That)
--- FailT "sdf"
+-- Fail "sdf"
 --
 -- >>> pl @(ThisFail "sdf" Id) (That 12)
 -- Error sdf (ThisFail That)
--- FailT "sdf"
+-- Fail "sdf"
 --
 data ThisFail p q
 
@@ -775,12 +777,12 @@ instance ( PP p x ~ String
       Left e -> pure e
       Right q ->
         case q of
-          This a -> pure $ mkNode opts (PresentT a) "This" [hh qq]
+          This a -> pure $ mkNode opts (Val a) "This" [hh qq]
           _ -> do
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (FailT p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
+              Right p -> mkNode opts (Fail p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
 
 
 -- | extract the That value from a 'These' otherwise fail with a message
@@ -788,16 +790,16 @@ instance ( PP p x ~ String
 -- if there is no That value then \p\ is passed the whole context only
 --
 -- >>> pz @(ThatFail "oops" Id) (That 20.4)
--- PresentT 20.4
+-- Val 20.4
 --
 -- >>> pz @(ThatFail "oops" Id) (This "aa")
--- FailT "oops"
+-- Fail "oops"
 --
 -- >>> pz @(ThatFail (PrintT "found %s fst=%d" '(ShowP Snd,Fst)) Snd) (123,This "xy")
--- FailT "found This \"xy\" fst=123"
+-- Fail "found This \"xy\" fst=123"
 --
 -- >>> pz @(ThatFail (MEmptyT _) Id) (This 222)
--- FailT ""
+-- Fail ""
 --
 data ThatFail p q
 
@@ -815,12 +817,12 @@ instance ( PP p x ~ String
       Left e -> pure e
       Right q ->
         case q of
-          That a -> pure $ mkNode opts (PresentT a) "That" [hh qq]
+          That a -> pure $ mkNode opts (Val a) "That" [hh qq]
           _ -> do
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (FailT p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
+              Right p -> mkNode opts (Fail p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
 
 
 
@@ -830,16 +832,16 @@ instance ( PP p x ~ String
 -- if there is no These value then \p\ is passed the whole context only
 --
 -- >>> pz @(TheseFail "oops" Id) (These "abc" 20.4)
--- PresentT ("abc",20.4)
+-- Val ("abc",20.4)
 --
 -- >>> pz @(TheseFail "oops" Id) (That "aa")
--- FailT "oops"
+-- Fail "oops"
 --
 -- >>> pz @(TheseFail (PrintT "found %s fst=%d" '(ShowP Snd,Fst)) Snd) (123,That "xy")
--- FailT "found That \"xy\" fst=123"
+-- Fail "found That \"xy\" fst=123"
 --
 -- >>> pz @(TheseFail (MEmptyT _) Id) (That 222)
--- FailT ""
+-- Fail ""
 --
 data TheseFail p q
 
@@ -857,38 +859,38 @@ instance ( PP p x ~ String
       Left e -> pure e
       Right q ->
         case q of
-          These a b -> pure $ mkNode opts (PresentT (a,b)) "These" [hh qq]
+          These a b -> pure $ mkNode opts (Val (a,b)) "These" [hh qq]
           _ -> do
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (FailT p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
+              Right p -> mkNode opts (Fail p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
 
 
 -- | assoc using 'AssocC'
 --
 -- >>> pz @Assoc (This (These 123 'x'))
--- PresentT (These 123 (This 'x'))
+-- Val (These 123 (This 'x'))
 --
 -- >>> pz @Assoc ((99,'a'),True)
--- PresentT (99,('a',True))
+-- Val (99,('a',True))
 --
 -- >>> pz @Assoc ((99,'a'),True)
--- PresentT (99,('a',True))
+-- Val (99,('a',True))
 --
 -- >>> pz @Assoc (Right "Abc" :: Either (Either () ()) String)
--- PresentT (Right (Right "Abc"))
+-- Val (Right (Right "Abc"))
 --
 -- >>> pz @Assoc (Left (Left 'x'))
--- PresentT (Left 'x')
+-- Val (Left 'x')
 --
 -- >>> pl @Assoc ((10,'c'),True)
 -- Present (10,('c',True)) (Assoc (10,('c',True)) | ((10,'c'),True))
--- PresentT (10,('c',True))
+-- Val (10,('c',True))
 --
 -- >>> pl @(Assoc >> Unassoc) ((10,'c'),True)
 -- Present ((10,'c'),True) ((>>) ((10,'c'),True) | {Unassoc ((10,'c'),True) | (10,('c',True))})
--- PresentT ((10,'c'),True)
+-- Val ((10,'c'),True)
 --
 data Assoc
 
@@ -930,28 +932,28 @@ instance ( AssocC p
   eval _ opts pabc =
     let msg0 = "Assoc"
         d = assoc pabc
-    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d pabc) []
+    in pure $ mkNode opts (Val d) (show01 opts msg0 d pabc) []
 
 -- | unassoc using 'AssocC'
 --
 -- >>> pz @Unassoc (These 123 (This 'x'))
--- PresentT (This (These 123 'x'))
+-- Val (This (These 123 'x'))
 --
 -- >>> pz @Unassoc (99,('a',True))
--- PresentT ((99,'a'),True)
+-- Val ((99,'a'),True)
 --
 -- >>> pz @Unassoc (This 10 :: These Int (These Bool ()))
--- PresentT (This (This 10))
+-- Val (This (This 10))
 --
 -- >>> pz @Unassoc (Right (Right 123))
--- PresentT (Right 123)
+-- Val (Right 123)
 --
 -- >>> pz @Unassoc (Left 'x' :: Either Char (Either Bool Double))
--- PresentT (Left (Left 'x'))
+-- Val (Left (Left 'x'))
 --
 -- >>> pl @Unassoc (10,('c',True))
 -- Present ((10,'c'),True) (Unassoc ((10,'c'),True) | (10,('c',True)))
--- PresentT ((10,'c'),True)
+-- Val ((10,'c'),True)
 --
 data Unassoc
 
@@ -963,16 +965,16 @@ instance ( AssocC p
   eval _ opts pabc =
     let msg0 = "Unassoc"
         d = unassoc pabc
-    in pure $ mkNode opts (PresentT d) (show01 opts msg0 d pabc) []
+    in pure $ mkNode opts (Val d) (show01 opts msg0 d pabc) []
 
 
 -- | tries to extract a value from the 'Data.These.This' constructor
 --
 -- >>> pz @(This' >> Succ) (This 20)
--- PresentT 21
+-- Val 21
 --
 -- >>> pz @(This' >> Succ) (That 'a')
--- FailT "This' found That"
+-- Fail "This' found That"
 --
 data This'
 instance Show a => P This' (These a x) where
@@ -980,17 +982,17 @@ instance Show a => P This' (These a x) where
   eval _ opts lr =
     let msg0 = "This'"
     in pure $ case lr of
-         These _ _ -> mkNode opts (FailT (msg0 <> " found These")) "" []
-         That _ -> mkNode opts (FailT (msg0 <> " found That")) "" []
-         This a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+         These _ _ -> mkNode opts (Fail (msg0 <> " found These")) "" []
+         That _ -> mkNode opts (Fail (msg0 <> " found That")) "" []
+         This a -> mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
 -- | tries to extract a value from the 'Data.These.That' constructor
 --
 -- >>> pz @(That' >> Succ) (That 20)
--- PresentT 21
+-- Val 21
 --
 -- >>> pz @(That' >> Succ) (This 'a')
--- FailT "That' found This"
+-- Fail "That' found This"
 --
 data That'
 instance Show a => P That' (These x a) where
@@ -998,20 +1000,20 @@ instance Show a => P That' (These x a) where
   eval _ opts lr =
     let msg0 = "That'"
     in pure $ case lr of
-         These _ _ -> mkNode opts (FailT (msg0 <> " found These")) "" []
-         This _ -> mkNode opts (FailT (msg0 <> " found This")) "" []
-         That a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+         These _ _ -> mkNode opts (Fail (msg0 <> " found These")) "" []
+         This _ -> mkNode opts (Fail (msg0 <> " found This")) "" []
+         That a -> mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
 -- | tries to extract the values from the 'Data.These.These' constructor
 --
 -- >>> pz @(These' >> Second Succ) (These 1 'a')
--- PresentT (1,'b')
+-- Val (1,'b')
 --
 -- >>> pz @(That' >> Succ) (This 'a')
--- FailT "That' found This"
+-- Fail "That' found This"
 --
 -- >>> pz @(These' >> Second Succ) (That 8)
--- FailT "These' found That"
+-- Fail "These' found That"
 --
 data These'
 instance ( Show a
@@ -1021,8 +1023,8 @@ instance ( Show a
   eval _ opts lr =
     let msg0 = "These'"
     in pure $ case lr of
-         This _ -> mkNode opts (FailT (msg0 <> " found This")) "" []
-         That _ -> mkNode opts (FailT (msg0 <> " found That")) "" []
-         These a b -> mkNode opts (PresentT (a,b)) (msg0 <> " " <> showL opts (a,b)) []
+         This _ -> mkNode opts (Fail (msg0 <> " found This")) "" []
+         That _ -> mkNode opts (Fail (msg0 <> " found That")) "" []
+         These a b -> mkNode opts (Val (a,b)) (msg0 <> " " <> showL opts (a,b)) []
 
 

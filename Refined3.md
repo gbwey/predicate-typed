@@ -53,13 +53,13 @@ False 4094 <= 255
 Read in the string "0000fe" as input to `ReadBase Int 16` and produce 254 as output
 ```haskell
 >pu @(ReadBase Int 16) "0000fe"
-PresentT 254
+Val 254
 
 >pu @(Between 0 255 Id) 254
-PresentT True
+Val True
 
 >pu @(ShowBase 16) 254 = "fe"
-PresentT "fe"
+Val "fe"
 ```
 
 

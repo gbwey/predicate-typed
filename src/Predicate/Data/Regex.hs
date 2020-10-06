@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -48,6 +49,7 @@ module Predicate.Data.Regex (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Data.Proxy (Proxy(Proxy))
 import qualified Text.Regex.PCRE.Heavy as RH
@@ -65,17 +67,17 @@ import qualified Text.Regex.PCRE.Heavy as RH
 --
 -- >>> pl @(Re' '[ 'Caseless, 'Dotall ] "ab" Id) "aB"
 -- True (Re' ['Caseless, 'Dotall] (ab) | aB)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Re' '[ 'Caseless, 'Dotall ] "ab." Id) "aB\n"
 -- True (Re' ['Caseless, 'Dotall] (ab.) | aB
 -- )
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Re' '[ 'Caseless ] "ab." Id) "aB\n"
 -- False (Re' ['Caseless] (ab.) | aB
 -- )
--- PresentT False
+-- Val False
 --
 data Re' (rs :: [ROpt]) p q
 
@@ -105,61 +107,61 @@ instance ( GetROpts rs
 -- | runs a regular expression and returns a boolean: see 'RH.=~'
 --
 -- >>> pz @(Re "^\\d{2}:\\d{2}:\\d{2}$") "13:05:25"
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Re "\\d{4}-\\d{3}") "1234-123"
 -- True (Re (\d{4}-\d{3}) | 1234-123)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Re "\\d{4}-\\d{3}") "1234-1x3"
 -- False (Re (\d{4}-\d{3}) | 1234-1x3)
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Re "(?i)ab") "aB" -- runtime [use 'Caseless instead]
 -- True (Re ((?i)ab) | aB)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Re "ab") "aB"
 -- False (Re (ab) | aB)
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Re "^\\d{1,3}(?:\\.\\d{1,3}){3}$") "123.1.1.21"
 -- True (Re (^\d{1,3}(?:\.\d{1,3}){3}$) | 123.1.1.21)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$") >> ReadP Double Id) "13.345"
 -- Present 13.345 ((>>) 13.345 | {ReadP Double 13.345})
--- PresentT 13.345
+-- Val 13.345
 --
 -- >>> pl @(Guard "regex failed" (Re "^\\d+(?:\\.\\d+)?$") >> ReadP Double Id) "13"
 -- Present 13.0 ((>>) 13.0 | {ReadP Double 13.0})
--- PresentT 13.0
+-- Val 13.0
 --
 -- >>> pl @(ExitWhen "regex failed" (Not (Re "^\\d+(?:\\.\\d+)?$")) >> ReadP Double Id) "-13.4"
 -- Error regex failed
--- FailT "regex failed"
+-- Fail "regex failed"
 --
 -- >>> pl @(Re "\\d{4}\\") "ayx"
 -- Error Regex failed to compile (Re (\d{4}\) ([],[]):\ at end of pattern)
--- FailT "Regex failed to compile"
+-- Fail "Regex failed to compile"
 --
 -- >>> pl @(Re "^\\d+$") "123\nx"
 -- False (Re (^\d+$) | 123
 -- x)
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Re "(?m)^\\d+$") "123\nx" -- (?m) anchors match beginning/end of line instead of whole string
 -- True (Re ((?m)^\d+$) | 123
 -- x)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Catch (Re "\\d+(") 'False) "123"
 -- False (Catch caught exception[Regex failed to compile])
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Catch (Re "\\d+") 'False) "123"
 -- True (Catch did not fire)
--- PresentT True
+-- Val True
 --
 data Re p
 type ReT p = Re' '[] p Id
@@ -179,10 +181,10 @@ instance P (ReT p) x => P (Re p) x where
 --
 -- >>> pl @(Rescan' '[ 'Anchored ] "([[:xdigit:]]{2})" Id) "wfeb12az"
 -- Error Regex no results (Rescan' ['Anchored] (([[:xdigit:]]{2})) | "wfeb12az")
--- FailT "Regex no results"
+-- Fail "Regex no results"
 --
 -- >>> pz @(Rescan' '[] Snd "13:05:25") ('a',"^(\\d{2}):(\\d{2}):(\\d{2})$")
--- PresentT [("13:05:25",["13","05","25"])]
+-- Val [("13:05:25",["13","05","25"])]
 --
 data Rescan' (rs :: [ROpt]) p q
 
@@ -206,66 +208,66 @@ instance ( GetROpts rs
           Left tta -> tta
           Right regex ->
             case splitAt (oRecursion opts) $ RH.scan regex q of
-              (b, _:_) -> mkNode opts (FailT ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
+              (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
-                         mkNode opts (FailT "Regex no results") (msg1 <> showVerbose opts " | " q) [hh pp, hh qq]
-              (b, _) -> mkNode opts (PresentT b) (lit01 opts msg1 b "" q) [hh pp, hh qq]
+                         mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) [hh pp, hh qq]
+              (b, _) -> mkNode opts (Val b) (lit01 opts msg1 b "" q) [hh pp, hh qq]
 
 -- | see 'RH.scan'
 --
 -- >>> pz @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$") "13:05:25"
--- PresentT [("13:05:25",["13","05","25"])]
+-- Val [("13:05:25",["13","05","25"])]
 --
 -- >>> pz @(Rescan "^(\\d{2}):(\\d{2}):(\\d{2})$" >> L2 Head >> Map (ReadP Int Id) Id) "13:05:25"
--- PresentT [13,5,25]
+-- Val [13,5,25]
 --
 -- >>> pl @(Rescan "(\\d+)\\D?" >> Map (Second (ReadP Int (OneP))) Id) "123-444-987"
 -- Present [("123-",123),("444-",444),("987",987)] ((>>) [("123-",123),("444-",444),("987",987)] | {Map [("123-",123),("444-",444),("987",987)] | [("123-",["123"]),("444-",["444"]),("987",["987"])]})
--- PresentT [("123-",123),("444-",444),("987",987)]
+-- Val [("123-",123),("444-",444),("987",987)]
 --
 -- >>> pl @(Rescan ".(.)") "aBcd"
 -- Present [("aB",["B"]),("cd",["d"])] (Rescan (.(.)) [("aB",["B"]),("cd",["d"])] | aBcd)
--- PresentT [("aB",["B"]),("cd",["d"])]
+-- Val [("aB",["B"]),("cd",["d"])]
 --
 -- >>> pl @(Rescan "\\d{1,3}(\\.)?") "123.8.99.21"
 -- Present [("123.",["."]),("8.",["."]),("99.",["."]),("21",[])] (Rescan (\d{1,3}(\.)?) [("123.",["."]),("8.",["."]),("99.",["."]),("21",[])] | 123.8.99.21)
--- PresentT [("123.",["."]),("8.",["."]),("99.",["."]),("21",[])]
+-- Val [("123.",["."]),("8.",["."]),("99.",["."]),("21",[])]
 --
 -- >>> pl @(Map Fst (Rescan "." << ShowP Id) >> Filter (Same "2") Id) 12324
 -- Present ["2","2"] ((>>) ["2","2"] | {Fst ["2","2"] | (["2","2"],["1","3","4"])})
--- PresentT ["2","2"]
+-- Val ["2","2"]
 --
 -- >>> pl @(Rescan "(\\d)+?") "1234"
 -- Present [("1",["1"]),("2",["2"]),("3",["3"]),("4",["4"])] (Rescan ((\d)+?) [("1",["1"]),("2",["2"]),("3",["3"]),("4",["4"])] | 1234)
--- PresentT [("1",["1"]),("2",["2"]),("3",["3"]),("4",["4"])]
+-- Val [("1",["1"]),("2",["2"]),("3",["3"]),("4",["4"])]
 --
 -- >>> pl @(Rescan "(\\d)+") "1234"
 -- Present [("1234",["4"])] (Rescan ((\d)+) [("1234",["4"])] | 1234)
--- PresentT [("1234",["4"])]
+-- Val [("1234",["4"])]
 --
 -- >>> pl @(Rescan "(\\d{1,3})(\\.(\\d{1,3}))+?") "1.2.3.4" -- overcapturing
 -- Present [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])] (Rescan ((\d{1,3})(\.(\d{1,3}))+?) [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])] | 1.2.3.4)
--- PresentT [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])]
+-- Val [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])]
 --
 -- >>> pl @(Rescan "^(\\d)+?$") "1234"
 -- Present [("1234",["4"])] (Rescan (^(\d)+?$) [("1234",["4"])] | 1234)
--- PresentT [("1234",["4"])]
+-- Val [("1234",["4"])]
 --
 -- >>> pl @(Rescan "(\\d{1,3})(\\.(\\d{1,3}))+?") "1.2.3.4"
 -- Present [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])] (Rescan ((\d{1,3})(\.(\d{1,3}))+?) [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])] | 1.2.3.4)
--- PresentT [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])]
+-- Val [("1.2",["1",".2","2"]),("3.4",["3",".4","4"])]
 --
 -- >>> pl @(Rescan "(\\d{1,3})(?:\\.(\\d{1,3}))+?") "1.2.3.4" -- bizzare!
 -- Present [("1.2",["1","2"]),("3.4",["3","4"])] (Rescan ((\d{1,3})(?:\.(\d{1,3}))+?) [("1.2",["1","2"]),("3.4",["3","4"])] | 1.2.3.4)
--- PresentT [("1.2",["1","2"]),("3.4",["3","4"])]
+-- Val [("1.2",["1","2"]),("3.4",["3","4"])]
 --
 -- >>> pl @(Rescan "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$") "1.2.3.4"
 -- Present [("1.2.3.4",["1","2","3","4"])] (Rescan (^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$) [("1.2.3.4",["1","2","3","4"])] | 1.2.3.4)
--- PresentT [("1.2.3.4",["1","2","3","4"])]
+-- Val [("1.2.3.4",["1","2","3","4"])]
 --
 -- >>> pl @(Rescan "([[:xdigit:]]{2})") "wfeb12az"
 -- Present [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])] (Rescan (([[:xdigit:]]{2})) [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])] | wfeb12az)
--- PresentT [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])]
+-- Val [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])]
 --
 data Rescan p
 type RescanT p = Rescan' '[] p Id
@@ -278,7 +280,7 @@ instance P (RescanT p) x => P (Rescan p) x where
 -- | see 'RH.scanRanges'
 --
 -- >>> pz @(RescanRanges "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
--- PresentT [((0,8),[(0,2),(3,5),(6,8)])]
+-- Val [((0,8),[(0,2),(3,5),(6,8)])]
 --
 data RescanRanges' (rs :: [ROpt]) p q
 
@@ -302,10 +304,10 @@ instance ( GetROpts rs
           Left tta -> tta
           Right regex ->
             case splitAt (oRecursion opts) $ RH.scanRanges regex q of
-              (b, _:_) -> mkNode opts (FailT ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
+              (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
-                         mkNode opts (FailT "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
-              (b, _) -> mkNode opts (PresentT b) (lit01 opts msg1 b "" q) hhs
+                         mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
+              (b, _) -> mkNode opts (Val b) (lit01 opts msg1 b "" q) hhs
 
 data RescanRanges p q
 type RescanRangesT p q = RescanRanges' '[] p q
@@ -318,10 +320,10 @@ instance P (RescanRangesT p q) x => P (RescanRanges p q) x where
 --
 -- >>> pl @(Resplit' '[ 'Caseless ] "aBc" Id) "123AbC456abc"
 -- Present ["123","456",""] (Resplit' ['Caseless] (aBc) ["123","456",""] | 123AbC456abc)
--- PresentT ["123","456",""]
+-- Val ["123","456",""]
 --
 -- >>> pz @(Resplit' '[] (Singleton Fst) Snd) (':', "12:13:1")
--- PresentT ["12","13","1"]
+-- Val ["12","13","1"]
 --
 data Resplit' (rs :: [ROpt]) p q
 
@@ -345,31 +347,31 @@ instance ( GetROpts rs
           Left tta -> tta
           Right regex ->
             case splitAt (oRecursion opts) $ RH.split regex q of
-              (b, _:_) -> mkNode opts (FailT ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
+              (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
-                         mkNode opts (FailT "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
-              (b, _) -> mkNode opts (PresentT b) (lit01 opts msg1 b "" q) hhs
+                         mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
+              (b, _) -> mkNode opts (Val b) (lit01 opts msg1 b "" q) hhs
 
 -- | splits a string on a regex delimiter: see 'RH.split'
 --
 -- >>> pz @(Resplit "\\.") "141.201.1.22"
--- PresentT ["141","201","1","22"]
+-- Val ["141","201","1","22"]
 --
 -- >>> pl @(Resplit "\\.") "123.2.3.5.6"
 -- Present ["123","2","3","5","6"] (Resplit (\.) ["123","2","3","5","6"] | 123.2.3.5.6)
--- PresentT ["123","2","3","5","6"]
+-- Val ["123","2","3","5","6"]
 --
 -- >>> pl @(Map (ReadP Int Id) (Resplit "\\.") >> '(Id, '(Len == 4, All (0 <..> 0xff)))) "141.214.125.1.2.3333"
 -- Present ([141,214,125,1,2,3333],(False,False)) ((>>) ([141,214,125,1,2,3333],(False,False)) | {'([141,214,125,1,2,3333],(False,False))})
--- PresentT ([141,214,125,1,2,3333],(False,False))
+-- Val ([141,214,125,1,2,3333],(False,False))
 --
 -- >>> pl @(Map (ReadP Int Id) (Resplit "\\.") >> Id &&& ((Len == 4) &&& All (0 <..> 0xff))) "141.214.125.1.2.6"
 -- Present ([141,214,125,1,2,6],(False,True)) ((>>) ([141,214,125,1,2,6],(False,True)) | {W '([141,214,125,1,2,6],(False,True))})
--- PresentT ([141,214,125,1,2,6],(False,True))
+-- Val ([141,214,125,1,2,6],(False,True))
 --
 -- >>> pl @(Resplit "\\." >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (0 <..> 0xff))) "141.214.125."
 -- Error ReadP Int ()
--- FailT "ReadP Int ()"
+-- Fail "ReadP Int ()"
 --
 data Resplit p
 type ResplitT p = Resplit' '[] p Id
@@ -381,7 +383,7 @@ instance P (ResplitT p) x => P (Resplit p) x where
 -- | replaces regex @s@ with a string @s1@ inside the value: see 'RH.sub' and 'RH.gsub'
 --
 -- >>> pz @(ReplaceAllString 'ROverWrite "\\." ":" Id) "141.201.1.22"
--- PresentT "141:201:1:22"
+-- Val "141:201:1:22"
 --
 data ReplaceImpl (alle :: Bool) (rs :: [ROpt]) p q r
 
@@ -423,7 +425,7 @@ instance ( GetBool b
                            RReplace1 s -> (if alle then RH.gsub else RH.sub) regex s r
                            RReplace2 s -> (if alle then RH.gsub else RH.sub) regex s r
                            RReplace3 s -> (if alle then RH.gsub else RH.sub) regex s r
-               in mkNode opts (PresentT ret) (msg1 <> " " <> litL opts r <> litVerbose opts " | " ret) (hhs <> [hh rr])
+               in mkNode opts (Val ret) (msg1 <> " " <> litL opts r <> litVerbose opts " | " ret) (hhs <> [hh rr])
 
 data ReplaceAll' (rs :: [ROpt]) p q r
 type ReplaceAllT' (rs :: [ROpt]) p q r = ReplaceImpl 'True rs p q r
@@ -450,16 +452,16 @@ instance P (ReplaceOneT' rs p q r) x => P (ReplaceOne' rs p q r) x where
 --
 -- >>> pl @(ReplaceOneString 'ROverWrite "abc" "def" Id) "123abc456abc"
 -- Present "123def456abc" (ReplaceOne (abc) 123abc456abc | 123def456abc)
--- PresentT "123def456abc"
+-- Val "123def456abc"
 --
 -- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z") "Date(1530144000123+0530)"
--- PresentT 2018-06-28 05:30:00.123 +0530
+-- Val 2018-06-28 05:30:00.123 +0530
 --
 -- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z") "Date(1593460089052+0800)"
--- PresentT 2020-06-30 03:48:09.052 +0800
+-- Val 2020-06-30 03:48:09.052 +0800
 --
 -- >>> pz @(Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z") "Date(1593460089052+0800)"
--- PresentT 2020-06-30 03:48:09.052 +0800
+-- Val 2020-06-30 03:48:09.052 +0800
 --
 data ReplaceOne p q r
 type ReplaceOneT p q r = ReplaceOne' '[] p q r
@@ -472,27 +474,27 @@ instance P (ReplaceOneT p q r) x => P (ReplaceOne p q r) x where
 --
 -- >>> pl @(ReplaceAllString 'ROverWrite "abc" "def" Id) "123abc456abc"
 -- Present "123def456def" (ReplaceAll (abc) 123abc456abc | 123def456def)
--- PresentT "123def456def"
+-- Val "123def456def"
 --
 -- >>> pl @(ReplaceAllString' '[] 'ROverWrite "abc" "def" Id) "123AbC456abc"
 -- Present "123AbC456def" (ReplaceAll (abc) 123AbC456abc | 123AbC456def)
--- PresentT "123AbC456def"
+-- Val "123AbC456def"
 --
 -- >>> pl @(ReplaceAllString' '[ 'Caseless ] 'ROverWrite "abc" "def" Id) "123AbC456abc"
 -- Present "123def456def" (ReplaceAll' ['Caseless] (abc) 123AbC456abc | 123def456def)
--- PresentT "123def456def"
+-- Val "123def456def"
 --
 -- >>> pl @(ReplaceAllString 'RPrepend "abc" "def" Id) "123AbC456abc"
 -- Present "123AbC456defabc" (ReplaceAll (abc) 123AbC456abc | 123AbC456defabc)
--- PresentT "123AbC456defabc"
+-- Val "123AbC456defabc"
 --
 -- >>> pl @(ReplaceAllString 'ROverWrite "abc" "def" Id) "123AbC456abc"
 -- Present "123AbC456def" (ReplaceAll (abc) 123AbC456abc | 123AbC456def)
--- PresentT "123AbC456def"
+-- Val "123AbC456def"
 --
 -- >>> pl @(ReplaceAllString 'RAppend "abc" "def" Id) "123AbC456abc"
 -- Present "123AbC456abcdef" (ReplaceAll (abc) 123AbC456abc | 123AbC456abcdef)
--- PresentT "123AbC456abcdef"
+-- Val "123AbC456abcdef"
 --
 data ReplaceAllString' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r
 type ReplaceAllStringT' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r = ReplaceAll' rs p (ReplaceFn o q) r
@@ -538,7 +540,7 @@ instance ( GetReplaceFnSub r
       Left e -> e
       Right p ->
         let b = RReplace (getReplaceFnSub @r) p
-        in mkNode opts (PresentT b) (msg0 <> showVerbose opts " | " p) [hh pp]
+        in mkNode opts (Val b) (msg0 <> showVerbose opts " | " p) [hh pp]
 
 -- | A replacement function @(String -> [String] -> String)@ which returns the whole match and the groups
 -- Used by 'RH.sub' and 'RH.gsub'
@@ -556,7 +558,7 @@ instance ( PP p x ~ (String -> [String] -> String)
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right f -> mkNode opts (PresentT (RReplace1 f)) msg0 [hh pp]
+      Right f -> mkNode opts (Val (RReplace1 f)) msg0 [hh pp]
 
 -- | A replacement function @(String -> String)@ that yields the whole match
 -- Used by 'RH.sub' and 'RH.gsub'
@@ -565,7 +567,7 @@ instance ( PP p x ~ (String -> [String] -> String)
 --
 -- >>> :m + Text.Show.Functions
 -- >>> pz @(ReplaceAll "\\." (ReplaceFn2 Fst) Snd) (\x -> x <> ":" <> x, "141.201.1.22")
--- PresentT "141.:.201.:.1.:.22"
+-- Val "141.:.201.:.1.:.22"
 --
 data ReplaceFn2 p
 
@@ -578,7 +580,7 @@ instance ( PP p x ~ (String -> String)
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right f -> mkNode opts (PresentT (RReplace2 f)) msg0 [hh pp]
+      Right f -> mkNode opts (Val (RReplace2 f)) msg0 [hh pp]
 
 -- | A replacement function @([String] -> String)@ which yields the groups
 -- Used by 'RH.sub' and 'RH.gsub'
@@ -588,7 +590,7 @@ instance ( PP p x ~ (String -> String)
 -- >>> :m + Text.Show.Functions
 -- >>> import Data.List (intercalate)
 -- >>> pz @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (ReplaceFn3 Fst) Snd) (\ys -> intercalate  " | " $ map (show . succ . readNote @Int "invalid int") ys, "141.201.1.22")
--- PresentT "142 | 202 | 2 | 23"
+-- Val "142 | 202 | 2 | 23"
 --
 data ReplaceFn3 p
 
@@ -601,4 +603,4 @@ instance ( PP p x ~ ([String] -> String)
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR opts msg0 pp [] of
       Left e -> e
-      Right f -> mkNode opts (PresentT (RReplace3 f)) msg0 [hh pp]
+      Right f -> mkNode opts (Val (RReplace3 f)) msg0 [hh pp]

@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -51,6 +52,7 @@ module Predicate.Data.Either (
 
  ) where
 import Predicate.Core
+import Predicate.Misc 
 import Predicate.Util
 import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
@@ -70,10 +72,10 @@ import Data.Either (isLeft, isRight, partitionEithers)
 -- | extracts the left value from an 'Either'
 --
 -- >>> pz @(Left' >> Succ) (Left 20)
--- PresentT 21
+-- Val 21
 --
 -- >>> pz @(Left' >> Succ) (Right 'a')
--- FailT "Left' found Right"
+-- Fail "Left' found Right"
 --
 data Left'
 instance Show a => P Left' (Either a x) where
@@ -81,16 +83,16 @@ instance Show a => P Left' (Either a x) where
   eval _ opts lr =
     let msg0 = "Left'"
     in pure $ case lr of
-         Right _ -> mkNode opts (FailT (msg0 <> " found Right")) "" []
-         Left a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+         Right _ -> mkNode opts (Fail (msg0 <> " found Right")) "" []
+         Left a -> mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
 -- | extracts the right value from an 'Either'
 --
 -- >>> pz @(Right' >> Succ) (Right 20)
--- PresentT 21
+-- Val 21
 --
 -- >>> pz @(Right' >> Succ) (Left 'a')
--- FailT "Right' found Left"
+-- Fail "Right' found Left"
 --
 data Right'
 instance Show a => P Right' (Either x a) where
@@ -98,40 +100,40 @@ instance Show a => P Right' (Either x a) where
   eval _ opts lr =
     let msg0 = "Right'"
     in pure $ case lr of
-         Left _ -> mkNode opts (FailT (msg0 <> " found Left")) "" []
-         Right a -> mkNode opts (PresentT a) (msg0 <> " " <> showL opts a) []
+         Left _ -> mkNode opts (Fail (msg0 <> " found Left")) "" []
+         Right a -> mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
 -- | similar 'Control.Arrow.|||'
 --
 -- >>> pz @(Pred ||| Id) (Left 13)
--- PresentT 12
+-- Val 12
 --
 -- >>> pz @(ShowP Id ||| Id) (Right "hello")
--- PresentT "hello"
+-- Val "hello"
 --
 -- >>> pl @('True ||| 'False) (Left "someval")
 -- True ((|||) Left True | "someval")
--- PresentT True
+-- Val True
 --
 -- >>> pl @('True ||| 'False) (Right "someval")
 -- False ((|||) Right False | "someval")
--- PresentT False
+-- Val False
 --
 -- >>> pl @(ShowP Succ ||| ShowP Id) (Left 123)
 -- Present "124" ((|||) Left "124" | 123)
--- PresentT "124"
+-- Val "124"
 --
 -- >>> pl @(ShowP Succ ||| ShowP Id) (Right True)
 -- Present "True" ((|||) Right "True" | True)
--- PresentT "True"
+-- Val "True"
 --
 -- >>> pl @(EitherIn (Not Id) Id) (Right True)
 -- Present True ((|||) Right True | True)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(EitherIn (Not Id) Id) (Left True)
 -- False ((|||) Left False | True)
--- PresentT False
+-- Val False
 --
 data p ||| q
 infixr 2 |||
@@ -165,10 +167,10 @@ instance ( Show (PP p a)
 -- | similar to 'isLeft'
 --
 -- >>> pz @IsLeft (Right 123)
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsLeft (Left 'a')
--- PresentT True
+-- Val True
 --
 data IsLeft
 
@@ -180,10 +182,10 @@ instance x ~ Either a b
 -- | similar to 'isRight'
 --
 -- >>> pz @IsRight (Right 123)
--- PresentT True
+-- Val True
 --
 -- >>> pz @IsRight (Left "aa")
--- PresentT False
+-- Val False
 --
 data IsRight
 
@@ -196,38 +198,38 @@ instance x ~ Either a b
 -- | similar 'Control.Arrow.+++'
 --
 -- >>> pz @(Pred +++ Id) (Left 13)
--- PresentT (Left 12)
+-- Val (Left 12)
 --
 -- >>> pz @(ShowP Id +++ Reverse) (Right "hello")
--- PresentT (Right "olleh")
+-- Val (Right "olleh")
 --
 -- >>> pl @(HeadDef 'False Id +++ Id) (Right @[Bool] 1) -- need @[Bool] cos we said 'False!
 -- Present Right 1 ((+++) Right 1 | 1)
--- PresentT (Right 1)
+-- Val (Right 1)
 --
 -- >>> pl @(HeadDef 'False Id +++ Id) (Left [True,False]) -- need @[Bool] cos we said 'False!
 -- Present Left True ((+++) Left True | [True,False])
--- PresentT (Left True)
+-- Val (Left True)
 --
 -- >>> pl @(Not Id +++ Id) (Right True)
 -- Present Right True ((+++) Right True | True)
--- PresentT (Right True)
+-- Val (Right True)
 --
 -- >>> pl @(Not Id +++ Id) (Right 12)
 -- Present Right 12 ((+++) Right 12 | 12)
--- PresentT (Right 12)
+-- Val (Right 12)
 --
 -- >>> pl @(HeadDef () Id +++ Id) (Right @[()] 1) -- breaks otherwise: Id says () -> () so has to be a list of [()]
 -- Present Right 1 ((+++) Right 1 | 1)
--- PresentT (Right 1)
+-- Val (Right 1)
 --
 -- >>> pl @(HeadDef () Id +++ Id) (Right @[()] 1) -- this breaks! cos Left doesnt have a type
 -- Present Right 1 ((+++) Right 1 | 1)
--- PresentT (Right 1)
+-- Val (Right 1)
 --
 -- >>> pl @(Not Id +++ Id) (Right @Bool 12)
 -- Present Right 12 ((+++) Right 12 | 12)
--- PresentT (Right 12)
+-- Val (Right 12)
 --
 data p +++ q
 infixr 2 +++
@@ -249,36 +251,36 @@ instance ( Show (PP p a)
           Left e -> e
           Right a1 ->
             let msg1 = msg0 ++ " Left"
-            in mkNode opts (PresentT (Left a1)) (msg1 <> " " <> showL opts a1 <> showVerbose opts " | " a) [hh pp]
+            in mkNode opts (Val (Left a1)) (msg1 <> " " <> showL opts a1 <> showVerbose opts " | " a) [hh pp]
       Right a -> do
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts msg0 qq [] of
           Left e -> e
           Right a1 ->
             let msg1 = msg0 ++ " Right"
-            in mkNode opts (PresentT (Right a1)) (msg1 <> " " <> showL opts a1 <> showVerbose opts " | " a) [hh qq]
+            in mkNode opts (Val (Right a1)) (msg1 <> " " <> showL opts a1 <> showVerbose opts " | " a) [hh qq]
 
 -- | similar to 'partitionEithers'
 --
 -- >>> pz @PartitionEithers [Left 'a',Right 2,Left 'c',Right 4,Right 99]
--- PresentT ("ac",[2,4,99])
+-- Val ("ac",[2,4,99])
 --
 -- >>> pz @PartitionEithers [Right 2,Right 4,Right 99]
--- PresentT ([],[2,4,99])
+-- Val ([],[2,4,99])
 --
 -- >>> pz @PartitionEithers [Left 'a',Left 'c']
--- PresentT ("ac",[])
+-- Val ("ac",[])
 --
 -- >>> pz @PartitionEithers ([] :: [Either () Int])
--- PresentT ([],[])
+-- Val ([],[])
 --
 -- >>> pl @PartitionEithers [Left 4, Right 'x', Right 'y',Left 99]
 -- Present ([4,99],"xy") (PartitionEithers ([4,99],"xy") | [Left 4,Right 'x',Right 'y',Left 99])
--- PresentT ([4,99],"xy")
+-- Val ([4,99],"xy")
 --
 -- >>> pl @PartitionEithers [Left 'x', Right 1,Left 'a', Left 'b',Left 'z', Right 10]
 -- Present ("xabz",[1,10]) (PartitionEithers ("xabz",[1,10]) | [Left 'x',Right 1,Left 'a',Left 'b',Left 'z',Right 10])
--- PresentT ("xabz",[1,10])
+-- Val ("xabz",[1,10])
 --
 data PartitionEithers
 
@@ -289,32 +291,32 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "PartitionEithers"
         b = partitionEithers as
-    in pure $ mkNode opts (PresentT b) (show01 opts msg0 b as) []
+    in pure $ mkNode opts (Val b) (show01 opts msg0 b as) []
 
 -- | Convenient method to convert a @p@ or @q@ to a 'Either' based on a predicate @b@
 --   if @b@ then Right @p@ else Left @q@
 --
 -- >>> pz @(EitherBool (Fst > 4) L21 L22) (24,(-1,999))
--- PresentT (Right 999)
+-- Val (Right 999)
 --
 -- >>> pz @(EitherBool (Fst > 4) L21 L22) (1,(-1,999))
--- PresentT (Left (-1))
+-- Val (Left (-1))
 --
 -- >>> pl @(EitherBool (Fst > 10) L21 L22) (7,('x',99))
 -- Present Left 'x' (EitherBool(False) Left 'x')
--- PresentT (Left 'x')
+-- Val (Left 'x')
 --
 -- >>> pl @(EitherBool (Fst > 10) L21 L22) (11,('x',99))
 -- Present Right 99 (EitherBool(True) Right 99)
--- PresentT (Right 99)
+-- Val (Right 99)
 --
 -- >>> pl @(EitherBool (Gt 10) "found left" 99) 12
 -- Present Right 99 (EitherBool(True) Right 99)
--- PresentT (Right 99)
+-- Val (Right 99)
 --
 -- >>> pl @(EitherBool (Gt 10) "found left" 99) 7
 -- Present Left "found left" (EitherBool(False) Left "found left")
--- PresentT (Left "found left")
+-- Val (Left "found left")
 --
 data EitherBool b p q
 
@@ -335,23 +337,23 @@ instance ( Show (PP p a)
         pp <- eval (Proxy @p) opts z
         pure $ case getValueLR opts (msg0 <> " p failed") pp [hh bb] of
           Left e -> e
-          Right p -> mkNode opts (PresentT (Left p)) (msg0 <> "(False) Left " <> showL opts p) [hh bb, hh pp]
+          Right p -> mkNode opts (Val (Left p)) (msg0 <> "(False) Left " <> showL opts p) [hh bb, hh pp]
       Right True -> do
         qq <- eval (Proxy @q) opts z
         pure $ case getValueLR opts (msg0 <> " q failed") qq [hh bb] of
           Left e -> e
-          Right q -> mkNode opts (PresentT (Right q)) (msg0 <> "(True) Right " <> showL opts q) [hh bb, hh qq]
+          Right q -> mkNode opts (Val (Right q)) (msg0 <> "(True) Right " <> showL opts q) [hh bb, hh qq]
 
 -- | similar to 'Control.Arrow.|||' but additionally gives @p@ and @q@ the original input
 --
 -- >>> pz @(EitherX (ShowP (L11 + Snd)) (ShowP Id) Snd) (9,Left 123)
--- PresentT "132"
+-- Val "132"
 --
 -- >>> pz @(EitherX (ShowP (L11 + Snd)) (ShowP Id) Snd) (9,Right 'x')
--- PresentT "((9,Right 'x'),'x')"
+-- Val "((9,Right 'x'),'x')"
 --
 -- >>> pz @(EitherX (ShowP Id) (ShowP (Second Succ)) Snd) (9,Right 'x')
--- PresentT "((9,Right 'x'),'y')"
+-- Val "((9,Right 'x'),'y')"
 --
 data EitherX p q r
 instance ( P r x
@@ -381,7 +383,7 @@ instance ( P r x
           Right _ -> mkNodeCopy opts qq msg1 [hh rr, hh qq]
 
 type family EitherXT lr x p where
-  EitherXT (Either a b) x p = PP p (x,a)
+  EitherXT (Either a _b) x p = PP p (x,a)
   EitherXT o _ _ = GL.TypeError (
       'GL.Text "EitherXT: expected 'Either a b' "
       ':$$: 'GL.Text "o = "
@@ -401,12 +403,12 @@ instance ( Show (PP p x)
       Left e -> e
       Right p ->
         let d = Left p
-        in mkNode opts (PresentT d) (msg0 <> " Left " <> showL opts p) [hh pp]
+        in mkNode opts (Val d) (msg0 <> " Left " <> showL opts p) [hh pp]
 
 -- | 'Data.Either.Left' constructor
 --
 -- >>> pz @(MkLeft _ Id) 44
--- PresentT (Left 44)
+-- Val (Left 44)
 --
 data MkLeft (t :: Type) p
 type MkLeftT (t :: Type) p = MkLeft' (Hole t) p
@@ -429,12 +431,12 @@ instance ( Show (PP p x)
       Left e -> e
       Right p ->
         let d = Right p
-        in mkNode opts (PresentT d) (msg0 <> " Right " <> showL opts p) [hh pp]
+        in mkNode opts (Val d) (msg0 <> " Right " <> showL opts p) [hh pp]
 
 -- | 'Data.Either.Right' constructor
 --
 -- >>> pz @(MkRight _ Id) 44
--- PresentT (Right 44)
+-- Val (Right 44)
 --
 data MkRight (t :: Type) p
 type MkRightT (t :: Type) p = MkRight' (Hole t) p
@@ -448,19 +450,19 @@ instance P (MkRightT t p) x => P (MkRight t p) x where
 -- if there is no Left value then \p\ is passed the Right value and the whole context
 --
 -- >>> pz @(LeftDef (1 % 4) Id) (Left 20.4)
--- PresentT (102 % 5)
+-- Val (102 % 5)
 --
 -- >>> pz @(LeftDef (1 % 4) Id) (Right "aa")
--- PresentT (1 % 4)
+-- Val (1 % 4)
 --
 -- >>> pz @(LeftDef (PrintT "found right=%s fst=%d" '(Fst,L21)) Snd) (123,Right "xy")
--- PresentT "found right=xy fst=123"
+-- Val "found right=xy fst=123"
 --
 -- >>> pz @(LeftDef (MEmptyT _) Id) (Right 222)
--- PresentT ()
+-- Val ()
 --
 -- >>> pz @(LeftDef (MEmptyT (SG.Sum _)) Id) (Right 222)
--- PresentT (Sum {getSum = 0})
+-- Val (Sum {getSum = 0})
 --
 data LeftDef p q
 
@@ -477,31 +479,31 @@ instance ( PP q x ~ Either a b
       Left e -> pure e
       Right q ->
         case q of
-          Left a -> pure $ mkNode opts (PresentT a) (msg0 <> " Left") [hh qq]
+          Left a -> pure $ mkNode opts (Val a) (msg0 <> " Left") [hh qq]
           Right b -> do
             pp <- eval (Proxy @p) opts (b,x)
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (PresentT p) (msg0 <> " Right") [hh qq, hh pp]
+              Right p -> mkNode opts (Val p) (msg0 <> " Right") [hh qq, hh pp]
 
 -- | extract the Right value from an 'Either': similar to 'Data.Either.fromRight'
 --
 -- if there is no Right value then \p\ is passed the Left value and the whole context
 --
 -- >>> pz @(RightDef (1 % 4) Id) (Right 20.4)
--- PresentT (102 % 5)
+-- Val (102 % 5)
 --
 -- >>> pz @(RightDef (1 % 4) Id) (Left "aa")
--- PresentT (1 % 4)
+-- Val (1 % 4)
 --
 -- >>> pz @(RightDef (PrintT "found left=%s fst=%d" '(Fst,L21)) Snd) (123,Left "xy")
--- PresentT "found left=xy fst=123"
+-- Val "found left=xy fst=123"
 --
 -- >>> pz @(RightDef (MEmptyT _) Id) (Left 222)
--- PresentT ()
+-- Val ()
 --
 -- >>> pz @(RightDef (MEmptyT (SG.Sum _)) Id) (Left 222)
--- PresentT (Sum {getSum = 0})
+-- Val (Sum {getSum = 0})
 --
 data RightDef p q
 
@@ -518,12 +520,12 @@ instance ( PP q x ~ Either a b
       Left e -> pure e
       Right q ->
         case q of
-          Right b -> pure $ mkNode opts (PresentT b) (msg0 <> " Right") [hh qq]
+          Right b -> pure $ mkNode opts (Val b) (msg0 <> " Right") [hh qq]
           Left a -> do
             pp <- eval (Proxy @p) opts (a,x)
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (PresentT p) (msg0 <> " Left") [hh qq, hh pp]
+              Right p -> mkNode opts (Val p) (msg0 <> " Left") [hh qq, hh pp]
 
 
 -- | extract the Left value from an 'Either' otherwise fail with a message
@@ -531,36 +533,36 @@ instance ( PP q x ~ Either a b
 -- if there is no Left value then \p\ is passed the Right value and the whole context
 --
 -- >>> pz @(LeftFail "oops" Id) (Left 20.4)
--- PresentT 20.4
+-- Val 20.4
 --
 -- >>> pz @(LeftFail "oops" Id) (Right "aa")
--- FailT "oops"
+-- Fail "oops"
 --
 -- >>> pz @(LeftFail (PrintT "found right=%s fst=%d" '(Fst,L21)) Snd) (123,Right "xy")
--- FailT "found right=xy fst=123"
+-- Fail "found right=xy fst=123"
 --
 -- >>> pz @(LeftFail (MEmptyT _) Id) (Right 222)
--- FailT ""
+-- Fail ""
 --
 -- >>> pl @(LeftFail (PrintF "someval=%d" L21) Snd) (13::Int,Right @(SG.Sum Int) "abc")
 -- Error someval=13 (LeftFail Right)
--- FailT "someval=13"
+-- Fail "someval=13"
 --
 -- >>> pl @(LeftFail (PrintF "someval=%s" Fst) Id) (Right @(SG.Sum Int) ("abc" :: String))
 -- Error someval=abc (LeftFail Right)
--- FailT "someval=abc"
+-- Fail "someval=abc"
 --
 -- >>> pl @(LeftFail (PrintF "found rhs=%d" Fst) Id) (Right @String @Int 10)
 -- Error found rhs=10 (LeftFail Right)
--- FailT "found rhs=10"
+-- Fail "found rhs=10"
 --
 -- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd >> L22)) L21) ('x',(Right 10,23::Int))
 -- Error found rhs=23 (LeftFail Right)
--- FailT "found rhs=23"
+-- Fail "found rhs=23"
 --
 -- >>> pl @(LeftFail (PrintF "found rhs=%d" (L2 L22)) L21) ('x',(Left "abc",23::Int))
 -- Present "abc" (Left)
--- PresentT "abc"
+-- Val "abc"
 --
 data LeftFail p q
 
@@ -578,12 +580,12 @@ instance ( PP p (b,x) ~ String
       Left e -> pure e
       Right q ->
         case q of
-          Left a -> pure $ mkNode opts (PresentT a) "Left" [hh qq]
+          Left a -> pure $ mkNode opts (Val a) "Left" [hh qq]
           Right b -> do
             pp <- eval (Proxy @p) opts (b,x)
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (FailT p) (msg0 <> " Right") [hh qq, hh pp]
+              Right p -> mkNode opts (Fail p) (msg0 <> " Right") [hh qq, hh pp]
 
 
 -- | extract the Right value from an 'Either' otherwise fail with a message
@@ -591,16 +593,16 @@ instance ( PP p (b,x) ~ String
 -- if there is no Right value then \p\ is passed the Left value and the whole context
 --
 -- >>> pz @(RightFail "oops" Id) (Right 20.4)
--- PresentT 20.4
+-- Val 20.4
 --
 -- >>> pz @(RightFail "oops" Id) (Left "aa")
--- FailT "oops"
+-- Fail "oops"
 --
 -- >>> pz @(RightFail (PrintT "found left=%s fst=%d" '(Fst,L21)) Snd) (123,Left "xy")
--- FailT "found left=xy fst=123"
+-- Fail "found left=xy fst=123"
 --
 -- >>> pz @(RightFail (MEmptyT _) Id) (Left 222)
--- FailT ""
+-- Fail ""
 --
 data RightFail p q
 
@@ -618,9 +620,9 @@ instance ( PP p (a,x) ~ String
       Left e -> pure e
       Right q ->
         case q of
-          Right b -> pure $ mkNode opts (PresentT b) "Right" [hh qq]
+          Right b -> pure $ mkNode opts (Val b) "Right" [hh qq]
           Left a -> do
             pp <- eval (Proxy @p) opts (a,x)
             pure $ case getValueLR opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (FailT p) (msg0 <> " Left") [hh qq, hh pp]
+              Right p -> mkNode opts (Fail p) (msg0 <> " Left") [hh qq, hh pp]

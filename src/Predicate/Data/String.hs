@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -42,6 +43,7 @@ module Predicate.Data.String (
   , FromString'
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import qualified GHC.TypeLits as GL
 import Control.Lens
@@ -83,12 +85,12 @@ instance ( FailUnlessT (OrT l r)
         fl = if l then dropWhile isSpace else id
         fr = if r then dropWhileEnd isSpace else id
         b =  (fl . fr) p
-     in pure $ mkNode opts (PresentT (b ^. DTL.packed)) (msg0 <> litL opts b <> litVerbose opts " | " p) []
+     in pure $ mkNode opts (Val (b ^. DTL.packed)) (msg0 <> litL opts b <> litVerbose opts " | " p) []
 
 -- | similar to 'T.stripStart'
 --
 -- >>> pz @(Snd >> TrimL) (20," abc   ")
--- PresentT "abc   "
+-- Val "abc   "
 --
 data TrimL
 type TrimLT = TrimImpl 'True 'False
@@ -100,13 +102,13 @@ instance P TrimLT x => P TrimL x where
 -- | similar to 'T.stripEnd'
 --
 -- >>> pz @(Snd >> TrimR) (20," abc   ")
--- PresentT " abc"
+-- Val " abc"
 --
 -- >>> pz @("  abc " >> TrimR) ()
--- PresentT "  abc"
+-- Val "  abc"
 --
 -- >>> pz @("" >> TrimR) ()
--- PresentT ""
+-- Val ""
 --
 data TrimR
 type TrimRT = TrimImpl 'False 'True
@@ -118,16 +120,16 @@ instance P TrimRT x => P TrimR x where
 -- | similar to 'T.strip'
 --
 -- >>> pz @(Snd >> TrimBoth) (20," abc   " :: String)
--- PresentT "abc"
+-- Val "abc"
 --
 -- >>> pz @(Snd >> TrimBoth) (20,T.pack " abc   ")
--- PresentT "abc"
+-- Val "abc"
 --
 -- >>> pz @("         " >> TrimBoth) ()
--- PresentT ""
+-- Val ""
 --
 -- >>> pz @("" >> TrimBoth) ()
--- PresentT ""
+-- Val ""
 --
 data TrimBoth
 type TrimBothT = TrimImpl 'True 'True
@@ -158,18 +160,18 @@ instance ( GetBool l
                 else
                   let (before,after) = splitAt (length q - length p) q
                   in if after == p then Just before else Nothing
-        in mkNode opts (PresentT (fmap (view DTL.packed) b)) (msg0 <> showL opts b <> litVerbose opts " | p=" p <> litVerbose opts " | q=" q) [hh pp, hh qq]
+        in mkNode opts (Val (fmap (view DTL.packed) b)) (msg0 <> showL opts b <> litVerbose opts " | p=" p <> litVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to 'T.stripLeft'
 --
 -- >>> pz @(StripL "xyz" Id) ("xyzHello" :: String)
--- PresentT (Just "Hello")
+-- Val (Just "Hello")
 --
 -- >>> pz @(StripL "xyz" Id) (T.pack "xyzHello")
--- PresentT (Just "Hello")
+-- Val (Just "Hello")
 --
 -- >>> pz @(StripL "xyz" Id) "xywHello"
--- PresentT Nothing
+-- Val Nothing
 --
 data StripL p q
 type StripLT p q = StripImpl 'True p q
@@ -181,16 +183,16 @@ instance P (StripLT p q) x => P (StripL p q) x where
 -- | similar to 'T.stripRight'
 --
 -- >>> pz @(StripR "xyz" Id) "Hello xyz"
--- PresentT (Just "Hello ")
+-- Val (Just "Hello ")
 --
 -- >>> pz @(StripR "xyz" Id) "xyzHelloxyw"
--- PresentT Nothing
+-- Val Nothing
 --
 -- >>> pz @(StripR "xyz" Id) ""
--- PresentT Nothing
+-- Val Nothing
 --
 -- >>> pz @(StripR "xyz" "xyz") ()
--- PresentT (Just "")
+-- Val (Just "")
 --
 data StripR p q
 type StripRT p q = StripImpl 'False p q
@@ -231,14 +233,14 @@ instance ( GetBool ignore
 --
 -- >>> pl @(IsPrefixC "xy" Id) "xyzabw"
 -- True (IsPrefixC | xy xyzabw)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(IsPrefixC "ab" Id) "xyzbaw"
 -- False (IsPrefixC | ab xyzbaw)
--- PresentT False
+-- Val False
 --
 -- >>> pz @(IsPrefixC "abc" "aBcbCd") ()
--- PresentT False
+-- Val False
 --
 data IsPrefixC p q
 type IsPrefixCT p q = IsFixImplC 'LT 'False p q
@@ -251,19 +253,19 @@ instance P (IsPrefixCT p q) x => P (IsPrefixC p q) x where
 --
 -- >>> pl @(IsInfixC "ab" Id) "xyzabw"
 -- True (IsInfixC | ab xyzabw)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(IsInfixC "aB" Id) "xyzAbw"
 -- False (IsInfixC | aB xyzAbw)
--- PresentT False
+-- Val False
 --
 -- >>> pl @(IsInfixC "ab" Id) "xyzbaw"
 -- False (IsInfixC | ab xyzbaw)
--- PresentT False
+-- Val False
 --
 -- >>> pl @(IsInfixC Fst Snd) ("ab","xyzabw")
 -- True (IsInfixC | ab xyzabw)
--- PresentT True
+-- Val True
 --
 
 data IsInfixC p q
@@ -277,14 +279,14 @@ instance P (IsInfixCT p q) x => P (IsInfixC p q) x where
 --
 -- >>> pl @(IsSuffixC "bw" Id) "xyzabw"
 -- True (IsSuffixC | bw xyzabw)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(IsSuffixC "bw" Id) "xyzbaw"
 -- False (IsSuffixC | bw xyzbaw)
--- PresentT False
+-- Val False
 --
 -- >>> pz @(IsSuffixC "bCd" "aBcbCd") ()
--- PresentT True
+-- Val True
 --
 data IsSuffixC p q
 type IsSuffixCT p q = IsFixImplC 'GT 'False p q
@@ -296,7 +298,7 @@ instance P (IsSuffixCT p q) x => P (IsSuffixC p q) x where
 -- | similar to case insensitive 'isPrefixOf' for strings
 --
 -- >>> pz @(IsPrefixCI "abc" "aBcbCd") ()
--- PresentT True
+-- Val True
 --
 data IsPrefixCI p q
 type IsPrefixCIT p q = IsFixImplC 'LT 'True p q
@@ -309,10 +311,10 @@ instance P (IsPrefixCIT p q) x => P (IsPrefixCI p q) x where
 --
 -- >>> pl @(IsInfixCI "aB" Id) "xyzAbw"
 -- True (IsInfixCI | aB xyzAbw)
--- PresentT True
+-- Val True
 --
 -- >>> pz @(IsInfixCI "abc" "axAbCd") ()
--- PresentT True
+-- Val True
 --
 data IsInfixCI p q
 type IsInfixCIT p q = IsFixImplC 'EQ 'True p q
@@ -334,7 +336,7 @@ instance P (IsSuffixCIT p q) x => P (IsSuffixCI p q) x where
 data ToString
 instance ToStringC x => P ToString x where
   type PP ToString x = String
-  eval _ opts x = pure $ mkNode opts (PresentT (toStringC x)) "ToString" []
+  eval _ opts x = pure $ mkNode opts (Val (toStringC x)) "ToString" []
 
 class ToStringC a where
   toStringC :: a -> String
@@ -365,15 +367,15 @@ instance ( P s a
       Left e -> e
       Right s ->
         let b = fromString @(PP t a) s
-        in mkNode opts (PresentT b) (msg0 <> " " <> showL opts b) [hh ss]
+        in mkNode opts (Val b) (msg0 <> " " <> showL opts b) [hh ss]
 
 -- | 'fromString' function where you need to provide the type @t@ of the result
 --
 -- >>> pz @(FromString (Identity _) Id) "abc"
--- PresentT (Identity "abc")
+-- Val (Identity "abc")
 --
 -- >>> pz @(FromString (Seq.Seq Char) Id) "abc"
--- PresentT (fromList "abc")
+-- Val (fromList "abc")
 --
 data FromString (t :: Type) p
 type FromStringPT (t :: Type) p = FromString' (Hole t) p

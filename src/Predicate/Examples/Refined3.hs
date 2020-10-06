@@ -5,6 +5,7 @@
 {-# OPTIONS -Wredundant-constraints #-}
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wno-unused-imports #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -134,10 +135,10 @@ import Data.Time
 -- Right (Refined3 {r3In = [1,2,3,4,5,6,7,8,9,0,3], r3Out = "1234-5678-903"})
 --
 -- >>> pz @(Luhnip >> Luhnop 11) "79927398713"
--- PresentT True
+-- Val True
 --
 -- >>> pz @(Luhnip >> Luhnop 10) "79927398713"
--- FailT "expected 10 digits but found 11"
+-- Fail "expected 10 digits but found 11"
 --
 
 type Luhn (opts :: Opt) (ns :: [Nat]) = '(opts, Luhnip, Luhnop (SumT ns), Luhnfmt ns, String)
@@ -448,20 +449,20 @@ readshow' = mkProxy3
 --
 -- >>> pl @(T5_2 (Ip4 OL)) "1.2.3.4"
 -- Present [1,2,3,4] (Map [1,2,3,4] | ["1","2","3","4"])
--- PresentT [1,2,3,4]
+-- Val [1,2,3,4]
 --
 --
 -- >>> pl @(T5_3 (Ip4 OL)) [141,213,308,4]
 -- Error octet 2 out of range 0-255 found 308
--- FailT "octet 2 out of range 0-255 found 308"
+-- Fail "octet 2 out of range 0-255 found 308"
 --
 --
 -- >>> pl @(T5_3 (Ip4 OL)) [141,213,308,4,8]
 -- Error Guards:invalid length(5) expected 4
--- FailT "Guards:invalid length(5) expected 4"
+-- Fail "Guards:invalid length(5) expected 4"
 --
 --
 -- >>> pl @(T5_4 (Ip4 OL)) [141,513,9,4]
 -- Present "141.513.009.004" (PrintL(4) [141.513.009.004] | s=%03d.%03d.%03d.%03d)
--- PresentT "141.513.009.004"
+-- Val "141.513.009.004"
 --

@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -49,6 +50,7 @@ module Predicate.Data.Foldable (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Monoid (MConcat)
 import Control.Lens
@@ -79,10 +81,10 @@ import qualified Safe (cycleNote)
 -- | create a 'NonEmpty' list from a 'Foldable'
 --
 -- >>> pz @ToNEList []
--- FailT "empty list"
+-- Fail "empty list"
 --
 -- >>> pz @ToNEList [1,2,3,4,5]
--- PresentT (1 :| [2,3,4,5])
+-- Val (1 :| [2,3,4,5])
 --
 data ToNEList
 instance ( Show (t a)
@@ -92,8 +94,8 @@ instance ( Show (t a)
   eval _ opts as =
     let msg0 = "ToNEList"
     in pure $ case toList as of
-         [] -> mkNode opts (FailT "empty list") msg0 []
-         x:xs -> mkNode opts (PresentT (x N.:| xs)) (msg0 <> showVerbose opts " " as) []
+         [] -> mkNode opts (Fail "empty list") msg0 []
+         x:xs -> mkNode opts (Val (x N.:| xs)) (msg0 <> showVerbose opts " " as) []
 
 
 -- cant directly create a singleton type using '[] since the type of '[] is unknown. instead use 'Singleton' or 'EmptyT'
@@ -101,24 +103,24 @@ instance ( Show (t a)
 -- | similar to 'null' using 'AsEmpty'
 --
 -- >>> pz @IsEmpty [1,2,3,4]
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsEmpty []
--- PresentT True
+-- Val True
 --
 -- >>> pz @IsEmpty LT
--- PresentT False
+-- Val False
 --
 -- >>> pz @IsEmpty EQ
--- PresentT True
+-- Val True
 --
 -- >>> pl @IsEmpty ("failed11" :: T.Text)
 -- False (IsEmpty | "failed11")
--- PresentT False
+-- Val False
 --
 -- >>> pl @IsEmpty ("" :: T.Text)
 -- True (IsEmpty | "")
--- PresentT True
+-- Val True
 --
 data IsEmpty
 
@@ -144,44 +146,44 @@ instance ( Show (f a)
     let msg0 = "IToList"
         b = itoList x
         t = showT @(PP t x)
-    in pure $ mkNode opts (PresentT b) (msg0 <> "(" <> t <> ") " <> showL opts b <> showVerbose opts " | " x) []
+    in pure $ mkNode opts (Val b) (msg0 <> "(" <> t <> ") " <> showL opts b <> showVerbose opts " | " x) []
 
 -- | similar to 'Control.Lens.itoList'
 --
 -- >>> pz @(IToList _) ("aBc" :: String)
--- PresentT [(0,'a'),(1,'B'),(2,'c')]
+-- Val [(0,'a'),(1,'B'),(2,'c')]
 --
 -- >>> pl @(IToList _) ("abcd" :: String)
 -- Present [(0,'a'),(1,'b'),(2,'c'),(3,'d')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c'),(3,'d')] | "abcd")
--- PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]
+-- Val [(0,'a'),(1,'b'),(2,'c'),(3,'d')]
 --
 -- >>> pl @(IToList _) (M.fromList $ itoList ("abcd" :: String))
 -- Present [(0,'a'),(1,'b'),(2,'c'),(3,'d')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c'),(3,'d')] | fromList [(0,'a'),(1,'b'),(2,'c'),(3,'d')])
--- PresentT [(0,'a'),(1,'b'),(2,'c'),(3,'d')]
+-- Val [(0,'a'),(1,'b'),(2,'c'),(3,'d')]
 --
 -- >>> pl @(IToList _) [9,2,7,4]
 -- Present [(0,9),(1,2),(2,7),(3,4)] (IToList(Int) [(0,9),(1,2),(2,7),(3,4)] | [9,2,7,4])
--- PresentT [(0,9),(1,2),(2,7),(3,4)]
+-- Val [(0,9),(1,2),(2,7),(3,4)]
 --
 -- >>> pl @(IToList _) (M.fromList (zip ['a'..] [9,2,7,4]))
 -- Present [('a',9),('b',2),('c',7),('d',4)] (IToList(Char) [('a',9),('b',2),('c',7),('d',4)] | fromList [('a',9),('b',2),('c',7),('d',4)])
--- PresentT [('a',9),('b',2),('c',7),('d',4)]
+-- Val [('a',9),('b',2),('c',7),('d',4)]
 --
 -- >>> pl @(IToList _) (Just 234)
 -- Present [((),234)] (IToList(()) [((),234)] | Just 234)
--- PresentT [((),234)]
+-- Val [((),234)]
 --
 -- >>> pl @(IToList _) (Nothing @Double)
 -- Present [] (IToList(()) [] | Nothing)
--- PresentT []
+-- Val []
 --
 -- >>> pl @(IToList _) [1..5]
 -- Present [(0,1),(1,2),(2,3),(3,4),(4,5)] (IToList(Int) [(0,1),(1,2),(2,3),(3,4),(4,5)] | [1,2,3,4,5])
--- PresentT [(0,1),(1,2),(2,3),(3,4),(4,5)]
+-- Val [(0,1),(1,2),(2,3),(3,4),(4,5)]
 --
 -- >>> pl @(IToList _) ['a','b','c']
 -- Present [(0,'a'),(1,'b'),(2,'c')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c')] | "abc")
--- PresentT [(0,'a'),(1,'b'),(2,'c')]
+-- Val [(0,'a'),(1,'b'),(2,'c')]
 --
 data IToList (t :: Type)
 type IToListT (t :: Type) = IToList' (Hole t)
@@ -193,10 +195,10 @@ instance P (IToListT t) x => P (IToList t) x where
 -- | invokes 'GE.toList'
 --
 -- >>> pz @ToListExt (M.fromList [(1,'x'),(4,'y')])
--- PresentT [(1,'x'),(4,'y')]
+-- Val [(1,'x'),(4,'y')]
 --
 -- >>> pz @ToListExt (T.pack "abc")
--- PresentT "abc"
+-- Val "abc"
 --
 data ToListExt
 
@@ -208,21 +210,21 @@ instance ( Show l
   eval _ opts as =
     let msg0 = "ToListExt"
         z = GE.toList as
-    in pure $ mkNode opts (PresentT z) (show01 opts msg0 z as) []
+    in pure $ mkNode opts (Val z) (show01 opts msg0 z as) []
 
 -- | invokes 'GE.fromList'
 --
 -- >>> run @('OMsg "Fred" ':# 'OLite ':# 'OColorOff) @(FromList (Set.Set Int) << '[2,1,5,5,2,5,2]) ()
 -- Fred >>> Present fromList [1,2,5] ((>>) fromList [1,2,5] | {FromList fromList [1,2,5]})
--- PresentT (fromList [1,2,5])
+-- Val (fromList [1,2,5])
 --
 -- >>> pl @(FromList (M.Map _ _) >> Id !! Char1 "y") [('x',True),('y',False)]
 -- Present False ((>>) False | {IxL('y') False | p=fromList [('x',True),('y',False)] | q='y'})
--- PresentT False
+-- Val False
 --
 -- >>> pl @(FromList (M.Map _ _) >> Id !! Char1 "z") [('x',True),('y',False)]
 -- Error (!!) index not found (IxL('z'))
--- FailT "(!!) index not found"
+-- Fail "(!!) index not found"
 --
 
 data FromList (t :: Type) -- doesnt work with OverloadedLists unless you cast to [a] explicitly
@@ -236,7 +238,7 @@ instance ( a ~ GE.Item t
   eval _ opts as =
     let msg0 = "FromList"
         z = GE.fromList (as :: [GE.Item t]) :: t
-    in pure $ mkNode opts (PresentT z) (msg0 <> " " <> showL opts z) []
+    in pure $ mkNode opts (Val z) (msg0 <> " " <> showL opts z) []
 
 -- | invokes 'GE.fromList'
 --
@@ -244,7 +246,7 @@ instance ( a ~ GE.Item t
 --
 -- >>> :set -XOverloadedLists
 -- >>> pz @(FromListExt (M.Map _ _)) [(4,"x"),(5,"dd")]
--- PresentT (fromList [(4,"x"),(5,"dd")])
+-- Val (fromList [(4,"x"),(5,"dd")])
 --
 data FromListExt (t :: Type)
 -- l ~ l' is key
@@ -256,15 +258,15 @@ instance ( Show l
   eval _ opts as =
     let msg0 = "FromListExt"
         z = GE.fromList (GE.toList @l as)
-    in pure $ mkNode opts (PresentT z) (msg0 <> " " <> showL opts z) []
+    in pure $ mkNode opts (Val z) (msg0 <> " " <> showL opts z) []
 
 -- | similar to 'concat'
 --
 -- >>> pz @Concat ["abc","D","eF","","G"]
--- PresentT "abcDeFG"
+-- Val "abcDeFG"
 --
 -- >>> pz @(Lift Concat Snd) ('x',["abc","D","eF","","G"])
--- PresentT "abcDeFG"
+-- Val "abcDeFG"
 --
 data Concat
 
@@ -277,7 +279,7 @@ instance ( Show a
   eval _ opts x =
     let msg0 = "Concat"
         b = concat x
-    in pure $ mkNode opts (PresentT b) (show01 opts msg0 b x) []
+    in pure $ mkNode opts (Val b) (show01 opts msg0 b x) []
 
 -- | similar to 'concatMap'
 data ConcatMap p q
@@ -291,7 +293,7 @@ instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
 -- | similar to 'cycle' but for a fixed number @n@
 --
 -- >>> pz @(Cycle 5 Id) [1,2]
--- PresentT [1,2,1,2,1]
+-- Val [1,2,1,2,1]
 --
 data Cycle n p
 
@@ -316,37 +318,37 @@ instance ( Show a
             Right _ ->
               let msg1 = msg0 <> "(" <> show n <> ")"
                   d = take n (Safe.cycleNote msg0 (toList p))
-              in mkNode opts (PresentT d) (show01 opts msg1 d p) hhs
+              in mkNode opts (Val d) (show01 opts msg1 d p) hhs
 
 
 -- | similar to 'toList'
 --
 -- >>> pz @ToList "aBc"
--- PresentT "aBc"
+-- Val "aBc"
 --
 -- >>> pz @ToList (Just 14)
--- PresentT [14]
+-- Val [14]
 --
 -- >>> pz @ToList Nothing
--- PresentT []
+-- Val []
 --
 -- >>> pz @ToList (Left "xx")
--- PresentT []
+-- Val []
 --
 -- >>> pz @ToList (These 12 "xx")
--- PresentT ["xx"]
+-- Val ["xx"]
 --
 -- >>> pl @ToList (M.fromList $ zip [0..] "abcd")
 -- Present "abcd" (ToList fromList [(0,'a'),(1,'b'),(2,'c'),(3,'d')])
--- PresentT "abcd"
+-- Val "abcd"
 --
 -- >>> pl @ToList (Just 123)
 -- Present [123] (ToList Just 123)
--- PresentT [123]
+-- Val [123]
 --
 -- >>> pl @ToList (M.fromList (zip ['a'..] [9,2,7,4]))
 -- Present [9,2,7,4] (ToList fromList [('a',9),('b',2),('c',7),('d',4)])
--- PresentT [9,2,7,4]
+-- Val [9,2,7,4]
 --
 
 data ToList
@@ -357,7 +359,7 @@ instance ( Show (t a)
   eval _ opts as =
     let msg0 = "ToList"
         z = toList as
-    in pure $ mkNode opts (PresentT z) (msg0 <> showVerbose opts " " as) []
+    in pure $ mkNode opts (Val z) (msg0 <> showVerbose opts " " as) []
 
 data Null' p
 
@@ -379,13 +381,13 @@ instance ( Show (t a)
 -- | similar to 'null' using 'Foldable'
 --
 -- >>> pz @Null [1,2,3,4]
--- PresentT False
+-- Val False
 --
 -- >>> pz @Null []
--- PresentT True
+-- Val True
 --
 -- >>> pz @Null Nothing
--- PresentT True
+-- Val True
 --
 data Null
 type NullT = Null' Id
@@ -396,83 +398,83 @@ instance P NullT a => P Null a where
 -- | similar to a limited form of 'foldMap'
 --
 -- >>> pz @(FoldMap (SG.Sum _) Id) [44, 12, 3]
--- PresentT 59
+-- Val 59
 --
 -- >>> pz @(FoldMap (SG.Product _) Id) [44, 12, 3]
--- PresentT 1584
+-- Val 1584
 --
 -- >>> type Ands' p = FoldMap SG.All p
 -- >>> pz @(Ands' Id) [True,False,True,True]
--- PresentT False
+-- Val False
 --
 -- >>> pz @(Ands' Id) [True,True,True]
--- PresentT True
+-- Val True
 --
 -- >>> pz @(Ands' Id) []
--- PresentT True
+-- Val True
 --
 -- >>> type Ors' p = FoldMap SG.Any p
 -- >>> pz @(Ors' Id) [False,False,False]
--- PresentT False
+-- Val False
 --
 -- >>> pz @(Ors' Id) []
--- PresentT False
+-- Val False
 --
 -- >>> pz @(Ors' Id) [False,False,False,True]
--- PresentT True
+-- Val True
 --
 -- >>> type AllPositive' = FoldMap SG.All (Map Positive Id)
 -- >>> pz @AllPositive' [3,1,-5,10,2,3]
--- PresentT False
+-- Val False
 --
 -- >>> type AllNegative' = FoldMap SG.All (Map Negative Id)
 -- >>> pz @AllNegative' [-1,-5,-10,-2,-3]
--- PresentT True
+-- Val True
 --
 -- >>> :set -XKindSignatures
 -- >>> type Max' (t :: Type) = FoldMap (SG.Max t) Id -- requires t be Bounded for monoid instance
 -- >>> pz @(Max' Int) [10,4,5,12,3,4]
--- PresentT 12
+-- Val 12
 --
 -- >>> pl @(FoldMap (SG.Sum _) Id) [14,8,17,13]
 -- Present 52 ((>>) 52 | {getSum = 52})
--- PresentT 52
+-- Val 52
 --
 -- >>> pl @(FoldMap (SG.Max _) Id) [14 :: Int,8,17,13] -- cos Bounded!
 -- Present 17 ((>>) 17 | {getMax = 17})
--- PresentT 17
+-- Val 17
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) [1..20]
 -- True (False || True)
--- PresentT True
+-- Val True
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) [1..19]
 -- False (False || False | ((>>) False | {1 == 0})}) || ((>>) False | {190 > 200}))
--- PresentT False
+-- Val False
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) []
 -- True (True || False)
--- PresentT True
+-- Val True
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) &&& FoldMap (SG.Sum _) Id) [1..20]
 -- Present (False,210) (W '(False,210))
--- PresentT (False,210)
+-- Val (False,210)
 --
 -- >>> pl @(FoldMap SG.Any Id) [False,False,True,False]
 -- Present True ((>>) True | {getAny = True})
--- PresentT True
+-- Val True
 --
 -- >>> pl @(FoldMap SG.All Id) [False,False,True,False]
 -- Present False ((>>) False | {getAll = False})
--- PresentT False
+-- Val False
 --
 -- >>> pl @(FoldMap (SG.Sum _) Id) (Just 13)
 -- Present 13 ((>>) 13 | {getSum = 13})
--- PresentT 13
+-- Val 13
 --
 -- >>> pl @(FoldMap (SG.Sum _) Id) [1..10]
 -- Present 55 ((>>) 55 | {getSum = 55})
--- PresentT 55
+-- Val 55
 --
 
 data FoldMap (t :: Type) p
@@ -485,14 +487,14 @@ instance P (FoldMapT t p) x => P (FoldMap t p) x where
 -- | similar to 'Data.Foldable.and'
 --
 -- >>> pz @Ands [True,True,True]
--- PresentT True
+-- Val True
 --
 -- >>> pl @Ands [True,True,True,False]
 -- False (Ands(4) i=3 | [True,True,True,False])
--- PresentT False
+-- Val False
 --
 -- >>> pz @Ands []
--- PresentT True
+-- Val True
 --
 data Ands
 
@@ -513,15 +515,15 @@ instance ( x ~ t a
 -- | similar to 'Data.Foldable.or'
 --
 -- >>> pz @Ors [False,False,False]
--- PresentT False
+-- Val False
 --
 -- >>> pl @Ors [True,True,True,False]
 -- True (Ors(4) i=0 | [True,True,True,False])
--- PresentT True
+-- Val True
 --
 -- >>> pl @Ors []
 -- False (Ors(0) | [])
--- PresentT False
+-- Val False
 --
 data Ors
 

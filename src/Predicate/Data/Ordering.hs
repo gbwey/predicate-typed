@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -63,6 +64,7 @@ module Predicate.Data.Ordering (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Tuple (Pairs)
 import Data.Proxy (Proxy(Proxy))
@@ -81,7 +83,7 @@ import Data.Function (on)
 --
 -- >>> pl @(Gt 4) 5
 -- True (5 > 4)
--- PresentT True
+-- Val True
 --
 type Gt n = Id > n
 type Ge n = Id >= n
@@ -94,15 +96,15 @@ type Ne n = Id /= n
 --
 -- >>> pl @(Id > "xx") "abc"
 -- False ("abc" > "xx")
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Id > "aa") "abc"
 -- True ("abc" > "aa")
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Fst > Snd) (True,False)
 -- True (True > False)
--- PresentT True
+-- Val True
 --
 data p > q
 infix 4 >
@@ -123,26 +125,26 @@ instance P (Cmp 'CGe p q) x => P (p >= q) x where
 --
 -- >>> pl @(Fst == Snd) ("ab","xyzabw")
 -- False ("ab" == "xyzabw")
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Fst == Snd) ("aBc","AbC")
 -- False ("aBc" == "AbC")
--- PresentT False
+-- Val False
 --
 -- >>> pz @(Fst == Snd) ("aBc","aBc")
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Id == "Abc") "abc"
 -- False ("abc" == "Abc")
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Fst == Snd) (True,False)
 -- False (True == False)
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Not Id *** Id >> Fst == Snd) (True,False)
 -- True ((>>) True | {False == False})
--- PresentT True
+-- Val True
 --
 data p == q
 infix 4 ==
@@ -155,19 +157,19 @@ instance P (Cmp 'CEq p q) x => P (p == q) x where
 --
 -- >>> pl @(Not (Fst >> Len <= 6)) ([2..7],True)
 -- False (Not ((>>) True | {6 <= 6}))
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Fst >> Len <= 6) ([2..7],True)
 -- True ((>>) True | {6 <= 6})
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Length Fst <= 6) ([2..7],True)
 -- True (6 <= 6)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Fst >> (Len <= 6)) ([2..7],True)
 -- True ((>>) True | {6 <= 6})
--- PresentT True
+-- Val True
 --
 data p <= q
 infix 4 <=
@@ -188,7 +190,7 @@ instance P (Cmp 'CLt p q) x => P (p < q) x where
 --
 -- >>> pl @(Fst /= Snd) ("ab","xyzabw")
 -- True ("ab" /= "xyzabw")
--- PresentT True
+-- Val True
 --
 data p /= q
 infix 4 /=
@@ -250,44 +252,44 @@ instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
 -- | similar to 'compare'
 --
 -- >>> pz @(Fst ==! Snd) (10,9)
--- PresentT GT
+-- Val GT
 --
 -- >>> pz @(14 % 3 ==! Fst -% Snd) (-10,7)
--- PresentT GT
+-- Val GT
 --
 -- >>> pz @(Fst ==! Snd) (10,11)
--- PresentT LT
+-- Val LT
 --
 -- >>> pz @(Snd ==! (L12 >> Head)) (('x',[10,12,13]),10)
--- PresentT EQ
+-- Val EQ
 --
 -- >>> pl @("aa" ==! Id) "aaaa"
 -- Present LT ((==!) "aa" < "aaaa")
--- PresentT LT
+-- Val LT
 --
 -- >>> pl @(Pairs >> Map (First (Succ >> Succ) >> Fst ==! Snd) Id) [1,2,3,6,8]
 -- Present [GT,GT,LT,EQ] ((>>) [GT,GT,LT,EQ] | {Map [GT,GT,LT,EQ] | [(1,2),(2,3),(3,6),(6,8)]})
--- PresentT [GT,GT,LT,EQ]
+-- Val [GT,GT,LT,EQ]
 --
 -- >>> pl @((Ones << ShowP Id) >> Map (Fst ==! Snd) Pairs) 1234223
 -- Present [LT,LT,LT,GT,EQ,LT] ((>>) [LT,LT,LT,GT,EQ,LT] | {Map [LT,LT,LT,GT,EQ,LT] | [("1","2"),("2","3"),("3","4"),("4","2"),("2","2"),("2","3")]})
--- PresentT [LT,LT,LT,GT,EQ,LT]
+-- Val [LT,LT,LT,GT,EQ,LT]
 --
 -- >>> pl @("Abc" ==! Id) "abc"
 -- Present LT ((==!) "Abc" < "abc")
--- PresentT LT
+-- Val LT
 --
 -- >>> pl @(Fst ==! Snd) (3,12)
 -- Present LT ((==!) 3 < 12)
--- PresentT LT
+-- Val LT
 --
 -- >>> pl @(Fst ==! Snd) ("aBc","AbC")
 -- Present GT ((==!) "aBc" > "AbC")
--- PresentT GT
+-- Val GT
 --
 -- >>> pl @(Snd ==! Fst) ("aBc","AbC")
 -- Present LT ((==!) "AbC" < "aBc")
--- PresentT LT
+-- Val LT
 --
 
 data p ==! q
@@ -309,7 +311,7 @@ instance ( Ord (PP p a)
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = compare p q
-        in mkNode opts (PresentT d) (msg0 <> " " <> showL opts p <> " " <> prettyOrd d <> " " <> showL opts q) [hh pp, hh qq]
+        in mkNode opts (Val d) (msg0 <> " " <> showL opts p <> " " <> prettyOrd d <> " " <> showL opts q) [hh pp, hh qq]
 
 -- | similar to 'compare' but using a tuple as input
 data OrdA
@@ -328,36 +330,36 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 -- | compare two strings ignoring case and return an ordering
 --
 -- >>> pz @(Fst ===~ Snd) ("abC","aBc")
--- PresentT EQ
+-- Val EQ
 --
 -- >>> pz @(Fst ===~ Snd) ("abC","DaBc")
--- PresentT LT
+-- Val LT
 --
 -- >>> pl @(Fst ===~ Snd &&& Fst ==! Snd) ("abc","abc")
 -- Present (EQ,EQ) (W '(EQ,EQ))
--- PresentT (EQ,EQ)
+-- Val (EQ,EQ)
 --
 --
 -- >>> pl @(Fst ===~ Snd) ("aBc","AbC")
 -- Present EQ ((===~) aBc = AbC)
--- PresentT EQ
+-- Val EQ
 --
 -- >>> pl @("Abc" ===~ Id) "abc"
 -- Present EQ ((===~) Abc = abc)
--- PresentT EQ
+-- Val EQ
 --
 --
 -- >>> pl @("Abc" ==~ Id) "abc"
 -- True (Abc ==~ abc)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Fst ==~ Snd) ("aBc","AbC")
 -- True (aBc ==~ AbC)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Fst ==~ Snd && Fst == Snd) ("Abc","Abc")
 -- True (True && True)
--- PresentT True
+-- Val True
 --
 
 type OrdI p q = p ===~ q
@@ -377,25 +379,25 @@ instance ( PP p a ~ String
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = on compare (map toLower) p q
-        in mkNode opts (PresentT d) (msg0 <> " " <> p <> " " <> prettyOrd d <> " " <> q) [hh pp, hh qq]
+        in mkNode opts (Val d) (msg0 <> " " <> p <> " " <> prettyOrd d <> " " <> q) [hh pp, hh qq]
 
 -- | compare two values using the given ordering @o@
 --
 -- >>> pl @(Lt 4) 123
 -- False (123 < 4)
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Lt 4) 1
 -- True (1 < 4)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Negate 7 <..> 20) (-4)
 -- True (-7 <= -4 <= 20)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Negate 7 <..> 20) 21
 -- False (21 <= 20)
--- PresentT False
+-- Val False
 --
 data Cmp (o :: OrderingP) p q
 
@@ -440,13 +442,13 @@ instance ( PP p a ~ String
 --
 -- >>> pl @Asc "aaacdef"
 -- True ((>>) True | {All(6)})
--- PresentT True
+-- Val True
 --
 -- >>> pz @Asc [1,2,3,4,5,5,7]
--- PresentT True
+-- Val True
 --
 -- >>> pz @Asc "axacdef"
--- PresentT False
+-- Val False
 --
 data Asc
 type AscT = Pairs >> All (Fst <= Snd)
@@ -458,13 +460,13 @@ instance P AscT x => P Asc x where
 -- | a type level predicate for a strictly increasing list
 --
 -- >>> pz @Asc' [1,2,3,4,5,5,7]
--- PresentT False
+-- Val False
 --
 -- >>> pz @Asc' []
--- PresentT True
+-- Val True
 --
 -- >>> pz @Asc' [-10]
--- PresentT True
+-- Val True
 --
 data Asc'
 type AscT' = Pairs >> All (Fst < Snd)
@@ -495,13 +497,13 @@ instance P DescT' x => P Desc' x where
 -- | a type level predicate for all positive elements in a list
 --
 -- >>> pz @AllPositive [1,5,10,2,3]
--- PresentT True
+-- Val True
 --
 -- >>> pz @AllPositive [0,1,5,10,2,3]
--- PresentT False
+-- Val False
 --
 -- >>> pz @AllPositive [3,1,-5,10,2,3]
--- PresentT False
+-- Val False
 --
 data AllPositive
 type AllPositiveT = All Positive
@@ -513,7 +515,7 @@ instance P AllPositiveT x => P AllPositive x where
 -- | a type level predicate for all negative elements in a list
 --
 -- >>> pz @AllNegative [-1,-5,-10,-2,-3]
--- PresentT True
+-- Val True
 --
 data AllNegative
 type AllNegativeT = All Negative

@@ -6,6 +6,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wno-redundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -67,9 +68,10 @@ module Predicate.Refined2 (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
-import Data.Tree
-import Data.Proxy
+import Data.Tree (Tree)
+import Data.Proxy (Proxy(..))
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Language.Haskell.TH.Syntax as TH
 import qualified GHC.Read as GR
@@ -81,11 +83,11 @@ import Data.Maybe (isJust)
 import Control.Lens
 import Data.Tree.Lens (root)
 import Data.Char (isSpace)
-import Data.String
+import Data.String (IsString(..))
 import Data.Hashable (Hashable(..))
-import GHC.Stack
+import GHC.Stack (HasCallStack)
 import Test.QuickCheck
-import Data.Coerce
+import Data.Coerce (coerce)
 import Control.DeepSeq (rnf, rnf2, NFData)
 -- $setup
 -- >>> :set -XDataKinds
@@ -486,7 +488,7 @@ eval2M i = do
 data Msg2 = Msg2 { m2Desc :: !String
                  , m2Short :: !String
                  , m2Long :: !String
-                 , m2BoolP :: !BoolP
+                 , m2ValP :: !ValP
                  } deriving Eq
 
 instance Show Msg2 where
@@ -506,7 +508,7 @@ prt2Impl opts v =
          let (m,n) = ("Step 1. Initial Conversion(ip) Failed", e)
              r = outmsg m
               <> prtTreePure opts t1
-         in mkMsg2 m n r (t1 ^. root . pBool)
+         in mkMsg2 m n r (t1 ^. root . peValP)
        RTF a t1 e t2 ->
          let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
              r = msg1 a
@@ -514,10 +516,10 @@ prt2Impl opts v =
               <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg2 m n r (t2 ^. root . pBool)
+         in mkMsg2 m n r (t2 ^. root . peValP)
        RTFalse a t1 t2 ->
          let (m,n) = ("Step 2. False Boolean Check(op)", z)
-             z = let w = t2 ^. root . pString
+             z = let w = t2 ^. root . peString
                  in if all isSpace w then "FalseP" else "{" <> w <> "}"
              r = msg1 a
               <> fixLite opts a t1
@@ -532,7 +534,7 @@ prt2Impl opts v =
               <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
-         in mkMsg2 m n r (t2 ^. root . pBool)
+         in mkMsg2 m n r (t2 ^. root . peValP)
 
 -- | creates a 4-tuple proxy (see 'eval2P' 'newRefined2P')
 --

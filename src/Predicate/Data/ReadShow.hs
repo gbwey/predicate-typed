@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -38,9 +39,9 @@ module Predicate.Data.ReadShow (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import GHC.TypeLits (Nat,KnownNat)
-import qualified GHC.TypeLits as GL
 import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
 import Text.Printf
@@ -57,13 +58,13 @@ import Data.Typeable (Typeable)
 -- | similar to 'show'
 --
 -- >>> pz @(ShowP Id) [4,8,3,9]
--- PresentT "[4,8,3,9]"
+-- Val "[4,8,3,9]"
 --
 -- >>> pz @(ShowP Id) 'x'
--- PresentT "'x'"
+-- Val "'x'"
 --
 -- >>> pz @(ShowP (42 -% 10)) 'x'
--- PresentT "(-21) % 5"
+-- Val "(-21) % 5"
 --
 data ShowP p
 
@@ -78,7 +79,7 @@ instance ( Show (PP p x)
       Left e -> e
       Right p ->
         let d = show p
-        in mkNode opts (PresentT d) (msg0 <> " " <> litL opts d <> showVerbose opts " | " p) [hh pp]
+        in mkNode opts (Val d) (msg0 <> " " <> litL opts d <> showVerbose opts " | " p) [hh pp]
 
 -- | uses the 'Read' of the given type @t@ and @p@ which points to the content to read
 data ReadP' t p
@@ -99,39 +100,39 @@ instance ( P p x
       Right s ->
         let hhs = [hh pp]
         in case reads @(PP t x) s of
-           [(b,"")] -> mkNode opts (PresentT b) (msg0 <> " " ++ showL opts b) hhs
-           o -> mkNode opts (FailT (msg0 <> " (" ++ s ++ ")")) (showVerbose opts "" o) hhs
+           [(b,"")] -> mkNode opts (Val b) (msg0 <> " " ++ showL opts b) hhs
+           o -> mkNode opts (Fail (msg0 <> " (" ++ s ++ ")")) (showVerbose opts "" o) hhs
 
 -- | uses the 'Read' of the given type @t@ and @p@ which points to the content to read
 --
 -- >>> pz @(ReadP Rational Id) "4 % 5"
--- PresentT (4 % 5)
+-- Val (4 % 5)
 --
 -- >>> pz @(Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30") (ReadP Day Id)) "2018-10-12"
--- PresentT True
+-- Val True
 --
 -- >>> pz @(Between (ReadP Day "2017-04-11") (ReadP Day "2018-12-30") (ReadP Day Id)) "2016-10-12"
--- PresentT False
+-- Val False
 --
 -- >>> pl @(ReadP Rational Id) "123 % 4"
 -- Present 123 % 4 (ReadP Ratio Integer 123 % 4)
--- PresentT (123 % 4)
+-- Val (123 % 4)
 --
 -- >>> pl @(ReadP Rational Id) "x123 % 4"
 -- Error ReadP Ratio Integer (x123 % 4) ([])
--- FailT "ReadP Ratio Integer (x123 % 4)"
+-- Fail "ReadP Ratio Integer (x123 % 4)"
 --
 -- >>> pl @(ReadP Day Id) "1999-11-30"
 -- Present 1999-11-30 (ReadP Day 1999-11-30)
--- PresentT 1999-11-30
+-- Val 1999-11-30
 --
 -- >>> pl @(ReadP Day Id) "1999-02-29"
 -- Error ReadP Day (1999-02-29) ([])
--- FailT "ReadP Day (1999-02-29)"
+-- Fail "ReadP Day (1999-02-29)"
 --
 -- >>> pl @(ReadP TimeOfDay Id) "14:59:20"
 -- Present 14:59:20 (ReadP TimeOfDay 14:59:20)
--- PresentT 14:59:20
+-- Val 14:59:20
 --
 data ReadP (t :: Type) p
 type ReadPT (t :: Type) p = ReadP' (Hole t) p
@@ -146,13 +147,13 @@ instance P (ReadPT t p) x => P (ReadP t p) x where
 -- | Read but returns the Maybe of the value and any remaining unparsed string
 --
 -- >>> pz @(ReadMaybe Int Id) "123x"
--- PresentT (Just (123,"x"))
+-- Val (Just (123,"x"))
 --
 -- >>> pz @(ReadMaybe Int Id) "123"
--- PresentT (Just (123,""))
+-- Val (Just (123,""))
 --
 -- >>> pz @(ReadMaybe Int Id) "x123"
--- PresentT Nothing
+-- Val Nothing
 --
 data ReadMaybe' t p
 
@@ -173,8 +174,8 @@ instance ( P p x
         let msg1 = msg0 <> " (" <> s <> ")"
             hhs = [hh pp]
         in case reads @(PP t x) s of
-           [(b,rest)] -> mkNode opts (PresentT (Just (b,rest))) (lit01 opts msg1 b "" s) hhs
-           o -> mkNode opts (PresentT Nothing) (msg1 <> " failed" <> showVerbose opts " " o) hhs
+           [(b,rest)] -> mkNode opts (Val (Just (b,rest))) (lit01 opts msg1 b "" s) hhs
+           o -> mkNode opts (Val Nothing) (msg1 <> " failed" <> showVerbose opts " " o) hhs
 
 data ReadMaybe (t :: Type) p
 type ReadMaybeT (t :: Type) p = ReadMaybe' (Hole t) p
@@ -186,37 +187,37 @@ instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
 -- | uses PrintF (unsafe) to format output for a single value
 --
 -- >>> pz @(PrintF "value=%03d" Id) 12
--- PresentT "value=012"
+-- Val "value=012"
 --
 -- >>> pz @(PrintF "%s" Fst) ("abc",'x')
--- PresentT "abc"
+-- Val "abc"
 --
 -- >>> pz @(PrintF "%d" Fst) ("abc",'x')
--- FailT "PrintF (IO e=printf: bad formatting char 'd')"
+-- Fail "PrintF (IO e=printf: bad formatting char 'd')"
 --
 -- >>> pl @(PrintF "someval %d" Id) ("!23"::String)
 -- Error PrintF (IO e=printf: bad formatting char 'd') ("!23" s=someval %d)
--- FailT "PrintF (IO e=printf: bad formatting char 'd')"
+-- Fail "PrintF (IO e=printf: bad formatting char 'd')"
 --
 -- >>> pl @(PrintF "%-6s" Id) (1234 :: Int)
 -- Error PrintF (IO e=printf: bad formatting char 's') (1234 s=%-6s)
--- FailT "PrintF (IO e=printf: bad formatting char 's')"
+-- Fail "PrintF (IO e=printf: bad formatting char 's')"
 --
 -- >>> pl @(PrintF "%06x" Id) (1234 :: Int)
 -- Present "0004d2" (PrintF [0004d2] | p=1234 | s=%06x)
--- PresentT "0004d2"
+-- Val "0004d2"
 --
 -- >>> pl @(Msg (PrintF "digits=%d" Len) Head) [1..4]
 -- Present 1 (digits=4 Head 1 | [1,2,3,4])
--- PresentT 1
+-- Val 1
 --
 -- >>> pl @(PrintF "ask%%dfas%%kef%05d hey %%" Id) (35 :: Int)
 -- Present "ask%dfas%kef00035 hey %" (PrintF [ask%dfas%kef00035 hey %] | p=35 | s=ask%%dfas%%kef%05d hey %%)
--- PresentT "ask%dfas%kef00035 hey %"
+-- Val "ask%dfas%kef00035 hey %"
 --
 -- >>> pl @(Fail () (PrintF "someval int=%d" Id)) (45 :: Int)
 -- Error someval int=45
--- FailT "someval int=45"
+-- Fail "someval int=45"
 --
 data PrintF s p
 
@@ -235,8 +236,8 @@ instance ( PrintfArg (PP p x)
       Right (s,p,ss,pp) -> do
         lr <- catchitNF (printf s p)
         pure $ case lr of
-          Left e -> mkNode opts (FailT (msg0 <> " (" <> e <> ")")) (showL opts p <> " s=" <> s) [hh ss, hh pp]
-          Right ret -> mkNode opts (PresentT ret) (msg0 <> " [" <> litL opts ret <> "]" <> showVerbose opts " | p=" p <> litVerbose opts " | s=" s) [hh ss, hh pp]
+          Left e -> mkNode opts (Fail (msg0 <> " (" <> e <> ")")) (showL opts p <> " s=" <> s) [hh ss, hh pp]
+          Right ret -> mkNode opts (Val ret) (msg0 <> " [" <> litL opts ret <> "]" <> showVerbose opts " | p=" p <> litVerbose opts " | s=" s) [hh ss, hh pp]
 
 
 -- | uses inductive tuples to replace variable arguments
@@ -254,57 +255,57 @@ instance ( PrintfArg a
 --
 -- >>> pl @(PrintT "%d %s %s %s" '(Fst, Snd, Snd,Snd)) (10,"Asdf")
 -- Present "10 Asdf Asdf Asdf" (PrintT [10 Asdf Asdf Asdf] | s=%d %s %s %s)
--- PresentT "10 Asdf Asdf Asdf"
+-- Val "10 Asdf Asdf Asdf"
 --
 -- >>> pl @(PrintT "%c %d %s" Id) ('x', 10,"Asdf")
 -- Present "x 10 Asdf" (PrintT [x 10 Asdf] | s=%c %d %s)
--- PresentT "x 10 Asdf"
+-- Val "x 10 Asdf"
 --
 -- >>> pz @(PrintT "fst=%s snd=%03d" Id) ("ab",123)
--- PresentT "fst=ab snd=123"
+-- Val "fst=ab snd=123"
 --
 -- >>> pz @(PrintT "fst=%s snd=%03d thd=%s" Id) ("ab",123,"xx")
--- PresentT "fst=ab snd=123 thd=xx"
+-- Val "fst=ab snd=123 thd=xx"
 --
 -- >>> pl @(PrintT "%s %d %c %s" '(W "xyz", Fst, Snd, Thd)) (123,'x',"ab")
 -- Present "xyz 123 x ab" (PrintT [xyz 123 x ab] | s=%s %d %c %s)
--- PresentT "xyz 123 x ab"
+-- Val "xyz 123 x ab"
 --
 -- >>> pl @(PrintT "%d %c %s" Id) (123,'x')
 -- Error PrintT(IO e=printf: argument list ended prematurely) (PrintT %d %c %s)
--- FailT "PrintT(IO e=printf: argument list ended prematurely)"
+-- Fail "PrintT(IO e=printf: argument list ended prematurely)"
 --
 -- >>> pl @(PrintT "%d %c %s" Id) (123,'x',"abc",11)
 -- Error PrintT(IO e=printf: formatting string ended prematurely) (PrintT %d %c %s)
--- FailT "PrintT(IO e=printf: formatting string ended prematurely)"
+-- Fail "PrintT(IO e=printf: formatting string ended prematurely)"
 --
 -- >>> pl @(PrintT "lhs = %d rhs = %s" Id) (123::Int,"asdf"::String)
 -- Present "lhs = 123 rhs = asdf" (PrintT [lhs = 123 rhs = asdf] | s=lhs = %d rhs = %s)
--- PresentT "lhs = 123 rhs = asdf"
+-- Val "lhs = 123 rhs = asdf"
 --
 -- >>> pl @(PrintT "d=%03d s=%s" Id) (9::Int,"ab"::String)
 -- Present "d=009 s=ab" (PrintT [d=009 s=ab] | s=d=%03d s=%s)
--- PresentT "d=009 s=ab"
+-- Val "d=009 s=ab"
 --
 -- >>> pl @(PrintT "d=%03d s=%s c=%c f=%4.2f" Id) (9::Int,"ab"::String,'x',1.54::Float)
 -- Present "d=009 s=ab c=x f=1.54" (PrintT [d=009 s=ab c=x f=1.54] | s=d=%03d s=%s c=%c f=%4.2f)
--- PresentT "d=009 s=ab c=x f=1.54"
+-- Val "d=009 s=ab c=x f=1.54"
 --
 -- >>> pl @(PrintT "d=%03d s=%s" Id) (9::Int, "ab"::String,'x',1.54::Float)
 -- Error PrintT(IO e=printf: formatting string ended prematurely) (PrintT d=%03d s=%s)
--- FailT "PrintT(IO e=printf: formatting string ended prematurely)"
+-- Fail "PrintT(IO e=printf: formatting string ended prematurely)"
 --
 -- >>> pl @(PrintT "lhs = %d rhs = %s c=%d" Id) (123::Int,"asdf"::String,'x')
 -- Present "lhs = 123 rhs = asdf c=120" (PrintT [lhs = 123 rhs = asdf c=120] | s=lhs = %d rhs = %s c=%d)
--- PresentT "lhs = 123 rhs = asdf c=120"
+-- Val "lhs = 123 rhs = asdf c=120"
 --
 -- >>> pl @(PrintT "hello d=%d %c %s" '(12, Char1 "z", "someval")) ()
 -- Present "hello d=12 z someval" (PrintT [hello d=12 z someval] | s=hello d=%d %c %s)
--- PresentT "hello d=12 z someval"
+-- Val "hello d=12 z someval"
 --
 -- >>> pl @(PrintT "ipaddress %03d.%03d.%03d.%03d" '(1,2,3,4)) ()
 -- Present "ipaddress 001.002.003.004" (PrintT [ipaddress 001.002.003.004] | s=ipaddress %03d.%03d.%03d.%03d)
--- PresentT "ipaddress 001.002.003.004"
+-- Val "ipaddress 001.002.003.004"
 --
 data PrintT s p
 instance ( PrintC bs
@@ -327,57 +328,53 @@ instance ( PrintC bs
         let hhs = [hh ss, hh pp]
         lr <- catchitNF (prtC @bs s (inductTupleC y))
         pure $ case lr of
-          Left e -> mkNode opts (FailT (msg0 <> "(" <> e <> ")")) (msg0 <> " " <> s) hhs
-          Right ret -> mkNode opts (PresentT ret) (msg0 <> " [" <> litL opts ret <> "] | s=" <> litL opts s) hhs
-
-type family CheckT (tp :: Type) :: Bool where
-  CheckT () = GL.TypeError ('GL.Text "Printfn: inductive tuple cannot be empty")
-  CheckT o = 'True
+          Left e -> mkNode opts (Fail (msg0 <> "(" <> e <> ")")) (msg0 <> " " <> s) hhs
+          Right ret -> mkNode opts (Val ret) (msg0 <> " [" <> litL opts ret <> "] | s=" <> litL opts s) hhs
 
 
 -- | print for lists  -- use 'PrintT' as it is safer than 'PrintL'
 --
 -- >>> pl @(PrintL 4 "%s %s %s %s" '[W "xyz", ShowP Fst, ShowP Snd, Thd]) (123,'x',"ab")
 -- Present "xyz 123 'x' ab" (PrintL(4) [xyz 123 'x' ab] | s=%s %s %s %s)
--- PresentT "xyz 123 'x' ab"
+-- Val "xyz 123 'x' ab"
 --
 -- >>> pz @(PrintL 1 "%05d" '[Id]) 123  -- tick is required for a one element list (use 'PrintF')
--- PresentT "00123"
+-- Val "00123"
 --
 -- >>> pz @(PrintL 2 "%d %05d" [Fst,Snd]) (29,123)
--- PresentT "29 00123"
+-- Val "29 00123"
 --
 -- >>> pl @(PrintL 3 "first=%d second=%d third=%d" Id) [10,11,12]
 -- Present "first=10 second=11 third=12" (PrintL(3) [first=10 second=11 third=12] | s=first=%d second=%d third=%d)
--- PresentT "first=10 second=11 third=12"
+-- Val "first=10 second=11 third=12"
 --
 -- >>> pl @(PrintL 2 "first=%d second=%d third=%d" Id) [10,11,12]
 -- Error PrintL(2) arg count=3 (wrong length 3)
--- FailT "PrintL(2) arg count=3"
+-- Fail "PrintL(2) arg count=3"
 --
 -- >>> pl @(PrintL 4 "first=%d second=%d third=%d" Id) [10,11,12]
 -- Error PrintL(4) arg count=3 (wrong length 3)
--- FailT "PrintL(4) arg count=3"
+-- Fail "PrintL(4) arg count=3"
 --
 -- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4::Int]
 -- Present "001.002.003.004" (PrintL(4) [001.002.003.004] | s=%03d.%03d.%03d.%03d)
--- PresentT "001.002.003.004"
+-- Val "001.002.003.004"
 --
 -- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4,5::Int]
 -- Error PrintL(4) arg count=5 (wrong length 5)
--- FailT "PrintL(4) arg count=5"
+-- Fail "PrintL(4) arg count=5"
 --
 -- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3::Int]
 -- Error PrintL(4) arg count=3 (wrong length 3)
--- FailT "PrintL(4) arg count=3"
+-- Fail "PrintL(4) arg count=3"
 --
 -- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4::Int]
 -- Present "001.002.003.004" (PrintL(4) [001.002.003.004] | s=%03d.%03d.%03d.%03d)
--- PresentT "001.002.003.004"
+-- Val "001.002.003.004"
 --
 -- >>> pl @(PrintL 4 "%d %4d %-d %03d" Id) [1..4::Int]
 -- Present "1    2 3 004" (PrintL(4) [1    2 3 004] | s=%d %4d %-d %03d)
--- PresentT "1    2 3 004"
+-- Val "1    2 3 004"
 --
 
 data PrintL (n :: Nat) s p
@@ -401,10 +398,10 @@ instance ( KnownNat n
       Left e -> pure e
       Right (s,p,ss,pp) -> do
         let hhs = [hh ss, hh pp]
-        if length p /= n then pure $ mkNode opts (FailT (msg0 <> " arg count=" ++ show (length p))) ("wrong length " ++ show (length p)) hhs
+        if length p /= n then pure $ mkNode opts (Fail (msg0 <> " arg count=" ++ show (length p))) ("wrong length " ++ show (length p)) hhs
         else do
           lr <- catchitNF (prtC @bs s (inductListC @n @a p))
           pure $ case lr of
-            Left e -> mkNode opts (FailT (msg0 <> "(" <> e <> ")")) ("s=" <> s) hhs
-            Right ret -> mkNode opts (PresentT ret) (msg0 <> " [" <> litL opts ret <> "] | s=" <> litL opts s) hhs
+            Left e -> mkNode opts (Fail (msg0 <> "(" <> e <> ")")) ("s=" <> s) hhs
+            Right ret -> mkNode opts (Val ret) (msg0 <> " [" <> litL opts ret <> "] | s=" <> litL opts s) hhs
 

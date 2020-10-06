@@ -8,6 +8,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators #-}
@@ -64,8 +65,9 @@ module Predicate.Refined5 (
 
  ) where
 import Predicate.Refined2 (Msg2(..), RResults2(..), prt2Impl, Refined2C)
-import Predicate.Refined
+import Predicate.Refined (RefinedC)
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Data.Proxy (Proxy(..))
 import Data.Aeson (ToJSON(..), FromJSON(..))
@@ -107,7 +109,7 @@ newtype Refined5 (opts :: Opt) ip op i = Refined5 (PP ip i)
 
 type role Refined5 phantom nominal nominal nominal
 
--- | extract the value from Refined
+-- | extract the value from 'Refined5'
 unRefined5 :: forall k k1 (opts :: Opt) (ip :: k) (op :: k1) i
    . Refined5 opts ip op i
   -> PP ip i
@@ -457,7 +459,7 @@ evalBool5 i =
   let pp = runIdentity $ evalBool (Proxy @p) (getOpt @opts) i
       opts = getOpt @opts
       (lr,p2) = getValAndPE pp
-      z = let zz = p2 ^. root . pString
+      z = let zz = p2 ^. root . peString
           in if all isSpace zz then "FalseP" else "{" <> zz <> "}"
       w = case lr of
             Right True -> Right i

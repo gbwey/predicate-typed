@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -41,6 +42,7 @@ module Predicate.Data.Tuple (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Data.Proxy (Proxy(Proxy))
 import GHC.TypeNats (Nat, KnownNat)
@@ -57,19 +59,19 @@ import GHC.TypeNats (Nat, KnownNat)
 --
 -- >>> pl @Dup 4
 -- Present (4,4) (W '(4,4))
--- PresentT (4,4)
+-- Val (4,4)
 --
 -- >>> pl @(Dup >> Id) 4
 -- Present (4,4) ((>>) (4,4) | {Id (4,4)})
--- PresentT (4,4)
+-- Val (4,4)
 --
 -- >>> pl @(Dup << Fst * Snd) (4,5)
 -- Present (20,20) ((>>) (20,20) | {W '(20,20)})
--- PresentT (20,20)
+-- Val (20,20)
 --
 -- >>> pl @(Fst * Snd >> Dup) (4,5)
 -- Present (20,20) ((>>) (20,20) | {W '(20,20)})
--- PresentT (20,20)
+-- Val (20,20)
 --
 data Dup
 type DupT = W '(Id, Id)
@@ -81,25 +83,25 @@ instance Show x => P Dup x where
 -- | creates a list of overlapping pairs of elements. requires two or more elements
 --
 -- >>> pz @Pairs [1,2,3,4]
--- PresentT [(1,2),(2,3),(3,4)]
+-- Val [(1,2),(2,3),(3,4)]
 --
 -- >>> pz @Pairs []
--- PresentT []
+-- Val []
 --
 -- >>> pz @Pairs [1]
--- PresentT []
+-- Val []
 --
 -- >>> pl @Pairs [1,2]
 -- Present [(1,2)] (Pairs [(1,2)] | [1,2])
--- PresentT [(1,2)]
+-- Val [(1,2)]
 --
 -- >>> pl @Pairs [1,2,3]
 -- Present [(1,2),(2,3)] (Pairs [(1,2),(2,3)] | [1,2,3])
--- PresentT [(1,2),(2,3)]
+-- Val [(1,2),(2,3)]
 --
 -- >>> pl @Pairs [1,2,3,4]
 -- Present [(1,2),(2,3),(3,4)] (Pairs [(1,2),(2,3),(3,4)] | [1,2,3,4])
--- PresentT [(1,2),(2,3),(3,4)]
+-- Val [(1,2),(2,3),(3,4)]
 --
 data Pairs
 instance Show a => P Pairs [a] where
@@ -108,37 +110,37 @@ instance Show a => P Pairs [a] where
     let zs = case as of
                [] -> []
                _:bs -> zip as bs
-    in pure $ mkNode opts (PresentT zs) (show01 opts "Pairs" zs as) []
+    in pure $ mkNode opts (Val zs) (show01 opts "Pairs" zs as) []
 
 -- | similar to 'Control.Arrow.&&&'
 --
 -- >>> pl @(Min &&& Max >> Id >> Fst < Snd) [10,4,2,12,14]
 -- True ((>>) True | {2 < 14})
--- PresentT True
+-- Val True
 --
 -- >>> pl @((123 &&& Id) >> Fst + Snd) 4
 -- Present 127 ((>>) 127 | {123 + 4 = 127})
--- PresentT 127
+-- Val 127
 --
 -- >>> pl @(4 &&& "sadf" &&& 'LT) ()
 -- Present (4,("sadf",LT)) (W '(4,("sadf",LT)))
--- PresentT (4,("sadf",LT))
+-- Val (4,("sadf",LT))
 --
 -- >>> pl @(Id &&& '() &&& ()) (Just 10)
 -- Present (Just 10,((),())) (W '(Just 10,((),())))
--- PresentT (Just 10,((),()))
+-- Val (Just 10,((),()))
 --
 -- >>> pl @(Fst &&& Snd &&& Thd &&& ()) (1,'x',True)
 -- Present (1,('x',(True,()))) (W '(1,('x',(True,()))))
--- PresentT (1,('x',(True,())))
+-- Val (1,('x',(True,())))
 --
 -- >>> pl @(Fst &&& Snd &&& Thd &&& ()) (1,'x',True)
 -- Present (1,('x',(True,()))) (W '(1,('x',(True,()))))
--- PresentT (1,('x',(True,())))
+-- Val (1,('x',(True,())))
 --
 -- >>> pl @(Fst &&& Snd &&& Thd &&& ()) (1,1.4,"aaa")
 -- Present (1,(1.4,("aaa",()))) (W '(1,(1.4,("aaa",()))))
--- PresentT (1,(1.4,("aaa",())))
+-- Val (1,(1.4,("aaa",())))
 --
 data p &&& q
 infixr 3 &&&
@@ -151,15 +153,15 @@ instance P (WAmpT p q) x => P (p &&& q) x where
 -- | similar to 'Control.Arrow.***'
 --
 -- >>> pz @(Pred *** ShowP Id) (13, True)
--- PresentT (12,"True")
+-- Val (12,"True")
 --
 -- >>> pl @(FlipT (***) Len (Id * 12)) (99,"cdef")
 -- Present (1188,4) ((***) (1188,4) | (99,"cdef"))
--- PresentT (1188,4)
+-- Val (1188,4)
 --
 -- >>> pl @(4 *** "sadf" *** 'LT) ('x',("abv",[1]))
 -- Present (4,("sadf",LT)) ((***) (4,("sadf",LT)) | ('x',("abv",[1])))
--- PresentT (4,("sadf",LT))
+-- Val (4,("sadf",LT))
 --
 data p *** q
 infixr 3 ***
@@ -181,12 +183,12 @@ instance ( Show (PP p a)
         qq <- eval (Proxy @q) opts b
         pure $ case getValueLR opts msg0 qq [hh pp] of
           Left e -> e
-          Right b1 -> mkNode opts (PresentT (a1,b1)) (msg0 <> " " <> showL opts (a1,b1) <> showVerbose opts " | " (a,b)) [hh pp, hh qq]
+          Right b1 -> mkNode opts (Val (a1,b1)) (msg0 <> " " <> showL opts (a1,b1) <> showVerbose opts " | " (a,b)) [hh pp, hh qq]
 
 -- | applies a function against the first part of a tuple: similar to 'Control.Arrow.first'
 --
 -- >>> pz @(First Succ) (12,True)
--- PresentT (13,True)
+-- Val (13,True)
 --
 data First p
 type FirstT p = p *** Id
@@ -198,7 +200,7 @@ instance P (FirstT p) x => P (First p) x where
 -- | applies a function against the second part of a tuple: similar to 'Control.Arrow.second'
 --
 -- >>> pz @(Second Succ) (12,False)
--- PresentT (12,True)
+-- Val (12,True)
 --
 data Second q
 type SecondT q = Id *** q
@@ -211,7 +213,7 @@ instance P (SecondT q) x => P (Second q) x where
 --
 -- >>> pl @(AndA (Gt 3) (Lt 10) Id) (1,2)
 -- False (False (&*) True | (1 > 3))
--- PresentT False
+-- Val False
 --
 data AndA p q r
 instance ( PP r x ~ (a,b)
@@ -247,7 +249,7 @@ instance ( PP r x ~ (a,b)
 --
 -- >>> pl @(SplitAt 4 "abcdefg" >> Len > 4 &* Len < 5) ()
 -- False ((>>) False | {False (&*) True | (4 > 4)})
--- PresentT False
+-- Val False
 --
 data p &* q
 type AndAT p q = AndA p q Id
@@ -261,7 +263,7 @@ instance P (AndAT p q) x => P (p &* q) x where
 --
 -- >>> pl @(OrA (Gt 3) (Lt 10) Id) (1,2)
 -- True (False (|+) True)
--- PresentT True
+-- Val True
 --
 data OrA p q r
 instance ( PP r x ~ (a,b)
@@ -295,15 +297,15 @@ instance ( PP r x ~ (a,b)
 --
 -- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,8,14,44],9)
 -- True (True (|+) False)
--- PresentT True
+-- Val True
 --
 -- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,14],9)
 -- False (False (|+) False | (32 > 44) (|+) (9 < 2))
--- PresentT False
+-- Val False
 --
 -- >>> pl @(Sum > 44 |+ Id < 2) ([5,6,7,14],1)
 -- True (False (|+) True)
--- PresentT True
+-- Val True
 --
 data p |+ q
 type OrAT p q = OrA p q Id
@@ -317,24 +319,24 @@ instance P (OrAT p q) x => P (p |+ q) x where
 --
 -- >>> pl @(Both Len Fst) (("abc",[10..17],1,2,3),True)
 -- Present (3,8) (Both)
--- PresentT (3,8)
+-- Val (3,8)
 --
 -- >>> pl @(Both Pred $ Fst) ((12,'z',[10..17]),True)
 -- Present (11,'y') (Both)
--- PresentT (11,'y')
+-- Val (11,'y')
 --
 -- >>> pl @(Both Succ Id) (4,'a')
 -- Present (5,'b') (Both)
--- PresentT (5,'b')
+-- Val (5,'b')
 --
 -- >>> pl @(Both Len Fst) (("abc",[10..17]),True)
 -- Present (3,8) (Both)
--- PresentT (3,8)
+-- Val (3,8)
 --
 -- >>> import Data.Time
 -- >>> pl @(Both (ReadP Day Id) Id) ("1999-01-01","2001-02-12")
 -- Present (1999-01-01,2001-02-12) (Both)
--- PresentT (1999-01-01,2001-02-12)
+-- Val (1999-01-01,2001-02-12)
 --
 data Both p q
 instance ( ExtractL1C (PP q x)
@@ -359,21 +361,21 @@ instance ( ExtractL1C (PP q x)
             pure $ case getValueLR opts msg0 pp' [hh qq, hh pp] of
               Left e -> e
               Right b' ->
-                mkNode opts (PresentT (b,b')) msg0 [hh qq, hh pp, hh pp']
+                mkNode opts (Val (b,b')) msg0 [hh qq, hh pp, hh pp']
 
 -- | create a n tuple from a list
 --
 -- >>> pz @(Tuple 4) "abcdefg"
--- PresentT ('a','b','c','d')
+-- Val ('a','b','c','d')
 --
 -- >>> pz @(Tuple 4) "abc"
--- FailT "Tuple(4):not enough elements"
+-- Fail "Tuple(4):not enough elements"
 --
 -- >>> pz @(Fst >> Tuple 3) ([1..5],True)
--- PresentT (1,2,3)
+-- Val (1,2,3)
 --
 -- >>> pz @(Lift (Tuple 3) Fst) ([1..5],True)
--- PresentT (1,2,3)
+-- Val (1,2,3)
 --
 data Tuple (n :: Nat)
 
@@ -388,24 +390,24 @@ instance ( KnownNat n
         n :: Int
         n = nat @n
     in pure $ case getTupleC @n as of
-         Left es -> mkNode opts (FailT (msg0 <> ":not enough elements")) (showVerbose opts " | " es) []
-         Right r -> mkNode opts (PresentT r) msg0 []
+         Left es -> mkNode opts (Fail (msg0 <> ":not enough elements")) (showVerbose opts " | " es) []
+         Right r -> mkNode opts (Val r) msg0 []
 
 -- | create a n tuple from a list
 --
 -- >>> pz @(Tuple' 4) "abcdefg"
--- PresentT (Right ('a','b','c','d'))
+-- Val (Right ('a','b','c','d'))
 --
 -- >>> pz @(Tuple' 4) "abc"
--- PresentT (Left "abc")
+-- Val (Left "abc")
 --
 -- >>> pz @(Tuple' 4) []
--- PresentT (Left [])
+-- Val (Left [])
 --
 -- >>> :set -XPolyKinds
 -- >>> type F n i = ChunksOf' n i Id >> Map (Tuple' n) Id >> PartitionEithers
 -- >>> pz @(F 3 1) [1..7]
--- PresentT ([[6,7],[7]],[(1,2,3),(2,3,4),(3,4,5),(4,5,6),(5,6,7)])
+-- Val ([[6,7],[7]],[(1,2,3),(2,3,4),(3,4,5),(4,5,6),(5,6,7)])
 --
 data Tuple' (n :: Nat)
 
@@ -418,4 +420,4 @@ instance ( KnownNat n
     let msg0 = "Tuple'(" ++ show n ++ ")"
         n :: Int
         n = nat @n
-    in pure $ mkNode opts (PresentT (getTupleC @n as)) msg0 []
+    in pure $ mkNode opts (Val (getTupleC @n as)) msg0 []

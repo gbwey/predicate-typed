@@ -5,6 +5,7 @@
 module Predicate.Prelude (
     module Predicate.Core
   , module Predicate.Util
+  , module Predicate.Misc
   , module Predicate.Data.Char
   , module Predicate.Data.Condition
   , module Predicate.Data.DateTime
@@ -28,6 +29,7 @@ module Predicate.Prelude (
   , module Predicate.Data.Tuple
  ) where
 import Predicate.Core
+import Predicate.Misc 
 import Predicate.Util
 import Predicate.Data.Char
 import Predicate.Data.Condition

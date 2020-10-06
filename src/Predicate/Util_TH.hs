@@ -1,6 +1,10 @@
 -- stack exec -- ghc-pkg unregister ghc-lib-parser-8.8.0.20190424 --force
 {-# OPTIONS -Wall #-}
+{-# OPTIONS -Wcompat #-}
+{-# OPTIONS -Wincomplete-record-updates #-}
+{-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -33,6 +37,7 @@ module Predicate.Util_TH (
 
  ) where
 import Predicate.Util
+import Predicate.Misc
 import Predicate.Core
 import Predicate.Refined
 import Predicate.Refined2
@@ -57,7 +62,7 @@ import qualified Language.Haskell.TH.Syntax as TH
 -- >$$(refinedTH 99) :: Refined OL (Between 100 125 Id) Int
 --
 -- <interactive>:8:4: error:
---     * refinedTH: predicate failed with PresentT False (100 <= 99)
+--     * refinedTH: predicate failed with Val False (100 <= 99)
 --     * In the Template Haskell splice $$(refinedTH 99)
 --       In the expression:
 --           $$(refinedTH 99) :: Refined OL (Between 100 125 Id) Int
@@ -91,7 +96,7 @@ refinedFailMsg :: forall opts . OptC opts => String -> Msg0 -> String
 refinedFailMsg msg m =
   let msg1 | hasNoTree (getOpt @opts) || null (m0Long m) = ""
            | otherwise = nullIf "\n" (m0Long m)
-  in msg ++ ": predicate failed with " ++ m0BoolTColor m ++ " " ++ m0Short m ++ msg1
+  in msg ++ ": predicate failed with " ++ m0ValBoolColor m ++ " " ++ m0Short m ++ msg1
 
 -- | creates a 'Refined2.Refined2' refinement type
 --

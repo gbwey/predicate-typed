@@ -56,7 +56,7 @@ toFrom = eitherDecode . encode
 orderTests :: String -> [Assertion] -> [TestTree]
 orderTests s = zipWith (\i -> testCase (s <> "_" <> show i)) [1::Int ..]
 
-expectBT :: (Show a, Eq a, HasCallStack) => BoolT a -> IO (BoolT a) -> IO ()
+expectBT :: (Show a, Eq a, HasCallStack) => Val a -> IO (Val a) -> IO ()
 expectBT bp m = do
   x <- m
   print (x,bp)

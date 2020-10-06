@@ -40,8 +40,8 @@ To run the examples you will need these settings (ghc>=8.6)
   * OU unicode plus colors (for Windows: chcp 65001)
 
 * BoolT is an ADT that holds the return value from evaluating the type level expression
-   * PresentT a : 'a' is any value
-   * FailT String : indicates a failure with an error message
+   * Val a : 'a' is any value
+   * Fail String : indicates a failure with an error message
 
 # testing the dsl
 
@@ -59,7 +59,7 @@ True 4 <= 7 <= 10
 +- P '4
 |
 `- P '10
-PresentT True
+Val True
 ```
 
 ```haskell
@@ -71,57 +71,57 @@ False 11 <= 10
 +- P '4
 |
 `- P '10
-PresentT False
+Val False
 ```
 
 ```haskell
 >pu @(Between (4 % 7) (10 % 2) Id) 7
 ...
 False (7 % 1 <= 5 % 1)
-PresentT False
+Val False
 ```
 
 ```haskell
 >pu @(Re "^[[:upper:]][[:lower:]]+") "Fred"
 ...
-PresentT True
+Val True
 ```
 
 ```haskell
 pu @(Re "^[[:upper:]][[:lower:]]+") "fred"
 ...
-PresentT False
+Val False
 ```
 
 ```haskell
 >pu @(Resplit "\\s+" >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+"))) "Fred Abel Bart Jimmy"
 ...
-PresentT ["Fred","Abel","Bart","Jimmy"]
+Val ["Fred","Abel","Bart","Jimmy"]
 ```
 
 ```haskell
 >pu @(Resplit "\\s+" >> GuardSimple (Len > 0 && All (Re "^[[:upper:]][[:lower:]]+"))) "Fred Abel bart Jimmy"
 ...
-FailT "(True && False | (All(4) i=2 (Re' [] (^[[:upper:]][[:lower:]]+) | bart)))"
+Fail "(True && False | (All(4) i=2 (Re' [] (^[[:upper:]][[:lower:]]+) | bart)))"
 ```
 
 ```haskell
 >pu @(ReadP Day Id >> ToWeekDate Id >> Snd == "Monday") "2020-07-13"
 ...
-PresentT True
+Val True
 ```
 
 ```haskell
 >pu @(ReadP Day Id >> ToWeekDate Id >> Snd == "Monday") "2020-07-14"
 ...
 False (>>) False | {"Tuesday" == "Monday"}
-PresentT False
+Val False
 ```
 
 ```haskell
 >pu @(ReadP Day Id >> ToWeekDate Id >> GuardSimple (Snd == "Monday")) "2020-07-13"
 ...
-PresentT (1,"Monday")
+Val (1,"Monday")
 ```
 
 

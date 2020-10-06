@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators #-}
@@ -54,6 +55,10 @@ module Predicate.Misc (
   , ThisT
   , ThatT
   , TheseT
+  , FnT
+  , ApplyConstT
+  , CheckT
+  , JoinT
 
  -- ** extract values from the type level
   , GetBool(..)
@@ -65,17 +70,6 @@ module Predicate.Misc (
   , InductTupleC(..)
   , InductListC(..)
   , TupleC(..)
-
- -- ** miscellaneous
-  , showTK
-  , showT
-  , showThese
-  , prettyOrd
-  , nat
-  , symb
-  , errorInProgram
-  , readField
-  , (~>)
 
  -- ** extract from n-tuple
   , T4_1
@@ -110,16 +104,32 @@ module Predicate.Misc (
   , displayROpts
 
   -- ** colors
-  , Color(..)
   , SColor(..)
   , GetColor(..)
+
+ -- ** miscellaneous
+  , showTK
+  , showT
+  , showThese
+  , prettyOrd
+  , nat
+  , symb
+  , errorInProgram
+  , readField
+  , unlessNull
+  , unlessNullM
+  , nullSpace
+  , nullIf
+  , pureTryTest
+  , pureTryTestPred
+  , (~>)
 
   ) where
 import qualified GHC.TypeNats as GN
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
-import Data.Typeable
-import System.Console.Pretty
+import Data.Typeable (Typeable, Proxy(Proxy), typeRep)
+import System.Console.Pretty (Color(..))
 import GHC.Exts (Constraint)
 import qualified Text.Regex.PCRE.Light as RL
 import qualified Data.Text as T
@@ -133,12 +143,14 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.ByteString (ByteString)
 import GHC.Stack (HasCallStack)
 import Data.Containers.ListUtils (nubOrd)
-import Control.Arrow (Arrow((***)))
+import Control.Arrow (Arrow((***)),ArrowChoice(left))
 import Data.List (intercalate)
 import qualified Safe (headNote)
 import qualified Text.Read.Lex as L
 import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified GHC.Read as GR
+import Data.Char (isSpace)
+import qualified Control.Exception as E
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -542,6 +554,36 @@ type family TheseT lr where
       'GL.Text "TheseT: expected 'These a b' "
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
+
+type family FnT ab :: Type where
+  FnT (_a -> b) = b
+  FnT ab = GL.TypeError (
+      'GL.Text "FnT: expected Type -> Type but found a simple Type?"
+      ':$$: 'GL.Text "ab = "
+      ':<>: 'GL.ShowType ab)
+
+type family JoinT x y where
+  JoinT (t a) (t b) = t (a, b)
+  JoinT ta tb = GL.TypeError (
+       'GL.Text "JoinT: expected (t a) (t b) but found something else"
+       ':$$: 'GL.Text "t a = "
+       ':<>: 'GL.ShowType ta
+       ':$$: 'GL.Text "t b = "
+       ':<>: 'GL.ShowType tb)
+
+type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
+--type family ApplyConstT ta b where -- less restrictive so allows ('Just Int) Bool through!
+  ApplyConstT (t _a) b = t b
+  ApplyConstT ta b = GL.TypeError (
+       'GL.Text "ApplyConstT: (t a) b but found something else"
+       ':$$: 'GL.Text "t a = "
+       ':<>: 'GL.ShowType ta
+       ':$$: 'GL.Text "b = "
+       ':<>: 'GL.ShowType b)
+
+type family CheckT (tp :: Type) :: Bool where
+  CheckT () = GL.TypeError ('GL.Text "Printfn: inductive tuple cannot be empty")
+  CheckT _o = 'True
 
 errorInProgram :: HasCallStack => String -> x
 errorInProgram s = error $ "programmer error:" <> s
@@ -950,4 +992,35 @@ readField fieldName readVal = do
         GR.expectP (L.Punc "=")
         readVal
 
+-- | convenience method for optional display
+unlessNull :: (Foldable t, Monoid m) => t a -> m -> m
+unlessNull t m | null t = mempty
+               | otherwise = m
+
+unlessNullM :: (Foldable t, Applicative m) => t a -> (t a -> m ()) -> m ()
+unlessNullM t f
+  | null t = pure ()
+  | otherwise = f t
+
+nullSpace :: String -> String
+nullSpace = nullIf " "
+
+nullIf :: String -> String -> String
+nullIf s t
+  | all isSpace t = ""
+  | otherwise = s <> t
+
+pureTryTest :: a -> IO (Either () a)
+pureTryTest = fmap (left (const ())) . E.try @E.SomeException . E.evaluate
+--pureTryTest = over (mapped . _Left) (const ()) . E.try @E.SomeException . E.evaluate
+
+pureTryTestPred :: (String -> Bool)
+                -> a
+                -> IO (Either String (Either () a))
+pureTryTestPred p a = do
+  lr <- left E.displayException <$> E.try @E.SomeException (E.evaluate a)
+  return $ case lr of
+    Left e | p e -> Right (Left ())
+           | otherwise -> Left ("no match found: e=" ++ e)
+    Right r -> Right (Right r)
 

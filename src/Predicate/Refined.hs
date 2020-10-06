@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE BangPatterns #-}
@@ -49,9 +50,10 @@ module Predicate.Refined (
 
  ) where
 import Predicate.Core
+import Predicate.Misc (nullIf) 
 import Predicate.Util
 import Control.Lens
-import Data.Proxy
+import Data.Proxy (Proxy(Proxy))
 import Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Language.Haskell.TH.Syntax as TH
 import Test.QuickCheck
@@ -102,7 +104,7 @@ instance RefinedC opts p String => IsString (Refined opts p String) where
 
 errorDisplay :: POpts -> Msg0 -> String
 errorDisplay o m =
-     m0BoolTColor m
+     m0ValBoolColor m
   ++ nullIf " " (m0Short m)
   ++ (if null (m0Long m) || hasNoTree o
       then ""
@@ -248,7 +250,7 @@ genRefined g =
 data Msg0 = Msg0 { m0BoolE :: !(Either String Bool)
                  , m0Short :: !String
                  , m0Long :: !String
-                 , m0BoolTColor :: !String
+                 , m0ValBoolColor :: !String
                  } deriving Eq
 
 showMsg0 :: Msg0 -> String
@@ -266,9 +268,9 @@ newRefined' :: forall opts p a m
 newRefined' a = do
   let o = getOpt @opts
   pp <- evalBool (Proxy @p) o a
-  let r = colorBoolTBool o (_ttBoolT pp)
+  let r = colorValBool o (_ttVal pp)
       s = prtTree o pp
-      msg0 = Msg0 (pp ^. ttBoolT . _BoolTIso) (topMessage pp) s r
+      msg0 = Msg0 (pp ^. ttVal . _ValEither) (topMessage pp) s r
   pure $ case getValueLR o "" pp [] of
        Right True -> Right (Refined a)
        _ -> Left msg0
@@ -347,7 +349,7 @@ unsafeRefined' a =
   in case getValueLR o "" tt [] of
        Right True -> Refined a
        _ -> let s = prtTree o tt
-                bp = colorBoolTBool o (_ttBoolT tt)
+                bp = colorValBool o (_ttVal tt)
             in case oDebug o of
                  DZero -> error bp
                  DLite -> error $ bp ++ nullIf "\n" s

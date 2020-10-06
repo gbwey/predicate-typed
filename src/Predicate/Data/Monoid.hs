@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -40,6 +41,7 @@ module Predicate.Data.Monoid (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
@@ -59,32 +61,32 @@ import Data.List.NonEmpty (NonEmpty(..))
 -- | similar to 'SG.<>'
 --
 -- >>> pz @(Fst <> Snd) ("abc","def")
--- PresentT "abcdef"
+-- Val "abcdef"
 --
 -- >>> pz @("abcd" <> "ef" <> Id) "ghi"
--- PresentT "abcdefghi"
+-- Val "abcdefghi"
 --
 -- >>> pz @("abcd" <> "ef" <> Id) "ghi"
--- PresentT "abcdefghi"
+-- Val "abcdefghi"
 --
 -- >>> pz @(Wrap (SG.Sum _) Id <> (10 >> FromInteger _)) 13
--- PresentT (Sum {getSum = 23})
+-- Val (Sum {getSum = 23})
 --
 -- >>> pz @(Wrap (SG.Product _) Id <> Lift (FromInteger _) 10) 13
--- PresentT (Product {getProduct = 130})
+-- Val (Product {getProduct = 130})
 --
 -- >>> pz @('(10 >> FromInteger _,"def") <> Id) (SG.Sum 12, "_XYZ")
--- PresentT (Sum {getSum = 22},"def_XYZ")
+-- Val (Sum {getSum = 22},"def_XYZ")
 --
 -- >>> pz @(SapA' (SG.Max _)) (10,12)
--- PresentT (Max {getMax = 12})
+-- Val (Max {getMax = 12})
 --
 -- >>> pz @(SapA' (SG.Sum _)) (10,12)
--- PresentT (Sum {getSum = 22})
+-- Val (Sum {getSum = 22})
 --
 -- >>> pl @((Id <> Id) >> Unwrap) (SG.Sum 12)
 -- Present 24 ((>>) 24 | {getSum = 24})
--- PresentT 24
+-- Val 24
 --
 data p <> q
 infixr 6 <>
@@ -103,13 +105,13 @@ instance ( Semigroup (PP p x)
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = p <> q
-        in mkNode opts (PresentT d) (showL opts p <> " <> " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
+        in mkNode opts (Val d) (showL opts p <> " <> " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
 
 -- | semigroup append both sides of a tuple (ie uncurry (<>)) using 'Wrap'
 --
 -- >>> pl @(SapA' (SG.Sum _) >> Unwrap) (4,5)
 -- Present 9 ((>>) 9 | {getSum = 9})
--- PresentT 9
+-- Val 9
 --
 data SapA' (t :: Type)
 type SapAT' (t :: Type) = Wrap t Fst <> Wrap t Snd
@@ -121,7 +123,7 @@ instance P (SapAT' t) x => P (SapA' t) x where
 -- | semigroup append both sides of a tuple (ie uncurry (<>))
 --
 -- >>> pz @(Snd >> SapA) (4,("abc","def"))
--- PresentT "abcdef"
+-- Val "abcdef"
 --
 data SapA
 type SapAT = Fst <> Snd
@@ -133,10 +135,10 @@ instance P SapAT x => P SapA x where
 -- | similar to 'mconcat'
 --
 -- >>> pz @(MConcat Id) [SG.Sum 44, SG.Sum 12, SG.Sum 3]
--- PresentT (Sum {getSum = 59})
+-- Val (Sum {getSum = 59})
 --
 -- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) Id >> MConcat Id) [7 :: Int,6,1,3,5] -- monoid so need eg Int
--- PresentT (Sum {getSum = 22},Max {getMax = 7})
+-- Val (Sum {getSum = 22},Max {getMax = 7})
 --
 data MConcat p
 
@@ -153,15 +155,15 @@ instance ( PP p x ~ [a]
       Left e -> e
       Right p ->
         let b = mconcat p
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
 
 -- | similar to 'SG.sconcat'
 --
 -- >>> pz @(ToNEList >> SConcat Id) [SG.Sum 44, SG.Sum 12, SG.Sum 3]
--- PresentT (Sum {getSum = 59})
+-- Val (Sum {getSum = 59})
 --
 -- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) Id >> ToNEList >> SConcat Id) [7,6,1,3,5]
--- PresentT (Sum {getSum = 22},Max {getMax = 7})
+-- Val (Sum {getSum = 22},Max {getMax = 7})
 --
 data SConcat p
 
@@ -178,7 +180,7 @@ instance ( PP p x ~ NonEmpty a
       Left e -> e
       Right p ->
         let b = SG.sconcat p
-        in mkNode opts (PresentT b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
 
 -- | lift mempty over a Functor
 data MEmpty2' t
@@ -192,16 +194,16 @@ instance ( Show (f a)
   eval _ opts fa =
     let msg0 = "MEmpty2"
         b = mempty <$> fa
-    in pure $ mkNode opts (PresentT b) (show01 opts msg0 b fa) []
+    in pure $ mkNode opts (Val b) (show01 opts msg0 b fa) []
 
 -- | lift mempty over a Functor
 --
 -- >>> pz @(MEmpty2 (SG.Product Int)) [Identity (-13), Identity 4, Identity 99]
--- PresentT [Product {getProduct = 1},Product {getProduct = 1},Product {getProduct = 1}]
+-- Val [Product {getProduct = 1},Product {getProduct = 1},Product {getProduct = 1}]
 --
 -- >>> pl @(MEmpty2 (SG.Sum _)) (Just ())
 -- Present Just (Sum {getSum = 0}) (MEmpty2 Just (Sum {getSum = 0}) | Just ())
--- PresentT (Just (Sum {getSum = 0}))
+-- Val (Just (Sum {getSum = 0}))
 --
 data MEmpty2 (t :: Type)
 type MEmpty2T (t :: Type) = MEmpty2' (Hole t)
@@ -214,11 +216,11 @@ instance P (MEmpty2T t) x => P (MEmpty2 t) x where
 --
 -- >>> pl @(MEmptyT' Id) (Just (SG.Sum 12))
 -- Present Nothing (MEmptyT Nothing)
--- PresentT Nothing
+-- Val Nothing
 --
 -- >>> pl @(MEmptyT (SG.Sum _) >> Unwrap >> Id + 4) ()
 -- Present 4 ((>>) 4 | {0 + 4 = 4})
--- PresentT 4
+-- Val 4
 --
 
 -- no Monoid for Maybe a unless a is also a monoid but can use empty!
@@ -230,24 +232,24 @@ instance ( Show (PP t a)
   eval _ opts _ =
     let msg0 = "MEmptyT"
         b = mempty @(PP t a)
-    in pure $ mkNode opts (PresentT b) (msg0 <> " " <> showL opts b) []
+    in pure $ mkNode opts (Val b) (msg0 <> " " <> showL opts b) []
 
 -- | similar to 'mempty'
 --
 -- >>> pz @(MEmptyT (SG.Sum Int)) ()
--- PresentT (Sum {getSum = 0})
+-- Val (Sum {getSum = 0})
 --
 -- >>> pl @(MEmptyT _ ||| Ones) (Right "abc")
 -- Present ["a","b","c"] ((|||) Right ["a","b","c"] | "abc")
--- PresentT ["a","b","c"]
+-- Val ["a","b","c"]
 --
 -- >>> pl @(MEmptyT _ ||| Ones) (Left ["ab"])
 -- Present [] ((|||) Left [] | ["ab"])
--- PresentT []
+-- Val []
 --
 -- >>> pl @(MEmptyT (Maybe ())) 'x'
 -- Present Nothing (MEmptyT Nothing)
--- PresentT Nothing
+-- Val Nothing
 --
 data MEmptyT (t :: Type)
 type MEmptyTT (t :: Type) = MEmptyT' (Hole t)
@@ -260,7 +262,7 @@ instance P (MEmptyTT t) x => P (MEmptyT t) x where
 --
 -- >>> pl @('Proxy >> MEmptyP) "abc"
 -- Present "" ((>>) "" | {MEmptyT ""})
--- PresentT ""
+-- Val ""
 --
 data MEmptyP
 type MEmptyPT = MEmptyT' Unproxy -- expects a proxy: so only some things work with this: eg MaybeIn
@@ -272,26 +274,26 @@ instance P MEmptyPT x => P MEmptyP x where
 -- | similar to 'SG.stimes'
 --
 -- >>> pz @(STimes 4 Id) (SG.Sum 3)
--- PresentT (Sum {getSum = 12})
+-- Val (Sum {getSum = 12})
 --
 -- >>> pz @(STimes 4 Id) "ab"
--- PresentT "abababab"
+-- Val "abababab"
 --
 -- >>> pl @(STimes 4 Id) (SG.Sum 13)
 -- Present Sum {getSum = 52} (STimes 4 p=Sum {getSum = 13} Sum {getSum = 52} | n=4 | Sum {getSum = 13})
--- PresentT (Sum {getSum = 52})
+-- Val (Sum {getSum = 52})
 --
 -- >>> pl @(STimes Fst Snd) (4,['x','y'])
 -- Present "xyxyxyxy" (STimes 4 p="xy" "xyxyxyxy" | n=4 | "xy")
--- PresentT "xyxyxyxy"
+-- Val "xyxyxyxy"
 --
 -- >>> pl @(STimes Fst Snd) (4,"abc")
 -- Present "abcabcabcabc" (STimes 4 p="abc" "abcabcabcabc" | n=4 | "abc")
--- PresentT "abcabcabcabc"
+-- Val "abcabcabcabc"
 --
 -- >>> pl @(STimes 4 Id) "abc"
 -- Present "abcabcabcabc" (STimes 4 p="abc" "abcabcabcabc" | n=4 | "abc")
--- PresentT "abcabcabcabc"
+-- Val "abcabcabcabc"
 --
 
 data STimes n p
@@ -310,4 +312,4 @@ instance ( P n a
       Right (fromIntegral -> n::Int,p,pp,qq) ->
         let msg1 = msg0 <> " " <> showL opts n <> " p=" <> showL opts p
             b = SG.stimes n p
-            in mkNode opts (PresentT b) (show01' opts msg1 b "n=" n <> showVerbose opts " | " p) [hh pp, hh qq]
+            in mkNode opts (Val b) (show01' opts msg1 b "n=" n <> showVerbose opts " | " p) [hh pp, hh qq]

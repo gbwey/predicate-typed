@@ -37,17 +37,17 @@ suite = testGroup "testjson"
   , testCase "testperson1 bad lastname lowercase first letter" $ expectIO (testPerson1 @OAN 4) (expectLeftWith ["lastName1", "invalid name", "diaz"])
   , testCase "testperson1 bad first name lowercase first letter" $ expectIO (testPerson1 @OAN 6) (expectLeftWith ["firstName1", "not upper first(d)"])
   , testCase "testperson1 age 99 out of range" $ expectIO (testPerson1 @OAN 5) (expectLeftWith ["Error in $[0].age1"])
-  , testCase "parse fail person1" $ expectBT (FailT "ParseJsonFile [Person1 'OZ](test3.json) Error in $[0].ipaddress1: Refined3:Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 260") $ pz @(ParseJsonFile [Person1 'OZ] "test3.json") ()
-  , testCase "parse ok person1" $ expectBT (PresentT 5) $ pl @(ParseJsonFile [Person1 OAN] "test2.json" >> Len) ()
-  , testCase "missing file" $ expectBT (FailT "ParseJsonFile [Person1 'OZ](test2.jsoxxxn) file does not exist") $ pl @(ParseJsonFile [Person1 'OZ] "test2.jsoxxxn" >> Len) ()
+  , testCase "parse fail person1" $ expectBT (Fail "ParseJsonFile [Person1 'OZ](test3.json) Error in $[0].ipaddress1: Refined3:Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 260") $ pz @(ParseJsonFile [Person1 'OZ] "test3.json") ()
+  , testCase "parse ok person1" $ expectBT (Val 5) $ pl @(ParseJsonFile [Person1 OAN] "test2.json" >> Len) ()
+  , testCase "missing file" $ expectBT (Fail "ParseJsonFile [Person1 'OZ](test2.jsoxxxn) file does not exist") $ pl @(ParseJsonFile [Person1 'OZ] "test2.jsoxxxn" >> Len) ()
 
   , testCase "getRow2Age1" $ do
                            x <- pz @(ParseJsonFile [Person1 OAN] "test2.json" >> Id !! 2) ()
-                           (x ^? _PresentT . to (unRefined . age1)) @?= Just 45
-                           (x ^? _PresentT . to (R3.r3Out . ipaddress1)) @?= Just "124.001.012.223"
+                           (x ^? _Val . to (unRefined . age1)) @?= Just 45
+                           (x ^? _Val . to (R3.r3Out . ipaddress1)) @?= Just "124.001.012.223"
   , testCase "getRow2" $ do
                            x <- pz @(ParseJsonFile [Person1 OAN] "test2.json" >> Id !! 2) ()
-                           x @?= PresentT (Person1 {firstName1 = unsafeRefined "John", lastName1 = unsafeRefined "Doe", age1 = unsafeRefined 45, likesPizza1 = False, date1 = R3.unsafeRefined3 (Safe.readNote "testjson: utc date" "2003-01-12 04:05:33 UTC") "2003-01-12 04:05:33", ipaddress1 = R3.unsafeRefined3 [124,1,12,223] "124.001.012.223"})
+                           x @?= Val (Person1 {firstName1 = unsafeRefined "John", lastName1 = unsafeRefined "Doe", age1 = unsafeRefined 45, likesPizza1 = False, date1 = R3.unsafeRefined3 (Safe.readNote "testjson: utc date" "2003-01-12 04:05:33 UTC") "2003-01-12 04:05:33", ipaddress1 = R3.unsafeRefined3 [124,1,12,223] "124.001.012.223"})
   ]
 
 testPerson :: IO (Either String [Person])

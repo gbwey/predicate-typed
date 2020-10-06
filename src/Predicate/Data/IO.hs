@@ -3,6 +3,7 @@
 {-# OPTIONS -Wincomplete-record-updates #-}
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
+{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -45,6 +46,7 @@ module Predicate.Data.IO (
 
  ) where
 import Predicate.Core
+import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Maybe (IsJust)
 import Predicate.Data.Monoid (type (<>))
@@ -70,10 +72,10 @@ import qualified Data.ByteString.Char8 as BS8
 -- | similar to 'System.IO.readFile'
 --
 -- >>> pz @(ReadFile "LICENSE" >> 'Just Id >> Len > 0) ()
--- PresentT True
+-- Val True
 --
 -- >>> pz @(FileExists "xyzzy") ()
--- PresentT False
+-- Val False
 --
 data ReadFile p
 
@@ -93,9 +95,9 @@ instance ( PP p x ~ String
                 if b then Just <$> readFile p
                 else pure Nothing
         pure $ case mb of
-          Nothing -> mkNode opts (FailT msg1) "" [hh pp]
-          Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
-          Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> litL opts b) [hh pp]
+          Nothing -> mkNode opts (Fail msg1) "" [hh pp]
+          Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
+          Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> litL opts b) [hh pp]
 
 data ReadFileBinary p
 
@@ -115,9 +117,9 @@ instance ( PP p x ~ String
                 if b then Just <$> BS8.readFile p
                 else pure Nothing
         pure $ case mb of
-          Nothing -> mkNode opts (FailT msg1) "" [hh pp]
-          Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
-          Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (BS8.length b) <> " Just " <> litBS opts b) [hh pp]
+          Nothing -> mkNode opts (Fail msg1) "" [hh pp]
+          Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
+          Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (BS8.length b) <> " Just " <> litBS opts b) [hh pp]
 
 instance P (FileExistsT p) x => P (FileExists p) x where
   type PP (FileExists p) x = PP (FileExistsT p) x
@@ -130,10 +132,10 @@ type FileExistsT p = ReadFile p >> IsJust
 -- | similar to 'System.Directory.doesDirectoryExist'
 --
 -- >>> pz @(DirExists ".") ()
--- PresentT True
+-- Val True
 --
 -- >>> pz @(DirExists "xxy") ()
--- PresentT False
+-- Val False
 --
 data DirExists p
 type DirExistsT p = ReadDir p >> IsJust
@@ -160,14 +162,14 @@ instance ( PP p x ~ String
                 if b then Just <$> listDirectory p
                 else pure Nothing
         pure $ case mb of
-          Nothing -> mkNode opts (FailT msg1) "" [hh pp]
-          Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
-          Just (Just b) -> mkNode opts (PresentT (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> showL opts b) [hh pp]
+          Nothing -> mkNode opts (Fail msg1) "" [hh pp]
+          Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
+          Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> showL opts b) [hh pp]
 
 -- | read an environment variable: similar to 'System.Environment.getEnv'
 --
 -- >>> pz @(ReadEnv "PATH" >> 'Just Id >> 'True) ()
--- PresentT True
+-- Val True
 --
 data ReadEnv p
 
@@ -184,9 +186,9 @@ instance ( PP p x ~ String
         let msg1 = msg0 <> "[" <> p <> "]"
         mb <- runIO $ lookupEnv p
         pure $ case mb of
-          Nothing -> mkNode opts (FailT msg1) "" [hh pp]
-          Just Nothing -> mkNode opts (PresentT Nothing) (msg1 <> " does not exist") [hh pp]
-          Just (Just v) -> mkNode opts (PresentT (Just v)) (msg1 <> " " <> litL opts v) [hh pp]
+          Nothing -> mkNode opts (Fail msg1) "" [hh pp]
+          Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
+          Just (Just v) -> mkNode opts (Val (Just v)) (msg1 <> " " <> litL opts v) [hh pp]
 
 -- | read all the environment variables as key value pairs: similar to 'System.Environment.getEnvironment'
 data ReadEnvAll
@@ -197,8 +199,8 @@ instance P ReadEnvAll a where
     let msg0 = "ReadEnvAll"
     mb <- runIO getEnvironment
     pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" []
-      Just v -> mkNode opts (PresentT v) (msg0 <> " count=" <> show (length v)) []
+      Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" []
+      Just v -> mkNode opts (Val v) (msg0 <> " count=" <> show (length v)) []
 
 -- | get the current time using 'UTCTime'
 data TimeUtc
@@ -209,8 +211,8 @@ instance P TimeUtc a where
     let msg0 = "TimeUtc"
     mb <- runIO getCurrentTime
     pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" []
-      Just v -> mkNode opts (PresentT v) (msg0 <> " " <> showL opts v) []
+      Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" []
+      Just v -> mkNode opts (Val v) (msg0 <> " " <> showL opts v) []
 
 -- | get the current time using 'ZonedTime'
 data TimeZt
@@ -221,8 +223,8 @@ instance P TimeZt a where
     let msg0 = "TimeZt"
     mb <- runIO getZonedTime
     pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" []
-      Just v -> mkNode opts (PresentT v) (msg0 <> " " <> showL opts v) []
+      Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" []
+      Just v -> mkNode opts (Val v) (msg0 <> " " <> showL opts v) []
 
 data FHandle s = FStdout | FStderr | FOther !s !WFMode
   deriving stock (Read, Show, Eq)
@@ -315,9 +317,9 @@ instance ( GetFHandle fh
                                    _ -> WriteMode
                             fmap (left show) $ E.try @E.SomeException $ withFile s md (`hPutStr` ss)
           pure $ case mb of
-            Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" [hh pp]
-            Just (Left e) -> mkNode opts (FailT $ msg0 <> ":" <> e) "" [hh pp]
-            Just (Right ()) -> mkNode opts (PresentT ()) msg0 [hh pp]
+            Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" [hh pp]
+            Just (Left e) -> mkNode opts (Fail $ msg0 <> ":" <> e) "" [hh pp]
+            Just (Right ()) -> mkNode opts (Val ()) msg0 [hh pp]
 
 -- | read in a value of a given type from stdin with a prompt: similar to 'System.IO.readIO'
 type ReadIO (t :: Type) = ReadIO' t "Enter value"
@@ -337,7 +339,7 @@ instance P Stdin x where
                         Left (e :: E.SomeException) -> Left $ show e
                         Right ss -> Right ss
     pure $ case mb of
-      Nothing -> mkNode opts (FailT (msg0 <> " must run in IO")) "" []
-      Just (Left e) -> mkNode opts (FailT $ msg0 <> ":" <> e) "" []
-      Just (Right ss) -> mkNode opts (PresentT ss) (msg0 <> "[" <> litVerbose opts "" ss <> "]") []
+      Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" []
+      Just (Left e) -> mkNode opts (Fail $ msg0 <> ":" <> e) "" []
+      Just (Right ss) -> mkNode opts (Val ss) (msg0 <> "[" <> litVerbose opts "" ss <> "]") []
 
