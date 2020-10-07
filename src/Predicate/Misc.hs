@@ -123,6 +123,7 @@ module Predicate.Misc (
   , pureTryTest
   , pureTryTestPred
   , (~>)
+  , drawTreeU
 
   ) where
 import qualified GHC.TypeNats as GN
@@ -151,6 +152,7 @@ import qualified Text.ParserCombinators.ReadPrec as PCR
 import qualified GHC.Read as GR
 import Data.Char (isSpace)
 import qualified Control.Exception as E
+import Data.Tree (Tree(Node))
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -1024,3 +1026,17 @@ pureTryTestPred p a = do
            | otherwise -> Left ("no match found: e=" ++ e)
     Right r -> Right (Right r)
 
+-- https://github.com/haskell/containers/pull/344
+drawTreeU :: Tree String -> String
+drawTreeU  = intercalate "\n" . drawU
+
+drawU :: Tree String -> [String]
+drawU (Node x ts0) = x : drawSubTrees ts0
+  where
+    drawSubTrees [] = []
+    drawSubTrees [t] =
+        shift "\x2514\x2500" "  " (drawU t)
+    drawSubTrees (t:ts) =
+        shift "\x251c\x2500" "\x2502 " (drawU t) ++ drawSubTrees ts
+
+    shift one other = zipWith (++) (one : repeat other)

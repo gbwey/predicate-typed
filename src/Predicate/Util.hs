@@ -37,18 +37,15 @@ module Predicate.Util (
   , ttValP
   , ttString
   , ttForest
-  , _Val2P
-  , topMessage
-  , hasNoTree
 
  -- ** Val
   , Val(..)
   , _Fail
   , _Val
-  , _ValE
   , _True
   , _False
   , _ValEither
+  , _Val2P
   , _Val2BoolP
 
  -- ** PE
@@ -79,6 +76,8 @@ module Predicate.Util (
   , verboseList
   , fixEmptyNode
   , fixTTValP
+  , topMessage
+  , hasNoTree
 
  -- ** options
   , POpts
@@ -197,6 +196,7 @@ instance Semigroup ValP where
    FailP s <> FailP s1 = FailP (s <> s1)
    FailP s <> _ = FailP s
    _ <> FailP s = FailP s
+   ValP <> _ = ValP
    _ <> ValP = ValP
    _ <> TrueP = TrueP
    _ <> FalseP = FalseP
@@ -243,7 +243,7 @@ instance Semigroup (Val a) where
    Fail s <> Fail s1 = Fail (s <> s1)
    Fail s <> _ = Fail s
    _ <> Fail s = Fail s
-   Val _a <> Val b = Val b
+   Val _ <> Val b = Val b
 
 -- | monoid instance for 'Val'
 --
@@ -1095,21 +1095,6 @@ verboseList o tt
   | isVerbose o = [hh tt]
   | otherwise = []
 
--- https://github.com/haskell/containers/pull/344
-drawTreeU :: Tree String -> String
-drawTreeU  = intercalate "\n" . drawU
-
-drawU :: Tree String -> [String]
-drawU (Node x ts0) = x : drawSubTrees ts0
-  where
-    drawSubTrees [] = []
-    drawSubTrees [t] =
-        shift "\x2514\x2500" "  " (drawU t)
-    drawSubTrees (t:ts) =
-        shift "\x251c\x2500" "\x2502 " (drawU t) ++ drawSubTrees ts
-
-    shift one other = zipWith (++) (one : repeat other)
-
 fixEmptyNode :: String -> TT a -> TT a
 fixEmptyNode s = over (ttForest . traverse) (fixEmptyNode' s)
 
@@ -1117,32 +1102,6 @@ fixEmptyNode' :: String -> Tree PE -> Tree PE
 fixEmptyNode' s = go
  where go (Node (PE ValP "") []) = Node (PE ValP s) []
        go (Node p xs) = Node p (map go xs)
-
--- | Val prism
---
--- >>> _ValE # 123
--- Val 123
---
--- >>> Val 123 ^? _ValE
--- Just 123
---
--- >>> Fail "abc" ^? _ValE
--- Nothing
---
--- >>> Val 1 & _ValE .~ True
--- Val True
---
--- >>> Val False & _ValE %~ not
--- Val True
---
--- >>> Fail "asdF" & _ValE .~ True
--- Fail "asdF"
---
-_ValE :: Prism (Val a) (Val b) a b
-_ValE = prism Val
-         $ \case
-              Val a -> Right a
-              Fail e -> Left (Fail e)
 
 -- | prism for Val True
 --
@@ -1154,9 +1113,10 @@ _ValE = prism Val
 --
 _True :: a ~ Bool => Prism' (Val a) ()
 _True =
-  prism' (const (Val True)) $ \case
-                       Val True -> Just ()
-                       _ -> Nothing
+  prism' (const (Val True))
+  $ \case
+       Val True -> Just ()
+       _ -> Nothing
 
 -- | prism for Val False
 --
@@ -1174,9 +1134,10 @@ _True =
 --
 _False :: a ~ Bool => Prism' (Val a) ()
 _False =
-  prism' (const (Val False)) $ \case
-                       Val False -> Just ()
-                       _ -> Nothing
+  prism' (const (Val False))
+  $ \case
+       Val False -> Just ()
+       _ -> Nothing
 
 -- | iso for Val
 --
