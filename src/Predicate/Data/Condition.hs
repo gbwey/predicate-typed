@@ -298,12 +298,12 @@ instance ( P r x
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR opts msgbase0 qq [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (Val b) (show01 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
+              Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ee <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
             pure $ case getValueLR opts ("Case:otherwise failed" <> nullIf ":" (_ttString ee)) ee [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (Val b) (show01 opts msgbase0 b a) [hh rr, hh pp, hh ee]
+              Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) [hh rr, hh pp, hh ee]
 
 instance ( KnownNat n
          , GetLen ps
@@ -335,12 +335,12 @@ instance ( KnownNat n
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR opts msgbase0 qq [hh pp, hh rr] of
               Left e -> e
-              Right b -> mkNode opts (Val b) (show01 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
+              Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
             pure $ case getValueLR opts (_ttString ww) ww [hh rr, hh pp] of
               Left e -> e -- use original failure msg
-              Right b -> mkNode opts (Val b) (show01 opts msgbase1 b a) [hh rr, hh pp, hh ww]
+              Right b -> mkNode opts (Val b) (show3 opts msgbase1 b a) [hh rr, hh pp, hh ww]
 
 
 data GuardsImpl (n :: Nat) (os :: [(k,k1)])
@@ -402,10 +402,10 @@ instance ( [a] ~ x
          , Show a
          ) => P (GuardsImpl n ('[] :: [(k,k1)])) x where
   type PP (GuardsImpl n ('[] :: [(k,k1)])) x = x
-  eval _ opts as =
-    let msg0 = "Guards"
-    in if not (null as) then errorInProgram $ "GuardsImpl base case has extra data " ++ show as
-       else pure $ mkNode opts (Val as) (msg0 <> " no data") []
+
+  eval _ opts [] = pure $ mkNode opts (Val []) ("Guards no data") []
+
+  eval _ _ as@(_:_) = errorInProgram $ "GuardsImpl base case has extra data " ++ show as
 
 instance ( PP prt (Int, a) ~ String
          , P prt (Int, a)
@@ -419,32 +419,34 @@ instance ( PP prt (Int, a) ~ String
          , [a] ~ x
          ) => P (GuardsImpl n ('(prt,p) ': ps)) x where
   type PP (GuardsImpl n ('(prt,p) ': ps)) x = x
-  eval _ opts as' = do
+
+  eval _ _ [] = errorInProgram "GuardsImpl n+1 case has no data"
+
+  eval _ opts (a:as) = do
      let cpos = n-pos-1
          msgbase1 = "Guard(" <> show cpos <> ")"
          msgbase2 = "Guards"
          n :: Int
          n = nat @n
          pos = getLen @ps
-     case as' of
-         a:as -> do
-            pp <- evalBoolHide @p opts a
-            case getValueLR opts (msgbase1 <> " p failed") pp [] of
-                 Left e -> pure e
-                 Right False -> do
-                   qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
-                   pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
-                      Left e -> e
-                      Right msgx -> mkNode opts (Fail msgx) (msgbase1 <> " " <> showL opts a) (hh pp : verboseList opts qq)
-                 Right True ->
-                   if pos == 0 then -- we are at the bottom of the tree
-                      pure $ mkNode opts (Val [a]) msgbase2 [hh pp]
-                   else do
-                     ss <- eval (Proxy @(GuardsImpl n ps)) opts as
-                     pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
-                       Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                       Right zs -> (ss & ttForest %~ (hh pp:)) & ttVal .~ Val (a:zs) & ttValP .~ ValP
-         _ -> errorInProgram "GuardsImpl n+1 case has no data"
+     pp <- evalBoolHide @p opts a
+     case getValueLR opts (msgbase1 <> " p failed") pp [] of
+       Left e -> pure e
+       Right False -> do
+         qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
+         pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+            Left e -> e
+            Right msgx -> mkNode opts (Fail msgx) (msgbase1 <> " " <> showL opts a) (hh pp : verboseList opts qq)
+       Right True ->
+         if pos == 0 then -- we are at the bottom of the tree
+            pure $ mkNode opts (Val [a]) msgbase2 [hh pp]
+         else do
+           ss <- eval (Proxy @(GuardsImpl n ps)) opts as
+           pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
+             Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
+             Right zs -> ss & ttForest %~ (hh pp:)
+                            & ttVal .~ Val (a:zs)
+                            & ttValP .~ ValP
 
 -- | GuardsQuick contain a type level list of conditions and one of matching values: on no match will fail using the first parameter
 --
@@ -553,11 +555,13 @@ instance ( KnownNat n
          , [a] ~ x
          ) => P (BoolsImpl n ('[] :: [(k,k1)])) x where
   type PP (BoolsImpl n ('[] :: [(k,k1)])) x = Bool
-  eval _ opts as =
+
+  eval _ _ as@(_:_) = errorInProgram $ "BoolsImpl base case has extra data " ++ show as
+
+  eval _ opts [] =
     let msg0 = "Bool(" <> show (n-1) <> ")"
         n :: Int = nat @n
-    in if not (null as) then errorInProgram $ "BoolsImpl base case has extra data " ++ show as
-       else pure $ mkNodeB opts True (msg0 <> " empty") []
+    in pure $ mkNodeB opts True (msg0 <> " empty") []
 
 instance ( PP prt (Int, a) ~ String
          , P prt (Int, a)
@@ -570,31 +574,31 @@ instance ( PP prt (Int, a) ~ String
          , [a] ~ x
          ) => P (BoolsImpl n ('(prt,p) ': ps)) x where
   type PP (BoolsImpl n ('(prt,p) ': ps)) x = Bool
-  eval _ opts as' = do
+
+  eval _ _ [] = errorInProgram "BoolsImpl n+1 case has no data"
+
+  eval _ opts (a:as) = do
      let cpos = n-pos-1
          msgbase1 = "Bool(" <> showIndex cpos <> ")"
          msgbase2 = "Bools"
          n :: Int = nat @n
          pos = getLen @ps
-     case as' of
-         a:as -> do
-            pp <- evalBoolHide @p opts a
-            case getValueLR opts (msgbase1 <> " p failed") pp [] of
-                 Left e -> pure e
-                 Right False -> do
-                   qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
-                   pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
-                      Left e -> e
-                      Right msgx -> mkNode opts (Fail (msgbase1 <> " [" <> msgx <> "]" <> nullSpace (topMessage pp))) "" (hh pp : verboseList opts qq)
-                 Right True ->
-                   if pos == 0 then -- we are at the bottom of the tree
-                      pure $ mkNodeB opts True msgbase2 [hh pp]
-                   else do
-                     ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
-                     pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
-                       Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                       Right _ ->  ss & ttForest %~ (hh pp:)
-         _ -> errorInProgram "BoolsImpl n+1 case has no data"
+     pp <- evalBoolHide @p opts a
+     case getValueLR opts (msgbase1 <> " p failed") pp [] of
+       Left e -> pure e
+       Right False -> do
+         qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
+         pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+            Left e -> e
+            Right msgx -> mkNode opts (Fail (msgbase1 <> " [" <> msgx <> "]" <> nullSpace (topMessage pp))) "" (hh pp : verboseList opts qq)
+       Right True ->
+         if pos == 0 then -- we are at the bottom of the tree
+            pure $ mkNodeB opts True msgbase2 [hh pp]
+         else do
+           ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
+           pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
+             Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
+             Right _ ->  ss & ttForest %~ (hh pp:)
 
 -- | boolean guard which checks a given a list of predicates against the list of values
 --
@@ -670,13 +674,15 @@ data GuardsImplX (n :: Nat) (os :: [(k,k1)])
 
 instance ( [a] ~ x
          , Show a
+         , KnownNat n
          ) => P (GuardsImplX n ('[] :: [(k,k1)])) x where
   type PP (GuardsImplX n ('[] :: [(k,k1)])) x = x
-  eval _ opts as =
-    let msg0 = "Guards"
-        -- n :: Int = nat @n
-    in if not (null as) then errorInProgram $ "GuardsImplX base case has extra data " ++ show as
-       else pure $ mkNode opts (Val as) msg0 []
+
+  eval _ _ as@(_:_) = errorInProgram $ "GuardsImplX base case has extra data " ++ show as
+
+  eval _ opts [] =
+    let n :: Int = nat @n
+    in pure $ mkNode opts (Val []) ("Guards(" ++ show n ++ ")") []
 
 instance ( PP prt a ~ String
          , P prt a
@@ -690,28 +696,28 @@ instance ( PP prt a ~ String
          , [a] ~ x
          ) => P (GuardsImplX n ('(prt,p) ': ps)) x where
   type PP (GuardsImplX n ('(prt,p) ': ps)) x = x
-  eval _ opts as' = do
+
+  eval _ _ [] = errorInProgram "GuardsImplX n+1 case has no data"
+
+  eval _ opts (a:as) = do
      let cpos = n-pos-1
          msgbase1 = "Guard(" <> showIndex cpos <> ")"
          msgbase2 = "Guards"
          n :: Int = nat @n
          pos = getLen @ps
-     case as' of
-         a:as -> do
-            pp <- evalBoolHide @p opts a
-            case getValueLR opts (msgbase1 <> " p failed") pp [] of
-                 Left e -> pure e
-                 Right False -> do
-                   qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
-                   pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
-                      Left e -> e
-                      Right msgx -> mkNode opts (Fail msgx) (msgbase1 <> ":" <> showL opts a) (hh pp : verboseList opts qq)
-                 Right True -> do
-                   ss <- eval (Proxy @(GuardsImplX n ps)) opts as
-                   pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
-                     Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                     Right zs -> mkNode opts (Val (a:zs)) (msgbase1 <> " " <> showL opts a) [hh pp, hh ss]
-         _ -> errorInProgram "GuardsImplX n+1 case has no data"
+     pp <- evalBoolHide @p opts a
+     case getValueLR opts (msgbase1 <> " p failed") pp [] of
+       Left e -> pure e
+       Right False -> do
+         qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
+         pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+            Left e -> e
+            Right msgx -> mkNode opts (Fail msgx) (msgbase1 <> ":" <> showL opts a) (hh pp : verboseList opts qq)
+       Right True -> do
+         ss <- eval (Proxy @(GuardsImplX n ps)) opts as
+         pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
+           Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
+           Right zs -> mkNode opts (Val (a:zs)) (msgbase1 <> " " <> showL opts a) [hh pp, hh ss]
 
 data GuardsDetail prt (ps :: [(k0,k1)])
 type GuardsDetailT prt (ps :: [(k0,k1)]) = GuardsDetailImpl (ToGuardsDetailT prt ps)

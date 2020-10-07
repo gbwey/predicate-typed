@@ -173,7 +173,7 @@ instance ( P p x
         let msg1 = msg0 <> " (" <> s <> ")"
             hhs = [hh pp]
         in case reads @(PP t x) s of
-           [(b,rest)] -> mkNode opts (Val (Just (b,rest))) (lit01 opts msg1 b "" s) hhs
+           [(b,rest)] -> mkNode opts (Val (Just (b,rest))) (lit3 opts msg1 b "" s) hhs
            o -> mkNode opts (Val Nothing) (msg1 <> " failed" <> showVerbose opts " " o) hhs
 
 data ReadMaybe (t :: Type) p

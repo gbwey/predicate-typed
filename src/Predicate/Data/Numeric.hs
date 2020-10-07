@@ -170,7 +170,7 @@ instance ( Num (PP t a)
       Left e -> e
       Right n ->
         let b = fromIntegral n
-        in mkNode opts (Val b) (show01 opts msg0 b n) [hh nn]
+        in mkNode opts (Val b) (show3 opts msg0 b n) [hh nn]
 
 data FromIntegral (t :: Type)
 type FromIntegralT (t :: Type) = FromIntegral' (Hole t) Id
@@ -217,7 +217,7 @@ instance ( a ~ PP p x
       Left e -> e
       Right a ->
         let r = toRational a
-        in mkNode opts (Val r) (show01 opts msg0 r a) [hh pp]
+        in mkNode opts (Val r) (show3 opts msg0 r a) [hh pp]
 
 -- | 'fromRational' function where you need to provide the type @t@ of the result
 --
@@ -240,7 +240,7 @@ instance ( P p a
       Left e -> e
       Right p ->
         let b = fromRational @(PP t a) p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 -- | 'fromRational' function where you need to provide the type @t@ of the result
 --
@@ -284,7 +284,7 @@ instance ( P p x
       Left e -> e
       Right p ->
         let b = truncate p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 -- | 'truncate' function where you need to provide the type @t@ of the result
 --
@@ -315,7 +315,7 @@ instance ( P p x
       Left e -> e
       Right p ->
         let b = ceiling p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 -- | 'ceiling' function where you need to provide the type @t@ of the result
 --
@@ -346,7 +346,7 @@ instance ( P p x
       Left e -> e
       Right p ->
         let b = floor p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 -- | 'floor' function where you need to provide the type @t@ of the result
 --
@@ -685,7 +685,7 @@ instance ( Num (PP p x)
       Left e -> e
       Right p ->
         let d = negate p
-        in mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
+        in mkNode opts (Val d) (show3 opts msg0 d p) [hh pp]
 
 
 -- | similar to 'abs'
@@ -716,7 +716,7 @@ instance ( Num (PP p x)
       Left e -> e
       Right p ->
         let d = abs p
-        in mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
+        in mkNode opts (Val d) (show3 opts msg0 d p) [hh pp]
 
 -- | similar to 'div'
 --
@@ -938,7 +938,7 @@ instance ( Num (PP p x)
       Left e -> e
       Right p ->
         let d = signum p
-        in mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
+        in mkNode opts (Val d) (show3 opts msg0 d p) [hh pp]
 
 -- supports negative numbers unlike readInt
 data ReadBase' t (n :: Nat) p
@@ -1028,7 +1028,8 @@ getValidBase :: Int -> String
 getValidBase n =
   let xs = ['0'..'9'] <> ['a'..'z']
       len = length xs
-  in if n > len || n < 2 then errorInProgram $ "getValidBase: oops invalid base valid is 2 thru " ++ show len ++ " found " ++ show n
+  in if n > len || n < 2
+     then errorInProgram $ "getValidBase: oops invalid base valid is 2 thru " ++ show len ++ " found " ++ show n
      else take n xs
 
 -- | Display a number at base 2 to 36, similar to 'Numeric.showIntAtBase' but passes the sign through

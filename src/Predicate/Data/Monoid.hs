@@ -154,7 +154,7 @@ instance ( PP p x ~ [a]
       Left e -> e
       Right p ->
         let b = mconcat p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 -- | similar to 'SG.sconcat'
 --
@@ -179,7 +179,7 @@ instance ( PP p x ~ NonEmpty a
       Left e -> e
       Right p ->
         let b = SG.sconcat p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 -- | lift mempty over a Functor
 data MEmpty2' t
@@ -193,7 +193,7 @@ instance ( Show (f a)
   eval _ opts fa =
     let msg0 = "MEmpty2"
         b = mempty <$> fa
-    in pure $ mkNode opts (Val b) (show01 opts msg0 b fa) []
+    in pure $ mkNode opts (Val b) (show3 opts msg0 b fa) []
 
 -- | lift mempty over a Functor
 --
@@ -311,4 +311,4 @@ instance ( P n a
       Right (fromIntegral -> n::Int,p,pp,qq) ->
         let msg1 = msg0 <> " " <> showL opts n <> " p=" <> showL opts p
             b = SG.stimes n p
-            in mkNode opts (Val b) (show01' opts msg1 b "n=" n <> showVerbose opts " | " p) [hh pp, hh qq]
+            in mkNode opts (Val b) (show3' opts msg1 b "n=" n <> showVerbose opts " | " p) [hh pp, hh qq]

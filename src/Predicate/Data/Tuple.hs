@@ -109,7 +109,7 @@ instance Show a => P Pairs [a] where
     let zs = case as of
                [] -> []
                _:bs -> zip as bs
-    in pure $ mkNode opts (Val zs) (show01 opts "Pairs" zs as) []
+    in pure $ mkNode opts (Val zs) (show3 opts "Pairs" zs as) []
 
 -- | similar to 'Control.Arrow.&&&'
 --

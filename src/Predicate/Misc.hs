@@ -28,10 +28,7 @@
 -}
 module Predicate.Misc (
   -- ** useful type families
-    ZwischenT
-  , FailWhenT
-  , FailUnlessT
-  , AndT
+    AndT
   , OrT
   , NotT
   , RepeatT
@@ -59,6 +56,9 @@ module Predicate.Misc (
   , ApplyConstT
   , CheckT
   , JoinT
+  , FailWhenT
+  , FailUnlessT
+  , ZwischenT
 
  -- ** extract values from the type level
   , GetBool(..)
@@ -70,6 +70,8 @@ module Predicate.Misc (
   , InductTupleC(..)
   , InductListC(..)
   , TupleC(..)
+  , nat
+  , symb
 
  -- ** extract from n-tuple
   , T4_1
@@ -112,10 +114,6 @@ module Predicate.Misc (
   , showT
   , showThese
   , prettyOrd
-  , nat
-  , symb
-  , errorInProgram
-  , readField
   , unlessNull
   , unlessNullM
   , nullSpace
@@ -123,7 +121,9 @@ module Predicate.Misc (
   , pureTryTest
   , pureTryTestPred
   , (~>)
+  , errorInProgram
   , drawTreeU
+  , readField
 
   ) where
 import qualified GHC.TypeNats as GN
@@ -608,7 +608,7 @@ errorInProgram s = error $ "programmer error:" <> s
 p ~> q = not p || q
 infixr 1 ~>
 
-
+-- | extract the first element from a n-tuple
 class ExtractL1C tp where
   type ExtractL1T tp
   extractL1C :: tp -> ExtractL1T tp
@@ -628,6 +628,7 @@ instance ExtractL1C (a,b,c,d,e,f) where
   type ExtractL1T (a,b,c,d,e,f) = a
   extractL1C (a,_,_,_,_,_) = a
 
+-- | extract the second element from a n-tuple
 class ExtractL2C tp where
   type ExtractL2T tp
   extractL2C :: tp -> ExtractL2T tp
@@ -646,6 +647,8 @@ instance ExtractL2C (a,b,c,d,e) where
 instance ExtractL2C (a,b,c,d,e,f) where
   type ExtractL2T (a,b,c,d,e,f) = b
   extractL2C (_,b,_,_,_,_) = b
+
+-- | extract the third element from a n-tuple
 class ExtractL3C tp where
   type ExtractL3T tp
   extractL3C :: tp -> ExtractL3T tp
@@ -665,6 +668,7 @@ instance ExtractL3C (a,b,c,d,e,f) where
   type ExtractL3T (a,b,c,d,e,f) = c
   extractL3C (_,_,c,_,_,_) = c
 
+-- | extract the fourth element from a n-tuple
 class ExtractL4C tp where
   type ExtractL4T tp
   extractL4C :: tp -> ExtractL4T tp
@@ -684,6 +688,7 @@ instance ExtractL4C (a,b,c,d,e,f) where
   type ExtractL4T (a,b,c,d,e,f) = d
   extractL4C (_,_,_,d,_,_) = d
 
+-- | extract the fifth element from a n-tuple
 class ExtractL5C tp where
   type ExtractL5T tp
   extractL5C :: tp -> ExtractL5T tp
@@ -703,6 +708,7 @@ instance ExtractL5C (a,b,c,d,e,f) where
   type ExtractL5T (a,b,c,d,e,f) = e
   extractL5C (_,_,_,_,e,_) = e
 
+-- | extract the sixth element from a n-tuple
 class ExtractL6C tp where
   type ExtractL6T tp
   extractL6C :: tp -> ExtractL6T tp
@@ -722,29 +728,40 @@ instance ExtractL6C (a,b,c,d,e,f) where
   type ExtractL6T (a,b,c,d,e,f) = f
   extractL6C (_,_,_,_,_,f) = f
 
+-- | try to convert a list to a n-tuple
 class TupleC (n :: Nat) a where
   type TupleT n a
   getTupleC :: [a] -> Either [a] (TupleT n a)
+
+-- | convert a list of at least 2 elements to a 2-tuple
 instance TupleC 2 a where
   type TupleT 2 a = (a,a)
   getTupleC = \case
                 a:b:_ -> Right (a,b)
                 o -> Left o
+
+-- | convert a list of at least 3 elements to a 3-tuple
 instance TupleC 3 a where
   type TupleT 3 a = (a,a,a)
   getTupleC = \case
                 a:b:c:_ -> Right (a,b,c)
                 o -> Left o
+
+-- | convert a list of at least 4 elements to a 4-tuple
 instance TupleC 4 a where
   type TupleT 4 a = (a,a,a,a)
   getTupleC = \case
                 a:b:c:d:_ -> Right (a,b,c,d)
                 o -> Left o
+
+-- | convert a list of at least 5 elements to a 5-tuple
 instance TupleC 5 a where
   type TupleT 5 a = (a,a,a,a,a)
   getTupleC = \case
                 a:b:c:d:e:_ -> Right (a,b,c,d,e)
                 o -> Left o
+
+-- | convert a list of at least 6 elements to a 6-tuple
 instance TupleC 6 a where
   type TupleT 6 a = (a,a,a,a,a,a)
   getTupleC = \case
@@ -891,6 +908,7 @@ instance ( Typeable r
          ) => GetROpts (r ': rs) where
   getROpts = ((showTK @r :) *** (getROpt @r :)) (getROpts @rs)
 
+-- | display regex options
 displayROpts :: [String] -> String
 displayROpts xs = "[" <> intercalate ", " (nubOrd xs) <> "]"
 
@@ -1027,6 +1045,7 @@ pureTryTestPred p a = do
     Right r -> Right (Right r)
 
 -- https://github.com/haskell/containers/pull/344
+-- | draw a tree using unicode
 drawTreeU :: Tree String -> String
 drawTreeU  = intercalate "\n" . drawU
 

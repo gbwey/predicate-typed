@@ -1,4 +1,3 @@
--- stack exec -- ghc-pkg unregister ghc-lib-parser-8.8.0.20190424 --force
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wcompat #-}
 {-# OPTIONS -Wincomplete-record-updates #-}

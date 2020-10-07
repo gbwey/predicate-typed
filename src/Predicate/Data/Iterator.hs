@@ -120,8 +120,8 @@ instance ( PP p (b,a) ~ b
                    let vals = map (view _1) abcs
                        itts = map (view _2 &&& view _3) abcs
                    in case lrx of
-                        Left e -> mkNodeCopy opts e msg0 (hh qq : hh rr : map (hh . fixit) itts ++ [hh e])
-                        Right () -> mkNode opts (Val vals) (show01' opts msg0 vals "b=" q <> showVerbose opts " | as=" r) (hh qq : hh rr : map (hh . fixit) itts)
+                        Left e -> mkNodeCopy opts e msg0 (hh qq : hh rr : map (hh . prefixNumberToTT) itts ++ [hh e])
+                        Right () -> mkNode opts (Val vals) (show3' opts msg0 vals "b=" q <> showVerbose opts " | as=" r) (hh qq : hh rr : map (hh . prefixNumberToTT) itts)
 
 -- | iterates n times keeping all the results
 --
@@ -355,10 +355,10 @@ instance ( PP q a ~ s
                let vals = map (view _1) abcs
                    itts = map (view _2 &&& view _3) abcs
                in case lr of
-                   Left e -> mkNodeCopy opts e msg1 (hh qq : map (hh . fixit) itts ++ [hh e])
+                   Left e -> mkNodeCopy opts e msg1 (hh qq : map (hh . prefixNumberToTT) itts ++ [hh e])
                    Right () ->
                      let ret = fst <$> catMaybes vals
-                     in mkNode opts (Val ret) (show01' opts msg1 ret "s=" q ) (hh qq : map (hh . fixit) itts)
+                     in mkNode opts (Val ret) (show3' opts msg1 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
 
 type family UnfoldrT mbs where
   UnfoldrT (Maybe (b, _s)) = b
@@ -504,23 +504,23 @@ instance ( KnownNat n
          )
      => P (ParaImpl n (p ': p1 ': ps)) [a] where
   type PP (ParaImpl n (p ': p1 ': ps)) [a] = [PP p a]
-  eval _ opts as' = do
+
+  eval _ _ [] = errorInProgram "ParaImpl n+1 case has no data left"
+
+  eval _ opts (a:as) = do
      let cpos = n-pos-1
          msgbase0 = "Para(" <> showIndex cpos <> " of " <> show (n-1) <> ")"
          msgbase1 = "Para(" <> showIndex cpos <> ")"
          n = nat @n
          pos = 1 + getLen @ps -- cos p1!
-     case as' of
-       a:as -> do
-         pp <- eval (Proxy @p) opts a
-         case getValueLR opts msgbase0 pp [] of
-           Left e -> pure e
-           Right b -> do
-                        qq <- eval (Proxy @(ParaImpl n (p1 ': ps))) opts as
-                        pure $ case getValueLR opts (_ttString qq <> " " <> showL opts b) qq [hh pp] of
-                          Left e -> e
-                          Right bs -> mkNode opts (Val (b:bs)) (msgbase1 <> " " <> showL opts (b:bs) <> showVerbose opts " | " as') [hh pp, hh qq]
-       _ -> errorInProgram "ParaImpl n+1 case has no data left"
+     pp <- eval (Proxy @p) opts a
+     case getValueLR opts msgbase0 pp [] of
+       Left e -> pure e
+       Right b -> do
+                    qq <- eval (Proxy @(ParaImpl n (p1 ': ps))) opts as
+                    pure $ case getValueLR opts (_ttString qq <> " " <> showL opts b) qq [hh pp] of
+                      Left e -> e
+                      Right bs -> mkNode opts (Val (b:bs)) (msgbase1 <> " " <> showL opts (b:bs) <> showVerbose opts " | " (a:as)) [hh pp, hh qq]
 
 -- | leverages 'Para' for repeating expressions (passthrough method)
 --

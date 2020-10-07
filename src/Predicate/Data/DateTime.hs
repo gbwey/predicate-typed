@@ -142,7 +142,7 @@ instance ( ParseTime (PP t a)
         let msg1 = msg0 <> " (" <> p <> ")"
             hhs = [hh pp, hh qq]
         in case parseTimeM @Maybe @(PP t a) True defaultTimeLocale p q of
-             Just b -> mkNode opts (Val b) (lit01 opts msg1 b "fmt=" p <> showVerbose opts " | " q) hhs
+             Just b -> mkNode opts (Val b) (lit3 opts msg1 b "fmt=" p <> showVerbose opts " | " q) hhs
              Nothing -> mkNode opts (Fail (msg1 <> " failed to parse")) "" hhs
 -- | similar to 'Date.Time.parseTimeM'
 --
@@ -194,7 +194,7 @@ instance ( ParseTime (PP t a)
             zs = map (\d -> (d,) <$> parseTimeM @Maybe @(PP t a) True defaultTimeLocale d q) p
         in case catMaybes zs of
              [] -> mkNode opts (Fail ("no match on (" ++ q ++ ")")) msg0 hhs
-             (d,b):_ -> mkNode opts (Val b) (lit01 opts msg0 b "fmt=" d <> showVerbose opts " | " q) hhs
+             (d,b):_ -> mkNode opts (Val b) (lit3 opts msg0 b "fmt=" d <> showVerbose opts " | " q) hhs
 
 -- | A convenience method to match against many different datetime formats to find the first match
 --
@@ -246,7 +246,7 @@ instance ( P p x
           Left e -> e
           Right r ->
             let mday = fromGregorianValid (fromIntegral p) q r
-            in mkNode opts (Val mday) (show01' opts msg0 mday "(y,m,d)=" (p,q,r)) (hhs <> [hh rr])
+            in mkNode opts (Val mday) (show3' opts msg0 mday "(y,m,d)=" (p,q,r)) (hhs <> [hh rr])
 
 -- | create a 'Day' from three int values passed in as year month and day
 --
@@ -288,7 +288,7 @@ instance ( PP p x ~ Day
       Right p ->
         let (fromIntegral -> y, m, d) = toGregorian p
             b = (y, m, d)
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 
 -- | create a 'Day', week number, and the day of the week from three numbers passed in as year month and day
@@ -321,7 +321,7 @@ instance ( P p x
                 b = mday <&> \day ->
                       let (_, week, dow) = toWeekDate day
                       in (day, week, dow)
-            in mkNode opts (Val b) (show01' opts msg0 b "(y,m,d)=" (p,q,r)) (hhs <> [hh rr])
+            in mkNode opts (Val b) (show3' opts msg0 b "(y,m,d)=" (p,q,r)) (hhs <> [hh rr])
 
 -- | create a 'Day', week number, and the day of the week from three numbers passed in as year month and day
 --
@@ -371,7 +371,7 @@ instance ( P p x
                           5 -> "Friday"
                           6 -> "Saturday"
                           o -> errorInProgram $ "ToWeekDate:" ++ show o
-        in mkNode opts (Val (dow,dowString)) (show01 opts msg0 dow p) [hh pp]
+        in mkNode opts (Val (dow,dowString)) (show3 opts msg0 dow p) [hh pp]
 
 -- | get week number of the year
 --
@@ -391,7 +391,7 @@ instance ( P p x
       Left e -> e
       Right p ->
         let (_, week, _dow) = toWeekDate p
-        in mkNode opts (Val week) (show01 opts msg0 week p) [hh pp]
+        in mkNode opts (Val week) (show3 opts msg0 week p) [hh pp]
 
 class ToDayC a where
   getDay :: a -> Day
@@ -438,7 +438,7 @@ instance ( ToDayC x
   eval _ opts x =
     let msg0 = "ToDay"
         ret = getDay x
-    in pure $ mkNode opts (Val ret) (show01 opts msg0 ret x) []
+    in pure $ mkNode opts (Val ret) (show3 opts msg0 ret x) []
 
 -- | extract 'TimeOfDay' from DateTime
 --
@@ -454,7 +454,7 @@ instance ( ToTimeC x
   eval _ opts x =
     let msg0 = "ToTime"
         ret = getTime x
-    in pure $ mkNode opts (Val ret) (show01 opts msg0 ret x) []
+    in pure $ mkNode opts (Val ret) (show3 opts msg0 ret x) []
 
 
 -- | create a 'TimeOfDay' from three int values passed in as year month and day
@@ -484,7 +484,7 @@ instance ( P p x
           Left e -> e
           Right r ->
             let mtime = TimeOfDay p q (fromRational r)
-            in mkNode opts (Val mtime) (show01' opts msg0 mtime "(h,m,s)=" (p,q,r)) (hhs <> [hh rr])
+            in mkNode opts (Val mtime) (show3' opts msg0 mtime "(h,m,s)=" (p,q,r)) (hhs <> [hh rr])
 
 -- | create a 'TimeOfDay' from a three-tuple of year month and day
 --
@@ -530,7 +530,7 @@ instance ( PP p x ~ TimeOfDay
       Right p ->
         let TimeOfDay h m s = p
             b = (h, m, toRational s)
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 
 -- microsoft json date is x*1000 ie milliseconds
@@ -569,7 +569,7 @@ instance ( PP p x ~ Rational
       Left e -> e
       Right p ->
         let d = P.posixSecondsToUTCTime (fromRational p)
-        in mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
+        in mkNode opts (Val d) (show3 opts msg0 d p) [hh pp]
 
 -- | convert 'UTCTime' to posix time (seconds since 01-01-1970)
 --
@@ -593,7 +593,7 @@ instance ( PP p x ~ UTCTime
       Left e -> e
       Right p ->
         let d = toRational $ P.utcTimeToPOSIXSeconds p
-        in mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
+        in mkNode opts (Val d) (show3 opts msg0 d p) [hh pp]
 
 
 -- | similar to 'Data.Time.diffUTCTime'
@@ -645,5 +645,5 @@ instance ( PP p x ~ LocalTime
       Left e -> e
       Right p ->
         let d = localTimeToUTC utc p
-        in mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
+        in mkNode opts (Val d) (show3 opts msg0 d p) [hh pp]
 

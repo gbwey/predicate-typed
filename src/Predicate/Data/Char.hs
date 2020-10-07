@@ -427,7 +427,7 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "ToLower"
         xs = as & DTL.text %~ toLower
-    in pure $ mkNode opts (Val xs) (show01 opts msg0 xs as) []
+    in pure $ mkNode opts (Val xs) (show3 opts msg0 xs as) []
 
 -- | converts a string 'Data.Text.Lens.IsText' value to upper case
 --
@@ -443,7 +443,7 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "ToUpper"
         xs = as & DTL.text %~ toUpper
-    in pure $ mkNode opts (Val xs) (show01 opts msg0 xs as) []
+    in pure $ mkNode opts (Val xs) (show3 opts msg0 xs as) []
 
 
 -- | converts a string 'Data.Text.Lens.IsText' value to title case
@@ -464,7 +464,7 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "ToTitle"
         xs = toTitleAll (as ^. DTL.unpacked) ^. DTL.packed
-    in pure $ mkNode opts (Val xs) (show01 opts msg0 xs as) []
+    in pure $ mkNode opts (Val xs) (show3 opts msg0 xs as) []
 
 
 toTitleAll :: String -> String

@@ -161,7 +161,7 @@ instance ( P p x
       Left e -> e
       Right (p,q,pp,qq) ->
         let b = p ++ q
-        in mkNode opts (Val b) (show01' opts msg0 b "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
+        in mkNode opts (Val b) (show3' opts msg0 b "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 
 
@@ -215,7 +215,7 @@ instance ( P p x
       Left e -> e
       Right (p,q,pp,qq) ->
         let b = p `cons` q
-        in mkNode opts (Val b) (show01' opts msg0 b "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
+        in mkNode opts (Val b) (show3' opts msg0 b "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to snoc
 --
@@ -261,7 +261,7 @@ instance ( P p x
       Left e -> e
       Right (p,q,pp,qq) ->
         let b = p `snoc` q
-        in mkNode opts (Val b) (show01' opts msg0 b "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
+        in mkNode opts (Val b) (show3' opts msg0 b "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to 'Control.Lens.uncons'
 --
@@ -300,7 +300,7 @@ instance ( Show (ConsT s)
   eval _ opts as =
     let msg0 = "Uncons"
         b = as ^? _Cons
-    in pure $ mkNode opts (Val b) (show01 opts msg0 b as) []
+    in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
 
 -- | similar to 'Control.Lens.unsnoc'
 --
@@ -336,7 +336,7 @@ instance ( Show (ConsT s)
   eval _ opts as =
     let msg0 = "Unsnoc"
         b = as ^? _Snoc
-    in pure $ mkNode opts (Val b) (show01 opts msg0 b as) []
+    in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
 
 -- | rotate a list @p@ @n@ units
 --
@@ -423,7 +423,7 @@ instance ( P p x
                  let itts = map (view _2 &&& view _3) abcs
                      w0 = partition (view _1) abcs
                      zz1 = (map (view (_2 . _2)) *** map (view (_2 . _2))) w0
-                 in mkNode opts (Val zz1) (show01' opts msg0 zz1 "s=" q) (hh qq : map (hh . fixit) itts)
+                 in mkNode opts (Val zz1) (show3' opts msg0 zz1 "s=" q) (hh qq : map (hh . prefixNumberToTT) itts)
 
 
 -- | partition values based on a function
@@ -466,7 +466,7 @@ instance ( P p x
                      let kvs = map (view _1 &&& ((:[]) . view (_2 . _2))) abcs
                          itts = map (view _2 &&& view _3) abcs
                          ret = M.fromListWith (++) kvs
-                     in mkNode opts (Val ret) (show01' opts msg0 ret "s=" q ) (hh qq : map (hh . fixit) itts)
+                     in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
 
 -- | similar to 'Data.List.groupBy'
 --
@@ -549,9 +549,9 @@ instance ( Show x
           Left e -> pure e
           Right _ ->
              case q of
-               [] -> pure $ mkNode opts (Val []) (show01' opts msg0 q "s=" q) [hh qq]
+               [] -> pure $ mkNode opts (Val []) (show3' opts msg0 q "s=" q) [hh qq]
                [_] -> let ret = [q]
-                      in pure $ mkNode opts (Val ret) (show01' opts msg0 ret "s=" q) [hh qq]
+                      in pure $ mkNode opts (Val ret) (show3' opts msg0 ret "s=" q) [hh qq]
                x:xs -> do
                  ts <- zipWithM (\i (a,b) -> ((i, b),) <$> evalBoolHide @p opts (a,b)) [0::Int ..] (zip (x:xs) xs)
                  pure $ case splitAndAlign opts msg0 ts of
@@ -559,7 +559,7 @@ instance ( Show x
                    Right abcs ->
                      let ret = gp1 x abcs
                          itts = map (view _2 &&& view _3) abcs
-                     in mkNode opts (Val ret) (show01' opts msg0 ret "s=" q ) (hh qq : map (hh . fixit) itts)
+                     in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
 
 -- | version of 'GroupCnt' that retains the original ordering
 --
@@ -714,13 +714,13 @@ instance ( P p x
                  Nothing ->
                    mkNode opts (Val (map (snd . fst) (toList ialls), rhs))
                            (msg0 <> " cnt=" <> show (length ialls, length rhs))
-                           (map (hh . fixit) (toList ialls))
+                           (map (hh . prefixNumberToTT) (toList ialls))
                  Just iatt@(ia, tt) ->
-                   case getValueLR opts (msg0 <> " predicate failed") tt (hh qq : map (hh . fixit) (toList (ialls Seq.|> iatt))) of
+                   case getValueLR opts (msg0 <> " predicate failed") tt (hh qq : map (hh . prefixNumberToTT) (toList (ialls Seq.|> iatt))) of
                      Right True ->
                        mkNode opts (Val (map (snd . fst) (toList ialls), snd ia : rhs))
                                (msg0 <> " cnt=" <> show (length ialls, 1+length rhs))
-                               (hh qq : hh tt : map (hh . fixit) (toList (ialls Seq.|> iatt)))
+                               (hh qq : hh tt : map (hh . prefixNumberToTT) (toList (ialls Seq.|> iatt)))
 
                      Right False -> errorInProgram "Break"
                      Left e -> e
@@ -778,7 +778,7 @@ instance ( PP p x ~ [a]
           Left e -> e
           Right _ ->
             let d = intercalate p (map pure q)
-            in mkNode opts (Val d) (show01 opts msg0 d p <> showVerbose opts " | " q) hhs
+            in mkNode opts (Val d) (show3 opts msg0 d p <> showVerbose opts " | " q) hhs
 
 -- | 'elem' function
 --
@@ -844,7 +844,7 @@ instance ( [a] ~ x
   eval _ opts as =
     let msg0 = "Inits"
         xs = inits as
-    in pure $ mkNode opts (Val xs) (show01 opts msg0 xs as) []
+    in pure $ mkNode opts (Val xs) (show3 opts msg0 xs as) []
 
 -- | similar to 'Data.List.tails'
 --
@@ -867,7 +867,7 @@ instance ( [a] ~ x
   eval _ opts as =
     let msg0 = "Tails"
         xs = tails as
-    in pure $ mkNode opts (Val xs) (show01 opts msg0 xs as) []
+    in pure $ mkNode opts (Val xs) (show3 opts msg0 xs as) []
 
 -- | split a list into single values
 --
@@ -918,7 +918,7 @@ instance ( P n a
                 bs = if lft
                      then replicate diff p <> q
                      else q <> replicate diff p
-            in mkNode opts (Val bs) (show01 opts msg1 bs q) (hhs <> [hh qq])
+            in mkNode opts (Val bs) (show3 opts msg1 bs q) (hhs <> [hh qq])
 
 -- | left pad @q@ with @n@ values from @p@
 --
@@ -1006,7 +1006,7 @@ instance ( P ns x
         let zs = foldr (\n k s -> let (a,b) = splitAtNeg (fromIntegral n) s
                                   in a:k b
                        ) (\as -> [as | not (null as)]) ns p
-        in mkNode opts (Val zs) (show01' opts msg0 zs "ns=" ns <> showVerbose opts " | " p) [hh nn, hh pp]
+        in mkNode opts (Val zs) (show3' opts msg0 zs "ns=" ns <> showVerbose opts " | " p) [hh nn, hh pp]
 
 -- | similar to 'Data.List.splitAt'
 --
@@ -1046,7 +1046,7 @@ instance ( PP p a ~ [b]
       Right (fromIntegral -> n,p,pp,qq) ->
         let msg1 = msg0 <> " " <> showL opts n <> " " <> showL opts p
             ret = splitAtNeg n p
-       in mkNode opts (Val ret) (show01' opts msg1 ret "n=" n <> showVerbose opts " | " p) [hh pp, hh qq]
+       in mkNode opts (Val ret) (show3' opts msg1 ret "n=" n <> showVerbose opts " | " p) [hh pp, hh qq]
 
 splitAtNeg :: Int -> [a] -> ([a], [a])
 splitAtNeg n as = splitAt (if n<0 then length as + n else n) as
@@ -1128,7 +1128,7 @@ instance ( PP p a ~ [b]
             in if n <= 0 then mkNode opts (Fail (msg0 <> " n<=0")) "" hhs1
                else if i < 1 then mkNode opts (Fail (msg0 <> " i<1")) "" hhs1
                else let ret = unfoldr (\s -> if null s then Nothing else Just (take n s,drop i s)) p
-                in mkNode opts (Val ret) (show01' opts msg1 ret "n,i=" (n,i) <> showVerbose opts " | " p) hhs1
+                in mkNode opts (Val ret) (show3' opts msg1 ret "n,i=" (n,i) <> showVerbose opts " | " p) hhs1
 
 -- empty lists at the type level wont work here
 
@@ -1151,7 +1151,7 @@ instance ( GetBool keep
       Left e -> e
       Right (p,q,pp,qq) ->
         let ret = filter (bool not id keep . (`elem` p)) q
-        in mkNode opts (Val ret) (show01' opts msg0 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
+        in mkNode opts (Val ret) (show3' opts msg0 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | filters a list @q@ keeping those elements in @p@
 --
@@ -1231,7 +1231,7 @@ instance ( Cons x x (ConsT x) (ConsT x)
     let msg0 = "Head"
     in pure $ case x ^? _Cons of
         Nothing -> mkNode opts (Fail (msg0 <> "(empty)")) "" []
-        Just (a,_) -> mkNode opts (Val a) (show01 opts msg0 a x) []
+        Just (a,_) -> mkNode opts (Val a) (show3 opts msg0 a x) []
 
 -- | takes the tail of a list-like container: similar to 'Data.List.tail'
 --
@@ -1257,7 +1257,7 @@ instance ( Cons x x (ConsT x) (ConsT x)
     let msg0 = "Tail"
     pure $ case x ^? _Cons of
       Nothing -> mkNode opts (Fail (msg0 <> "(empty)")) "" []
-      Just (_,as) -> mkNode opts (Val as) (show01 opts msg0 as x) []
+      Just (_,as) -> mkNode opts (Val as) (show3 opts msg0 as x) []
 
 
 -- | takes the last of a list-like container: similar to 'Data.List.last'
@@ -1284,7 +1284,7 @@ instance ( Snoc x x (ConsT x) (ConsT x)
     let msg0 = "Last"
     in pure $ case x ^? _Snoc of
           Nothing -> mkNode opts (Fail (msg0 <> "(empty)")) "" []
-          Just (_,a) -> mkNode opts (Val a) (show01 opts msg0 a x) []
+          Just (_,a) -> mkNode opts (Val a) (show3 opts msg0 a x) []
 
 -- | takes the init of a list-like container: similar to 'Data.List.init'
 --
@@ -1316,7 +1316,7 @@ instance ( Snoc s s (ConsT s) (ConsT s)
     let msg0 = "Init"
     pure $ case x ^? _Snoc of
       Nothing -> mkNode opts (Fail (msg0 <> "(empty)")) "" []
-      Just (as,_) -> mkNode opts (Val as) (show01 opts msg0 as x) []
+      Just (as,_) -> mkNode opts (Val as) (show3 opts msg0 as x) []
 
 
 -- | 'unzip' equivalent
@@ -1504,7 +1504,7 @@ instance ( as ~ [a]
   eval _ opts as =
     let msg0 = "Reverse"
         d = reverse as
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d as) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d as) []
 
 -- | reverses using 'reversing'
 --
@@ -1527,7 +1527,7 @@ instance ( Reversing t
   eval _ opts as =
     let msg0 = "ReverseL"
         d = as ^. reversed
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d as) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d as) []
 
 -- | creates a singleton from a value
 --
@@ -1619,7 +1619,7 @@ instance ( PP q a ~ [x]
                    let kvs = map (view _1 &&& ((:[]) . view (_2 . _2))) abcs
                        itts = map (view _2 &&& view _3) abcs
                        ret = map fst kvs
-                   in mkNode opts (Val ret) (show01' opts msg0 ret "s=" q ) (hh qq : map (hh . fixit) itts)
+                   in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
 
              else do
                    let msg1 = msg0 ++ show lls
@@ -1673,17 +1673,17 @@ instance ( PP l a ~ x
                   Left e -> e
                   Right l ->
                     let d = zip (p ++ repeat l) q
-                    in mkNode opts (Val d) (show01' opts (msg0 <> " Left pad") d "p=" p <> showVerbose opts " | q=" q) (hhs ++ [hh ll])
+                    in mkNode opts (Val d) (show3' opts (msg0 <> " Left pad") d "p=" p <> showVerbose opts " | q=" q) (hhs ++ [hh ll])
               GT -> do
                 rr <- eval (Proxy @r) opts a
                 pure $ case getValueLR opts (msg0 <> " r failed") rr hhs of
                   Left e -> e
                   Right r ->
                     let d =zip p (q ++ repeat r)
-                    in mkNode opts (Val d) (show01' opts (msg0 <> " Right pad") d "p=" p <> showVerbose opts " | q=" q) (hhs ++ [hh rr])
+                    in mkNode opts (Val d) (show3' opts (msg0 <> " Right pad") d "p=" p <> showVerbose opts " | q=" q) (hhs ++ [hh rr])
               EQ ->
                 let d = zip p q
-                in pure $ mkNode opts (Val d) (show01' opts (msg0 <> " No pad") d "p=" p <> showVerbose opts " | q=" q) hhs
+                in pure $ mkNode opts (Val d) (show3' opts (msg0 <> " No pad") d "p=" p <> showVerbose opts " | q=" q) hhs
 
 
 -- | zip two lists optionally padding the left hand side
@@ -1748,7 +1748,7 @@ instance ( PP l a ~ x
                              Left e -> e
                              Right l ->
                                let d = zip (p ++ repeat l) q
-                               in mkNode opts (Val d) (show01' opts msg0 d "p=" p <> showVerbose opts " | q=" q) (hhs ++ [hh ll])
+                               in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) (hhs ++ [hh ll])
 
 -- | zip two lists optionally padding the right hand side
 --
@@ -1804,7 +1804,7 @@ instance ( PP r a ~ y
                              Left e -> e
                              Right r ->
                                let d = zip p (q ++ repeat r)
-                               in mkNode opts (Val d) (show01' opts msg0 d "p=" p <> showVerbose opts " | q=" q) (hhs ++ [hh rr])
+                               in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) (hhs ++ [hh rr])
 
 -- | zip two lists with the same length
 --
@@ -1846,7 +1846,7 @@ instance ( PP p a ~ [x]
             let lls = (length p, length q)
             in case uncurry compare lls of
                  EQ -> let d = zip p q
-                       in mkNode opts (Val d) (show01' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
+                       in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
                  _ -> let msg1 = msg0 ++ show lls
                       in mkNode opts (Fail (msg1 <> " length mismatch")) (showVerbose opts "p=" p <> showVerbose opts " | q=" q) hhs
 
@@ -1891,7 +1891,7 @@ instance ( Num a
   eval _ opts as =
     let msg0 = "Sum"
         v = sum as
-    in pure $ mkNode opts (Val v) (show01 opts msg0 v as) []
+    in pure $ mkNode opts (Val v) (show3 opts msg0 v as) []
 
 -- | similar to 'Data.List.product'
 --
@@ -1910,7 +1910,7 @@ instance ( Num a
   eval _ opts as =
     let msg0 = "Product"
         v = product as
-    in pure $ mkNode opts (Val v) (show01 opts msg0 v as) []
+    in pure $ mkNode opts (Val v) (show3 opts msg0 v as) []
 
 -- | similar to 'Data.List.minimum'
 --
@@ -1932,7 +1932,7 @@ instance ( Ord a
      [] -> mkNode opts (Fail "empty list") msg0 []
      as@(_:_) ->
        let v = minimum as
-       in mkNode opts (Val v) (show01 opts msg0 v as) []
+       in mkNode opts (Val v) (show3 opts msg0 v as) []
 
 -- | similar to 'Data.List.maximum'
 --
@@ -1955,7 +1955,7 @@ instance ( Ord a
       [] -> mkNode opts (Fail "empty list") msg0 []
       as@(_:_) ->
         let v = maximum as
-        in mkNode opts (Val v) (show01 opts msg0 v as) []
+        in mkNode opts (Val v) (show3 opts msg0 v as) []
 
 data IsFixImpl (cmp :: Ordering) p q
 
@@ -2056,5 +2056,5 @@ instance ( x ~ [a]
   eval _ opts x =
     let msg0 = "Nub"
         ret = nubOrd x
-    in pure $ mkNode opts (Val ret) (show01 opts msg0 ret x) []
+    in pure $ mkNode opts (Val ret) (show3 opts msg0 ret x) []
 

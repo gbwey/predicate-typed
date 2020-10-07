@@ -266,7 +266,7 @@ instance ( P q a
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts msg1 qq [] of
           Left e -> e
-          Right b -> mkNodeCopy opts qq (show01 opts msg1 b a) [hh qq]
+          Right b -> mkNodeCopy opts qq (show3 opts msg1 b a) [hh qq]
 
 -- | similar to 'Data.Maybe.isJust'
 --

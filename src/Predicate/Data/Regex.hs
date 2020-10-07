@@ -210,7 +210,7 @@ instance ( GetROpts rs
               (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
                          mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) [hh pp, hh qq]
-              (b, _) -> mkNode opts (Val b) (lit01 opts msg1 b "" q) [hh pp, hh qq]
+              (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) [hh pp, hh qq]
 
 -- | see 'RH.scan'
 --
@@ -306,7 +306,7 @@ instance ( GetROpts rs
               (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
                          mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
-              (b, _) -> mkNode opts (Val b) (lit01 opts msg1 b "" q) hhs
+              (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) hhs
 
 data RescanRanges p q
 type RescanRangesT p q = RescanRanges' '[] p q
@@ -349,7 +349,7 @@ instance ( GetROpts rs
               (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
               ([], _) -> -- this is a failure cos empty string returned: so reuse p?
                          mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
-              (b, _) -> mkNode opts (Val b) (lit01 opts msg1 b "" q) hhs
+              (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) hhs
 
 -- | splits a string on a regex delimiter: see 'RH.split'
 --

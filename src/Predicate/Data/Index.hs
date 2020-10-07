@@ -297,7 +297,7 @@ instance ( P q a
                 pure $ case getValueLR opts msg1 rr [hh pp, hh qq] of
                   Left e -> e
                   Right _ -> mkNodeCopy opts rr (msg1 <> " index not found") [hh pp, hh qq]
-             Just ret -> pure $ mkNode opts (Val ret) (show01' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
+             Just ret -> pure $ mkNode opts (Val ret) (show3' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to 'Data.List.!!' leveraging 'Ixed'
 --
@@ -496,7 +496,7 @@ instance ( P q a
             hhs = [hh pp, hh qq]
         in case p ^? ix q of
              Nothing -> mkNode opts (Val Nothing) (msg1 <> " not found") hhs
-             Just ret -> mkNode opts (Val (Just ret)) (show01' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) hhs
+             Just ret -> mkNode opts (Val (Just ret)) (show3' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) hhs
 
 -- | type operator version of 'Lookup'
 --

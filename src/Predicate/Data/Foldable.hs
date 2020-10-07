@@ -209,7 +209,7 @@ instance ( Show l
   eval _ opts as =
     let msg0 = "ToListExt"
         z = GE.toList as
-    in pure $ mkNode opts (Val z) (show01 opts msg0 z as) []
+    in pure $ mkNode opts (Val z) (show3 opts msg0 z as) []
 
 -- | invokes 'GE.fromList'
 --
@@ -278,7 +278,7 @@ instance ( Show a
   eval _ opts x =
     let msg0 = "Concat"
         b = concat x
-    in pure $ mkNode opts (Val b) (show01 opts msg0 b x) []
+    in pure $ mkNode opts (Val b) (show3 opts msg0 b x) []
 
 -- | similar to 'concatMap'
 data ConcatMap p q
@@ -317,7 +317,7 @@ instance ( Show a
             Right _ ->
               let msg1 = msg0 <> "(" <> show n <> ")"
                   d = take n (Safe.cycleNote msg0 (toList p))
-              in mkNode opts (Val d) (show01 opts msg1 d p) hhs
+              in mkNode opts (Val d) (show3 opts msg1 d p) hhs
 
 
 -- | similar to 'toList'

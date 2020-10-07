@@ -158,7 +158,7 @@ evalBool :: ( MonadEval m
               -> POpts
               -> a
               -> m (TT (PP p a))
-evalBool p opts a = fmap fixTTValP (eval p opts a)
+evalBool p = (fmap fixTTValP .) . eval p
 
 evalQuick :: forall opts p i
   . ( OptC opts
@@ -682,7 +682,7 @@ instance ( Show a
       Right p ->
         case p of
           Nothing -> mkNode opts (Fail (msg0 <> "(empty)")) "" [hh pp]
-          Just d -> mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
+          Just d -> mkNode opts (Val d) (show3 opts msg0 d p) [hh pp]
 
 -- | expects Nothing otherwise it fails
 --   if the value is Nothing then it returns @Proxy a@ as this provides type information
@@ -868,7 +868,7 @@ instance ( Show a
                     Left e -> e
                     Right q ->
                       let ret =(p,q)
-                      in  mkNode opts (Val ret) (show01 opts msg0 ret (These a b)) [hh pp, hh qq]
+                      in  mkNode opts (Val ret) (show3 opts msg0 ret (These a b)) [hh pp, hh qq]
          _ -> pure $ mkNode opts (Fail (msg0 <> " found " <> showThese th)) "" []
 
 -- | converts the value to the corresponding 'Proxy'
@@ -1051,10 +1051,12 @@ instance ( P p a
         qq <- eval (Proxy @q) opts p
         pure $ case getValueLR opts (showL opts p) qq [hh pp] of
         -- need to look inside to see if there is already an exception in ttForest
-          Left e -> if anyOf (ttForest . traverse . root . peValP) (has _FailP) qq
+          Left e | isVerbose opts -> e
+                 | otherwise ->
+                    if anyOf (ttForest . traverse . root . peValP) (has _FailP) qq
                     then qq & ttForest %~ (hh pp:) -- we still need pp for context
                     else e
-          Right q -> mkNodeCopy opts qq (lit01 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
+          Right q -> mkNodeCopy opts qq (lit3 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
 
 -- | flipped version of 'Predicate.Core.>>'
 data p << q
@@ -1089,7 +1091,7 @@ instance ( Show x
   eval _ opts x =
     let msg0 = "Unwrap"
         d = x ^. _Wrapped'
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d x) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d x) []
 
 data Wrap' t p
 
@@ -1107,7 +1109,7 @@ instance ( Show (PP p x)
       Left e -> e
       Right p ->
         let d = p ^. _Unwrapped'
-        in mkNode opts (Val d) (show01 opts msg0 d p) [hh pp]
+        in mkNode opts (Val d) (show3 opts msg0 d p) [hh pp]
 
 -- | wraps a value (see '_Wrapped'' and '_Unwrapped'')
 --
@@ -1167,7 +1169,7 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "Len"
         n = length as
-    in pure $ mkNode opts (Val n) (show01 opts msg0 n as) []
+    in pure $ mkNode opts (Val n) (show3 opts msg0 n as) []
 
 -- | similar to 'length' for 'Foldable' instances
 --
@@ -1198,7 +1200,7 @@ instance ( PP p x ~ t a
       Left e -> e
       Right p ->
             let n = length p
-            in mkNode opts (Val n) (show01 opts msg0 n p) [hh pp]
+            in mkNode opts (Val n) (show3 opts msg0 n p) [hh pp]
 
 -- | 'not' function
 --
@@ -1538,7 +1540,7 @@ instance ( P p a
         pure $ case splitAndAlign opts msg0 ts of
              Left e -> e
              Right abcs ->
-               let hhs = map (hh . fixit) ts
+               let hhs = map (hh . prefixNumberToTT) ts
                    msg1 = msg0 ++ "(" ++ showL opts (length x) ++ ")"
                in case find (not . view _1) abcs of
                     Nothing -> mkNodeB opts True msg1 hhs
@@ -1588,7 +1590,7 @@ instance ( P p a
         pure $ case splitAndAlign opts msg0 ts of
              Left e -> e
              Right abcs ->
-               let hhs = map (hh . fixit) ts
+               let hhs = map (hh . prefixNumberToTT) ts
                    msg1 = msg0 ++ "(" ++ showL opts (length xs) ++ ")"
                in case find (view _1) abcs of
                     Nothing -> mkNodeB opts False msg1 hhs
@@ -1625,7 +1627,7 @@ instance ( Show (ExtractL1T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL1C p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 data Fst
 type FstT = L1 Id
@@ -1661,7 +1663,7 @@ instance ( Show (ExtractL2T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL2C p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 data Snd
 type SndT = L2 Id
@@ -1697,7 +1699,7 @@ instance ( Show (ExtractL3T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL3C p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 data Thd
 type ThdT = L3 Id
@@ -1733,7 +1735,7 @@ instance ( Show (ExtractL4T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL4C p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 -- | similar to 5th element in a n-tuple
 --
@@ -1755,7 +1757,7 @@ instance ( Show (ExtractL5T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL5C p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 
 -- | similar to 6th element in a n-tuple
@@ -1778,7 +1780,7 @@ instance ( Show (ExtractL6T (PP p x))
       Left e -> e
       Right p ->
         let b = extractL6C p
-        in mkNode opts (Val b) (show01 opts msg0 b p) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 -- | similar to 'map'
 --
@@ -1810,7 +1812,7 @@ instance ( Show (PP p a)
                  Left e -> e
                  Right abcs ->
                    let vals = map (view _1) abcs
-                   in mkNode opts (Val vals) (show01 opts msg0 vals q) (hh qq : map (hh . fixit) ts)
+                   in mkNode opts (Val vals) (show3 opts msg0 vals q) (hh qq : map (hh . prefixNumberToTT) ts)
 
 -- | processes a type level list predicates running each in sequence: see 'Predicate.>>'
 --
@@ -1925,13 +1927,13 @@ instance ( P p a
   type PP (p &&~ q) a = Bool
   eval _ opts a = do
     let msg0 = "&&~"
-    pp <- eval (Proxy @p) opts a
+    pp <- evalBool (Proxy @p) opts a
     case getValueLR opts msg0 pp [] of
       Left e -> pure e
       Right False ->
         pure $ mkNodeB opts False ("False " <> msg0 <> " _" <> litVerbose opts " | " (topMessage pp)) [hh pp]
       Right True -> do
-        qq <- eval (Proxy @q) opts a
+        qq <- evalBool (Proxy @q) opts a
         pure $ case getValueLR opts msg0 qq [hh pp] of
           Left e -> e
           Right q ->
@@ -1991,11 +1993,11 @@ instance ( P p a
   type PP (p ||~ q) a = Bool
   eval _ opts a = do
     let msg0 = "||~"
-    pp <- eval (Proxy @p) opts a
+    pp <- evalBool (Proxy @p) opts a
     case getValueLR opts msg0 pp [] of
       Left e -> pure e
       Right False -> do
-        qq <- eval (Proxy @q) opts a
+        qq <- evalBool (Proxy @q) opts a
         pure $ case getValueLR opts msg0 qq [hh pp] of
           Left e -> e
           Right q ->
@@ -2109,7 +2111,7 @@ instance ( Show (p a b)
   eval _ opts pabx =
     let msg0 = "Swap"
         d = swapC pabx
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d pabx) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d pabx) []
 
 -- | like 'GHC.Base.$' for expressions
 --
@@ -2202,7 +2204,7 @@ instance ( P p x
       Left e -> e
       Right a ->
         let b = pure a
-        in mkNode opts (Val b) (show01 opts msg0 b a) [hh pp]
+        in mkNode opts (Val b) (show3 opts msg0 b a) [hh pp]
 
 -- | similar to 'Data.Coerce.coerce'
 --
@@ -2227,7 +2229,7 @@ instance ( Show a
   eval _ opts a =
     let msg0 = "Coerce"
         d = a ^. coerced
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d a) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d a) []
 
 {-
  -- | extracts the value level representation of the promoted 'DayOfWeek'

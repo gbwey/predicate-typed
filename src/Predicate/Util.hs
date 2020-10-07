@@ -31,15 +31,8 @@
      Utility methods for Predicate / methods for displaying the evaluation tree
 -}
 module Predicate.Util (
-  -- ** TT
-    TT(..)
-  , ttVal
-  , ttValP
-  , ttString
-  , ttForest
-
  -- ** Val
-  , Val(..)
+    Val(..)
   , _Fail
   , _Val
   , _True
@@ -47,6 +40,13 @@ module Predicate.Util (
   , _ValEither
   , _Val2P
   , _Val2BoolP
+
+  -- ** TT
+  , TT(..)
+  , ttVal
+  , ttValP
+  , ttString
+  , ttForest
 
  -- ** PE
   , PE(..)
@@ -70,7 +70,7 @@ module Predicate.Util (
   , getValLRFromTT
   , getValueLR
   , fixLite
-  , fixit
+  , prefixNumberToTT
   , prefixMsg
   , splitAndAlign
   , verboseList
@@ -114,11 +114,14 @@ module Predicate.Util (
   , type OptT
   , getOpt
   , subopts
+  , _DVerbose
+  , _Debug
+  , defOpts
 
 -- ** formatting functions
-  , show01
-  , show01'
-  , lit01
+  , show3
+  , show3'
+  , lit3
   , litVerbose
   , showVerbose
   , showL
@@ -131,16 +134,17 @@ module Predicate.Util (
   , formatOMsg
   , prtTree
 
+ -- ** MonadEval
+  , MonadEval(..)
+
  -- ** miscellaneous
   , compileRegex
   , hh
   , removeAnsi
-  , MonadEval(..)
   , chkSize
   , chkSize2
   , badLength
   , showIndex
-
   ) where
 import Predicate.Misc
 import GHC.TypeLits (Symbol, Nat, KnownSymbol, KnownNat)
@@ -193,10 +197,9 @@ data PE = PE { _peValP :: !ValP -- ^ holds the result of running the predicate
 makeLenses ''PE
 
 instance Semigroup ValP where
-   FailP s <> FailP s1 = FailP (s <> s1)
+   FailP s <> FailP s1 = FailP (s <> " | " <> s1)
    FailP s <> _ = FailP s
    _ <> FailP s = FailP s
-   ValP <> _ = ValP
    _ <> ValP = ValP
    _ <> TrueP = TrueP
    _ <> FalseP = FalseP
@@ -231,16 +234,16 @@ instance Monad Val where
 -- Val True
 --
 -- >>> Fail "abc" <> (Val True <> Val False) <> Fail "def"
--- Fail "abcdef"
+-- Fail "abc | def"
 --
 -- >>> (Fail "abc" <> Val True) <> (Val False <> Fail "def")
--- Fail "abcdef"
+-- Fail "abc | def"
 --
 -- >>> Val False <> (Val True <> Val False) == (Val False <> Val True) <> Val False
 -- True
 --
 instance Semigroup (Val a) where
-   Fail s <> Fail s1 = Fail (s <> s1)
+   Fail s <> Fail s1 = Fail (s <> " | " <> s1)
    Fail s <> _ = Fail s
    _ <> Fail s = Fail s
    Val _ <> Val b = Val b
@@ -341,6 +344,7 @@ mkNodeImpl opts bp' bt ss hs =
           in TT bp bt ss zs
       _ -> TT bp bt ss hs
 
+-- | check that 'ValP' value is consistent with 'Val' a
 validateValP :: ValP -> Val a -> ValP
 validateValP bp bt =
   case bt of
@@ -352,6 +356,7 @@ validateValP bp bt =
                          | otherwise -> errorInProgram $ "validateValP: found Fail but message mismatch in ValP " ++ show (e,e1)
                 _ -> errorInProgram $ "validateValP: found " ++ show bp ++ " expected FailP e=" ++ e
 
+-- | fix the 'ValP' value for the Bool case: ie use 'TrueP' and 'FalseP'
 fixTTValP :: TT Bool -> TT Bool
 fixTTValP tt = tt { _ttValP = tt ^. ttVal . _Val2BoolP }
 
@@ -363,9 +368,11 @@ mkNodeB :: POpts
         -> TT Bool
 mkNodeB opts b = mkNodeImpl opts (bool FalseP TrueP b) (Val b)
 
+-- | convenience method to pull parts out of 'TT'
 getValAndPE :: TT a -> (Either String a, Tree PE)
 getValAndPE = getValLRFromTT &&& hh
 
+-- | convenience method to pull out the return value from 'TT'
 getValLRFromTT :: TT a -> Either String a
 getValLRFromTT = view (ttVal . _ValEither)
 
@@ -383,7 +390,7 @@ getValueLR opts msg0 tt hs =
   left (\e -> mkNode opts (Fail e) msg0 (hs ++ [hh tt]))
        (getValLRFromTT tt)
 
--- | elide the 'Identity' wrapper so it acts like a normal adt
+-- | elide the 'Identity' wrapper so it acts like a normal ADT
 type family HKD f a where
   HKD Identity a = a
   HKD f a = f a
@@ -552,35 +559,35 @@ type Color5 = 'OColor "color5" 'Blue 'Default 'Red 'Default 'Cyan 'Default 'Yell
 type Other1 = 'OOther 'True 'Yellow 'Default
 type Other2 = 'OOther 'True 'Default 'Default
 
-show01 :: (Show a1, Show a2)
+show3 :: (Show a1, Show a2)
   => POpts
   -> String
   -> a1
   -> a2
   -> String
-show01 opts msg0 ret = lit01 opts msg0 ret "" . show
+show3 opts msg0 ret = lit3 opts msg0 ret "" . show
 
-show01' :: (Show a1, Show a2)
+show3' :: (Show a1, Show a2)
   => POpts
   -> String
   -> a1
   -> String
   -> a2
   -> String
-show01' opts msg0 ret fmt = lit01 opts msg0 ret fmt . show
+show3' opts msg0 ret fmt = lit3 opts msg0 ret fmt . show
 
-lit01 :: Show a1
+lit3 :: Show a1
   => POpts
   -> String
   -> a1
   -> String
   -> String
   -> String
-lit01 opts msg0 ret fmt as
+lit3 opts msg0 ret fmt as
   | null fmt && null as = msg0
   | otherwise =
          msg0
-      <> " "
+      <> (if null msg0 then "" else " ")
       <> showL opts ret
       <> litVerbose opts (" | " <> take 100 fmt) as
 
@@ -651,8 +658,8 @@ compileRegex opts nm s hhs
   | otherwise =
       let rs = getROpts @rs
           mm = nm <> " " <> show rs
-      in flip left (RH.compileM (TE.encodeUtf8 (T.pack s)) (snd rs))
-            $ \e -> mkNode opts (Fail "Regex failed to compile") (mm <> ":" <> e) hhs
+          f e = mkNode opts (Fail "Regex failed to compile") (mm <> ":" <> e) hhs
+      in left f (RH.compileM (TE.encodeUtf8 (T.pack s)) (snd rs))
 
 -- | extract values from the trees or if there are errors return a tree with context
 splitAndAlign :: Show x =>
@@ -776,7 +783,15 @@ prtTreePure ::
   -> String
 prtTreePure opts t
   | hasNoTree opts = colorValP opts (t ^. root . peValP)
-  | otherwise = showImpl opts $ fmap (toNodeString opts) t
+  | otherwise = showTreeImpl opts $ fmap (toNodeString opts) t
+
+showTreeImpl :: POpts
+         -> Tree String
+         -> String
+showTreeImpl o =
+  case oDisp o of
+    Unicode -> drawTreeU
+    Ansi -> Safe.initSafe . drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
 
 -- | extract message part from tree
 topMessage :: TT a -> String
@@ -784,17 +799,9 @@ topMessage pp =
   let s = _ttString pp
   in unlessNull s $ "(" <> s <> ")"
 
-showImpl :: POpts
-         -> Tree String
-         -> String
-showImpl o =
-  case oDisp o of
-    Unicode -> drawTreeU
-    Ansi -> Safe.initSafe . drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
-
 -- | render numbered tree
-fixit :: ((Int, x), TT a) -> TT a
-fixit ((i, _), t) = prefixMsg ("i=" <> show i <> ": ") t
+prefixNumberToTT :: ((Int, x), TT a) -> TT a
+prefixNumberToTT ((i, _), t) = prefixMsg ("i=" <> show i <> ": ") t
 
 -- | prefix text in front of ttString
 prefixMsg :: String -> TT a -> TT a
@@ -987,6 +994,27 @@ type OUB = 'OUB   -- 'OUnicode ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 10
 type OUN = 'OUN   -- 'OUnicode ':# 'OColorOff ':# 'OWidth 200
 type OUV = 'OUV   -- 'OUnicode ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
 type OUNV = 'OUNV -- 'OUnicode ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
+
+_Debug :: Lens' POpts Debug
+_Debug afb opts = (\d -> opts { oDebug = d }) <$> afb (oDebug opts)
+
+_DVerboseI :: Prism' Debug ()
+_DVerboseI =
+  prism' (const DVerbose)
+  $ \case
+       DVerbose -> Just ()
+       _ -> Nothing
+
+-- | traversal for DVerbose
+--
+-- >>> has _DVerbose (getOpt @OU)
+-- False
+--
+-- >>> has _DVerbose (getOpt @OUV)
+-- True
+--
+_DVerbose :: Traversal' POpts ()
+_DVerbose = _Debug . _DVerboseI
 
 -- | convert typelevel options to 'POpts'
 --

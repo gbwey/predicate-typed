@@ -152,10 +152,15 @@ allTests =
   , expectBT (Val (4,"helo","oleh")) $ pl @'(Len, Id, Reverse) "helo"
   , expectBT (Val [1,2,3,1000,998]) $ pl @'[W 1, W 2, W 3, Succ, Pred] 999
   , expectBT (Val [3996,998]) $ pl @'[Id * 4, Pred] 999
+  , expectBT (Val [2,3,4,5,6]) $ pz @(FlipT Map Id Succ) [1..5]
+  , expectBT (Val (2,True)) $ pz @( FlipT '(,) 'True 2) ()
+  , expectBT (Val (1,"ab",2)) $ pz @( FlipT ('(,,) 1) 2 Id) "ab"
+  , expectBT (Val 13) $ pz @(12 & Lift Succ) ()
+  , expectBT (Val 10) $ pz @('[1,2,3,4] & FoldMap (SG.Sum _)) ()
 
 
   -- test semigroup interaction
-  , expectEQR (These (Val 6) (Fail "xyzhello")) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(FailS "xyz") 5) <> fmap That (pz @(FailS "hello") 1)
+  , expectEQR (These (Val 6) (Fail "xyz | hello")) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(FailS "xyz") 5) <> fmap That (pz @(FailS "hello") 1)
   , expectEQR (These (Val 6) (Val ("5",6))) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(ShowP Id &&& Succ) 5)
 -- test options
   , oRecursion testopts1 @?= 11

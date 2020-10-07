@@ -100,7 +100,7 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "PartitionThese"
         b = partitionThese as
-    in pure $ mkNode opts (Val b) (show01 opts msg0 b as) []
+    in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
 
 -- | similar to 'TheseC.catThis'
 --
@@ -159,7 +159,7 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "Heres"
         b = TheseC.catHere as
-    in pure $ mkNode opts (Val b) (show01 opts msg0 b as) []
+    in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
 
 -- | similar to 'TheseC.catThere'
 --
@@ -175,7 +175,7 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "Theres"
         b = TheseC.catThere as
-    in pure $ mkNode opts (Val b) (show01 opts msg0 b as) []
+    in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
 
 -- | similar to 'Data.These.mergeTheseWith' but additionally provides @p@, @q@ and @r@ the original input as the first element in the tuple
 --
@@ -479,21 +479,21 @@ instance ( Show a
           pp <- eval (Proxy @p) opts a
           pure $ case getValueLR opts (msg2 <> "p failed") pp [] of
                Left e -> e
-               Right c -> mkNode opts (Val c) (show01' opts msg0 c msg1 a) [hh pp]
+               Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 a) [hh pp]
         That b -> do
           let msg1 = "That "
               msg2 = msg0 <> msg1
           qq <- eval (Proxy @q) opts b
           pure $ case getValueLR opts (msg2 <> "q failed") qq [] of
                Left e -> e
-               Right c -> mkNode opts (Val c) (show01' opts msg0 c msg1 b) [hh qq]
+               Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 b) [hh qq]
         These a b -> do
           let msg1 = "These "
               msg2 = msg0 <> msg1
           rr <- eval (Proxy @r) opts (a,b)
           pure $ case getValueLR opts (msg2 <> "r failed") rr [] of
                Left e -> e
-               Right c -> mkNode opts (Val c) (show01 opts msg0 c (These a b)) [hh rr]
+               Right c -> mkNode opts (Val c) (show3 opts msg0 c (These a b)) [hh rr]
 
 -- | TheseId: given a 'These' returns a tuple but you need to provide default values for both sides
 --
@@ -568,7 +568,7 @@ instance ( PP p a ~ [x]
           Left e -> e
           Right _ ->
             let d = simpleAlign p q
-            in mkNode opts (Val d) (show01' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
+            in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
 
 
 simpleAlign :: [a] -> [b] -> [These a b]
@@ -931,7 +931,7 @@ instance ( AssocC p
   eval _ opts pabc =
     let msg0 = "Assoc"
         d = assoc pabc
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d pabc) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d pabc) []
 
 -- | unassoc using 'AssocC'
 --
@@ -964,7 +964,7 @@ instance ( AssocC p
   eval _ opts pabc =
     let msg0 = "Unassoc"
         d = unassoc pabc
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d pabc) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d pabc) []
 
 
 -- | tries to extract a value from the 'Data.These.This' constructor

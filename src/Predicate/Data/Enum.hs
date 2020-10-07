@@ -99,7 +99,7 @@ instance ( PP q x ~ a
       Right q ->
         case succMay q of
           Nothing -> _enumDefault @p @a opts msg0 (hh qq)
-          Just n -> pure $ mkNode opts (Val n) (show01 opts msg0 n q) [hh qq]
+          Just n -> pure $ mkNode opts (Val n) (show3 opts msg0 n q) [hh qq]
 
 _enumDefault :: forall p a m
   . ( MonadEval m
@@ -173,7 +173,7 @@ instance ( PP q x ~ a
       Right q ->
         case predMay q of
           Nothing -> _enumDefault @p @a opts msg0 (hh qq)
-          Just n -> pure $ mkNode opts (Val n) (show01 opts msg0 n q) [hh qq]
+          Just n -> pure $ mkNode opts (Val n) (show3 opts msg0 n q) [hh qq]
 
 
 -- | unbounded 'succ' function
@@ -206,7 +206,7 @@ instance ( Show x
     lr <- catchit (succ x)
     pure $ case lr of
       Left e -> mkNode opts (Fail (msg0 <> " " <> e)) (showL opts x) []
-      Right n -> mkNode opts (Val n) (show01 opts msg0 n x) []
+      Right n -> mkNode opts (Val n) (show3 opts msg0 n x) []
 
 -- | SuccN n p (unsafe) increments an enum p by the given integral n
 --
@@ -264,7 +264,7 @@ instance ( Show x
     lr <- catchit (pred x)
     pure $ case lr of
       Left e -> mkNode opts (Fail (msg0 <> " " <> e)) (showL opts x) []
-      Right n -> mkNode opts (Val n) (show01 opts msg0 n x) []
+      Right n -> mkNode opts (Val n) (show3 opts msg0 n x) []
 
 -- | bounded 'pred' function
 --
@@ -317,7 +317,7 @@ instance ( Show a
       Left e -> e
       Right p ->
         let n = fromEnum p
-        in mkNode opts (Val n) (show01 opts msg0 n p) [hh pp]
+        in mkNode opts (Val n) (show3 opts msg0 n p) [hh pp]
 
 -- | unsafe 'toEnum' function
 --
@@ -351,7 +351,7 @@ instance ( PP p x ~ a
         lr <- catchit (toEnum $! fromIntegral p)
         pure $ case lr of
           Left e -> mkNode opts (Fail (msg0 <> " " <> e)) (showL opts p) [hh pp]
-          Right n -> mkNode opts (Val n) (show01 opts msg0 n p) [hh pp]
+          Right n -> mkNode opts (Val n) (show3 opts msg0 n p) [hh pp]
 
 data ToEnum (t :: Type)
 type ToEnumT (t :: Type) = ToEnum' (Hole t) Id
@@ -380,7 +380,7 @@ instance ( P def (Proxy (PP t a))
          pure $ case getValueLR opts msg1 pp [] of
            Left e -> e
            Right _ -> mkNodeCopy opts pp msg1 [hh pp]
-      Just n -> pure $ mkNode opts (Val n) (show01 opts msg0 n a) []
+      Just n -> pure $ mkNode opts (Val n) (show3 opts msg0 n a) []
 
 -- | bounded 'toEnum' function
 --

@@ -154,14 +154,14 @@ instance ( Show (PP p a)
         pure $ case getValueLR opts msg0 pp [] of
           Left e -> e
           Right a1 -> let msg1 = msg0 ++ " Left"
-                      in mkNodeCopy opts pp (show01 opts msg1 a1 a) [hh pp]
+                      in mkNodeCopy opts pp (show3 opts msg1 a1 a) [hh pp]
       Right a -> do
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR opts msg0 qq [] of
           Left e -> e
           Right a1 ->
             let msg1 = msg0 ++ " Right"
-            in mkNodeCopy opts qq (show01 opts msg1 a1 a) [hh qq]
+            in mkNodeCopy opts qq (show3 opts msg1 a1 a) [hh qq]
 
 -- | similar to 'isLeft'
 --
@@ -290,7 +290,7 @@ instance ( Show a
   eval _ opts as =
     let msg0 = "PartitionEithers"
         b = partitionEithers as
-    in pure $ mkNode opts (Val b) (show01 opts msg0 b as) []
+    in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
 
 -- | Convenient method to convert a @p@ or @q@ to a 'Either' based on a predicate @b@
 --   if @b@ then Right @p@ else Left @q@

@@ -25,10 +25,17 @@
 -}
 module Predicate.Data.Extra (
 
-    Pure2
+    FMap
+  , type (<$>)
+  , type (<&>)
+  , FPair
+  , FFish
+  , type (>>=)
+  , type (<:>)
   , type (<$)
   , type (<*)
   , type (*>)
+  , Pure2
   , Sequence
   , Traverse
   , Join
@@ -81,12 +88,7 @@ module Predicate.Data.Extra (
   , PartitionsBy
   , IMap
   , IList
-  , FMap
-  , type (<$>)
-  , FPair
-  , FFish
-  , type (>>=)
-  , type (<:>)
+  , Flip
 
  ) where
 import Predicate.Core
@@ -140,7 +142,7 @@ instance ( Show (f (t a))
   eval _ opts fa =
     let msg0 = "Pure2"
         b = fmap pure fa
-    in pure $ mkNode opts (Val b) (show01 opts msg0 b fa) []
+    in pure $ mkNode opts (Val b) (show3 opts msg0 b fa) []
 
 -- | similar to 'Control.Applicative.<$'
 --
@@ -239,7 +241,7 @@ instance ( Show (t c)
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = p <* q
-        in mkNode opts (Val d) (show01' opts msg0 p "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
+        in mkNode opts (Val d) (show3' opts msg0 p "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to 'Control.Applicative.<|>'
 --
@@ -278,7 +280,7 @@ instance ( P p x
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = p <|> q
-        in mkNode opts (Val d) (show01' opts msg0 d "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
+        in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 
 -- | similar to 'Control.Comonad.extract'
@@ -302,7 +304,7 @@ instance ( Show (t a)
   eval _ opts ta =
     let msg0 = "Extract"
         d = extract ta
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d ta) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d ta) []
 
 -- | similar to 'Control.Comonad.duplicate'
 --
@@ -319,7 +321,7 @@ instance ( Show (t a)
   eval _ opts ta =
     let msg0 = "Duplicate"
         d = duplicate ta
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d ta) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d ta) []
 
 -- | similar to 'Control.Monad.join'
 --
@@ -339,7 +341,7 @@ instance ( Show (t (t a))
   eval _ opts tta =
     let msg0 = "Join"
         d = join tta
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d tta) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d tta) []
 
 -- | function application for expressions: similar to 'GHC.Base.$'
 --
@@ -586,7 +588,7 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 --
 -- see 'ConsT' for other supported types eg 'Seq.Seq'
 --
--- >>> pz @(HeadFail "dude" Id) ["abc","def","asdfadf"]
+-- >>> pz @(HeadFail "oops" Id) ["abc","def","asdfadf"]
 -- Val "abc"
 --
 -- >>> pz @(HeadFail "empty list" Id) []
@@ -901,7 +903,7 @@ instance ( Show (f a)
   eval _ opts fa =
     let msg0 = "Coerce2"
         d = view coerced <$> fa
-    in pure $ mkNode opts (Val d) (show01 opts msg0 d fa) []
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d fa) []
 
 data ProxyT' t
 
@@ -1043,7 +1045,7 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
   RDotExpandT '[p] q = p $ q
   RDotExpandT (p ': p1 ': ps) q = RDotExpandT (p1 ': ps) (p $ q)
 
--- | creates a constant expression ignoring the second argument:types dont need to match on rhs!
+-- | similar to 'const':types dont need to match on rhs!
 --
 -- >>> pl @(RDot '[L1,L2,L3,K "xxx"] Id) 12345
 -- Present "xxx" (K '"xxx")
@@ -1200,7 +1202,7 @@ instance P IListT x => P IList x where
   type PP IList x = PP IListT x
   eval _ = eval (Proxy @IListT)
 
--- | fmap
+-- | similar to 'Data.Functor.<$>'
 --
 -- >>> pz @(FMap (MkDay Id) >> Join) (Just (2020,01,01))
 -- Val (Just 2020-01-01)
@@ -1248,7 +1250,7 @@ instance ( Traversable n
       Left e -> e
       Right ret -> mkNode opts (Val ret) msg0 [hh (fixEmptyNode (msg0 <> " <skipped>") ttnb)]
 
--- | see 'FMap'
+-- | similar to 'Data.Functor.<$>'
 --
 -- >>> pz @(Len <$> Snd) (1,Just "abcdef")
 -- Val (Just 6)
@@ -1286,6 +1288,20 @@ instance ( Traversable n
         pure $ case getValueLR opts msg0 ttnb [hh qq] of
           Left e -> e
           Right ret -> mkNode opts (Val ret) msg0 [hh qq, hh (fixEmptyNode (msg0 <> " <skipped>") ttnb)]
+
+-- | similar to 'Data.Functor.<&>'
+--
+-- >>> pz @('[1,2,3] <&> Succ) ()
+-- Val [2,3,4]
+--
+data p <&> q
+infixl 1 <&>
+type FMapFlipT p q = q <$> p
+
+instance P (FMapFlipT p q) x => P (p <&> q) x where
+  type PP (p <&> q) x = PP (FMapFlipT p q) x
+  eval _ = eval (Proxy @(FMapFlipT p q))
+
 
 -- | runs liftA2 (,) against two values
 --
@@ -1422,4 +1438,21 @@ type InitMayT = Unsnoc >> FMap Fst
 instance P InitMayT x => P InitMay x where
   type PP InitMay x = PP InitMayT x
   eval _ = eval (Proxy @InitMayT)
+
+-- | similar to 'flip':see also 'Predicate.Misc.FlipT'
+--
+-- >>> pz @(Flip Map Id Succ) [1..5]
+-- Val [2,3,4,5,6]
+--
+-- >>> pz @( Flip '(,) 'True 2) ()
+-- Val (2,True)
+--
+-- >>> pz @( Flip ('(,,) 1) 2 Id) "ab"
+-- Val (1,"ab",2)
+--
+data Flip (p :: k1 -> k2 -> k3) (q :: k2) (r :: k1) -- needs explicit types
+
+instance P (p r q) x => P (Flip p q r) x where
+  type PP (Flip p q r) x = PP (p r q) x
+  eval _ = eval (Proxy @(p r q))
 
