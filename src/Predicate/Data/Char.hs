@@ -57,7 +57,7 @@ module Predicate.Data.Char (
   , ToLower
  ) where
 import Predicate.Core
-import Predicate.Misc 
+import Predicate.Misc
 import Predicate.Util
 import Control.Lens
 import qualified Data.Text.Lens as DTL

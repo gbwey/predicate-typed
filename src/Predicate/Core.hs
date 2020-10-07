@@ -118,7 +118,7 @@ module Predicate.Core (
   , type ($)
   , type (&)
   ) where
-import Predicate.Misc 
+import Predicate.Misc
 import Predicate.Util
 import qualified GHC.TypeLits as GL
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
@@ -129,6 +129,7 @@ import Data.Kind (Type)
 import Data.These (These(..))
 import Control.Monad (zipWithM)
 import Data.List (find)
+import Data.Tree (Tree)
 import Data.Coerce (Coercible)
 import qualified Data.Semigroup as SG
 import Data.Tree.Lens (root)
@@ -968,7 +969,7 @@ runPQ :: ( P p a
    -> proxy2 q
    -> POpts
    -> a
-   -> [Holder]
+   -> [Tree PE]
    -> m (Either (TT x) (PP p a, PP q a, TT (PP p a), TT (PP q a)))
 runPQ msg0 proxyp proxyq opts a hhs = do
     pp <- eval proxyp opts a
@@ -990,7 +991,7 @@ runPQBool :: ( P p a
    -> proxy2 q
    -> POpts
    -> a
-   -> [Holder]
+   -> [Tree PE]
    -> m (Either (TT x) (PP p a, PP q a, TT (PP p a), TT (PP q a)))
 runPQBool msg0 proxyp proxyq opts a hhs = do
     pp <- evalBool proxyp opts a
@@ -1051,7 +1052,7 @@ instance ( P p a
         pure $ case getValueLR opts (showL opts p) qq [hh pp] of
         -- need to look inside to see if there is already an exception in ttForest
           Left e -> if anyOf (ttForest . traverse . root . peValP) (has _FailP) qq
-                    then qq & ttForest %~ (fromTT pp:) -- we still need pp for context
+                    then qq & ttForest %~ (hh pp:) -- we still need pp for context
                     else e
           Right q -> mkNodeCopy opts qq (lit01 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
 

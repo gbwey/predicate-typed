@@ -7,7 +7,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
@@ -444,7 +443,7 @@ instance ( PP prt (Int, a) ~ String
                      ss <- eval (Proxy @(GuardsImpl n ps)) opts as
                      pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
                        Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                       Right zs -> (ss & ttForest %~ (fromTT pp:)) & ttVal .~ Val (a:zs) & ttValP .~ ValP
+                       Right zs -> (ss & ttForest %~ (hh pp:)) & ttVal .~ Val (a:zs) & ttValP .~ ValP
          _ -> errorInProgram "GuardsImpl n+1 case has no data"
 
 -- | GuardsQuick contain a type level list of conditions and one of matching values: on no match will fail using the first parameter
@@ -594,7 +593,7 @@ instance ( PP prt (Int, a) ~ String
                      ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
                      pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
                        Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-                       Right _ ->  ss & ttForest %~ (fromTT pp:)
+                       Right _ ->  ss & ttForest %~ (hh pp:)
          _ -> errorInProgram "BoolsImpl n+1 case has no data"
 
 -- | boolean guard which checks a given a list of predicates against the list of values

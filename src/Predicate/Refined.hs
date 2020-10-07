@@ -4,7 +4,6 @@
 {-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wredundant-constraints #-}
 {-# OPTIONS -Wunused-type-patterns #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -50,7 +49,7 @@ module Predicate.Refined (
 
  ) where
 import Predicate.Core
-import Predicate.Misc (nullIf) 
+import Predicate.Misc (nullIf)
 import Predicate.Util
 import Control.Lens
 import Data.Proxy (Proxy(Proxy))

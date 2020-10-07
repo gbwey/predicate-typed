@@ -7,7 +7,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
@@ -52,7 +51,7 @@ module Predicate.Data.Either (
 
  ) where
 import Predicate.Core
-import Predicate.Misc 
+import Predicate.Misc
 import Predicate.Util
 import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL

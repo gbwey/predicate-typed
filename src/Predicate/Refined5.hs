@@ -452,7 +452,7 @@ appendOpt5 :: forall (opts :: Opt) opt0 ip op i
 appendOpt5 = coerce
 
 evalBool5 :: forall opts p a
-   . RefinedC opts p a
+   . (PP p a ~ Bool, RefinedC opts p a)
    => a
    -> Either String a
 evalBool5 i =

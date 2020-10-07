@@ -7,7 +7,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
@@ -116,7 +115,7 @@ instance ( PP p (b,a) ~ b
                                Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
             (ts,lrx) :: ([((Int, b), TT b)], Either (TT [b]) ()) <- ff 1 q r []
             pure $ case splitAndAlign opts msg0 (((0,q), mkNode opts (Val q) (msg0 <> "(initial)") []) : ts) of
-                 Left e -> errorInProgram $ "Scanl e=" ++ show (fromTT e)
+                 Left e -> errorInProgram $ "Scanl e=" ++ show (hh e)
                  Right abcs ->
                    let vals = map (view _1) abcs
                        itts = map (view _2 &&& view _3) abcs
@@ -351,7 +350,7 @@ instance ( PP q a ~ s
                                    Right w@(Just (_b,s')) -> ff (i+1) s' (rs ++ [((i,w), pp)])
         (ts,lr) :: ([((Int, PP p s), TT (PP p s))], Either (TT [b]) ()) <- ff 1 q []
         pure $ case splitAndAlign opts msg1 ts of
-             Left e -> errorInProgram $ "Unfoldr e=" ++ show (fromTT e)
+             Left e -> errorInProgram $ "Unfoldr e=" ++ show (hh e)
              Right abcs ->
                let vals = map (view _1) abcs
                    itts = map (view _2 &&& view _3) abcs

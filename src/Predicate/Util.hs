@@ -65,14 +65,12 @@ module Predicate.Util (
 
  -- ** create tree
   , mkNode
-  , mkNode'
   , mkNodeCopy
   , mkNodeB
 
  -- ** tree manipulation
   , getValAndPE
   , getValLRFromTT
-  , fromTT
   , getValueLR
   , fixLite
   , fixit
@@ -136,7 +134,6 @@ module Predicate.Util (
 
  -- ** miscellaneous
   , compileRegex
-  , Holder
   , hh
   , removeAnsi
   , MonadEval(..)
@@ -237,6 +234,18 @@ instance Semigroup (Val a) where
    _ <> Fail s = Fail s
    Val _a <> Val b = Val b
 
+-- | monoid instance for 'Val'
+--
+-- >>> mempty :: Val (Maybe [Int])
+-- Val Nothing
+--
+-- >>> import qualified Data.Semigroup as SG
+-- >>> mempty :: SG.Sum Int
+-- Sum {getSum = 0}
+--
+instance Monoid a => Monoid (Val a) where
+   mempty = Val mempty
+
 -- | 'Read' instance for Val
 --
 -- >>> reads @(Val Int) "Val 123"
@@ -253,62 +262,69 @@ instance Semigroup (Val a) where
 --
 
 -- | evaluation tree for predicates
-data TT a = TT { _ttVal :: !(Val a)  -- ^ the value at this root node
+data TT a = TT { _ttValP :: !ValP -- ^ display value
+               , _ttVal :: !(Val a)  -- ^ the value at this root node
                , _ttString :: !String  -- ^ detailed information eg input and output and text
                , _ttForest :: !(Forest PE) -- ^ the child nodes
-               , _ttValP :: !ValP -- ^ display value
                } deriving stock (Functor, Read, Show, Eq, Foldable, Traversable, Generic, Generic1)
 
 makeLenses ''TT
 
 instance Applicative TT where
-  pure a = TT (pure a) "" [] ValP
+  pure a = TT ValP (pure a) "" []
   (<*>) = ap
 
 instance Monad TT where
   return = pure
-  TT (Val a) y z _p >>= amb =
-    let TT w _y1 z1 p1 = amb a
-    in TT w (y++ nullIf " | " _y1) (z <> z1) p1
-  TT (Fail s) y z _ >>= _ = TT (Fail s) y z (FailP s)
+{- yurk
+  TT _ (Val a) ss ts >>= amb =
+    let TT bp bt ss1 ts1 = amb a
+    in TT bp bt (ss <> (if null ss || null ss1 then "" else " | ") <> ss1) (ts <> ts1)
+  TT _ (Fail e) ss ts >>= _ = TT (FailP e) (Fail e) ss ts
+-}
+  z@(TT _ bt ss ts) >>= amb =
+     case bt of
+       Val a -> amb a & ttString %~ (\ss1 -> ss <> (if null ss || null ss1 then "" else " | ") <> ss1)
+                      & ttForest %~ (ts <>)
+       Fail e -> z & ttVal .~ Fail e
+                   & ttValP .~ FailP e
 
 -- | creates a Node for the evaluation tree
 mkNodeCopy :: POpts
        -> TT a
        -> String
-       -> [Holder]
+       -> [Tree PE]
        -> TT a
-mkNodeCopy opts tt ss hs = mkNode' opts (_ttVal tt) ss hs (_ttValP tt)
-
+mkNodeCopy opts tt = mkNodeImpl opts (_ttValP tt) (_ttVal tt)
 
 -- | creates a Node for the evaluation tree
 mkNode :: POpts
        -> Val a
        -> String
-       -> [Holder]
+       -> [Tree PE]
        -> TT a
-mkNode opts bt ss hs = mkNode' opts bt ss hs (bt ^. _Val2P)
+mkNode opts bt = mkNodeImpl opts (bt ^. _Val2P) bt
 
 -- | creates a Node for the evaluation tree
-mkNode' :: POpts
-       -> Val a
-       -> String
-       -> [Holder]
-       -> ValP
-       -> TT a
-mkNode' opts bt ss hs bp' =
-  let bp = validateValP bt bp'
+mkNodeImpl :: POpts
+           -> ValP
+           -> Val a
+           -> String
+           -> [Tree PE]
+           -> TT a
+mkNodeImpl opts bp' bt ss hs =
+  let bp = validateValP bp' bt
   in case oDebug opts of
-      DZero -> TT bt [] [] bp
+      DZero -> TT bp bt "" []
       DLite ->
       -- keeps the last string so we can use the root to give more details on failure (especially for Refined* types)
       -- also holds onto any failures
-          let zs = filter (\(Holder x) -> has (ttVal . _Fail) x) hs
-          in TT bt ss (map fromTTH zs) bp
-      _ -> TT bt ss (map fromTTH hs) bp
+          let zs = filter (has (root . peValP . _FailP)) hs
+          in TT bp bt ss zs
+      _ -> TT bp bt ss hs
 
-validateValP :: Val a -> ValP -> ValP
-validateValP bt bp =
+validateValP :: ValP -> Val a -> ValP
+validateValP bp bt =
   case bt of
     Val _a -> case bp of
                      FailP e -> errorInProgram $ "validateValP: found FailP for Val in Val e=" ++ e
@@ -325,37 +341,25 @@ fixTTValP tt = tt { _ttValP = tt ^. ttVal . _Val2BoolP }
 mkNodeB :: POpts
         -> Bool
         -> String
-        -> [Holder]
+        -> [Tree PE]
         -> TT Bool
-mkNodeB opts b s tt =
-  mkNode' opts (Val b) s tt (bool FalseP TrueP b)
+mkNodeB opts b = mkNodeImpl opts (bool FalseP TrueP b) (Val b)
 
 getValAndPE :: TT a -> (Either String a, Tree PE)
-getValAndPE = getValLRFromTT &&& fromTT
+getValAndPE = getValLRFromTT &&& hh
 
 getValLRFromTT :: TT a -> Either String a
 getValLRFromTT = view (ttVal . _ValEither)
 
 -- | converts a typed tree to an untyped tree for display
-fromTT :: TT a -> Tree PE
-fromTT (TT bt ss tt bp) = Node (PE (validateValP bt bp) ss) tt
-
--- | a monomorphic container of trees
-data Holder = forall w . Holder !(TT w)
-
--- | converts a typed tree into an untyped one
-fromTTH :: Holder -> Tree PE
-fromTTH (Holder x) = fromTT x
-
--- | convenience method to wrap a typed tree
-hh :: TT w -> Holder
-hh = Holder
+hh :: TT a -> Tree PE
+hh (TT bp bt ss tt) = Node (PE (validateValP bp bt) ss) tt
 
 -- | decorate the tree with more detail when there are errors
 getValueLR :: POpts
            -> String
            -> TT a
-           -> [Holder]
+           -> [Tree PE]
            -> Either (TT x) a
 getValueLR opts msg0 tt hs =
   let tt' = hs ++ [hh tt]
@@ -407,12 +411,16 @@ reifyOpts h =
   HOpts (fromMaybe (oWidth defOpts) (coerce (oWidth h)))
         (fromMaybe (oDebug defOpts) (coerce (oDebug h)))
         (fromMaybe (oDisp defOpts) (coerce (oDisp h)))
-        (if fromMaybe (oNoColor defOpts) (coerce (oNoColor h)) then nocolor
-         else fromMaybe (oColor defOpts) (coerce (oColor h)))
+        (if fromMaybe (oNoColor defOpts) (coerce (oNoColor h))
+           then nocolor
+           else fromMaybe (oColor defOpts) (coerce (oColor h))
+        )
         (oMsg defOpts <> oMsg h)
         (fromMaybe (oRecursion defOpts) (coerce (oRecursion h)))
-        (if fromMaybe (oNoColor defOpts) (coerce (oNoColor h)) then otherDef
-         else fromMaybe (oOther defOpts) (coerce (oOther h)))
+        (if fromMaybe (oNoColor defOpts) (coerce (oNoColor h))
+           then otherDef
+           else fromMaybe (oOther defOpts) (coerce (oOther h))
+        )
         (fromMaybe (oNoColor defOpts) (coerce (oNoColor h)))
 
 -- | set maximum display width of expressions
@@ -624,7 +632,7 @@ compileRegex :: forall rs a . GetROpts rs
   => POpts
   -> String
   -> String
-  -> [Holder]
+  -> [Tree PE]
   -> Either (TT a) RH.Regex
 compileRegex opts nm s hhs
   | null s = Left (mkNode opts (Fail "Regex cannot be empty") nm hhs)
@@ -666,10 +674,6 @@ formatList :: forall x z . Show x
   -> [((Int, x), z)]
   -> String
 formatList opts = unwords . map (\((i, a), _) -> "(i=" <> show i <> showAImpl opts DLite ", a=" a <> ")")
-
--- (_Val %~ length) <$> pz @Pairs [1..4]
--- (over _Val length) <$> pz @Pairs [1..4]
--- fmapB length $ pz @Pairs [1..4]
 
 -- | pretty print a tree
 toNodeString :: POpts
@@ -997,7 +1001,7 @@ chkSize :: Foldable t
    => POpts
    -> String
    -> t a
-   -> [Holder]
+   -> [Tree PE]
    -> Either (TT x) [a]
 chkSize opts msg0 xs hhs =
   let mx = oRecursion opts
@@ -1011,7 +1015,7 @@ chkSize2 :: (Foldable t, Foldable u)
    -> String
    -> t a
    -> u b
-   -> [Holder]
+   -> [Tree PE]
    -> Either (TT x) ([a],[b])
 chkSize2 opts msg0 xs ys hhs =
  (,) <$> chkSize opts msg0 xs hhs <*> chkSize opts msg0 ys hhs
@@ -1069,12 +1073,12 @@ prtTree opts pp =
            <> topMessage pp
 
      _ -> formatOMsg opts ""
-          <> prtTreePure opts (fromTT pp)
+          <> prtTreePure opts (hh pp)
 
 showIndex :: (Show i, Num i) => i -> String
 showIndex i = show (i+0)
 
-verboseList :: POpts -> TT a -> [Holder]
+verboseList :: POpts -> TT a -> [Tree PE]
 verboseList o tt
   | isVerbose o = [hh tt]
   | otherwise = []
@@ -1193,6 +1197,16 @@ _ValEither = iso fw bw
         bw = either Fail Val
 
 -- | a lens from typed 'Val' to the untyped 'ValP'
+--
+-- >>> Val True ^. _Val2P
+-- ValP
+--
+-- >>> Val 123 ^. _Val2P
+-- ValP
+--
+-- >>> Fail "abc" ^. _Val2P
+-- FailP "abc"
+--
 _Val2P :: Lens' (Val a) ValP
 _Val2P afb bt = bt <$ afb r
   where r = case bt of
@@ -1200,6 +1214,16 @@ _Val2P afb bt = bt <$ afb r
               Val {} -> ValP
 
 -- | a lens from typed 'Val' Bool to the untyped 'ValP'
+--
+-- >>> Val True ^. _Val2BoolP
+-- TrueP
+--
+-- >>> Val False ^. _Val2BoolP
+-- FalseP
+--
+-- >>> Fail "abc" ^. _Val2BoolP
+-- FailP "abc"
+--
 _Val2BoolP :: a ~ Bool => Lens' (Val a) ValP
 _Val2BoolP afb bt = bt <$ afb r
   where r = case bt of

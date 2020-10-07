@@ -7,7 +7,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
@@ -58,7 +57,7 @@ module Predicate.Data.DateTime (
 
  ) where
 import Predicate.Core
-import Predicate.Misc 
+import Predicate.Misc
 import Predicate.Util
 import Control.Lens
 import Data.Typeable (Typeable, Proxy(Proxy))

@@ -56,6 +56,7 @@ import Predicate.Util
 import Safe (succMay, predMay, toEnumMay)
 import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
+import Data.Tree (Tree)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -107,7 +108,7 @@ _enumDefault :: forall p a m
     )
   => POpts
   -> String
-  -> Holder
+  -> Tree PE
   -> m (TT a)
 _enumDefault opts msg0 hhqq = do
    let msg1 = msg0 <> " out of range"
