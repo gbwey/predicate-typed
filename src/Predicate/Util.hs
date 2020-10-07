@@ -193,6 +193,17 @@ data PE = PE { _peValP :: !ValP -- ^ holds the result of running the predicate
 
 makeLenses ''PE
 
+instance Semigroup ValP where
+   FailP s <> FailP s1 = FailP (s <> s1)
+   FailP s <> _ = FailP s
+   _ <> FailP s = FailP s
+   _ <> ValP = ValP
+   _ <> TrueP = TrueP
+   _ <> FalseP = FalseP
+
+instance Monoid ValP where
+  mempty = ValP
+
 -- | contains the typed result from evaluating the expression
 data Val a = Fail !String | Val !a
   deriving stock (Show, Eq, Ord, Read, Functor, Foldable, Traversable, Generic, Generic1)
@@ -269,6 +280,13 @@ data TT a = TT { _ttValP :: !ValP -- ^ display value
                } deriving stock (Functor, Read, Show, Eq, Foldable, Traversable, Generic, Generic1)
 
 makeLenses ''TT
+
+instance Semigroup (TT a) where
+   TT bp bt ss ts <> TT bp1 bt1 ss1 ts1 =
+     TT (bp <> bp1) (bt <> bt1) (ss <> (if null ss || null ss1 then "" else " | ") <> ss1) (ts <> ts1)
+
+instance Monoid a => Monoid (TT a) where
+   mempty = TT mempty mempty mempty mempty
 
 instance Applicative TT where
   pure a = TT ValP (pure a) "" []
@@ -362,14 +380,8 @@ getValueLR :: POpts
            -> [Tree PE]
            -> Either (TT x) a
 getValueLR opts msg0 tt hs =
-  let tt' = hs ++ [hh tt]
-  in left (\e -> mkNode
-                   opts
-                  (Fail e)
-                   msg0
-                  tt'
-          )
-          (getValLRFromTT tt)
+  left (\e -> mkNode opts (Fail e) msg0 (hs ++ [hh tt]))
+       (getValLRFromTT tt)
 
 -- | elide the 'Identity' wrapper so it acts like a normal adt
 type family HKD f a where
