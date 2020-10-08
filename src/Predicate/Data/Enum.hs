@@ -31,6 +31,7 @@ module Predicate.Data.Enum (
   , EnumFromTo
   , EnumFromThenTo
   , FromEnum
+  , FromEnum'
   , Universe
   , Universe'
 
@@ -286,30 +287,30 @@ instance P (PredBT' q) x => P (PredB' q) x where
 
 -- | 'fromEnum' function
 --
--- >>> pz @(FromEnum Id) 'x'
+-- >>> pz @(FromEnum' Id) 'x'
 -- Val 120
 --
--- >>> pl @(FromEnum ("aa" ==! Id) >> Same 1) "aaaa"
+-- >>> pl @(FromEnum' ("aa" ==! Id) >> Same 1) "aaaa"
 -- False ((>>) False | {0 == 1})
 -- Val False
 --
--- >>> pl @(FromEnum ("aa" ==! Id) >> ToEnum OrderingP) "aaaa"
+-- >>> pl @(FromEnum' ("aa" ==! Id) >> ToEnum OrderingP) "aaaa"
 -- Present CGt ((>>) CGt | {ToEnum CGt | 0})
 -- Val CGt
 --
--- >>> pl @(Map (FromEnum Id) Id >> Map (ToEnum Char) Id) ("abcd" :: String)
+-- >>> pl @(Map (FromEnum' Id) Id >> Map (ToEnum Char) Id) ("abcd" :: String)
 -- Present "abcd" ((>>) "abcd" | {Map "abcd" | [97,98,99,100]})
 -- Val "abcd"
 --
 
-data FromEnum p
+data FromEnum' p
 
 instance ( Show a
          , Enum a
          , PP p x ~ a
          , P p x
-         ) => P (FromEnum p) x where
-  type PP (FromEnum p) x = Int
+         ) => P (FromEnum' p) x where
+  type PP (FromEnum' p) x = Int
   eval _ opts x = do
     let msg0 = "FromEnum"
     pp <- eval (Proxy @p) opts x
@@ -319,12 +320,30 @@ instance ( Show a
         let n = fromEnum p
         in mkNode opts (Val n) (show3 opts msg0 n p) [hh pp]
 
+-- | 'fromEnum' function
+--
+-- >>> pz @FromEnum 'x'
+-- Val 120
+--
+data FromEnum
+
+instance ( Show x
+         , Enum x
+         ) => P FromEnum x where
+  type PP FromEnum x = Int
+  eval _ opts x =
+    let msg0 = "FromEnum"
+        n = fromEnum x
+    in pure $ mkNode opts (Val n) (show3 opts msg0 n x) []
+
+
+
 -- | unsafe 'toEnum' function
 --
 -- >>> pz @(ToEnum Char) 120
 -- Val 'x'
 --
--- >>> pl @(Map (FromEnum Id) Id >> Map (Id - 97 >> ToEnum Ordering) Id) ("abcde" :: String)
+-- >>> pl @(Map FromEnum Id >> Map (Id - 97 >> ToEnum Ordering) Id) ("abcde" :: String)
 -- Error ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2) (Map(i=3, a=100) excnt=2)
 -- Fail "ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2)"
 --

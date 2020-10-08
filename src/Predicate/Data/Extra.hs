@@ -20,6 +20,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE LambdaCase #-}
 {- |
      extra promoted functions
 -}
@@ -1220,20 +1221,90 @@ instance P IListT x => P IList x where
 -- Val (Just "10")
 --
 -- >>> pan @(FMap $ FMap $ FMap Succ) [Just "abcdefG",Nothing,Just "X"]
--- P FMap
+-- P FMap FMap FMap Succ 'b' | Succ 'c' | Succ 'd' | Succ 'e' | Succ 'f' | Succ 'g' | Succ 'H' | FMap <skipped> | FMap FMap Succ 'Y'
 -- |
--- `- P FMap | FMap | FMap
+-- +- P FMap FMap Succ 'b' | Succ 'c' | Succ 'd' | Succ 'e' | Succ 'f' | Succ 'g' | Succ 'H'
+-- |  |
+-- |  `- P FMap Succ 'b' | Succ 'c' | Succ 'd' | Succ 'e' | Succ 'f' | Succ 'g' | Succ 'H'
+-- |     |
+-- |     +- P Succ 'b'
+-- |     |
+-- |     +- P Succ 'c'
+-- |     |
+-- |     +- P Succ 'd'
+-- |     |
+-- |     +- P Succ 'e'
+-- |     |
+-- |     +- P Succ 'f'
+-- |     |
+-- |     +- P Succ 'g'
+-- |     |
+-- |     `- P Succ 'H'
+-- |
+-- +- P FMap <skipped>
+-- |
+-- `- P FMap FMap Succ 'Y'
 --    |
---    +- P FMap
---    |  |
---    |  `- P Succ 'b' | Succ 'c' | Succ 'd' | Succ 'e' | Succ 'f' | Succ 'g' | Succ 'H'
---    |
---    +- P FMap <skipped>
---    |
---    `- P FMap
+--    `- P FMap Succ 'Y'
 --       |
 --       `- P Succ 'Y'
 -- Val [Just "bcdefgH",Nothing,Just "Y"]
+--
+-- >>> pan @(FMap (FromEnum > 97)) "abc"
+-- P FMap 97 > 97 | 98 > 97 | 99 > 97
+-- |
+-- +- False 97 > 97
+-- |  |
+-- |  +- P FromEnum 97
+-- |  |
+-- |  `- P '97
+-- |
+-- +- True 98 > 97
+-- |  |
+-- |  +- P FromEnum 98
+-- |  |
+-- |  `- P '97
+-- |
+-- `- True 99 > 97
+--    |
+--    +- P FromEnum 99
+--    |
+--    `- P '97
+-- Val [False,True,True]
+--
+-- >>> pan @(FMap (FromEnum > 97 >> Id)) "abc"
+-- P FMap (>>) False | (>>) True | (>>) True
+-- |
+-- +- P (>>) False
+-- |  |
+-- |  +- False 97 > 97
+-- |  |  |
+-- |  |  +- P FromEnum 97
+-- |  |  |
+-- |  |  `- P '97
+-- |  |
+-- |  `- P Id False
+-- |
+-- +- P (>>) True
+-- |  |
+-- |  +- True 98 > 97
+-- |  |  |
+-- |  |  +- P FromEnum 98
+-- |  |  |
+-- |  |  `- P '97
+-- |  |
+-- |  `- P Id True
+-- |
+-- `- P (>>) True
+--    |
+--    +- True 99 > 97
+--    |  |
+--    |  +- P FromEnum 99
+--    |  |
+--    |  `- P '97
+--    |
+--    `- P Id True
+-- Val [False,True,True]
 --
 data FMap p
 
@@ -1244,11 +1315,15 @@ instance ( Traversable n
   type PP (FMap p) (n a) = n (PP p a)
   eval _ opts na = do
     let msg0 = "FMap"
-    nttb <- traverse (eval (Proxy @p) opts) na
+    nttb <- traverse (fmap (\tt -> tt & ttString %~ litL opts
+                                      & ttForest .~ [hh tt]) . eval (Proxy @p) opts) na
     let ttnb = sequenceA nttb
     pure $ case getValueLR opts msg0 ttnb [] of
       Left e -> e
-      Right ret -> mkNode opts (Val ret) msg0 [hh (fixEmptyNode (msg0 <> " <skipped>") ttnb)]
+      Right ret -> (case (_ttString ttnb,_ttForest ttnb) of
+                     ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"
+                     _ -> ttnb & ttString %~ \y -> msg0 <> nullIf " " y)
+                               & ttVal .~ Val ret
 
 -- | similar to 'Data.Functor.<$>'
 --
@@ -1283,11 +1358,16 @@ instance ( Traversable n
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
       Right q -> do
-        nttb <- traverse (eval (Proxy @p) opts) q
+        nttb <- traverse (fmap (\tt -> tt & ttString %~ litL opts
+                                          & ttForest .~ [hh tt]) . eval (Proxy @p) opts) q
         let ttnb = sequenceA nttb
         pure $ case getValueLR opts msg0 ttnb [hh qq] of
           Left e -> e
-          Right ret -> mkNode opts (Val ret) msg0 [hh qq, hh (fixEmptyNode (msg0 <> " <skipped>") ttnb)]
+          Right ret -> (case (_ttString ttnb,_ttForest ttnb) of
+                         ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"
+                         _ -> ttnb & ttString %~ \y -> msg0 <> nullIf " " y)
+                                 & ttVal .~ Val ret
+                                 & ttForest %~ (hh qq:)
 
 -- | similar to 'Data.Functor.<&>'
 --
@@ -1389,11 +1469,11 @@ instance P (FBindT p q) x => P (p >>= q) x where
 -- | similar to 'Safe.headMay'
 --
 -- >>> pl @HeadMay []
--- Present Nothing ((>>) Nothing | {FMap})
+-- Present Nothing ((>>) Nothing | {FMap <skipped>})
 -- Val Nothing
 --
 -- >>> pl @HeadMay [99,7,3]
--- Present Just 99 ((>>) Just 99 | {FMap})
+-- Present Just 99 ((>>) Just 99 | {FMap Fst 99 | (99,[7,3])})
 -- Val (Just 99)
 --
 data HeadMay

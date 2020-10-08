@@ -74,7 +74,6 @@ module Predicate.Util (
   , prefixMsg
   , splitAndAlign
   , verboseList
-  , fixEmptyNode
   , fixTTValP
   , topMessage
   , hasNoTree
@@ -86,6 +85,7 @@ module Predicate.Util (
   , Color(..)
   , isVerbose
   , colorValBool
+  , colorValP
   , setOtherEffects
   , type Color1
   , type Color2
@@ -1122,14 +1122,6 @@ verboseList :: POpts -> TT a -> [Tree PE]
 verboseList o tt
   | isVerbose o = [hh tt]
   | otherwise = []
-
-fixEmptyNode :: String -> TT a -> TT a
-fixEmptyNode s = over (ttForest . traverse) (fixEmptyNode' s)
-
-fixEmptyNode' :: String -> Tree PE -> Tree PE
-fixEmptyNode' s = go
- where go (Node (PE ValP "") []) = Node (PE ValP s) []
-       go (Node p xs) = Node p (map go xs)
 
 -- | prism for Val True
 --
