@@ -40,7 +40,6 @@ module Predicate.Core (
   , Pure
   , Coerce
   , OneP
-  , type (>>)
 
   -- ** tree evaluation
   , pan
@@ -110,13 +109,21 @@ module Predicate.Core (
   , Any
   , IdBool
 
- -- ** miscellaneous
-  , type (<..>)
+ -- ** type application
+  , type (>>)
+  , type (>>>)
   , type (<<)
-  , Swap
-  , SwapC(..)
   , type ($)
   , type (&)
+
+ -- ** miscellaneous
+  , type (<..>)
+  , Swap
+  , SwapC(..)
+  , DoExpandT
+  , DoExpandLT
+  , DoL
+
   ) where
 import Predicate.Misc
 import Predicate.Util
@@ -158,7 +165,9 @@ evalBool :: ( MonadEval m
               -> POpts
               -> a
               -> m (TT (PP p a))
-evalBool p = (fmap fixTTValP .) . eval p
+evalBool p opts = fmap fixTTBool . eval p opts
+-- evalBool p opts = (over (mapped . ttValBool') id) . eval p opts
+
 
 evalQuick :: forall opts p i
   . ( OptC opts
@@ -194,7 +203,8 @@ instance ( Typeable a
         t = showT @a
     in pure $ mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
--- | transparent predicate wrapper to make k of kind 'Type' so it can be in a promoted list (cant mix kinds) see 'Predicate.Core.Do'
+-- | transparent wrapper to turn kind k into kind 'Type'
+--   eg useful for putting in a promoted list (cant mix kinds) see 'Predicate.Core.Do'
 --
 -- >>> pz @'[W 123, Id] 99
 -- Val [123,99]
@@ -205,7 +215,8 @@ instance ( Typeable a
 data W (p :: k)
 instance P p a => P (W p) a where
   type PP (W p) a = PP p a
-  eval _ = eval (Proxy @(MsgI "W " p))
+  eval _ opts | isVerbose opts = eval (Proxy @(MsgI "W " p)) opts
+              | otherwise = eval (Proxy @p) opts
 
 -- | add a message to give more context to the evaluation tree
 --
@@ -313,9 +324,6 @@ instance P (Proxy t) a where
   eval _ opts _ =
     let msg0 = "Proxy"
     in pure $ mkNode opts (Val Proxy) msg0 []
-
--- Start non-Type kinds
------------------------
 
 -- | pulls the type level 'Bool' to the value level
 --
@@ -638,7 +646,7 @@ instance ( Show (PP p a)
       Left e -> pure e
       Right p -> do
         qq <- eval (Proxy @(p1 ': ps)) opts a
-        pure $ case getValueLRMerge opts qq [hh pp] of
+        pure $ case getValueLRInline opts qq [hh pp] of
           Left e -> e
           Right q ->
             let ret = p:q
@@ -1030,8 +1038,14 @@ evalHide opts
 
 -- | compose expressions
 --
--- >>> pz @L12 ((11,12),'x')
--- Val 12
+-- >>> pz @(L11 >> Not Id) ((True,12),'x')
+-- Val False
+--
+-- >>> pz @(L12 >> Succ >> Dup) ((True,12),'x')
+-- Val (13,13)
+--
+-- >>> pz @(10 >> '(Id,"abc") >> Second Len) ()
+-- Val (10,3)
 --
 data p >> q
 infixr 1 >>
@@ -1057,6 +1071,21 @@ instance ( P p a
                     then qq & ttForest %~ (hh pp:) -- we still need pp for context
                     else e
           Right q -> mkNodeCopy opts qq (lit3 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
+{-
+          Right q -> pp & ttVal .~ _ttVal qq -- dont use ttVal' cos we want a copy
+                        & ttValP .~ _ttValP qq -- we need this to preserve the old ValP
+                        & ttString %~ (\x -> x <> " !!! " <> (lit3 opts msg0 q "" (topMessageEgregious qq)))
+                        & ttForest %~ (hh pp:)
+-}
+-- | infixl version of 'Predicate.Core.>>'
+data p >>> q
+type RightArrowsLeftInfixT p q = p >> q
+infixl 1 >>>
+
+instance P (RightArrowsLeftInfixT p q) x => P (p >>> q) x where
+  type PP (p >>> q) x = PP (RightArrowsLeftInfixT p q) x
+  eval _ = eval (Proxy @(RightArrowsLeftInfixT p q))
+
 
 -- | flipped version of 'Predicate.Core.>>'
 data p << q
@@ -1275,9 +1304,6 @@ instance x ~ Bool
     in pure $ mkNodeB opts x msg0 []
 
 -- | Fails the computation with a message but allows you to set the output type
---
--- >>> pz @(Failt Int (PrintF "value=%03d" Id)) 99
--- Fail "value=099"
 --
 -- >>> pz @('False || (Fail 'True "failed")) (99,"somedata")
 -- Fail "failed"
@@ -1814,7 +1840,7 @@ instance ( Show (PP p a)
                    let vals = map (view _1) abcs
                    in mkNode opts (Val vals) (show3 opts msg0 vals q) (hh qq : map (hh . prefixNumberToTT) ts)
 
--- | processes a type level list predicates running each in sequence: see 'Predicate.>>'
+-- | processes a type level list predicates running each in sequence with infixr: see 'Predicate.>>'
 --
 -- >>> pz @(Do [Pred, ShowP Id, Id &&& Len]) 9876543
 -- Val ("9876542",7)
@@ -1850,17 +1876,41 @@ instance ( Show (PP p a)
 -- Present 3 ((>>) 3 | {'3})
 -- Val 3
 --
-
-data Do (ps :: [k])
+data Do (ps :: [k]) -- infixr same as >>
 
 instance (P (DoExpandT ps) a) => P (Do ps) a where
   type PP (Do ps) a = PP (DoExpandT ps) a
   eval _ = eval (Proxy @(DoExpandT ps))
 
-type family DoExpandT (ps :: [k]) :: Type where
-  DoExpandT '[] = GL.TypeError ('GL.Text "'[] invalid: requires at least one predicate in the list")
-  DoExpandT '[p] = Id >> p -- need this else fails cos 1 is nat and would mean that the result is nat not Type!
+-- need both :: Type and (Id >> p or W)
+type family DoExpandT (ps :: [k]) :: Type where -- need Type not k else No instance for GN.KnownNat: pl @(Do '[4,5,6]) ()
+  DoExpandT '[] = GL.TypeError ('GL.Text "DoExpandT '[] invalid: requires at least one predicate in the list")
+  DoExpandT '[p] = W p -- need W or Id >> p else will fail with No instance for Show: pl @(Do '[4,5,6]) ()
   DoExpandT (p ': p1 ': ps) = p >> DoExpandT (p1 ': ps)
+
+-- | processes a type level list predicates running each in sequence with infixl: see 'Predicate.>>'
+--
+-- >>> pz @(DoL [Pred, ShowP Id, Id &&& Len]) 9876543
+-- Val ("9876542",7)
+--
+-- >>> pz @(DoL [2,3,4]) ()
+-- Val 4
+--
+-- >>> pl @(DoL '[4,5,6]) ()
+-- Present 6 ((>>) 6 | {'6})
+-- Val 6
+--
+data DoL (ps :: [k]) -- infixl unlike >>
+
+instance (P (DoExpandLT ps) a) => P (DoL ps) a where
+  type PP (DoL ps) a = PP (DoExpandLT ps) a
+  eval _ = eval (Proxy @(DoExpandLT ps))
+
+type family DoExpandLT (ps :: [k]) :: Type where
+  DoExpandLT '[] = GL.TypeError ('GL.Text "DoExpandT '[] invalid: requires at least one predicate in the list")
+  DoExpandLT '[p] = W p
+  DoExpandLT (p ': p1 ': '[]) = p >> p1
+  DoExpandLT (p ': p1 ': p2 ': ps) = (p >> p1) >> DoExpandLT (p2 ': ps)
 
 -- | similar to 'Prelude.&&'
 --
@@ -2136,7 +2186,7 @@ instance P (p q) a => P (p $ q) a where
 -- Val 1
 --
 -- >>> pl @(2 & (&&&) "abc") ()
--- Present ("abc",2) (W '("abc",2))
+-- Present ("abc",2) ('("abc",2))
 -- Val ("abc",2)
 --
 -- >>> pl @(2 & '(,) "abc") ()
@@ -2271,7 +2321,7 @@ instance GetWeekDay 'Saturday where
 -- Val 10
 --
 data L11
-type L11T = L1 (L1 Id)
+type L11T = MsgI "L11:" (L1 (L1 Id))
 
 instance P L11T x => P L11 x where
   type PP L11 x = PP L11T x
@@ -2283,7 +2333,7 @@ instance P L11T x => P L11 x where
 -- Val "ss"
 --
 data L12
-type L12T = L2 (L1 Id)
+type L12T = MsgI "L12:" (L2 (L1 Id))
 
 instance P L12T x => P L12 x where
   type PP L12 x = PP L12T x
@@ -2295,7 +2345,7 @@ instance P L12T x => P L12 x where
 -- Val 4.5
 --
 data L13
-type L13T = L3 (L1 Id)
+type L13T = MsgI "L13:" (L3 (L1 Id))
 
 instance P L13T x => P L13 x where
   type PP L13 x = PP L13T x
@@ -2307,7 +2357,7 @@ instance P L13T x => P L13 x where
 -- Val 10
 --
 data L21
-type L21T = L1 (L2 Id)
+type L21T = MsgI "L21:" (L1 (L2 Id))
 
 instance P L21T x => P L21 x where
   type PP L21 x = PP L21T x
@@ -2319,7 +2369,7 @@ instance P L21T x => P L21 x where
 -- Val "ss"
 --
 data L22
-type L22T = L2 (L2 Id)
+type L22T = MsgI "L22:" (L2 (L2 Id))
 
 instance P L22T x => P L22 x where
   type PP L22 x = PP L22T x
@@ -2331,7 +2381,7 @@ instance P L22T x => P L22 x where
 -- Val 4.5
 --
 data L23
-type L23T = L3 (L2 Id)
+type L23T = MsgI "L23:" (L3 (L2 Id))
 
 instance P L23T x => P L23 x where
   type PP L23 x = PP L23T x
@@ -2343,7 +2393,7 @@ instance P L23T x => P L23 x where
 -- Val 'c'
 --
 data L31
-type L31T = L1 (L3 Id)
+type L31T = MsgI "L31:" (L1 (L3 Id))
 
 instance P L31T x => P L31 x where
   type PP L31 x = PP L31T x
@@ -2355,7 +2405,7 @@ instance P L31T x => P L31 x where
 -- Val 4
 --
 data L32
-type L32T = L2 (L3 Id)
+type L32T = MsgI "L32:" (L2 (L3 Id))
 
 instance P L32T x => P L32 x where
   type PP L32 x = PP L32T x
@@ -2367,7 +2417,7 @@ instance P L32T x => P L32 x where
 -- Val False
 --
 data L33
-type L33T = L3 (L3 Id)
+type L33T = MsgI "L33:" (L3 (L3 Id))
 
 instance P L33T x => P L33 x where
   type PP L33 x = PP L33T x

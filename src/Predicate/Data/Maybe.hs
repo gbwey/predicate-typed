@@ -292,11 +292,11 @@ instance x ~ Maybe a
 -- Val True
 --
 -- >>> pl @(Not IsNothing &&& ('Just Id >> Id + 12)) (Just 1)
--- Present (True,13) (W '(True,13))
+-- Present (True,13) ('(True,13))
 -- Val (True,13)
 --
 -- >>> pl @(Not IsNothing &&& ('Just Id >> Id + 12)) Nothing
--- Error 'Just(empty) (W '(,))
+-- Error 'Just(empty) ('(,))
 -- Fail "'Just(empty)"
 --
 data IsNothing

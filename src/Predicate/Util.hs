@@ -38,12 +38,14 @@ module Predicate.Util (
   , _True
   , _False
   , _ValEither
-  , _Val2P
-  , _Val2BoolP
+  , val2P
+  , val2PBool
 
   -- ** TT
   , TT(..)
   , ttVal
+  , ttVal'
+  , ttValBool'
   , ttValP
   , ttString
   , ttForest
@@ -62,20 +64,20 @@ module Predicate.Util (
 
  -- ** create tree
   , mkNode
-  , mkNodeCopy
   , mkNodeB
+  , mkNodeCopy
 
  -- ** tree manipulation
   , getValAndPE
   , getValLRFromTT
   , getValueLR
-  , getValueLRMerge
+  , getValueLRInline
   , fixLite
   , prefixNumberToTT
   , prefixMsg
   , splitAndAlign
   , verboseList
-  , fixTTValP
+  , fixTTBool
   , topMessage
   , hasNoTree
 
@@ -147,6 +149,7 @@ module Predicate.Util (
   , chkSize2
   , badLength
   , showIndex
+
   ) where
 import Predicate.Misc
 import GHC.TypeLits (Symbol, Nat, KnownSymbol, KnownNat)
@@ -351,18 +354,11 @@ instance Applicative TT where
 
 instance Monad TT where
   return = pure
-{- yurk
-  TT _ (Val a) ss ts >>= amb =
-    let TT bp bt ss1 ts1 = amb a
-    in TT bp bt (jamSS ss ss1) (ts <> ts1)
-  TT _ (Fail e) ss ts >>= _ = TT (FailP e) (Fail e) ss ts
--}
   z@(TT _ bt ss ts) >>= amb =
      case bt of
        Val a -> amb a & ttString %~ jamSS ss
                       & ttForest %~ (ts <>)
-       Fail e -> z & ttVal .~ Fail e
-                   & ttValP .~ FailP e
+       Fail e -> z & ttVal' .~ Fail e
 
 -- | creates a Node for the evaluation tree
 mkNodeCopy :: POpts
@@ -370,7 +366,7 @@ mkNodeCopy :: POpts
        -> String
        -> [Tree PE]
        -> TT a
-mkNodeCopy opts tt = mkNodeImpl opts (_ttValP tt) (_ttVal tt)
+mkNodeCopy opts = mkNodeImpl opts . (_ttValP &&& _ttVal)
 
 -- | creates a Node for the evaluation tree
 mkNode :: POpts
@@ -378,16 +374,15 @@ mkNode :: POpts
        -> String
        -> [Tree PE]
        -> TT a
-mkNode opts bt = mkNodeImpl opts (bt ^. _Val2P) bt
+mkNode opts = mkNodeImpl opts . (view val2P &&& id)
 
 -- | creates a Node for the evaluation tree
 mkNodeImpl :: POpts
-           -> ValP
-           -> Val a
+           -> (ValP, Val a)
            -> String
            -> [Tree PE]
            -> TT a
-mkNodeImpl opts bp' bt ss hs =
+mkNodeImpl opts (bp',bt) ss hs =
   let bp = validateValP bp' bt
   in case oDebug opts of
       DZero -> TT bp bt "" []
@@ -411,8 +406,15 @@ validateValP bp bt =
                 _ -> errorInProgram $ "validateValP: found " ++ show bp ++ " expected FailP e=" ++ e
 
 -- | fix the 'ValP' value for the Bool case: ie use 'TrueP' and 'FalseP'
-fixTTValP :: TT Bool -> TT Bool
-fixTTValP tt = tt { _ttValP = tt ^. ttVal . _Val2BoolP }
+--
+-- >>> fixTTBool (TT ValP (Val True) "x" []) == TT TrueP (Val True) "x" []
+-- True
+--
+-- >>> fixTTBool (TT FalseP (Fail "abc") "x" []) == TT (FailP "abc") (Fail "abc") "x" []
+-- True
+--
+fixTTBool :: TT Bool -> TT Bool
+fixTTBool = over ttValBool' id
 
 -- | creates a Boolean node for a predicate type
 mkNodeB :: POpts
@@ -420,7 +422,7 @@ mkNodeB :: POpts
         -> String
         -> [Tree PE]
         -> TT Bool
-mkNodeB opts b = mkNodeImpl opts (bool FalseP TrueP b) (Val b)
+mkNodeB opts = mkNodeImpl opts . (bool FalseP TrueP &&& Val)
 
 -- | convenience method to pull parts out of 'TT'
 getValAndPE :: TT a -> (Either String a, Tree PE)
@@ -445,13 +447,11 @@ getValueLR opts msg0 tt hs =
        (getValLRFromTT tt)
 
 -- | decorate the tree with more detail when there are errors
-getValueLRMerge :: POpts
+getValueLRInline :: POpts
            -> TT a
            -> [Tree PE]
            -> Either (TT x) a
-getValueLRMerge opts tt hs =
---  left (\e -> tt & ttVal .~ Fail e
---                 & ttForest %~ (hs <>))
+getValueLRInline opts tt hs =
   left (\e -> mkNode opts (Fail e) (_ttString tt) (hs <> _ttForest tt))
        (getValLRFromTT tt)
 
@@ -750,7 +750,7 @@ groupErrors =
 partitionTTExtended :: (w, TT a) -> Either ((w, TT x), String) (a, w, TT a)
 partitionTTExtended (s, t) =
   case _ttVal t of
-    Fail e -> Left ((s, t & ttVal .~ Fail e), e)
+    Fail e -> Left ((s, t & ttVal' .~ Fail e), e)
     Val a -> Right (a,s,t)
 
 formatList :: forall x z . Show x
@@ -824,7 +824,7 @@ colorValBool ::
    -> Val Bool
    -> String
 colorValBool o r =
-  colorMe o (r ^. _Val2BoolP)
+  colorMe o (r ^. val2PBool)
   $ case r of
       Fail e -> "Fail " <> e
       Val True -> "TrueT"
@@ -1270,38 +1270,75 @@ _ValEither = iso fw bw
 
 -- | a lens from typed 'Val' to the untyped 'ValP'
 --
--- >>> Val True ^. _Val2P
+-- >>> Val True ^. val2P
 -- ValP
 --
--- >>> Val 123 ^. _Val2P
+-- >>> Val 123 ^. val2P
 -- ValP
 --
--- >>> Fail "abc" ^. _Val2P
+-- >>> Fail "abc" ^. val2P
 -- FailP "abc"
 --
-_Val2P :: Lens' (Val a) ValP
-_Val2P afb bt = bt <$ afb r
+val2P :: Lens' (Val a) ValP
+val2P afb bt = bt <$ afb r
   where r = case bt of
               Fail e -> FailP e
               Val {} -> ValP
 
 -- | a lens from typed 'Val' Bool to the untyped 'ValP'
 --
--- >>> Val True ^. _Val2BoolP
+-- >>> Val True ^. val2PBool
 -- TrueP
 --
--- >>> Val False ^. _Val2BoolP
+-- >>> Val False ^. val2PBool
 -- FalseP
 --
--- >>> Fail "abc" ^. _Val2BoolP
+-- >>> Fail "abc" ^. val2PBool
 -- FailP "abc"
 --
-_Val2BoolP :: a ~ Bool => Lens' (Val a) ValP
-_Val2BoolP afb bt = bt <$ afb r
+val2PBool :: a ~ Bool => Lens' (Val a) ValP
+val2PBool afb bt = bt <$ afb r
   where r = case bt of
               Fail e -> FailP e
               Val True -> TrueP
               Val False -> FalseP
 
+-- | lens that ensures _ttValP is in sync with _ttVal
+--
+-- >>> (TT ValP (Val True) "xxx" [] & ttValBool' %~ \b -> fmap not b) == TT FalseP (Val False) "xxx" []
+-- True
+--
+-- >>> (TT ValP (Val True) "xxx" [] & ttValBool' .~ Fail "abc") == TT (FailP "abc") (Fail "abc") "xxx" []
+-- True
+--
+-- >>> (TT ValP (Val True) "xxx" [] & ttValBool' %~ id) == TT TrueP (Val True) "xxx" []
+-- True
+--
+-- >>> (TT FalseP (Val True) "xxx" [] & ttValBool' %~ id) == TT TrueP (Val True) "xxx" []
+-- True
+--
+ttValBool' :: a ~ Bool => Lens' (TT a) (Val Bool)
+ttValBool' afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
+  where f = \case
+               Fail e -> FailP e
+               Val True -> TrueP
+               Val False -> FalseP
+
+-- | lens that ensures _ttValP is in sync with _ttVal for TT Bool
+--
+-- >>> (TT FalseP (Val True) "xxx" [] & ttVal' %~ id) == TT ValP (Val True) "xxx" []
+-- True
+--
+-- >>> (TT FalseP (Val 123) "xxx" [] & ttVal' .~ Fail "aa") == TT (FailP "aa") (Fail "aa") "xxx" []
+-- True
+--
+-- >>> (TT (FailP "sdf") (Val 123) "xxx" [] & ttVal' %~ fmap show) == TT ValP (Val "123") "xxx" []
+-- True
+--
+ttVal' :: Lens (TT a) (TT b) (Val a) (Val b)
+ttVal' afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
+  where f = \case
+               Fail e -> FailP e
+               Val {} -> ValP
 
 

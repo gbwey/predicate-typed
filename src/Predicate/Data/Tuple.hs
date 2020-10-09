@@ -57,7 +57,7 @@ import GHC.TypeNats (Nat, KnownNat)
 -- | duplicate a value into a tuple
 --
 -- >>> pl @Dup 4
--- Present (4,4) (W '(4,4))
+-- Present (4,4) ('(4,4))
 -- Val (4,4)
 --
 -- >>> pl @(Dup >> Id) 4
@@ -65,11 +65,11 @@ import GHC.TypeNats (Nat, KnownNat)
 -- Val (4,4)
 --
 -- >>> pl @(Dup << Fst * Snd) (4,5)
--- Present (20,20) ((>>) (20,20) | {W '(20,20)})
+-- Present (20,20) ((>>) (20,20) | {'(20,20)})
 -- Val (20,20)
 --
 -- >>> pl @(Fst * Snd >> Dup) (4,5)
--- Present (20,20) ((>>) (20,20) | {W '(20,20)})
+-- Present (20,20) ((>>) (20,20) | {'(20,20)})
 -- Val (20,20)
 --
 data Dup
@@ -122,23 +122,23 @@ instance Show a => P Pairs [a] where
 -- Val 127
 --
 -- >>> pl @(4 &&& "sadf" &&& 'LT) ()
--- Present (4,("sadf",LT)) (W '(4,("sadf",LT)))
+-- Present (4,("sadf",LT)) ('(4,("sadf",LT)))
 -- Val (4,("sadf",LT))
 --
 -- >>> pl @(Id &&& '() &&& ()) (Just 10)
--- Present (Just 10,((),())) (W '(Just 10,((),())))
+-- Present (Just 10,((),())) ('(Just 10,((),())))
 -- Val (Just 10,((),()))
 --
 -- >>> pl @(Fst &&& Snd &&& Thd &&& ()) (1,'x',True)
--- Present (1,('x',(True,()))) (W '(1,('x',(True,()))))
+-- Present (1,('x',(True,()))) ('(1,('x',(True,()))))
 -- Val (1,('x',(True,())))
 --
 -- >>> pl @(Fst &&& Snd &&& Thd &&& ()) (1,'x',True)
--- Present (1,('x',(True,()))) (W '(1,('x',(True,()))))
+-- Present (1,('x',(True,()))) ('(1,('x',(True,()))))
 -- Val (1,('x',(True,())))
 --
 -- >>> pl @(Fst &&& Snd &&& Thd &&& ()) (1,1.4,"aaa")
--- Present (1,(1.4,("aaa",()))) (W '(1,(1.4,("aaa",()))))
+-- Present (1,(1.4,("aaa",()))) ('(1,(1.4,("aaa",()))))
 -- Val (1,(1.4,("aaa",())))
 --
 data p &&& q

@@ -335,7 +335,7 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 -- Val LT
 --
 -- >>> pl @(Fst ===~ Snd &&& Fst ==! Snd) ("abc","abc")
--- Present (EQ,EQ) (W '(EQ,EQ))
+-- Present (EQ,EQ) ('(EQ,EQ))
 -- Val (EQ,EQ)
 --
 --

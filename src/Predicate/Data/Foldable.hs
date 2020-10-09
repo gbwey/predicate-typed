@@ -456,7 +456,7 @@ instance P NullT a => P Null a where
 -- Val True
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) &&& FoldMap (SG.Sum _) Id) [1..20]
--- Present (False,210) (W '(False,210))
+-- Present (False,210) ('(False,210))
 -- Val (False,210)
 --
 -- >>> pl @(FoldMap SG.Any Id) [False,False,True,False]

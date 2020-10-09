@@ -518,7 +518,7 @@ instance ( KnownNat n
        Left e -> pure e
        Right b -> do
                     qq <- eval (Proxy @(ParaImpl n (p1 ': ps))) opts as
-                    pure $ case getValueLRMerge opts qq [hh pp] of
+                    pure $ case getValueLRInline opts qq [hh pp] of
                       Left e -> e -- & ttString %~ (\x -> x <> (if null x then "" else " ") <> showL opts b)
                       Right bs -> mkNode opts (Val (b:bs)) (msgbase1 <> " " <> showL opts (b:bs) <> showVerbose opts " | " (a:as)) [hh pp, hh qq]
 

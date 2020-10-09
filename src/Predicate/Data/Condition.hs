@@ -339,7 +339,7 @@ instance ( KnownNat n
               Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
-            pure $ case getValueLRMerge opts ww [hh rr, hh pp] of
+            pure $ case getValueLRInline opts ww [hh rr, hh pp] of
               Left e -> e
               Right b -> mkNode opts (Val b) (show3 opts msgbase1 b a) [hh rr, hh pp, hh ww]
 
@@ -443,11 +443,10 @@ instance ( PP prt (Int, a) ~ String
             pure $ mkNode opts (Val [a]) msgbase2 [hh pp]
          else do
            ss <- eval (Proxy @(GuardsImpl n ps)) opts as
-           pure $ case getValueLRMerge opts ss [hh pp] of
+           pure $ case getValueLRInline opts ss [hh pp] of
              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
              Right zs -> ss & ttForest %~ (hh pp:)
-                            & ttVal .~ Val (a:zs)
-                            & ttValP .~ ValP
+                            & ttVal' .~ Val (a:zs)
 
 -- | GuardsQuick contain a type level list of conditions and one of matching values: on no match will fail using the first parameter
 --
@@ -597,7 +596,7 @@ instance ( PP prt (Int, a) ~ String
             pure $ mkNodeB opts True msgbase2 [hh pp]
          else do
            ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
-           pure $ case getValueLRMerge opts ss [hh pp] of
+           pure $ case getValueLRInline opts ss [hh pp] of
              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
              Right _ -> ss & ttForest %~ (hh pp:)
 
@@ -781,7 +780,7 @@ instance ( x ~ [a]
 -- Fail "someval"
 --
 -- >>> pl @(Guard "someval" (Len == 2) >> (Id &&& ShowP Id)) [2,3]
--- Present ([2,3],"[2,3]") ((>>) ([2,3],"[2,3]") | {W '([2,3],"[2,3]")})
+-- Present ([2,3],"[2,3]") ((>>) ([2,3],"[2,3]") | {'([2,3],"[2,3]")})
 -- Val ([2,3],"[2,3]")
 --
 -- >>> pl @(Guard "someval" (Len == 2) >> (ShowP Id &&& Id)) [2,3,4]

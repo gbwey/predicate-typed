@@ -107,6 +107,7 @@ import Control.Comonad (Comonad(duplicate, extract))
 import Data.Coerce (Coercible)
 import Control.Lens
 import qualified Safe (headNote, cycleNote)
+import Data.Tree
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -1002,7 +1003,7 @@ instance ( P p x
     pp <- eval (Proxy @p) opts x
     case getValueLR opts msg0 pp [] of
       Left e -> do
-         let emsg = e ^?! ttVal . _Fail -- extract the failt string a push back into the fail case
+         let emsg = e ^?! ttVal' . _Fail -- extract the failt string a push back into the fail case
          qq <- eval (Proxy @q) opts ((emsg, x), Proxy @(PP p x))
          pure $ case getValueLR opts (msg0 <> " default condition failed") qq [hh pp] of
             Left e1 -> e1
@@ -1059,11 +1060,11 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 -- Present "skip" (K '"skip")
 -- Val "skip"
 --
--- >>> pl @(L3 $ L2 $ L1 $ K Id "dud") ((1,("W",9,'a')),(3,4))
--- Present 'a' (Thd 'a' | ("W",9,'a'))
+-- >>> pl @(L3 $ L2 $ L1 $ K Id "dud") ((1,("X",9,'a')),(3,4))
+-- Present 'a' (Thd 'a' | ("X",9,'a'))
 -- Val 'a'
 --
--- >>> pl @((L3 $ L2 $ L1 $ K Id "dud") >> Pred) ((1,("W",9,'a')),(3,4))
+-- >>> pl @((L3 $ L2 $ L1 $ K Id "dud") >> Pred) ((1,("X",9,'a')),(3,4))
 -- Present '`' ((>>) '`' | {Pred '`' | 'a'})
 -- Val '`'
 --
@@ -1092,7 +1093,7 @@ instance P (LiftT p q) x => P (Lift p q) x where
 -- | application using a Proxy: @q@ must be of kind Type else ambiguous k0 error
 --
 -- >>> pl @(Apply1 (MsgI "hello ")) (Proxy @(W "there"),()) -- have to wrap Symbol
--- Present "there" (hello W '"there")
+-- Present "there" (hello '"there")
 -- Val "there"
 --
 -- >>> pl @(Apply1 Length) (Proxy @Snd,(True,"abcdef"))
@@ -1134,7 +1135,7 @@ instance forall p q x . (P (p q) x)
 -- Val 10
 --
 -- >>> pl @(Apply2 (&&&)) ((Proxy @(W "abc"),Proxy @(W 13)), ())
--- Present ("abc",13) (W '("abc",13))
+-- Present ("abc",13) ('("abc",13))
 -- Val ("abc",13)
 --
 data Apply2 (p :: Type -> Type -> Type)
@@ -1305,24 +1306,22 @@ instance P IListT x => P IList x where
 --    `- P Id True
 -- Val [False,True,True]
 --
+-- >>> pan @(FMap IdBool) (Just True)
+-- P FMap IdBool
+-- |
+-- `- True IdBool
+-- Val (Just True)
+--
 data FMap p
 
 instance ( Traversable n
          , P p a
-         , PP p a ~ b
+--         , PP p a ~ b
          ) => P (FMap p) (n a) where
   type PP (FMap p) (n a) = n (PP p a)
   eval _ opts na = do
     let msg0 = "FMap"
-    nttb <- traverse (fmap (\tt -> tt & ttString %~ litL opts
-                                      & ttForest .~ [hh tt]) . eval (Proxy @p) opts) na
-    let ttnb = sequenceA nttb
-    pure $ case getValueLR opts msg0 ttnb [] of
-      Left e -> e
-      Right ret -> (case (_ttString ttnb,_ttForest ttnb) of
-                     ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"
-                     _ -> ttnb & ttString %~ \y -> msg0 <> nullIf " " y)
-                               & ttVal .~ Val ret
+    _fmapImpl opts (Proxy @p) msg0 [] na
 
 -- | similar to 'Data.Functor.<$>'
 --
@@ -1356,17 +1355,29 @@ instance ( Traversable n
     qq <- eval (Proxy @q) opts x
     case getValueLR opts msg0 qq [] of
       Left e -> pure e
-      Right q -> do
+      Right q -> _fmapImpl opts (Proxy @p) msg0 [hh qq] q
+
+_fmapImpl :: forall m n p a
+  . ( P p a
+    , Traversable n
+    , MonadEval m
+    ) => POpts
+      -> Proxy p
+      -> String
+      -> [Tree PE]
+      -> n a
+      -> m (TT (n (PP p a)))
+_fmapImpl opts proxyp msg0 hhs na = do
         nttb <- traverse (fmap (\tt -> tt & ttString %~ litL opts
-                                          & ttForest .~ [hh tt]) . eval (Proxy @p) opts) q
+                                          & ttForest .~ [hh tt]) . eval proxyp opts) na
         let ttnb = sequenceA nttb
-        pure $ case getValueLR opts msg0 ttnb [hh qq] of
+        pure $ case getValueLR opts msg0 ttnb hhs of
           Left e -> e
-          Right ret -> (case (_ttString ttnb,_ttForest ttnb) of
-                         ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"
-                         _ -> ttnb & ttString %~ \y -> msg0 <> nullIf " " y)
-                                 & ttVal .~ Val ret
-                                 & ttForest %~ (hh qq:)
+          Right ret -> let z = case (_ttString ttnb,_ttForest ttnb) of
+                                 ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"
+                                 _ -> ttnb & ttString %~ (msg0 <>) . nullIf " "
+                       in z & ttVal' .~ Val ret
+                            & ttForest %~ (hhs <>)
 
 -- | similar to 'Data.Functor.<&>'
 --

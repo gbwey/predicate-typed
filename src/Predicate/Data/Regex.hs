@@ -365,7 +365,7 @@ instance ( GetROpts rs
 -- Val ([141,214,125,1,2,3333],(False,False))
 --
 -- >>> pl @(Map (ReadP Int Id) (Resplit "\\.") >> Id &&& ((Len == 4) &&& All (0 <..> 0xff))) "141.214.125.1.2.6"
--- Present ([141,214,125,1,2,6],(False,True)) ((>>) ([141,214,125,1,2,6],(False,True)) | {W '([141,214,125,1,2,6],(False,True))})
+-- Present ([141,214,125,1,2,6],(False,True)) ((>>) ([141,214,125,1,2,6],(False,True)) | {'([141,214,125,1,2,6],(False,True))})
 -- Val ([141,214,125,1,2,6],(False,True))
 --
 -- >>> pl @(Resplit "\\." >> Map (ReadP Int Id) Id >> Id &&& ((Len == 4) &&& All (0 <..> 0xff))) "141.214.125."
