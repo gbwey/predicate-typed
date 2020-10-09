@@ -638,7 +638,7 @@ instance ( Show (PP p a)
       Left e -> pure e
       Right p -> do
         qq <- eval (Proxy @(p1 ': ps)) opts a
-        pure $ case getValueLR opts (_ttString qq) qq [hh pp] of
+        pure $ case getValueLRMerge opts qq [hh pp] of
           Left e -> e
           Right q ->
             let ret = p:q
@@ -1053,7 +1053,7 @@ instance ( P p a
         -- need to look inside to see if there is already an exception in ttForest
           Left e | isVerbose opts -> e
                  | otherwise ->
-                    if anyOf (ttForest . traverse . root . peValP) (has _FailP) qq
+                    if anyOf (ttForest . folded . root . peValP) (has _FailP) qq
                     then qq & ttForest %~ (hh pp:) -- we still need pp for context
                     else e
           Right q -> mkNodeCopy opts qq (lit3 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
@@ -1860,7 +1860,6 @@ instance (P (DoExpandT ps) a) => P (Do ps) a where
 type family DoExpandT (ps :: [k]) :: Type where
   DoExpandT '[] = GL.TypeError ('GL.Text "'[] invalid: requires at least one predicate in the list")
   DoExpandT '[p] = Id >> p -- need this else fails cos 1 is nat and would mean that the result is nat not Type!
-  -- if p >> Id then turns Val True to Val True
   DoExpandT (p ': p1 ': ps) = p >> DoExpandT (p1 ': ps)
 
 -- | similar to 'Prelude.&&'
@@ -1900,7 +1899,7 @@ instance ( P p a
                   (False, True) -> topMessage pp
                   (True, False) -> topMessage qq
                   (False, False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
-        in mkNodeB opts (p&&q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> (if null zz then zz else " | " <> zz)) [hh pp, hh qq]
+        in mkNodeB opts (p&&q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> nullIf " | " zz) [hh pp, hh qq]
 
 -- | short circuit version of boolean And
 --
@@ -2039,7 +2038,7 @@ instance ( P p a
         let zz = case (p,q) of
                   (True,False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
                   _ -> ""
-        in mkNodeB opts (p~>q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> (if null zz then zz else " | " <> zz)) [hh pp, hh qq]
+        in mkNodeB opts (p~>q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> nullIf " | " zz) [hh pp, hh qq]
 
 
 -- | swaps using 'SwapC'

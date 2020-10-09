@@ -32,7 +32,6 @@
 -- @
 -- similar to 'Predicate.Refined2.Refined2' but also provides:
 -- * quickCheck methods
--- * ability to combine refinement types
 -- * a canonical output value using the \'fmt\' parameter
 -- @
 --
@@ -465,7 +464,7 @@ newRefined3P' _ i = do
 -- Left Step 2. Failed Boolean Check(op) | 0xFE is too large
 --
 -- >>> newRefined3 @OZ @(ReadBase Int 16) @(Lt 255) @(PrintF "%x" Id) "00fg"
--- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
+-- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
 --
 -- >>> newRefined3 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
@@ -490,10 +489,19 @@ newRefined3P' _ i = do
 -- Right (Refined3 {r3In = 01:15:07, r3Out = "01:15:07"})
 --
 -- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S") @'True @(FormatTimeP "%H:%M:%S") "1:2:x"
--- Left Step 1. Initial Conversion(ip) Failed | ParseTimeP TimeOfDay (%-H:%-M:%-S) failed to parse
+-- Left Step 1. Failed Initial Conversion(ip) | ParseTimeP TimeOfDay (%-H:%-M:%-S) failed to parse
 --
 -- >>> newRefined3 @OL @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" >> L2 Head >> Map (ReadP Int Id) Id) @(All (0 <..> 59) && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"
 -- Right (Refined3 {r3In = [1,2,3], r3Out = "01:02:03"})
+--
+-- >>> newRefined3 @OL @(Resplit "\\." >> Map (ReadP Int Id) Id) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.251"
+-- Right (Refined3 {r3In = [13,2,1,251], r3Out = "013.002.001.251"})
+--
+-- >>> newRefined3 @OZ @(Resplit "\\." >> Map (ReadP Int Id) Id) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.259"
+-- Left Step 2. Failed Boolean Check(op) | Bool(3) [oops]
+--
+-- >>> newRefined3 @OZ @(Resplit "\\." >> Map (ReadP Int Id) Id) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.253.1"
+-- Left Step 2. Failed Boolean Check(op) | Bools:invalid length(5) expected 4
 --
 newRefined3 :: forall opts ip op fmt i
   . ( Refined3C opts ip op fmt i
@@ -598,12 +606,12 @@ prt3Impl opts v =
                      | otherwise = Msg3 m n r bp
   in case v of
        RF e t1 ->
-         let (m,n) = ("Step 1. Initial Conversion(ip) Failed", e)
+         let (m,n) = ("Step 1. " <> colorValPShort opts (FailP e) <> " Initial Conversion(ip)", e)
              r = outmsg m
               <> prtTreePure opts t1
          in mkMsg3 m n r (t1 ^. root . peValP)
        RTF a t1 e t2 ->
-         let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
+         let (m,n) = ("Step 2. " <> colorValPShort opts (FailP e) <> " Boolean Check(op)", e)
              r = msg1 a
               <> fixLite opts a t1
               <> "\n"
@@ -611,7 +619,7 @@ prt3Impl opts v =
               <> prtTreePure opts t2
          in mkMsg3 m n r (t2 ^. root . peValP)
        RTFalse a t1 t2 ->
-         let (m,n) = ("Step 2. False Boolean Check(op)", z)
+         let (m,n) = ("Step 2. " <> colorValPShort opts FalseP <> " Boolean Check(op)", z)
              z = let w = t2 ^. root . peString
                  in if all isSpace w then "FalseP" else "{" <> w <> "}"
              r = msg1 a
@@ -621,7 +629,7 @@ prt3Impl opts v =
               <> prtTreePure opts t2
          in mkMsg3 m n r FalseP
        RTTrueF a t1 t2 e t3 ->
-         let (m,n) = ("Step 3. Failed Output Conversion(fmt)", e)
+         let (m,n) = ("Step 3. " <> colorValPShort opts (FailP e) <> " Output Conversion(fmt)", e)
              r = msg1 a
               <> fixLite opts a t1
               <> "\n"

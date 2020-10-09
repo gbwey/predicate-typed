@@ -518,8 +518,8 @@ instance ( KnownNat n
        Left e -> pure e
        Right b -> do
                     qq <- eval (Proxy @(ParaImpl n (p1 ': ps))) opts as
-                    pure $ case getValueLR opts (_ttString qq <> " " <> showL opts b) qq [hh pp] of
-                      Left e -> e
+                    pure $ case getValueLRMerge opts qq [hh pp] of
+                      Left e -> e -- & ttString %~ (\x -> x <> (if null x then "" else " ") <> showL opts b)
                       Right bs -> mkNode opts (Val (b:bs)) (msgbase1 <> " " <> showL opts (b:bs) <> showVerbose opts " | " (a:as)) [hh pp, hh qq]
 
 -- | leverages 'Para' for repeating expressions (passthrough method)
@@ -538,8 +538,11 @@ instance ( KnownNat n
 -- Val [1,2,3,4,12]
 --
 -- >>> pl @(ParaN 5 (Guard "0-255" (Between 0 255 Id))) [1,2,3,400,12]
--- Error 0-255 (Para(3 of 4) 3 2 1)
+-- Error 0-255 (Para(3 of 4))
 -- Fail "0-255"
+--
+-- >>> pz @(ParaN 5 (Guard (PrintF "bad value %d" Id) (Between 0 255 Id))) [1,2,3,400,12]
+-- Fail "bad value 400"
 --
 -- >>> pl @(ParaN 4 (PrintF "%03d" Id)) [141,21,3,0::Int]
 -- Present ["141","021","003","000"] (Para(0) ["141","021","003","000"] | [141,21,3,0])

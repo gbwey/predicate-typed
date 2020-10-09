@@ -410,7 +410,7 @@ newRefined2P' _ i = do
 -- Left Step 2. Failed Boolean Check(op) | 0xFE is too large
 --
 -- >>> newRefined2 @OZ @(ReadBase Int 16) @(Lt 255) "00fg"
--- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
+-- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
 --
 -- >>> newRefined2 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
@@ -504,12 +504,12 @@ prt2Impl opts v =
                       | otherwise = Msg2 m n r bp
   in case v of
        RF e t1 ->
-         let (m,n) = ("Step 1. Initial Conversion(ip) Failed", e)
+         let (m,n) = ("Step 1. " <> colorValPShort opts (FailP e) <> " Initial Conversion(ip)", e)
              r = outmsg m
               <> prtTreePure opts t1
          in mkMsg2 m n r (t1 ^. root . peValP)
        RTF a t1 e t2 ->
-         let (m,n) = ("Step 2. Failed Boolean Check(op)", e)
+         let (m,n) = ("Step 2. " <> colorValPShort opts (FailP e) <> " Boolean Check(op)", e)
              r = msg1 a
               <> fixLite opts a t1
               <> "\n"
@@ -517,7 +517,7 @@ prt2Impl opts v =
               <> prtTreePure opts t2
          in mkMsg2 m n r (t2 ^. root . peValP)
        RTFalse a t1 t2 ->
-         let (m,n) = ("Step 2. False Boolean Check(op)", z)
+         let (m,n) = ("Step 2. " <> colorValPShort opts FalseP <> " Boolean Check(op)", z)
              z = let w = t2 ^. root . peString
                  in if all isSpace w then "FalseP" else "{" <> w <> "}"
              r = msg1 a

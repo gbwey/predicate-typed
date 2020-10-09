@@ -20,7 +20,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE LambdaCase #-}
 {- |
      extra promoted functions
 -}

@@ -164,7 +164,7 @@ luhn11 = mkProxy3'
 -- Right (Refined3 {r3In = 2018-09-14 02:57:04, r3Out = "2018-09-14 02:57:04"})
 --
 -- >>> newRefined3P (datetime1 @OL @LocalTime) "2018-09-99 12:12:12"
--- Left Step 1. Initial Conversion(ip) Failed | ParseTimeP LocalTime (%F %T) failed to parse
+-- Left Step 1. Failed Initial Conversion(ip) | ParseTimeP LocalTime (%F %T) failed to parse
 --
 datetime1 :: Proxy (DateTime1 opts t)
 datetime1 = mkProxy3
@@ -390,7 +390,7 @@ oknot = mkProxy3
 -- Right (Refined3 {r3In = "11111110", r3Out = "fe"})
 --
 -- >>> newRefined3P (Proxy @(BaseIJ OZ 16 2)) "fge"
--- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
+-- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
 --
 -- >>> newRefined3P (Proxy @(BaseIJ' OL 16 2 (ReadBase Int 2 < 1000))) "ffe"
 -- Left Step 2. False Boolean Check(op) | {4094 < 1000}
@@ -405,7 +405,7 @@ type BaseIJ' (opts :: Opt) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i >> S
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
 --
 -- >>> newRefined3P (readshow @OZ @Rational) "13x % 3"
--- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3)
+-- Left Step 1. Failed Initial Conversion(ip) | ReadP Ratio Integer (13x % 3)
 --
 -- >>> newRefined3P (readshow' @OZ @Rational @(3 % 1 <..> 5 % 1)) "13 % 3"
 -- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})

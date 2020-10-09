@@ -87,12 +87,12 @@ An example of an invalid refined2TH call
 >$$(refined2TH "2016-xy-09") :: Refined2 OU (ReadP Day Id) (Id > 'Just (MkDay '(2012,1,1))) String
 
 <interactive>:64:4: error:
-*** Step 1. Initial Conversion(ip) Failed ***
+*** Step 1. Failed Initial Conversion(ip) ***
 [Error ReadP Day (2016-xy-09)]
 |
 `- P Id "2016-xy-09"
 
-refined2TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09)
+refined2TH: predicate failed with Step 1. Failed Initial Conversion(ip) | ReadP Day (2016-xy-09)
     * In the Template Haskell splice $$(refined2TH "2016-xy-09")
       In the expression:
           $$(refined2TH "2016-xy-09") ::
@@ -110,9 +110,9 @@ Right (Refined2 {r2In = 254, r2Out = "00fe"})
 #### This example fails as the value is not a valid hexadecimal string
 ```haskell
 >either putStrLn print $ eitherDecode' @(Refined2 OU (ReadBase Int 16) 'True String) "\"00feg\""
-Error in $: Refined2:Step 1. Initial Conversion(ip) Failed | invalid base 16
+Error in $: Refined2:Step 1. Failed Initial Conversion(ip) | invalid base 16
 
-*** Step 1. Initial Conversion(ip) Failed ***
+*** Step 1. Failed Initial Conversion(ip) ***
 [Error invalid base 16] ReadBase(Int,16) as=00feg err=[(254,"g")]
 |
 `- P Id "00feg"

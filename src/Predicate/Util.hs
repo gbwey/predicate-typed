@@ -69,6 +69,7 @@ module Predicate.Util (
   , getValAndPE
   , getValLRFromTT
   , getValueLR
+  , getValueLRMerge
   , fixLite
   , prefixNumberToTT
   , prefixMsg
@@ -86,6 +87,7 @@ module Predicate.Util (
   , isVerbose
   , colorValBool
   , colorValP
+  , colorValPShort
   , setOtherEffects
   , type Color1
   , type Color2
@@ -196,8 +198,54 @@ data PE = PE { _peValP :: !ValP -- ^ holds the result of running the predicate
 
 makeLenses ''PE
 
+instance Monoid PE where
+  mempty = PE mempty mempty
+
+-- | concatenate two strings with delimiter
+--
+-- >>> jamSS "xyz" "abc"
+-- "xyz | abc"
+--
+-- >>> jamSS "" "abc"
+-- "abc"
+--
+-- >>> jamSS "xyz" ""
+-- "xyz"
+--
+-- >>> jamSS "" ""
+-- ""
+--
+jamSS :: String -> String -> String
+jamSS s s1 = s <> (if null s || null s1 then "" else " | ") <> s1
+
+instance Semigroup PE where
+  PE b s <> PE b1 s1 = PE (b <> b1) (jamSS s s1)
+
+-- | semigroup for ValP
+--
+-- >>> TrueP <> FalseP <> ValP
+-- ValP
+--
+-- >>> ValP <> TrueP <> FalseP
+-- FalseP
+--
+-- >>> FailP "abc" <> (TrueP <> FalseP) <> FailP "def"
+-- FailP "abc | def"
+--
+-- >>> (FailP "abc" <> TrueP) <> (FalseP <> FailP "def")
+-- FailP "abc | def"
+--
+-- >>> FailP "" <> (TrueP <> FalseP) <> FailP "def"
+-- FailP "def"
+--
+-- >>> FailP "abc" <> FailP "" <> FailP "def"
+-- FailP "abc | def"
+--
+-- >>> FailP "abc" <> FailP "xyz" <> FailP "def"
+-- FailP "abc | xyz | def"
+--
 instance Semigroup ValP where
-   FailP s <> FailP s1 = FailP (s <> " | " <> s1)
+   FailP s <> FailP s1 = FailP (jamSS s s1)
    FailP s <> _ = FailP s
    _ <> FailP s = FailP s
    _ <> ValP = ValP
@@ -239,11 +287,17 @@ instance Monad Val where
 -- >>> (Fail "abc" <> Val True) <> (Val False <> Fail "def")
 -- Fail "abc | def"
 --
+-- >>> Fail "" <> (Val True <> Val False) <> Fail "def"
+-- Fail "def"
+--
+-- >>> Fail "abc" <> Fail "" <> Fail "def"
+-- Fail "abc | def"
+--
 -- >>> Val False <> (Val True <> Val False) == (Val False <> Val True) <> Val False
 -- True
 --
 instance Semigroup (Val a) where
-   Fail s <> Fail s1 = Fail (s <> " | " <> s1)
+   Fail s <> Fail s1 = Fail (jamSS s s1)
    Fail s <> _ = Fail s
    _ <> Fail s = Fail s
    Val _ <> Val b = Val b
@@ -286,7 +340,7 @@ makeLenses ''TT
 
 instance Semigroup (TT a) where
    TT bp bt ss ts <> TT bp1 bt1 ss1 ts1 =
-     TT (bp <> bp1) (bt <> bt1) (ss <> (if null ss || null ss1 then "" else " | ") <> ss1) (ts <> ts1)
+     TT (bp <> bp1) (bt <> bt1) (jamSS ss ss1) (ts <> ts1)
 
 instance Monoid a => Monoid (TT a) where
    mempty = TT mempty mempty mempty mempty
@@ -300,12 +354,12 @@ instance Monad TT where
 {- yurk
   TT _ (Val a) ss ts >>= amb =
     let TT bp bt ss1 ts1 = amb a
-    in TT bp bt (ss <> (if null ss || null ss1 then "" else " | ") <> ss1) (ts <> ts1)
+    in TT bp bt (jamSS ss ss1) (ts <> ts1)
   TT _ (Fail e) ss ts >>= _ = TT (FailP e) (Fail e) ss ts
 -}
   z@(TT _ bt ss ts) >>= amb =
      case bt of
-       Val a -> amb a & ttString %~ (\ss1 -> ss <> (if null ss || null ss1 then "" else " | ") <> ss1)
+       Val a -> amb a & ttString %~ jamSS ss
                       & ttForest %~ (ts <>)
        Fail e -> z & ttVal .~ Fail e
                    & ttValP .~ FailP e
@@ -388,6 +442,17 @@ getValueLR :: POpts
            -> Either (TT x) a
 getValueLR opts msg0 tt hs =
   left (\e -> mkNode opts (Fail e) msg0 (hs ++ [hh tt]))
+       (getValLRFromTT tt)
+
+-- | decorate the tree with more detail when there are errors
+getValueLRMerge :: POpts
+           -> TT a
+           -> [Tree PE]
+           -> Either (TT x) a
+getValueLRMerge opts tt hs =
+--  left (\e -> tt & ttVal .~ Fail e
+--                 & ttForest %~ (hs <>))
+  left (\e -> mkNode opts (Fail e) (_ttString tt) (hs <> _ttForest tt))
        (getValLRFromTT tt)
 
 -- | elide the 'Identity' wrapper so it acts like a normal ADT
@@ -722,6 +787,20 @@ colorValP o b =
     ValP -> f "P "
     TrueP -> f "True "
     FalseP -> f "False "
+  where f = colorMe o b
+
+
+-- | render the 'ValP' value with colors
+colorValPShort ::
+     POpts
+  -> ValP
+  -> String
+colorValPShort o b =
+  case b of
+    FailP {} -> f "Failed"
+    TrueP -> f "True"
+    FalseP -> f "False"
+    ValP -> f "P"
   where f = colorMe o b
 
 -- | render the 'Val' value with colors

@@ -346,7 +346,7 @@ newRefined5P' _ i = do
 -- Left Step 2. Failed Boolean Check(op) | 0xFE is too large
 --
 -- >>> newRefined5 @OZ @(ReadBase Int 16) @(Lt 255) "00fg"
--- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
+-- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
 --
 -- >>> newRefined5 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}

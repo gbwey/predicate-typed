@@ -116,7 +116,7 @@ type Luhn (opts :: Opt) (n :: Nat) = '(opts, Luhnip, Luhnop n, String)
 -- Right (Refined2 {r2In = 2018-09-14 02:57:04, r2Out = "2018-09-14 02:57:04"})
 --
 -- >>> newRefined2 @OL @(Dtip LocalTime) @'True "2018-09-99 12:12:12"
--- Left Step 1. Initial Conversion(ip) Failed | ParseTimeP LocalTime (%F %T) failed to parse
+-- Left Step 1. Failed Initial Conversion(ip) | ParseTimeP LocalTime (%F %T) failed to parse
 --
 datetime1 :: Proxy (DateTime1 opts t)
 datetime1 = mkProxy2
@@ -279,7 +279,7 @@ type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n, p, String)
 -- Right (Refined2 {r2In = "11111110", r2Out = "fe"})
 --
 -- >>> newRefined2 @OZ @(BaseIJip 16 2) @'True "fge"
--- Left Step 1. Initial Conversion(ip) Failed | invalid base 16
+-- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
 --
 -- >>> newRefined2 @OL @(BaseIJip 16 2) @(ReadBase Int 2 < 1000) "ffe"
 -- Left Step 2. False Boolean Check(op) | {4094 < 1000}
@@ -296,7 +296,7 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, String
 -- Right (Refined2 {r2In = 13 % 3, r2Out = "13 % 3"})
 --
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @'True "13x % 3"
--- Left Step 1. Initial Conversion(ip) Failed | ReadP Ratio Integer (13x % 3)
+-- Left Step 1. Failed Initial Conversion(ip) | ReadP Ratio Integer (13x % 3)
 --
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @(3 % 1 <..> 5 % 1) "13 % 3"
 -- Right (Refined2 {r2In = 13 % 3, r2Out = "13 % 3"})

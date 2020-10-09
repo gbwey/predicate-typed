@@ -109,12 +109,12 @@ An example of an invalid refined3TH call
 
 <interactive>:719:4: error:
     *
-*** Step 1. Initial Conversion(ip) Failed ***
+*** Step 1. Failed Initial Conversion(ip) ***
 [Error ReadP Day (2016-xy-09)]
 |
 `- P Id "2016-xy-09"
 
-refined3TH: predicate failed with Step 1. Initial Conversion(ip) Failed | ReadP Day (2016-xy-09)
+refined3TH: predicate failed with Step 1. Failed Initial Conversion(ip) | ReadP Day (2016-xy-09)
     * In the Template Haskell splice $$(refined3TH "2016-xy-09")
       In the expression: $$(refined3TH "2016-xy-09") :: ReadShowR  OU Day
 ```
@@ -130,9 +130,9 @@ Right (Refined3 {r3In = 254, r3Out = "254"})
 #### This example fails as the value is not a valid hexadecimal string
 ```haskell
 >either putStrLn print $ eitherDecode' @(Refined3 OU (ReadBase Int 16) 'True (ShowP Id) String) "\"00feg\""
-Error in $: Refined3:Step 1. Initial Conversion(ip) Failed | invalid base 16
+Error in $: Refined3:Step 1. Failed Initial Conversion(ip) | invalid base 16
 
-***Step 1. Initial Conversion(ip) Failed ***
+***Step 1. Failed Initial Conversion(ip) ***
 
 [Error invalid base 16] ReadBase(Int,16) as=00feg err=[(254,"g")]
 |

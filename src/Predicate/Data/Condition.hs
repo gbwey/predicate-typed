@@ -41,6 +41,7 @@ module Predicate.Data.Condition (
   , BoolsQuick
   , BoolsN
 
+  , ToGuardsT
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -338,8 +339,8 @@ instance ( KnownNat n
               Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
-            pure $ case getValueLR opts (_ttString ww) ww [hh rr, hh pp] of
-              Left e -> e -- use original failure msg
+            pure $ case getValueLRMerge opts ww [hh rr, hh pp] of
+              Left e -> e
               Right b -> mkNode opts (Val b) (show3 opts msgbase1 b a) [hh rr, hh pp, hh ww]
 
 
@@ -403,7 +404,7 @@ instance ( [a] ~ x
          ) => P (GuardsImpl n ('[] :: [(k,k1)])) x where
   type PP (GuardsImpl n ('[] :: [(k,k1)])) x = x
 
-  eval _ opts [] = pure $ mkNode opts (Val []) ("Guards no data") []
+  eval _ opts [] = pure $ mkNode opts (Val []) "Guards:no data" []
 
   eval _ _ as@(_:_) = errorInProgram $ "GuardsImpl base case has extra data " ++ show as
 
@@ -442,7 +443,7 @@ instance ( PP prt (Int, a) ~ String
             pure $ mkNode opts (Val [a]) msgbase2 [hh pp]
          else do
            ss <- eval (Proxy @(GuardsImpl n ps)) opts as
-           pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
+           pure $ case getValueLRMerge opts ss [hh pp] of
              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
              Right zs -> ss & ttForest %~ (hh pp:)
                             & ttVal .~ Val (a:zs)
@@ -596,9 +597,9 @@ instance ( PP prt (Int, a) ~ String
             pure $ mkNodeB opts True msgbase2 [hh pp]
          else do
            ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
-           pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
+           pure $ case getValueLRMerge opts ss [hh pp] of
              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-             Right _ ->  ss & ttForest %~ (hh pp:)
+             Right _ -> ss & ttForest %~ (hh pp:)
 
 -- | boolean guard which checks a given a list of predicates against the list of values
 --
