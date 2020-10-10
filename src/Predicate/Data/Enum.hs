@@ -298,7 +298,7 @@ instance P (PredBT' q) x => P (PredB' q) x where
 -- Present CGt ((>>) CGt | {ToEnum CGt | 0})
 -- Val CGt
 --
--- >>> pl @(Map (FromEnum' Id) Id >> Map (ToEnum Char) Id) ("abcd" :: String)
+-- >>> pl @(Map (FromEnum' Id) >> Map (ToEnum Char)) "abcd"
 -- Present "abcd" ((>>) "abcd" | {Map "abcd" | [97,98,99,100]})
 -- Val "abcd"
 --
@@ -343,7 +343,7 @@ instance ( Show x
 -- >>> pz @(ToEnum Char) 120
 -- Val 'x'
 --
--- >>> pl @(Map FromEnum Id >> Map (Id - 97 >> ToEnum Ordering) Id) ("abcde" :: String)
+-- >>> pl @(Map FromEnum >> Map (Id - 97 >> ToEnum Ordering)) "abcde"
 -- Error ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2) (Map(i=3, a=100) excnt=2)
 -- Fail "ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2)"
 --
@@ -453,7 +453,7 @@ instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
 -- >>> pz @(EnumFromTo Pred Succ) (SG.Max 10)
 -- Val [Max {getMax = 9},Max {getMax = 10},Max {getMax = 11}]
 --
--- >>> pz @(EnumFromTo 1 20 >> Map '(Id, (If (Id `Mod` 3 == 0) "Fizz" "" <> If (Id `Mod` 5 == 0) "Buzz" "")) Id) 123
+-- >>> pz @(EnumFromTo 1 20 >> Map '(Id, (If (Id `Mod` 3 == 0) "Fizz" "" <> If (Id `Mod` 5 == 0) "Buzz" ""))) 123
 -- Val [(1,""),(2,""),(3,"Fizz"),(4,""),(5,"Buzz"),(6,"Fizz"),(7,""),(8,""),(9,"Fizz"),(10,"Buzz"),(11,""),(12,"Fizz"),(13,""),(14,""),(15,"FizzBuzz"),(16,""),(17,""),(18,"Fizz"),(19,""),(20,"Buzz")]
 --
 -- >>> pl @(EnumFromTo (Pure SG.Min 9) (Pure _ 13)) ()

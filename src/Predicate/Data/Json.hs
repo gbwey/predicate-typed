@@ -82,7 +82,7 @@ instance ( P p x
 -- Error ParseJson (Int,[Char])([10,"abc",99]) Error in $: cannot unpack array of length 3 into a tuple of length 2 ([10,"abc",99])
 -- Fail "ParseJson (Int,[Char])([10,\"abc\",99]) Error in $: cannot unpack array of length 3 into a tuple of length 2"
 --
--- >>> pl @(ParseJson (Int,Bool) (FromString _ Id)) ("[1,true]" :: String)
+-- >>> pl @(ParseJson (Int,Bool) (FromString _ Id)) "[1,true]"
 -- Present (1,True) (ParseJson (Int,Bool) (1,True))
 -- Val (1,True)
 --

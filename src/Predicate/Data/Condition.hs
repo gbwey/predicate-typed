@@ -76,19 +76,19 @@ import qualified Data.Type.Equality as DE
 -- >>> pz @(If (Snd == "a") '("xxx",Fst + 13) (If (Snd == "b") '("yyy",Fst + 7) (Failt _ "oops"))) (99,"b")
 -- Val ("yyy",106)
 --
--- >>> pl @(If (Len > 2) (Map Succ Id) (FailS "someval")) [12,15,16]
+-- >>> pl @(If (Len > 2) (Map Succ) (FailS "someval")) [12,15,16]
 -- Present [13,16,17] (If 'True [13,16,17])
 -- Val [13,16,17]
 --
--- >>> pl @(Map (If (Lt 3) 'True (Failt _ "err")) Id) [1..10]
+-- >>> pl @(Map (If (Lt 3) 'True (Failt _ "err"))) [1..10]
 -- Error err(8) (Map(i=2, a=3) excnt=8)
 -- Fail "err(8)"
 --
--- >>> pl @(Map (If (Lt 3) 'True (Failt _ "someval")) Id) [1..10]
+-- >>> pl @(Map (If (Lt 3) 'True (Failt _ "someval"))) [1..10]
 -- Error someval(8) (Map(i=2, a=3) excnt=8)
 -- Fail "someval(8)"
 --
--- >>> pl @(Map (If (Lt 3) 'True 'False) Id) [1..5]
+-- >>> pl @(Map (If (Lt 3) 'True 'False)) [1..5]
 -- Present [True,True,False,False,False] (Map [True,True,False,False,False] | [1,2,3,4,5])
 -- Val [True,True,False,False,False]
 --
@@ -287,7 +287,7 @@ instance ( P r x
   type PP (CaseImpl n e '[p] '[q] r) x = PP q (PP r x)
   eval _ opts z = do
     let msgbase0 = "Case(" <> show (n-1) <> ")"
-        n :: Int = nat @n
+        n = nat @n @Int
     rr <- eval (Proxy @r) opts z
     case getValueLR opts msgbase0 rr [] of
       Left e -> pure e
@@ -366,22 +366,22 @@ data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 -- >>> pz @(Guards '[ '(PrintT "arg %d failed with value %d" Id,Gt 4), '(PrintT "%d %d" Id, Same 4)]) [17,3]
 -- Fail "1 3"
 --
--- >>> pz @(Msg "isbn10" (Resplit "-") >> Concat >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> ZipWith (Fst * Snd) (1...10 >> Reverse) (Fst +: Snd) >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40614-X"
+-- >>> pz @(Msg "isbn10" (Resplit "-") >> Concat >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> ZipWith (Fst * Snd) (1...10 >> Reverse) (Fst +: Snd) >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40614-X"
 -- Fail "mod 0 oops"
 --
--- >>> pz @(Resplit "-" >> Concat >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) Id *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> ZipWith (Fst * Snd) (1...10 >> Reverse) (Fst +: Snd) >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40611-X"
+-- >>> pz @(Resplit "-" >> Concat >> 'Just Unsnoc >> Map (ReadP Int (Singleton Id)) *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id)) >> ZipWith (Fst * Snd) (1...10 >> Reverse) (Fst +: Snd) >> Sum >> Guard ("mod 0 oops") (Id `Mod` 11 == 0)) "0-306-40611-X"
 -- Val 132
 --
--- >>> pz @(Msg "isbn13" (Resplit "-") >> Concat >> Map (ReadP Int (Singleton Id)) Id >> ZipWith (Fst * Snd) (Cycle 13 [1,3] >> Reverse) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd == 0)) "978-0-306-40615-7"
+-- >>> pz @(Msg "isbn13" (Resplit "-") >> Concat >> Map (ReadP Int (Singleton Id)) >> ZipWith (Fst * Snd) (Cycle 13 [1,3] >> Reverse) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd == 0)) "978-0-306-40615-7"
 -- Val (100,0)
 --
--- >>> pz @(Resplit "-" >> Concat >> Map (ReadP Int (Singleton Id)) Id >> ZipWith (Fst * Snd) (Cycle 13 [1,3] >> Reverse) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd == 0)) "978-0-306-40615-8"
+-- >>> pz @(Resplit "-" >> Concat >> Map (ReadP Int (Singleton Id)) >> ZipWith (Fst * Snd) (Cycle 13 [1,3] >> Reverse) Id >> Sum >> '(Id,Id `Mod` 10) >> Guard (PrintT "sum=%d mod 10=%d" Id) (Snd == 0)) "978-0-306-40615-8"
 -- Fail "sum=101 mod 10=1"
 --
--- >>> pz @(Do '[Resplit "-", Concat, ZipWith (Fst * Snd) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-9"
+-- >>> pz @(Do '[Resplit "-", Concat, ZipWith (Fst * Snd) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id))), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-9"
 -- Fail "109 is not evenly divisible by 10"
 --
--- >>> pz @(Do '[Resplit "-", Concat, ZipWith (Fst * Snd) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id)) Id), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-0"
+-- >>> pz @(Do '[Resplit "-", Concat, ZipWith (Fst * Snd) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id))), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-0"
 -- Val 100
 --
 data Guards (ps :: [(k,k1)])
@@ -427,8 +427,7 @@ instance ( PP prt (Int, a) ~ String
      let cpos = n-pos-1
          msgbase1 = "Guard(" <> show cpos <> ")"
          msgbase2 = "Guards"
-         n :: Int
-         n = nat @n
+         n = nat @n @Int
          pos = getLen @ps
      pp <- evalBoolHide @p opts a
      case getValueLR opts (msgbase1 <> " p failed") pp [] of
@@ -456,27 +455,27 @@ instance ( PP prt (Int, a) ~ String
 -- >>> pz @(GuardsQuick (PrintT "arg %d failed with value %d" Id) '[Gt 4, Ge 3, Same 4]) [17,3,5,99]
 -- Fail "Guards:invalid length(4) expected 3"
 --
--- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 11 Id, Between 1 4 Id,Between 3 5 Id]) [10::Int,2,5]
+-- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 11 Id, Between 1 4 Id,Between 3 5 Id]) [10,2,5]
 -- Present [10,2,5] (Guards)
 -- Val [10,2,5]
 --
--- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,11,1999::Int]
+-- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,11,1999]
 -- Present [31,11,1999] (Guards)
 -- Val [31,11,1999]
 --
--- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,11::Int]
+-- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,11]
 -- Error Guards:invalid length(2) expected 3
 -- Fail "Guards:invalid length(2) expected 3"
 --
--- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,13,1999::Int]
+-- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,13,1999]
 -- Error guard(1) 13 is out of range (Guard(1) 13)
 -- Fail "guard(1) 13 is out of range"
 --
--- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [0,44,1999::Int]
+-- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [0,44,1999]
 -- Error guard(0) 0 is out of range (Guard(0) 0)
 -- Fail "guard(0) 0 is out of range"
 --
--- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,11,2000,1,2::Int]
+-- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,11,2000,1,2]
 -- Error Guards:invalid length(5) expected 3
 -- Fail "Guards:invalid length(5) expected 3"
 --
@@ -560,7 +559,7 @@ instance ( KnownNat n
 
   eval _ opts [] =
     let msg0 = "Bool(" <> show (n-1) <> ")"
-        n :: Int = nat @n
+        n = nat @n @Int
     in pure $ mkNodeB opts True (msg0 <> " empty") []
 
 instance ( PP prt (Int, a) ~ String
@@ -581,7 +580,7 @@ instance ( PP prt (Int, a) ~ String
      let cpos = n-pos-1
          msgbase1 = "Bool(" <> showIndex cpos <> ")"
          msgbase2 = "Bools"
-         n :: Int = nat @n
+         n = nat @n @Int
          pos = getLen @ps
      pp <- evalBoolHide @p opts a
      case getValueLR opts (msgbase1 <> " p failed") pp [] of
@@ -681,7 +680,7 @@ instance ( [a] ~ x
   eval _ _ as@(_:_) = errorInProgram $ "GuardsImplX base case has extra data " ++ show as
 
   eval _ opts [] =
-    let n :: Int = nat @n
+    let n = nat @n @Int
     in pure $ mkNode opts (Val []) ("Guards(" ++ show n ++ ")") []
 
 instance ( PP prt a ~ String
@@ -703,7 +702,7 @@ instance ( PP prt a ~ String
      let cpos = n-pos-1
          msgbase1 = "Guard(" <> showIndex cpos <> ")"
          msgbase2 = "Guards"
-         n :: Int = nat @n
+         n = nat @n @Int
          pos = getLen @ps
      pp <- evalBoolHide @p opts a
      case getValueLR opts (msgbase1 <> " p failed") pp [] of
@@ -739,15 +738,15 @@ type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
 -- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (0 <..> 0xff)) [121,33,7,44]
 -- Val [121,33,7,44]
 --
--- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3,4::Int]
+-- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3,4]
 -- Present [1,2,3,4] (Guards)
 -- Val [1,2,3,4]
 --
--- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3,4,5::Int]
+-- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3,4,5]
 -- Error Guards:invalid length(5) expected 4
 -- Fail "Guards:invalid length(5) expected 4"
 --
--- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3::Int]
+-- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3]
 -- Error Guards:invalid length(3) expected 4
 -- Fail "Guards:invalid length(3) expected 4"
 --
@@ -771,7 +770,7 @@ instance ( x ~ [a]
 -- >>> pz @(Guard (PrintF "%d not > 3" Id) (Gt 3)) (-99)
 -- Fail "-99 not > 3"
 --
--- >>> pl @(Map (Guard "someval" (Lt 3) >> 'True) Id) [1::Int ..10]
+-- >>> pl @(Map (Guard "someval" (Lt 3) >> 'True)) [1 ..10]
 -- Error someval(8) (Map(i=2, a=3) excnt=8)
 -- Fail "someval(8)"
 --
@@ -787,19 +786,19 @@ instance ( x ~ [a]
 -- Error someval
 -- Fail "someval"
 --
--- >>> pl @(Map (Guard "someval" (Lt 3) >> 'True) Id) [1::Int ..10]
+-- >>> pl @(Map (Guard "someval" (Lt 3) >> 'True)) [1 ..10]
 -- Error someval(8) (Map(i=2, a=3) excnt=8)
 -- Fail "someval(8)"
 --
--- >>> pl @(Guard "oops" (Len > 2) >> Map Succ Id) [12,15,16]
+-- >>> pl @(Guard "oops" (Len > 2) >> Map Succ) [12,15,16]
 -- Present [13,16,17] ((>>) [13,16,17] | {Map [13,16,17] | [12,15,16]})
 -- Val [13,16,17]
 --
--- >>> pl @(Guard "err" (Len > 2) >> Map Succ Id) [12]
+-- >>> pl @(Guard "err" (Len > 2) >> Map Succ) [12]
 -- Error err
 -- Fail "err"
 --
--- >>> pl @(Guard (PrintF "err found len=%d" Len) (Len > 5) >> Map Succ Id) [12,15,16]
+-- >>> pl @(Guard (PrintF "err found len=%d" Len) (Len > 5) >> Map Succ) [12,15,16]
 -- Error err found len=3
 -- Fail "err found len=3"
 --
@@ -881,15 +880,15 @@ instance ( P prt a
 -- False ((>>) False | {(-23) % 1 > (-20) % 1})
 -- Val False
 --
--- >>> pl @(Map (ExitWhen "ExitWhen" (Gt 10) >> Gt 2) Id) [1..5]
+-- >>> pl @(Map (ExitWhen "ExitWhen" (Gt 10) >> Gt 2)) [1..5]
 -- Present [False,False,True,True,True] (Map [False,False,True,True,True] | [1,2,3,4,5])
 -- Val [False,False,True,True,True]
 --
--- >>> pl @(ExitWhen "err" (Len > 2) >> Map Succ Id) [12,15,16]
+-- >>> pl @(ExitWhen "err" (Len > 2) >> Map Succ) [12,15,16]
 -- Error err
 -- Fail "err"
 --
--- >>> pl @(ExitWhen "err" (Len > 2) >> Map Succ Id) [12]
+-- >>> pl @(ExitWhen "err" (Len > 2) >> Map Succ) [12]
 -- Present [13] ((>>) [13] | {Map [13] | [12]})
 -- Val [13]
 --
@@ -916,15 +915,15 @@ instance P (ExitWhenT prt p) x => P (ExitWhen prt p) x where
 -- >>> pz @(GuardSimple (Len > 30)) [1,2,3,0]
 -- Fail "(4 > 30)"
 --
--- >>> pl @(Map (GuardSimple (Lt 3) >> 'True) Id) [1::Int .. 10]
+-- >>> pl @(Map (GuardSimple (Lt 3) >> 'True)) [1 .. 10]
 -- Error (3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3) (Map(i=2, a=3) excnt=8)
 -- Fail "(3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3)"
 --
--- >>> pl @(Map (GuardSimple (Ge 1) >> 'True) Id) [1::Int .. 10]
+-- >>> pl @(Map (GuardSimple (Ge 1) >> 'True)) [1 .. 10]
 -- Present [True,True,True,True,True,True,True,True,True,True] (Map [True,True,True,True,True,True,True,True,True,True] | [1,2,3,4,5,6,7,8,9,10])
 -- Val [True,True,True,True,True,True,True,True,True,True]
 --
--- >>> pl @(Map (GuardSimple (Lt 3) >> 'True) Id) [1::Int .. 10]
+-- >>> pl @(Map (GuardSimple (Lt 3) >> 'True)) [1 .. 10]
 -- Error (3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3) (Map(i=2, a=3) excnt=8)
 -- Fail "(3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3)"
 --

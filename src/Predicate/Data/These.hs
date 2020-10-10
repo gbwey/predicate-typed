@@ -538,11 +538,11 @@ instance P (TheseIdT p q) x => P (TheseId p q) x where
 -- >>> pz @(ZipThese '[] '[]) "aBcDeF"
 -- Val []
 --
--- >>> pl @(ZipThese Fst Snd >> Map (TheseIn Id Id Fst) Id) (['w'..'y'],['a'..'f'])
+-- >>> pl @(ZipThese Fst Snd >> Map (TheseIn Id Id Fst)) (['w'..'y'],['a'..'f'])
 -- Present "wxydef" ((>>) "wxydef" | {Map "wxydef" | [These 'w' 'a',These 'x' 'b',These 'y' 'c',That 'd',That 'e',That 'f']})
 -- Val "wxydef"
 --
--- >>> pl @(("sdf" &&& Id) >> ZipThese Fst Snd >> Map (TheseIn (Id &&& 0) (("x" >> Head) &&& Id) Id) Id) [1..5]
+-- >>> pl @(("sdf" &&& Id) >> ZipThese Fst Snd >> Map (TheseIn (Id &&& 0) (("x" >> Head) &&& Id) Id)) [1..5]
 -- Present [('s',1),('d',2),('f',3),('x',4),('x',5)] ((>>) [('s',1),('d',2),('f',3),('x',4),('x',5)] | {Map [('s',1),('d',2),('f',3),('x',4),('x',5)] | [These 's' 1,These 'd' 2,These 'f' 3,That 4,That 5]})
 -- Val [('s',1),('d',2),('f',3),('x',4),('x',5)]
 --

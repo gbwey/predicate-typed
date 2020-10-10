@@ -43,12 +43,12 @@ Left False ((>>) False | {254 <= 253})
 
 6. reads in a string as time and does simple validation
 ```haskell
->newRefined @OL @(Resplit ":" >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
+>newRefined @OL @(Resplit ":" >> Map (ReadP Int Id) >> Len == 3) "12:01:05"
 Right (Refined "12:01:05")
 ```
   * `Resplit ":"`
      split using regex using a colon as a delimiter  ["12","01","05"]
-  * `Map (ReadP Int Id) Id`
+  * `Map (ReadP Int Id)`
      Read in the values as Ints                      [12,1,5]
   * `Len == 3`
      Check to see that the length of the list of Ints is 3
@@ -59,11 +59,11 @@ _pab_ does not have that restriction so you can run the whole thing or the indiv
 for less detail use _pl_\
 
 ```haskell
->pu @(Resplit ":" >> Map (ReadP Int Id) Id >> Len == 3) "12:01:05"
+>pu @(Resplit ":" >> Map (ReadP Int Id) >> Len == 3) "12:01:05"
 
 >pu @(Resplit ":") "12:01:05"
 
->pu @(Map (ReadP Int Id) Id) ["12","01","05"]
+>pu @(Map (ReadP Int Id)) ["12","01","05"]
 
 >pu @(Len == 3) [12,1,5]
 ```

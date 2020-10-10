@@ -35,6 +35,7 @@ module Predicate.Core (
   , Unproxy
   , Len
   , Length
+  , MapF
   , Map
   , Do
   , Pure
@@ -1382,18 +1383,6 @@ instance P (Fail Unproxy p) x => P (Failp p) x where
 -- Error OneP:expected one element(empty)
 -- Fail "OneP:expected one element(empty)"
 --
--- >>> pl @OneP [12]
--- Present 12 (OneP)
--- Val 12
---
--- >>> pl @OneP [1..5]
--- Error OneP:expected one element(5)
--- Fail "OneP:expected one element(5)"
---
--- >>> pl @OneP ([] ::[()])
--- Error OneP:expected one element(empty)
--- Fail "OneP:expected one element(empty)"
---
 data OneP
 instance ( Foldable t
          , x ~ t a
@@ -1544,7 +1533,7 @@ instance P (BetweenT p q) x => P (p <..> q) x where
 -- False ((>>) False | {All(4) i=2 (3 > 3)})
 -- Val False
 --
--- >>> pl @(All (Lt 3)) [1::Int .. 10]
+-- >>> pl @(All (Lt 3)) [1 .. 10]
 -- False (All(10) i=2 (3 < 3))
 -- Val False
 --
@@ -1808,12 +1797,12 @@ instance ( Show (ExtractL6T (PP p x))
         let b = extractL6C p
         in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
--- | similar to 'map'
+-- | similar to 'map' for foldable
 --
--- >>> pz @(Map Pred Id) [1..5]
+-- >>> pz @(MapF Pred Id) [1..5]
 -- Val [0,1,2,3,4]
 --
-data Map p q
+data MapF p q
 
 instance ( Show (PP p a)
          , P p a
@@ -1822,8 +1811,8 @@ instance ( Show (PP p a)
          , Show a
          , Show (f a)
          , Foldable f
-         ) => P (Map p q) x where
-  type PP (Map p q) x = [PP p (ExtractAFromTA (PP q x))]
+         ) => P (MapF p q) x where
+  type PP (MapF p q) x = [PP p (ExtractAFromTA (PP q x))]
   eval _ opts x = do
     let msg0 = "Map"
     qq <- eval (Proxy @q) opts x
@@ -1840,6 +1829,31 @@ instance ( Show (PP p a)
                    let vals = map (view _1) abcs
                    in mkNode opts (Val vals) (show3 opts msg0 vals q) (hh qq : map (hh . prefixNumberToTT) ts)
 
+-- | similar to 'map'
+--
+-- >>> pz @(Map Pred) [1..5]
+-- Val [0,1,2,3,4]
+--
+data Map p
+
+instance ( Show (PP p a)
+         , P p a
+         , x ~ [a]
+         , Show a
+         ) => P (Map p) x where
+  type PP (Map p) x = [PP p (ExtractAFromTA x)]
+  eval _ opts x = do
+    let msg0 = "Map"
+    case chkSize opts msg0 x [] of
+      Left e -> pure e
+      Right xs -> do
+        ts <- zipWithM (\i a -> ((i, a),) <$> evalHide @p opts a) [0::Int ..] xs
+        pure $ case splitAndAlign opts msg0 ts of
+             Left e -> e
+             Right abcs ->
+               let vals = map (view _1) abcs
+               in mkNode opts (Val vals) (show3 opts msg0 vals x) (map (hh . prefixNumberToTT) ts)
+
 -- | processes a type level list predicates running each in sequence with infixr: see 'Predicate.>>'
 --
 -- >>> pz @(Do [Pred, ShowP Id, Id &&& Len]) 9876543
@@ -1848,11 +1862,11 @@ instance ( Show (PP p a)
 -- >>> pz @(Do '[W 123, W "xyz", Len &&& Id, Pred *** Id<>Id]) ()
 -- Val (2,"xyzxyz")
 --
--- >>> pl @(Do '[Succ,Id,ShowP Id,Ones,Map (ReadBase Int 8) Id]) 1239
+-- >>> pl @(Do '[Succ,Id,ShowP Id,Ones,Map (ReadBase Int 8)]) 1239
 -- Present [1,2,4,0] ((>>) [1,2,4,0] | {Map [1,2,4,0] | ["1","2","4","0"]})
 -- Val [1,2,4,0]
 --
--- >>> pl @(Do '[Pred,Id,ShowP Id,Ones,Map (ReadBase Int 8) Id]) 1239
+-- >>> pl @(Do '[Pred,Id,ShowP Id,Ones,Map (ReadBase Int 8)]) 1239
 -- Error invalid base 8 (Map(i=3, a="8") excnt=1)
 -- Fail "invalid base 8"
 --

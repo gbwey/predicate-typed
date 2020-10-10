@@ -611,7 +611,7 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 -- Error Asdf (JustFail Nothing)
 -- Fail "Asdf"
 --
--- >>> pl @(HeadFail (PrintF "msg=%s def" Fst) Snd) ("Abc" :: String,[]::[Int])
+-- >>> pl @(HeadFail (PrintF "msg=%s def" Fst) Snd) ("Abc",[])
 -- Error msg=Abc def (JustFail Nothing)
 -- Fail "msg=Abc def"
 --
@@ -648,7 +648,7 @@ instance P (TailDefT p q) x => P (TailDef p q) x where
 
 -- | takes the tail of a list-like object or fails with the given message
 --
--- >>> pl @(TailFail (PrintT "a=%d b=%s" Snd) Fst) ([]::[()],(4::Int,"someval" :: String))
+-- >>> pl @(TailFail (PrintT "a=%d b=%s" Snd) Fst) ([]::[()],(4,"someval"))
 -- Error a=4 b=someval (JustFail Nothing)
 -- Fail "a=4 b=someval"
 --
@@ -732,7 +732,7 @@ instance P (InitFailT msg q) x => P (InitFail msg q) x where
 -- >>> pz @IsPrime 2
 -- Val True
 --
--- >>> pz @(Map '(Id,IsPrime) Id) [0..12]
+-- >>> pz @(Map '(Id,IsPrime)) [0..12]
 -- Val [(0,False),(1,False),(2,True),(3,True),(4,False),(5,True),(6,False),(7,True),(8,False),(9,False),(10,False),(11,True),(12,False)]
 --
 data IsPrime
@@ -968,7 +968,7 @@ data Catch p q
 -- >>> pz @(Catch' Succ (Second (ShowP Id) >> PrintT "%s %s" Id)) LT
 -- Val EQ
 --
--- >>> pl @(Catch' (Failt Int "someval") (PrintT "msg=%s caught(%03d)" Id)) (44 :: Int)
+-- >>> pl @(Catch' (Failt Int "someval") (PrintT "msg=%s caught(%03d)" Id)) 44
 -- Error msg=someval caught(044) (Catch default condition failed)
 -- Fail "msg=someval caught(044)"
 --
@@ -1170,7 +1170,7 @@ instance forall p (q :: Type) (r :: Type) x . (P (p q r) x)
 -- Val [[9],[1,4,9],[9,10]]
 --
 data PartitionsBy p q r
-type PartitionsByT p q r = SortBy p (Zip r (0 ... (Length r - 1))) >> GroupBy q Id >> SortOn (Head >> Snd) Id >> Map (Map Fst Id) Id
+type PartitionsByT p q r = SortBy p (Zip r (0 ... (Length r - 1))) >> GroupBy q Id >> SortOn (Head >> Snd) Id >> Map (Map Fst)
 
 instance P (PartitionsByT p q r) x => P (PartitionsBy p q r) x where
   type PP (PartitionsBy p q r) x = PP (PartitionsByT p q r) x
@@ -1178,10 +1178,10 @@ instance P (PartitionsByT p q r) x => P (PartitionsBy p q r) x where
 
 -- | add an index to map
 --
--- >>> pz @(Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Map (Snd >> IMap (GuardBool (PrintT "bad value=%d %s" Id) (Snd >> ReadP Int Id < 255)) Id) Id) "123.222.999.3"
+-- >>> pz @(Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Map (Snd >> IMap (GuardBool (PrintT "bad value=%d %s" Id) (Snd >> ReadP Int Id < 255)) Id)) "123.222.999.3"
 -- Fail "bad value=2 999"
 --
--- >>> pz @(Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Map (Snd >> IMap (GuardBool (PrintT "bad value=%d %s" Id) (Snd >> ReadP Int Id < 255)) Id) Id) "123.222.99.3"
+-- >>> pz @(Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Map (Snd >> IMap (GuardBool (PrintT "bad value=%d %s" Id) (Snd >> ReadP Int Id < 255)) Id)) "123.222.99.3"
 -- Val [[True,True,True,True]]
 --
 data IMap p q
@@ -1316,7 +1316,6 @@ data FMap p
 
 instance ( Traversable n
          , P p a
---         , PP p a ~ b
          ) => P (FMap p) (n a) where
   type PP (FMap p) (n a) = n (PP p a)
   eval _ opts na = do
@@ -1429,7 +1428,7 @@ instance ( Applicative n
 -- >>> pz @(Fst <:> Snd) (Just 10, Just True)
 -- Val (Just (10,True))
 --
--- >>> pz @(Fst <:> Snd) ("abc" :: String,[10,12,14])
+-- >>> pz @(Fst <:> Snd) ("abc",[10,12,14])
 -- Val [('a',10),('a',12),('a',14),('b',10),('b',12),('b',14),('c',10),('c',12),('c',14)]
 --
 data p <:> q
@@ -1531,7 +1530,7 @@ instance P InitMayT x => P InitMay x where
 
 -- | similar to 'flip':see also 'Predicate.Misc.FlipT'
 --
--- >>> pz @(Flip Map Id Succ) [1..5]
+-- >>> pz @(Flip MapF Id Succ) [1..5]
 -- Val [2,3,4,5,6]
 --
 -- >>> pz @( Flip '(,) 'True 2) ()

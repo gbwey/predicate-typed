@@ -194,15 +194,15 @@ instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
 -- >>> pz @(PrintF "%d" Fst) ("abc",'x')
 -- Fail "PrintF (IO e=printf: bad formatting char 'd')"
 --
--- >>> pl @(PrintF "someval %d" Id) ("!23"::String)
+-- >>> pl @(PrintF "someval %d" Id) "!23"
 -- Error PrintF (IO e=printf: bad formatting char 'd') ("!23" s=someval %d)
 -- Fail "PrintF (IO e=printf: bad formatting char 'd')"
 --
--- >>> pl @(PrintF "%-6s" Id) (1234 :: Int)
+-- >>> pl @(PrintF "%-6s" Id) 1234
 -- Error PrintF (IO e=printf: bad formatting char 's') (1234 s=%-6s)
 -- Fail "PrintF (IO e=printf: bad formatting char 's')"
 --
--- >>> pl @(PrintF "%06x" Id) (1234 :: Int)
+-- >>> pl @(PrintF "%06x" Id) 1234
 -- Present "0004d2" (PrintF [0004d2] | p=1234 | s=%06x)
 -- Val "0004d2"
 --
@@ -210,11 +210,11 @@ instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
 -- Present 1 (digits=4 Head 1 | [1,2,3,4])
 -- Val 1
 --
--- >>> pl @(PrintF "ask%%dfas%%kef%05d hey %%" Id) (35 :: Int)
+-- >>> pl @(PrintF "ask%%dfas%%kef%05d hey %%" Id) 35
 -- Present "ask%dfas%kef00035 hey %" (PrintF [ask%dfas%kef00035 hey %] | p=35 | s=ask%%dfas%%kef%05d hey %%)
 -- Val "ask%dfas%kef00035 hey %"
 --
--- >>> pl @(Fail () (PrintF "someval int=%d" Id)) (45 :: Int)
+-- >>> pl @(Fail () (PrintF "someval int=%d" Id)) 45
 -- Error someval int=45
 -- Fail "someval int=45"
 --
@@ -278,23 +278,23 @@ instance ( PrintfArg a
 -- Error PrintT(IO e=printf: formatting string ended prematurely) (PrintT %d %c %s)
 -- Fail "PrintT(IO e=printf: formatting string ended prematurely)"
 --
--- >>> pl @(PrintT "lhs = %d rhs = %s" Id) (123::Int,"asdf"::String)
+-- >>> pl @(PrintT "lhs = %d rhs = %s" Id) (123,"asdf")
 -- Present "lhs = 123 rhs = asdf" (PrintT [lhs = 123 rhs = asdf] | s=lhs = %d rhs = %s)
 -- Val "lhs = 123 rhs = asdf"
 --
--- >>> pl @(PrintT "d=%03d s=%s" Id) (9::Int,"ab"::String)
+-- >>> pl @(PrintT "d=%03d s=%s" Id) (9,"ab")
 -- Present "d=009 s=ab" (PrintT [d=009 s=ab] | s=d=%03d s=%s)
 -- Val "d=009 s=ab"
 --
--- >>> pl @(PrintT "d=%03d s=%s c=%c f=%4.2f" Id) (9::Int,"ab"::String,'x',1.54::Float)
+-- >>> pl @(PrintT "d=%03d s=%s c=%c f=%4.2f" Id) (9,"ab",'x',1.54)
 -- Present "d=009 s=ab c=x f=1.54" (PrintT [d=009 s=ab c=x f=1.54] | s=d=%03d s=%s c=%c f=%4.2f)
 -- Val "d=009 s=ab c=x f=1.54"
 --
--- >>> pl @(PrintT "d=%03d s=%s" Id) (9::Int, "ab"::String,'x',1.54::Float)
+-- >>> pl @(PrintT "d=%03d s=%s" Id) (9, "ab",'x',1.54)
 -- Error PrintT(IO e=printf: formatting string ended prematurely) (PrintT d=%03d s=%s)
 -- Fail "PrintT(IO e=printf: formatting string ended prematurely)"
 --
--- >>> pl @(PrintT "lhs = %d rhs = %s c=%d" Id) (123::Int,"asdf"::String,'x')
+-- >>> pl @(PrintT "lhs = %d rhs = %s c=%d" Id) (123,"asdf",'x')
 -- Present "lhs = 123 rhs = asdf c=120" (PrintT [lhs = 123 rhs = asdf c=120] | s=lhs = %d rhs = %s c=%d)
 -- Val "lhs = 123 rhs = asdf c=120"
 --
@@ -355,23 +355,23 @@ instance ( PrintC bs
 -- Error PrintL(4) arg count=3 (wrong length 3)
 -- Fail "PrintL(4) arg count=3"
 --
--- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4::Int]
+-- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4]
 -- Present "001.002.003.004" (PrintL(4) [001.002.003.004] | s=%03d.%03d.%03d.%03d)
 -- Val "001.002.003.004"
 --
--- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4,5::Int]
+-- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4,5]
 -- Error PrintL(4) arg count=5 (wrong length 5)
 -- Fail "PrintL(4) arg count=5"
 --
--- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3::Int]
+-- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3]
 -- Error PrintL(4) arg count=3 (wrong length 3)
 -- Fail "PrintL(4) arg count=3"
 --
--- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4::Int]
+-- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4]
 -- Present "001.002.003.004" (PrintL(4) [001.002.003.004] | s=%03d.%03d.%03d.%03d)
 -- Val "001.002.003.004"
 --
--- >>> pl @(PrintL 4 "%d %4d %-d %03d" Id) [1..4::Int]
+-- >>> pl @(PrintL 4 "%d %4d %-d %03d" Id) [1..4]
 -- Present "1    2 3 004" (PrintL(4) [1    2 3 004] | s=%d %4d %-d %03d)
 -- Val "1    2 3 004"
 --

@@ -206,7 +206,7 @@ instance ( Refined3C opts ip op fmt String
 -- >>> reads @(Refined3 OZ (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
 -- [(Refined3 {r3In = -1234, r3Out = "-4d2"},"")]
 --
--- >>> reads @(Refined3 OZ (Map (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined3 OZ (MapF (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
 -- [(Refined3 {r3In = [192,168,0,1], r3Out = "192.168.0.1"},"")]
 --
 instance ( Eq i
@@ -466,13 +466,13 @@ newRefined3P' _ i = do
 -- >>> newRefined3 @OZ @(ReadBase Int 16) @(Lt 255) @(PrintF "%x" Id) "00fg"
 -- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
 --
--- >>> newRefined3 @OL @(Map (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
+-- >>> newRefined3 @OL @(MapF (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
 --
--- >>> newRefined3 @OZ @(Map (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
+-- >>> newRefined3 @OZ @(MapF (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> newRefined3 @OZ @(Map (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
+-- >>> newRefined3 @OZ @(MapF (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
@@ -491,16 +491,16 @@ newRefined3P' _ i = do
 -- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S") @'True @(FormatTimeP "%H:%M:%S") "1:2:x"
 -- Left Step 1. Failed Initial Conversion(ip) | ParseTimeP TimeOfDay (%-H:%-M:%-S) failed to parse
 --
--- >>> newRefined3 @OL @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" >> L2 Head >> Map (ReadP Int Id) Id) @(All (0 <..> 59) && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"
+-- >>> newRefined3 @OL @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" >> L2 Head >> Map (ReadP Int Id)) @(All (0 <..> 59) && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"
 -- Right (Refined3 {r3In = [1,2,3], r3Out = "01:02:03"})
 --
--- >>> newRefined3 @OL @(Resplit "\\." >> Map (ReadP Int Id) Id) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.251"
+-- >>> newRefined3 @OL @(Resplit "\\." >> Map (ReadP Int Id)) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.251"
 -- Right (Refined3 {r3In = [13,2,1,251], r3Out = "013.002.001.251"})
 --
--- >>> newRefined3 @OZ @(Resplit "\\." >> Map (ReadP Int Id) Id) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.259"
+-- >>> newRefined3 @OZ @(Resplit "\\." >> Map (ReadP Int Id)) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.259"
 -- Left Step 2. Failed Boolean Check(op) | Bool(3) [oops]
 --
--- >>> newRefined3 @OZ @(Resplit "\\." >> Map (ReadP Int Id) Id) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.253.1"
+-- >>> newRefined3 @OZ @(Resplit "\\." >> Map (ReadP Int Id)) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.253.1"
 -- Left Step 2. Failed Boolean Check(op) | Bools:invalid length(5) expected 4
 --
 newRefined3 :: forall opts ip op fmt i

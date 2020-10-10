@@ -136,7 +136,7 @@ instance P SapAT x => P SapA x where
 -- >>> pz @(MConcat Id) [SG.Sum 44, SG.Sum 12, SG.Sum 3]
 -- Val (Sum {getSum = 59})
 --
--- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) Id >> MConcat Id) [7 :: Int,6,1,3,5] -- monoid so need eg Int
+-- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) >> MConcat Id) [7 :: Int,6,1,3,5] -- monoid so need eg Int
 -- Val (Sum {getSum = 22},Max {getMax = 7})
 --
 data MConcat p
@@ -161,7 +161,7 @@ instance ( PP p x ~ [a]
 -- >>> pz @(ToNEList >> SConcat Id) [SG.Sum 44, SG.Sum 12, SG.Sum 3]
 -- Val (Sum {getSum = 59})
 --
--- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) Id >> ToNEList >> SConcat Id) [7,6,1,3,5]
+-- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) >> ToNEList >> SConcat Id) [7,6,1,3,5]
 -- Val (Sum {getSum = 22},Max {getMax = 7})
 --
 data SConcat p

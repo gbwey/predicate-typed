@@ -186,43 +186,43 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- True ((>>) True | {5 > 4})
 -- Val True
 --
--- >>> pl @(Map Len Id >> Ix 3 (Failp "lhs") &&& Ix 0 5 >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 3 (Failp "lhs") &&& Ix 0 5 >> Fst == Snd) [[1..4],[4..5]]
 -- Error lhs
 -- Fail "lhs"
 --
--- >>> pl @(Map Len Id >> Ix 0 (Failp "lhs") &&& Ix 1 5 >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 0 (Failp "lhs") &&& Ix 1 5 >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {4 == 2})
 -- Val False
 --
--- >>> pl @(Map Len Id >> Ix 1 (Failp "lhs") &&& Ix 3 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 1 (Failp "lhs") &&& Ix 3 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- Error rhs
 -- Fail "rhs"
 --
--- >>> pl @(Map Len Id >> Ix 10 (Failp "lhs") &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 10 (Failp "lhs") &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- Error lhs
 -- Fail "lhs"
 --
--- >>> pl @(Map Len Id >> Ix 0 (Failp "lhs") &&& Ix 10 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 0 (Failp "lhs") &&& Ix 10 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- Error rhs
 -- Fail "rhs"
 --
--- >>> pl @(Map Len Id >> Ix 10 3 &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 10 3 &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {3 == 2})
 -- Val False
 --
--- >>> pl @(Map Len Id >> Ix 3 3 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 3 3 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {3 == 2})
 -- Val False
 --
--- >>> pl @(Map Len Id >> Ix 10 3 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 10 3 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {3 == 2})
 -- Val False
 --
--- >>> pl @(Map Len Id >> Ix 10 5 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 10 5 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {5 == 2})
 -- Val False
 --
--- >>> pl @(Map Len Id >> Ix 10 2 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 10 2 &&& Ix 1 4 >> Fst == Snd) [[1..4],[4..5]]
 -- True ((>>) True | {2 == 2})
 -- Val True
 --
@@ -366,7 +366,7 @@ instance ( P q a
 -- Present 'g' (IxL(6) 'g' | p="abcdefghijklmnopqrstuvwxyz" | q=6)
 -- Val 'g'
 --
--- >>> pl @(Snd !! Fst) (3,"abcde" :: String)
+-- >>> pl @(Snd !! Fst) (3,"abcde")
 -- Present 'd' (IxL(3) 'd' | p="abcde" | q=3)
 -- Val 'd'
 --
@@ -374,7 +374,7 @@ instance ( P q a
 -- Error (!!) index not found (IxL(4))
 -- Fail "(!!) index not found"
 --
--- >>> pl @(2 &&& Id >> Snd !! Fst) ("abcdef" :: String)
+-- >>> pl @(2 &&& Id >> Snd !! Fst) "abcdef"
 -- Present 'c' ((>>) 'c' | {IxL(2) 'c' | p="abcdef" | q=2})
 -- Val 'c'
 --
@@ -394,11 +394,11 @@ instance ( P q a
 -- Present 3 (IxL('d') 3 | p=fromList [('a',0),('b',1),('c',2),('d',3)] | q='d')
 -- Val 3
 --
--- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd >> Gt 3 >> Coerce SG.Any) (IToList _) >> MConcat Id)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
+-- >>> pl @(Id !! FromString _ "d" &&& (MapF (Snd >> Gt 3 >> Coerce SG.Any) (IToList _) >> MConcat Id)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
 -- Present (3,Any {getAny = True}) ('(3,Any {getAny = True}))
 -- Val (3,Any {getAny = True})
 --
--- >>> pl @(Id !! FromString _ "d" &&& (Map (Snd >> Gt 3 >> Wrap SG.Any Id) (IToList _) >> MConcat Id >> Unwrap)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
+-- >>> pl @(Id !! FromString _ "d" &&& (MapF (Snd >> Gt 3 >> Wrap SG.Any Id) (IToList _) >> MConcat Id >> Unwrap)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
 -- Present (3,True) ('(3,True))
 -- Val (3,True)
 --

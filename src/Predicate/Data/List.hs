@@ -349,7 +349,7 @@ instance ( Show (ConsT s)
 -- >>> pz @(Rotate 2 Id) [1,2,3,4]
 -- Val [3,4,1,2]
 --
--- >>> pz @(Map (Rotate Id "abcd") Id) [-3..7]
+-- >>> pz @(Map (Rotate Id "abcd")) [-3..7]
 -- Val ["bcda","cdab","dabc","abcd","bcda","cdab","dabc","abcd","bcda","cdab","dabc"]
 --
 data Rotate n p
@@ -619,7 +619,7 @@ instance P GroupT x => P Group x where
 -- Val [('a',4),('b',1),('x',2),('y',1),('z',1)]
 --
 data GroupCnt
-type GroupCntT = Group >> Map '(Head,Len) Id
+type GroupCntT = Group >> Map '(Head,Len)
 
 instance P GroupCntT x => P GroupCnt x where
   type PP GroupCnt x = PP GroupCntT x
@@ -1325,7 +1325,7 @@ instance ( Snoc s s (ConsT s) (ConsT s)
 -- Val ([1,2,3,4],"abcd")
 --
 data Unzip
-type UnzipT = '(Map Fst Id, Map Snd Id)
+type UnzipT = '(Map Fst, Map Snd)
 
 instance P UnzipT x => P Unzip x where
   type PP Unzip x = PP UnzipT x
@@ -1338,7 +1338,7 @@ instance P UnzipT x => P Unzip x where
 -- Val ([1,2,3,4],"abcd",[True,False,True,False])
 --
 data Unzip3
-type Unzip3T = '(Map Fst Id, Map Snd Id, Map Thd Id)
+type Unzip3T = '(Map Fst, Map Snd, Map Thd)
 
 instance P Unzip3T x => P Unzip3 x where
   type PP Unzip3 x = PP Unzip3T x
@@ -1712,7 +1712,7 @@ instance ( PP l a ~ x
 -- Present [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')] (ZipL [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')] | p=[1 % 1,2 % 1,3 % 1] | q="abcde")
 -- Val [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')]
 --
--- >>> pl @(ZipL "X" (EmptyT _) Id) ("abcd" :: String)
+-- >>> pl @(ZipL "X" (EmptyT _) Id) "abcd"
 -- Present [("X",'a'),("X",'b'),("X",'c'),("X",'d')] (ZipL [("X",'a'),("X",'b'),("X",'c'),("X",'d')] | p=[] | q="abcd")
 -- Val [("X",'a'),("X",'b'),("X",'c'),("X",'d')]
 --

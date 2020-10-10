@@ -297,19 +297,19 @@ newRefined' a = do
 -- >>> AR.left m0BoolE $ newRefined @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1"
 -- Left (Right False)
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
+-- >>> AR.left m0BoolE $ newRefined @OZ @(MapF (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
 -- Left (Left "bad length: found 3")
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1.444"
+-- >>> AR.left m0BoolE $ newRefined @OZ @(MapF (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1.444"
 -- Left (Left "Bool(3) [octet 3 out of range 444]")
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Map (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1x34.444"
+-- >>> AR.left m0BoolE $ newRefined @OZ @(MapF (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1x34.444"
 -- Left (Left "ReadP Int (1x34)")
 --
--- >>> newRefined @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12344"
+-- >>> newRefined @OZ @(Map ('[Id] >> ReadP Int Id) >> IsLuhn) "12344"
 -- Right (Refined "12344")
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Map ('[Id] >> ReadP Int Id) Id >> IsLuhn) "12340"
+-- >>> AR.left m0BoolE $ newRefined @OZ @(Map ('[Id] >> ReadP Int Id) >> IsLuhn) "12340"
 -- Left (Right False)
 --
 -- >>> newRefined @OZ @(Any IsPrime) [11,13,17,18]

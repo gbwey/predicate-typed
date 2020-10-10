@@ -134,7 +134,7 @@ instance ( PP p (b,a) ~ b
 -- >>> pz @(ScanN 4 Succ Id) 4
 -- Val [4,5,6,7,8]
 --
--- >>> pz @('(0,1) >> ScanN 20 '(Snd, Fst + Snd) Id >> Map Fst Id) "sdf"
+-- >>> pz @('(0,1) >> ScanN 20 '(Snd, Fst + Snd) Id >> Map Fst) "sdf"
 -- Val [0,1,1,2,3,5,8,13,21,34,55,89,144,233,377,610,987,1597,2584,4181,6765]
 --
 -- >>> pl @(ScanN 2 Succ Id) 4
@@ -166,7 +166,7 @@ instance P (ScanNT n p q) x => P (ScanN n p q) x where
 -- Present "abcde" (Scanl "abcde" | b='a' | as=[1,2,3,4])
 -- Val "abcde"
 --
--- >>> pl @(ScanNA Tail) (4,"abcd" :: String)
+-- >>> pl @(ScanNA Tail) (4,"abcd")
 -- Present ["abcd","bcd","cd","d",""] (Scanl ["abcd","bcd","cd","d",""] | b="abcd" | as=[1,2,3,4])
 -- Val ["abcd","bcd","cd","d",""]
 --
@@ -242,7 +242,7 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 -- Present 16 ((>>) 16 | {Last 16 | [1,4,7,9,16]})
 -- Val 16
 --
--- >>> pl @(Foldl (Guard (PrintT "%d not less than %d" Id) (Fst < Snd) >> Snd) Head Tail) [1,4,7,6,16::Int]
+-- >>> pl @(Foldl (Guard (PrintT "%d not less than %d" Id) (Fst < Snd) >> Snd) Head Tail) [1,4,7,6,16]
 -- Error 7 not less than 6
 -- Fail "7 not less than 6"
 --
@@ -400,7 +400,7 @@ instance P (IterateWhileT p f) x => P (IterateWhile p f) x where
 -- Val [95,94,93]
 --
 data IterateNWhile n p f
-type IterateNWhileT n p f = '(n, Id) >> IterateWhile (Fst > 0 && (Snd >> p)) (Pred *** f) >> Map Snd Id
+type IterateNWhileT n p f = '(n, Id) >> IterateWhile (Fst > 0 && (Snd >> p)) (Pred *** f) >> Map Snd
 
 instance P (IterateNWhileT n p f) x => P (IterateNWhile n p f) x where
   type PP (IterateNWhile n p f) x = PP (IterateNWhileT n p f) x
@@ -480,8 +480,7 @@ instance ( KnownNat n
   eval _ opts as' = do
     let msgbase0 = "Para"
         msgbase1 = msgbase0 <> "(" <> show (n-1) <> ")"
-        n :: Int
-        n = nat @n
+        n = nat @n @Int
     case as' of
       [a] -> do
         pp <- eval (Proxy @p) opts a
@@ -544,7 +543,7 @@ instance ( KnownNat n
 -- >>> pz @(ParaN 5 (Guard (PrintF "bad value %d" Id) (Between 0 255 Id))) [1,2,3,400,12]
 -- Fail "bad value 400"
 --
--- >>> pl @(ParaN 4 (PrintF "%03d" Id)) [141,21,3,0::Int]
+-- >>> pl @(ParaN 4 (PrintF "%03d" Id)) [141,21,3,0]
 -- Present ["141","021","003","000"] (Para(0) ["141","021","003","000"] | [141,21,3,0])
 -- Val ["141","021","003","000"]
 --

@@ -282,7 +282,7 @@ instance ( Show a
 
 -- | similar to 'concatMap'
 data ConcatMap p q
-type ConcatMapT p q = Map p q >> Concat
+type ConcatMapT p q = MapF p q >> Concat
 
 instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
   type PP (ConcatMap p q) x = PP (ConcatMapT p q) x
@@ -422,11 +422,11 @@ instance P NullT a => P Null a where
 -- >>> pz @(Ors' Id) [False,False,False,True]
 -- Val True
 --
--- >>> type AllPositive' = FoldMap SG.All (Map Positive Id)
+-- >>> type AllPositive' = FoldMap SG.All (Map Positive)
 -- >>> pz @AllPositive' [3,1,-5,10,2,3]
 -- Val False
 --
--- >>> type AllNegative' = FoldMap SG.All (Map Negative Id)
+-- >>> type AllNegative' = FoldMap SG.All (Map Negative)
 -- >>> pz @AllNegative' [-1,-5,-10,-2,-3]
 -- Val True
 --
@@ -477,7 +477,7 @@ instance P NullT a => P Null a where
 --
 
 data FoldMap (t :: Type) p
-type FoldMapT (t :: Type) p = Map (Wrap t Id) p >> MConcat Id >> Unwrap
+type FoldMapT (t :: Type) p = MapF (Wrap t Id) p >> MConcat Id >> Unwrap
 
 instance P (FoldMapT t p) x => P (FoldMap t p) x where
   type PP (FoldMap t p) x = PP (FoldMapT t p) x

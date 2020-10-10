@@ -386,8 +386,7 @@ instance ( KnownNat n
   type PP (Tuple n) x = TupleT n (ExtractAFromList x)
   eval _ opts as =
     let msg0 = "Tuple(" ++ show n ++ ")"
-        n :: Int
-        n = nat @n
+        n = nat @n @Int
     in pure $ case getTupleC @n as of
          Left es -> mkNode opts (Fail (msg0 <> ":not enough elements")) (showVerbose opts " | " es) []
          Right r -> mkNode opts (Val r) msg0 []
@@ -404,7 +403,7 @@ instance ( KnownNat n
 -- Val (Left [])
 --
 -- >>> :set -XPolyKinds
--- >>> type F n i = ChunksOf' n i Id >> Map (Tuple' n) Id >> PartitionEithers
+-- >>> type F n i = ChunksOf' n i Id >> Map (Tuple' n) >> PartitionEithers
 -- >>> pz @(F 3 1) [1..7]
 -- Val ([[6,7],[7]],[(1,2,3),(2,3,4),(3,4,5),(4,5,6),(5,6,7)])
 --
@@ -417,6 +416,5 @@ instance ( KnownNat n
   type PP (Tuple' n) x = Either x (TupleT n (ExtractAFromList x))
   eval _ opts as =
     let msg0 = "Tuple'(" ++ show n ++ ")"
-        n :: Int
-        n = nat @n
+        n = nat @n @Int
     in pure $ mkNode opts (Val (getTupleC @n as)) msg0 []

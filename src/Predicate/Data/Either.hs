@@ -547,7 +547,7 @@ instance ( PP q x ~ Either a b
 -- Error someval=13 (LeftFail Right)
 -- Fail "someval=13"
 --
--- >>> pl @(LeftFail (PrintF "someval=%s" Fst) Id) (Right @(SG.Sum Int) ("abc" :: String))
+-- >>> pl @(LeftFail (PrintF "someval=%s" Fst) Id) (Right @(SG.Sum Int) "abc")
 -- Error someval=abc (LeftFail Right)
 -- Fail "someval=abc"
 --
@@ -555,11 +555,11 @@ instance ( PP q x ~ Either a b
 -- Error found rhs=10 (LeftFail Right)
 -- Fail "found rhs=10"
 --
--- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd >> L22)) L21) ('x',(Right 10,23::Int))
+-- >>> pl @(LeftFail (PrintF "found rhs=%d" (Snd >> L22)) L21) ('x',(Right 10,23))
 -- Error found rhs=23 (LeftFail Right)
 -- Fail "found rhs=23"
 --
--- >>> pl @(LeftFail (PrintF "found rhs=%d" (L2 L22)) L21) ('x',(Left "abc",23::Int))
+-- >>> pl @(LeftFail (PrintF "found rhs=%d" (L2 L22)) L21) ('x',(Left "abc",23))
 -- Present "abc" (Left)
 -- Val "abc"
 --

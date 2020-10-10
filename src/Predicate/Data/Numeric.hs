@@ -625,15 +625,15 @@ instance ( Integral (PP p x)
 -- Present [1 % 1,(-3) % 2,(-3) % 1] ('[1 % 1,(-3) % 2,(-3) % 1] (1 % 1) | ())
 -- Val [1 % 1,(-3) % 2,(-3) % 1]
 --
--- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Floor _) Id) ()
+-- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Floor _)) ()
 -- Present [1,-5,5,-1] ((>>) [1,-5,5,-1] | {Map [1,-5,5,-1] | [1 % 1,(-33) % 7,21 % 4,(-1) % 1]})
 -- Val [1,-5,5,-1]
 --
--- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Ceiling _) Id) ()
+-- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Ceiling _)) ()
 -- Present [1,-4,6,-1] ((>>) [1,-4,6,-1] | {Map [1,-4,6,-1] | [1 % 1,(-33) % 7,21 % 4,(-1) % 1]})
 -- Val [1,-4,6,-1]
 --
--- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Truncate _) Id) ()
+-- >>> pl @('[1 % 1 ,Negate (33 % 7), 21 % 4,Signum (7 -% 5)] >> Map (Truncate _)) ()
 -- Present [1,-4,5,-1] ((>>) [1,-4,5,-1] | {Map [1,-4,5,-1] | [1 % 1,(-33) % 7,21 % 4,(-1) % 1]})
 -- Val [1,-4,5,-1]
 --
@@ -893,10 +893,10 @@ instance P (RemT p q) x => P (Rem p q) x where
 
 -- | similar to 'even'
 --
--- >>> pz @(Map Even Id) [9,-4,12,1,2,3]
+-- >>> pz @(Map Even) [9,-4,12,1,2,3]
 -- Val [False,True,True,False,True,False]
 --
--- >>> pz @(Map '(Even,Odd) Id) [9,-4,12,1,2,3]
+-- >>> pz @(Map '(Even,Odd)) [9,-4,12,1,2,3]
 -- Val [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
 --
 data Even
