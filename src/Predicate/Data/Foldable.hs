@@ -307,7 +307,7 @@ instance ( Show a
   type PP (Cycle n p) x = [ExtractAFromTA (PP p x)]
   eval _ opts x = do
     let msg0 = "Cycle"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @p) opts x []
     pure $ case lr of
       Left e -> e
       Right (fromIntegral -> n,p,nn,pp) ->
@@ -371,7 +371,7 @@ instance ( Show (t a)
   eval _ opts x = do
     let msg0 = "Null"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let b = null p

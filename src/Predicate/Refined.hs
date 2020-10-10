@@ -270,7 +270,7 @@ newRefined' a = do
   let r = colorValBool o (_ttVal pp)
       s = prtTree o pp
       msg0 = Msg0 (pp ^. ttVal . _ValEither) (topMessage pp) s r
-  pure $ case getValueLR o "" pp [] of
+  pure $ case getValueLR NoInline o "" pp [] of
        Right True -> Right (Refined a)
        _ -> Left msg0
 
@@ -345,7 +345,7 @@ unsafeRefined' :: forall opts p a
 unsafeRefined' a =
   let o = getOpt @opts
       tt = runIdentity $ evalBool (Proxy @p) o a
-  in case getValueLR o "" tt [] of
+  in case getValueLR NoInline o "" tt [] of
        Right True -> Refined a
        _ -> let s = prtTree o tt
                 bp = colorValBool o (_ttVal tt)

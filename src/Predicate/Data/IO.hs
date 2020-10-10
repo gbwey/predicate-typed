@@ -86,7 +86,7 @@ instance ( PP p x ~ String
   eval _ opts x = do
     let msg0 = "ReadFile"
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right p -> do
         let msg1 = msg0 <> "[" <> p <> "]"
@@ -108,7 +108,7 @@ instance ( PP p x ~ String
   eval _ opts x = do
     let msg0 = "ReadFileBinary"
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right p -> do
         let msg1 = msg0 <> "[" <> p <> "]"
@@ -153,7 +153,7 @@ instance ( PP p x ~ String
   eval _ opts x = do
     let msg0 = "ReadDir"
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right p -> do
         let msg1 = msg0 <> "[" <> p <> "]"
@@ -180,7 +180,7 @@ instance ( PP p x ~ String
   eval _ opts x = do
     let msg0 = "ReadEnv"
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right p -> do
         let msg1 = msg0 <> "[" <> p <> "]"
@@ -302,7 +302,7 @@ instance ( GetFHandle fh
                          WFWrite -> "WriteFile"
                          WFWriteForce -> "WriteFile'"
     pp <- eval (Proxy @p) opts a
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right ss -> do
           mb <- runIO $ case fh of

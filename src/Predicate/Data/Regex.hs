@@ -90,7 +90,7 @@ instance ( GetROpts rs
   eval _ opts x = do
     let msg0 = "Re" <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -197,7 +197,7 @@ instance ( GetROpts rs
   eval _ opts x = do
     let msg0 = "Rescan" <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -293,7 +293,7 @@ instance ( GetROpts rs
   eval _ opts x = do
     let msg0 = "RescanRanges" <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -336,7 +336,7 @@ instance ( GetROpts rs
   eval _ opts x = do
     let msg0 = "Resplit" <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -400,7 +400,7 @@ instance ( GetBool b
     let msg0 = "Replace" <> (if alle then "All" else "One") <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
         alle = getBool @b
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) ->
@@ -410,7 +410,7 @@ instance ( GetBool b
           Left tta -> pure tta
           Right regex -> do
             rr <- eval (Proxy @r) opts x
-            pure $ case getValueLR opts msg0 rr hhs of
+            pure $ case getValueLR NoInline opts msg0 rr hhs of
               Left e -> e
               Right r ->
                let ret :: String
@@ -535,7 +535,7 @@ instance ( GetReplaceFnSub r
   eval _ opts x = do
     let msg0 = "ReplaceFn"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let b = RReplace (getReplaceFnSub @r) p
@@ -555,7 +555,7 @@ instance ( PP p x ~ (String -> [String] -> String)
   eval _ opts x = do
     let msg0 = "ReplaceFn1 (String -> [String] -> String)"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right f -> mkNode opts (Val (RReplace1 f)) msg0 [hh pp]
 
@@ -577,7 +577,7 @@ instance ( PP p x ~ (String -> String)
   eval _ opts x = do
     let msg0 = "ReplaceFn2 (String -> String)"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right f -> mkNode opts (Val (RReplace2 f)) msg0 [hh pp]
 
@@ -600,6 +600,6 @@ instance ( PP p x ~ ([String] -> String)
   eval _ opts x = do
     let msg0 = "ReplaceFn3 ([String] -> String)"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right f -> mkNode opts (Val (RReplace3 f)) msg0 [hh pp]

@@ -149,7 +149,7 @@ instance ( GetBool l
   eval _ opts x = do
     let msg0 = "Strip" ++ if l then "L" else "R"
         l = getBool @l
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,view DTL.unpacked -> q,pp,qq) ->
@@ -219,12 +219,12 @@ instance ( GetBool ignore
                     EQ -> (isInfixOf, "IsInfixC")
                     GT -> (isSuffixOf, "IsSuffixC")
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
         Left e -> pure e
         Right s0 -> do
           let msg1 = msg0 <> (if ignore then "I" else "") <> " | " <> s0
           qq <- eval (Proxy @q) opts x
-          pure $ case getValueLR opts (msg1 <> " q failed") qq [hh pp] of
+          pure $ case getValueLR NoInline opts (msg1 <> " q failed") qq [hh pp] of
             Left e -> e
             Right s1 -> mkNodeB opts (on ff lwr s0 s1) (msg1 <> " " <> litL opts s1) [hh pp, hh qq]
 
@@ -362,7 +362,7 @@ instance ( P s a
   eval _ opts a = do
     let msg0 = "FromString"
     ss <- eval (Proxy @s) opts a
-    pure $ case getValueLR opts msg0 ss [] of
+    pure $ case getValueLR NoInline opts msg0 ss [] of
       Left e -> e
       Right s ->
         let b = fromString @(PP t a) s

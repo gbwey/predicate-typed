@@ -96,7 +96,7 @@ instance ( PP p (b,a) ~ b
   type PP (Scanl p q r) x = [PP q x]
   eval _ opts z = do
     let msg0 = "Scanl"
-    lr <- runPQ msg0 (Proxy @q) (Proxy @r) opts z []
+    lr <- runPQ NoInline msg0 (Proxy @q) (Proxy @r) opts z []
     case lr of
       Left e -> pure e
       Right (q,r,qq,rr) ->
@@ -104,13 +104,13 @@ instance ( PP p (b,a) ~ b
           Left e -> pure e
           Right _ -> do
             let ff i b as' rs
-                   | i >= oRecursion opts = pure (rs, Left $ mkNode opts (Fail (msg0 <> ":recursion limit i=" <> showIndex i)) ("(b,as')=" <> showL opts (b,as')) [])
-                   | otherwise =
+                 | i >= oRecursion opts = pure (rs, Left $ mkNode opts (Fail (msg0 <> ":recursion limit i=" <> showIndex i)) ("(b,as')=" <> showL opts (b,as')) [])
+                 | otherwise =
                        case as' of
                          [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (Val q) (msg0 <> "(done)") [])], Right ())
                          a:as -> do
                             pp :: TT b <- evalHide @p opts (b,a)
-                            case getValueLR opts (msg0 <> " i=" <> showIndex i <> " a=" <> showL opts a) pp [] of
+                            case getValueLR NoInline opts (msg0 <> " i=" <> showIndex i <> " a=" <> showL opts a) pp [] of
                                Left e  -> pure (rs,Left e)
                                Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
             (ts,lrx) :: ([((Int, b), TT b)], Either (TT [b]) ()) <- ff 1 q r []
@@ -337,14 +337,14 @@ instance ( PP q a ~ s
   eval _ opts z = do
     let msg0 = "Unfoldr"
     qq <- eval (Proxy @q) opts z
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q -> do
         let msg1 = msg0 <> " " <> showL opts q
             ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (Fail (msg1 <> ":recursion limit i=" <> showIndex i)) ("s=" <> showL opts s) [])
                       | otherwise = do
                               pp :: TT (PP p s) <- evalHide @p opts s
-                              case getValueLR opts (msg1 <> " i=" <> showIndex i <> " s=" <> show s) pp [] of
+                              case getValueLR NoInline opts (msg1 <> " i=" <> showIndex i <> " s=" <> show s) pp [] of
                                    Left e  -> pure (rs, Left e)
                                    Right Nothing -> pure (rs ++ [((i,Nothing), pp)], Right ())
                                    Right w@(Just (_b,s')) -> ff (i+1) s' (rs ++ [((i,w), pp)])
@@ -484,7 +484,7 @@ instance ( KnownNat n
     case as' of
       [a] -> do
         pp <- eval (Proxy @p) opts a
-        pure $ case getValueLR opts msgbase1 pp [] of
+        pure $ case getValueLR NoInline opts msgbase1 pp [] of
           Left e -> e
           -- showVerbose opts " " [b]  fails but using 'b' is ok and (b : []) also works!
           -- GE.List problem
@@ -513,12 +513,12 @@ instance ( KnownNat n
          n = nat @n
          pos = 1 + getLen @ps -- cos p1!
      pp <- eval (Proxy @p) opts a
-     case getValueLR opts msgbase0 pp [] of
+     case getValueLR NoInline opts msgbase0 pp [] of
        Left e -> pure e
        Right b -> do
                     qq <- eval (Proxy @(ParaImpl n (p1 ': ps))) opts as
-                    pure $ case getValueLRInline opts "" qq [hh pp] of
-                      Left e -> e -- & ttString %~ (\x -> x <> (if null x then "" else " ") <> showL opts b)
+                    pure $ case getValueLR Inline opts "" qq [hh pp] of
+                      Left e -> e
                       Right bs -> mkNode opts (Val (b:bs)) (msgbase1 <> " " <> showL opts (b:bs) <> showVerbose opts " | " (a:as)) [hh pp, hh qq]
 
 -- | leverages 'Para' for repeating expressions (passthrough method)

@@ -99,7 +99,7 @@ instance ( Semigroup (PP p x)
   type PP (p <> q) x = PP p x
   eval _ opts x = do
     let msg0 = "<>"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -150,7 +150,7 @@ instance ( PP p x ~ [a]
   eval _ opts x = do
     let msg0 = "MConcat"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let b = mconcat p
@@ -175,7 +175,7 @@ instance ( PP p x ~ NonEmpty a
   eval _ opts x = do
     let msg0 = "SConcat"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let b = SG.sconcat p
@@ -305,7 +305,7 @@ instance ( P n a
   type PP (STimes n p) a = PP p a
   eval _ opts a = do
     let msg0 = "STimes"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @p) opts a []
     pure $ case lr of
       Left e -> e
       Right (fromIntegral -> n::Int,p,pp,qq) ->

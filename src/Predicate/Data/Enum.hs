@@ -95,7 +95,7 @@ instance ( PP q x ~ a
   eval _ opts x = do
     let msg0 = "SuccB"
     qq <- eval (Proxy @q) opts x
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q ->
         case succMay q of
@@ -114,7 +114,7 @@ _enumDefault :: forall p a m
 _enumDefault opts msg0 hhqq = do
    let msg1 = msg0 <> " out of range"
    pp <- eval (Proxy @p) opts (Proxy @a)
-   pure $ case getValueLR opts msg1 pp [hhqq] of
+   pure $ case getValueLR NoInline opts msg1 pp [hhqq] of
      Left e -> e
      Right _ -> mkNodeCopy opts pp msg1 [hhqq, hh pp]
 
@@ -169,7 +169,7 @@ instance ( PP q x ~ a
   eval _ opts x = do
     let msg0 = "PredB"
     qq <- eval (Proxy @q) opts x
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q ->
         case predMay q of
@@ -236,7 +236,7 @@ instance ( Show a
   type PP (SuccN n p) x = PP p x
   eval _ opts x = do
     let msg0 = "SuccN"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @p) opts x []
     case lr of
       Left e -> pure e
       Right (fromIntegral -> n :: Int,p,nn,pp) -> do
@@ -314,7 +314,7 @@ instance ( Show a
   eval _ opts x = do
     let msg0 = "FromEnum"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let n = fromEnum p
@@ -364,7 +364,7 @@ instance ( PP p x ~ a
   eval _ opts x = do
     let msg0 = "ToEnum"
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right p -> do
         lr <- catchit (toEnum $! fromIntegral p)
@@ -396,7 +396,7 @@ instance ( P def (Proxy (PP t a))
       Nothing -> do
          let msg1 = msg0 <> " out of range"
          pp <- eval (Proxy @def) opts (Proxy @(PP t a))
-         pure $ case getValueLR opts msg1 pp [] of
+         pure $ case getValueLR NoInline opts msg1 pp [] of
            Left e -> e
            Right _ -> mkNodeCopy opts pp msg1 [hh pp]
       Just n -> pure $ mkNode opts (Val n) (show3 opts msg0 n a) []
@@ -496,7 +496,7 @@ instance ( P p x
   type PP (EnumFromTo p q) x = [PP p x]
   eval _ opts z = do
     let msg0 = "..."
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts z []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) -> mkNode opts (Val (enumFromTo p q)) (showL opts p <> " " <> msg0 <> " " <> showL opts q) [hh pp, hh qq]
@@ -523,12 +523,12 @@ instance ( P p x
   type PP (EnumFromThenTo p q r) x = [PP p x]
   eval _ opts z = do
     let msg0 = "EnumFromThenTo"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts z []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
         rr <- eval (Proxy @r) opts z
-        pure $ case getValueLR opts (msg0 ++ " r failed") rr [hh pp, hh qq] of
+        pure $ case getValueLR NoInline opts (msg0 ++ " r failed") rr [hh pp, hh qq] of
           Left e -> e
           Right r ->
             mkNode opts (Val (enumFromThenTo p q r)) (msg0 <> " [" <> showL opts p <> ", " <> showL opts q <> " .. " <> showL opts r <> "]") [hh pp, hh qq, hh rr]

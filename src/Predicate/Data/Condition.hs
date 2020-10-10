@@ -122,14 +122,14 @@ instance ( Show (PP r a)
   eval _ opts a = do
     let msg0 = "If"
     pp <- evalBool (Proxy @p) opts a
-    case getValueLR opts (msg0 <> " condition failed") pp [] of
+    case getValueLR NoInline opts (msg0 <> " condition failed") pp [] of
       Left e -> pure e
       Right b -> do
         qqrr <- if b
-              then eval (Proxy @q) opts a
-              else eval (Proxy @r) opts a
-        pure $ case getValueLRInline opts (msg0 <> " " <> show b) qqrr [hh pp, hh qqrr] of
-          Left e -> e -- & ttString %~ \x -> msg0 <> show b <> nullIf " | " x
+                then eval (Proxy @q) opts a
+                else eval (Proxy @r) opts a
+        pure $ case getValueLR Inline opts (msg0 <> " " <> show b) qqrr [hh pp, hh qqrr] of
+          Left e -> e
           Right ret -> mkNodeCopy opts qqrr (msg0 <> " " <> bool "'False" "'True" b <> " " <> showL opts ret) [hh pp, hh qqrr]
 
 type family GuardsT (ps :: [k]) where
@@ -290,20 +290,20 @@ instance ( P r x
     let msgbase0 = "Case(" <> show (n-1) <> ")"
         n = nat @n @Int
     rr <- eval (Proxy @r) opts z
-    case getValueLR opts msgbase0 rr [] of
+    case getValueLR NoInline opts msgbase0 rr [] of
       Left e -> pure e
       Right a -> do
         pp <- evalBool (Proxy @p) opts a
-        case getValueLR opts msgbase0 pp [hh rr] of
+        case getValueLR NoInline opts msgbase0 pp [hh rr] of
           Left e -> pure e
           Right True -> do
             qq <- eval (Proxy @q) opts a
-            pure $ case getValueLR opts msgbase0 qq [hh rr, hh pp] of
+            pure $ case getValueLR NoInline opts msgbase0 qq [hh rr, hh pp] of
               Left e -> e
               Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ee <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
-            pure $ case getValueLR opts ("Case:otherwise failed" <> nullIf ":" (_ttString ee)) ee [hh rr, hh pp] of
+            pure $ case getValueLR NoInline opts ("Case:otherwise failed" <> nullIf ":" (_ttString ee)) ee [hh rr, hh pp] of
               Left e -> e
               Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) [hh rr, hh pp, hh ee]
 
@@ -327,20 +327,20 @@ instance ( KnownNat n
         n = nat @n
         pos = 1 + getLen @ps -- cos p1!
     rr <- eval (Proxy @r) opts z
-    case getValueLR opts msgbase0 rr [] of
+    case getValueLR NoInline opts msgbase0 rr [] of
       Left e -> pure e
       Right a -> do
         pp <- evalBool (Proxy @p) opts a
-        case getValueLR opts msgbase0 pp [hh rr] of
+        case getValueLR NoInline opts msgbase0 pp [hh rr] of
           Left e -> pure e
           Right True -> do
             qq <- eval (Proxy @q) opts a
-            pure $ case getValueLR opts msgbase0 qq [hh pp, hh rr] of
+            pure $ case getValueLR NoInline opts msgbase0 qq [hh pp, hh rr] of
               Left e -> e
               Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
-            pure $ case getValueLRInline opts "" ww [hh rr, hh pp] of
+            pure $ case getValueLR Inline opts "" ww [hh rr, hh pp] of
               Left e -> e
               Right b -> mkNode opts (Val b) (show3 opts msgbase1 b a) [hh rr, hh pp, hh ww]
 
@@ -431,11 +431,11 @@ instance ( PP prt (Int, a) ~ String
          n = nat @n @Int
          pos = getLen @ps
      pp <- evalBoolHide @p opts a
-     case getValueLR opts (msgbase1 <> " p failed") pp [] of
+     case getValueLR NoInline opts (msgbase1 <> " p failed") pp [] of
        Left e -> pure e
        Right False -> do
          qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
-         pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+         pure $ case getValueLR NoInline opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
             Left e -> e
             Right msgx -> mkNode opts (Fail msgx) (msgbase1 <> " " <> showL opts a) (hh pp : verboseList opts qq)
        Right True ->
@@ -443,7 +443,7 @@ instance ( PP prt (Int, a) ~ String
             pure $ mkNode opts (Val [a]) msgbase2 [hh pp]
          else do
            ss <- eval (Proxy @(GuardsImpl n ps)) opts as
-           pure $ case getValueLRInline opts "" ss [hh pp] of
+           pure $ case getValueLR Inline opts "" ss [hh pp] of
              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
              Right zs -> ss & ttForest %~ (hh pp:)
                             & ttVal' .~ Val (a:zs)
@@ -584,11 +584,11 @@ instance ( PP prt (Int, a) ~ String
          n = nat @n @Int
          pos = getLen @ps
      pp <- evalBoolHide @p opts a
-     case getValueLR opts (msgbase1 <> " p failed") pp [] of
+     case getValueLR NoInline opts (msgbase1 <> " p failed") pp [] of
        Left e -> pure e
        Right False -> do
          qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
-         pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+         pure $ case getValueLR NoInline opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
             Left e -> e
             Right msgx -> mkNode opts (Fail (msgbase1 <> " [" <> msgx <> "]" <> nullSpace (topMessage pp))) "" (hh pp : verboseList opts qq)
        Right True ->
@@ -596,7 +596,7 @@ instance ( PP prt (Int, a) ~ String
             pure $ mkNodeB opts True msgbase2 [hh pp]
          else do
            ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
-           pure $ case getValueLRInline opts "" ss [hh pp] of
+           pure $ case getValueLR Inline opts "" ss [hh pp] of
              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
              Right _ -> ss & ttForest %~ (hh pp:)
 
@@ -706,16 +706,16 @@ instance ( PP prt a ~ String
          n = nat @n @Int
          pos = getLen @ps
      pp <- evalBoolHide @p opts a
-     case getValueLR opts (msgbase1 <> " p failed") pp [] of
+     case getValueLR NoInline opts (msgbase1 <> " p failed") pp [] of
        Left e -> pure e
        Right False -> do
          qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
-         pure $ case getValueLR opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
+         pure $ case getValueLR NoInline opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
             Left e -> e
             Right msgx -> mkNode opts (Fail msgx) (msgbase1 <> ":" <> showL opts a) (hh pp : verboseList opts qq)
        Right True -> do
          ss <- eval (Proxy @(GuardsImplX n ps)) opts as
-         pure $ case getValueLR opts (_ttString ss) ss [hh pp] of
+         pure $ case getValueLR NoInline opts (_ttString ss) ss [hh pp] of
            Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
            Right zs -> mkNode opts (Val (a:zs)) (msgbase1 <> " " <> showL opts a) [hh pp, hh ss]
 
@@ -816,11 +816,11 @@ instance ( Show a
   eval _ opts a = do
     let msg0 = "Guard"
     pp <- evalBool (Proxy @p) opts a
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right False -> do
         qq <- eval (Proxy @prt) opts a
-        pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
+        pure $ case getValueLR NoInline opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
           Right ee -> mkNode opts (Fail ee) (msg0 <> " | " <> showL opts a) (hh pp : verboseList opts qq)
       Right True -> pure $ mkNode opts (Val a) (msg0 <> "(ok) | " <> showL opts a) [hh pp]  -- dont show the guard message if successful
@@ -842,11 +842,11 @@ instance ( P prt a
   eval _ opts a = do
     let msg0 = "GuardBool"
     pp <- evalBool (Proxy @p) opts a
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right False -> do
         qq <- eval (Proxy @prt) opts a
-        pure $ case getValueLR opts (msg0 <> " Msg") qq [hh pp] of
+        pure $ case getValueLR NoInline opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
           Right ee -> mkNode opts (Fail ee) (msg0 <> nullSpace (topMessage pp)) [hh pp, hh qq]
       Right True -> pure $ mkNodeB opts True "" [hh pp]  -- dont show the guard message if successful
@@ -938,7 +938,7 @@ instance ( Show a
   eval _ opts a = do
     let msg0 = "GuardSimple"
     pp <- evalBool (Proxy @p) (subopts opts) a -- temporarily lift DZero to DLite so as not to lose the failure message
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right False ->
         let msgx = topMessage pp

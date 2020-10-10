@@ -93,7 +93,7 @@ instance ( PP p x ~ String
   type PP (FormatTimeP' p q) x = String
   eval _ opts x = do
     let msg0 = "FormatTimeP"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -135,7 +135,7 @@ instance ( ParseTime (PP t a)
   eval _ opts a = do
     let msg0 = "ParseTimeP " <> t
         t = showT @(PP t a)
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -186,7 +186,7 @@ instance ( ParseTime (PP t a)
   eval _ opts a = do
     let msg0 = "ParseTimes " <> t
         t = showT @(PP t a)
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -236,13 +236,13 @@ instance ( P p x
   type PP (MkDay' p q r) x = Maybe Day
   eval _ opts x = do
     let msg0 = "MkDay"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
         let hhs = [hh pp, hh qq]
         rr <- eval (Proxy @r) opts x
-        pure $ case getValueLR opts msg0 rr hhs of
+        pure $ case getValueLR NoInline opts msg0 rr hhs of
           Left e -> e
           Right r ->
             let mday = fromGregorianValid (fromIntegral p) q r
@@ -283,7 +283,7 @@ instance ( PP p x ~ Day
   eval _ opts x = do
     let msg0 = "UnMkDay"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let (fromIntegral -> y, m, d) = toGregorian p
@@ -308,13 +308,13 @@ instance ( P p x
   type PP (MkDayExtra' p q r) x = Maybe (Day, Int, Int)
   eval _ opts x = do
     let msg0 = "MkDayExtra"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
         let hhs = [hh pp, hh qq]
         rr <- eval (Proxy @r) opts x
-        pure $ case getValueLR opts msg0 rr hhs of
+        pure $ case getValueLR NoInline opts msg0 rr hhs of
           Left e -> e
           Right r ->
             let mday = fromGregorianValid (fromIntegral p) q r
@@ -358,7 +358,7 @@ instance ( P p x
   eval _ opts x = do
     let msg0 = "ToWeekDate"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let (_, _week, dow) = toWeekDate p
@@ -387,7 +387,7 @@ instance ( P p x
   eval _ opts x = do
     let msg0 = "ToWeekYear"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let (_, week, _dow) = toWeekDate p
@@ -474,13 +474,13 @@ instance ( P p x
   type PP (MkTime' p q r) x = TimeOfDay
   eval _ opts x = do
     let msg0 = "MkTime"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
         let hhs = [hh pp, hh qq]
         rr <- eval (Proxy @r) opts x
-        pure $ case getValueLR opts msg0 rr hhs of
+        pure $ case getValueLR NoInline opts msg0 rr hhs of
           Left e -> e
           Right r ->
             let mtime = TimeOfDay p q (fromRational r)
@@ -525,7 +525,7 @@ instance ( PP p x ~ TimeOfDay
   eval _ opts x = do
     let msg0 = "UnMkTime"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let TimeOfDay h m s = p
@@ -565,7 +565,7 @@ instance ( PP p x ~ Rational
   eval _ opts x = do
     let msg0 = "PosixToUTCTime"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let d = P.posixSecondsToUTCTime (fromRational p)
@@ -589,7 +589,7 @@ instance ( PP p x ~ UTCTime
   eval _ opts x = do
     let msg0 = "UTCTimeToPosix"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let d = toRational $ P.utcTimeToPOSIXSeconds p
@@ -611,7 +611,7 @@ instance ( PP p x ~ UTCTime
   type PP (DiffUTCTime p q) x = NominalDiffTime
   eval _ opts x = do
     let msg0 = "DiffUTCTime"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -641,7 +641,7 @@ instance ( PP p x ~ LocalTime
   eval _ opts x = do
     let msg0 = "LocalTimeToUTC"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let d = localTimeToUTC utc p

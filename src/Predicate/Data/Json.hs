@@ -63,7 +63,7 @@ instance ( P p x
     let msg0 = "ParseJson " <> t
         t = showT @(PP t x)
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right s ->
         let hhs = [hh pp]
@@ -115,7 +115,7 @@ instance ( P p x
     let msg0 = "ParseJsonFile " <> t
         t = showT @(PP t x)
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right p -> do
         let hhs = [hh pp]
@@ -165,7 +165,7 @@ instance ( GetBool pretty
     let msg0 = "EncodeJson"
         pretty = getBool @pretty
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let d = (if pretty then AP.encodePretty else A.encode) p
@@ -184,7 +184,7 @@ instance ( GetBool pretty
   eval _ opts x = do
     let msg0 = "EncodeJsonFile"
         pretty = getBool @pretty
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do

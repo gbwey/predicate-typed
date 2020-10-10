@@ -241,7 +241,7 @@ instance ( P def (Proxy a)
          Nothing -> do
            let msg1 = msg0 <> " not found"
            pp <- eval (Proxy @def) opts (Proxy @a)
-           pure $ case getValueLRInline opts msg1 pp [] of
+           pure $ case getValueLR Inline opts msg1 pp [] of
              Left e -> e
              Right _ -> mkNodeCopy opts pp msg1 [hh pp]
          Just a -> pure $ mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
@@ -286,7 +286,7 @@ instance ( P q a
   type PP (IxL p q r) a = IxValue (PP p a)
   eval _ opts a = do
     let msg0 = "IxL"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) ->
@@ -294,7 +294,7 @@ instance ( P q a
         in case p ^? ix q of
              Nothing -> do
                 rr <- eval (Proxy @r) opts (Proxy @(IxValue (PP p a)))
-                pure $ case getValueLRInline opts msg1 rr [hh pp, hh qq] of
+                pure $ case getValueLR Inline opts msg1 rr [hh pp, hh qq] of
                   Left e -> e
                   Right _ -> mkNodeCopy opts rr (msg1 <> " index not found") [hh pp, hh qq]
              Just ret -> pure $ mkNode opts (Val ret) (show3' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
@@ -488,7 +488,7 @@ instance ( P q a
   type PP (Lookup p q) a = Maybe (IxValue (PP p a))
   eval _ opts a = do
     let msg0 = "Lookup"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->

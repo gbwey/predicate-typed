@@ -176,11 +176,11 @@ instance ( Show (PP p a)
   eval _ opts (a,b) = do
     let msg0 = "(***)"
     pp <- eval (Proxy @p) opts a
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right a1 -> do
         qq <- eval (Proxy @q) opts b
-        pure $ case getValueLR opts msg0 qq [hh pp] of
+        pure $ case getValueLR NoInline opts msg0 qq [hh pp] of
           Left e -> e
           Right b1 -> mkNode opts (Val (a1,b1)) (msg0 <> " " <> showL opts (a1,b1) <> showVerbose opts " | " (a,b)) [hh pp, hh qq]
 
@@ -226,15 +226,15 @@ instance ( PP r x ~ (a,b)
   eval _ opts x = do
     let msg0 = "(&*)"
     rr <- eval (Proxy @r) opts x
-    case getValueLR opts msg0 rr [] of
+    case getValueLR NoInline opts msg0 rr [] of
       Left e -> pure e
       Right (r1,r2) -> do
         pp <- evalBool (Proxy @p) opts r1
-        case getValueLR opts msg0 pp [hh rr] of
+        case getValueLR NoInline opts msg0 pp [hh rr] of
           Left e -> pure e
           Right p -> do
             qq <- evalBool (Proxy @q) opts r2
-            pure $ case getValueLR opts msg0 qq [hh rr, hh pp] of
+            pure $ case getValueLR NoInline opts msg0 qq [hh rr, hh pp] of
               Left e -> e
               Right q ->
                 let zz = case (p,q) of
@@ -276,15 +276,15 @@ instance ( PP r x ~ (a,b)
   eval _ opts x = do
     let msg0 = "(|+)"
     rr <- eval (Proxy @r) opts x
-    case getValueLR opts msg0 rr [] of
+    case getValueLR NoInline opts msg0 rr [] of
       Left e -> pure e
       Right (r1,r2) -> do
         pp <- evalBool (Proxy @p) opts r1
-        case getValueLR opts msg0 pp [hh rr] of
+        case getValueLR NoInline opts msg0 pp [hh rr] of
           Left e -> pure e
           Right p -> do
             qq <- evalBool (Proxy @q) opts r2
-            pure $ case getValueLR opts msg0 qq [hh rr, hh pp] of
+            pure $ case getValueLR NoInline opts msg0 qq [hh rr, hh pp] of
               Left e -> e
               Right q ->
                 let zz = case (p,q) of
@@ -348,16 +348,16 @@ instance ( ExtractL1C (PP q x)
   eval _ opts x = do
     let msg0 = "Both"
     qq <- eval (Proxy @q) opts x
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q -> do
         let (a,a') = (extractL1C q, extractL2C q)
         pp <- eval (Proxy @p) opts a
-        case getValueLR opts msg0 pp [hh qq] of
+        case getValueLR NoInline opts msg0 pp [hh qq] of
           Left e -> pure e
           Right b -> do
             pp' <- eval (Proxy @p) opts a'
-            pure $ case getValueLR opts msg0 pp' [hh qq, hh pp] of
+            pure $ case getValueLR NoInline opts msg0 pp' [hh qq, hh pp] of
               Left e -> e
               Right b' ->
                 mkNode opts (Val (b,b')) msg0 [hh qq, hh pp, hh pp']

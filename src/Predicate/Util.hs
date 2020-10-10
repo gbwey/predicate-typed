@@ -71,7 +71,7 @@ module Predicate.Util (
   , getValAndPE
   , getValLRFromTT
   , getValueLR
-  , getValueLRInline
+  , Inline (..)
   , fixLite
   , prefixNumberToTT
   , prefixMsg
@@ -436,34 +436,22 @@ getValLRFromTT = view (ttVal . _ValEither)
 hh :: TT a -> Tree PE
 hh (TT bp bt ss tt) = Node (PE (validateValP bp bt) ss) tt
 
--- | decorate the tree with more detail when there are errors
-getValueLR :: POpts
-           -> String
-           -> TT a
-           -> [Tree PE]
-           -> Either (TT x) a
-getValueLR = getValueLRImpl False
+data Inline = Inline | NoInline deriving (Show, Eq)
 
 -- | decorate the tree with more detail when there are errors but inline the error node
-getValueLRInline :: POpts
-           -> String
-           -> TT a
-           -> [Tree PE]
-           -> Either (TT x) a
-getValueLRInline = getValueLRImpl True
-
-getValueLRImpl :: Bool
+getValueLR :: Inline
            -> POpts
            -> String
            -> TT a
            -> [Tree PE]
            -> Either (TT x) a
-getValueLRImpl inline opts msg0 tt hs =
--- hack! fix me: if infix ...
+getValueLR inline opts msg0 tt hs =
+-- hack: if infix ...
   let ts = if _ttString tt `isInfixOf` msg0 then "" else _ttString tt
       xs = ts <> (if null ts || null msg0 then "" else " | ") <> msg0
-      tts | inline = hs <> _ttForest tt
-          | otherwise = hs <> [hh tt]
+      tts = case inline of
+              Inline -> hs <> _ttForest tt
+              NoInline -> hs <> [hh tt]
   in left (\e -> mkNode opts (Fail e) xs tts) (getValLRFromTT tt)
 
 

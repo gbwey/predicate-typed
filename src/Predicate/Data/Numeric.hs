@@ -109,7 +109,7 @@ instance ( Num (PP t a)
   eval _ opts a = do
     let msg0 = "FromInteger"
     nn <- eval (Proxy @n) opts a
-    pure $ case getValueLR opts msg0 nn [] of
+    pure $ case getValueLR NoInline opts msg0 nn [] of
       Left e -> e
       Right n ->
         let b = fromInteger (fromIntegral n)
@@ -166,7 +166,7 @@ instance ( Num (PP t a)
   eval _ opts a = do
     let msg0 = "FromIntegral"
     nn <- eval (Proxy @n) opts a
-    pure $ case getValueLR opts msg0 nn [] of
+    pure $ case getValueLR NoInline opts msg0 nn [] of
       Left e -> e
       Right n ->
         let b = fromIntegral n
@@ -213,7 +213,7 @@ instance ( a ~ PP p x
   eval _ opts x = do
     let msg0 = "ToRational"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right a ->
         let r = toRational a
@@ -236,7 +236,7 @@ instance ( P p a
   eval _ opts a = do
     let msg0 = "FromRational"
     pp <- eval (Proxy @p) opts a
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let b = fromRational @(PP t a) p
@@ -280,7 +280,7 @@ instance ( P p x
   eval _ opts x = do
     let msg0 = "Truncate"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let b = truncate p
@@ -311,7 +311,7 @@ instance ( P p x
   eval _ opts x = do
     let msg0 = "Ceiling"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let b = ceiling p
@@ -342,7 +342,7 @@ instance ( P p x
   eval _ opts x = do
     let msg0 = "Floor"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let b = floor p
@@ -409,11 +409,11 @@ instance ( P p a
   eval _ opts a = do
     let msg0 = "Pow"
     pp <- eval (Proxy @p) opts a
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
       Right p -> do
         qq <- eval (Proxy @q) opts a
-        pure $ case getValueLR opts msg0 qq [hh pp] of
+        pure $ case getValueLR NoInline opts msg0 qq [hh pp] of
           Left e -> e
           Right q ->
                 let hhs = [hh pp, hh qq]
@@ -442,7 +442,7 @@ instance ( PP p a ~ PP q a
   type PP (p ** q) a = PP p a
   eval _ opts a = do
     let msg0 = "Exp"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -468,7 +468,7 @@ instance ( PP p a ~ PP q a
   type PP (LogBase p q) a = PP p a
   eval _ opts a = do
     let msg0 = "LogBase"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -507,7 +507,7 @@ instance ( GetBinOp op
   type PP (Bin op p q) a = PP p a
   eval _ opts a = do
     let (s,f) = getBinOp @op
-    lr <- runPQ s (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline s (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -538,7 +538,7 @@ instance ( PP p a ~ PP q a
   type PP (p / q) a = PP p a
   eval _ opts a = do
     let msg0 = "(/)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)
@@ -606,7 +606,7 @@ instance ( Integral (PP p x)
   type PP (p % q) x = Rational
   eval _ opts x = do
     let msg0 = "(%)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)
@@ -681,7 +681,7 @@ instance ( Num (PP p x)
   eval _ opts x = do
     let msg0 = "Negate"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let d = negate p
@@ -712,7 +712,7 @@ instance ( Num (PP p x)
   eval _ opts x = do
     let msg0 = "Abs"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let d = abs p
@@ -736,7 +736,7 @@ instance ( PP p a ~ PP q a
   type PP (Div p q) a = PP p a
   eval _ opts a = do
     let msg0 = "Div"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -765,7 +765,7 @@ instance ( PP p a ~ PP q a
   type PP (Mod p q) a = PP p a
   eval _ opts a = do
     let msg0 = "Mod"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -820,7 +820,7 @@ instance ( PP p a ~ PP q a
   type PP (DivMod p q) a = (PP p a, PP p a)
   eval _ opts a = do
     let msg0 = "DivMod"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -867,7 +867,7 @@ instance ( PP p a ~ PP q a
   type PP (QuotRem p q) a = (PP p a, PP p a)
   eval _ opts a = do
     let msg0 = "QuotRem"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -934,7 +934,7 @@ instance ( Num (PP p x)
   eval _ opts x = do
     let msg0 = "Signum"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let d = signum p
@@ -958,7 +958,7 @@ instance ( Typeable (PP t x)
         msg0 = "ReadBase(" <> t <> "," <> show n <> ")"
         t = showT @(PP t x)
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let (ff,p1) = case p of
@@ -1095,7 +1095,7 @@ instance ( PP p x ~ a
   type PP (ShowBaseN n p) x = [Int]
   eval _ opts x = do
     let msg0 = "ShowBaseN"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @p) opts x []
     pure $ case lr of
       Left e -> e
       Right (fromIntegral -> n,fromIntegral -> p,nn,pp) ->
@@ -1147,7 +1147,7 @@ instance ( x ~ [a]
   eval _ opts x = do
     let msg0 = "UnShowBaseN"
     nn <- eval (Proxy @n) opts x
-    pure $ case getValueLR opts msg0 nn [] of
+    pure $ case getValueLR NoInline opts msg0 nn [] of
       Left e -> e
       Right (fromIntegral -> n) ->
          let xs = map fromIntegral x

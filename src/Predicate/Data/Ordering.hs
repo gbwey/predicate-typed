@@ -305,7 +305,7 @@ instance ( Ord (PP p a)
   type PP (p ==! q) a = Ordering
   eval _ opts a = do
     let msg0 = "(==!)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -373,7 +373,7 @@ instance ( PP p a ~ String
   type PP (p ===~ q) a = Ordering
   eval _ opts a = do
     let msg0 = "(===~)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -410,7 +410,7 @@ instance ( GetOrd o
   type PP (Cmp o p q) a = Bool
   eval _ opts a = do
     let (sfn, fn) = getOrd @o
-    lr <- runPQ sfn (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline sfn (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -429,7 +429,7 @@ instance ( PP p a ~ String
   type PP (CmpI o p q) a = Bool
   eval _ opts a = do
     let (sfn, fn) = getOrd @o
-    lr <- runPQ sfn (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline sfn (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->

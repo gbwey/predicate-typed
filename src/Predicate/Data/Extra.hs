@@ -192,7 +192,7 @@ instance ( P p x
   type PP (p <$ q) x = ApplyConstT (PP q x) (PP p x)
   eval _ opts x = do
     let msg0 = "(<$)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -237,7 +237,7 @@ instance ( Show (t c)
   type PP (p <* q) x = PP p x
   eval _ opts x = do
     let msg0 = "(<*)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -276,7 +276,7 @@ instance ( P p x
   type PP (p <|> q) x = PP p x
   eval _ opts x = do
     let msg0 = "(<|>)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -367,7 +367,7 @@ instance ( P p x
   type PP (p $$ q) x = FnT (PP p x)
   eval _ opts x = do
     let msg0 = "($$)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)  ->
@@ -399,7 +399,7 @@ instance ( P p x
   type PP (q $& p) x = FnT (PP p x)
   eval _ opts x = do
     let msg0 = "($&)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)  ->
@@ -471,7 +471,7 @@ instance ( Show (PP p a)
   eval _ opts a = do
     let msg0 = "Skip"
     pp <- eval (Proxy @p) opts a
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p -> mkNode opts (Val a) (msg0 <> " " <> showL opts p) [hh pp]
 
@@ -807,7 +807,7 @@ instance ( Integral (PP n x)
   eval _ opts x = do
     let msg0 = "Primes"
     nn <- eval (Proxy @n) opts x
-    pure $ case getValueLR opts msg0 nn [] of
+    pure $ case getValueLR NoInline opts msg0 nn [] of
       Left e -> e
       Right (fromIntegral -> n) ->
         let ret = take n primes
@@ -839,7 +839,7 @@ instance ( Integral (PP n x)
   eval _ opts x = do
     let msg0 = "PrimeFactors"
     nn <- eval (Proxy @n) opts x
-    pure $ case getValueLR opts msg0 nn [] of
+    pure $ case getValueLR NoInline opts msg0 nn [] of
       Left e -> e
       Right (fromIntegral -> n :: Integer)
             | n <= 0 -> mkNode opts (Fail (msg0 <> " number<=0")) "" [hh nn]
@@ -1001,11 +1001,11 @@ instance ( P p x
   eval _ opts x = do
     let msg0 = "Catch"
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> do
          let emsg = e ^?! ttVal' . _Fail -- extract the failt string a push back into the fail case
          qq <- eval (Proxy @q) opts ((emsg, x), Proxy @(PP p x))
-         pure $ case getValueLR opts (msg0 <> " default condition failed") qq [hh pp] of
+         pure $ case getValueLR NoInline opts (msg0 <> " default condition failed") qq [hh pp] of
             Left e1 -> e1
             Right _ -> mkNodeCopy opts qq (msg0 <> " caught exception[" <> emsg <> "]") [hh pp, hh qq]
       Right _ -> pure $ mkNodeCopy opts pp (msg0 <> " did not fire") [hh pp]
@@ -1352,7 +1352,7 @@ instance ( Traversable n
   eval _ opts x = do
     let msg0 = "(<$>)"
     qq <- eval (Proxy @q) opts x
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q -> _fmapImpl opts (Proxy @p) msg0 [hh qq] q
 
@@ -1370,7 +1370,7 @@ _fmapImpl opts proxyp msg0 hhs na = do
         nttb <- traverse (fmap (\tt -> tt & ttString %~ litL opts
                                           & ttForest .~ [hh tt]) . eval proxyp opts) na
         let ttnb = sequenceA nttb
-        pure $ case getValueLRInline opts "" ttnb hhs of
+        pure $ case getValueLR Inline opts "" ttnb hhs of
           Left e -> e
           Right ret -> let z = case (_ttString ttnb,_ttForest ttnb) of
                                  ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"
@@ -1416,7 +1416,7 @@ instance ( Applicative n
   type PP (FPair p q) a = JoinT (PP p a) (PP q a)
   eval _ opts a = do
     let msg0 = "FPair"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq)  ->

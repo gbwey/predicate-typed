@@ -156,7 +156,7 @@ instance ( P p x
   type PP (p ++ q) x = PP q x
   eval _ opts z = do
     let msg0 = "(++)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts z []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -210,7 +210,7 @@ instance ( P p x
   type PP (p :+ q) x = PP q x
   eval _ opts z = do
     let msg0 = "(:+)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts z []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -256,7 +256,7 @@ instance ( P p x
   type PP (p +: q) x = PP p x
   eval _ opts z = do
     let msg0 = "(+:)"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts z []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts z []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -410,7 +410,7 @@ instance ( P p x
   eval _ opts a' = do
     let msg0 = "Partition"
     qq <- eval (Proxy @q) opts a'
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q ->
         case chkSize opts msg0 q [hh qq] of
@@ -453,7 +453,7 @@ instance ( P p x
   eval _ opts a' = do
     let msg0 = "PartitionBy"
     qq <- eval (Proxy @q) opts a'
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q ->
         case chkSize opts msg0 q [hh qq] of
@@ -542,7 +542,7 @@ instance ( Show x
   eval _ opts a' = do
     let msg0 = "GroupBy"
     qq <- eval (Proxy @q) opts a'
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q ->
         case chkSize opts msg0 q [hh qq] of
@@ -695,7 +695,7 @@ instance ( P p x
   eval _ opts a' = do
     let msg0 = "Break"
     qq <- eval (Proxy @q) opts a'
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q ->
         case chkSize opts msg0 q [hh qq] of
@@ -705,7 +705,7 @@ instance ( P p x
                 ff ((i,a):ias) zs = do
                    pp <- evalBoolHide @p opts a
                    let v = ((i,a), pp)
-                   case getValueLR opts msg0 pp [hh qq] of
+                   case getValueLR NoInline opts msg0 pp [hh qq] of
                      Right False -> ff ias (zs Seq.|> v)
                      Right True -> pure (zs,map snd ias,Just v)
                      Left _ -> pure (zs,map snd ias,Just v)
@@ -716,7 +716,7 @@ instance ( P p x
                            (msg0 <> " cnt=" <> show (length ialls, length rhs))
                            (map (hh . prefixNumberToTT) (toList ialls))
                  Just iatt@(ia, tt) ->
-                   case getValueLR opts (msg0 <> " predicate failed") tt (hh qq : map (hh . prefixNumberToTT) (toList (ialls Seq.|> iatt))) of
+                   case getValueLR NoInline opts (msg0 <> " predicate failed") tt (hh qq : map (hh . prefixNumberToTT) (toList (ialls Seq.|> iatt))) of
                      Right True ->
                        mkNode opts (Val (map (snd . fst) (toList ialls), snd ia : rhs))
                                (msg0 <> " cnt=" <> show (length ialls, 1+length rhs))
@@ -769,7 +769,7 @@ instance ( PP p x ~ [a]
   type PP (Intercalate p q) x = PP p x
   eval _ opts x = do
     let msg0 = "Intercalate"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -820,7 +820,7 @@ instance ( [PP p a] ~ PP q a
   type PP (Elem p q) a = Bool
   eval _ opts a = do
     let msg0 = "Elem"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -903,14 +903,14 @@ instance ( P n a
   eval _ opts a = do
     let msg0 = "Pad" <> (if lft then "L" else "R")
         lft = getBool @left
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @p) opts a []
     case lr of
       Left e -> pure e
       Right (fromIntegral -> n,p,nn,pp) -> do
         let msg1 = msg0 <> " " <> showL opts n <> " pad=" <> showL opts p
             hhs = [hh nn, hh pp]
         qq <- eval (Proxy @q) opts a
-        pure $ case getValueLR opts (msg1 <> " q failed") qq hhs of
+        pure $ case getValueLR NoInline opts (msg1 <> " q failed") qq hhs of
           Left e -> e
           Right q ->
             let l = length q
@@ -999,7 +999,7 @@ instance ( P ns x
   type PP (SplitAts ns p) x = [PP p x]
   eval _ opts x = do
     let msg0 = "SplitAts"
-    lr <- runPQ msg0 (Proxy @ns) (Proxy @p) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @ns) (Proxy @p) opts x []
     pure $ case lr of
       Left e -> e
       Right (ns,p,nn,pp) ->
@@ -1040,7 +1040,7 @@ instance ( PP p a ~ [b]
   type PP (SplitAt n p) a = (PP p a, PP p a)
   eval _ opts a = do
     let msg0 = "SplitAt"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @p) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @p) opts a []
     pure $ case lr of
       Left e -> e -- (Left e, tt')
       Right (fromIntegral -> n,p,pp,qq) ->
@@ -1114,14 +1114,14 @@ instance ( PP p a ~ [b]
   type PP (ChunksOf' n i p) a = [PP p a]
   eval _ opts a = do
     let msg0 = "ChunksOf"
-    lr <- runPQ msg0 (Proxy @n) (Proxy @i) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @i) opts a []
     case lr of
       Left e -> pure e
       Right (fromIntegral -> n,fromIntegral -> i,nn,ii) -> do
         let hhs = [hh nn, hh ii]
             msg1 = msg0 <> " " <> showL opts (n,i)
         pp <- eval (Proxy @p) opts a
-        pure $ case getValueLR opts (msg1 <> " p failed") pp hhs of
+        pure $ case getValueLR NoInline opts (msg1 <> " p failed") pp hhs of
           Left e -> e
           Right p ->
             let hhs1 = hhs ++ [hh pp]
@@ -1146,7 +1146,7 @@ instance ( GetBool keep
   eval _ opts x = do
     let msg0 = if keep then "Keep" else "Remove"
         keep = getBool @keep
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts x []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -1391,7 +1391,7 @@ instance ( P p (a,a)
   eval _ opts x = do
     let msg0 = "SortBy"
     qq <- eval (Proxy @q) opts x
-    case getValueLR opts (msg0 <> " q failed") qq [] of
+    case getValueLR NoInline opts (msg0 <> " q failed") qq [] of
       Left e -> pure e
       Right as -> do
         let ff :: MonadEval m => [a] -> m (TT [a])
@@ -1400,22 +1400,22 @@ instance ( P p (a,a)
                 [w] -> pure $ mkNode opts (Val [w]) (msg0 <> " one element " <> showL opts w) [hh qq]
                 w:ys@(_:_) -> do
                   pp <- evalHide @(SortByHelperT p) opts (map (w,) ys)
-                  case getValueLR opts msg0 pp [hh qq] of
+                  case getValueLR NoInline opts msg0 pp [hh qq] of
                     Left e -> pure e
                     Right (ll', rr') -> do
                       lhs <- ff (map snd ll')
-                      case getValueLR opts msg0 lhs [hh qq, hh pp] of
+                      case getValueLR NoInline opts msg0 lhs [hh qq, hh pp] of
                         Left _ -> pure lhs -- dont rewrap or rewrite
                         Right ll -> do
                           rhs <- ff (map snd rr')
-                          case getValueLR opts msg0 rhs [hh qq, hh pp, hh lhs] of
+                          case getValueLR NoInline opts msg0 rhs [hh qq, hh pp, hh lhs] of
                             Left _ -> pure rhs
                             Right rr ->
                               pure $  mkNode opts (Val (ll ++ w : rr))
                                      (msg0 <> " lhs=" <> showL opts ll <> " pivot " <> showL opts w <> " rhs=" <> showL opts rr)
                                      (hh pp : [hh lhs | length ll > 1] ++ [hh rhs | length rr > 1])
         ret <- ff as
-        pure $ case getValueLR opts msg0 ret [hh qq] of
+        pure $ case getValueLR NoInline opts msg0 ret [hh qq] of
           Left _e -> ret -- dont rewrap else will double up messages: already handled
           Right xs -> mkNodeCopy opts ret (msg0 <> " " <> showL opts xs) [hh qq, hh ret]
 
@@ -1547,7 +1547,7 @@ instance P p x => P (Singleton p) x where
   eval _ opts x = do
     let msg0 = "Singleton"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p -> mkNode opts (Val [p]) msg0 [hh pp]
 
@@ -1602,7 +1602,7 @@ instance ( PP q a ~ [x]
   type PP (ZipWith p q r) a = [PP p (ExtractAFromList (PP q a), ExtractAFromList (PP r a))]
   eval _ opts a = do
     let msg0 = "ZipWith"
-    lr <- runPQ msg0 (Proxy @q) (Proxy @r) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @q) (Proxy @r) opts a []
     case lr of
       Left e -> pure e
       Right (q,r,qq,rr) ->
@@ -1658,7 +1658,7 @@ instance ( PP l a ~ x
   type PP (ZipPad l r p q) a = [(PP l a, PP r a)]
   eval _ opts a = do
     let msg0 = "ZipPad"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
@@ -1669,14 +1669,14 @@ instance ( PP l a ~ x
             case compare (length p) (length q) of
               LT -> do
                 ll <- eval (Proxy @l) opts a
-                pure $ case getValueLR opts (msg0 <> " l failed") ll hhs of
+                pure $ case getValueLR NoInline opts (msg0 <> " l failed") ll hhs of
                   Left e -> e
                   Right l ->
                     let d = zip (p ++ repeat l) q
                     in mkNode opts (Val d) (show3' opts (msg0 <> " Left pad") d "p=" p <> showVerbose opts " | q=" q) (hhs ++ [hh ll])
               GT -> do
                 rr <- eval (Proxy @r) opts a
-                pure $ case getValueLR opts (msg0 <> " r failed") rr hhs of
+                pure $ case getValueLR NoInline opts (msg0 <> " r failed") rr hhs of
                   Left e -> e
                   Right r ->
                     let d =zip p (q ++ repeat r)
@@ -1730,7 +1730,7 @@ instance ( PP l a ~ x
   type PP (ZipL l p q) a = [(ExtractAFromList (PP p a), ExtractAFromList (PP q a))]
   eval _ opts a = do
     let msg0 = "ZipL"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
@@ -1744,7 +1744,7 @@ instance ( PP l a ~ x
                     in pure $ mkNode opts (Fail (msg1 ++ " rhs would be truncated")) (showVerbose opts "p=" p <> showVerbose opts " | q=" q) hhs
               _ -> do
                      ll <- eval (Proxy @l) opts a
-                     pure $ case getValueLR opts (msg0 <> " l failed") ll hhs of
+                     pure $ case getValueLR NoInline opts (msg0 <> " l failed") ll hhs of
                              Left e -> e
                              Right l ->
                                let d = zip (p ++ repeat l) q
@@ -1786,7 +1786,7 @@ instance ( PP r a ~ y
   type PP (ZipR r p q) a = [(ExtractAFromList (PP p a), ExtractAFromList (PP q a))]
   eval _ opts a = do
     let msg0 = "ZipR"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
@@ -1800,7 +1800,7 @@ instance ( PP r a ~ y
                     in pure $ mkNode opts (Fail (msg1 ++ " rhs would be truncated")) (showVerbose opts "p=" p <> showVerbose opts " | q=" q) hhs
               _ -> do
                      rr <- eval (Proxy @r) opts a
-                     pure $ case getValueLR opts (msg0 <> " l failed") rr hhs of
+                     pure $ case getValueLR NoInline opts (msg0 <> " l failed") rr hhs of
                              Left e -> e
                              Right r ->
                                let d = zip p (q ++ repeat r)
@@ -1835,7 +1835,7 @@ instance ( PP p a ~ [x]
   type PP (Zip p q) a = [(ExtractAFromList (PP p a), ExtractAFromList (PP q a))]
   eval _ opts a = do
     let msg0 = "Zip"
-    lr <- runPQ msg0 (Proxy @p) (Proxy @q) opts a []
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
@@ -1975,12 +1975,12 @@ instance ( P p x
                     EQ -> (isInfixOf, "IsInfix")
                     GT -> (isSuffixOf, "IsSuffix")
     pp <- eval (Proxy @p) opts x
-    case getValueLR opts msg0 pp [] of
+    case getValueLR NoInline opts msg0 pp [] of
         Left e -> pure e
         Right s0 -> do
           let msg1 = msg0 <> " | " <> showL opts s0
           qq <- eval (Proxy @q) opts x
-          pure $ case getValueLR opts (msg1 <> " q failed") qq [hh pp] of
+          pure $ case getValueLR NoInline opts (msg1 <> " q failed") qq [hh pp] of
             Left e -> e
             Right s1 -> mkNodeB opts (ff s0 s1) (msg1 <> " " <> showL opts s1) [hh pp, hh qq]
 

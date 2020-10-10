@@ -74,7 +74,7 @@ instance ( Show (PP p x)
   eval _ opts x = do
     let msg0 = "ShowP"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let d = show p
@@ -94,7 +94,7 @@ instance ( P p x
     let msg0 = "ReadP " <> t
         t = showT @(PP t x)
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right s ->
         let hhs = [hh pp]
@@ -167,7 +167,7 @@ instance ( P p x
     let msg0 = "ReadMaybe " <> t
         t = showT @(PP t x)
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right s ->
         let msg1 = msg0 <> " (" <> s <> ")"
@@ -229,7 +229,7 @@ instance ( PrintfArg (PP p x)
   type PP (PrintF s p) x = String
   eval _ opts x = do
     let msg0 = "PrintF"
-    lrx <- runPQ msg0 (Proxy @s) (Proxy @p) opts x []
+    lrx <- runPQ NoInline msg0 (Proxy @s) (Proxy @p) opts x []
     case lrx of
       Left e -> pure e
       Right (s,p,ss,pp) -> do
@@ -320,7 +320,7 @@ instance ( PrintC bs
   type PP (PrintT s p) x = String
   eval _ opts x = do
     let msg0 = "PrintT"
-    lrx <- runPQ msg0 (Proxy @s) (Proxy @p) opts x []
+    lrx <- runPQ NoInline msg0 (Proxy @s) (Proxy @p) opts x []
     case lrx of
       Left e -> pure e
       Right (s,y,ss,pp) -> do
@@ -392,7 +392,7 @@ instance ( KnownNat n
   eval _ opts x = do
     let msg0 = "PrintL(" ++ show n ++ ")"
         n = nat @n
-    lrx <- runPQ msg0 (Proxy @s) (Proxy @p) opts x []
+    lrx <- runPQ NoInline msg0 (Proxy @s) (Proxy @p) opts x []
     case lrx of
       Left e -> pure e
       Right (s,p,ss,pp) -> do

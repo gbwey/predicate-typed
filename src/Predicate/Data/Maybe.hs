@@ -110,7 +110,7 @@ instance ( PP p x ~ a
   eval _ opts x = do
     let msg0 = "MkJust"
     pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR opts msg0 pp [] of
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
         let d = Just p
@@ -258,13 +258,13 @@ instance ( P q a
       Nothing -> do
         let msg1 = msg0 <> "(Nothing)"
         pp <- eval (Proxy @p) opts (Proxy @(PP q a))
-        pure $ case getValueLR opts msg1 pp [] of
+        pure $ case getValueLR NoInline opts msg1 pp [] of
           Left e -> e
           Right b -> mkNodeCopy opts pp (msg1 <> " " <> showL opts b <> " | Proxy") [hh pp]
       Just a -> do
         let msg1 = msg0 <> "(Just)"
         qq <- eval (Proxy @q) opts a
-        pure $ case getValueLR opts msg1 qq [] of
+        pure $ case getValueLR NoInline opts msg1 qq [] of
           Left e -> e
           Right b -> mkNodeCopy opts qq (show3 opts msg1 b a) [hh qq]
 
@@ -356,11 +356,11 @@ instance ( Show (PP p a)
   eval _ opts z = do
     let msg0 = "MaybeBool"
     bb <- evalBool (Proxy @b) opts z
-    case getValueLR opts (msg0 <> " b failed") bb [] of
+    case getValueLR NoInline opts (msg0 <> " b failed") bb [] of
       Left e -> pure e
       Right True -> do
         pp <- eval (Proxy @p) opts z
-        pure $ case getValueLR opts (msg0 <> " p failed") pp [hh bb] of
+        pure $ case getValueLR NoInline opts (msg0 <> " p failed") pp [hh bb] of
           Left e -> e
           Right p -> mkNode opts (Val (Just p)) (msg0 <> "(False) Just " <> showL opts p) [hh bb, hh pp]
       Right False -> pure $ mkNode opts (Val Nothing) (msg0 <> "(True)") [hh bb]
@@ -422,14 +422,14 @@ instance ( PP p x ~ a
   eval _ opts x = do
     let msg0 = "JustDef"
     qq <- eval (Proxy @q) opts x
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q ->
         case q of
           Just b -> pure $ mkNode opts (Val b) (msg0 <> " Just") [hh qq]
           Nothing -> do
             pp <- eval (Proxy @p) opts x
-            pure $ case getValueLR opts msg0 pp [hh qq] of
+            pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
               Right b -> mkNode opts (Val b) (msg0 <> " Nothing") [hh qq, hh pp]
 
@@ -460,13 +460,13 @@ instance ( PP p x ~ String
   eval _ opts x = do
     let msg0 = "JustFail"
     qq <- eval (Proxy @q) opts x
-    case getValueLR opts msg0 qq [] of
+    case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q ->
         case q of
           Just b -> pure $ mkNode opts (Val b) (msg0 <> " Just") [hh qq]
           Nothing -> do
             pp <- eval (Proxy @p) opts x
-            pure $ case getValueLR opts msg0 pp [hh qq] of
+            pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
               Right p -> mkNode opts (Fail p) (msg0 <> " Nothing") [hh qq, hh pp]
