@@ -596,11 +596,11 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 -- Fail "empty list"
 --
 -- >>> pl @(HeadFail "zz" Fst >> Le 6) ([],True)
--- Error zz
+-- Error zz (JustFail Nothing)
 -- Fail "zz"
 --
 -- >>> pl @((HeadFail "failed1" Fst >> Le 6) || 'False) ([],True)
--- Error failed1 (||)
+-- Error failed1 (JustFail Nothing | ||)
 -- Fail "failed1"
 --
 -- >>> pl @((Fst >> HeadFail "failed2" Id >> Le (6 -% 1)) || 'False) ([-9],True)
@@ -1370,7 +1370,7 @@ _fmapImpl opts proxyp msg0 hhs na = do
         nttb <- traverse (fmap (\tt -> tt & ttString %~ litL opts
                                           & ttForest .~ [hh tt]) . eval proxyp opts) na
         let ttnb = sequenceA nttb
-        pure $ case getValueLRInline opts ttnb hhs of
+        pure $ case getValueLRInline opts "" ttnb hhs of
           Left e -> e
           Right ret -> let z = case (_ttString ttnb,_ttForest ttnb) of
                                  ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"

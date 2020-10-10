@@ -452,7 +452,7 @@ readshow' = mkProxy3
 --
 --
 -- >>> pl @(T5_3 (Ip4 OL)) [141,213,308,4]
--- Error octet 2 out of range 0-255 found 308
+-- Error octet 2 out of range 0-255 found 308 (Guard(2) 308)
 -- Fail "octet 2 out of range 0-255 found 308"
 --
 --

@@ -187,7 +187,7 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- Val True
 --
 -- >>> pl @(Map Len >> Ix 3 (Failp "lhs") &&& Ix 0 5 >> Fst == Snd) [[1..4],[4..5]]
--- Error lhs
+-- Error lhs (Ix(3) not found | '(,))
 -- Fail "lhs"
 --
 -- >>> pl @(Map Len >> Ix 0 (Failp "lhs") &&& Ix 1 5 >> Fst == Snd) [[1..4],[4..5]]
@@ -195,15 +195,15 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- Val False
 --
 -- >>> pl @(Map Len >> Ix 1 (Failp "lhs") &&& Ix 3 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
--- Error rhs
+-- Error rhs (Ix(3) not found | '(,))
 -- Fail "rhs"
 --
 -- >>> pl @(Map Len >> Ix 10 (Failp "lhs") &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
--- Error lhs
+-- Error lhs (Ix(10) not found | '(,))
 -- Fail "lhs"
 --
 -- >>> pl @(Map Len >> Ix 0 (Failp "lhs") &&& Ix 10 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
--- Error rhs
+-- Error rhs (Ix(10) not found | '(,))
 -- Fail "rhs"
 --
 -- >>> pl @(Map Len >> Ix 10 3 &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
@@ -241,7 +241,7 @@ instance ( P def (Proxy a)
          Nothing -> do
            let msg1 = msg0 <> " not found"
            pp <- eval (Proxy @def) opts (Proxy @a)
-           pure $ case getValueLR opts msg1 pp [] of
+           pure $ case getValueLRInline opts msg1 pp [] of
              Left e -> e
              Right _ -> mkNodeCopy opts pp msg1 [hh pp]
          Just a -> pure $ mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
@@ -294,7 +294,7 @@ instance ( P q a
         in case p ^? ix q of
              Nothing -> do
                 rr <- eval (Proxy @r) opts (Proxy @(IxValue (PP p a)))
-                pure $ case getValueLR opts msg1 rr [hh pp, hh qq] of
+                pure $ case getValueLRInline opts msg1 rr [hh pp, hh qq] of
                   Left e -> e
                   Right _ -> mkNodeCopy opts rr (msg1 <> " index not found") [hh pp, hh qq]
              Just ret -> pure $ mkNode opts (Val ret) (show3' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]

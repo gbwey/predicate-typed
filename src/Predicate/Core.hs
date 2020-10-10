@@ -647,7 +647,7 @@ instance ( Show (PP p a)
       Left e -> pure e
       Right p -> do
         qq <- eval (Proxy @(p1 ': ps)) opts a
-        pure $ case getValueLRInline opts qq [hh pp] of
+        pure $ case getValueLRInline opts "" qq [hh pp] of
           Left e -> e
           Right q ->
             let ret = p:q

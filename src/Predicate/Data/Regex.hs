@@ -137,7 +137,7 @@ instance ( GetROpts rs
 -- Val 13.0
 --
 -- >>> pl @(ExitWhen "regex failed" (Not (Re "^\\d+(?:\\.\\d+)?$")) >> ReadP Double Id) "-13.4"
--- Error regex failed
+-- Error regex failed (Guard | "-13.4")
 -- Fail "regex failed"
 --
 -- >>> pl @(Re "\\d{4}\\") "ayx"
@@ -369,7 +369,7 @@ instance ( GetROpts rs
 -- Val ([141,214,125,1,2,6],(False,True))
 --
 -- >>> pl @(Resplit "\\." >> Map (ReadP Int Id) >> Id &&& ((Len == 4) &&& All (0 <..> 0xff))) "141.214.125."
--- Error ReadP Int ()
+-- Error ReadP Int () (Map(i=3, a="") excnt=1)
 -- Fail "ReadP Int ()"
 --
 data Resplit p

@@ -179,7 +179,7 @@ instance ( PP p x ~ a
 -- Fail "failed20"
 --
 -- >>> pl @(MaybeIn ('False >> FailS "failed21") 'False) (Nothing @Double)
--- Error failed21 (MaybeIn(Nothing))
+-- Error failed21 (False | MaybeIn(Nothing))
 -- Fail "failed21"
 --
 -- >>> pl @(MaybeIn (Failp "err") Id) (Nothing @Int)

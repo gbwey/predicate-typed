@@ -54,6 +54,7 @@ import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
 import Data.Void (Void)
 import qualified Data.Type.Equality as DE
+import Data.Bool (bool)
 -- $setup
 -- >>> import Predicate.Prelude
 -- >>> :set -XDataKinds
@@ -93,7 +94,7 @@ import qualified Data.Type.Equality as DE
 -- Val [True,True,False,False,False]
 --
 -- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) ()) 45
--- Error failing with 45 (If [True])
+-- Error failing with 45 (If True)
 -- Fail "failing with 45"
 --
 -- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (Id * 7)) 3
@@ -105,7 +106,7 @@ import qualified Data.Type.Equality as DE
 -- Val ["2","1"]
 --
 -- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (ShowP (Id * 7) >> Ones)) 19
--- Error failing with 19 (If [True])
+-- Error failing with 19 (If True)
 -- Fail "failing with 19"
 --
 data If p q r
@@ -127,9 +128,9 @@ instance ( Show (PP r a)
         qqrr <- if b
               then eval (Proxy @q) opts a
               else eval (Proxy @r) opts a
-        pure $ case getValueLR opts (msg0 <> " [" <> show b <> "]") qqrr [hh pp, hh qqrr] of
-          Left e -> e
-          Right ret -> mkNodeCopy opts qqrr (msg0 <> " " <> (if b then "'True " else "'False ") <> showL opts ret) [hh pp, hh qqrr]
+        pure $ case getValueLRInline opts (msg0 <> " " <> show b) qqrr [hh pp, hh qqrr] of
+          Left e -> e -- & ttString %~ \x -> msg0 <> show b <> nullIf " | " x
+          Right ret -> mkNodeCopy opts qqrr (msg0 <> " " <> bool "'False" "'True" b <> " " <> showL opts ret) [hh pp, hh qqrr]
 
 type family GuardsT (ps :: [k]) where
   GuardsT '[] = '[]
@@ -339,7 +340,7 @@ instance ( KnownNat n
               Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
-            pure $ case getValueLRInline opts ww [hh rr, hh pp] of
+            pure $ case getValueLRInline opts "" ww [hh rr, hh pp] of
               Left e -> e
               Right b -> mkNode opts (Val b) (show3 opts msgbase1 b a) [hh rr, hh pp, hh ww]
 
@@ -442,7 +443,7 @@ instance ( PP prt (Int, a) ~ String
             pure $ mkNode opts (Val [a]) msgbase2 [hh pp]
          else do
            ss <- eval (Proxy @(GuardsImpl n ps)) opts as
-           pure $ case getValueLRInline opts ss [hh pp] of
+           pure $ case getValueLRInline opts "" ss [hh pp] of
              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
              Right zs -> ss & ttForest %~ (hh pp:)
                             & ttVal' .~ Val (a:zs)
@@ -595,7 +596,7 @@ instance ( PP prt (Int, a) ~ String
             pure $ mkNodeB opts True msgbase2 [hh pp]
          else do
            ss <- evalBool (Proxy @(BoolsImpl n ps)) opts as
-           pure $ case getValueLRInline opts ss [hh pp] of
+           pure $ case getValueLRInline opts "" ss [hh pp] of
              Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
              Right _ -> ss & ttForest %~ (hh pp:)
 
@@ -775,7 +776,7 @@ instance ( x ~ [a]
 -- Fail "someval(8)"
 --
 -- >>> pl @(Guard "someval" (Len == 2) >> (ShowP Id &&& Id)) ([] :: [Int])
--- Error someval
+-- Error someval (Guard | [])
 -- Fail "someval"
 --
 -- >>> pl @(Guard "someval" (Len == 2) >> (Id &&& ShowP Id)) [2,3]
@@ -783,7 +784,7 @@ instance ( x ~ [a]
 -- Val ([2,3],"[2,3]")
 --
 -- >>> pl @(Guard "someval" (Len == 2) >> (ShowP Id &&& Id)) [2,3,4]
--- Error someval
+-- Error someval (Guard | [2,3,4])
 -- Fail "someval"
 --
 -- >>> pl @(Map (Guard "someval" (Lt 3) >> 'True)) [1 ..10]
@@ -795,11 +796,11 @@ instance ( x ~ [a]
 -- Val [13,16,17]
 --
 -- >>> pl @(Guard "err" (Len > 2) >> Map Succ) [12]
--- Error err
+-- Error err (Guard | [12])
 -- Fail "err"
 --
 -- >>> pl @(Guard (PrintF "err found len=%d" Len) (Len > 5) >> Map Succ) [12,15,16]
--- Error err found len=3
+-- Error err found len=3 (Guard | [12,15,16])
 -- Fail "err found len=3"
 --
 data Guard prt p
@@ -853,7 +854,7 @@ instance ( P prt a
 -- | uses 'Guard' but negates @p@
 --
 -- >>> pl @(HeadFail "failedn" Id &&& (Len == 1 >> ExitWhen "ExitWhen" Id) >> Fst) [3]
--- Error ExitWhen
+-- Error ExitWhen (Guard | True | True | '(,))
 -- Fail "ExitWhen"
 --
 -- >>> pl @(Head &&& (Len == 1 >> Not Id >> ExitWhen "ExitWhen" Id) >> Fst) [3]
@@ -865,7 +866,7 @@ instance ( P prt a
 -- Val 3
 --
 -- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head) [3,1]
--- Error ExitWhen
+-- Error ExitWhen (Guard | [3,1])
 -- Fail "ExitWhen"
 --
 -- >>> pl @(ExitWhen "ExitWhen" (Len /= 1) >> Head) [3]
@@ -885,7 +886,7 @@ instance ( P prt a
 -- Val [False,False,True,True,True]
 --
 -- >>> pl @(ExitWhen "err" (Len > 2) >> Map Succ) [12,15,16]
--- Error err
+-- Error err (Guard | [12,15,16])
 -- Fail "err"
 --
 -- >>> pl @(ExitWhen "err" (Len > 2) >> Map Succ) [12]

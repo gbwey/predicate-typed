@@ -155,7 +155,7 @@ import Predicate.Misc
 import GHC.TypeLits (Symbol, Nat, KnownSymbol, KnownNat)
 import Control.Lens
 import Control.Arrow (Arrow((&&&)), ArrowChoice(left))
-import Data.List (intercalate, unfoldr)
+import Data.List (intercalate, unfoldr, isInfixOf)
 import Data.Tree (drawTree, Forest, Tree(Node))
 import Data.Tree.Lens (root)
 import System.Console.Pretty (Color(..))
@@ -442,18 +442,30 @@ getValueLR :: POpts
            -> TT a
            -> [Tree PE]
            -> Either (TT x) a
-getValueLR opts msg0 tt hs =
-  left (\e -> mkNode opts (Fail e) msg0 (hs ++ [hh tt]))
-       (getValLRFromTT tt)
+getValueLR = getValueLRImpl False
 
--- | decorate the tree with more detail when there are errors
+-- | decorate the tree with more detail when there are errors but inline the error node
 getValueLRInline :: POpts
+           -> String
            -> TT a
            -> [Tree PE]
            -> Either (TT x) a
-getValueLRInline opts tt hs =
-  left (\e -> mkNode opts (Fail e) (_ttString tt) (hs <> _ttForest tt))
-       (getValLRFromTT tt)
+getValueLRInline = getValueLRImpl True
+
+getValueLRImpl :: Bool
+           -> POpts
+           -> String
+           -> TT a
+           -> [Tree PE]
+           -> Either (TT x) a
+getValueLRImpl inline opts msg0 tt hs =
+-- hack! fix me: if infix ...
+  let ts = if _ttString tt `isInfixOf` msg0 then "" else _ttString tt
+      xs = ts <> (if null ts || null msg0 then "" else " | ") <> msg0
+      tts | inline = hs <> _ttForest tt
+          | otherwise = hs <> [hh tt]
+  in left (\e -> mkNode opts (Fail e) xs tts) (getValLRFromTT tt)
+
 
 -- | elide the 'Identity' wrapper so it acts like a normal ADT
 type family HKD f a where

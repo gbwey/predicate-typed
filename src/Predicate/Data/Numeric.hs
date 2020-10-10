@@ -1180,7 +1180,7 @@ instance ( x ~ [a]
 -- Val 0
 --
 -- >>> pl @(RoundUp 0 10) ()
--- Error Mod zero denominator (RoundUp Mod)
+-- Error Mod zero denominator (RoundUp - | Mod)
 -- Fail "Mod zero denominator"
 --
 data RoundUp n p

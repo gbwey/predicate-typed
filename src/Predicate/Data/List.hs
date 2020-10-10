@@ -667,7 +667,7 @@ instance P (FilterT p q) x => P (Filter p q) x where
 -- Val ([1,2],[3,4,5,6,7,8])
 --
 -- >>> pl @(Break (If (Gt 2) (Failt _ "ASfd") 'False) Id) [1..8]
--- Error ASfd (Break predicate failed)
+-- Error ASfd (If True | Break predicate failed)
 -- Fail "ASfd"
 --
 -- >>> pl @(Break Snd Id) (zip [1..] [False,False,False,True,True,False])
@@ -1370,7 +1370,7 @@ instance P Unzip3T x => P Unzip3 x where
 -- Val ["aa","cx","by","az"]
 --
 -- >>> pl @(SortBy (If (Fst==5 && Snd==3) (Failt _ (PrintT "pivot=%d value=%d" Id)) 'GT) Snd) ((), [5,7,3,1,6,2,1,3])
--- Error pivot=5 value=3(2) (SortBy)
+-- Error pivot=5 value=3(2) (Partition(i=1, a=(5,3)) excnt=2 | SortBy)
 -- Fail "pivot=5 value=3(2)"
 --
 -- >>> pl @(SortBy (If (Fst==50 && Snd==3) (Failt _ (PrintT "pivot=%d value=%d" Id)) OrdA) Snd) ((), [5,7,3,1,6,2,1,3])
@@ -1437,7 +1437,7 @@ instance ( P p (a,a)
 -- Val [('a',4),('a',14),('b',2),('c',10),('d',12),('z',1)]
 --
 -- >>> pl @(SortOn (FailS "asdf") Id) [10,4,2,12,14]
--- Error asdf(4) (SortBy)
+-- Error asdf(4) (Partition(i=0, a=(10,4)) excnt=4 | SortBy)
 -- Fail "asdf(4)"
 --
 -- >>> pl @(SortOn Snd Snd) ((),[('z',14),('a',10),('m',22),('a',1)])

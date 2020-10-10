@@ -194,7 +194,7 @@ instance P (ScanNAT q) x => P (ScanNA q) x where
 -- Val GT
 --
 -- >>> pl @(FoldN 30 Succ Id) LT
--- Error Succ IO e=Prelude.Enum.Ordering.succ: bad argument
+-- Error Succ IO e=Prelude.Enum.Ordering.succ: bad argument (Scanl)
 -- Fail "Succ IO e=Prelude.Enum.Ordering.succ: bad argument"
 --
 -- >>> pl @(FoldN 6 Succ Id) 'a'
@@ -235,7 +235,7 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 -- Val [10,9,8,7,6,5,4,3,2,1,99]
 --
 -- >>> pl @(Foldl Fst '() (EnumFromTo 1 9999)) ()
--- Error Scanl list size exceeded
+-- Error Scanl list size exceeded (max is 100)
 -- Fail "Scanl list size exceeded"
 --
 -- >>> pl @(Foldl (Guard "someval" (Fst < Snd) >> Snd) Head Tail) [1,4,7,9,16]
@@ -243,7 +243,7 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 -- Val 16
 --
 -- >>> pl @(Foldl (Guard (PrintT "%d not less than %d" Id) (Fst < Snd) >> Snd) Head Tail) [1,4,7,6,16]
--- Error 7 not less than 6
+-- Error 7 not less than 6 (Scanl)
 -- Fail "7 not less than 6"
 --
 -- >>> pl @(Foldl (If (L11 && (Snd > L12)) '( 'True, Snd) '( 'False, L12)) '( 'True, Head) Tail) [1,4,7,9,16]
@@ -417,7 +417,7 @@ instance P (IterateNWhileT n p f) x => P (IterateNWhile n p f) x where
 -- Val [95,94,93]
 --
 -- >>> pl @(IterateNUntil 9999 'False Id) 1
--- Error Unfoldr (9999,1):recursion limit i=100
+-- Error Unfoldr (9999,1):recursion limit i=100 (Unfoldr (9999,1))
 -- Fail "Unfoldr (9999,1):recursion limit i=100"
 --
 data IterateNUntil n p f
@@ -517,7 +517,7 @@ instance ( KnownNat n
        Left e -> pure e
        Right b -> do
                     qq <- eval (Proxy @(ParaImpl n (p1 ': ps))) opts as
-                    pure $ case getValueLRInline opts qq [hh pp] of
+                    pure $ case getValueLRInline opts "" qq [hh pp] of
                       Left e -> e -- & ttString %~ (\x -> x <> (if null x then "" else " ") <> showL opts b)
                       Right bs -> mkNode opts (Val (b:bs)) (msgbase1 <> " " <> showL opts (b:bs) <> showVerbose opts " | " (a:as)) [hh pp, hh qq]
 
@@ -537,7 +537,7 @@ instance ( KnownNat n
 -- Val [1,2,3,4,12]
 --
 -- >>> pl @(ParaN 5 (Guard "0-255" (Between 0 255 Id))) [1,2,3,400,12]
--- Error 0-255 (Para(3 of 4))
+-- Error 0-255 (Guard | 400 | Para(3 of 4))
 -- Fail "0-255"
 --
 -- >>> pz @(ParaN 5 (Guard (PrintF "bad value %d" Id) (Between 0 255 Id))) [1,2,3,400,12]
