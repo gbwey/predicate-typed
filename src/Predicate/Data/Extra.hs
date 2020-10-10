@@ -1370,7 +1370,7 @@ _fmapImpl opts proxyp msg0 hhs na = do
         nttb <- traverse (fmap (\tt -> tt & ttString %~ litL opts
                                           & ttForest .~ [hh tt]) . eval proxyp opts) na
         let ttnb = sequenceA nttb
-        pure $ case getValueLR opts msg0 ttnb hhs of
+        pure $ case getValueLRInline opts ttnb hhs of
           Left e -> e
           Right ret -> let z = case (_ttString ttnb,_ttForest ttnb) of
                                  ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"
@@ -1530,7 +1530,7 @@ instance P InitMayT x => P InitMay x where
 
 -- | similar to 'flip':see also 'Predicate.Misc.FlipT'
 --
--- >>> pz @(Flip MapF Id Succ) [1..5]
+-- >>> pz @(Flip Map' Id Succ) [1..5]
 -- Val [2,3,4,5,6]
 --
 -- >>> pz @( Flip '(,) 'True 2) ()

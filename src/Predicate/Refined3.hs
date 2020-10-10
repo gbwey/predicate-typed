@@ -206,7 +206,7 @@ instance ( Refined3C opts ip op fmt String
 -- >>> reads @(Refined3 OZ (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
 -- [(Refined3 {r3In = -1234, r3Out = "-4d2"},"")]
 --
--- >>> reads @(Refined3 OZ (MapF (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined3 OZ (Map' (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
 -- [(Refined3 {r3In = [192,168,0,1], r3Out = "192.168.0.1"},"")]
 --
 instance ( Eq i
@@ -466,13 +466,13 @@ newRefined3P' _ i = do
 -- >>> newRefined3 @OZ @(ReadBase Int 16) @(Lt 255) @(PrintF "%x" Id) "00fg"
 -- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
 --
--- >>> newRefined3 @OL @(MapF (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
+-- >>> newRefined3 @OL @(Map' (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
 --
--- >>> newRefined3 @OZ @(MapF (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
+-- >>> newRefined3 @OZ @(Map' (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> newRefined3 @OZ @(MapF (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
+-- >>> newRefined3 @OZ @(Map' (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
 -- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate

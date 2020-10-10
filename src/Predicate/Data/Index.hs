@@ -394,11 +394,11 @@ instance ( P q a
 -- Present 3 (IxL('d') 3 | p=fromList [('a',0),('b',1),('c',2),('d',3)] | q='d')
 -- Val 3
 --
--- >>> pl @(Id !! FromString _ "d" &&& (MapF (Snd >> Gt 3 >> Coerce SG.Any) (IToList _) >> MConcat Id)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
+-- >>> pl @(Id !! FromString _ "d" &&& (Map' (Snd >> Gt 3 >> Coerce SG.Any) (IToList _) >> MConcat Id)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
 -- Present (3,Any {getAny = True}) ('(3,Any {getAny = True}))
 -- Val (3,Any {getAny = True})
 --
--- >>> pl @(Id !! FromString _ "d" &&& (MapF (Snd >> Gt 3 >> Wrap SG.Any Id) (IToList _) >> MConcat Id >> Unwrap)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
+-- >>> pl @(Id !! FromString _ "d" &&& (Map' (Snd >> Gt 3 >> Wrap SG.Any Id) (IToList _) >> MConcat Id >> Unwrap)) (M.fromList $ zip (map T.singleton "abcdefgh") [0 ..])
 -- Present (3,True) ('(3,True))
 -- Val (3,True)
 --

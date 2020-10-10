@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 995e61c49b0223a6619e55eb13dacd62627cd9ccb996273e12f597e441e50e09
+-- hash: d7e2fb55f619287d8ae2b5977f8d6ab7317a3bd9238ab69434acbda346839f2f
 
 name:           predicate-typed
 version:        0.7.4.0
@@ -99,44 +99,8 @@ test-suite doctests
   type: exitcode-stdio-1.0
   main-is: doctests.hs
   other-modules:
-      Predicate
-      Predicate.Core
-      Predicate.Data.Char
-      Predicate.Data.Condition
-      Predicate.Data.DateTime
-      Predicate.Data.Either
-      Predicate.Data.Enum
-      Predicate.Data.Extra
-      Predicate.Data.Foldable
-      Predicate.Data.Index
-      Predicate.Data.IO
-      Predicate.Data.Iterator
-      Predicate.Data.Json
-      Predicate.Data.List
-      Predicate.Data.Maybe
-      Predicate.Data.Monoid
-      Predicate.Data.Numeric
-      Predicate.Data.Ordering
-      Predicate.Data.ReadShow
-      Predicate.Data.Regex
-      Predicate.Data.String
-      Predicate.Data.These
-      Predicate.Data.Tuple
-      Predicate.Examples.Common
-      Predicate.Examples.Refined2
-      Predicate.Examples.Refined3
-      Predicate.Misc
-      Predicate.Prelude
-      Predicate.Refined
-      Predicate.Refined2
-      Predicate.Refined3
-      Predicate.Refined5
-      Predicate.TH_Orphans
-      Predicate.Util
-      Predicate.Util_TH
       Paths_predicate_typed
   hs-source-dirs:
-      src
       doctest
   ghc-options: -threaded
   build-depends:
@@ -174,41 +138,6 @@ test-suite predicate-typed-test
   type: exitcode-stdio-1.0
   main-is: TestSpec.hs
   other-modules:
-      Predicate
-      Predicate.Core
-      Predicate.Data.Char
-      Predicate.Data.Condition
-      Predicate.Data.DateTime
-      Predicate.Data.Either
-      Predicate.Data.Enum
-      Predicate.Data.Extra
-      Predicate.Data.Foldable
-      Predicate.Data.Index
-      Predicate.Data.IO
-      Predicate.Data.Iterator
-      Predicate.Data.Json
-      Predicate.Data.List
-      Predicate.Data.Maybe
-      Predicate.Data.Monoid
-      Predicate.Data.Numeric
-      Predicate.Data.Ordering
-      Predicate.Data.ReadShow
-      Predicate.Data.Regex
-      Predicate.Data.String
-      Predicate.Data.These
-      Predicate.Data.Tuple
-      Predicate.Examples.Common
-      Predicate.Examples.Refined2
-      Predicate.Examples.Refined3
-      Predicate.Misc
-      Predicate.Prelude
-      Predicate.Refined
-      Predicate.Refined2
-      Predicate.Refined3
-      Predicate.Refined5
-      Predicate.TH_Orphans
-      Predicate.Util
-      Predicate.Util_TH
       TastyExtras
       TestJson
       TestPredicate
@@ -217,7 +146,6 @@ test-suite predicate-typed-test
       TestRefined3
       Paths_predicate_typed
   hs-source-dirs:
-      src
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:

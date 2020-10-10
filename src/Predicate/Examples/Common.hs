@@ -80,7 +80,7 @@ import GHC.TypeLits (Nat)
 import Data.Time
 
 -- | @ip@ type for converting a credit card number to a list of singleton digits
-type Luhnip = MapF (ReadP Int Id) (Remove "-" Id >> Ones)
+type Luhnip = Map' (ReadP Int Id) (Remove "-" Id >> Ones)
 
 -- | @op@ type for validating a credit card number by check digit
 type Luhnop (n :: Nat) = GuardBool (PrintT "expected %d digits but found %d" '(n,Len)) (Len == n) && GuardBool "invalid checkdigit" IsLuhn
@@ -95,7 +95,7 @@ type Dtip t = ParseTimeP t "%F %T"
 type Dtfmt = FormatTimeP "%F %T"
 
 -- | @ip@ type for reading in a ssn
-type Ssnip = MapF (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd)
+type Ssnip = Map' (ReadP Int Id) (Rescan "^(\\d{3})-(\\d{2})-(\\d{4})$" >> OneP >> Snd)
 -- | @op@ type for validating a ssn
 type Ssnop = BoolsQuick (PrintT "number for group %d invalid: found %d" Id)
                      '[Between 1 899 Id && Id /= 666, Between 1 99 Id, Between 1 9999 Id]
@@ -112,7 +112,7 @@ type Ssnop' = GuardsDetail "%s invalid: found %d"
 type Ssnfmt = PrintL 3 "%03d-%02d-%04d" Id
 
 -- | @ip@ type for reading in time
-type Hmsip = MapF (ReadP Int Id) (Resplit ":")
+type Hmsip = Map' (ReadP Int Id) (Resplit ":")
 -- type Hmsop' = BoolsQuick "" '[Msg "hours:"   (Between 0 23 Id), Msg "minutes:" (Between 0 59 Id), Msg "seconds:" (Between 0 59 Id)]
 
 -- | @op@ type for validating the time using a guard
@@ -131,10 +131,10 @@ type HmsRE = "^([0-1][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9])$" -- strict validat
 type Ip4RE = "^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$"
 
 -- | @ip@ type for reading in an ip4 address
-type Ip4ip = MapF (ReadP Int Id) (Resplit "\\.")
+type Ip4ip = Map' (ReadP Int Id) (Resplit "\\.")
 
 -- | @ip@ type for reading in an ip4 address using a regular expression
-type Ip4ip' = MapF (ReadP Int Id) (Rescan Ip4RE >> OneP >> Snd)
+type Ip4ip' = Map' (ReadP Int Id) (Rescan Ip4RE >> OneP >> Snd)
 -- RepeatT is a type family so it expands everything! replace RepeatT with a type class
 
 -- | @op@ type for validating an ip4 address using a predicate
@@ -158,7 +158,7 @@ type Ip6ip = Resplit ":"
          >> Map (ReadBase Int 16)
          >> PadL 8 0 Id
 
---type Ip6ip' = MapF (If (Id == "") 0 (ReadBase Int 16)) (Resplit ":") >> PadL 8 0 Id
+--type Ip6ip' = Map' (If (Id == "") 0 (ReadBase Int 16)) (Resplit ":") >> PadL 8 0 Id
 
 -- | @op@ type for validating an ip6 address using predicates
 type Ip6op = Msg "count is bad:" (Len == 8)

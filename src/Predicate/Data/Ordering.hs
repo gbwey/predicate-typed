@@ -270,7 +270,7 @@ instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
 -- Present [GT,GT,LT,EQ] ((>>) [GT,GT,LT,EQ] | {Map [GT,GT,LT,EQ] | [(1,2),(2,3),(3,6),(6,8)]})
 -- Val [GT,GT,LT,EQ]
 --
--- >>> pl @((Ones << ShowP Id) >> MapF (Fst ==! Snd) Pairs) 1234223
+-- >>> pl @((Ones << ShowP Id) >> Map' (Fst ==! Snd) Pairs) 1234223
 -- Present [LT,LT,LT,GT,EQ,LT] ((>>) [LT,LT,LT,GT,EQ,LT] | {Map [LT,LT,LT,GT,EQ,LT] | [("1","2"),("2","3"),("3","4"),("4","2"),("2","2"),("2","3")]})
 -- Val [LT,LT,LT,GT,EQ,LT]
 --

@@ -41,7 +41,7 @@ allTests :: [IO ()]
 allTests =
   [ expectBT (Val [False,True,True,False]) $ pl @'[Gt 5, Lt 9, Same 4, W 'False] 4
   , expectBT (Val [21,19,20,40,60,2]) $ pl @'[Succ, Pred, Id, Id + Id, Id * 3, Id `Mod` 3] 20
-  , expectBT (Val [False,False,False,True]) $ pl @(MapF (Mod Id 3) Fst >> Map (Gt 1)) ([10,12,3,5],"ss")
+  , expectBT (Val [False,False,False,True]) $ pl @(Map' (Mod Id 3) Fst >> Map (Gt 1)) ([10,12,3,5],"ss")
   , expectBT (Val 5) $ pl @(Snd >> Snd >> Snd >> Snd) (9,(1,(2,(3,5))))
   , expectBT (Val (-1.0)) $ pl @(Negate Id >> Dup >> First Succ >> Swap >> Fst - Snd) 4
   , expectBT (Val False) $ pl @(Msg "someval4" (Gt 4 >> Id)) 4
@@ -58,13 +58,13 @@ allTests =
   , expectBT (Fail "len is bad") $ pl @Ip6Test "FE80::203:Baff:FE77:326FF"
   , expectBT (Fail "not a hex") $ pl @Ip6Test "FE80::203:Baff:GE77:326F"
   , expectBT (Fail "count is bad") $ pl @Ip6Test "FE80::203:Baff:FE77:326F:::::"
-  , expectBT (Val [1,2,3,244]) $ pl @(Rescan Ip4RE >> OneP >> MapF (ReadBase Int 10) Snd >| Ip4op) "1.2.3.244"
-  , expectBT (Fail "octet 1 out of range 0-255 found 256") $ pl @(Rescan Ip4RE >> OneP >> MapF (ReadBase Int 10) Snd >| Ip4op) "1.256.3.244"
+  , expectBT (Val [1,2,3,244]) $ pl @(Rescan Ip4RE >> OneP >> Map' (ReadBase Int 10) Snd >| Ip4op) "1.2.3.244"
+  , expectBT (Fail "octet 1 out of range 0-255 found 256") $ pl @(Rescan Ip4RE >> OneP >> Map' (ReadBase Int 10) Snd >| Ip4op) "1.256.3.244"
   , expectBT (Fail "Guards:invalid length(5) expected 4") $ pl @(Rescan "(\\d+)\\.?" >> ConcatMap Snd Id >> Map (ReadBase Int 10) >| Ip4op) "1.22.244.66.77"
   , expectBT (Val 256) $ pl @(Rescan "(?i)^\\\\x([0-9a-f]{2})$" >> OneP >> Snd >> OneP >> ReadBase Int 16 >> Succ) "\\xfF"
   , expectBT (Val 256) $ pl @(Rescan "(?i)^\\\\x(.{2})$" >> OneP >> Snd >> OneP >> ReadBase Int 16 >> Succ) "\\xfF"
   , expectBT (Val (("fF",(255,"ff")),False)) $ pl @(Rescan "(?i)^\\\\x([0-9a-f]{2})$" >> OneP >> Snd >> OneP >> (Id &&& (ReadBase Int 16 >> (Id &&& ShowBase 16))) >> (Id &&& ((Id *** Snd) >> Fst == Snd))) "\\xfF"
-  , expectBT (Val [31,11,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> MapF (ReadBase Int 10) Snd >| Ddmmyyyyop) "31-11-1999"
+  , expectBT (Val [31,11,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> Map' (ReadBase Int 10) Snd >| Ddmmyyyyop) "31-11-1999"
   , expectBT (Val (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE) >> ReadP TimeOfDay Id) "23:13:59"
   , expectBT (Fail "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE) >> ReadP TimeOfDay Id) "23:13:60"
   , expectBT (Val (124,["1","2","2"])) $ pl @(Left' >> (Succ &&& (Pred >> ShowP Id >> Ones))) (Left 123)
@@ -73,8 +73,8 @@ allTests =
     --- have to wrap with W cos different kinds
   -- IxL "d" doesnt work cos is Text not String
   -- use Fromstring
-  , expectBT (Val [7,9,9,2,7,3,9,8,7,1,3]) $ pl @(MapF (ReadP Int Id) Ones >> Guard "invalid checkdigit" IsLuhn) "79927398713"
-  , expectBT (Fail "invalid checkdigit") $ pl @(MapF (ReadP Int Id) Ones >> Guard "invalid checkdigit" IsLuhn) "79927398714"
+  , expectBT (Val [7,9,9,2,7,3,9,8,7,1,3]) $ pl @(Map' (ReadP Int Id) Ones >> Guard "invalid checkdigit" IsLuhn) "79927398713"
+  , expectBT (Fail "invalid checkdigit") $ pl @(Map' (ReadP Int Id) Ones >> Guard "invalid checkdigit" IsLuhn) "79927398714"
   , expectBT (Val [10,14,15,9]) $ pl @(MM1 16 >> MM2 16) "aef9"
   , expectBT (Fail "invalid base 16") $ pl @(MM1 16 >> MM2 16) "aef9g"
   , expectBT (Fail "found empty") $ pl @(MM1 16 >> MM2 16) ""
@@ -87,8 +87,8 @@ allTests =
 -- have to check the length of the match vs input to see that are the same
   , expectBT (Val [1,3,4,15]) $ pl @(((Rescan "([[:xdigit:]])" >> Map (Snd >> OneP >> ReadBase Int 16)) &&& Id) >> Guard "notallmatched" ((Len *** Len) >> Fst == Snd) >> Fst) "134F"
   , expectBT (Fail "notallmatched") $ pl @(((Rescan "([[:xdigit:]])" >> Map (Snd >> OneP >> ReadBase Int 16)) &&& Id) >> Guard "notallmatched" ((Len *** Len) >> Fst == Snd) >> Fst) "134g"
-  , expectBT (Val True) $ pl @(MapF (ReadP _ Id) Ones >> IsLuhn) "12345678903"
-  , expectBT (Val False) $ pl @(MapF (ReadP _ Id) Ones >> IsLuhn) "12345678904"
+  , expectBT (Val True) $ pl @(Map' (ReadP _ Id) Ones >> IsLuhn) "12345678903"
+  , expectBT (Val False) $ pl @(Map' (ReadP _ Id) Ones >> IsLuhn) "12345678904"
   , expectBT (Fail "incorrect length: found 10 but expected 11 in [1234567890]") $ pl @(Luhn' 11) "1234567890"
   , (@?=) (Just "abc") ((_Fail # "abc") ^? _Fail)
   , (@?=) (Just 'x') ((_Val # 'x') ^? _Val)
@@ -98,9 +98,9 @@ allTests =
   -- need to fill in the types for both even in ghci
   , expectBT (Val [Just 1,Just 2,Just 3,Just 4]) $ pl @Sequence (Just [1..4])
 
-  , expectBT (Val [13,2,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> MapF (ReadP Int Id) Snd) "13-02-1999"
-  , expectBT (Val [3,2,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> MapF (ReadP Int Id) Snd >| Ddmmyyyyop) "03-02-1999"
-  , expectBT (Fail "month 13 is out of range") $ pl @(Rescan DdmmyyyyRE >> OneP >> MapF (ReadP Int Id) Snd >| Ddmmyyyyop) "12-13-1999"
+  , expectBT (Val [13,2,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> Map' (ReadP Int Id) Snd) "13-02-1999"
+  , expectBT (Val [3,2,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> Map' (ReadP Int Id) Snd >| Ddmmyyyyop) "03-02-1999"
+  , expectBT (Fail "month 13 is out of range") $ pl @(Rescan DdmmyyyyRE >> OneP >> Map' (ReadP Int Id) Snd >| Ddmmyyyyop) "12-13-1999"
   , expectBT (Val 10) $ pl @(Luhn' 4) "1230"
   , expectBT (Fail "expected 14 mod 10 = 0 but found 4") $ pl @(Luhn' 4) "1234"
   , expectBT (Val [4, 7, 8, 9]) $ pl @'[4,7,8,9] ()
@@ -151,7 +151,7 @@ allTests =
   , expectBT (Val (4,"helo","oleh")) $ pl @'(Len, Id, Reverse) "helo"
   , expectBT (Val [1,2,3,1000,998]) $ pl @'[W 1, W 2, W 3, Succ, Pred] 999
   , expectBT (Val [3996,998]) $ pl @'[Id * 4, Pred] 999
-  , expectBT (Val [2,3,4,5,6]) $ pz @(FlipT MapF Id Succ) [1..5]
+  , expectBT (Val [2,3,4,5,6]) $ pz @(FlipT Map' Id Succ) [1..5]
   , expectBT (Val (2,True)) $ pz @( FlipT '(,) 'True 2) ()
   , expectBT (Val (1,"ab",2)) $ pz @( FlipT ('(,,) 1) 2 Id) "ab"
   , expectBT (Val 13) $ pz @(12 & Lift Succ) ()
@@ -199,5 +199,5 @@ type Ip6Test = Resplit ":"
 
 -- base n number of length x and then convert to a list of length x of (0 to (n-1))
 -- checks that each digit is between 0 and n-1
-type MM1 (n :: Nat) = MapF (ReadBase Int n) Ones
+type MM1 (n :: Nat) = Map' (ReadBase Int n) Ones
 type MM2 (n :: Nat) = ExitWhen "found empty" IsEmpty >> Guard "0<=x<n" (All (Ge 0 && Lt n))

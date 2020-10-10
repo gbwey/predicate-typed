@@ -578,8 +578,7 @@ simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
 
 
 -- | extract the This value from an 'These' otherwise use the default value
---
--- if there is no This value then \p\ is passed the whole context only
+--   if there is no This value then \p\ is passed the whole context only
 --
 -- >>> pz @(ThisDef (1 % 4) Id) (This 20.4)
 -- Val (102 % 5)

@@ -175,7 +175,7 @@ instance ( i ~ String
 -- >>> reads @(Refined5 OZ (ReadBase Int 16) (Id < 0) String) "Refined5 -1234"
 -- [(Refined5 (-1234),"")]
 --
--- >>> reads @(Refined5 OZ (MapF (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) String) "Refined5 [192,168,0,1]"
+-- >>> reads @(Refined5 OZ (Map' (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) String) "Refined5 [192,168,0,1]"
 -- [(Refined5 [192,168,0,1],"")]
 --
 -- >>> reads @(Refined5 OZ (ReadP Rational Id) (Id > Negate 4 % 3) String) "Refined5 (-10 % 9)"
@@ -348,13 +348,13 @@ newRefined5P' _ i = do
 -- >>> newRefined5 @OZ @(ReadBase Int 16) @(Lt 255) "00fg"
 -- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
 --
--- >>> newRefined5 @OL @(MapF (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
+-- >>> newRefined5 @OL @(Map' (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
 --
--- >>> newRefined5 @OZ @(MapF (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
+-- >>> newRefined5 @OZ @(Map' (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> newRefined5 @OZ @(MapF (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1"
+-- >>> newRefined5 @OZ @(Map' (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1"
 -- Right (Refined5 [198,162,3,1])
 --
 -- >>> :m + Data.Time.Calendar.WeekDate

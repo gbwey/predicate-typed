@@ -35,7 +35,7 @@ module Predicate.Core (
   , Unproxy
   , Len
   , Length
-  , MapF
+  , Map'
   , Map
   , Do
   , Pure
@@ -1799,10 +1799,10 @@ instance ( Show (ExtractL6T (PP p x))
 
 -- | similar to 'map' for foldable
 --
--- >>> pz @(MapF Pred Id) [1..5]
+-- >>> pz @(Map' Pred Id) [1..5]
 -- Val [0,1,2,3,4]
 --
-data MapF p q
+data Map' p q
 
 instance ( Show (PP p a)
          , P p a
@@ -1811,8 +1811,8 @@ instance ( Show (PP p a)
          , Show a
          , Show (f a)
          , Foldable f
-         ) => P (MapF p q) x where
-  type PP (MapF p q) x = [PP p (ExtractAFromTA (PP q x))]
+         ) => P (Map' p q) x where
+  type PP (Map' p q) x = [PP p (ExtractAFromTA (PP q x))]
   eval _ opts x = do
     let msg0 = "Map"
     qq <- eval (Proxy @q) opts x

@@ -60,7 +60,7 @@ tests:
   predicate-typed-test:
     main:                TestSpec.hs
     source-dirs:
-    - src
+#    - src
     - test
     ghc-options:
     - -threaded
@@ -83,7 +83,7 @@ tests:
   doctests:
     main: doctests.hs
     source-dirs:
-    - src
+#    - src
     - doctest
 #    other-modules: []
     ghc-options:

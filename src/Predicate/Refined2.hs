@@ -187,7 +187,7 @@ instance ( i ~ String
 -- >>> reads @(Refined2 OZ (ReadBase Int 16) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}"
 -- [(Refined2 {r2In = -1234, r2Out = "-4d2"},"")]
 --
--- >>> reads @(Refined2 OZ (MapF (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
+-- >>> reads @(Refined2 OZ (Map' (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) String) "Refined2 {r2In = [192,168,0,1], r2Out = \"192.168.0.1\"}"
 -- [(Refined2 {r2In = [192,168,0,1], r2Out = "192.168.0.1"},"")]
 --
 instance ( Refined2C opts ip op i
@@ -412,13 +412,13 @@ newRefined2P' _ i = do
 -- >>> newRefined2 @OZ @(ReadBase Int 16) @(Lt 255) "00fg"
 -- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
 --
--- >>> newRefined2 @OL @(MapF (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
+-- >>> newRefined2 @OL @(Map' (ReadP Int Id) (Resplit "\\.")) @(Msg "length invalid:" (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. False Boolean Check(op) | {length invalid: 5 == 4}
 --
--- >>> newRefined2 @OZ @(MapF (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
+-- >>> newRefined2 @OZ @(Map' (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1.5"
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
--- >>> newRefined2 @OZ @(MapF (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1"
+-- >>> newRefined2 @OZ @(Map' (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) "198.162.3.1"
 -- Right (Refined2 {r2In = [198,162,3,1], r2Out = "198.162.3.1"})
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
