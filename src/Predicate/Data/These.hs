@@ -693,7 +693,7 @@ instance ( PP q x ~ These a b
 -- >>> pz @(TheseDef (MEmptyT (SG.Sum _, String)) Id) (This 222)
 -- Val (Sum {getSum = 0},"")
 --
--- >>> pz @(TheseDef (MEmptyT _) Id) (These (222 :: SG.Sum Int) "aa")
+-- >>> pz @(TheseDef (MEmptyT _) Id) (These (SG.Sum 222) "aa")
 -- Val (Sum {getSum = 222},"aa")
 --
 -- >>> pl @(TheseDef '("xyz",'True) Id) (This "abc")

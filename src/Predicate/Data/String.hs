@@ -118,7 +118,7 @@ instance P TrimRT x => P TrimR x where
 
 -- | similar to 'T.strip'
 --
--- >>> pz @(Snd >> TrimBoth) (20," abc   " :: String)
+-- >>> pz @(Snd >> TrimBoth) (20," abc   ")
 -- Val "abc"
 --
 -- >>> pz @(Snd >> TrimBoth) (20,T.pack " abc   ")
@@ -163,7 +163,7 @@ instance ( GetBool l
 
 -- | similar to 'T.stripLeft'
 --
--- >>> pz @(StripL "xyz" Id) ("xyzHello" :: String)
+-- >>> pz @(StripL "xyz" Id) "xyzHello"
 -- Val (Just "Hello")
 --
 -- >>> pz @(StripL "xyz" Id) (T.pack "xyzHello")

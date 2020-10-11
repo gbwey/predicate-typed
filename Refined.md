@@ -82,13 +82,13 @@ False False || False | (44 < 3) || (44 > 55)
 |
 +- False 44 < 3
 |  |
-|  +- P I
+|  +- P Id 44
 |  |
 |  `- P '3
 |
 `- False 44 > 55
    |
-   +- P I
+   +- P Id 44
    |
    `- P '55
 

@@ -1590,7 +1590,6 @@ instance ( P p a
 -- Val True
 --
 data Any p
-
 instance ( P p a
          , PP p a ~ Bool
          , x ~ f a

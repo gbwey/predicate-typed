@@ -60,6 +60,7 @@ module Predicate.Data.List (
 
  -- ** higher order methods
   , Partition
+  , Quant
   , PartitionBy
   , Group
   , GroupBy
@@ -425,11 +426,28 @@ instance ( P p x
                      zz1 = (map (view (_2 . _2)) *** map (view (_2 . _2))) w0
                  in mkNode opts (Val zz1) (show3' opts msg0 zz1 "s=" q) (hh qq : map (hh . prefixNumberToTT) itts)
 
+-- | counts number on matches and non matches: ie All is length snd==0 and Any is length fst > 0
+--
+-- >>> pz @(Quant Even) [2,3,3,7,2,8,1,5,9]
+-- Val (3,6)
+--
+-- >>> pz @(Quant (Gt 10)) [2,8,1,5,9]
+-- Val (0,5)
+--
+data Quant p
+type QuantT p = Partition p Id >> '(Length Fst,Length Snd)
+
+instance P (QuantT p) x => P (Quant p) x where
+  type PP (Quant p) x = PP (QuantT p) x
+  eval _ = eval (Proxy @(QuantT p))
 
 -- | partition values based on a function
 --
--- >>> pz @(PartitionBy Ordering (Case 'EQ '[Id < 0, Id > 0] '[ 'LT, 'GT] Id) Id) [-4,-2,5,6,7,0,-1,2,-3,4,0]
--- Val (fromList [(LT,[-3,-1,-2,-4]),(EQ,[0,0]),(GT,[4,2,7,6,5])])
+-- >>> pz @(PartitionBy Ordering (Id ==! 0)  Id) [17,3,-12,0,1,0,-3]
+-- Val (fromList [(LT,[-3,-12]),(EQ,[0,0]),(GT,[1,3,17])])
+--
+-- >>> pz @(PartitionBy Char (Mod Id 16 >> ShowBase 16 >> Head) Id) [-4,-2,5,0,15,12,-1,2,-3,4,0]
+-- Val (fromList [('0',[0,0]),('2',[2]),('4',[4]),('5',[5]),('c',[12,-4]),('d',[-3]),('e',[-2]),('f',[-1,15])])
 --
 -- >>> pl @(PartitionBy Ordering (Case (Failt _ "asdf") '[Id < 2, Id == 2, Id > 2] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
 -- Present fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])] (PartitionBy fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])] | s=[-4,2,5,6,7,1,2,3,4])
@@ -438,6 +456,9 @@ instance ( P p x
 -- >>> pl @(PartitionBy Ordering (Case (Failt _ "xyzxyzxyzzyyysyfsyfydf") '[Id < 2, Id == 2, Id > 3] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
 -- Error xyzxyzxyzzyyysyfsyfydf (PartitionBy(i=7, a=3) excnt=1)
 -- Fail "xyzxyzxyzzyyysyfsyfydf"
+--
+-- >>> pz @(PartitionBy Ordering (Case 'EQ '[Id < 0, Id > 0] '[ 'LT, 'GT] Id) Id) [-4,-2,5,6,7,0,-1,2,-3,4,0]
+-- Val (fromList [(LT,[-3,-1,-2,-4]),(EQ,[0,0]),(GT,[4,2,7,6,5])])
 --
 data PartitionBy t p q
 
@@ -1200,18 +1221,11 @@ instance P (RemoveT p q) x => P (Remove p q) x where
 -- >>> pz @Head "abcd"
 -- Val 'a'
 --
--- >>> pz @Head []
--- Fail "Head(empty)"
---
--- >>> pl @Head ([] :: [Int])
+-- >>> pl @Head []
 -- Error Head(empty)
 -- Fail "Head(empty)"
 --
--- >>> pl @Head ([] :: [Double])
--- Error Head(empty)
--- Fail "Head(empty)"
---
--- >>> pl @(Fst >> Head >> Le 6) ([]::[Int], True)
+-- >>> pl @(Fst >> Head >> Le 6) ([], True)
 -- Error Head(empty)
 -- Fail "Head(empty)"
 --
@@ -1511,7 +1525,7 @@ instance ( as ~ [a]
 -- >>> pz @ReverseL (T.pack "AbcDeF")
 -- Val "FeDcbA"
 --
--- >>> pz @ReverseL ("AbcDeF" :: String)
+-- >>> pz @ReverseL "AbcDeF"
 -- Val "FeDcbA"
 --
 -- >>> pl @ReverseL ("asfd" :: T.Text)

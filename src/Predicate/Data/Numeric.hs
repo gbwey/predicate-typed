@@ -221,7 +221,7 @@ instance ( a ~ PP p x
 
 -- | 'fromRational' function where you need to provide the type @t@ of the result
 --
--- >>> pl @(FromRational' Fst Snd) (1::Float,2 % 5)
+-- >>> pl @(FromRational' Fst Snd) (1,2 % 5)
 -- Present 0.4 (FromRational 0.4 | 2 % 5)
 -- Val 0.4
 --
