@@ -10,6 +10,12 @@ copyright:           2019 Grant Weyburne
 
 description:         Please see the README on GitHub at <https://github.com/gbwey/predicate-typed#readme>
 
+flags:
+  coverage:
+    description: run hpc tool and put files in separate folders
+    manual: yes
+    default: no
+
 dependencies:
 - base >= 4.7 && < 5
 - QuickCheck
@@ -40,39 +46,46 @@ library:
   source-dirs: src
 
   ghc-options:
-#  - -fomit-interface-pragmas
+  - -Wall
   - -Wincomplete-uni-patterns
   - -Wincomplete-record-updates
   - -Wcompat
-#  - -Wno-compat-unqualified-imports
-#  - -Widentities
-#  - -fhide-source-paths
-#  - -Wmissing-export-lists
   - -Wpartial-fields
-  - -Wredundant-constraints
+  - -Wcompat
+  - -Wunused-type-patterns
+
   when:
-     condition: impl(ghc >= 8.8)
+   - condition: impl(ghc >= 8.8)
      ghc-options:
      - -fwrite-ide-info
      - -hiedir=.hie
+   #  - -Wno-compat-unqualified-imports
+   #  - -Widentities
+   #  - -Wmissing-export-lists
+   - condition: flag(coverage)
+     ghc-options:
+     - -fhpc
+     - -hpcdir hpc/lib/
 
 tests:
   predicate-typed-test:
     main:                TestSpec.hs
     source-dirs:
-#    - src
     - test
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
-#    - -fomit-interface-pragmas
-#    - -Wno-missing-export-lists
+    - -Wall
     when:
-       condition: impl(ghc >= 8.8)
+    -  condition: impl(ghc >= 8.8)
        ghc-options:
        - -fwrite-ide-info
        - -hiedir=.hie
+    -  condition: flag(coverage)
+       ghc-options:
+       - -fhpc
+       - -hpcdir hpc/testspec/
     dependencies:
     - base
     - predicate-typed
@@ -83,18 +96,19 @@ tests:
   doctests:
     main: doctests.hs
     source-dirs:
-#    - src
     - doctest
-#    other-modules: []
     ghc-options:
+    - -Wall
     - -threaded
-#    - -fomit-interface-pragmas
-#    - -Wno-missing-export-lists
     when:
-       condition: impl(ghc >= 8.8)
+    -  condition: impl(ghc >= 8.8)
        ghc-options:
        - -fwrite-ide-info
        - -hiedir=.hie
+    -  condition: flag(coverage)
+       ghc-options:
+       - -fhpc
+       - -hpcdir hpc/doctest/
 
     dependencies:
     - base

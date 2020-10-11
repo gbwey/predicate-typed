@@ -1,12 +1,7 @@
 -- tojson binary hash arbitrary all use i not PP ip i
 -- all instances work with the original input [ie not the internal values]
 --   we have no way to get back to i from PP ip i (unlike Refined3)
-{-# OPTIONS -Wall #-}
-{-# OPTIONS -Wcompat #-}
-{-# OPTIONS -Wincomplete-record-updates #-}
-{-# OPTIONS -Wincomplete-uni-patterns #-}
 {-# OPTIONS -Wno-redundant-constraints #-}
-{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}

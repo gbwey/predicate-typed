@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 {-# OPTIONS -Wno-orphans #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE StandaloneDeriving #-}

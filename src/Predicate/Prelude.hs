@@ -1,4 +1,3 @@
-{-# OPTIONS -Wall #-}
 {- |
      Dsl for evaluating and displaying type level expressions
 -}
@@ -29,7 +28,7 @@ module Predicate.Prelude (
   , module Predicate.Data.Tuple
  ) where
 import Predicate.Core
-import Predicate.Misc 
+import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Char
 import Predicate.Data.Condition

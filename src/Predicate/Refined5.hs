@@ -3,12 +3,6 @@
 -- all instances uses the internal values except for IsString [internal value is less likely to be a string!]
 --   but json/binary/hash use internal input (ie PP ip i) as they json and binary have to roundtrip
 -- tojson only has access to PP ip i! so fromjson can only use this!
-{-# OPTIONS -Wall #-}
-{-# OPTIONS -Wcompat #-}
-{-# OPTIONS -Wincomplete-record-updates #-}
-{-# OPTIONS -Wincomplete-uni-patterns #-}
-{-# OPTIONS -Wredundant-constraints #-}
-{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators #-}

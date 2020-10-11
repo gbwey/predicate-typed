@@ -4,7 +4,6 @@ import qualified TestJson
 import qualified TestRefined
 import qualified TestRefined2
 import qualified TestRefined3
-import Data.Functor
 import Test.Tasty
 import System.IO
 

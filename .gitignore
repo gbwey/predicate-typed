@@ -10,3 +10,6 @@ cabal.project.local
 stack*.yaml.lock
 *.bundle
 .hie/
+hpc/
+weeder.dhall
+*OLD

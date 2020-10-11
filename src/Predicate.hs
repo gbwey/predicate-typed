@@ -10,7 +10,6 @@ module Predicate (
  , module Predicate.Util
  , module Predicate.Util_TH
  , module Predicate.Refined
- , module Predicate.TH_Orphans
  ) where
 import Predicate.Core
 import Predicate.Util

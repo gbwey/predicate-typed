@@ -1,9 +1,3 @@
-{-# OPTIONS -Wall #-}
-{-# OPTIONS -Wcompat #-}
-{-# OPTIONS -Wincomplete-record-updates #-}
-{-# OPTIONS -Wincomplete-uni-patterns #-}
-{-# OPTIONS -Wredundant-constraints #-}
-{-# OPTIONS -Wunused-type-patterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -61,6 +55,7 @@ module Predicate.Data.List (
  -- ** higher order methods
   , Partition
   , Quant
+  , All1
   , PartitionBy
   , Group
   , GroupBy
@@ -104,7 +99,7 @@ module Predicate.Data.List (
 import Predicate.Core
 import Predicate.Misc
 import Predicate.Util
-import Predicate.Data.Ordering (type (==), OrdA')
+import Predicate.Data.Ordering (type (==), OrdA', type (>))
 import Predicate.Data.Numeric (Mod)
 import Predicate.Data.Monoid (type (<>))
 import Control.Lens
@@ -434,12 +429,47 @@ instance ( P p x
 -- >>> pz @(Quant (Gt 10)) [2,8,1,5,9]
 -- Val (0,5)
 --
+-- >>> pz @(Quant (Gt 10)) []
+-- Val (0,0)
+--
+-- >>> pz @(Quant (Same 4)) [3]
+-- Val (0,1)
+--
+-- >>> pz @(Quant (Same 4)) [4]
+-- Val (1,0)
+--
 data Quant p
 type QuantT p = Partition p Id >> '(Length Fst,Length Snd)
 
 instance P (QuantT p) x => P (Quant p) x where
   type PP (Quant p) x = PP (QuantT p) x
   eval _ = eval (Proxy @(QuantT p))
+
+-- | similar to 'Predicate.All' for non-empty lists
+--
+-- >>> pz @(All1 Even) [2,4,6]
+-- Val True
+--
+-- >>> pz @(All1 Even) [2,3,3,7,2,8,1,5,9]
+-- Val False
+--
+-- >>> pz @(All1 Even) []
+-- Val False
+--
+-- >>> pz @(All1 Even) [1]
+-- Val False
+--
+-- >>> pz @(All1 Even) [2]
+-- Val True
+--
+data All1 p
+
+-- partially hidden example
+instance P (Quant p) x => P (All1 p) x where
+  type PP (All1 p) x = Bool
+  eval _ opts
+    | isVerbose opts = eval (Proxy @(Quant p >> Fst > 0 && Snd == 0)) opts
+    | otherwise = eval (Proxy @(Hide (Quant p) >> Fst > 0 && Snd == 0)) opts
 
 -- | partition values based on a function
 --
