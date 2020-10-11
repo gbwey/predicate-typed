@@ -47,11 +47,10 @@ library:
 
   ghc-options:
   - -Wall
-  - -Wincomplete-uni-patterns
+  - -Wcompat
   - -Wincomplete-record-updates
-  - -Wcompat
+  - -Wincomplete-uni-patterns
   - -Wpartial-fields
-  - -Wcompat
   - -Wunused-type-patterns
 
   when:
