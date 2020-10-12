@@ -52,7 +52,7 @@ library:
   - -Wincomplete-uni-patterns
   - -Wpartial-fields
   - -Wunused-type-patterns
-
+  - -Wredundant-constraints
   when:
    - condition: impl(ghc >= 8.8)
      ghc-options:
@@ -76,6 +76,12 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     - -Wall
+    - -Wcompat
+    - -Wincomplete-record-updates
+    - -Wincomplete-uni-patterns
+    - -Wpartial-fields
+    - -Wunused-type-patterns
+    - -Wredundant-constraints
     when:
     -  condition: impl(ghc >= 8.8)
        ghc-options:
@@ -99,6 +105,12 @@ tests:
     ghc-options:
     - -Wall
     - -threaded
+    - -Wcompat
+    - -Wincomplete-record-updates
+    - -Wincomplete-uni-patterns
+    - -Wpartial-fields
+    - -Wunused-type-patterns
+    - -Wredundant-constraints
     when:
     -  condition: impl(ghc >= 8.8)
        ghc-options:
