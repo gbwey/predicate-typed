@@ -51,6 +51,7 @@ module Predicate.Data.List (
   , ZipR
   , Zip
   , ZipWith
+  , ZipCartesian
 
  -- ** higher order methods
   , Partition
@@ -112,7 +113,7 @@ import Control.Arrow (Arrow((***), (&&&)))
 import qualified Data.Sequence as Seq
 import Data.Bool (bool)
 import qualified Data.Map.Strict as M
-import Control.Applicative (Alternative(empty))
+import Control.Applicative (Alternative(empty), liftA2)
 import Data.Containers.ListUtils (nubOrd)
 import qualified Data.List.NonEmpty as NE
 -- $setup
@@ -1541,10 +1542,10 @@ instance P SortT x => P Sort x where
 --
 data Reverse
 
-instance ( as ~ [a]
+instance ( x ~ [a]
          , Show a
-         ) => P Reverse as where
-  type PP Reverse as = as
+         ) => P Reverse x where
+  type PP Reverse x = x
   eval _ opts as =
     let msg0 = "Reverse"
         d = reverse as
@@ -2109,3 +2110,33 @@ instance ( x ~ [a]
         ret = nubOrd x
     in pure $ mkNode opts (Val ret) (show3 opts msg0 ret x) []
 
+-- | zip cartesian product for lists: see 'Predicate.Data.Extra.FPair' for Applicative version
+--
+-- >>> pz @(ZipCartesian (EnumFromTo Fst Snd) ('LT ... 'GT) ) (10,11)
+-- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
+--
+-- >>> pz @(ZipCartesian '[ '() ] (1 ... 5)) True
+-- Val [((),1),((),2),((),3),((),4),((),5)]
+--
+data ZipCartesian p q
+
+instance ( PP p x ~ [a]
+         , PP q x ~ [b]
+         , P p x
+         , P q x
+         , Show a
+         , Show b
+         ) => P (ZipCartesian p q) x where
+  type PP (ZipCartesian p q) x = [(ExtractAFromTA (PP p x), ExtractAFromTA (PP q x))]
+  eval _ opts x = do
+    let msg0 = "ZipCartesian"
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let hhs = [hh pp, hh qq]
+        in case chkSize2 opts msg0 p q hhs of
+          Left e -> e
+          Right _ ->
+            let d = liftA2 (,) p q
+            in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs

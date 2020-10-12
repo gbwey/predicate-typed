@@ -1386,7 +1386,7 @@ instance P (FMapFlipT p q) x => P (p <&> q) x where
   eval _ = eval (Proxy @(FMapFlipT p q))
 
 
--- | runs liftA2 (,) against two values
+-- | runs 'Control.Applicative.liftA2' (,) against two values
 --
 -- >>> pz @(FPair Fst Snd) (Just 10, Just True)
 -- Val (Just (10,True))
@@ -1397,6 +1397,10 @@ instance P (FMapFlipT p q) x => P (p <&> q) x where
 -- >>> pz @(FPair Fst Snd >> FMap (Fst + Snd)) (Just 10, Just 13)
 -- Val (Just 23)
 --
+-- >>> pz @(FPair (EnumFromTo Fst Snd) ('LT ... 'GT) ) (10,11)
+-- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
+--
+
 data FPair p q
 
 instance ( Applicative n

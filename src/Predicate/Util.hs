@@ -777,10 +777,10 @@ colorValP ::
   -> String
 colorValP o b =
   case b of
-    FailP e -> "[" <> f "Error" <> nullSpace e <> "] "
-    ValP -> f "P "
-    TrueP -> f "True "
-    FalseP -> f "False "
+    FailP e -> "[" <> f "Error" <> nullSpace e <> "]"
+    ValP -> f "P" <> " "
+    TrueP -> f "True" <> " "
+    FalseP -> f "False" <> " "
   where f = colorMe o b
 
 
@@ -806,7 +806,7 @@ colorValLite :: Show a
 colorValLite o bt bp =
   let f = colorMe o bp
   in case bt of
-      Fail e -> f "Error " <> e
+      Fail e -> f "Error" <> " " <> e
       Val x -> case bp of
                       ValP -> f "Present " <> show x
                       TrueP -> f "True"
@@ -818,11 +818,11 @@ colorValBool ::
    -> Val Bool
    -> String
 colorValBool o r =
-  colorMe o (r ^. val2PBool)
-  $ case r of
-      Fail e -> "Fail " <> e
-      Val True -> "TrueT"
-      Val False -> "FalseT"
+  let f = colorMe o (r ^. val2PBool)
+  in case r of
+      Fail e -> f "Fail" <> " " <> e
+      Val True -> f "TrueT"
+      Val False -> f "FalseT"
 
 -- | colors the result of the predicate based on the current color palette
 colorMe ::

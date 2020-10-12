@@ -963,6 +963,9 @@ instance Show RReplace where
 -- | wrapper for a Show instance around 'Color'
 newtype SColor = SColor Color
   deriving newtype Enum
+instance Bounded SColor where
+  minBound = SColor Black
+  maxBound = SColor Default
 
 instance Show SColor where
   show (SColor c) =

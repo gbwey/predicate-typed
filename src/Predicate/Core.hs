@@ -1192,9 +1192,9 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 --
 data Len
 instance ( Show a
-         , as ~ [a]
-         ) => P Len as where
-  type PP Len as = Int
+         , x ~ [a]
+         ) => P Len x where
+  type PP Len x = Int
   eval _ opts as =
     let msg0 = "Len"
         n = length as
