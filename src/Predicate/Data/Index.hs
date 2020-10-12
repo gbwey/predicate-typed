@@ -226,8 +226,9 @@ instance ( P def (Proxy a)
          , PP def (Proxy a) ~ a
          , KnownNat n
          , Show a
-         ) => P (Ix n def) [a] where
-  type PP (Ix n def) [a] = a
+         , [a] ~ x
+         ) => P (Ix n def) x where
+  type PP (Ix n def) x = ExtractAFromTA x
   eval _ opts as = do
     let n = nat @n
         msg0 = "Ix(" <> show n <> ")"

@@ -97,8 +97,8 @@ instance Show x => P Dup x where
 -- Val [(1,2),(2,3),(3,4)]
 --
 data Pairs
-instance Show a => P Pairs [a] where
-  type PP Pairs [a] = [(a,a)]
+instance ([a] ~ x, Show a) => P Pairs x where
+  type PP Pairs x = [(ExtractAFromTA x,ExtractAFromTA x)]
   eval _ opts as =
     let zs = case as of
                [] -> []

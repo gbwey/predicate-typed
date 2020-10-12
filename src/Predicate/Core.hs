@@ -1187,6 +1187,9 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 -- >>> pz @Len []
 -- Val 0
 --
+-- pz @(Pairs >> Len > 2) "abcdef"
+-- Val True
+--
 data Len
 instance ( Show a
          , as ~ [a]

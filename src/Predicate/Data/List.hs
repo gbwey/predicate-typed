@@ -1926,12 +1926,16 @@ instance Alternative t => P (EmptyT t) x where
 -- >>> pz @Sum []
 -- Val 0
 --
+-- >>> pz @(1 ... 10 >> Sum) ()
+-- Val 55
+--
 data Sum
 
-instance ( Num a
+instance ( x ~ [a]
+         , Num a
          , Show a
-         ) => P Sum [a] where
-  type PP Sum [a] = a
+         ) => P Sum x where
+  type PP Sum x = ExtractAFromTA x
   eval _ opts as =
     let msg0 = "Sum"
         v = sum as
@@ -1947,10 +1951,11 @@ instance ( Num a
 --
 data Product
 
-instance ( Num a
+instance ( x ~ [a]
+         , Num a
          , Show a
-         ) => P Product [a] where
-  type PP Product [a] = a
+         ) => P Product x where
+  type PP Product x = ExtractAFromTA x
   eval _ opts as =
     let msg0 = "Product"
         v = product as
@@ -1966,10 +1971,11 @@ instance ( Num a
 --
 data Min
 
-instance ( Ord a
+instance ( x ~ [a]
+         , Ord a
          , Show a
-         ) => P Min [a] where
-  type PP Min [a] = a
+         ) => P Min x where
+  type PP Min x = ExtractAFromTA x
   eval _ opts as' = do
     let msg0 = "Min"
     pure $ case as' of
@@ -1989,10 +1995,11 @@ instance ( Ord a
 
 data Max
 
-instance ( Ord a
+instance ( x ~ [a]
+         , Ord a
          , Show a
-         ) => P Max [a] where
-  type PP Max [a] = a
+         ) => P Max x where
+  type PP Max x = ExtractAFromTA x
   eval _ opts as' = do
     let msg0 = "Max"
     pure $ case as' of

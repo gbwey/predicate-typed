@@ -469,8 +469,9 @@ instance ( KnownNat n
          , Show a
          , Show (PP p a)
          , P p a
-         ) => P (ParaImpl n '[p]) [a] where
-  type PP (ParaImpl n '[p]) [a] = [PP p a]
+         , x ~ [a]
+         ) => P (ParaImpl n '[p]) x where
+  type PP (ParaImpl n '[p]) x = [PP p (ExtractAFromTA x)]
   eval _ opts as' = do
     let msgbase0 = "Para"
         msgbase1 = msgbase0 <> "(" <> show (n-1) <> ")"
@@ -494,9 +495,10 @@ instance ( KnownNat n
          , PP (ParaImpl n (p1 ': ps)) [a] ~ [PP p a]
          , Show a
          , Show (PP p a)
+         , x ~ [a]
          )
-     => P (ParaImpl n (p ': p1 ': ps)) [a] where
-  type PP (ParaImpl n (p ': p1 ': ps)) [a] = [PP p a]
+     => P (ParaImpl n (p ': p1 ': ps)) x where
+  type PP (ParaImpl n (p ': p1 ': ps)) x = [PP p (ExtractAFromTA x)]
 
   eval _ _ [] = errorInProgram "ParaImpl n+1 case has no data left"
 
@@ -543,9 +545,9 @@ instance ( KnownNat n
 --
 data ParaN (n :: Nat) p
 
-instance ( P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) x
+instance ( x ~ [a]
+         , P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) x
          , GetLen (RepeatT n p)
-         , x ~ [a]
          ) => P (ParaN n p) x where
   type PP (ParaN n p) x = PP (Para (RepeatT n p)) x
   eval _ = eval (Proxy @(Para (RepeatT n p)))
