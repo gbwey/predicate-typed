@@ -96,6 +96,20 @@ instance Show x => P Dup x where
 -- Present [(1,2),(2,3),(3,4)] (Pairs [(1,2),(2,3),(3,4)] | [1,2,3,4])
 -- Val [(1,2),(2,3),(3,4)]
 --
+-- >>> pan @(Pairs >> Len >> 'True >> 'False >> Failt _ "xyzzy") "abcde"
+-- [Error xyzzy] False
+-- |
+-- +- P Pairs [('a','b'),('b','c'),('c','d'),('d','e')]
+-- |
+-- +- P Len 4
+-- |
+-- +- True 'True
+-- |
+-- +- False 'False
+-- |
+-- `- [Error xyzzy]
+-- Fail "xyzzy"
+--
 data Pairs
 instance ([a] ~ x, Show a) => P Pairs x where
   type PP Pairs x = [(ExtractAFromTA x,ExtractAFromTA x)]

@@ -601,32 +601,32 @@ prt3Impl opts v =
                      | otherwise = Msg3 m n r bp
   in case v of
        RF e t1 ->
-         let (m,n) = ("Step 1. " <> colorValPShort opts (FailP e) <> " Initial Conversion(ip)", e)
+         let (m,n) = ("Step 1. " <> colorValP Short opts (FailP e) <> " Initial Conversion(ip)", e)
              r = outmsg m
               <> prtTreePure opts t1
          in mkMsg3 m n r (t1 ^. root . peValP)
        RTF a t1 e t2 ->
-         let (m,n) = ("Step 2. " <> colorValPShort opts (FailP e) <> " Boolean Check(op)", e)
+         let (m,n) = ("Step 2. " <> colorValP Short opts (FailP e) <> " Boolean Check(op)", e)
              r = msg1 a
-              <> fixLite opts a t1
+              <> prtTreePure opts t1
               <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
          in mkMsg3 m n r (t2 ^. root . peValP)
        RTFalse a t1 t2 ->
-         let (m,n) = ("Step 2. " <> colorValPShort opts FalseP <> " Boolean Check(op)", z)
+         let (m,n) = ("Step 2. " <> colorValP Short opts FalseP <> " Boolean Check(op)", z)
              z = let w = t2 ^. root . peString
                  in if all isSpace w then "FalseP" else "{" <> w <> "}"
              r = msg1 a
-              <> fixLite opts a t1
+              <> prtTreePure opts t1
               <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
          in mkMsg3 m n r FalseP
        RTTrueF a t1 t2 e t3 ->
-         let (m,n) = ("Step 3. " <> colorValPShort opts (FailP e) <> " Output Conversion(fmt)", e)
+         let (m,n) = ("Step 3. " <> colorValP Short opts (FailP e) <> " Output Conversion(fmt)", e)
              r = msg1 a
-              <> fixLite opts a t1
+              <> prtTreePure opts t1
               <> "\n"
               <> outmsg "Step 2. Success Boolean Check(op)"
               <> prtTreePure opts t2
@@ -637,13 +637,13 @@ prt3Impl opts v =
        RTTrueT a t1 t2 t3 ->
          let (m,n) = ("Step 3. Success Output Conversion(fmt)", "")
              r = msg1 a
-              <> fixLite opts a t1
+              <> prtTreePure opts t1
               <> "\n"
               <> outmsg "Step 2. Success Boolean Check(op)"
               <> prtTreePure opts t2
               <> "\n"
               <> outmsg m
-              <> fixLite opts () t3
+              <> prtTreePure opts t3
          in mkMsg3 m n r (t3 ^. root . peValP)
 
 replaceOpt3 :: forall (opts :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 opts ip op fmt i

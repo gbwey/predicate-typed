@@ -66,7 +66,6 @@ module Predicate.Util (
   , getValLRFromTT
   , getValueLR
   , Inline (..)
-  , fixLite
   , prefixNumberToTT
   , prefixMsg
   , splitAndAlign
@@ -83,7 +82,7 @@ module Predicate.Util (
   , isVerbose
   , colorValBool
   , colorValP
-  , colorValPShort
+  , Long(..)
   , setOtherEffects
   , type Color1
   , type Color2
@@ -760,7 +759,7 @@ toNodeString :: POpts
 toNodeString opts bpe =
   if hasNoTree opts
   then errorInProgram $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
-  else colorValP opts (_peValP bpe) <> _peString bpe
+  else colorValP Long opts (_peValP bpe) <> " " <> _peString bpe
 
 hasNoTree :: POpts -> Bool
 hasNoTree opts =
@@ -770,48 +769,40 @@ hasNoTree opts =
     DNormal -> False
     DVerbose -> False
 
--- | render the 'ValP' value with colors
+-- | render 'ValP' value with colors
 colorValP ::
-     POpts
+     Long
+  -> POpts
   -> ValP
   -> String
-colorValP o b =
-  case b of
-    FailP e -> "[" <> f "Error" <> nullSpace e <> "]"
-    ValP -> f "P" <> " "
-    TrueP -> f "True" <> " "
-    FalseP -> f "False" <> " "
-  where f = colorMe o b
-
-
--- | render the 'ValP' value with colors
-colorValPShort ::
-     POpts
-  -> ValP
-  -> String
-colorValPShort o b =
-  case b of
-    FailP {} -> f "Failed"
-    TrueP -> f "True"
+colorValP long o bp =
+  case bp of
+    FailP e -> case long of
+                 Long -> "[" <> f "Error" <> nullSpace e <> "]"
+                 Short -> f "Failed"
     FalseP -> f "False"
+    TrueP -> f "True"
     ValP -> f "P"
-  where f = colorMe o b
+  where f = colorMe o bp
 
--- | render the 'Val' value with colors
+data Long = Long | Short deriving (Show, Eq)
+
+-- | render 'Val' value with colors
 colorValLite :: Show a
     => POpts
     -> Val a
     -> ValP
     -> String
-colorValLite o bt bp =
+colorValLite o bt bp' =
   let f = colorMe o bp
+      bp = validateValP bp' bt
   in case bt of
-      Fail e -> f "Error" <> " " <> e
-      Val x -> case bp of
-                      ValP -> f "Present " <> show x
-                      TrueP -> f "True"
-                      FalseP -> f "False"
-                      FailP _ -> errorInProgram $ "colorValLite: unexpected FailP " ++ show (bt,bp)
+       Fail e -> f "Error" <> " " <> e
+       Val a -> case bp of
+                  FalseP -> f "False"
+                  TrueP -> f "True"
+                  ValP -> f "Present" <> " " <> show a
+                  FailP _ -> errorInProgram $ "colorValLite: unexpected FailP " ++ show (bt,bp)
 
 colorValBool ::
       POpts
@@ -821,8 +812,8 @@ colorValBool o r =
   let f = colorMe o (r ^. val2PBool)
   in case r of
       Fail e -> f "Fail" <> " " <> e
-      Val True -> f "TrueT"
-      Val False -> f "FalseT"
+      Val False -> f "False"
+      Val True -> f "True"
 
 -- | colors the result of the predicate based on the current color palette
 colorMe ::
@@ -835,27 +826,13 @@ colorMe o b s =
              | otherwise = oColor o
   in coerce f b s
 
--- | override ValP case if there is no tree ie lite or zero mode
-fixLite :: forall a . Show a
-   => POpts
-   -> a
-   -> Tree PE
-   -> String
-fixLite opts a t
-  | hasNoTree opts =
-      let r = case t ^. root . peValP of
-                ValP -> colorMe opts ValP "Present " <> show a
-                bp -> colorValP opts bp
-      in r <> "\n"
-  | otherwise = prtTreePure opts t
-
 -- | display tree
 prtTreePure ::
      POpts
   -> Tree PE
   -> String
 prtTreePure opts t
-  | hasNoTree opts = colorValP opts (t ^. root . peValP)
+  | hasNoTree opts = colorValP Long opts (t ^. root . peValP)
   | otherwise = showTreeImpl opts $ fmap (toNodeString opts) t
 
 showTreeImpl :: POpts
@@ -864,7 +841,7 @@ showTreeImpl :: POpts
 showTreeImpl o =
   case oDisp o of
     Unicode -> drawTreeU
-    Ansi -> Safe.initSafe . drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline: eg fixLite
+    Ansi -> Safe.initSafe . drawTree -- to drop the last newline else we have to make sure that everywhere else has that newline
 
 -- | extract message part from tree
 topMessage :: TT a -> String

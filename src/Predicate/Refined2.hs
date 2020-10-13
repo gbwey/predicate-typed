@@ -499,24 +499,24 @@ prt2Impl opts v =
                       | otherwise = Msg2 m n r bp
   in case v of
        RF e t1 ->
-         let (m,n) = ("Step 1. " <> colorValPShort opts (FailP e) <> " Initial Conversion(ip)", e)
+         let (m,n) = ("Step 1. " <> colorValP Short opts (FailP e) <> " Initial Conversion(ip)", e)
              r = outmsg m
               <> prtTreePure opts t1
          in mkMsg2 m n r (t1 ^. root . peValP)
        RTF a t1 e t2 ->
-         let (m,n) = ("Step 2. " <> colorValPShort opts (FailP e) <> " Boolean Check(op)", e)
+         let (m,n) = ("Step 2. " <> colorValP Short opts (FailP e) <> " Boolean Check(op)", e)
              r = msg1 a
-              <> fixLite opts a t1
+              <> prtTreePure opts t1
               <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
          in mkMsg2 m n r (t2 ^. root . peValP)
        RTFalse a t1 t2 ->
-         let (m,n) = ("Step 2. " <> colorValPShort opts FalseP <> " Boolean Check(op)", z)
+         let (m,n) = ("Step 2. " <> colorValP Short opts FalseP <> " Boolean Check(op)", z)
              z = let w = t2 ^. root . peString
                  in if all isSpace w then "FalseP" else "{" <> w <> "}"
              r = msg1 a
-              <> fixLite opts a t1
+              <> prtTreePure opts t1
               <> "\n"
               <> outmsg m
               <> prtTreePure opts t2
@@ -524,7 +524,7 @@ prt2Impl opts v =
        RTTrue a t1 t2 ->
          let (m,n) = ("Step 2. True Boolean Check(op)", "")
              r = msg1 a
-              <> fixLite opts a t1
+              <> prtTreePure opts t1
               <> "\n"
               <> outmsg m
               <> prtTreePure opts t2

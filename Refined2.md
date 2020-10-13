@@ -87,12 +87,12 @@ An example of an invalid refined2TH call
 >$$(refined2TH "2016-xy-09") :: Refined2 OU (ReadP Day Id) (Id > 'Just (MkDay '(2012,1,1))) String
 
 <interactive>:64:4: error:
+    * Step 1. Failed Initial Conversion(ip) | ReadP Day (2016-xy-09)
 *** Step 1. Failed Initial Conversion(ip) ***
 [Error ReadP Day (2016-xy-09)]
 |
 `- P Id "2016-xy-09"
 
-refined2TH: predicate failed with Step 1. Failed Initial Conversion(ip) | ReadP Day (2016-xy-09)
     * In the Template Haskell splice $$(refined2TH "2016-xy-09")
       In the expression:
           $$(refined2TH "2016-xy-09") ::

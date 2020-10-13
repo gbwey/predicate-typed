@@ -58,9 +58,7 @@ library:
      ghc-options:
      - -fwrite-ide-info
      - -hiedir=.hie
-   #  - -Wno-compat-unqualified-imports
-   #  - -Widentities
-   #  - -Wmissing-export-lists
+     - -Widentities
    - condition: flag(coverage)
      ghc-options:
      - -fhpc
@@ -87,6 +85,7 @@ tests:
        ghc-options:
        - -fwrite-ide-info
        - -hiedir=.hie
+       - -Widentities
     -  condition: flag(coverage)
        ghc-options:
        - -fhpc
@@ -116,6 +115,7 @@ tests:
        ghc-options:
        - -fwrite-ide-info
        - -hiedir=.hie
+       - -Widentities
     -  condition: flag(coverage)
        ghc-options:
        - -fhpc

@@ -144,7 +144,7 @@ instance ToJSON a => ToJSON (Refined opts p a) where
 -- Right (Refined 13)
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined OAN (Between 10 14 Id) Int) "16"
--- Error in $: Refined(FromJSON:parseJSON):FalseT (16 <= 14)
+-- Error in $: Refined(FromJSON:parseJSON):False (16 <= 14)
 -- False 16 <= 14
 -- |
 -- +- P Id 16
@@ -174,7 +174,7 @@ instance ( RefinedC opts p a
 -- Refined "2019-04-23"
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined(Binary:get):FalseT (2019-05-30 <= 2019-04-23)
+-- Refined(Binary:get):False (2019-05-30 <= 2019-04-23)
 -- False 2019-05-30 <= 2019-04-23
 -- |
 -- +- P ReadP Day 2019-04-23

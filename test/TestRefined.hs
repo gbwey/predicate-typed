@@ -45,7 +45,7 @@ unnamedTests = [
   , (@=?) [(unsafeRefined "abcaaaabb", "")] (reads @(Refined OAN (Re "^[abc]+$") String) "Refined \"abcaaaabb\"")
   , (@=?) [] (reads @(Refined OAN (Re "^[abc]+$") String) "Refined \"abcaaaabbx\"")
 
-  , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):FalseT"]) (toFrom (unsafeRefined @OZ @(Between 4 7 Id || Gt 14) 12))
+  , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):False"]) (toFrom (unsafeRefined @OZ @(Between 4 7 Id || Gt 14) 12))
   , expectJ (Right (unsafeRefined 22)) (toFrom (unsafeRefined @OZ @(Between 4 7 Id || Gt 14) 22))
   , expectJ (Left ["Error in $: Refined(FromJSON:parseJSON):Fail someval (||)"]) (toFrom (unsafeRefined @OL @(Between 4 7 Id || Gt 14 || Failt _ "someval") 12))
 

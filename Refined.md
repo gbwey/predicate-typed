@@ -77,7 +77,7 @@ ex1 = $$(refinedTH "123")
 >$$(refinedTH @OU @(Lt 3 || Gt 55) 44)
 
 <interactive>:36:4: error:
-    * refinedTH: predicate failed with FalseT (False || False | (44 < 3) || (44 > 55))
+    * refinedTH: predicate failed with False (False || False | (44 < 3) || (44 > 55))
 False False || False | (44 < 3) || (44 > 55)
 |
 +- False 44 < 3
@@ -108,7 +108,7 @@ it :: Refined ((Len > 7) || Elem 3 Id) [Int]
 
 
 <interactive>:31:4: error:
-    * refinedTH: predicate failed with FalseT (False || False | (5 > 7) || (7 `elem` [1,2,3,4,5]))
+    * refinedTH: predicate failed with False (False || False | (5 > 7) || (7 `elem` [1,2,3,4,5]))
 False False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
 |
 +- False 5 > 7
@@ -133,7 +133,7 @@ False False || False | (5 > 7) || (7 `elem` [1,2,3,4,5])
 >$$(refinedTH @OU @(Re "^[A-Z][a-z]+$") "smith")
 
 <interactive>:32:4: error:
-    * refinedTH: predicate failed with FalseT (Re (^[A-Z][a-z]+$))
+    * refinedTH: predicate failed with False (Re (^[A-Z][a-z]+$))
 False Re (^[A-Z][a-z]+$)
 |
 +- P '"^[A-Z][a-z]+$"
@@ -155,7 +155,7 @@ Refined "Smith"
 >$$(refinedTH @OU @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
 
 <interactive>:34:4: error:
-    * refinedTH: predicate failed with FalseT (expected title case Re (^[A-Z][a-z]+$))
+    * refinedTH: predicate failed with False (expected title case Re (^[A-Z][a-z]+$))
 False expected title case Re (^[A-Z][a-z]+$)
 |
 +- P '"^[A-Z][a-z]+$"
@@ -165,16 +165,13 @@ False expected title case Re (^[A-Z][a-z]+$)
     * In the Template Haskell splice
         $$(refinedTH
              @OU @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
-      In the expression:
-        $$(refinedTH
-             @OU @(Msg "expected title case" $ Re "^[A-Z][a-z]+$") "smith")
 ```
 
 ```haskell
 >$$(refinedTH @OU @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$")) "smith")
 
 <interactive>:22:4: error:
-    * refinedTH: predicate failed with Fail expected title case (GuardBool (Re (^[A-Z][a-z]+$)))
+    * refinedTH: predicate failed with Error expected title case (GuardBool (Re (^[A-Z][a-z]+$)))
 [Error expected title case] GuardBool (Re (^[A-Z][a-z]+$))
 |
 +- False Re (^[A-Z][a-z]+$)
@@ -186,10 +183,6 @@ False expected title case Re (^[A-Z][a-z]+$)
 `- P '"expected title case"
 
     * In the Template Haskell splice
-        $$(refinedTH
-             @OU @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$"))
-             "smith")
-      In the expression:
         $$(refinedTH
              @OU @(GuardBool "expected title case" (Re "^[A-Z][a-z]+$"))
              "smith")

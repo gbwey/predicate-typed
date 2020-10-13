@@ -55,7 +55,7 @@ import qualified Language.Haskell.TH.Syntax as TH
 -- >$$(refinedTH 99) :: Refined OL (Between 100 125 Id) Int
 --
 -- <interactive>:8:4: error:
---     * refinedTH: predicate failed with Val False (100 <= 99)
+--     * refinedTH: predicate failed with False (100 <= 99)
 --     * In the Template Haskell splice $$(refinedTH 99)
 --       In the expression:
 --           $$(refinedTH 99) :: Refined OL (Between 100 125 Id) Int
@@ -154,7 +154,7 @@ refined2THIO i = do
 -- >$$(refined3TH 99) :: Refined3 OAN Id (Between 100 125 Id) Id Int
 --
 -- <interactive>:127:4: error:
---     * refined3TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
+--     * Step 2. False Boolean Check(op) | {100 <= 99}
 -- *** Step 1. Success Initial Conversion(ip) (99) ***
 -- P Id 99
 -- *** Step 2. False Boolean Check(op) ***
@@ -211,7 +211,7 @@ refined3THIO i = do
 -- >$$(refined5TH 99) :: Refined5 OAN Id (Between 100 125 Id) Int
 --
 -- <interactive>:127:4: error:
---     * refined5TH: predicate failed with Step 2. False Boolean Check(op) | {100 <= 99}
+--     * Step 2. False Boolean Check(op) | {100 <= 99}
 -- *** Step 1. Success Initial Conversion(ip) (99) ***
 -- P Id 99
 -- *** Step 2. False Boolean Check(op) ***
