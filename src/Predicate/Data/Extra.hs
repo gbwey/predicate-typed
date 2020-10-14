@@ -83,6 +83,8 @@ module Predicate.Data.Extra (
   , IMap
   , IList
   , Flip
+  , Unproxy'
+  , ExtractUnproxyT
 
  ) where
 import Predicate.Core
@@ -346,6 +348,36 @@ instance ( Show (t (t a))
 --
 -- >>> pz @(Id $$ "def") ("abc"<>)
 -- Val "abcdef"
+--
+-- >>> pz @(Id $$ 12) (*13)
+-- Val 156
+--
+-- >>> pz @(Id $$ 7 $$ 3) (*)
+-- Val 21
+--
+-- >>> pz @(Id $$ 7 $$ 3) (,)
+-- Val (7,3)
+--
+-- >>> pz @(Id $$ "abc" $$ 'True) (,)
+-- Val ("abc",True)
+--
+-- >>> pz @(Id $$ "asdf" $$ 99 $$ Char1 "A") (,,)
+-- Val ("asdf",99,'A')
+--
+-- >>> (fmap.fmap) ($ 9999) $ pz @Id (*33)
+-- Val 329967
+--
+-- >>> (fmap.fmap) ($ 9999) $ pz @(Id $$ 1 $$ 'True) (,,)
+-- Val (1,True,9999)
+--
+-- >>> (fmap.fmap.fmap) ($ 8) $ pz @'("xxx",Id) (*33)
+-- Val ("xxx",264)
+--
+-- >>> pz @('True $& 4 $& Id $$ "aa") (,,)
+-- Val (4,True,"aa")
+--
+-- >>> pz @('True $& 4 $& Id) (,)
+-- Val (4,True)
 --
 data p $$ q
 infixl 0 $$
@@ -1085,6 +1117,7 @@ instance P (LiftT p q) x => P (Lift p q) x where
   eval _ = eval (Proxy @(LiftT p q))
 
 -- | application using a Proxy: @q@ must be of kind Type else ambiguous k0 error
+--   see 'Unproxy'' for a better more flexible approach
 --
 -- >>> pl @(Apply1 (MsgI "hello ")) (Proxy @(W "there"),()) -- have to wrap Symbol
 -- Present "there" (hello '"there")
@@ -1094,6 +1127,9 @@ instance P (LiftT p q) x => P (Lift p q) x where
 -- Present 6 (Length 6 | "abcdef")
 -- Val 6
 --
+-- >>> pl @(Apply1 (Lift Len)) (Proxy @Snd,(True,"abcdef"))
+-- Present 6 ((>>) 6 | {Len 6 | "abcdef"})
+-- Val 6
 -- >>> pl @(Apply1 ((+) 4)) (Proxy @Fst,(5,"abcdef"))
 -- Present 9 (4 + 5 = 9)
 -- Val 9
@@ -1119,6 +1155,7 @@ instance forall p q x . (P (p q) x)
     eval (Proxy @(p q)) opts x
 
 -- | application using a Proxy: @q@ and @r@ must be of kind Type else ambiguous k0 error
+--   see 'Unproxy'' for a better more flexible approach
 --
 -- >>> pl @(Apply2 (+)) ((Proxy @Fst,Proxy @(Length Snd)),(5,"abcdef"))
 -- Present 11 (5 + 6 = 11)
@@ -1542,4 +1579,65 @@ data Flip (p :: k1 -> k2 -> k3) (q :: k2) (r :: k1) -- needs explicit types
 instance P (p r q) x => P (Flip p q r) x where
   type PP (Flip p q r) x = PP (p r q) x
   eval _ = eval (Proxy @(p r q))
+
+-- z has to be saturated: ie Length wont work but Len will
+-- however you provide the context where z will run so it is just as good
+-- needed to wrap ExtractUnproxyT with W so symbols and nats work
+
+-- | unproxy an expression: p is the location of Proxy z and q is the where the data for z
+--   unlike 'Apply1' and 'Apply2' does not require z to be of kind Type
+-- >>> pl @(Unproxy' Fst Snd) (Proxy @Snd,("dd","ee"))
+-- Present "ee" (Unproxy' | Snd "ee" | ("dd","ee"))
+-- Val "ee"
+--
+-- >>> pz @(Unproxy' Fst L22) (Proxy @(Fst <> Snd),(True,("dd","ee")))
+-- Val "ddee"
+--
+-- >>> pz @(Unproxy' Id () <> "def") (Proxy @"abc") -- dont need to wrap with W!
+-- Val "abcdef"
+--
+-- >>> pz @(Unproxy' Id () <> "def") (Nothing @(W "ss"))
+-- Val "ssdef"
+--
+-- >>> pz @(Unproxy' Id (Char1 "A")) (Proxy @Succ)
+-- Val 'B'
+--
+-- >>> pz @(Unproxy' Fst Snd) (Proxy @(All1 Even),[1,5,2,3,4])
+-- Val False
+--
+-- >>> pz @(Unproxy' Fst Snd) (Proxy @(Partition Even Snd),(True,[8,1,5,2,3,4,6]))
+-- Val ([8,2,4,6],[1,5,3])
+--
+-- >>> pl @(Proxy Snd >> Unproxy' Id (W '( 'True,2))) () -- have to wrap with W
+-- Present 2 ((>>) 2 | {Unproxy' | Snd 2 | (True,2)})
+-- Val 2
+--
+-- >>> pl @(Proxy (Fst <> Snd) >> Unproxy' Id (W '("aa","bb"))) ()
+-- Present "aabb" ((>>) "aabb" | {Unproxy' | "aa" <> "bb" = "aabb"})
+-- Val "aabb"
+--
+data Unproxy' (p :: Type) (q :: Type)
+
+type family ExtractUnproxyT pa :: Type where
+  ExtractUnproxyT (Proxy a) = W a -- have to wrap to get symbols and nats to work
+  ExtractUnproxyT (_t a) = a  -- assume 'a' is already Type
+  ExtractUnproxyT _ = GL.TypeError ('GL.Text "ExtractUnproxyT: only supports a t a style wrapper")
+
+instance ( PP p x ~ proxy z -- loosen up to use proxy
+         , PP z (PP q x) ~ w
+         , P q x
+         , PP (ExtractUnproxyT (PP p x)) (PP q x) ~ w
+         , P (ExtractUnproxyT (PP p x)) (PP q x)
+         ) => P (Unproxy' p q) x where
+  type PP (Unproxy' p q) x = PP (ExtractUnproxyT (PP p x)) (PP q x)
+  eval _ opts x = do
+    let msg0 = "Unproxy'"
+    qq <- eval (Proxy @q) opts x
+    case getValueLR NoInline opts msg0 qq [] of
+      Left e -> pure e
+      Right q -> do
+        rr <- eval (Proxy @(ExtractUnproxyT (PP p x))) opts q
+        pure $ case getValueLR NoInline opts msg0 rr [hh qq] of
+          Left e -> e
+          Right _r -> mkNodeCopy opts rr (msg0 <> nullIf " | " (_ttString rr)) [hh qq,hh rr]
 

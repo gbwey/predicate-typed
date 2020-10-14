@@ -74,6 +74,10 @@ import Data.Tree (Tree)
 -- >>> pz @(SuccB 'GT 'LT) ()
 -- Val EQ
 --
+-- >>> pl @(SuccB 'LT Id) GT
+-- Present LT (SuccB out of range)
+-- Val LT
+--
 data SuccB p q
 
 instance ( PP q x ~ a

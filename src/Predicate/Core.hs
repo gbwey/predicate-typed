@@ -12,6 +12,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NoStarIsType #-}
+-- {-# LANGUAGE StandaloneKindSignatures #-}
 {- |
      Dsl for evaluating and displaying type level expressions
 -}
@@ -135,6 +136,7 @@ import Data.Tree (Tree)
 import Data.Coerce (Coercible)
 import qualified Data.Semigroup as SG
 import Data.Tree.Lens (root)
+--import GHC.Exts (Constraint)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -144,6 +146,7 @@ import Data.Tree.Lens (root)
 -- >>> import Data.Time
 
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Predicate.Core.>>'
+--type P :: forall k. k -> Type -> Constraint
 class P p a where
   type PP (p :: k) a :: Type -- PP is the output type
   eval :: MonadEval m
@@ -1187,7 +1190,7 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 -- >>> pz @Len []
 -- Val 0
 --
--- pz @(Pairs >> Len > 2) "abcdef"
+-- >>> pz @(Pairs >> Len > 2) "abcdef"
 -- Val True
 --
 data Len

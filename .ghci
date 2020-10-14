@@ -1,4 +1,15 @@
+:seti -Wall
+{- :seti -Wcompat -}
+{- :seti -Wno-compat-unqualified-imports -}
+
 :seti -Wno-compat
+:seti -Wredundant-constraints
+:seti -Wincomplete-record-updates
+:seti -Wincomplete-uni-patterns
+:seti -Wpartial-fields
+:seti -Wunused-type-patterns
+:seti -Wredundant-constraints
+
 :seti -fprint-explicit-kinds
 :seti -XTemplateHaskell
 :seti -XTypeOperators
@@ -15,14 +26,6 @@
 :seti -XTypeFamilies
 :seti -XUndecidableInstances
 :seti -XNoStarIsType
-
-:seti -Wall
-{- :seti -Wcompat -}
-{- :seti -Wno-compat-unqualified-imports -}
-
-:seti -Wincomplete-record-updates
-:seti -Wincomplete-uni-patterns
-:seti -Wredundant-constraints
 
 {- need this for ghci -}
 :seti -Wno-type-defaults
@@ -58,12 +61,10 @@ import Data.Tree.Lens
 import qualified Data.Sequence as Seq
 import Data.Sequence (Seq(..))
 import Control.Monad.IO.Class
-import Control.Monad.Writer (WriterT(..), runWriterT, MonadWriter, tell)
-import Control.Monad.Except
 import Data.Bitraversable
 import qualified Data.Text as T
 import qualified Control.Exception as E
-import Text.Show.Functions ()
+import Text.Show.Functions () -- need this to do anything useful
 import Text.Printf
 import qualified GHC.Exts as GE
 import Data.String
