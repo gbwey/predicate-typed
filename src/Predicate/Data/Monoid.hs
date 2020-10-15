@@ -29,8 +29,6 @@ module Predicate.Data.Monoid (
   , MEmptyT
   , MEmptyT'
   , MEmptyP
-  , MEmpty2
-  , MEmpty2'
 
  ) where
 import Predicate.Core
@@ -176,45 +174,11 @@ instance ( PP p x ~ NonEmpty a
         let b = SG.sconcat p
         in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
--- | lift mempty over a Functor
-data MEmpty2' t
-
-instance ( Show (f a)
-         , Show (f (PP t (f a)))
-         , Functor f
-         , Monoid (PP t (f a))
-         ) => P (MEmpty2' t) (f a) where
-  type PP (MEmpty2' t) (f a) = f (PP t (f a))
-  eval _ opts fa =
-    let msg0 = "MEmpty2"
-        b = mempty <$> fa
-    in pure $ mkNode opts (Val b) (show3 opts msg0 b fa) []
-
--- | lift mempty over a Functor
---
--- >>> pz @(MEmpty2 (SG.Product Int)) [Identity (-13), Identity 4, Identity 99]
--- Val [Product {getProduct = 1},Product {getProduct = 1},Product {getProduct = 1}]
---
--- >>> pl @(MEmpty2 (SG.Sum _)) (Just ())
--- Present Just (Sum {getSum = 0}) (MEmpty2 Just (Sum {getSum = 0}) | Just ())
--- Val (Just (Sum {getSum = 0}))
---
-data MEmpty2 (t :: Type)
-type MEmpty2T (t :: Type) = MEmpty2' (Hole t)
-
-instance P (MEmpty2T t) x => P (MEmpty2 t) x where
-  type PP (MEmpty2 t) x = PP (MEmpty2T t) x
-  eval _ = eval (Proxy @(MEmpty2T t))
-
 -- | similar to 'mempty'
 --
 -- >>> pl @(MEmptyT' Id) (Just (SG.Sum 12))
 -- Present Nothing (MEmptyT Nothing)
 -- Val Nothing
---
--- >>> pl @(MEmptyT (SG.Sum _) >> Unwrap >> Id + 4) ()
--- Present 4 ((>>) 4 | {0 + 4 = 4})
--- Val 4
 --
 
 -- no Monoid for Maybe a unless a is also a monoid but can use empty!
@@ -244,6 +208,17 @@ instance ( Show (PP t a)
 -- >>> pl @(MEmptyT (Maybe ())) 'x'
 -- Present Nothing (MEmptyT Nothing)
 -- Val Nothing
+--
+-- >>> pl @(MEmptyT (SG.Sum _) >> Unwrap >> Id + 4) ()
+-- Present 4 ((>>) 4 | {0 + 4 = 4})
+-- Val 4
+--
+-- >>> pz @(FMap (MEmptyT (SG.Product Int))) [Identity (-13), Identity 4, Identity 99]
+-- Val [Product {getProduct = 1},Product {getProduct = 1},Product {getProduct = 1}]
+--
+-- >>> pl @(FMap (MEmptyT (SG.Sum _))) (Just ())
+-- Present Just (Sum {getSum = 0}) (FMap MEmptyT Sum {getSum = 0})
+-- Val (Just (Sum {getSum = 0}))
 --
 data MEmptyT (t :: Type)
 type MEmptyTT (t :: Type) = MEmptyT' (Hole t)

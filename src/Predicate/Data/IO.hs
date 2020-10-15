@@ -19,25 +19,32 @@
    promoted io functions
 -}
 module Predicate.Data.IO (
-
+   -- ** file handling
     ReadFile
   , ReadFileBinary
   , FileExists
   , ReadDir
   , DirExists
-  , ReadEnv
-  , ReadEnvAll
-  , TimeUtc
-  , TimeZt
   , AppendFile
   , WriteFile
   , WriteFile'
+
+  -- ** screen
   , Stdout
   , Stderr
   , Stdin
   , ReadIO
   , ReadIO'
 
+  -- ** environment
+  , ReadEnv
+  , ReadEnvAll
+
+  -- ** date time
+  , TimeUtc
+  , TimeZt
+
+  -- ** random
   , GenIO
   , GenPure
   , GenNext
@@ -47,17 +54,7 @@ module Predicate.Data.IO (
   , RandomList
   , RandomRNext
   , RandomRList
-{-
-  , FileExistsT
-  , DirExistsT
-  , AppendFileT
-  , WriteFileT'
-  , WriteFileT
-  , StdoutT
-  , StderrT
-  , RandomListT
-  , RandomRListT
--}
+
  ) where
 import Predicate.Core
 import Predicate.Misc

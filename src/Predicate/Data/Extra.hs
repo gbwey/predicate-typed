@@ -29,7 +29,6 @@ module Predicate.Data.Extra (
   , type (<$)
   , type (<*)
   , type (*>)
-  , Pure2
   , Sequence
   , Traverse
   , Join
@@ -57,8 +56,6 @@ module Predicate.Data.Extra (
   , LastMay
   , TailMay
   , InitMay
-
-  , Coerce2
 
   , ProxyT
   , ProxyT'
@@ -100,7 +97,6 @@ import Control.Applicative (liftA2, Alternative((<|>)))
 import Control.Monad (join)
 import Data.Kind (Type)
 import Control.Comonad (Comonad(duplicate, extract))
-import Data.Coerce (Coercible)
 import Control.Lens
 import qualified Safe (headNote, cycleNote)
 import Data.Tree
@@ -114,32 +110,6 @@ import Data.Tree
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Functor.Identity
 -- >>> import Data.These
-
--- | lift pure over a Functor
---
--- >>> pz @(Pure2 (Either String)) [1,2,4]
--- Val [Right 1,Right 2,Right 4]
---
--- >>> pl @(Pure2 []) (Just 10)
--- Present Just [10] (Pure2 Just [10] | Just 10)
--- Val (Just [10])
---
--- >>> pl @(Pure2 SG.Sum) (Just 20)
--- Present Just (Sum {getSum = 20}) (Pure2 Just (Sum {getSum = 20}) | Just 20)
--- Val (Just (Sum {getSum = 20}))
---
-data Pure2 (t :: Type -> Type)
-
-instance ( Show (f (t a))
-         , Show (f a)
-         , Applicative t
-         , Functor f
-         ) => P (Pure2 t) (f a) where
-  type PP (Pure2 t) (f a) = f (t a)
-  eval _ opts fa =
-    let msg0 = "Pure2"
-        b = fmap pure fa
-    in pure $ mkNode opts (Val b) (show3 opts msg0 b fa) []
 
 -- | similar to 'Control.Applicative.<$'
 --
@@ -907,30 +877,19 @@ instance x ~ [Int]
 
 -- | coerce over a functor
 --
--- >>> pz @(Coerce2 (SG.Sum Integer)) [Identity (-13), Identity 4, Identity 99]
+-- >>> pz @(FMap (Coerce (SG.Sum Integer))) [Identity (-13), Identity 4, Identity 99]
 -- Val [Sum {getSum = -13},Sum {getSum = 4},Sum {getSum = 99}]
 --
--- >>> pz @(Coerce2 (SG.Sum Integer)) (Just (Identity (-13)))
+-- >>> pz @(FMap (Coerce (SG.Sum Integer))) (Just (Identity (-13)))
 -- Val (Just (Sum {getSum = -13}))
 --
--- >>> pz @(Coerce2 (SG.Sum Int)) (Nothing @(Identity Int))
+-- >>> pz @(FMap (Coerce (SG.Sum Int))) (Nothing @(Identity Int))
 -- Val Nothing
 --
--- >>> pl @(Coerce2 (SG.Sum Int)) (Just (10 :: Int))
--- Present Just (Sum {getSum = 10}) (Coerce2 Just (Sum {getSum = 10}) | Just 10)
+-- >>> pl @(FMap (Coerce (SG.Sum Int))) (Just (10 :: Int))
+-- Present Just (Sum {getSum = 10}) (FMap Coerce Sum {getSum = 10} | 10)
 -- Val (Just (Sum {getSum = 10}))
 --
-data Coerce2 (t :: k)
-instance ( Show (f a)
-         , Show (f t)
-         , Coercible t a
-         , Functor f
-         ) => P (Coerce2 t) (f a) where
-  type PP (Coerce2 t) (f a) = f t
-  eval _ opts fa =
-    let msg0 = "Coerce2"
-        d = view coerced <$> fa
-    in pure $ mkNode opts (Val d) (show3 opts msg0 d fa) []
 
 data ProxyT' t
 
@@ -1343,6 +1302,18 @@ instance P IListT x => P IList x where
 -- `- True IdBool
 -- Val (Just True)
 --
+-- >>> pz @(FMap (Pure (Either String) Id)) [1,2,4]
+-- Val [Right 1,Right 2,Right 4]
+--
+-- >>> pl @(FMap (Pure [] Id)) (Just 10)
+-- Present Just [10] (FMap Pure [10] | 10)
+-- Val (Just [10])
+--
+-- >>> pl @(FMap (Pure SG.Sum Id)) (Just 20)
+-- Present Just (Sum {getSum = 20}) (FMap Pure Sum {getSum = 20} | 20)
+-- Val (Just (Sum {getSum = 20}))
+--
+
 data FMap p
 
 instance ( Traversable n

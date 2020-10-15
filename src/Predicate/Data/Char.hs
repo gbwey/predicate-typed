@@ -60,6 +60,7 @@ import GHC.TypeLits (Symbol, KnownSymbol)
 import qualified GHC.TypeLits as GL
 import Data.Proxy (Proxy(Proxy))
 import Data.Char
+import qualified Data.Type.Equality as DE
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -76,13 +77,16 @@ import Data.Char
 --
 data Char1 (s :: Symbol)  -- gets the first char from the Symbol [requires that Symbol is not empty]
 instance ( KnownSymbol s
-         , GL.CmpSymbol s "" ~ 'GT
+         , FailUnlessT (GL.CmpSymbol s "" DE.== 'GT)
+              ('GL.Text "Char1 symbol cannot be empty")
          ) => P (Char1 s) a where
   type PP (Char1 s) a = Char
   eval _ opts _ =
      case symb @s of
        [] -> errorInProgram "Char1: found empty Symbol/string"
        c:_ -> pure $ mkNode opts (Val c) ("Char1 " <> showL opts c) []
+
+
 
 data C (s :: Symbol)
 type CT s = Char1 s
