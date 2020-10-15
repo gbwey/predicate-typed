@@ -216,6 +216,9 @@ instance P p a => P (W p) a where
   eval _ opts | isVerbose opts = eval (Proxy @(MsgI "W " p)) opts
               | otherwise = eval (Proxy @p) opts
 
+instance Show (W a) where
+  show _ = "W <?>"
+
 -- | add a message to give more context to the evaluation tree
 --
 -- >>> pan @(Msg "[somemessage]" Id) 999
@@ -363,7 +366,6 @@ instance ( P p a
     pure $ case lr of
        Left e -> e
        Right (p,q,pp,qq) ->
---         mkNode opts (Val (p,q)) msg [hh pp, hh qq]
          mkNode opts (Val (p,q)) ("'(" <> showL opts p <> "," <> showL opts q <> ")") [hh pp, hh qq]
 
 -- | run the predicates in a promoted 3-tuple
@@ -2177,7 +2179,8 @@ instance ( Show (p a b)
         d = swapC pabx
     in pure $ mkNode opts (Val d) (show3 opts msg0 d pabx) []
 
--- | like 'GHC.Base.$' for expressions
+-- | like 'GHC.Base.$' for expressions taking exactly on argument
+-- ie this doesnt work: pz @('(,) $ 4 $ 'True) ()
 --
 -- >>> pl @(L1 $ L2 $ Id) ((1,2),(3,4))
 -- Present 3 (Fst 3 | (3,4))
@@ -2187,6 +2190,9 @@ instance ( Show (p a b)
 -- False (4 <= 3)
 -- Val False
 --
+-- >>> pz @('(,) 4 $ 'True) ()
+-- Val (4,True)
+--
 data (p :: k -> k1) $ (q :: k)
 infixr 0 $
 
@@ -2194,7 +2200,7 @@ instance P (p q) a => P (p $ q) a where
   type PP (p $ q) a = PP (p q) a
   eval _  = eval (Proxy @(p q))
 
--- | similar to 'Control.Lens.&'
+-- | similar to 'Control.Lens.&' for expressions taking exactly on argument
 --
 -- >>> pl @(Id & L1 & Singleton & Length) (13,"xyzw")
 -- Present 1 (Length 1 | [13])

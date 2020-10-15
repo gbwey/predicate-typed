@@ -1913,7 +1913,7 @@ data EmptyT (t :: Type -> Type)
 
 instance Alternative t => P (EmptyT t) x where
   type PP (EmptyT t) x = t x
-  eval _ opts _x =
+  eval _ opts _ =
     let msg0 = "EmptyT"
         b = empty @t
     in pure $ mkNode opts (Val b) msg0 []

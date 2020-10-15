@@ -1028,8 +1028,8 @@ instance ( P p x
     let msg0 = "Catch"
     pp <- eval (Proxy @p) opts x
     case getValueLR NoInline opts msg0 pp [] of
-      Left e -> do
-         let emsg = e ^?! ttVal' . _Fail -- extract the failt string a push back into the fail case
+      Left p -> do
+         let emsg = p ^. ttVal . singular _Fail -- extract the Fail string and push it back into the fail case
          qq <- eval (Proxy @q) opts ((emsg, x), Proxy @(PP p x))
          pure $ case getValueLR NoInline opts (msg0 <> " default condition failed") qq [hh pp] of
             Left e1 -> e1
@@ -1596,7 +1596,7 @@ instance P (p r q) x => P (Flip p q r) x where
 -- >>> pz @(Unproxy' Id () <> "def") (Proxy @"abc") -- dont need to wrap with W!
 -- Val "abcdef"
 --
--- >>> pz @(Unproxy' Id () <> "def") (Nothing @(W "ss"))
+-- >>> pz @(Unproxy' Id () <> "def") (Nothing @(W "ss")) -- doesnt work for Snd etc cos no show instance!
 -- Val "ssdef"
 --
 -- >>> pz @(Unproxy' Id (Char1 "A")) (Proxy @Succ)
@@ -1616,11 +1616,30 @@ instance P (p r q) x => P (Flip p q r) x where
 -- Present "aabb" ((>>) "aabb" | {Unproxy' | "aa" <> "bb" = "aabb"})
 -- Val "aabb"
 --
+-- >>> pz @(Unproxy' Id (W 'EQ)) (Nothing @Succ)
+-- Val GT
+--
+-- >>> pz @(Unproxy' Fst Snd) (Proxy @Succ,EQ)
+-- Val GT
+--
+-- >>> pz @(Unproxy' Fst Snd) (Nothing @(W Snd),(1,EQ)) -- have to wrap with W as it has a Show instance which is needed by Snd
+-- Val EQ
+--
+-- >>> pz @(Unproxy' Fst Snd) (Proxy @(FMap Succ),Just 23)
+-- Val (Just 24)
+--
+-- >>> pz @(Unproxy' Id (1 ... 12)) (Proxy @(FMap Succ))
+-- Val [2,3,4,5,6,7,8,9,10,11,12,13]
+--
+-- >>> pz @(Unproxy' Id (W '( 'True, MkJust 12))) (Proxy @(FMap $ FMap Succ))
+--Val (True,Just 13)
+--
 data Unproxy' (p :: Type) (q :: Type)
 
 type family ExtractUnproxyT pa :: Type where
   ExtractUnproxyT (Proxy a) = W a -- have to wrap to get symbols and nats to work
-  ExtractUnproxyT (_t a) = a  -- assume 'a' is already Type
+  -- Proxy is more reliable as it has a Show instance: anything else is iffy
+  ExtractUnproxyT (_t a) = a  -- assume 'a' is already Type -- doesnt work for Snd ie functions so not great: unless wrapped by W
   ExtractUnproxyT _ = GL.TypeError ('GL.Text "ExtractUnproxyT: only supports a t a style wrapper")
 
 instance ( PP p x ~ proxy z -- loosen up to use proxy

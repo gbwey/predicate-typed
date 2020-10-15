@@ -32,6 +32,7 @@ dependencies:
 - pcre-heavy >= 1.0.0.2
 - pcre-light
 - pretty-terminal >= 0.1.0.0
+- random
 - safe
 - string-conversions
 - template-haskell

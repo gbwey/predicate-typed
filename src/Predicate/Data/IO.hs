@@ -38,6 +38,10 @@ module Predicate.Data.IO (
   , ReadIO
   , ReadIO'
 
+  , RanIO
+  , RanPure
+  , RanNext
+  , RanNext'
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -55,7 +59,7 @@ import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
 import System.IO (hPutStr, withFile, IOMode(WriteMode, AppendMode))
 import System.Environment (getEnvironment, lookupEnv)
 import qualified Data.ByteString.Char8 as BS8
-
+import System.Random
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -325,7 +329,7 @@ data Stdin
 
 instance P Stdin x where
   type PP Stdin x = String
-  eval _ opts _x = do
+  eval _ opts _ = do
     let msg0 = "Stdin"
     mb <- runIO $ do
                       lr <- E.try getLine
@@ -337,3 +341,75 @@ instance P Stdin x where
       Just (Left e) -> mkNode opts (Fail $ msg0 <> ":" <> e) "" []
       Just (Right ss) -> mkNode opts (Val ss) (msg0 <> "[" <> litVerbose opts "" ss <> "]") []
 
+data RanIO 
+
+instance P RanIO x where
+  type PP RanIO x = StdGen
+  eval _ opts _ = do
+    let msg0 = "RanIO"
+    mg <- runIO $ newStdGen
+    pure $ case mg of
+      Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" []
+      Just g -> mkNode opts (Val g) (msg0 <> "[" <> showVerbose opts "" g <> "]") []
+
+data RanPure p 
+
+instance (PP p x ~ Int, P p x) => P (RanPure p) x where
+  type PP (RanPure p) x = StdGen
+  eval _ opts x = do
+    let msg0 = "RanPure"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR NoInline opts msg0 pp [] of
+      Left e -> e
+      Right p -> 
+        let g = mkStdGen p
+        in mkNode opts (Val g) msg0 [hh pp]
+
+-- | get next random value given a seed
+--
+-- >>> pz @(IterateN 5 (RanNext Bool Id) Id) (mkStdGen 3)
+-- Val [True,True,False,True,True]
+--
+data RanNext (t :: Type) p 
+
+instance (Random t, P p x, PP p x ~ StdGen) => P (RanNext t p) x where
+  type PP (RanNext t p) x = (t,StdGen)
+  eval _ opts x = do
+    let msg0 = "RanNext"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR NoInline opts msg0 pp [] of
+      Left e -> e
+      Right p -> 
+        let (a,g) = random p
+        in mkNode opts (Val (a,g)) (msg0 <> "[" <> showVerbose opts "" g <> "]") [hh pp]
+
+-- | get next random value in a range
+--
+-- >>> pz @(Foldl (Fst >> Second (RanNext' Int 1 100 Id) >> '(L21 :+ Fst, L22)) '( MEmptyT [Int] ,Id) (1...5)) (mkStdGen 3)
+-- Val ([12,26,33,94,64],781515869 652912057)
+--
+-- >>> pz @(IterateN 10 (RanNext' Char (Char1 "A") (Char1 "H") Id) Id) (mkStdGen 3)
+-- Val "DBABDDEEEA"
+--
+
+data RanNext' (t :: Type) p q r
+
+instance (Random t, P r x, PP r x ~ StdGen, PP p x ~ t, PP q x ~ t, P p x, P q x) => P (RanNext' t p q r) x where
+  type PP (RanNext' t p q r) x = (t,StdGen)
+  eval _ opts x = do
+    let msg0 = "RanNext'"
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
+    case lr of
+      Left e -> pure e
+      Right (p,q,pp,qq) -> do
+        rr <- eval (Proxy @r) opts x
+        pure $ case getValueLR NoInline opts msg0 rr [hh pp,hh qq] of
+          Left e -> e
+          Right r -> 
+            let (a,g) = randomR (p,q) r
+            in mkNode opts (Val (a,g)) (msg0 <> "[" <> showVerbose opts "" g <> "]") [hh pp, hh qq, hh rr]
+
+{-
+pz @(ScanN 20 (RanNext' Char (Char1 "a") (Char1 "d") Snd) Id >> Tail >> Map Fst) ('x',mkStdGen 3)
+Val "dbabddaaaabdcbbbaabc"
+-}

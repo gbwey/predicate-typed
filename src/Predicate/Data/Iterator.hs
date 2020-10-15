@@ -27,6 +27,7 @@ module Predicate.Data.Iterator (
   , IterateWhile
   , IterateNWhile
   , IterateNUntil
+  , IterateN
 
   , Para
   , ParaN
@@ -356,6 +357,23 @@ instance ( PP q a ~ s
 
 type family UnfoldrT mbs where
   UnfoldrT (Maybe (b, _s)) = b
+
+-- | run @p@ @n@ times with state @s@
+--
+-- >>> :m + System.Random
+-- >>> pz @(IterateN 10 (RanNext' Int 1 100 Id) Id) (mkStdGen 3)
+-- Val [64,94,33,26,12,8,81,41,21,89]  
+--
+
+data IterateN n p s
+
+-- have to rewrite (a,s) to (a,(s,n)) hence the L11 ... 
+type IterateNT n p s = Unfoldr (MaybeBool (Snd > 0) ((p *** Pred) >> '(L11,'(L12,Snd)))) '(s,n)
+
+instance P (IterateNT n p s) x => P (IterateN n p s) x where
+  type PP (IterateN n p s) x = PP (IterateNT n p s) x
+  eval _ = eval (Proxy @(IterateNT n p s))
+
 
 -- | unfolds a value applying @f@ until the condition @p@ is true
 --
