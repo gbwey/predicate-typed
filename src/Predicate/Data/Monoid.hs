@@ -24,8 +24,8 @@ module Predicate.Data.Monoid (
   , MConcat
   , SConcat
   , STimes
-  , SapA
-  , SapA'
+  , Sap
+  , type S
   , MEmptyT
   , MEmptyT'
   , MEmptyP
@@ -71,16 +71,6 @@ import Data.List.NonEmpty (NonEmpty(..))
 -- >>> pz @('(10 >> FromInteger _,"def") <> Id) (SG.Sum 12, "_XYZ")
 -- Val (Sum {getSum = 22},"def_XYZ")
 --
--- >>> pz @(SapA' (SG.Max _)) (10,12)
--- Val (Max {getMax = 12})
---
--- >>> pz @(SapA' (SG.Sum _)) (10,12)
--- Val (Sum {getSum = 22})
---
--- >>> pl @((Id <> Id) >> Unwrap) (SG.Sum 12)
--- Present 24 ((>>) 24 | {getSum = 24})
--- Val 24
---
 data p <> q
 infixr 6 <>
 
@@ -100,30 +90,41 @@ instance ( Semigroup (PP p x)
         let d = p <> q
         in mkNode opts (Val d) (showL opts p <> " <> " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
 
--- | semigroup append both sides of a tuple (ie uncurry (<>)) using 'Wrap'
+-- | synonym for wrapping a monoid
+
+type S a = SG.WrappedMonoid a
+-- | semigroup append both sides of a tuple (ie uncurry (<>)) using 'Wrap' and then unwraps the final result
 --
--- >>> pl @(SapA' (SG.Sum _) >> Unwrap) (4,5)
--- Present 9 ((>>) 9 | {getSum = 9})
+-- >>> pz @(Sap (SG.Sum _)) (4,5)
 -- Val 9
 --
-data SapA' (t :: Type)
-type SapAT' (t :: Type) = Wrap t Fst <> Wrap t Snd
-
-instance P (SapAT' t) x => P (SapA' t) x where
-  type PP (SapA' t) x = PP (SapAT' t) x
-  eval _ = eval (Proxy @(SapAT' t))
-
--- | semigroup append both sides of a tuple (ie uncurry (<>))
+-- >>> pz @(Sap (SG.Sum _)) (13,44)
+-- Val 57
 --
--- >>> pz @(Snd >> SapA) (4,("abc","def"))
+-- >>> pz @(Sap SG.Any) (True,False)
+-- Val True
+--
+-- >>> pz @(Sap SG.All) (True,False)
+-- Val False
+--
+-- >>> pz @(Sap (SG.Max _)) (10,12)
+-- Val 12
+--
+-- >>> pz @(Sap (SG.Sum _)) (10,12)
+-- Val 22
+--
+-- >>> pz @(Sap (S _)) ("abc","def")
 -- Val "abcdef"
 --
-data SapA
-type SapAT = Fst <> Snd
+-- >>> pz @(Fst <> Snd) ("abc","def") -- same as above but more direct
+-- Val "abcdef"
+--
+data Sap (t :: Type)
+type SapT (t :: Type) = Wrap t Fst <> Wrap t Snd >> Unwrap
 
-instance P SapAT x => P SapA x where
-  type PP SapA x = PP SapAT x
-  eval _ = eval (Proxy @SapAT)
+instance P (SapT t) x => P (Sap t) x where
+  type PP (Sap t) x = PP (SapT t) x
+  eval _ = eval (Proxy @(SapT t))
 
 -- | similar to 'mconcat'
 --

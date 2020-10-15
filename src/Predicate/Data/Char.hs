@@ -21,6 +21,7 @@
 module Predicate.Data.Char (
  -- ** constructor
     Char1
+  , C
 
  -- ** character predicates
   , IsLower
@@ -82,6 +83,13 @@ instance ( KnownSymbol s
      case symb @s of
        [] -> errorInProgram "Char1: found empty Symbol/string"
        c:_ -> pure $ mkNode opts (Val c) ("Char1 " <> showL opts c) []
+
+data C (s :: Symbol)
+type CT s = Char1 s
+
+instance P (CT s) x => P (C s) x where
+  type PP (C s) x = PP (CT s) x
+  eval _ = eval (Proxy @(CT s))
 
 
 -- | a predicate for determining if a character belongs to the given character set

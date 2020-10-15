@@ -45,12 +45,12 @@ allTests =
   , expectBT (Val ()) $ pl @(L22 >> L22) (1,('a',(3,(True,()))))
   , expectBT (Val True) $ pl @L31 (1,2,(True,4))
   , expectBT (Fail "failed3") $ pl @((Fst >> Failt _ "failed3" >> Le (6 -% 1)) || 'False) ([-5],True)
-  , expectBT (Val [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 -% 1 ) >> Wrap (MM.First _) Id)) >> Map SapA >> Map ('Just Unwrap)) [Nothing,Just 10,Just 20,Nothing,Just 30]
+  , expectBT (Val [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 -% 1 ) >> Wrap (MM.First _) Id)) >> Map (Fst <> Snd) >> Map ('Just Unwrap)) [Nothing,Just 10,Just 20,Nothing,Just 30]
   , expectBT (Val (True,3.4)) $ pl @(Thd >> Snd >> Fst) (1,'a',('x',((True,3.4),999)))
   , expectBT (Val [13,16,17]) $ pl @(Guard "err" (Len > 2) >> Map Succ) [12,15,16]
   , expectBT (Val 55) $ pl @(Map (Wrap (SG.Sum _) Id) >> MConcat Id >> Unwrap) [1..10]
-  , expectBT (Val 9) $ pl @((Wrap _ Id *** Wrap (SG.Sum _) Id) >> SapA >> Unwrap) (4,5)
-  , expectBT (Val (SG.Sum 9)) $ pl @((Wrap _ Id *** Wrap _ Id) >> SapA) (4,5)
+  , expectBT (Val 9) $ pl @((Wrap _ Id *** Wrap (SG.Sum _) Id) >> (Fst <> Snd) >> Unwrap) (4,5)
+  , expectBT (Val (SG.Sum 9)) $ pl @((Wrap _ Id *** Wrap _ Id) >> (Fst <> Snd)) (4,5)
   , expectBT (Fail "len is bad") $ pl @Ip6Test "FE80::203:Baff:FE77:326FF"
   , expectBT (Fail "not a hex") $ pl @Ip6Test "FE80::203:Baff:GE77:326F"
   , expectBT (Fail "count is bad") $ pl @Ip6Test "FE80::203:Baff:FE77:326F:::::"

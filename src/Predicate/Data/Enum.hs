@@ -545,7 +545,7 @@ instance ( PP p x ~ a
          , Bounded a
          ) => P (Universe' p) x where
   type PP (Universe' p) x = [PP p x]
-  eval _ opts _z =
+  eval _ opts _ =
     let msg0 = "Universe"
         u = [mn .. mx]
         mn = minBound @a

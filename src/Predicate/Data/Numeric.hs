@@ -124,8 +124,8 @@ instance ( Num (PP t a)
 -- Present Min {getMin = 19} ((>>) Min {getMin = 19} | {getMin = 19})
 -- Val (Min {getMin = 19})
 --
--- >>> pl @((Lift (FromInteger _) 12 &&& Id) >> SapA) (SG.Product 7)
--- Present Product {getProduct = 84} ((>>) Product {getProduct = 84} | {getProduct = 84})
+-- >>> pl @(Lift (FromInteger _) 12 <> Id) (SG.Product 7)
+-- Present Product {getProduct = 84} (Product {getProduct = 12} <> Product {getProduct = 7} = Product {getProduct = 84})
 -- Val (Product {getProduct = 84})
 --
 -- >>> pl @(Fst >> FromInteger (SG.Sum _)) (3,"A")

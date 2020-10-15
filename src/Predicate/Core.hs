@@ -283,7 +283,7 @@ data Hole (t :: Type)
 --
 instance Typeable t => P (Hole t) a where
   type PP (Hole t) a = t -- can only be Type not Type -> Type (can use Proxy but then we go down the rabbithole)
-  eval _ opts _a =
+  eval _ opts _ =
     let msg0 = "Hole(" <> showT @t <> ")"
     in pure $ mkNode opts (Fail msg0) "you probably meant to get access to the type of PP only and not evaluate" []
 
@@ -577,7 +577,7 @@ instance ( P p a
 -- Val EQ
 instance GetOrdering cmp => P (cmp :: Ordering) a where
   type PP cmp a = Ordering
-  eval _ opts _a =
+  eval _ opts _ =
     let cmp = getOrdering @cmp
         msg = "'" <> showL opts cmp
     in pure $ mkNode opts (Val cmp) msg []
@@ -1180,7 +1180,7 @@ data Unproxy
 
 instance Typeable a => P Unproxy (Proxy (a :: Type)) where
   type PP Unproxy (Proxy a) = a
-  eval _ opts _a =
+  eval _ opts _ =
     let msg0 = "Unproxy(" <> showT @a <> ")"
     in pure $ mkNode opts (Fail msg0) "you probably meant to get access to the type of PP only and not evaluate" []
 
@@ -2312,7 +2312,7 @@ instance ( Show a
  --
 instance GetWeekDay dy => P (dy :: DayOfWeek) a where
   type PP dy a = DayOfWeek
-  eval _ opts _a =
+  eval _ opts _ =
     let dy = getWeekDay @dy
         msg = "'" <> showL opts dy
     in pure $ mkNode opts (Val dy) msg []

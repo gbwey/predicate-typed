@@ -27,7 +27,7 @@ module Predicate.Data.Iterator (
   , IterateWhile
   , IterateNWhile
   , IterateNUntil
-  , IterateN
+  , UnfoldN
 
   , Para
   , ParaN
@@ -208,8 +208,7 @@ instance P (ScanNAT q) x => P (ScanNA q) x where
 -- Present LT ((>>) LT | {Last LT | [GT,EQ,LT]})
 -- Val LT
 --
--- >>> pl @(FoldN 4 ((Id &&& Id) >> SapA) Id) "abc"
--- Present "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc" ((>>) "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc" | {Last "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc" | ["abc","abcabc","abcabcabcabc","abcabcabcabcabcabcabcabc","abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc"]})
+-- >>> pz @(FoldN 4 (Id <> Id) Id) "abc" -- same as above
 -- Val "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc"
 --
 
@@ -361,17 +360,17 @@ type family UnfoldrT mbs where
 -- | run @p@ @n@ times with state @s@
 --
 -- >>> :m + System.Random
--- >>> pz @(IterateN 10 (RanNext' Int 1 100 Id) Id) (mkStdGen 3)
--- Val [64,94,33,26,12,8,81,41,21,89]  
+-- >>> pz @(UnfoldN 10 (RandomRNext Int 1 100 Id) Id) (mkStdGen 3)
+-- Val [64,94,33,26,12,8,81,41,21,89]
 --
 
-data IterateN n p s
+data UnfoldN n p s
 
--- have to rewrite (a,s) to (a,(s,n)) hence the L11 ... 
+-- have to rewrite (a,s) to (a,(s,n)) hence the L11 ...
 type IterateNT n p s = Unfoldr (MaybeBool (Snd > 0) ((p *** Pred) >> '(L11,'(L12,Snd)))) '(s,n)
 
-instance P (IterateNT n p s) x => P (IterateN n p s) x where
-  type PP (IterateN n p s) x = PP (IterateNT n p s) x
+instance P (IterateNT n p s) x => P (UnfoldN n p s) x where
+  type PP (UnfoldN n p s) x = PP (IterateNT n p s) x
   eval _ = eval (Proxy @(IterateNT n p s))
 
 
