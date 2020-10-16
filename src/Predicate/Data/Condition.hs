@@ -14,9 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     promoted conditional functions
--}
+-- |     promoted conditional functions
 module Predicate.Data.Condition (
   -- ** conditional expressions
     If
@@ -69,18 +67,18 @@ import Data.Bool (bool)
 -- >>> pz @(If (Gt 4) "greater than 4" "less than or equal to 4") 0
 -- Val "less than or equal to 4"
 --
--- >>> pz @(If (Snd == "a") '("xxx",Fst + 13) (If (Snd == "b") '("yyy",Fst + 7) (Failt _ "oops"))) (99,"b")
+-- >>> pz @(If (Snd == "a") '("xxx",Fst + 13) (If (Snd == "b") '("yyy",Fst + 7) (FailT _ "oops"))) (99,"b")
 -- Val ("yyy",106)
 --
 -- >>> pl @(If (Len > 2) (Map Succ) (FailS "someval")) [12,15,16]
 -- Present [13,16,17] (If 'True [13,16,17])
 -- Val [13,16,17]
 --
--- >>> pl @(Map (If (Lt 3) 'True (Failt _ "err"))) [1..10]
+-- >>> pl @(Map (If (Lt 3) 'True (FailT _ "err"))) [1..10]
 -- Error err(8) (Map(i=2, a=3) excnt=8)
 -- Fail "err(8)"
 --
--- >>> pl @(Map (If (Lt 3) 'True (Failt _ "someval"))) [1..10]
+-- >>> pl @(Map (If (Lt 3) 'True (FailT _ "someval"))) [1..10]
 -- Error someval(8) (Map(i=2, a=3) excnt=8)
 -- Fail "someval(8)"
 --
@@ -142,28 +140,28 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 
 -- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
 --
--- >>> pz @(Case (Failt _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 50
+-- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 50
 -- Val "50 is same50"
 --
--- >>> pz @(Case (Failt _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 9
+-- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 9
 -- Val "9 is lt10"
 --
--- >>> pz @(Case (Failt _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 3
+-- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 3
 -- Val "3 is lt4"
 --
--- >>> pz @(Case (Failt _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
+-- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
 -- Fail "asdf"
 --
 -- >>> pz @(Case (FailS "asdf" >> Snd >> Unproxy) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
 -- Fail "asdf"
 --
--- >>> pz @(Case (Failt _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "b"
+-- >>> pz @(Case (FailT _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "b"
 -- Val "there"
 --
--- >>> pz @(Case (Failt _ "x") '[Id == "a",Id == "b"] '["hey","there"] Id) "a"
+-- >>> pz @(Case (FailT _ "x") '[Id == "a",Id == "b"] '["hey","there"] Id) "a"
 -- Val "hey"
 --
--- >>> pz @(Case (Failt _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "c"
+-- >>> pz @(Case (FailT _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "c"
 -- Fail "x"
 --
 data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
@@ -174,19 +172,19 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2) deriving S
 
 -- | tries to match the value @r@ with a condition in @ps@ and if there is a match calls the associated @qs@ entry else run @e@
 --
--- >>> pl @(Case (Snd >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 15
+-- >>> pl @(Case (Snd >> FailP "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 15
 -- Present "gt3" (Case(0 of 2) "gt3" | 15)
 -- Val "gt3"
 --
--- >>> pl @(Case (Snd >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 1
+-- >>> pl @(Case (Snd >> FailP "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 1
 -- Present "lt2" (Case(0) "lt2" | 1)
 -- Val "lt2"
 --
--- >>> pl @(Case (Snd >> Failp "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 3
+-- >>> pl @(Case (Snd >> FailP "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 3
 -- Present "eq3" (Case(0) "eq3" | 3)
 -- Val "eq3"
 --
--- >>> pl @(Case (Snd >> Failp "no match") '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
+-- >>> pl @(Case (Snd >> FailP "no match") '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Error no match (Case:otherwise failed:Proxy)
 -- Fail "no match"
 --
@@ -228,7 +226,7 @@ data Case' (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
 --
 data Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
 
-type CaseT' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd >> Failp "Case:no match") ps qs r
+type CaseT' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd >> FailP "Case:no match") ps qs r
 type CaseT'' s (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (FailCaseT s) ps qs r -- eg s= PrintF "%s" (ShowP Id)
 
 instance P (CaseT'' s ps qs r) x => P (Case'' s ps qs r) x where
@@ -410,8 +408,8 @@ instance ( PP prt (Int, a) ~ String
          , GetLen ps
          , P p a
          , PP p a ~ Bool
-         , P (GuardsImpl n ps) [a]
-         , PP (GuardsImpl n ps) [a] ~ [a]
+         , P (GuardsImpl n ps) x
+         , PP (GuardsImpl n ps) x ~ x
          , Show a
          , [a] ~ x
          ) => P (GuardsImpl n ('(prt,p) ': ps)) x where
@@ -565,7 +563,7 @@ instance ( PP prt (Int, a) ~ String
          , P p a
          , PP p a ~ Bool
          , P (BoolsImpl n ps) x
-         , PP (BoolsImpl n ps) [a] ~ Bool
+         , PP (BoolsImpl n ps) x ~ Bool
          , [a] ~ x
          ) => P (BoolsImpl n ('(prt,p) ': ps)) x where
   type PP (BoolsImpl n ('(prt,p) ': ps)) x = Bool
@@ -685,8 +683,8 @@ instance ( PP prt a ~ String
          , GetLen ps
          , P p a
          , PP p a ~ Bool
-         , P (GuardsImplX n ps) [a]
-         , PP (GuardsImplX n ps) [a] ~ [a]
+         , P (GuardsImplX n ps) x
+         , PP (GuardsImplX n ps) x ~ x
          , Show a
          , [a] ~ x
          ) => P (GuardsImplX n ('(prt,p) ': ps)) x where

@@ -16,9 +16,7 @@
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE TypeOperators #-}
-{- |
-     Simple refinement type with only one type and a predicate
--}
+-- |     Simple refinement type with only one type and a predicate
 module Predicate.Refined (
   -- ** Refined
     Refined

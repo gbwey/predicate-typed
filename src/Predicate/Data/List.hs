@@ -17,9 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     promoted list functions
--}
+-- |     promoted list functions
 module Predicate.Data.List (
 
  -- ** constructors
@@ -481,11 +479,11 @@ instance P (Quant p) x => P (All1 p) x where
 -- >>> pz @(PartitionBy Char (Mod Id 16 >> ShowBase 16 >> Head) Id) [-4,-2,5,0,15,12,-1,2,-3,4,0]
 -- Val (fromList [('0',[0,0]),('2',[2]),('4',[4]),('5',[5]),('c',[12,-4]),('d',[-3]),('e',[-2]),('f',[-1,15])])
 --
--- >>> pl @(PartitionBy Ordering (Case (Failt _ "asdf") '[Id < 2, Id == 2, Id > 2] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
+-- >>> pl @(PartitionBy Ordering (Case (FailT _ "asdf") '[Id < 2, Id == 2, Id > 2] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
 -- Present fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])] (PartitionBy fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])] | s=[-4,2,5,6,7,1,2,3,4])
 -- Val (fromList [(LT,[1,-4]),(EQ,[2,2]),(GT,[4,3,7,6,5])])
 --
--- >>> pl @(PartitionBy Ordering (Case (Failt _ "xyzxyzxyzzyyysyfsyfydf") '[Id < 2, Id == 2, Id > 3] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
+-- >>> pl @(PartitionBy Ordering (Case (FailT _ "xyzxyzxyzzyyysyfsyfydf") '[Id < 2, Id == 2, Id > 3] '[ 'LT, 'EQ, 'GT] Id) Id) [-4,2,5,6,7,1,2,3,4]
 -- Error xyzxyzxyzzyyysyfsyfydf (PartitionBy(i=7, a=3) excnt=1)
 -- Fail "xyzxyzxyzzyyysyfsyfydf"
 --
@@ -711,15 +709,15 @@ instance P (FilterT p q) x => P (Filter p q) x where
 -- Present ([1,2],[3,4,5,6,7,8,9,10,11]) (Break cnt=(2,9))
 -- Val ([1,2],[3,4,5,6,7,8,9,10,11])
 --
--- >>> pl @(Break (If (Gt 2) 'True (If (Gt 4) (Failt _ "ASfd") 'False)) Id) [1..8]
+-- >>> pl @(Break (If (Gt 2) 'True (If (Gt 4) (FailT _ "ASfd") 'False)) Id) [1..8]
 -- Present ([1,2],[3,4,5,6,7,8]) (Break cnt=(2,6))
 -- Val ([1,2],[3,4,5,6,7,8])
 --
--- >>> pl @(Break (Case 'False '[Gt 2,Gt 4] '[W 'True, Failt _ "ASfd"] Id) Id) [1..8]  -- case version
+-- >>> pl @(Break (Case 'False '[Gt 2,Gt 4] '[W 'True, FailT _ "ASfd"] Id) Id) [1..8]  -- case version
 -- Present ([1,2],[3,4,5,6,7,8]) (Break cnt=(2,6))
 -- Val ([1,2],[3,4,5,6,7,8])
 --
--- >>> pl @(Break (If (Gt 2) (Failt _ "ASfd") 'False) Id) [1..8]
+-- >>> pl @(Break (If (Gt 2) (FailT _ "ASfd") 'False) Id) [1..8]
 -- Error ASfd (If True | Break predicate failed)
 -- Fail "ASfd"
 --
@@ -1415,11 +1413,11 @@ instance P Unzip3T x => P Unzip3 x where
 -- Present ["aa","cx","by","az"] (SortBy ["aa","cx","by","az"])
 -- Val ["aa","cx","by","az"]
 --
--- >>> pl @(SortBy (If (Fst==5 && Snd==3) (Failt _ (PrintT "pivot=%d value=%d" Id)) 'GT) Snd) ((), [5,7,3,1,6,2,1,3])
+-- >>> pl @(SortBy (If (Fst==5 && Snd==3) (FailT _ (PrintT "pivot=%d value=%d" Id)) 'GT) Snd) ((), [5,7,3,1,6,2,1,3])
 -- Error pivot=5 value=3(2) (Partition(i=1, a=(5,3)) excnt=2 | SortBy)
 -- Fail "pivot=5 value=3(2)"
 --
--- >>> pl @(SortBy (If (Fst==50 && Snd==3) (Failt _ (PrintT "pivot=%d value=%d" Id)) OrdA) Snd) ((), [5,7,3,1,6,2,1,3])
+-- >>> pl @(SortBy (If (Fst==50 && Snd==3) (FailT _ (PrintT "pivot=%d value=%d" Id)) OrdA) Snd) ((), [5,7,3,1,6,2,1,3])
 -- Present [1,1,2,3,3,5,6,7] (SortBy [1,1,2,3,3,5,6,7])
 -- Val [1,1,2,3,3,5,6,7]
 --

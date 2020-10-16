@@ -1,6 +1,4 @@
-{- |
-     Dsl for evaluating and displaying type level expressions
--}
+-- | Dsl for evaluating and displaying type level expressions
 module Predicate.Prelude (
     module Predicate.Core
   , module Predicate.Util

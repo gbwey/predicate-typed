@@ -14,9 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     promoted indexing functions
--}
+-- |     promoted indexing functions
 module Predicate.Data.Index (
   -- ** indexing expressions
     Ix
@@ -157,51 +155,51 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- >>> pz @(Ix 40 "not found") ["abc","D","eF","","G"]
 -- Val "not found"
 --
--- >>> pl @(Fst >> Dup >> (Ix 1 (Failp "failed5") *** Ix 3 (Failp "failed5")) >> Id) ([10,12,3,5],"ss")
+-- >>> pl @(Fst >> Dup >> (Ix 1 (FailP "failed5") *** Ix 3 (FailP "failed5")) >> Id) ([10,12,3,5],"ss")
 -- Present (12,5) ((>>) (12,5) | {Id (12,5)})
 -- Val (12,5)
 --
--- >>> pl @(Fst >> Dup >> (Ix 1 (Failp "failed5") *** Ix 3 (Failp "failed5")) >> Fst < Snd) ([10,12,3,5],"ss")
+-- >>> pl @(Fst >> Dup >> (Ix 1 (FailP "failed5") *** Ix 3 (FailP "failed5")) >> Fst < Snd) ([10,12,3,5],"ss")
 -- False ((>>) False | {12 < 5})
 -- Val False
 --
--- >>> pl @(Fst >> Dup >> (Ix 1 (Failp "failed5") *** Ix 3 (Failp "failed5")) >> Fst > Snd) ([10,12,3,5],"ss")
+-- >>> pl @(Fst >> Dup >> (Ix 1 (FailP "failed5") *** Ix 3 (FailP "failed5")) >> Fst > Snd) ([10,12,3,5],"ss")
 -- True ((>>) True | {12 > 5})
 -- Val True
 --
--- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval1") >> Fst == Snd) ('x',[1..5])
+-- >>> pl @(Snd >> Len &&& Ix 3 (FailP "someval1") >> Fst == Snd) ('x',[1..5])
 -- False ((>>) False | {5 == 4})
 -- Val False
 --
--- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval2") >> Fst < Snd) ('x',[1..5])
+-- >>> pl @(Snd >> Len &&& Ix 3 (FailP "someval2") >> Fst < Snd) ('x',[1..5])
 -- False ((>>) False | {5 < 4})
 -- Val False
 --
--- >>> pl @(Snd >> Len &&& Ix 3 (Failp "someval3") >> Fst > Snd) ('x',[1..5])
+-- >>> pl @(Snd >> Len &&& Ix 3 (FailP "someval3") >> Fst > Snd) ('x',[1..5])
 -- True ((>>) True | {5 > 4})
 -- Val True
 --
--- >>> pl @(Map Len >> Ix 3 (Failp "lhs") &&& Ix 0 5 >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 3 (FailP "lhs") &&& Ix 0 5 >> Fst == Snd) [[1..4],[4..5]]
 -- Error lhs (Ix(3) not found | '(,))
 -- Fail "lhs"
 --
--- >>> pl @(Map Len >> Ix 0 (Failp "lhs") &&& Ix 1 5 >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 0 (FailP "lhs") &&& Ix 1 5 >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {4 == 2})
 -- Val False
 --
--- >>> pl @(Map Len >> Ix 1 (Failp "lhs") &&& Ix 3 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 1 (FailP "lhs") &&& Ix 3 (FailP "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- Error rhs (Ix(3) not found | '(,))
 -- Fail "rhs"
 --
--- >>> pl @(Map Len >> Ix 10 (Failp "lhs") &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 10 (FailP "lhs") &&& Ix 1 (FailP "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- Error lhs (Ix(10) not found | '(,))
 -- Fail "lhs"
 --
--- >>> pl @(Map Len >> Ix 0 (Failp "lhs") &&& Ix 10 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 0 (FailP "lhs") &&& Ix 10 (FailP "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- Error rhs (Ix(10) not found | '(,))
 -- Fail "rhs"
 --
--- >>> pl @(Map Len >> Ix 10 3 &&& Ix 1 (Failp "rhs") >> Fst == Snd) [[1..4],[4..5]]
+-- >>> pl @(Map Len >> Ix 10 3 &&& Ix 1 (FailP "rhs") >> Fst == Snd) [[1..4],[4..5]]
 -- False ((>>) False | {3 == 2})
 -- Val False
 --
@@ -243,7 +241,7 @@ instance ( P def (Proxy a)
          Just a -> pure $ mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
 data Ix' (n :: Nat) deriving Show
-type IxT' (n :: Nat) = Ix n (Failp "Ix index not found")
+type IxT' (n :: Nat) = Ix n (FailP "Ix index not found")
 
 instance P (IxT' n) x => P (Ix' n) x where
   type PP (Ix' n) x = PP (IxT' n) x
@@ -327,7 +325,7 @@ instance ( P q a
 -- Present 'a' (IxL(0) 'a' | p=('a','b','c') | q=0)
 -- Val 'a'
 --
--- >>> pl @(Id !! Failt _ "err") ('a','b','c')
+-- >>> pl @(Id !! FailT _ "err") ('a','b','c')
 -- Error err (IxL)
 -- Fail "err"
 --
@@ -425,7 +423,7 @@ instance ( P q a
 --
 
 data p !! q deriving Show
-type BangBangT p q = IxL p q (Failp "(!!) index not found")
+type BangBangT p q = IxL p q (FailP "(!!) index not found")
 
 instance P (BangBangT p q) a => P (p !! q) a where
   type PP (p !! q) a = PP (BangBangT p q) a

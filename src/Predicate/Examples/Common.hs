@@ -9,9 +9,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
-{- |
-     Common predicates for use with Refined, Refined2, and Refined3
--}
+-- | Common predicates for use with Refined, Refined2, and Refined3
 module Predicate.Examples.Common (
   -- ** date time checkers
     DateNip
@@ -71,7 +69,7 @@ module Predicate.Examples.Common (
    ) where
 import Predicate.Prelude
 import GHC.TypeLits (Nat)
-import Data.Time
+import Data.Time (Day, UTCTime, ZonedTime)
 
 -- | @ip@ type for converting a credit card number to a list of singleton digits
 type Luhnip = Map' (ReadP Int Id) (Remove "-" Id >> Ones)

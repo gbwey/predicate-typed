@@ -17,9 +17,7 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
-{- |
-     promoted numeric functions
--}
+-- |     promoted numeric functions
 module Predicate.Data.Numeric (
 
   -- ** numeric expressions

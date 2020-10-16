@@ -14,9 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     promoted iterator functions
--}
+-- |     promoted iterator functions
 module Predicate.Data.Iterator (
     Scanl
   , ScanN
@@ -509,8 +507,8 @@ instance ( KnownNat n
 instance ( KnownNat n
          , GetLen ps
          , P p a
-         , P (ParaImpl n (p1 ': ps)) [a]
-         , PP (ParaImpl n (p1 ': ps)) [a] ~ [PP p a]
+         , P (ParaImpl n (p1 ': ps)) x
+         , PP (ParaImpl n (p1 ': ps)) x ~ [PP p a]
          , Show a
          , Show (PP p a)
          , x ~ [a]

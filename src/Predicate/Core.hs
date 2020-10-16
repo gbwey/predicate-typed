@@ -13,10 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE NoStarIsType #-}
--- {-# LANGUAGE StandaloneKindSignatures #-}
-{- |
-     Dsl for evaluating and displaying type level expressions
--}
+-- |     Dsl for evaluating and displaying type level expressions
 module Predicate.Core (
 
  -- ** basic types
@@ -70,8 +67,8 @@ module Predicate.Core (
 
  -- ** failure expressions
   , Fail
-  , Failp
-  , Failt
+  , FailP
+  , FailT
   , FailS
 
  -- ** tuple expressions
@@ -147,7 +144,6 @@ import Data.Tree.Lens (root)
 -- >>> import Data.Time
 
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Predicate.Core.>>'
---type P :: forall k. k -> Type -> Constraint
 class P p a where
   type PP (p :: k) a :: Type -- PP is the output type
   eval :: MonadEval m
@@ -927,7 +923,7 @@ puv = run @OUV @p
 -- field1 >>> Error 'Left found Right
 -- Fail "'Left found Right"
 --
--- >>> run @(OptT '[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"]) @(Failt _ "oops") ()
+-- >>> run @(OptT '[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"]) @(FailT _ "oops") ()
 -- test | field2 >>> Error oops
 -- Fail "oops"
 --
@@ -953,7 +949,7 @@ run a = do
 -- field2 >>> Present (True,False) ('(True,False))
 -- Val (True,False)
 --
--- >>> runs @'[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"] @(Failt _ "oops") ()
+-- >>> runs @'[ 'OMsg "test", OU, 'OEmpty, OL, 'OMsg "field2"] @(FailT _ "oops") ()
 -- test | field2 >>> Error oops
 -- Fail "oops"
 --
@@ -1071,12 +1067,7 @@ instance ( P p a
                     then qq & ttForest %~ (hh pp:) -- we still need pp for context
                     else e
           Right q -> mkNodeCopy opts qq (lit3 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
-{-
-          Right q -> pp & ttVal .~ _ttVal qq -- dont use ttVal' cos we want a copy
-                        & ttValP .~ _ttValP qq -- we need this to preserve the old ValP
-                        & ttString %~ (\x -> x <> " !!! " <> (lit3 opts msg0 q "" (topMessageEgregious qq)))
-                        & ttForest %~ (hh pp:)
--}
+
 -- | infixl version of 'Predicate.Core.>>'
 data p >>> q deriving Show
 type RightArrowsLeftInfixT p q = p >> q
@@ -1342,25 +1333,25 @@ instance P (Fail Id p) x => P (FailS p) x where
 
 -- | Fails the computation with a message (wraps the type in 'Hole')
 --
--- >>> pz @(Failt Int (PrintF "value=%03d" Id)) 99
+-- >>> pz @(FailT Int (PrintF "value=%03d" Id)) 99
 -- Fail "value=099"
 --
-data Failt (t :: Type) p deriving Show
-instance P (Fail (Hole t) p) x => P (Failt t p) x where
-  type PP (Failt t p) x = PP (Fail (Hole t) p) x
+data FailT (t :: Type) p deriving Show
+instance P (Fail (Hole t) p) x => P (FailT t p) x where
+  type PP (FailT t p) x = PP (Fail (Hole t) p) x
   eval _ = eval (Proxy @(Fail (Hole t) p))
 
 -- | Fails the computation with a message where the input value is a Proxy
 --
--- >>> pz @(Ix 3 (Failp "oops")) "abcd"
+-- >>> pz @(Ix 3 (FailP "oops")) "abcd"
 -- Val 'd'
 --
--- >>> pz @(Ix 3 (Failp "oops")) "abc"
+-- >>> pz @(Ix 3 (FailP "oops")) "abc"
 -- Fail "oops"
 --
-data Failp p deriving Show
-instance P (Fail Unproxy p) x => P (Failp p) x where
-  type PP (Failp p) x = PP (Fail Unproxy p) x
+data FailP p deriving Show
+instance P (Fail Unproxy p) x => P (FailP p) x where
+  type PP (FailP p) x = PP (Fail Unproxy p) x
   eval _ = eval (Proxy @(Fail Unproxy p))
 
 -- | gets the singleton value from a foldable
@@ -1971,7 +1962,7 @@ instance ( P p a
 
 -- | short circuit version of boolean And
 --
--- >>> pl @(Id > 10 &&~ Failt _ "ss") 9
+-- >>> pl @(Id > 10 &&~ FailT _ "ss") 9
 -- False (False &&~ _ | (9 > 10))
 -- Val False
 --
@@ -2038,7 +2029,7 @@ instance ( P p a
 
 -- | short circuit version of boolean Or
 --
--- >>> pl @(Id > 10 ||~ Failt _ "ss") 11
+-- >>> pl @(Id > 10 ||~ FailT _ "ss") 11
 -- True (True ||~ _ | (11 > 10))
 -- Val True
 --
@@ -2219,8 +2210,8 @@ instance P (p q) a => P (p $ q) a where
 -- Present (4,(7,"aa")) ('(4,(7,"aa")))
 -- Val (4,(7,"aa"))
 --
--- >>> pl @(L3 $ L2 $ Fst) ((1,("W",9,'a')),(3,4))
--- Present 'a' (Thd 'a' | ("W",9,'a'))
+-- >>> pl @(L3 $ L2 $ Fst) ((1,("X",9,'a')),(3,4))
+-- Present 'a' (Thd 'a' | ("X",9,'a'))
 -- Val 'a'
 --
 data (q :: k) & (p :: k -> k1) deriving Show

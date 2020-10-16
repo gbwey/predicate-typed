@@ -14,9 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     promoted read, show, and printf functions
--}
+-- |     promoted read, show, and printf functions
 module Predicate.Data.ReadShow (
 
     ShowP
@@ -38,7 +36,7 @@ import Predicate.Util
 import GHC.TypeLits (Nat,KnownNat)
 import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
-import Text.Printf
+import Text.Printf (PrintfArg, printf, PrintfType)
 import Data.Typeable (Typeable)
 -- $setup
 -- >>> :set -XDataKinds

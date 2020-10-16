@@ -15,9 +15,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     extra promoted functions
--}
+-- |     extra promoted functions
 module Predicate.Data.Extra (
 
     FMap
@@ -100,7 +98,7 @@ import Data.Kind (Type)
 import Control.Comonad (Comonad(duplicate, extract))
 import Control.Lens
 import qualified Safe (headNote, cycleNote)
-import Data.Tree
+import Data.Tree (Tree)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -955,7 +953,7 @@ data Catch p q deriving Show
 -- >>> pz @(Catch' Succ (Second (ShowP Id) >> PrintT "%s %s" Id)) LT
 -- Val EQ
 --
--- >>> pl @(Catch' (Failt Int "someval") (PrintT "msg=%s caught(%03d)" Id)) 44
+-- >>> pl @(Catch' (FailT Int "someval") (PrintT "msg=%s caught(%03d)" Id)) 44
 -- Error msg=someval caught(044) (Catch default condition failed)
 -- Fail "msg=someval caught(044)"
 --
@@ -1568,10 +1566,10 @@ instance P (p r q) x => P (Flip p q r) x where
 -- >>> pz @(Unproxy' Fst L22) (Proxy @(Fst <> Snd),(True,("dd","ee")))
 -- Val "ddee"
 --
--- >>> pz @(Unproxy' Id () <> "def") (Proxy @"abc") -- dont need to wrap with W!
+-- >>> pz @(Unproxy' Id () <> "def") (Proxy @"abc") -- Proxy works for any kind!
 -- Val "abcdef"
 --
--- >>> pz @(Unproxy' Id () <> "def") (Nothing @(W "ss")) -- doesnt work for Snd etc cos no show instance!
+-- >>> pz @(Unproxy' Id () <> "def") (Nothing @(W "ss")) -- just use Proxy, dont use eg Maybe else you will need to wrap non-Type kinds with W
 -- Val "ssdef"
 --
 -- >>> pz @(Unproxy' Id (Char1 "A")) (Proxy @Succ)
@@ -1583,7 +1581,7 @@ instance P (p r q) x => P (Flip p q r) x where
 -- >>> pz @(Unproxy' Fst Snd) (Proxy @(Partition Even Snd),(True,[8,1,5,2,3,4,6]))
 -- Val ([8,2,4,6],[1,5,3])
 --
--- >>> pl @(Proxy Snd >> Unproxy' Id '( 'True,2)) () -- have to wrap with W
+-- >>> pl @(Proxy Snd >> Unproxy' Id '( 'True,2)) ()
 -- Present 2 ((>>) 2 | {Unproxy' | Snd 2 | (True,2)})
 -- Val 2
 --

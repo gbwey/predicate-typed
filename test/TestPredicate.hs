@@ -44,7 +44,7 @@ allTests =
   , expectBT (Val ()) $ pl @(Snd >> Snd >> Snd >> Snd >> Id) (1,('a',(3,(True,()))))
   , expectBT (Val ()) $ pl @(L22 >> L22) (1,('a',(3,(True,()))))
   , expectBT (Val True) $ pl @L31 (1,2,(True,4))
-  , expectBT (Fail "failed3") $ pl @((Fst >> Failt _ "failed3" >> Le (6 -% 1)) || 'False) ([-5],True)
+  , expectBT (Fail "failed3") $ pl @((Fst >> FailT _ "failed3" >> Le (6 -% 1)) || 'False) ([-5],True)
   , expectBT (Val [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 -% 1 ) >> Wrap (MM.First _) Id)) >> Map (Fst <> Snd) >> Map ('Just Unwrap)) [Nothing,Just 10,Just 20,Nothing,Just 30]
   , expectBT (Val (True,3.4)) $ pl @(Thd >> Snd >> Fst) (1,'a',('x',((True,3.4),999)))
   , expectBT (Val [13,16,17]) $ pl @(Guard "err" (Len > 2) >> Map Succ) [12,15,16]
@@ -66,9 +66,6 @@ allTests =
   , expectBT (Val (124,["1","2","2"])) $ pl @(Left' >> (Succ &&& (Pred >> ShowP Id >> Ones))) (Left 123)
   , expectBT (Val (1,("asdf",True))) $ pl @'(1,'("asdf",'True)) ()
   , expectBT (Val (12, False)) $ pl @('These Id (Not Id)) (These 12 True)
-    --- have to wrap with W cos different kinds
-  -- IxL "d" doesnt work cos is Text not String
-  -- use Fromstring
   , expectBT (Val [7,9,9,2,7,3,9,8,7,1,3]) $ pl @(Map' (ReadP Int Id) Ones >> Guard "invalid checkdigit" IsLuhn) "79927398713"
   , expectBT (Fail "invalid checkdigit") $ pl @(Map' (ReadP Int Id) Ones >> Guard "invalid checkdigit" IsLuhn) "79927398714"
   , expectBT (Val [10,14,15,9]) $ pl @(MM1 16 >> MM2 16) "aef9"

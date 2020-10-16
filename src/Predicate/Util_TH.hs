@@ -8,9 +8,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE NoStarIsType #-}
-{- |
-     Template Haskell methods for creating Refined, Refined2, and Refined3 refinement types
--}
+-- | Template Haskell methods for creating Refined, Refined2, and Refined3 refinement types
 module Predicate.Util_TH (
   -- ** Refined
     refinedTH

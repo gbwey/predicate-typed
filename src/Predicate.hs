@@ -1,9 +1,7 @@
-{- |
-     Provides a type-level Dsl for refinement types
-
-     "Predicate.Refined2" and "Predicate.Refined3" hold the more advanced refinement types allowing changes to the input type
-
--}
+-- | Provides a type-level Dsl for refinement types
+--
+--   "Predicate.Refined2" and "Predicate.Refined3" hold the more advanced refinement types allowing changes to the input type
+--
 module Predicate (
    module Predicate.Core
  , module Predicate.Prelude

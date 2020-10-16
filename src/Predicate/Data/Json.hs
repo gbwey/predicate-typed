@@ -14,9 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     promoted json encoding and decoding functions
--}
+-- |     promoted json encoding and decoding functions
 module Predicate.Data.Json (
 
     ParseJson'

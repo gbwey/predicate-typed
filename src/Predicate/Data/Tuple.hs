@@ -14,9 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     promoted tuple functions
--}
+-- |     promoted tuple functions
 module Predicate.Data.Tuple (
 
     Dup
@@ -97,7 +95,7 @@ instance Show x => P Dup x where
 -- Present [(1,2),(2,3),(3,4)] (Pairs [(1,2),(2,3),(3,4)] | [1,2,3,4])
 -- Val [(1,2),(2,3),(3,4)]
 --
--- >>> pan @(Pairs >> Len >> 'True >> 'False >> Failt _ "xyzzy") "abcde"
+-- >>> pan @(Pairs >> Len >> 'True >> 'False >> FailT _ "xyzzy") "abcde"
 -- [Error xyzzy] False
 -- |
 -- +- P Pairs [('a','b'),('b','c'),('c','d'),('d','e')]

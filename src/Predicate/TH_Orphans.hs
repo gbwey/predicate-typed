@@ -2,9 +2,7 @@
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
-{- |
-     orphan Lift instances for Data.Time
--}
+-- |     orphan Lift instances for Data.Time
 module Predicate.TH_Orphans () where
 import Language.Haskell.TH.Syntax (Lift)
 import Data.Time

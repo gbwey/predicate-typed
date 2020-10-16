@@ -15,9 +15,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-          promoted 'Semigroup' and 'Monoid' functions
--}
+-- |          promoted 'Semigroup' and 'Monoid' functions
 module Predicate.Data.Monoid (
 
   -- ** semigroup / monoid expressions

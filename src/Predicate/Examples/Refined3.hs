@@ -10,9 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
-{- |
-     Contains prepackaged 5-tuples and proxies to use with 'Refined3'
--}
+-- | Contains prepackaged 5-tuples and proxies to use with 'Refined3'
 module Predicate.Examples.Refined3 (
   -- ** date time checkers
     datetime1
@@ -106,10 +104,10 @@ module Predicate.Examples.Refined3 (
 import Predicate.Examples.Common
 import Predicate.Refined3
 import Predicate
-import Data.Proxy
+import Data.Proxy (Proxy(..))
 import GHC.TypeLits (KnownNat, Nat)
 import Data.Kind (Type)
-import Data.Time
+import Data.Time (Day, UTCTime)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -117,6 +115,7 @@ import Data.Time
 -- >>> :set -XTypeOperators
 -- >>> :set -XTemplateHaskell
 -- >>> :set -XTypeApplications
+-- >>> :m + Data.Time
 
 -- | credit card with luhn algorithm
 --

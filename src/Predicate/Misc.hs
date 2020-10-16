@@ -17,9 +17,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{- |
-     Utility methods for Predicate / methods for displaying the evaluation tree
--}
+-- | Utility methods for Predicate / methods for displaying the evaluation tree
 module Predicate.Misc (
   -- ** useful type families
     AndT

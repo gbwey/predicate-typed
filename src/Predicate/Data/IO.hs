@@ -16,9 +16,7 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
-{- |
-   promoted io functions
--}
+-- |   promoted io functions
 module Predicate.Data.IO (
    -- ** file handling
     ReadFile
@@ -471,11 +469,6 @@ instance P (RandomRListT n t p q r) x => P (RandomRList n t p q r) x where
   type PP (RandomRList n t p q r) x = PP (RandomRListT n t p q r) x
   eval _ = eval (Proxy @(RandomRListT n t p q r))
 
-
-{-
-pz @(ScanN 20 (RandomRNext Char (C "a") (C "d") Snd) Id >> Tail >> Map Fst) ('x',mkStdGen 3)
-Val "dbabddaaaabdcbbbaabc"
--}
 -- | similar to 'System.Random.split'
 data GenSplit p deriving Show
 

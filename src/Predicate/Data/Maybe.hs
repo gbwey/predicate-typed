@@ -14,9 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     promoted 'Maybe' functions
--}
+-- |     promoted 'Maybe' functions
 module Predicate.Data.Maybe (
 
  -- ** boolean predicates
@@ -128,7 +126,7 @@ instance ( PP p x ~ a
 -- True (MaybeIn(Nothing) True | Proxy)
 -- Val True
 --
--- >>> pl @(MaybeIn (Failt _ "failed4") Id) (Just 10)
+-- >>> pl @(MaybeIn (FailT _ "failed4") Id) (Just 10)
 -- Present 10 (MaybeIn(Just) 10 | 10)
 -- Val 10
 --
@@ -144,7 +142,7 @@ instance ( PP p x ~ a
 -- Present [] (MaybeIn(Nothing) [] | Proxy)
 -- Val []
 --
--- >>> pl @(MaybeIn (Failp "err") Succ) (Just 116)
+-- >>> pl @(MaybeIn (FailP "err") Succ) (Just 116)
 -- Present 117 (MaybeIn(Just) 117 | 116)
 -- Val 117
 --
@@ -152,7 +150,7 @@ instance ( PP p x ~ a
 -- Present 99 (MaybeIn(Nothing) 99 | Proxy)
 -- Val 99
 --
--- >>> pl @(MaybeIn (Failp "someval") Succ) (Nothing @())
+-- >>> pl @(MaybeIn (FailP "someval") Succ) (Nothing @())
 -- Error someval (MaybeIn(Nothing))
 -- Fail "someval"
 --
@@ -172,7 +170,7 @@ instance ( PP p x ~ a
 -- Present EQ (MaybeIn(Nothing) EQ | Proxy)
 -- Val EQ
 --
--- >>> pl @(MaybeIn (Failp "failed20") 'False) (Nothing @Int)
+-- >>> pl @(MaybeIn (FailP "failed20") 'False) (Nothing @Int)
 -- Error failed20 (MaybeIn(Nothing))
 -- Fail "failed20"
 --
@@ -180,11 +178,11 @@ instance ( PP p x ~ a
 -- Error failed21 (False | MaybeIn(Nothing))
 -- Fail "failed21"
 --
--- >>> pl @(MaybeIn (Failp "err") Id) (Nothing @Int)
+-- >>> pl @(MaybeIn (FailP "err") Id) (Nothing @Int)
 -- Error err (MaybeIn(Nothing))
 -- Fail "err"
 --
--- >>> pl @(MaybeIn (Failp "err") Id) (Nothing @())
+-- >>> pl @(MaybeIn (FailP "err") Id) (Nothing @())
 -- Error err (MaybeIn(Nothing))
 -- Fail "err"
 --
@@ -346,11 +344,11 @@ instance P CatMaybesT x => P CatMaybes x where
 -- >>> pz @(MaybeBool 'True 10) ()
 -- Val (Just 10)
 --
-{-
-pu @(If 'True (MkJust 10) (EmptyT Maybe)) ()  -- doesnt work
-<interactive>:211:1: error:
-    * Couldn't match type 'Int' with '()' arising from a use of 'pu'
--}
+
+-- pu @(If 'True (MkJust 10) (EmptyT Maybe)) ()  -- doesnt work
+-- <interactive>:211:1: error:
+--    * Couldn't match type 'Int' with '()' arising from a use of 'pu'
+
 data MaybeBool b p deriving Show
 
 type MaybeBoolT b p = EmptyBool Maybe b p

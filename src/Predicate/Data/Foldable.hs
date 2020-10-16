@@ -15,9 +15,7 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
-{- |
-     promoted foldable functions
--}
+-- |     promoted foldable functions
 module Predicate.Data.Foldable (
     Concat
   , ConcatMap
@@ -266,7 +264,7 @@ instance ( Show l
 data Concat deriving Show
 
 instance ( Show a
-         , Show (t [a])
+         , Show x
          , x ~ t [a]
          , Foldable t
          ) => P Concat x where
@@ -523,7 +521,7 @@ instance ( x ~ t a
 data Ors deriving Show
 
 instance ( x ~ t a
-         , Show (t a)
+         , Show x
          , Foldable t
          , a ~ Bool
          ) => P Ors x where

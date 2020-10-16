@@ -16,9 +16,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     promoted enum functions
--}
+-- |     promoted enum functions
 module Predicate.Data.Enum (
 
   -- *** constructors
@@ -129,7 +127,7 @@ _enumDefault opts msg0 hhqq = do
 -- Val EQ
 --
 data SuccB' q deriving Show
-type SuccBT' q = SuccB (Failp "Succ bounded") q
+type SuccBT' q = SuccB (FailP "Succ bounded") q
 
 instance P (SuccBT' q) x => P (SuccB' q) x where
   type PP (SuccB' q) x = PP (SuccBT' q) x
@@ -153,7 +151,7 @@ instance P (SuccBT' q) x => P (SuccB' q) x where
 --
 
 data PredB' q deriving Show
-type PredBT' q = PredB (Failp "Pred bounded") q
+type PredBT' q = PredB (FailP "Pred bounded") q
 
 instance ( PP q x ~ a
          , P q x
@@ -438,7 +436,7 @@ instance P (ToEnumBDefT t def) x => P (ToEnumBDef t def) x where
 -- Fail "ToEnum bounded"
 --
 data ToEnumBFail (t :: Type) deriving Show
-type ToEnumBFailT (t :: Type) = ToEnumBDef' (Hole t) (Failp "ToEnum bounded")
+type ToEnumBFailT (t :: Type) = ToEnumBDef' (Hole t) (FailP "ToEnum bounded")
 
 instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
   type PP (ToEnumBFail t) x = PP (ToEnumBFailT t) x

@@ -14,9 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{- |
-     promoted 'These' functions
--}
+-- |     promoted 'These' functions
 module Predicate.Data.These (
  -- ** boolean predicates
     IsThis
