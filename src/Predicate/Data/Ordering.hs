@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted 'Ordering' functions
 -}
@@ -99,7 +100,7 @@ type Ne n = Id /= n
 -- True (True > False)
 -- Val True
 --
-data p > q
+data p > q deriving Show
 infix 4 >
 
 instance P (Cmp 'CGt p q) x => P (p > q) x where
@@ -107,7 +108,7 @@ instance P (Cmp 'CGt p q) x => P (p > q) x where
   eval _ = evalBool (Proxy @(Cmp 'CGt p q))
 
 -- | compare if expression @p@ is greater than or equal to @q@
-data p >= q
+data p >= q deriving Show
 infix 4 >=
 
 instance P (Cmp 'CGe p q) x => P (p >= q) x where
@@ -139,7 +140,7 @@ instance P (Cmp 'CGe p q) x => P (p >= q) x where
 -- True ((>>) True | {False == False})
 -- Val True
 --
-data p == q
+data p == q deriving Show
 infix 4 ==
 
 instance P (Cmp 'CEq p q) x => P (p == q) x where
@@ -164,7 +165,7 @@ instance P (Cmp 'CEq p q) x => P (p == q) x where
 -- True ((>>) True | {6 <= 6})
 -- Val True
 --
-data p <= q
+data p <= q deriving Show
 infix 4 <=
 
 instance P (Cmp 'CLe p q) x => P (p <= q) x where
@@ -172,7 +173,7 @@ instance P (Cmp 'CLe p q) x => P (p <= q) x where
   eval _ = evalBool (Proxy @(Cmp 'CLe p q))
 
 -- | compare if expression @p@ is less than @q@
-data p < q
+data p < q deriving Show
 infix 4 <
 
 instance P (Cmp 'CLt p q) x => P (p < q) x where
@@ -185,7 +186,7 @@ instance P (Cmp 'CLt p q) x => P (p < q) x where
 -- True ("ab" /= "xyzabw")
 -- Val True
 --
-data p /= q
+data p /= q deriving Show
 infix 4 /=
 
 instance P (Cmp 'CNe p q) x => P (p /= q) x where
@@ -194,7 +195,7 @@ instance P (Cmp 'CNe p q) x => P (p /= q) x where
 
 -- | case-insensitive compare if string expression @p@ is greater than @q@
 --
-data p >~ q
+data p >~ q deriving Show
 infix 4 >~
 
 instance P (CmpI 'CGt p q) x => P (p >~ q) x where
@@ -202,7 +203,7 @@ instance P (CmpI 'CGt p q) x => P (p >~ q) x where
   eval _ = evalBool (Proxy @(CmpI 'CGt p q))
 
 -- | case-insensitive compare if string expression @p@ is greater than or equal to @q@
-data p >=~ q
+data p >=~ q deriving Show
 infix 4 >=~
 
 instance P (CmpI 'CGe p q) x => P (p >=~ q) x where
@@ -210,7 +211,7 @@ instance P (CmpI 'CGe p q) x => P (p >=~ q) x where
   eval _ = evalBool (Proxy @(CmpI 'CGe p q))
 
 -- | case-insensitive compare if string expression @p@ is equal to @q@
-data p ==~ q
+data p ==~ q deriving Show
 infix 4 ==~
 
 instance P (CmpI 'CEq p q) x => P (p ==~ q) x where
@@ -218,7 +219,7 @@ instance P (CmpI 'CEq p q) x => P (p ==~ q) x where
   eval _ = evalBool (Proxy @(CmpI 'CEq p q))
 
 -- | case-insensitive compare if string expression @p@ is less than or equal to @q@
-data p <=~ q
+data p <=~ q deriving Show
 infix 4 <=~
 
 instance P (CmpI 'CLe p q) x => P (p <=~ q) x where
@@ -226,7 +227,7 @@ instance P (CmpI 'CLe p q) x => P (p <=~ q) x where
   eval _ = evalBool (Proxy @(CmpI 'CLe p q))
 
 -- | case-insensitive compare if string expression @p@ is less than @q@
-data p <~ q
+data p <~ q deriving Show
 infix 4 <~
 
 instance P (CmpI 'CLt p q) x => P (p <~ q) x where
@@ -234,7 +235,7 @@ instance P (CmpI 'CLt p q) x => P (p <~ q) x where
   eval _ = evalBool (Proxy @(CmpI 'CLt p q))
 
 -- | case-insensitive compare if string expression @p@ is not equal to @q@
-data p /=~ q
+data p /=~ q deriving Show
 infix 4 /=~
 
 instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
@@ -285,7 +286,7 @@ instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
 -- Val LT
 --
 
-data p ==! q
+data p ==! q deriving Show
 infix 4 ==!
 
 type OrdP p q = p ==! q
@@ -307,13 +308,13 @@ instance ( Ord (PP p a)
         in mkNode opts (Val d) (msg0 <> " " <> showL opts p <> " " <> prettyOrd d <> " " <> showL opts q) [hh pp, hh qq]
 
 -- | similar to 'compare' but using a tuple as input
-data OrdA
+data OrdA deriving Show
 
 instance P (OrdA' Id Id) x => P OrdA x where
   type PP OrdA x = PP (OrdA' Id Id) x
   eval _ = eval (Proxy @(OrdA' Id Id))
 
-data OrdA' p q
+data OrdA' p q deriving Show
 type OrdAT' p q = (Fst >> p) ==! (Snd >> q)
 
 instance P (OrdAT' p q) x => P (OrdA' p q) x where
@@ -356,7 +357,7 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 --
 
 type OrdI p q = p ===~ q
-data p ===~ q
+data p ===~ q deriving Show
 infix 4 ===~
 
 instance ( PP p a ~ String
@@ -392,7 +393,7 @@ instance ( PP p a ~ String
 -- False (21 <= 20)
 -- Val False
 --
-data Cmp (o :: OrderingP) p q
+data Cmp (o :: OrderingP) p q deriving Show
 
 instance ( GetOrd o
          , Ord (PP p a)
@@ -412,7 +413,7 @@ instance ( GetOrd o
         in mkNodeB opts b (showL opts p <> " " <> sfn <> " " <> showL opts q) [hh pp, hh qq]
 
 -- | compare two strings ignoring case using the given ordering @o@
-data CmpI (o :: OrderingP) p q
+data CmpI (o :: OrderingP) p q deriving Show
 
 instance ( PP p a ~ String
          , GetOrd o
@@ -443,7 +444,7 @@ instance ( PP p a ~ String
 -- >>> pz @Asc "axacdef"
 -- Val False
 --
-data Asc
+data Asc deriving Show
 type AscT = Pairs >> All (Fst <= Snd)
 
 instance P AscT x => P Asc x where
@@ -461,7 +462,7 @@ instance P AscT x => P Asc x where
 -- >>> pz @Asc' [-10]
 -- Val True
 --
-data Asc'
+data Asc' deriving Show
 type AscT' = Pairs >> All (Fst < Snd)
 
 instance P AscT' x => P Asc' x where
@@ -469,14 +470,14 @@ instance P AscT' x => P Asc' x where
   eval _ = evalBool (Proxy @AscT')
 
 -- | a type level predicate for a monotonic decreasing list
-data Desc
+data Desc deriving Show
 type DescT = Pairs >> All (Fst >= Snd)
 
 instance P DescT x => P Desc x where
   type PP Desc x = PP DescT x
   eval _ = evalBool (Proxy @DescT)
 -- | a type level predicate for a strictly decreasing list
-data Desc'
+data Desc' deriving Show
 type DescT' = Pairs >> All (Fst > Snd)
 
 instance P DescT' x => P Desc' x where
@@ -498,7 +499,7 @@ instance P DescT' x => P Desc' x where
 -- >>> pz @AllPositive [3,1,-5,10,2,3]
 -- Val False
 --
-data AllPositive
+data AllPositive deriving Show
 type AllPositiveT = All Positive
 
 instance P AllPositiveT x => P AllPositive x where
@@ -510,7 +511,7 @@ instance P AllPositiveT x => P AllPositive x where
 -- >>> pz @AllNegative [-1,-5,-10,-2,-3]
 -- Val True
 --
-data AllNegative
+data AllNegative deriving Show
 type AllNegativeT = All Negative
 
 instance P AllNegativeT x => P AllNegative x where

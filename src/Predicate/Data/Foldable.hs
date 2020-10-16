@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
 {- |
      promoted foldable functions
@@ -79,7 +80,7 @@ import qualified Safe (cycleNote)
 -- >>> pz @ToNEList [1,2,3,4,5]
 -- Val (1 :| [2,3,4,5])
 --
-data ToNEList
+data ToNEList deriving Show
 instance ( Show (t a)
          , Foldable t
          ) => P ToNEList (t a) where
@@ -115,7 +116,7 @@ instance ( Show (t a)
 -- True (IsEmpty | "")
 -- Val True
 --
-data IsEmpty
+data IsEmpty deriving Show
 
 instance ( Show as
          , AsEmpty as
@@ -125,7 +126,7 @@ instance ( Show as
     let b = has _Empty as
     in pure $ mkNodeB opts b ("IsEmpty" <> showVerbose opts " | " as) []
 
-data IToList' t
+data IToList' t deriving Show
 
 instance ( Show (f a)
          , Typeable (PP t x)
@@ -178,7 +179,7 @@ instance ( Show (f a)
 -- Present [(0,'a'),(1,'b'),(2,'c')] (IToList(Int) [(0,'a'),(1,'b'),(2,'c')] | "abc")
 -- Val [(0,'a'),(1,'b'),(2,'c')]
 --
-data IToList (t :: Type)
+data IToList (t :: Type) deriving Show
 type IToListT (t :: Type) = IToList' (Hole t)
 
 instance P (IToListT t) x => P (IToList t) x where
@@ -193,7 +194,7 @@ instance P (IToListT t) x => P (IToList t) x where
 -- >>> pz @ToListExt (T.pack "abc")
 -- Val "abc"
 --
-data ToListExt
+data ToListExt deriving Show
 
 instance ( Show l
          , GE.IsList l
@@ -220,7 +221,8 @@ instance ( Show l
 -- Fail "(!!) index not found"
 --
 
-data FromList (t :: Type) -- doesnt work with OverloadedLists unless you cast to [a] explicitly
+data FromList (t :: Type) deriving Show
+-- doesnt work with OverloadedLists unless you cast to [a] explicitly
 
 instance ( a ~ GE.Item t
          , Show t
@@ -241,7 +243,7 @@ instance ( a ~ GE.Item t
 -- >>> pz @(FromListExt (M.Map _ _)) [(4,"x"),(5,"dd")]
 -- Val (fromList [(4,"x"),(5,"dd")])
 --
-data FromListExt (t :: Type)
+data FromListExt (t :: Type) deriving Show
 -- l ~ l' is key
 instance ( Show l
          , GE.IsList l
@@ -261,7 +263,7 @@ instance ( Show l
 -- >>> pz @(Lift Concat Snd) ('x',["abc","D","eF","","G"])
 -- Val "abcDeFG"
 --
-data Concat
+data Concat deriving Show
 
 instance ( Show a
          , Show (t [a])
@@ -275,7 +277,7 @@ instance ( Show a
     in pure $ mkNode opts (Val b) (show3 opts msg0 b x) []
 
 -- | similar to 'concatMap'
-data ConcatMap p q
+data ConcatMap p q deriving Show
 type ConcatMapT p q = Map' p q >> Concat
 
 instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
@@ -288,7 +290,7 @@ instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
 -- >>> pz @(Cycle 5 Id) [1,2]
 -- Val [1,2,1,2,1]
 --
-data Cycle n p
+data Cycle n p deriving Show
 
 instance ( Show a
          , Show (t a)
@@ -344,7 +346,7 @@ instance ( Show a
 -- Val [9,2,7,4]
 --
 
-data ToList
+data ToList deriving Show
 instance ( Show (t a)
          , Foldable t
          ) => P ToList (t a) where
@@ -354,7 +356,7 @@ instance ( Show (t a)
         z = toList as
     in pure $ mkNode opts (Val z) (msg0 <> showVerbose opts " " as) []
 
-data Null' p
+data Null' p deriving Show
 
 instance ( Show (t a)
          , Foldable t
@@ -382,7 +384,7 @@ instance ( Show (t a)
 -- >>> pz @Null Nothing
 -- Val True
 --
-data Null
+data Null deriving Show
 type NullT = Null' Id
 instance P NullT a => P Null a where
   type PP Null a = Bool
@@ -470,7 +472,7 @@ instance P NullT a => P Null a where
 -- Val 55
 --
 
-data FoldMap (t :: Type) p
+data FoldMap (t :: Type) p deriving Show
 type FoldMapT (t :: Type) p = Map' (Wrap t Id) p >> MConcat Id >> Unwrap
 
 instance P (FoldMapT t p) x => P (FoldMap t p) x where
@@ -489,7 +491,7 @@ instance P (FoldMapT t p) x => P (FoldMap t p) x where
 -- >>> pz @Ands []
 -- Val True
 --
-data Ands
+data Ands deriving Show
 
 instance ( x ~ t a
          , Show (t a)
@@ -518,7 +520,7 @@ instance ( x ~ t a
 -- False (Ors(0) | [])
 -- Val False
 --
-data Ors
+data Ors deriving Show
 
 instance ( x ~ t a
          , Show (t a)

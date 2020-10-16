@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted json encoding and decoding functions
 -}
@@ -44,7 +45,7 @@ import System.Directory (doesFileExist)
 -- >>> import Predicate.Prelude
 
 -- | parse json data using the type @t@
-data ParseJson' t p
+data ParseJson' t p deriving Show
 
 instance ( P p x
          , PP p x ~ BL8.ByteString
@@ -88,7 +89,7 @@ instance ( P p x
 -- Error ParseJson ()([1,true]) Error in $: parsing () failed, expected an empty array ([1,true])
 -- Fail "ParseJson ()([1,true]) Error in $: parsing () failed, expected an empty array"
 --
-data ParseJson (t :: Type) p
+data ParseJson (t :: Type) p deriving Show
 type ParseJsonT (t :: Type) p = ParseJson' (Hole t) p
 
 instance P (ParseJsonT t p) x => P (ParseJson t p) x where
@@ -96,7 +97,7 @@ instance P (ParseJsonT t p) x => P (ParseJson t p) x where
   eval _ = eval (Proxy @(ParseJsonT t p))
 
 -- | parse json file @p@ using the type @t@
-data ParseJsonFile' t p
+data ParseJsonFile' t p deriving Show
 
 instance ( P p x
          , PP p x ~ String
@@ -131,7 +132,7 @@ instance ( P p x
 -- >>> pz @(ParseJsonFile [A.Value] "test1.json" >> Id !! 2) ()
 -- Val (Object (fromList [("lastName",String "Doe"),("age",Number 45.0),("firstName",String "John"),("likesPizza",Bool False)]))
 --
-data ParseJsonFile (t :: Type) p
+data ParseJsonFile (t :: Type) p deriving Show
 type ParseJsonFileT (t :: Type) p = ParseJsonFile' (Hole t) p
 
 instance P (ParseJsonFileT t p) x => P (ParseJsonFile t p) x where
@@ -148,7 +149,7 @@ instance P (ParseJsonFileT t p) x => P (ParseJsonFile t p) x where
 -- Present (1,True) ((>>) (1,True) | {ParseJson (Int,Bool) (1,True)})
 -- Val (1,True)
 --
-data EncodeJson (pretty :: Bool) p
+data EncodeJson (pretty :: Bool) p deriving Show
 
 instance ( GetBool pretty
          , A.ToJSON (PP p x)
@@ -166,7 +167,7 @@ instance ( GetBool pretty
         in mkNode opts (Val d) (msg0 <> " " <> litL opts (litBL opts d)) [hh pp]
 
 -- | encode a json file with pretty option
-data EncodeJsonFile (pretty :: Bool) p q
+data EncodeJsonFile (pretty :: Bool) p q deriving Show
 
 instance ( GetBool pretty
          , PP p x ~ String

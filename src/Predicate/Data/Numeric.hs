@@ -15,6 +15,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
 {- |
      promoted numeric functions
@@ -92,7 +93,7 @@ import qualified Safe (fromJustNote)
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Time
 
-data FromInteger' t n
+data FromInteger' t n deriving Show
 
 instance ( Num (PP t a)
          , Integral (PP n a)
@@ -136,7 +137,7 @@ instance ( Num (PP t a)
 -- Present 123s ((>>) 123s | {FromInteger 123s})
 -- Val 123s
 --
-data FromInteger (t :: Type)
+data FromInteger (t :: Type) deriving Show
 type FromIntegerT (t :: Type) = FromInteger' (Hole t) Id
 --type FromIntegerP n = FromInteger' Unproxy n
 
@@ -148,7 +149,7 @@ instance P (FromIntegerT t) x => P (FromInteger t) x where
 --
 -- >>> pz @(FromIntegral (SG.Sum _)) 23
 -- Val (Sum {getSum = 23})
-data FromIntegral' t n
+data FromIntegral' t n deriving Show
 
 instance ( Num (PP t a)
          , Integral (PP n a)
@@ -166,7 +167,7 @@ instance ( Num (PP t a)
         let b = fromIntegral n
         in mkNode opts (Val b) (show3 opts msg0 b n) [hh nn]
 
-data FromIntegral (t :: Type)
+data FromIntegral (t :: Type) deriving Show
 type FromIntegralT (t :: Type) = FromIntegral' (Hole t) Id
 
 instance P (FromIntegralT t) x => P (FromIntegral t) x where
@@ -195,7 +196,7 @@ instance P (FromIntegralT t) x => P (FromIntegral t) x where
 -- Val (5 % 3)
 --
 
-data ToRational p
+data ToRational p deriving Show
 
 instance ( a ~ PP p x
          , Show a
@@ -219,7 +220,7 @@ instance ( a ~ PP p x
 -- Present 0.4 (FromRational 0.4 | 2 % 5)
 -- Val 0.4
 --
-data FromRational' t p
+data FromRational' t p deriving Show
 
 instance ( P p a
          , PP p a ~ Rational
@@ -245,7 +246,7 @@ instance ( P p a
 -- Present 0.8 (FromRational 0.8 | 4 % 5)
 -- Val 0.8
 --
-data FromRational (t :: Type)
+data FromRational (t :: Type) deriving Show
 type FromRationalT (t :: Type) = FromRational' (Hole t) Id
 
 instance P (FromRationalT t) x => P (FromRational t) x where
@@ -262,7 +263,7 @@ instance P (FromRationalT t) x => P (FromRational t) x where
 -- Present 2 (Truncate 2 | 2.3)
 -- Val 2
 --
-data Truncate' t p
+data Truncate' t p deriving Show
 
 instance ( P p x
          , RealFrac (PP p x)
@@ -285,7 +286,7 @@ instance ( P p x
 -- >>> pz @(Truncate Int) (23 % 5)
 -- Val 4
 --
-data Truncate (t :: Type)
+data Truncate (t :: Type) deriving Show
 type TruncateT (t :: Type) = Truncate' (Hole t) Id
 
 instance P (TruncateT t) x => P (Truncate t) x where
@@ -293,7 +294,7 @@ instance P (TruncateT t) x => P (Truncate t) x where
   eval _ = eval (Proxy @(TruncateT t))
 
 -- | 'ceiling' function where you need to provide the type @t@ of the result
-data Ceiling' t p
+data Ceiling' t p deriving Show
 
 instance ( P p x
          , RealFrac (PP p x)
@@ -316,7 +317,7 @@ instance ( P p x
 -- >>> pz @(Ceiling Int) (23 % 5)
 -- Val 5
 --
-data Ceiling (t :: Type)
+data Ceiling (t :: Type) deriving Show
 type CeilingT (t :: Type) = Ceiling' (Hole t) Id
 
 instance P (CeilingT t) x => P (Ceiling t) x where
@@ -324,7 +325,7 @@ instance P (CeilingT t) x => P (Ceiling t) x where
   eval _ = eval (Proxy @(CeilingT t))
 
 -- | 'floor' function where you need to provide the type @t@ of the result
-data Floor' t p
+data Floor' t p deriving Show
 
 instance ( P p x
          , RealFrac (PP p x)
@@ -347,7 +348,7 @@ instance ( P p x
 -- >>> pz @(Floor Int) (23 % 5)
 -- Val 4
 --
-data Floor (t :: Type)
+data Floor (t :: Type) deriving Show
 type FloorT (t :: Type) = Floor' (Hole t) Id
 
 instance P (FloorT t) x => P (Floor t) x where
@@ -357,7 +358,7 @@ instance P (FloorT t) x => P (Floor t) x where
 data BinOp = BMult | BSub | BAdd
   deriving stock (Read, Show, Eq)
 
-data p + q
+data p + q deriving Show
 infixl 6 +
 
 type AddT p q = Bin 'BAdd p q
@@ -366,7 +367,7 @@ instance P (AddT p q) x => P (p + q) x where
   type PP (p + q) x = PP (AddT p q) x
   eval _ = eval (Proxy @(AddT p q))
 
-data p - q
+data p - q deriving Show
 infixl 6 -
 
 type SubT p q = Bin 'BSub p q
@@ -375,7 +376,7 @@ instance P (SubT p q) x => P (p - q) x where
   type PP (p - q) x = PP (SubT p q) x
   eval _ = eval (Proxy @(SubT p q))
 
-data p * q
+data p * q deriving Show
 infixl 7 *
 
 type MultT p q = Bin 'BMult p q
@@ -389,7 +390,7 @@ instance P (MultT p q) x => P (p * q) x where
 -- >>> pz @(Fst ^ Snd) (10,4)
 -- Val 10000
 --
-data p ^ q
+data p ^ q deriving Show
 infixr 8 ^
 
 instance ( P p a
@@ -423,7 +424,7 @@ instance ( P p a
 -- >>> pz @'(IsPrime,Id ^ 3,(FromIntegral _) ** (Lift (FromRational _) (1 % 2))) 4
 -- Val (False,64,2.0)
 --
-data p ** q
+data p ** q deriving Show
 infixr 8 **
 
 instance ( PP p a ~ PP q a
@@ -451,7 +452,7 @@ instance ( PP p a ~ PP q a
 -- >>> pz @(Fst `LogBase` Snd >> Truncate Int) (10,12345)
 -- Val 4
 --
-data LogBase p q
+data LogBase p q deriving Show
 instance ( PP p a ~ PP q a
          , P p a
          , P q a
@@ -489,7 +490,7 @@ instance GetBinOp 'BAdd where
 -- >>> pz @(Fst + 4 * Length Snd - 4) (3,"hello")
 -- Val 19
 --
-data Bin (op :: BinOp) p q
+data Bin (op :: BinOp) p q deriving Show
 
 instance ( GetBinOp op
          , PP p a ~ PP q a
@@ -519,7 +520,7 @@ instance ( GetBinOp op
 -- >>> pz @(12 % 7 / 14 % 5 + Id) 12.4
 -- Val (3188 % 245)
 --
-data p / q
+data p / q deriving Show
 infixl 7 /
 
 instance ( PP p a ~ PP q a
@@ -586,7 +587,7 @@ instance ( PP p a ~ PP q a
 -- >>> pz @(15 % 3 / 4 % 2) ()
 -- Val (5 % 2)
 --
-data p % q
+data p % q deriving Show
 infixl 8 %
 
 instance ( Integral (PP p x)
@@ -639,7 +640,7 @@ instance ( Integral (PP p x)
 -- Present (-5) % 3 ((-5) % 1 / 3 % 1 = (-5) % 3)
 -- Val ((-5) % 3)
 --
-data p -% q -- = Negate (p % q)
+data p -% q deriving Show
 infixl 8 -%
 type NegateRatioT p q = Negate (p % q)
 
@@ -665,7 +666,7 @@ instance P (NegateRatioT p q) x => P (p -% q) x where
 -- >>> pz @(Negate (Fst % Snd)) (14,3)
 -- Val ((-14) % 3)
 --
-data Negate p
+data Negate p deriving Show
 
 instance ( Num (PP p x)
          , P p x
@@ -696,7 +697,7 @@ instance ( Num (PP p x)
 -- >>> pz @(Abs (Negate 44)) "aaa"
 -- Val 44
 --
-data Abs p
+data Abs p deriving Show
 
 instance ( Num (PP p x)
          , P p x
@@ -720,7 +721,7 @@ instance ( Num (PP p x)
 -- >>> pz @(Div Fst Snd) (10,0)
 -- Fail "Div zero denominator"
 --
-data Div p q
+data Div p q deriving Show
 instance ( PP p a ~ PP q a
          , P p a
          , P q a
@@ -749,7 +750,7 @@ instance ( PP p a ~ PP q a
 -- >>> pz @(Mod Fst Snd) (10,0)
 -- Fail "Mod zero denominator"
 --
-data Mod p q
+data Mod p q deriving Show
 instance ( PP p a ~ PP q a
          , P p a
          , P q a
@@ -803,7 +804,7 @@ instance ( PP p a ~ PP q a
 -- Val (-1,12)
 --
 
-data DivMod p q
+data DivMod p q deriving Show
 
 instance ( PP p a ~ PP q a
          , P p a
@@ -850,7 +851,7 @@ instance ( PP p a ~ PP q a
 -- Val (-3,1)
 --
 
-data QuotRem p q
+data QuotRem p q deriving Show
 
 instance ( PP p a ~ PP q a
          , P p a
@@ -871,14 +872,14 @@ instance ( PP p a ~ PP q a
              _ -> let d = p `quotRem` q
                   in mkNode opts (Val d) (showL opts p <> " `quotRem` " <> showL opts q <> " = " <> showL opts d) hhs
 
-data Quot p q
+data Quot p q deriving Show
 type QuotT p q = QuotRem p q >> Fst
 
 instance P (QuotT p q) x => P (Quot p q) x where
   type PP (Quot p q) x = PP (QuotT p q) x
   eval _ = eval (Proxy @(QuotT p q))
 
-data Rem p q
+data Rem p q deriving Show
 type RemT p q = QuotRem p q >> Snd
 
 instance P (RemT p q) x => P (Rem p q) x where
@@ -893,14 +894,14 @@ instance P (RemT p q) x => P (Rem p q) x where
 -- >>> pz @(Map '(Even,Odd)) [9,-4,12,1,2,3]
 -- Val [(False,True),(True,False),(True,False),(False,True),(True,False),(False,True)]
 --
-data Even
+data Even deriving Show
 type EvenT = Mod Id 2 == 0
 
 instance P EvenT x => P Even x where
   type PP Even x = Bool
   eval _ = evalBool (Proxy @EvenT)
 
-data Odd
+data Odd deriving Show
 type OddT = Mod Id 2 == 1
 
 instance P OddT x => P Odd x where
@@ -918,7 +919,7 @@ instance P OddT x => P Odd x where
 -- >>> pz @(Signum Id) 0
 -- Val 0
 --
-data Signum p
+data Signum p deriving Show
 
 instance ( Num (PP p x)
          , P p x
@@ -935,7 +936,7 @@ instance ( Num (PP p x)
         in mkNode opts (Val d) (show3 opts msg0 d p) [hh pp]
 
 -- supports negative numbers unlike readInt
-data ReadBase' t (n :: Nat) p
+data ReadBase' t (n :: Nat) p deriving Show
 
 instance ( Typeable (PP t x)
          , ZwischenT 2 36 n
@@ -1011,7 +1012,7 @@ instance ( Typeable (PP t x)
 -- Present 47 (ReadBase(Int,2) 47 | "101111")
 -- Val 47
 --
-data ReadBase (t :: Type) (n :: Nat)
+data ReadBase (t :: Type) (n :: Nat) deriving Show
 type ReadBaseT (t :: Type) (n :: Nat) = ReadBase' (Hole t) n Id
 
 instance P (ReadBaseT t n) x => P (ReadBase t n) x where
@@ -1053,7 +1054,7 @@ getValidBase n =
 -- Val "ffe0"
 --
 
-data ShowBase (n :: Nat)
+data ShowBase (n :: Nat) deriving Show
 
 instance ( 2 GL.<= n
          , n GL.<= 36
@@ -1077,7 +1078,7 @@ instance ( 2 GL.<= n
 -- Present [2,0,14,7,11] (ShowBaseN | 16 | 134779)
 -- Val [2,0,14,7,11]
 --
-data ShowBaseN n p
+data ShowBaseN n p deriving Show
 
 instance ( PP p x ~ a
          , P p x
@@ -1104,7 +1105,7 @@ instance ( PP p x ~ a
 -- Present 123 ((>>) 123 | {UnShowBaseN | 2 | [1,1,1,1,0,1,1]})
 -- Val 123
 --
-data Bits p
+data Bits p deriving Show
 type BitsT p = ShowBaseN 2 p
 
 instance P (BitsT p) x => P (Bits p) x where
@@ -1129,7 +1130,7 @@ instance P (BitsT p) x => P (Bits p) x where
 -- >>> pz @(UnShowBaseN 16) []
 -- Val 0
 --
-data UnShowBaseN n
+data UnShowBaseN n deriving Show
 
 instance ( x ~ [a]
          , PP n x ~ b
@@ -1177,7 +1178,7 @@ instance ( x ~ [a]
 -- Error Mod zero denominator (RoundUp - | Mod)
 -- Fail "Mod zero denominator"
 --
-data RoundUp n p
+data RoundUp n p deriving Show
 type RoundUpT n p = (n - p `Mod` n) `Mod` n
 
 instance P (RoundUpT n p) x => P (RoundUp n p) x where

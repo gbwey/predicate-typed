@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted iterator functions
 -}
@@ -74,7 +75,7 @@ import Data.Void (Void)
 -- Val [[99]]
 --
 
-data Scanl p q r
+data Scanl p q r deriving Show
 -- scanr :: (a -> b -> b) -> b -> [a] -> [b]
 -- result is scanl but signature is flipped ((a,b) -> b) -> b -> [a] -> [b]
 
@@ -148,7 +149,7 @@ instance ( PP p (b,a) ~ b
 -- Present [99,98,97,96,95] (Scanl [99,98,97,96,95] | b=99 | as=[1,2,3,4])
 -- Val [99,98,97,96,95]
 --
-data ScanN n p q
+data ScanN n p q deriving Show
 type ScanNT n p q = Scanl (Fst >> p) q (1...n) -- n times using q then run p
 
 instance P (ScanNT n p q) x => P (ScanN n p q) x where
@@ -169,7 +170,7 @@ instance P (ScanNT n p q) x => P (ScanN n p q) x where
 -- Present ["abcd","bcd","cd","d",""] ((>>) ["abcd","bcd","cd","d",""] | {Scanl ["abcd","bcd","cd","d",""] | b="abcd" | as=[1,2,3,4]})
 -- Val ["abcd","bcd","cd","d",""]
 --
-data ScanNA q
+data ScanNA q deriving Show
 type ScanNAT q = ScanN Fst q Snd
 
 instance P (ScanNAT q) x => P (ScanNA q) x where
@@ -212,7 +213,7 @@ instance P (ScanNAT q) x => P (ScanNA q) x where
 -- Val "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc"
 --
 
-data FoldN n p q
+data FoldN n p q deriving Show
 type FoldNT n p q = ScanN n p q >> Last
 
 instance P (FoldNT n p q) x => P (FoldN n p q) x where
@@ -261,7 +262,7 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 -- Val (True,11)
 --
 
-data Foldl p q r
+data Foldl p q r deriving Show
 type FoldLT p q r = Scanl p q r >> Last
 
 instance P (FoldLT p q r) x => P (Foldl p q r) x where
@@ -317,7 +318,7 @@ instance P (FoldLT p q r) x => P (Foldl p q r) x where
 -- `- P i=5: If 'True Nothing
 -- Val [0,0,0,1]
 --
-data Unfoldr p q
+data Unfoldr p q deriving Show
 
 instance ( PP q a ~ s
          , PP p s ~ Maybe (b,s)
@@ -364,7 +365,7 @@ type family UnfoldrT mbs where
 -- Val [64,94,33,26,12,8,81,41,21,89]
 --
 
-data UnfoldN n p s
+data UnfoldN n p s deriving Show
 
 -- have to rewrite (a,s) to (a,(s,n)) hence the L11 ...
 type IterateNT n p s = Unfoldr (MaybeBool (Snd > 0) ((p *** Pred) >> '(L11,'(L12,Snd)))) '(s,n)
@@ -380,7 +381,7 @@ instance P (IterateNT n p s) x => P (UnfoldN n p s) x where
 -- Present [94,93,92,91,90] (Unfoldr 94 [94,93,92,91,90] | s=94)
 -- Val [94,93,92,91,90]
 --
-data IterateUntil p f
+data IterateUntil p f deriving Show
 type IterateUntilT p f = IterateWhile (Not p) f
 
 instance P (IterateUntilT p f) x => P (IterateUntil p f) x where
@@ -393,7 +394,7 @@ instance P (IterateUntilT p f) x => P (IterateUntil p f) x where
 -- Present [94,93,92,91] (Unfoldr 94 [94,93,92,91] | s=94)
 -- Val [94,93,92,91]
 --
-data IterateWhile p f
+data IterateWhile p f deriving Show
 type IterateWhileT p f = Unfoldr (MaybeBool p '(Id, f)) Id
 
 instance P (IterateWhileT p f) x => P (IterateWhile p f) x where
@@ -410,7 +411,7 @@ instance P (IterateWhileT p f) x => P (IterateWhile p f) x where
 -- Present [95,94,93] ((>>) [95,94,93] | {Map [95,94,93] | [(3,95),(2,94),(1,93)]})
 -- Val [95,94,93]
 --
-data IterateNWhile n p f
+data IterateNWhile n p f deriving Show
 type IterateNWhileT n p f = '(n, Id) >> IterateWhile (Fst > 0 && (Snd >> p)) (Pred *** f) >> Map Snd
 
 instance P (IterateNWhileT n p f) x => P (IterateNWhile n p f) x where
@@ -431,14 +432,14 @@ instance P (IterateNWhileT n p f) x => P (IterateNWhile n p f) x where
 -- Error Unfoldr (9999,1):recursion limit i=100 (Unfoldr (9999,1))
 -- Fail "Unfoldr (9999,1):recursion limit i=100"
 --
-data IterateNUntil n p f
+data IterateNUntil n p f deriving Show
 type IterateNUntilT n p f = IterateNWhile n (Not p) f
 
 instance P (IterateNUntilT n p f) x => P (IterateNUntil n p f) x where
   type PP (IterateNUntil n p f) x = PP (IterateNUntilT n p f) x
   eval _ = eval (Proxy @(IterateNUntilT n p f))
 
-data ParaImpl (n :: Nat) (os :: [k])
+data ParaImpl (n :: Nat) (os :: [k]) deriving Show
 
 -- | runs values in parallel unlike 'Do' which is serial
 --
@@ -460,7 +461,7 @@ data ParaImpl (n :: Nat) (os :: [k])
 -- Error Para:invalid length(7) expected 4
 -- Fail "Para:invalid length(7) expected 4"
 --
-data Para (ps :: [k])
+data Para (ps :: [k]) deriving Show
 
 -- passthru but adds the length of ps (replaces LenT in the type synonym to avoid type synonyms being expanded out
 instance ( [a] ~ x
@@ -560,7 +561,7 @@ instance ( KnownNat n
 -- Present ["141","021","003","000"] (Para(0) ["141","021","003","000"] | [141,21,3,0])
 -- Val ["141","021","003","000"]
 --
-data ParaN (n :: Nat) p
+data ParaN (n :: Nat) p deriving Show
 
 instance ( x ~ [a]
          , P (ParaImpl (LenT (RepeatT n p)) (RepeatT n p)) x
@@ -581,7 +582,7 @@ instance ( x ~ [a]
 -- Present ["xy","xy","xy","xy"] ('["xy","xy","xy","xy"] ('"xy") | 3)
 -- Val ["xy","xy","xy","xy"]
 --
-data Repeat (n :: Nat) p
+data Repeat (n :: Nat) p deriving Show
 instance P (RepeatT n p) a => P (Repeat n p) a where
   type PP (Repeat n p) a = PP (RepeatT n p) a
   eval _ = eval (Proxy @(RepeatT n p))
@@ -615,7 +616,7 @@ instance P (RepeatT n p) a => P (Repeat n p) a where
 -- Val "xy"
 --
 
-data DoN (n :: Nat) p
+data DoN (n :: Nat) p deriving Show
 type DoNT (n :: Nat) p = Do (RepeatT n p)
 instance P (DoNT n p) a => P (DoN n p) a where
   type PP (DoN n p) a = PP (DoNT n p) a

@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted conditional functions
 -}
@@ -103,7 +104,7 @@ import Data.Bool (bool)
 -- Error failing with 19 (If True)
 -- Fail "failing with 19"
 --
-data If p q r
+data If p q r deriving Show
 
 instance ( Show (PP r a)
          , P p a
@@ -165,7 +166,7 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 -- >>> pz @(Case (Failt _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "c"
 -- Fail "x"
 --
-data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
+data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
 -- ps = conditions
 -- qs = what to do [one to one with ps]
 -- r = the value
@@ -201,7 +202,7 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- Present "151515" (Case(0) "151515" | 15)
 -- Val "151515"
 --
-data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
+data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
 
 -- | like 'Case' but uses a generic error message (skips the @e@ parameter)
 --
@@ -209,7 +210,7 @@ data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- Error Case:no match (Case:otherwise failed:Proxy)
 -- Fail "Case:no match"
 --
-data Case' (ps :: [k]) (qs :: [k1]) (r :: k2)
+data Case' (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
 
 -- | like 'Case' but allows you to use the value in the error message
 --
@@ -225,7 +226,7 @@ data Case' (ps :: [k]) (qs :: [k1]) (r :: k2)
 -- Error no match for -012 (Case:otherwise failed)
 -- Fail "no match for -012"
 --
-data Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2)
+data Case'' s (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
 
 type CaseT' (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (Snd >> Failp "Case:no match") ps qs r
 type CaseT'' s (ps :: [k]) (qs :: [k1]) (r :: k2) = Case (FailCaseT s) ps qs r -- eg s= PrintF "%s" (ShowP Id)
@@ -339,7 +340,7 @@ instance ( KnownNat n
               Right b -> mkNode opts (Val b) (show3 opts msgbase1 b a) [hh rr, hh pp, hh ww]
 
 
-data GuardsImpl (n :: Nat) (os :: [(k,k1)])
+data GuardsImpl (n :: Nat) (os :: [(k,k1)]) deriving Show
 
 -- isbn 10 tests (dont need first guard as Zip enforces same length: handles case insensitive @x@ as check digit)
 
@@ -379,7 +380,7 @@ data GuardsImpl (n :: Nat) (os :: [(k,k1)])
 -- >>> pz @(Do '[Resplit "-", Concat, ZipWith (Fst * Snd) (Cycle 13 [1,3]) (Map (ReadP Int (Singleton Id))), Sum, Guard (PrintF "%d is not evenly divisible by 10" Id) (Id `Mod` 10 == 0)]) "978-0-7167-0344-0"
 -- Val 100
 --
-data Guards (ps :: [(k,k1)])
+data Guards (ps :: [(k,k1)]) deriving Show
 
 instance ( [a] ~ x
          , GetLen ps
@@ -486,7 +487,7 @@ instance ( PP prt (Int, a) ~ String
 -- Error Guards:invalid length(7) expected 4
 -- Fail "Guards:invalid length(7) expected 4"
 --
-data GuardsQuick (prt :: k) (ps :: [k1])
+data GuardsQuick (prt :: k) (ps :: [k1]) deriving Show
 type GuardsQuickT (prt :: k) (ps :: [k1]) = Guards (ToGuardsT prt ps)
 
 instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
@@ -522,7 +523,7 @@ instance P (GuardsQuickT prt ps) x => P (GuardsQuick prt ps) x where
 -- Error Bools:invalid length(4) expected 3
 -- Fail "Bools:invalid length(4) expected 3"
 --
-data Bools (ps :: [(k,k1)])
+data Bools (ps :: [(k,k1)]) deriving Show
 
 instance ( [a] ~ x
          , GetLen ps
@@ -542,7 +543,7 @@ instance ( [a] ~ x
            in pure $ mkNode opts (Fail msg2) "" []
         else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts as
 
-data BoolsImpl (n :: Nat) (os :: [(k,k1)])
+data BoolsImpl (n :: Nat) (os :: [(k,k1)]) deriving Show
 
 instance ( KnownNat n
          , Show a
@@ -609,7 +610,7 @@ instance ( PP prt (Int, a) ~ String
 -- Fail "Bool(2) [id=2 val=99] (99 <= 59)"
 --
 
-data BoolsQuick (prt :: k) (ps :: [k1])
+data BoolsQuick (prt :: k) (ps :: [k1]) deriving Show
 type BoolsQuickT (prt :: k) (ps :: [k1]) = Bools (ToGuardsT prt ps)
 
 -- why do we need this? when BoolsN works without [use the x ~ [a] trick in BoolsN]
@@ -629,7 +630,7 @@ instance ( PP (Bools (ToGuardsT prt ps)) x ~ Bool
 -- True (Bools)
 -- Val True
 --
-data BoolsN prt (n :: Nat) (p :: k1)
+data BoolsN prt (n :: Nat) (p :: k1) deriving Show
 type BoolsNT prt (n :: Nat) (p :: k1) = Bools (ToGuardsT prt (RepeatT n p))
 
 instance ( x ~ [a]
@@ -649,7 +650,7 @@ instance ( x ~ [a]
 -- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [23,59,12]
 -- Val [23,59,12]
 --
-data GuardsDetailImpl (ps :: [(k,k1)])
+data GuardsDetailImpl (ps :: [(k,k1)]) deriving Show
 
 instance ( [a] ~ x
          , GetLen ps
@@ -664,7 +665,7 @@ instance ( [a] ~ x
        in pure $ mkNode opts (Fail msg1) "" []
     else eval (Proxy @(GuardsImplX (LenT ps) ps)) opts as
 
-data GuardsImplX (n :: Nat) (os :: [(k,k1)])
+data GuardsImplX (n :: Nat) (os :: [(k,k1)]) deriving Show
 
 instance ( [a] ~ x
          , Show a
@@ -713,7 +714,7 @@ instance ( PP prt a ~ String
            Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
            Right zs -> mkNode opts (Val (a:zs)) (msgbase1 <> " " <> showL opts a) [hh pp, hh ss]
 
-data GuardsDetail prt (ps :: [(k0,k1)])
+data GuardsDetail prt (ps :: [(k0,k1)]) deriving Show
 type GuardsDetailT prt (ps :: [(k0,k1)]) = GuardsDetailImpl (ToGuardsDetailT prt ps)
 
 instance P (GuardsDetailT prt ps) x => P (GuardsDetail prt ps) x where
@@ -745,7 +746,7 @@ type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
 -- Error Guards:invalid length(3) expected 4
 -- Fail "Guards:invalid length(3) expected 4"
 --
-data GuardsN prt (n :: Nat) p
+data GuardsN prt (n :: Nat) p deriving Show
 type GuardsNT prt (n :: Nat) p = Guards (ToGuardsT prt (RepeatT n p))
 
 instance ( x ~ [a]
@@ -797,7 +798,7 @@ instance ( x ~ [a]
 -- Error err found len=3 (Guard | [12,15,16])
 -- Fail "err found len=3"
 --
-data Guard prt p
+data Guard prt p deriving Show
 
 
 instance ( Show a
@@ -825,7 +826,7 @@ instance ( Show a
 -- Error bad length = 6 (GuardBool (6 > 9))
 -- Fail "bad length = 6"
 --
-data GuardBool prt p
+data GuardBool prt p deriving Show
 
 instance ( P prt a
          , PP prt a ~ String
@@ -888,7 +889,7 @@ instance ( P prt a
 -- Val [13]
 --
 
-data ExitWhen prt p
+data ExitWhen prt p deriving Show
 type ExitWhenT prt p = Guard prt (Not p)
 
 instance P (ExitWhenT prt p) x => P (ExitWhen prt p) x where
@@ -922,7 +923,7 @@ instance P (ExitWhenT prt p) x => P (ExitWhen prt p) x where
 -- Error (3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3) (Map(i=2, a=3) excnt=8)
 -- Fail "(3 < 3) | (4 < 3) | (5 < 3) | (6 < 3) | (7 < 3) | (8 < 3) | (9 < 3) | (10 < 3)"
 --
-data GuardSimple p
+data GuardSimple p deriving Show
 
 instance ( Show a
          , P p a

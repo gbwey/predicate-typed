@@ -15,6 +15,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted date time functions
 -}
@@ -76,7 +77,7 @@ import qualified Data.Time.Clock.POSIX as P
 -- >>> pz @(FormatTimeP' Fst Snd) ("the date is %d/%m/%Y", readNote @Day "invalid day" "2019-05-24")
 -- Val "the date is 24/05/2019"
 --
-data FormatTimeP' p q
+data FormatTimeP' p q deriving Show
 
 instance ( PP p x ~ String
          , FormatTime (PP q x)
@@ -104,7 +105,7 @@ instance ( PP p x ~ String
 -- Present "2019-08-17" (FormatTimeP (%Y-%m-%d) 2019-08-17 | 2019-08-17)
 -- Val "2019-08-17"
 --
-data FormatTimeP p
+data FormatTimeP p deriving Show
 type FormatTimePT p = FormatTimeP' p Id
 
 instance P (FormatTimePT p) x => P (FormatTimeP p) x where
@@ -115,7 +116,7 @@ instance P (FormatTimePT p) x => P (FormatTimeP p) x where
 
 -- | similar to 'Data.Time.parseTimeM' where @t@ is the 'Data.Time.ParseTime' type, @p@ is the datetime format and @q@ points to the content to parse
 -- keeping @q@ as we might want to extract from a tuple
-data ParseTimeP' t p q
+data ParseTimeP' t p q deriving Show
 
 instance ( ParseTime (PP t a)
          , Typeable (PP t a)
@@ -158,7 +159,7 @@ instance ( ParseTime (PP t a)
 -- Val 1974-11-07 05:30:00 +0530
 --
 
-data ParseTimeP (t :: Type) p
+data ParseTimeP (t :: Type) p deriving Show
 type ParseTimePT (t :: Type) p = ParseTimeP' (Hole t) p Id
 
 instance P (ParseTimePT t p) x => P (ParseTimeP t p) x where
@@ -166,7 +167,7 @@ instance P (ParseTimePT t p) x => P (ParseTimeP t p) x where
   eval _ = eval (Proxy @(ParseTimePT t p))
 
 -- | A convenience method to match against many different datetime formats to find the first match
-data ParseTimes' t p q
+data ParseTimes' t p q deriving Show
 
 instance ( ParseTime (PP t a)
          , Typeable (PP t a)
@@ -206,7 +207,7 @@ instance ( ParseTime (PP t a)
 -- Present [2001-01-01,2009-01-24,2007-03-29] (Map [2001-01-01,2009-01-24,2007-03-29] | ["2001-01-01","Jan 24 2009","03/29/07"])
 -- Val [2001-01-01,2009-01-24,2007-03-29]
 --
-data ParseTimes (t :: Type) p q
+data ParseTimes (t :: Type) p q deriving Show
 type ParseTimesT (t :: Type) p q = ParseTimes' (Hole t) p q
 
 instance P (ParseTimesT t p q) x => P (ParseTimes t p q) x where
@@ -218,7 +219,7 @@ instance P (ParseTimesT t p q) x => P (ParseTimes t p q) x where
 -- >>> pz @(MkDay' Fst Snd Thd) (2019,99,99999)
 -- Val Nothing
 --
-data MkDay' p q r
+data MkDay' p q r deriving Show
 
 instance ( P p x
          , P q x
@@ -256,7 +257,7 @@ instance ( P p x
 -- >>> pz @(MkDay Id) (1999,3,13)
 -- Val (Just 1999-03-13)
 --
-data MkDay p
+data MkDay p deriving Show
 type MkDayT p = p >> MkDay' Fst Snd Thd
 
 instance P (MkDayT p) x => P (MkDay p) x where
@@ -268,7 +269,7 @@ instance P (MkDayT p) x => P (MkDay p) x where
 -- >>> pz @(UnMkDay Id) (readNote "invalid day" "2019-12-30")
 -- Val (2019,12,30)
 --
-data UnMkDay p
+data UnMkDay p deriving Show
 
 instance ( PP p x ~ Day
          , P p x
@@ -290,7 +291,7 @@ instance ( PP p x ~ Day
 -- >>> pz @(MkDayExtra' Fst Snd Thd) (2019,99,99999)
 -- Val Nothing
 --
-data MkDayExtra' p q r
+data MkDayExtra' p q r deriving Show
 
 instance ( P p x
          , P q x
@@ -331,7 +332,7 @@ instance ( P p x
 -- >>> pz @(MkDayExtra Id) (1999,3,13)
 -- Val (Just (1999-03-13,10,6))
 --
-data MkDayExtra p
+data MkDayExtra p deriving Show
 type MkDayExtraT p = p >> MkDayExtra' Fst Snd Thd
 
 instance P (MkDayExtraT p) x => P (MkDayExtra p) x where
@@ -343,7 +344,7 @@ instance P (MkDayExtraT p) x => P (MkDayExtra p) x where
 -- >>> pz @('Just (MkDay '(2020,7,11)) >> '(UnMkDay Id, ToWeekYear Id,ToWeekDate Id)) ()
 -- Val ((2020,7,11),28,(6,"Saturday"))
 --
-data ToWeekDate p
+data ToWeekDate p deriving Show
 
 instance ( P p x
          , PP p x ~ Day
@@ -372,7 +373,7 @@ instance ( P p x
 -- >>> pz @('Just (MkDay '(2020,7,11)) >> ToWeekYear Id) ()
 -- Val 28
 --
-data ToWeekYear p
+data ToWeekYear p deriving Show
 
 instance ( P p x
          , PP p x ~ Day
@@ -424,7 +425,7 @@ instance ToTimeC CP.SystemTime where
 -- >>> pz @(ReadP UTCTime Id >> ToDay) "2020-07-06 12:11:13Z"
 -- Val 2020-07-06
 --
-data ToDay
+data ToDay deriving Show
 instance ( ToDayC x
          , Show x
          ) => P ToDay x where
@@ -439,7 +440,7 @@ instance ( ToDayC x
 -- >>> pz @(ReadP UTCTime Id >> ToTime) "2020-07-06 12:11:13Z"
 -- Val 12:11:13
 --
-data ToTime
+data ToTime deriving Show
 
 instance ( ToTimeC x
          , Show x
@@ -456,7 +457,7 @@ instance ( ToTimeC x
 -- >>> pz @(MkTime' Fst Snd Thd) (13,99,99999)
 -- Val 13:99:99999
 --
-data MkTime' p q r
+data MkTime' p q r deriving Show
 
 instance ( P p x
          , P q x
@@ -491,7 +492,7 @@ instance ( P p x
 -- >>> pz @(MkTime Id) (17,3,13)
 -- Val 17:03:13
 --
-data MkTime p
+data MkTime p deriving Show
 type MkTimeT p = p >> MkTime' Fst Snd Thd
 
 instance P (MkTimeT p) x => P (MkTime p) x where
@@ -510,7 +511,7 @@ instance P (MkTimeT p) x => P (MkTime p) x where
 -- >>> pz @(ReadP ZonedTime Id >> '(UnMkDay ToDay, UnMkTime ToTime)) "2020-07-11 11:41:12.333+0400"
 -- Val ((2020,7,11),(11,41,12333 % 1000))
 --
-data UnMkTime p
+data UnMkTime p deriving Show
 
 instance ( PP p x ~ TimeOfDay
          , P p x
@@ -550,7 +551,7 @@ instance ( PP p x ~ TimeOfDay
 -- >>> pz @(Rescan "^Date\\((\\d+)([^\\)]+)\\)" >> Head >> Snd >> ReadP Integer (Id !! 0) >> PosixToUTCTime (Id % 1000)) "Date(1530144000000+0530)"
 -- Val 2018-06-28 00:00:00 UTC
 --
-data PosixToUTCTime p
+data PosixToUTCTime p deriving Show
 
 instance ( PP p x ~ Rational
          , P p x
@@ -574,7 +575,7 @@ instance ( PP p x ~ Rational
 -- >>> pz @(Rescan "^Date\\((\\d+)([^\\)]+)\\)" >> Head >> Snd >> ((ReadP Integer (Id !! 0) >> PosixToUTCTime (Id % 1000)) &&& ReadP TimeZone (Id !! 1))) "Date(1530144000000+0530)"
 -- Val (2018-06-28 00:00:00 UTC,+0530)
 --
-data UTCTimeToPosix p
+data UTCTimeToPosix p deriving Show
 
 instance ( PP p x ~ UTCTime
          , P p x
@@ -595,7 +596,7 @@ instance ( PP p x ~ UTCTime
 -- >>> pz @(DiffUTCTime Fst Snd) (read "2020-11-08 12:12:03Z", read "2020-11-08 11:12:00Z")
 -- Val 3603s
 --
-data DiffUTCTime p q
+data DiffUTCTime p q deriving Show
 
 instance ( PP p x ~ UTCTime
          , PP q x ~ UTCTime
@@ -617,7 +618,7 @@ instance ( PP p x ~ UTCTime
 -- >>> pz @(DiffLocalTime Fst Snd) (read "2020-11-08 12:12:03", read "2020-11-05 15:12:00")
 -- Val 248403s
 --
-data DiffLocalTime p q
+data DiffLocalTime p q deriving Show
 type DiffLocalTimeT p q = DiffUTCTime (LocalTimeToUTC p) (LocalTimeToUTC q)
 
 instance P (DiffLocalTimeT p q) x => P (DiffLocalTime p q) x where
@@ -626,7 +627,7 @@ instance P (DiffLocalTimeT p q) x => P (DiffLocalTime p q) x where
 
 
 -- | similar to 'Data.Time.localTimeToUTC'
-data LocalTimeToUTC p
+data LocalTimeToUTC p deriving Show
 
 instance ( PP p x ~ LocalTime
          , P p x

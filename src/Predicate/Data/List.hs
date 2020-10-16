@@ -16,6 +16,7 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted list functions
 -}
@@ -141,7 +142,7 @@ import qualified Data.List.NonEmpty as NE
 -- >>> pz @([1,2,3] ++ EmptyList _) "somestuff"
 -- Val [1,2,3]
 --
-data p ++ q
+data p ++ q deriving Show
 infixr 5 ++
 
 instance ( P p x
@@ -195,7 +196,7 @@ instance ( P p x
 -- Present [5,1,2,3] ((:+) [5,1,2,3] | p=5 | q=[1,2,3])
 -- Val [5,1,2,3]
 --
-data p :+ q
+data p :+ q deriving Show
 infixr 5 :+
 
 instance ( P p x
@@ -241,7 +242,7 @@ instance ( P p x
 -- Present "abcx" ((+:) "abcx" | p="abc" | q='x')
 -- Val "abcx"
 --
-data p +: q
+data p +: q deriving Show
 infixl 5 +:
 
 instance ( P p x
@@ -287,7 +288,7 @@ instance ( P p x
 -- Val (Just (1,[2,3,4,5]))
 --
 
-data Uncons
+data Uncons deriving Show
 
 instance ( Show (ConsT s)
          , Show s
@@ -323,7 +324,7 @@ instance ( Show (ConsT s)
 -- Val (Just ([1,2,3,4],5))
 --
 
-data Unsnoc
+data Unsnoc deriving Show
 
 instance ( Show (ConsT s)
          , Show s
@@ -349,7 +350,7 @@ instance ( Show (ConsT s)
 -- >>> pz @(Map (Rotate Id "abcd")) [-3..7]
 -- Val ["bcda","cdab","dabc","abcd","bcda","cdab","dabc","abcd","bcda","cdab","dabc"]
 --
-data Rotate n p
+data Rotate n p deriving Show
 type RotateT n p = SplitAt (n `Mod` Length p) p >> Swap >> Fst <> Snd
 
 instance P (RotateT n p) x => P (Rotate n p) x where
@@ -395,7 +396,7 @@ instance P (RotateT n p) x => P (Rotate n p) x where
 -- Present ([2,3,5,7,11,13],[1,4,6,8,9,10,12,14,15]) (Partition ([2,3,5,7,11,13],[1,4,6,8,9,10,12,14,15]) | s=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15])
 -- Val ([2,3,5,7,11,13],[1,4,6,8,9,10,12,14,15])
 --
-data Partition p q
+data Partition p q deriving Show
 
 instance ( P p x
          , Show x
@@ -439,7 +440,7 @@ instance ( P p x
 -- >>> pz @(Quant (Same 4)) [4]
 -- Val (1,0)
 --
-data Quant p
+data Quant p deriving Show
 type QuantT p = Partition p Id >> '(Length Fst,Length Snd)
 
 instance P (QuantT p) x => P (Quant p) x where
@@ -463,7 +464,7 @@ instance P (QuantT p) x => P (Quant p) x where
 -- >>> pz @(All1 Even) [2]
 -- Val True
 --
-data All1 p
+data All1 p deriving Show
 
 -- partially hidden example
 instance P (Quant p) x => P (All1 p) x where
@@ -491,7 +492,7 @@ instance P (Quant p) x => P (All1 p) x where
 -- >>> pz @(PartitionBy Ordering (Case 'EQ '[Id < 0, Id > 0] '[ 'LT, 'GT] Id) Id) [-4,-2,5,6,7,0,-1,2,-3,4,0]
 -- Val (fromList [(LT,[-3,-1,-2,-4]),(EQ,[0,0]),(GT,[4,2,7,6,5])])
 --
-data PartitionBy t p q
+data PartitionBy t p q deriving Show
 
 instance ( P p x
          , Ord t
@@ -582,7 +583,7 @@ instance ( P p x
 -- `- False i=14: 'y' == 'e'
 -- Val ["h","e","ll","o","    ","g","oo","d","b","y","e"]
 --
-data GroupBy p q
+data GroupBy p q deriving Show
 
 instance ( Show x
          , PP q a ~ [x]
@@ -630,7 +631,7 @@ instance ( Show x
 -- >>> pz @GroupCntStable ""
 -- Val []
 --
-data GroupCntStable
+data GroupCntStable deriving Show
 
 instance ( a ~ [x]
          , Ord x
@@ -651,7 +652,7 @@ instance ( a ~ [x]
 -- >>> pz @(Sort >> Group) [1,3,4,5,1,5,5]
 -- Val [[1,1],[3],[4],[5,5,5]]
 --
-data Group
+data Group deriving Show
 type GroupT = GroupBy (Fst == Snd) Id
 
 instance P GroupT x => P Group x where
@@ -670,7 +671,7 @@ instance P GroupT x => P Group x where
 -- >>> pz @(Sort >> GroupCnt) "xyabxaaaz"
 -- Val [('a',4),('b',1),('x',2),('y',1),('z',1)]
 --
-data GroupCnt
+data GroupCnt deriving Show
 type GroupCntT = Group >> Map '(Head,Len)
 
 instance P GroupCntT x => P GroupCnt x where
@@ -691,7 +692,7 @@ gp1 b = go [b]
 -- >>> pz @(Filter (Gt 4) Id) [10,1,3,5,-10,12,1]
 -- Val [10,5,12]
 --
-data Filter p q
+data Filter p q deriving Show
 type FilterT p q = Partition p q >> Fst
 
 instance P (FilterT p q) x => P (Filter p q) x where
@@ -734,7 +735,7 @@ instance P (FilterT p q) x => P (Filter p q) x where
 -- Present ([],[(1,True),(2,True),(3,True),(4,True)]) (Break cnt=(0,4))
 -- Val ([],[(1,True),(2,True),(3,True),(4,True)])
 --
-data Break p q
+data Break p q deriving Show
 
 -- only process up to the pivot! only process while Right False
 -- a predicate can return ValP not just TrueP
@@ -784,7 +785,7 @@ instance ( P p x
 -- Val ([1,2,3],[4,5,6,7,8,9,10,11])
 --
 
-data Span p q
+data Span p q deriving Show
 type SpanT p q = Break (Not p) q
 
 instance P (SpanT p q) x => P (Span p q) x where
@@ -810,7 +811,7 @@ instance P (SpanT p q) x => P (Span p q) x where
 -- Present [12,-5,13,-5,14,-5,15,-5,16] ((>>) [12,-5,13,-5,14,-5,15,-5,16] | {Intercalate [12,-5,13,-5,14,-5,15,-5,16] | [-5] | [12,13,14,15,16]})
 -- Val [12,-5,13,-5,14,-5,15,-5,16]
 --
-data Intercalate p q
+data Intercalate p q deriving Show
 
 instance ( PP p x ~ [a]
          , PP q x ~ PP p x
@@ -861,7 +862,7 @@ instance ( PP p x ~ [a]
 -- Val False
 --
 
-data Elem p q
+data Elem p q deriving Show
 
 instance ( [PP p a] ~ PP q a
          , P p a
@@ -887,7 +888,7 @@ instance ( [PP p a] ~ PP q a
 -- >>> pz @Inits []
 -- Val [[]]
 --
-data Inits
+data Inits deriving Show
 
 instance ( [a] ~ x
          , Show a
@@ -910,7 +911,7 @@ instance ( [a] ~ x
 -- Present ["abcd","bcd","cd","d",""] (Tails ["abcd","bcd","cd","d",""] | "abcd")
 -- Val ["abcd","bcd","cd","d",""]
 --
-data Tails
+data Tails deriving Show
 
 instance ( [a] ~ x
          , Show a
@@ -929,7 +930,7 @@ instance ( [a] ~ x
 -- >>> pz @Ones []
 -- Val []
 --
-data Ones
+data Ones deriving Show
 
 instance x ~ [a] => P Ones x where
   type PP Ones x = [x]
@@ -941,7 +942,7 @@ instance x ~ [a] => P Ones x where
             let d = map pure x
             in mkNode opts (Val d) msg0 []
 
-data PadImpl (left :: Bool) n p q
+data PadImpl (left :: Bool) n p q deriving Show
 
 instance ( P n a
          , GetBool left
@@ -991,7 +992,7 @@ instance ( P n a
 -- Present [0,0,0,0,0,0,0,1,2,3] (PadL 10 pad=0 [0,0,0,0,0,0,0,1,2,3] | [1,2,3])
 -- Val [0,0,0,0,0,0,0,1,2,3]
 --
-data PadL n p q
+data PadL n p q deriving Show
 type PadLT n p q = PadImpl 'True n p q
 
 instance P (PadLT n p q) x => P (PadL n p q) x where
@@ -1012,7 +1013,7 @@ instance P (PadLT n p q) x => P (PadL n p q) x where
 -- Present [1,2,3,4,5,6] (PadR 5 pad=0 [1,2,3,4,5,6] | [1,2,3,4,5,6])
 -- Val [1,2,3,4,5,6]
 --
-data PadR n p q
+data PadR n p q deriving Show
 type PadRT n p q = PadImpl 'False n p q
 
 instance P (PadRT n p q) x => P (PadR n p q) x where
@@ -1038,7 +1039,7 @@ instance P (PadRT n p q) x => P (PadR n p q) x where
 -- Present [[1,2,3],[4]] ((>>) [[1,2,3],[4]] | {Fst [[1,2,3],[4]] | ([[1,2,3],[4]],[[],[]])})
 -- Val [[1,2,3],[4]]
 --
-data SplitAts ns p
+data SplitAts ns p deriving Show
 
 instance ( P ns x
          , P p x
@@ -1081,7 +1082,7 @@ instance ( P ns x
 -- False ((>>) False | {2 > 3})
 -- Val False
 --
-data SplitAt n p
+data SplitAt n p deriving Show
 
 instance ( PP p a ~ [b]
          , P n a
@@ -1104,14 +1105,14 @@ splitAtNeg :: Int -> [a] -> ([a], [a])
 splitAtNeg n as = splitAt (if n<0 then length as + n else n) as
 
 
-data Take n p
+data Take n p deriving Show
 type TakeT n p = SplitAt n p >> Fst
 
 instance P (TakeT n p) x => P (Take n p) x where
   type PP (Take n p) x = PP (TakeT n p) x
   eval _ = eval (Proxy @(TakeT n p))
 
-data Drop n p
+data Drop n p deriving Show
 type DropT n p = SplitAt n p >> Snd
 
 instance P (DropT n p) x => P (Drop n p) x where
@@ -1138,7 +1139,7 @@ instance P (DropT n p) x => P (Drop n p) x where
 -- >>> pz @(PadR (Len + RoundUp 5 Len) 999 Id >> ChunksOf 5) [1..15]
 -- Val [[1,2,3,4,5],[6,7,8,9,10],[11,12,13,14,15]]
 --
-data ChunksOf n
+data ChunksOf n deriving Show
 type ChunksOfT n = ChunksOf' n n Id
 
 instance P (ChunksOfT n) x => P (ChunksOf n) x where
@@ -1153,7 +1154,7 @@ instance P (ChunksOfT n) x => P (ChunksOf n) x where
 -- >>> pz @(ChunksOf' 3 2 Id) [1..10]
 -- Val [[1,2,3],[3,4,5],[5,6,7],[7,8,9],[9,10]]
 --
-data ChunksOf' n i p
+data ChunksOf' n i p deriving Show
 
 instance ( PP p a ~ [b]
          , P n a
@@ -1184,7 +1185,7 @@ instance ( PP p a ~ [b]
 
 -- empty lists at the type level wont work here
 
-data KeepImpl (keep :: Bool) p q
+data KeepImpl (keep :: Bool) p q deriving Show
 
 instance ( GetBool keep
          , Eq a
@@ -1213,7 +1214,7 @@ instance ( GetBool keep
 -- >>> pz @(Keep '[0,1,1,5] '[1,5,5,2,5,2]) ()
 -- Val [1,5,5,5]
 --
-data Keep p q
+data Keep p q deriving Show
 type KeepT p q = KeepImpl 'True p q
 
 instance P (KeepT p q) x => P (Keep p q) x where
@@ -1240,7 +1241,7 @@ instance P (KeepT p q) x => P (Keep p q) x where
 -- >>> pz @(Remove '[] '[1,5,5,2,5,2]) 44 -- works if you make this a number!
 -- Val [1,5,5,2,5,2]
 --
-data Remove p q
+data Remove p q deriving Show
 type RemoveT p q = KeepImpl 'False p q
 
 instance P (RemoveT p q) x => P (Remove p q) x where
@@ -1265,7 +1266,7 @@ instance P (RemoveT p q) x => P (Remove p q) x where
 -- Val 1
 --
 
-data Head
+data Head deriving Show
 
 instance ( Cons x x (ConsT x) (ConsT x)
          , Show (ConsT x)
@@ -1292,7 +1293,7 @@ instance ( Cons x x (ConsT x) (ConsT x)
 -- Fail "Tail(empty)"
 --
 
-data Tail
+data Tail deriving Show
 
 instance ( Cons x x (ConsT x) (ConsT x)
          , Show x
@@ -1318,7 +1319,7 @@ instance ( Cons x x (ConsT x) (ConsT x)
 -- Val 3
 --
 
-data Last
+data Last deriving Show
 
 instance ( Snoc x x (ConsT x) (ConsT x)
          , Show (ConsT x)
@@ -1350,7 +1351,7 @@ instance ( Snoc x x (ConsT x) (ConsT x)
 -- Error Init(empty)
 -- Fail "Init(empty)"
 --
-data Init
+data Init deriving Show
 
 instance ( Snoc s s (ConsT s) (ConsT s)
          , x ~ s
@@ -1369,7 +1370,7 @@ instance ( Snoc s s (ConsT s) (ConsT s)
 -- >>> pz @Unzip (zip [1..5] "abcd")
 -- Val ([1,2,3,4],"abcd")
 --
-data Unzip
+data Unzip deriving Show
 type UnzipT = '(Map Fst, Map Snd)
 
 instance P UnzipT x => P Unzip x where
@@ -1382,7 +1383,7 @@ instance P UnzipT x => P Unzip x where
 -- >>> pz @Unzip3 (zip3 [1..5] "abcd" (cycle [True,False]))
 -- Val ([1,2,3,4],"abcd",[True,False,True,False])
 --
-data Unzip3
+data Unzip3 deriving Show
 type Unzip3T = '(Map Fst, Map Snd, Map Thd)
 
 instance P Unzip3T x => P Unzip3 x where
@@ -1422,7 +1423,7 @@ instance P Unzip3T x => P Unzip3 x where
 -- Present [1,1,2,3,3,5,6,7] (SortBy [1,1,2,3,3,5,6,7])
 -- Val [1,1,2,3,3,5,6,7]
 --
-data SortBy p q
+data SortBy p q deriving Show
 
 type SortByHelperT p = Partition (p == 'GT) Id
 
@@ -1501,7 +1502,7 @@ instance ( P p (a,a)
 -- Present [('a',9),('a',10),('m',10),('m',22),('z',1)] (SortBy [('a',9),('a',10),('m',10),('m',22),('z',1)])
 -- Val [('a',9),('a',10),('m',10),('m',22),('z',1)]
 --
-data SortOn p q
+data SortOn p q deriving Show
 type SortOnT p q = SortBy (OrdA' p p) q
 
 instance P (SortOnT p q) x => P (SortOn p q) x where
@@ -1518,14 +1519,14 @@ instance P (SortOnT p q) x => P (SortOn p q) x where
 -- Present [('z',1),('m',22),('a',10)] (SortBy [('z',1),('m',22),('a',10)])
 -- Val [('z',1),('m',22),('a',10)]
 --
-data SortOnDesc p q
+data SortOnDesc p q deriving Show
 type SortOnDescT p q = SortBy (Swap >> OrdA' p p) q
 
 instance P (SortOnDescT p q) x => P (SortOnDesc p q) x where
   type PP (SortOnDesc p q) x = PP (SortOnDescT p q) x
   eval _ = eval (Proxy @(SortOnDescT p q))
 
-data Sort
+data Sort deriving Show
 type SortT = SortOn Id Id
 
 instance P SortT x => P Sort x where
@@ -1540,7 +1541,7 @@ instance P SortT x => P Sort x where
 -- >>> pz @Reverse "AbcDeF"
 -- Val "FeDcbA"
 --
-data Reverse
+data Reverse deriving Show
 
 instance ( x ~ [a]
          , Show a
@@ -1563,7 +1564,7 @@ instance ( x ~ [a]
 -- Present "dfsa" (ReverseL "dfsa" | "asfd")
 -- Val "dfsa"
 --
-data ReverseL
+data ReverseL deriving Show
 
 instance ( Reversing t
          , Show t
@@ -1585,7 +1586,7 @@ instance ( Reversing t
 -- >>> pz @(Singleton Snd) (False,"hello")
 -- Val ["hello"]
 --
-data Singleton p
+data Singleton p deriving Show
 
 instance P p x => P (Singleton p) x where
   type PP (Singleton p) x = [PP p x]
@@ -1596,7 +1597,7 @@ instance P p x => P (Singleton p) x where
       Left e -> e
       Right p -> mkNode opts (Val [p]) msg0 [hh pp]
 
-data EmptyList' t
+data EmptyList' t deriving Show
 
 instance P (EmptyList' t) x where
   type PP (EmptyList' t) x = [PP t x]
@@ -1608,7 +1609,7 @@ instance P (EmptyList' t) x where
 -- >>> pz @(Id :+ EmptyList _) 99
 -- Val [99]
 --
-data EmptyList (t :: Type)
+data EmptyList (t :: Type) deriving Show
 type EmptyListT (t :: Type) = EmptyList' (Hole t)
 
 instance P (EmptyList t) x where
@@ -1633,7 +1634,7 @@ instance P (EmptyList t) x where
 -- >>> pz @(ZipWith (MkThese Fst Snd) (1...3) (Char1 "a" ... Char1 "f")) ()
 -- Fail "ZipWith(3,6) length mismatch"
 --
-data ZipWith p q r
+data ZipWith p q r deriving Show
 
 instance ( PP q a ~ [x]
          , PP r a ~ [y]
@@ -1687,7 +1688,7 @@ instance ( PP q a ~ [x]
 -- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("abcde", [])
 -- Val [('a',99),('b',99),('c',99),('d',99),('e',99)]
 --
-data ZipPad l r p q
+data ZipPad l r p q deriving Show
 
 instance ( PP l a ~ x
          , PP r a ~ y
@@ -1762,7 +1763,7 @@ instance ( PP l a ~ x
 -- Val [("X",'a'),("X",'b'),("X",'c'),("X",'d')]
 --
 
-data ZipL l p q
+data ZipL l p q deriving Show
 instance ( PP l a ~ x
         , P l a
          , PP p a ~ [x]
@@ -1818,7 +1819,7 @@ instance ( PP l a ~ x
 -- Fail "ZipR(0,4) rhs would be truncated"
 --
 
-data ZipR r p q
+data ZipR r p q deriving Show
 instance ( PP r a ~ y
          , P r a
          , PP p a ~ [x]
@@ -1869,7 +1870,7 @@ instance ( PP r a ~ y
 -- Error Zip(3,7) length mismatch (p="abc" | q=[1,2,3,4,5,6,7])
 -- Fail "Zip(3,7) length mismatch"
 --
-data Zip p q
+data Zip p q deriving Show
 instance ( PP p a ~ [x]
          , PP q a ~ [y]
          , P p a
@@ -1909,7 +1910,7 @@ instance ( PP p a ~ [x]
 -- >>> pz @(Fst >> EmptyT (Either String)) (13,True)
 -- Val (Left "")
 --
-data EmptyT (t :: Type -> Type)
+data EmptyT (t :: Type -> Type) deriving Show
 
 instance Alternative t => P (EmptyT t) x where
   type PP (EmptyT t) x = t x
@@ -1930,7 +1931,7 @@ instance Alternative t => P (EmptyT t) x where
 -- >>> pz @(1 ... 10 >> Sum) ()
 -- Val 55
 --
-data Sum
+data Sum deriving Show
 
 instance ( x ~ [a]
          , Num a
@@ -1950,7 +1951,7 @@ instance ( x ~ [a]
 -- >>> pz @Product []
 -- Val 1
 --
-data Product
+data Product deriving Show
 
 instance ( x ~ [a]
          , Num a
@@ -1970,7 +1971,7 @@ instance ( x ~ [a]
 -- >>> pz @Min []
 -- Fail "empty list"
 --
-data Min
+data Min deriving Show
 
 instance ( x ~ [a]
          , Ord a
@@ -1994,7 +1995,7 @@ instance ( x ~ [a]
 -- Fail "empty list"
 --
 
-data Max
+data Max deriving Show
 
 instance ( x ~ [a]
          , Ord a
@@ -2009,7 +2010,7 @@ instance ( x ~ [a]
         let v = maximum as
         in mkNode opts (Val v) (show3 opts msg0 v as) []
 
-data IsFixImpl (cmp :: Ordering) p q
+data IsFixImpl (cmp :: Ordering) p q deriving Show
 
 instance ( P p x
          , P q x
@@ -2046,7 +2047,7 @@ instance ( P p x
 -- False (IsPrefix | [2,3] [1,2,3])
 -- Val False
 --
-data IsPrefix p q
+data IsPrefix p q deriving Show
 type IsPrefixT p q = IsFixImpl 'LT p q
 
 instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
@@ -2063,7 +2064,7 @@ instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
 -- False (IsInfix | [2,3] [1,2,1,3])
 -- Val False
 --
-data IsInfix p q
+data IsInfix p q deriving Show
 type IsInfixT p q = IsFixImpl 'EQ p q
 
 instance P (IsInfixT p q) x => P (IsInfix p q) x where
@@ -2080,7 +2081,7 @@ instance P (IsInfixT p q) x => P (IsInfix p q) x where
 -- False (IsSuffix | [2,3] [2,3,4])
 -- Val False
 --
-data IsSuffix p q
+data IsSuffix p q deriving Show
 type IsSuffixT p q = IsFixImpl 'GT p q
 
 instance P (IsSuffixT p q) x => P (IsSuffix p q) x where
@@ -2098,7 +2099,7 @@ instance P (IsSuffixT p q) x => P (IsSuffix p q) x where
 -- >>> pz @Nub [1,4,1,1,1,1,1]
 -- Val [1,4]
 --
-data Nub
+data Nub deriving Show
 
 instance ( x ~ [a]
          , Show a
@@ -2118,7 +2119,7 @@ instance ( x ~ [a]
 -- >>> pz @(ZipCartesian '[ '() ] (1 ... 5)) True
 -- Val [((),1),((),2),((),3),((),4),((),5)]
 --
-data ZipCartesian p q
+data ZipCartesian p q deriving Show
 
 instance ( PP p x ~ [a]
          , PP q x ~ [b]

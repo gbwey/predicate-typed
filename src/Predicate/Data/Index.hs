@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted indexing functions
 -}
@@ -75,7 +76,7 @@ import Data.Proxy (Proxy(..))
 -- Present Min {getMin = 13} (JustDef Just)
 -- Val (Min {getMin = 13})
 --
-data LookupDef' v w p q
+data LookupDef' v w p q deriving Show
 type LookupDefT' v w p q = JustDef p (q >> Lookup v w)
 
 instance P (LookupDefT' v w p q) x => P (LookupDef' v w p q) x where
@@ -116,7 +117,7 @@ instance P (LookupDefT' v w p q) x => P (LookupDef' v w p q) x where
 -- Present Min {getMin = 9223372036854775807} (JustDef Nothing)
 -- Val (Min {getMin = 9223372036854775807})
 --
-data LookupDef v w p
+data LookupDef v w p deriving Show
 type LookupDefT v w p = LookupDef' v w p Id
 
 instance P (LookupDefT v w p) x => P (LookupDef v w p) x where
@@ -124,7 +125,7 @@ instance P (LookupDefT v w p) x => P (LookupDef v w p) x where
   eval _ = eval (Proxy @(LookupDefT v w p))
 
 -- | index a value in an 'Ixed' container and if not found fail with the given message
-data LookupFail' msg v w q
+data LookupFail' msg v w q deriving Show
 type LookupFailT' msg v w q = JustFail msg (q >> Lookup v w)
 
 instance P (LookupFailT' msg v w q) x => P (LookupFail' msg v w q) x where
@@ -141,7 +142,7 @@ instance P (LookupFailT' msg v w q) x => P (LookupFail' msg v w q) x where
 -- Error char=x (JustFail Nothing)
 -- Fail "char=x"
 --
-data LookupFail msg v w
+data LookupFail msg v w deriving Show
 type LookupFailT msg v w = LookupFail' msg v w Id
 
 instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
@@ -220,7 +221,7 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
 -- True ((>>) True | {2 == 2})
 -- Val True
 --
-data Ix (n :: Nat) def
+data Ix (n :: Nat) def deriving Show
 
 instance ( P def (Proxy a)
          , PP def (Proxy a) ~ a
@@ -241,7 +242,7 @@ instance ( P def (Proxy a)
              Right _ -> mkNodeCopy opts pp msg1 [hh pp]
          Just a -> pure $ mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
-data Ix' (n :: Nat)
+data Ix' (n :: Nat) deriving Show
 type IxT' (n :: Nat) = Ix n (Failp "Ix index not found")
 
 instance P (IxT' n) x => P (Ix' n) x where
@@ -265,7 +266,8 @@ instance P (IxT' n) x => P (Ix' n) x where
 -- Val 'x'
 --
 
-data IxL p q def -- p is the big value and q is the index and def is the default
+data IxL p q def deriving Show
+-- p is the big value and q is the index and def is the default
 
 instance ( P q a
          , P p a
@@ -422,7 +424,7 @@ instance ( P q a
 -- Fail "(!!) index not found"
 --
 
-data p !! q
+data p !! q deriving Show
 type BangBangT p q = IxL p q (Failp "(!!) index not found")
 
 instance P (BangBangT p q) a => P (p !! q) a where
@@ -469,7 +471,7 @@ instance P (BangBangT p q) a => P (p !! q) a where
 -- Present fromList [(4,"x"),(5,"dd")] (FromList fromList [(4,"x"),(5,"dd")])
 -- Val (fromList [(4,"x"),(5,"dd")])
 --
-data Lookup p q
+data Lookup p q deriving Show
 
 instance ( P q a
          , P p a
@@ -502,7 +504,7 @@ instance ( P q a
 -- >>> pz @((Id !!? Char1 "d") > MkJust 2 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
 -- Val True
 --
-data p !!? q
+data p !!? q deriving Show
 type BangBangQT p q = Lookup p q
 
 instance P (BangBangQT p q) a => P (p !!? q) a where

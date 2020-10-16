@@ -15,6 +15,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted enum functions
 -}
@@ -78,7 +79,7 @@ import Data.Tree (Tree)
 -- Present LT (SuccB out of range)
 -- Val LT
 --
-data SuccB p q
+data SuccB p q deriving Show
 
 instance ( PP q x ~ a
          , P q x
@@ -127,7 +128,7 @@ _enumDefault opts msg0 hhqq = do
 -- >>> pz @(SuccB' Id) LT
 -- Val EQ
 --
-data SuccB' q
+data SuccB' q deriving Show
 type SuccBT' q = SuccB (Failp "Succ bounded") q
 
 instance P (SuccBT' q) x => P (SuccB' q) x where
@@ -151,7 +152,7 @@ instance P (SuccBT' q) x => P (SuccB' q) x where
 -- Fail "Pred bounded"
 --
 
-data PredB' q
+data PredB' q deriving Show
 type PredBT' q = PredB (Failp "Pred bounded") q
 
 instance ( PP q x ~ a
@@ -194,7 +195,7 @@ instance ( PP q x ~ a
 -- Error Succ IO e=Prelude.Enum.Bool.succ: bad argument (True)
 -- Fail "Succ IO e=Prelude.Enum.Bool.succ: bad argument"
 --
-data Succ
+data Succ deriving Show
 
 instance ( Show x
          , Enum x
@@ -222,7 +223,7 @@ instance ( Show x
 -- >>> pz @(SuccN 2 'LT) ()
 -- Val GT
 --
-data SuccN n p
+data SuccN n p deriving Show
 
 instance ( Show a
          , Enum a
@@ -252,7 +253,7 @@ instance ( Show a
 -- >>> pz @Pred LT
 -- Fail "Pred IO e=Prelude.Enum.Ordering.pred: bad argument"
 --
-data Pred
+data Pred deriving Show
 
 instance ( Show x
          , Enum x
@@ -276,7 +277,7 @@ instance ( Show x
 -- Val EQ
 --
 
-data PredB p q
+data PredB p q deriving Show
 
 instance P (PredBT' q) x => P (PredB' q) x where
   type PP (PredB' q) x = PP (PredBT' q) x
@@ -301,7 +302,7 @@ instance P (PredBT' q) x => P (PredB' q) x where
 -- Val "abcd"
 --
 
-data FromEnum' p
+data FromEnum' p deriving Show
 
 instance ( Show a
          , Enum a
@@ -323,7 +324,7 @@ instance ( Show a
 -- >>> pz @FromEnum 'x'
 -- Val 120
 --
-data FromEnum
+data FromEnum deriving Show
 
 instance ( Show x
          , Enum x
@@ -349,7 +350,7 @@ instance ( Show x
 -- Present [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] ((>>) [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] | {1858-11-17 ... 1858-11-22})
 -- Val [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22]
 --
-data ToEnum' t p
+data ToEnum' t p deriving Show
 
 instance ( PP p x ~ a
          , P p x
@@ -370,14 +371,14 @@ instance ( PP p x ~ a
           Left e -> mkNode opts (Fail (msg0 <> " " <> e)) (showL opts p) [hh pp]
           Right n -> mkNode opts (Val n) (show3 opts msg0 n p) [hh pp]
 
-data ToEnum (t :: Type)
+data ToEnum (t :: Type) deriving Show
 type ToEnumT (t :: Type) = ToEnum' (Hole t) Id
 
 instance P (ToEnumT t) x => P (ToEnum t) x where
   type PP (ToEnum t) x = PP (ToEnumT t) x
   eval _ = eval (Proxy @(ToEnumT t))
 
-data ToEnumBDef' t def
+data ToEnumBDef' t def deriving Show
 
 instance ( P def (Proxy (PP t a))
          , PP def (Proxy (PP t a)) ~ PP t a
@@ -416,7 +417,7 @@ instance ( P def (Proxy (PP t a))
 -- Val EQ
 --
 
-data ToEnumBDef (t :: Type) def
+data ToEnumBDef (t :: Type) def deriving Show
 type ToEnumBDefT (t :: Type) def = ToEnumBDef' (Hole t) def
 
 instance P (ToEnumBDefT t def) x => P (ToEnumBDef t def) x where
@@ -436,7 +437,7 @@ instance P (ToEnumBDefT t def) x => P (ToEnumBDef t def) x where
 -- Error ToEnum bounded (ToEnumBDef out of range)
 -- Fail "ToEnum bounded"
 --
-data ToEnumBFail (t :: Type)
+data ToEnumBFail (t :: Type) deriving Show
 type ToEnumBFailT (t :: Type) = ToEnumBDef' (Hole t) (Failp "ToEnum bounded")
 
 instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
@@ -462,7 +463,7 @@ instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
 -- Present [Min {getMin = 9},Min {getMin = 10},Min {getMin = 11},Min {getMin = 12},Min {getMin = 13}] (Min {getMin = 9} ... Min {getMin = 13})
 -- Val [Min {getMin = 9},Min {getMin = 10},Min {getMin = 11},Min {getMin = 12},Min {getMin = 13}]
 --
-data EnumFromTo p q
+data EnumFromTo p q deriving Show
 
 -- | similar to 'enumFromTo'
 --
@@ -475,7 +476,7 @@ data EnumFromTo p q
 -- >>> pz @('Just (MkDay '(2020, 1, 2)) ... 'Just (MkDay '(2020, 1, 7))) ()
 -- Val [2020-01-02,2020-01-03,2020-01-04,2020-01-05,2020-01-06,2020-01-07]
 --
-data p ... q
+data p ... q deriving Show
 infix 7 ...
 
 type EnumFromToT p q = EnumFromTo p q
@@ -507,7 +508,7 @@ instance ( P p x
 -- >>> pz @(EnumFromThenTo (ReadP Day "2020-01-12") (ReadP Day "2020-02-12") (ReadP Day "2020-08-12")) ()
 -- Val [2020-01-12,2020-02-12,2020-03-14,2020-04-14,2020-05-15,2020-06-15,2020-07-16]
 --
-data EnumFromThenTo p q r
+data EnumFromThenTo p q r deriving Show
 
 instance ( P p x
          , P q x
@@ -537,7 +538,7 @@ instance ( P p x
 -- Present [LT,EQ,GT] (Universe [LT .. GT])
 -- Val [LT,EQ,GT]
 --
-data Universe' p
+data Universe' p deriving Show
 
 instance ( PP p x ~ a
          , Show a
@@ -557,7 +558,7 @@ instance ( PP p x ~ a
 -- >>> pz @(Universe Ordering) ()
 -- Val [LT,EQ,GT]
 --
-data Universe (t :: Type)
+data Universe (t :: Type) deriving Show
 type UniverseT (t :: Type) = Universe' (Hole t)
 
 instance P (UniverseT t) x => P (Universe t) x where

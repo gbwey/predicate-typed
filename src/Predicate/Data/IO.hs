@@ -14,6 +14,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
 {- |
    promoted io functions
@@ -92,7 +93,7 @@ import System.Random
 -- >>> pz @(FileExists "xyzzy") ()
 -- Val False
 --
-data ReadFile p
+data ReadFile p deriving Show
 
 instance ( PP p x ~ String
          , P p x
@@ -114,7 +115,7 @@ instance ( PP p x ~ String
           Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> litL opts b) [hh pp]
 
-data ReadFileBinary p
+data ReadFileBinary p deriving Show
 
 instance ( PP p x ~ String
          , P p x
@@ -137,7 +138,7 @@ instance ( PP p x ~ String
           Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (BS8.length b) <> " Just " <> litBS opts b) [hh pp]
 
 -- | similar to 'System.Directory.doesFileExist'
-data FileExists p
+data FileExists p deriving Show
 type FileExistsT p = ReadFile p >> IsJust
 
 instance P (FileExistsT p) x => P (FileExists p) x where
@@ -152,7 +153,7 @@ instance P (FileExistsT p) x => P (FileExists p) x where
 -- >>> pz @(DirExists "xxy") ()
 -- Val False
 --
-data DirExists p
+data DirExists p deriving Show
 type DirExistsT p = ReadDir p >> IsJust
 
 instance P (DirExistsT p) x => P (DirExists p) x where
@@ -160,7 +161,7 @@ instance P (DirExistsT p) x => P (DirExists p) x where
   eval _ = evalBool (Proxy @(DirExistsT p))
 
 -- | similar to 'System.Directory.listDirectory'
-data ReadDir p
+data ReadDir p deriving Show
 instance ( PP p x ~ String
          , P p x
          ) => P (ReadDir p) x where
@@ -186,7 +187,7 @@ instance ( PP p x ~ String
 -- >>> pz @(ReadEnv "PATH" >> 'Just Id >> 'True) ()
 -- Val True
 --
-data ReadEnv p
+data ReadEnv p deriving Show
 
 instance ( PP p x ~ String
          , P p x
@@ -206,7 +207,7 @@ instance ( PP p x ~ String
           Just (Just v) -> mkNode opts (Val (Just v)) (msg1 <> " " <> litL opts v) [hh pp]
 
 -- | read all the environment variables as key value pairs: similar to 'System.Environment.getEnvironment'
-data ReadEnvAll
+data ReadEnvAll deriving Show
 
 instance P ReadEnvAll a where
   type PP ReadEnvAll a = [(String,String)]
@@ -218,7 +219,7 @@ instance P ReadEnvAll a where
       Just v -> mkNode opts (Val v) (msg0 <> " count=" <> show (length v)) []
 
 -- | get the current time using 'UTCTime'
-data TimeUtc
+data TimeUtc deriving Show
 
 instance P TimeUtc a where
   type PP TimeUtc a = UTCTime
@@ -230,7 +231,7 @@ instance P TimeUtc a where
       Just v -> mkNode opts (Val v) (msg0 <> " " <> showL opts v) []
 
 -- | get the current time using 'ZonedTime'
-data TimeZt
+data TimeZt deriving Show
 
 instance P TimeZt a where
   type PP TimeZt a = ZonedTime
@@ -259,10 +260,10 @@ instance GetMode 'WFAppend where getMode = WFAppend
 instance GetMode 'WFWriteForce where getMode = WFWriteForce
 instance GetMode 'WFWrite where getMode = WFWrite
 
-data WriteFileImpl (hh :: FHandle Symbol) p
+data WriteFileImpl (hh :: FHandle Symbol) p deriving Show
 
 -- | append to a file
-data AppendFile (s :: Symbol) p
+data AppendFile (s :: Symbol) p deriving Show
 type AppendFileT (s :: Symbol) p = WriteFileImpl ('FOther s 'WFAppend) p
 
 instance P (AppendFileT s p) x => P (AppendFile s p) x where
@@ -271,7 +272,7 @@ instance P (AppendFileT s p) x => P (AppendFile s p) x where
 
 
 -- | write to file, overwriting if needed
-data WriteFile' (s :: Symbol) p
+data WriteFile' (s :: Symbol) p deriving Show
 type WriteFileT' (s :: Symbol) p = WriteFileImpl ('FOther s 'WFWriteForce) p
 
 instance P (WriteFileT' s p) x => P (WriteFile' s p) x where
@@ -279,7 +280,7 @@ instance P (WriteFileT' s p) x => P (WriteFile' s p) x where
   eval _ = eval (Proxy @(WriteFileT' s p))
 
 -- | write to file, without overwriting
-data WriteFile (s :: Symbol) p
+data WriteFile (s :: Symbol) p deriving Show
 type WriteFileT (s :: Symbol) p = WriteFileImpl ('FOther s 'WFWrite) p
 
 instance P (WriteFileT s p) x => P (WriteFile s p) x where
@@ -287,7 +288,7 @@ instance P (WriteFileT s p) x => P (WriteFile s p) x where
   eval _ = eval (Proxy @(WriteFileT s p))
 
 -- | write a string value to stdout
-data Stdout p
+data Stdout p deriving Show
 type StdoutT p = WriteFileImpl 'FStdout p
 
 instance P (StdoutT p) x => P (Stdout p) x where
@@ -295,7 +296,7 @@ instance P (StdoutT p) x => P (Stdout p) x where
   eval _ = eval (Proxy @(StdoutT p))
 
 -- | write a string value to stderr
-data Stderr p
+data Stderr p deriving Show
 type StderrT p = WriteFileImpl 'FStderr p
 
 instance P (StderrT p) x => P (Stderr p) x where
@@ -342,7 +343,7 @@ type ReadIO' (t :: Type) s = Stdout (s <> ":") >> Stdin >> ReadP t Id
 -- eg pa @(ReadIO Int + ReadIO Int) ()
 
 -- | read a value from stdin
-data Stdin
+data Stdin deriving Show
 
 instance P Stdin x where
   type PP Stdin x = String
@@ -358,7 +359,7 @@ instance P Stdin x where
       Just (Left e) -> mkNode opts (Fail $ msg0 <> ":" <> e) "" []
       Just (Right ss) -> mkNode opts (Val ss) (msg0 <> "[" <> litVerbose opts "" ss <> "]") []
 
-data GenIO
+data GenIO deriving Show
 
 instance P GenIO x where
   type PP GenIO x = StdGen
@@ -374,7 +375,7 @@ instance P GenIO x where
 -- >>> pz @(GenPure Id) 1234
 -- Val 1235 1
 --
-data GenPure p
+data GenPure p deriving Show
 
 instance (PP p x ~ Int, P p x) => P (GenPure p) x where
   type PP (GenPure p) x = StdGen
@@ -392,7 +393,7 @@ instance (PP p x ~ Int, P p x) => P (GenPure p) x where
 -- >>> pz @(UnfoldN 5 (RandomNext Bool Id) Id) (mkStdGen 3)
 -- Val [True,True,False,True,True]
 --
-data RandomNext (t :: Type) p
+data RandomNext (t :: Type) p deriving Show
 
 instance ( Random t
          , P p x
@@ -414,7 +415,7 @@ instance ( Random t
 -- >>> pz @(RandomList 10 Bool Id) (mkStdGen 4)
 -- Val ([True,True,False,True,True,True,True,False,False,True],2036574526 1336516156)
 --
-data RandomList n (t :: Type) p
+data RandomList n (t :: Type) p deriving Show
 type RandomListT n t p = Foldl (Fst >> Second (RandomNext t Id) >> '(L21 :+ Fst, L22)) '(MEmptyT [t],p) (1...n)
 
 instance P (RandomListT n t p) x => P (RandomList n t p) x where
@@ -430,7 +431,7 @@ instance P (RandomListT n t p) x => P (RandomList n t p) x where
 -- >>> pz @(UnfoldN 10 (RandomRNext _ (C "A") (C "H") Id) Id) (mkStdGen 3)
 -- Val "DBABDDEEEA"
 --
-data RandomRNext (t :: Type) p q r
+data RandomRNext (t :: Type) p q r deriving Show
 
 instance ( Random t
          , P r x
@@ -463,7 +464,7 @@ instance ( Random t
 -- >>> pz @(RandomRList 10 _ (C "A") (C "F") Id) (mkStdGen 1)
 -- Val ("EEBCBEFBEF",1244126523 1336516156)
 --
-data RandomRList n (t :: Type) p q r
+data RandomRList n (t :: Type) p q r deriving Show
 type RandomRListT n t p q r = Foldl (Fst >> Second (RandomRNext t p q Id) >> '(L21 :+ Fst, L22)) '(MEmptyT [t],r) (1...n)
 
 instance P (RandomRListT n t p q r) x => P (RandomRList n t p q r) x where
@@ -476,7 +477,7 @@ pz @(ScanN 20 (RandomRNext Char (C "a") (C "d") Snd) Id >> Tail >> Map Fst) ('x'
 Val "dbabddaaaabdcbbbaabc"
 -}
 -- | similar to 'System.Random.split'
-data GenSplit p
+data GenSplit p deriving Show
 
 instance (RandomGen (PP p x), P p x) => P (GenSplit p) x where
   type PP (GenSplit p) x = (PP p x, PP p x)
@@ -491,7 +492,7 @@ instance (RandomGen (PP p x), P p x) => P (GenSplit p) x where
 
 
 -- | similar to 'System.Random.next'
-data GenNext p
+data GenNext p deriving Show
 
 instance (RandomGen (PP p x), P p x) => P (GenNext p) x where
   type PP (GenNext p) x = (Int, PP p x)
@@ -505,7 +506,7 @@ instance (RandomGen (PP p x), P p x) => P (GenNext p) x where
         in mkNode opts (Val g) msg0 [hh pp]
 
 -- | similar to 'System.Random.genRange'
-data GenRange p
+data GenRange p deriving Show
 
 instance (RandomGen (PP p x), P p x) => P (GenRange p) x where
   type PP (GenRange p) x = (Int, Int)

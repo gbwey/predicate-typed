@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted read, show, and printf functions
 -}
@@ -59,7 +60,7 @@ import Data.Typeable (Typeable)
 -- >>> pz @(ShowP (42 -% 10)) 'x'
 -- Val "(-21) % 5"
 --
-data ShowP p
+data ShowP p deriving Show
 
 instance ( Show (PP p x)
          , P p x
@@ -75,7 +76,7 @@ instance ( Show (PP p x)
         in mkNode opts (Val d) (msg0 <> " " <> litL opts d <> showVerbose opts " | " p) [hh pp]
 
 -- | uses the 'Read' of the given type @t@ and @p@ which points to the content to read
-data ReadP' t p
+data ReadP' t p deriving Show
 
 instance ( P p x
          , PP p x ~ String
@@ -127,7 +128,7 @@ instance ( P p x
 -- Present 14:59:20 (ReadP TimeOfDay 14:59:20)
 -- Val 14:59:20
 --
-data ReadP (t :: Type) p
+data ReadP (t :: Type) p deriving Show
 type ReadPT (t :: Type) p = ReadP' (Hole t) p
 
 instance P (ReadPT t p) x => P (ReadP t p) x where
@@ -148,7 +149,7 @@ instance P (ReadPT t p) x => P (ReadP t p) x where
 -- >>> pz @(ReadMaybe Int Id) "x123"
 -- Val Nothing
 --
-data ReadMaybe' t p
+data ReadMaybe' t p deriving Show
 
 instance ( P p x
          , PP p x ~ String
@@ -170,7 +171,7 @@ instance ( P p x
            [(b,rest)] -> mkNode opts (Val (Just (b,rest))) (lit3 opts msg1 b "" s) hhs
            o -> mkNode opts (Val Nothing) (msg1 <> " failed" <> showVerbose opts " " o) hhs
 
-data ReadMaybe (t :: Type) p
+data ReadMaybe (t :: Type) p deriving Show
 type ReadMaybeT (t :: Type) p = ReadMaybe' (Hole t) p
 
 instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
@@ -212,7 +213,7 @@ instance P (ReadMaybeT t p) x => P (ReadMaybe t p) x where
 -- Error someval int=45
 -- Fail "someval int=45"
 --
-data PrintF s p
+data PrintF s p deriving Show
 
 instance ( PrintfArg (PP p x)
          , Show (PP p x)
@@ -300,7 +301,7 @@ instance ( PrintfArg a
 -- Present "ipaddress 001.002.003.004" (PrintT [ipaddress 001.002.003.004] | s=ipaddress %03d.%03d.%03d.%03d)
 -- Val "ipaddress 001.002.003.004"
 --
-data PrintT s p
+data PrintT s p deriving Show
 instance ( PrintC bs
          , (b,bs) ~ InductTupleP y
          , InductTupleC y
@@ -370,7 +371,7 @@ instance ( PrintC bs
 -- Val "1    2 3 004"
 --
 
-data PrintL (n :: Nat) s p
+data PrintL (n :: Nat) s p deriving Show
 
 instance ( KnownNat n
          , PrintC bs

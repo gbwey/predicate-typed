@@ -14,6 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted String functions
 -}
@@ -61,7 +62,7 @@ import qualified Data.Text.Lazy as TL
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Sequence as Seq
 
-data TrimImpl (left :: Bool) (right :: Bool)
+data TrimImpl (left :: Bool) (right :: Bool) deriving Show
 
 instance ( FailUnlessT (OrT l r)
             ('GL.Text "TrimImpl: left and right cannot both be False")
@@ -85,7 +86,7 @@ instance ( FailUnlessT (OrT l r)
 -- >>> pz @(Snd >> TrimL) (20," abc   ")
 -- Val "abc   "
 --
-data TrimL
+data TrimL deriving Show
 type TrimLT = TrimImpl 'True 'False
 
 instance P TrimLT x => P TrimL x where
@@ -103,7 +104,7 @@ instance P TrimLT x => P TrimL x where
 -- >>> pz @("" >> TrimR) ()
 -- Val ""
 --
-data TrimR
+data TrimR deriving Show
 type TrimRT = TrimImpl 'False 'True
 
 instance P TrimRT x => P TrimR x where
@@ -124,14 +125,14 @@ instance P TrimRT x => P TrimR x where
 -- >>> pz @("" >> TrimBoth) ()
 -- Val ""
 --
-data TrimBoth
+data TrimBoth deriving Show
 type TrimBothT = TrimImpl 'True 'True
 
 instance P TrimBothT x => P TrimBoth x where
   type PP TrimBoth x = PP TrimBothT x
   eval _ = eval (Proxy @TrimBothT)
 
-data StripImpl(left :: Bool) p q
+data StripImpl(left :: Bool) p q deriving Show
 
 instance ( GetBool l
          , PP p x ~ String
@@ -166,7 +167,7 @@ instance ( GetBool l
 -- >>> pz @(StripL "xyz" Id) "xywHello"
 -- Val Nothing
 --
-data StripL p q
+data StripL p q deriving Show
 type StripLT p q = StripImpl 'True p q
 
 instance P (StripLT p q) x => P (StripL p q) x where
@@ -187,14 +188,14 @@ instance P (StripLT p q) x => P (StripL p q) x where
 -- >>> pz @(StripR "xyz" "xyz") ()
 -- Val (Just "")
 --
-data StripR p q
+data StripR p q deriving Show
 type StripRT p q = StripImpl 'False p q
 
 instance P (StripRT p q) x => P (StripR p q) x where
   type PP (StripR p q) x = PP (StripRT p q) x
   eval _ = eval (Proxy @(StripRT p q))
 
-data IsFixImplC (cmp :: Ordering) (ignore :: Bool) p q
+data IsFixImplC (cmp :: Ordering) (ignore :: Bool) p q deriving Show
 
 instance ( GetBool ignore
          , P p x
@@ -235,7 +236,7 @@ instance ( GetBool ignore
 -- >>> pz @(IsPrefixC "abc" "aBcbCd") ()
 -- Val False
 --
-data IsPrefixC p q
+data IsPrefixC p q deriving Show
 type IsPrefixCT p q = IsFixImplC 'LT 'False p q
 
 instance P (IsPrefixCT p q) x => P (IsPrefixC p q) x where
@@ -261,7 +262,7 @@ instance P (IsPrefixCT p q) x => P (IsPrefixC p q) x where
 -- Val True
 --
 
-data IsInfixC p q
+data IsInfixC p q deriving Show
 type IsInfixCT p q = IsFixImplC 'EQ 'False p q
 
 instance P (IsInfixCT p q) x => P (IsInfixC p q) x where
@@ -281,7 +282,7 @@ instance P (IsInfixCT p q) x => P (IsInfixC p q) x where
 -- >>> pz @(IsSuffixC "bCd" "aBcbCd") ()
 -- Val True
 --
-data IsSuffixC p q
+data IsSuffixC p q deriving Show
 type IsSuffixCT p q = IsFixImplC 'GT 'False p q
 
 instance P (IsSuffixCT p q) x => P (IsSuffixC p q) x where
@@ -293,7 +294,7 @@ instance P (IsSuffixCT p q) x => P (IsSuffixC p q) x where
 -- >>> pz @(IsPrefixCI "abc" "aBcbCd") ()
 -- Val True
 --
-data IsPrefixCI p q
+data IsPrefixCI p q deriving Show
 type IsPrefixCIT p q = IsFixImplC 'LT 'True p q
 
 instance P (IsPrefixCIT p q) x => P (IsPrefixCI p q) x where
@@ -309,7 +310,7 @@ instance P (IsPrefixCIT p q) x => P (IsPrefixCI p q) x where
 -- >>> pz @(IsInfixCI "abc" "axAbCd") ()
 -- Val True
 --
-data IsInfixCI p q
+data IsInfixCI p q deriving Show
 type IsInfixCIT p q = IsFixImplC 'EQ 'True p q
 
 instance P (IsInfixCIT p q) x => P (IsInfixCI p q) x where
@@ -318,7 +319,7 @@ instance P (IsInfixCIT p q) x => P (IsInfixCI p q) x where
 
 -- | similar to case insensitive 'isSuffixOf' for strings
 --
-data IsSuffixCI p q
+data IsSuffixCI p q deriving Show
 type IsSuffixCIT p q = IsFixImplC 'GT 'True p q
 
 instance P (IsSuffixCIT p q) x => P (IsSuffixCI p q) x where
@@ -326,7 +327,7 @@ instance P (IsSuffixCIT p q) x => P (IsSuffixCI p q) x where
   eval _ = evalBool (Proxy @(IsSuffixCIT p q))
 
 -- | very simple conversion to a string
-data ToString
+data ToString deriving Show
 instance ToStringC x => P ToString x where
   type PP ToString x = String
   eval _ opts x = pure $ mkNode opts (Val (toStringC x)) "ToString" []
@@ -345,7 +346,7 @@ instance ToStringC BS8.ByteString where
   toStringC = BS8.unpack
 
 -- | 'fromString' function where you need to provide the type @t@ of the result
-data FromString' t s
+data FromString' t s deriving Show
 
 instance ( P s a
          , PP s a ~ String
@@ -370,7 +371,7 @@ instance ( P s a
 -- >>> pz @(FromString (Seq.Seq Char) Id) "abc"
 -- Val (fromList "abc")
 --
-data FromString (t :: Type) p
+data FromString (t :: Type) p deriving Show
 type FromStringPT (t :: Type) p = FromString' (Hole t) p
 
 instance P (FromStringPT t p) x => P (FromString t p) x where

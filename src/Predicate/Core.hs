@@ -11,6 +11,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE NoStarIsType #-}
 -- {-# LANGUAGE StandaloneKindSignatures #-}
 {- |
@@ -180,7 +181,7 @@ evalQuick = getValLRFromTT . runIdentity . eval @_ (Proxy @p) (getOpt @opts)
 -- >>> pz @Id 23
 -- Val 23
 --
-data Id
+data Id deriving Show
 instance Show a => P Id a where
   type PP Id a = a
   eval _ opts a =
@@ -191,7 +192,7 @@ instance Show a => P Id a where
 --
 -- >>> pz @IdT 23
 -- Val 23
-data IdT
+data IdT deriving Show
 instance ( Typeable a
          , Show a
          ) => P IdT a where
@@ -210,14 +211,11 @@ instance ( Typeable a
 -- >>> pz @'[W "abc", W "def", Id, Id] "ghi"
 -- Val ["abc","def","ghi","ghi"]
 --
-data W (p :: k)
+data W (p :: k) deriving Show
 instance P p a => P (W p) a where
   type PP (W p) a = PP p a
   eval _ opts | isVerbose opts = eval (Proxy @(MsgI "W " p)) opts
               | otherwise = eval (Proxy @p) opts
-
-instance Show (W a) where
-  show _ = "W <?>"
 
 -- | add a message to give more context to the evaluation tree
 --
@@ -229,7 +227,7 @@ instance Show (W a) where
 -- P info message: '999
 -- Val 999
 --
-data Msg prt p
+data Msg prt p deriving Show
 
 instance ( P prt a
          , PP prt a ~ String
@@ -252,7 +250,7 @@ instance ( P prt a
 -- P info message:'999
 -- Val 999
 --
-data MsgI prt p
+data MsgI prt p deriving Show
 
 instance ( P prt a
          , PP prt a ~ String
@@ -266,7 +264,7 @@ instance ( P prt a
          Right msg -> prefixMsg msg <$> eval (Proxy @p) opts a
 
 -- | run the expression @p@ but remove the subtrees
-data Hide p
+data Hide p deriving Show
 -- type H p = Hide p -- doesnt work with %   -- unsaturated!
 
 instance P p x => P (Hide p) x where
@@ -275,7 +273,7 @@ instance P p x => P (Hide p) x where
       tt <- eval (Proxy @p) opts x
       pure $ tt & ttForest .~ []
 
-data Hole (t :: Type)
+data Hole (t :: Type) deriving Show
 
 -- | Acts as a proxy in this dsl where you can explicitly set the Type.
 --
@@ -288,7 +286,7 @@ instance Typeable t => P (Hole t) a where
     in pure $ mkNode opts (Fail msg0) "you probably meant to get access to the type of PP only and not evaluate" []
 
 -- | override the display width for the expression @p@
-data Width (n :: Nat) p
+data Width (n :: Nat) p deriving Show
 
 instance ( KnownNat n
          , P p a
@@ -1049,7 +1047,7 @@ evalHide opts
 -- >>> pz @(10 >> '(Id,"abc") >> Second Len) ()
 -- Val (10,3)
 --
-data p >> q
+data p >> q deriving Show
 infixr 1 >>
 
 instance ( P p a
@@ -1080,7 +1078,7 @@ instance ( P p a
                         & ttForest %~ (hh pp:)
 -}
 -- | infixl version of 'Predicate.Core.>>'
-data p >>> q
+data p >>> q deriving Show
 type RightArrowsLeftInfixT p q = p >> q
 infixl 1 >>>
 
@@ -1090,7 +1088,7 @@ instance P (RightArrowsLeftInfixT p q) x => P (p >>> q) x where
 
 
 -- | flipped version of 'Predicate.Core.>>'
-data p << q
+data p << q deriving Show
 type LeftArrowsT p q = q >> p
 infixr 1 <<
 
@@ -1112,7 +1110,7 @@ topMessageEgregious pp = innermost (_ttString pp)
 -- Present (13,True) ((>>) (13,True) | {'(13,True)})
 -- Val (13,True)
 --
-data Unwrap
+data Unwrap deriving Show
 
 instance ( Show x
          , Show (Unwrapped x)
@@ -1124,7 +1122,7 @@ instance ( Show x
         d = x ^. _Wrapped'
     in pure $ mkNode opts (Val d) (show3 opts msg0 d x) []
 
-data Wrap' t p
+data Wrap' t p deriving Show
 
 instance ( Show (PP p x)
          , P p x
@@ -1167,7 +1165,7 @@ instance ( Show (PP p x)
 -- Val (Sum {getSum = 25})
 --
 
-data Wrap (t :: Type) p
+data Wrap (t :: Type) p deriving Show
 type WrapT (t :: Type) p = Wrap' (Hole t) p
 
 instance P (WrapT t p) x => P (Wrap t p) x where
@@ -1176,7 +1174,7 @@ instance P (WrapT t p) x => P (Wrap t p) x where
 
 
 -- | used for type inference
-data Unproxy
+data Unproxy deriving Show
 
 instance Typeable a => P Unproxy (Proxy (a :: Type)) where
   type PP Unproxy (Proxy a) = a
@@ -1195,7 +1193,7 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
 -- >>> pz @(Pairs >> Len > 2) "abcdef"
 -- Val True
 --
-data Len
+data Len deriving Show
 instance ( Show a
          , x ~ [a]
          ) => P Len x where
@@ -1219,7 +1217,7 @@ instance ( Show a
 -- >>> pz @(Length L23) (True,(23,'x',[10,9,1,3,4,2]))
 -- Val 6
 --
-data Length p
+data Length p deriving Show
 
 instance ( PP p x ~ t a
          , P p x
@@ -1255,7 +1253,7 @@ instance ( PP p x ~ t a
 -- False (Not ('True))
 -- Val False
 --
-data Not p
+data Not p deriving Show
 
 instance ( PP p x ~ Bool
          , P p x
@@ -1299,7 +1297,7 @@ instance ( PP p x ~ Bool
 -- Val True
 --
 
-data IdBool
+data IdBool deriving Show
 
 instance x ~ Bool
         => P IdBool x where
@@ -1319,7 +1317,7 @@ instance x ~ Bool
 -- >>> pz @('False || (Fail (Hole _) "failed")) (99,"somedata")
 -- Fail "failed"
 --
-data Fail t prt
+data Fail t prt deriving Show
 
 instance ( P prt a
          , PP prt a ~ String
@@ -1337,7 +1335,7 @@ instance ( P prt a
 -- >>> pz @(FailS (PrintT "value=%03d string=%s" Id)) (99,"somedata")
 -- Fail "value=099 string=somedata"
 --
-data FailS p
+data FailS p deriving Show
 instance P (Fail Id p) x => P (FailS p) x where
   type PP (FailS p) x = PP (Fail Id p) x
   eval _ = eval (Proxy @(Fail Id p))
@@ -1347,7 +1345,7 @@ instance P (Fail Id p) x => P (FailS p) x where
 -- >>> pz @(Failt Int (PrintF "value=%03d" Id)) 99
 -- Fail "value=099"
 --
-data Failt (t :: Type) p
+data Failt (t :: Type) p deriving Show
 instance P (Fail (Hole t) p) x => P (Failt t p) x where
   type PP (Failt t p) x = PP (Fail (Hole t) p) x
   eval _ = eval (Proxy @(Fail (Hole t) p))
@@ -1360,7 +1358,7 @@ instance P (Fail (Hole t) p) x => P (Failt t p) x where
 -- >>> pz @(Ix 3 (Failp "oops")) "abc"
 -- Fail "oops"
 --
-data Failp p
+data Failp p deriving Show
 instance P (Fail Unproxy p) x => P (Failp p) x where
   type PP (Failp p) x = PP (Fail Unproxy p) x
   eval _ = eval (Proxy @(Fail Unproxy p))
@@ -1387,7 +1385,7 @@ instance P (Fail Unproxy p) x => P (Failp p) x where
 -- Error OneP:expected one element(empty)
 -- Fail "OneP:expected one element(empty)"
 --
-data OneP
+data OneP deriving Show
 instance ( Foldable t
          , x ~ t a
          ) => P OneP x where
@@ -1420,7 +1418,7 @@ instance ( Foldable t
 -- False (10 <= 4)
 -- Val False
 --
-data Between p q r -- reify as it is used a lot! nicer specific messages at the top level!
+data Between p q r deriving Show
 
 instance ( Ord (PP p x)
          , Show (PP p x)
@@ -1458,7 +1456,7 @@ instance ( Ord (PP p x)
 -- >>> pz @(10 % 4 <..> 40 % 5) 33
 -- Val False
 --
-data p <..> q
+data p <..> q deriving Show
 infix 4 <..>
 
 type BetweenT p q = Between p q Id
@@ -1541,7 +1539,7 @@ instance P (BetweenT p q) x => P (p <..> q) x where
 -- False (All(10) i=2 (3 < 3))
 -- Val False
 --
-data All p
+data All p deriving Show
 
 instance ( P p a
          , PP p a ~ Bool
@@ -1591,7 +1589,7 @@ instance ( P p a
 -- True (Any(5) i=3 (2 == 2))
 -- Val True
 --
-data Any p
+data Any p deriving Show
 instance ( P p a
          , PP p a ~ Bool
          , x ~ f a
@@ -1630,7 +1628,7 @@ instance ( P p a
 -- Present 99 (Fst 99 | (99,'a',False,1.3))
 -- Val 99
 --
-data L1 p
+data L1 p deriving Show
 
 instance ( Show (ExtractL1T (PP p x))
          , ExtractL1C (PP p x)
@@ -1647,7 +1645,7 @@ instance ( Show (ExtractL1T (PP p x))
         let b = extractL1C p
         in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
-data Fst
+data Fst deriving Show
 type FstT = L1 Id
 
 instance P FstT x => P Fst x where
@@ -1666,7 +1664,7 @@ instance P FstT x => P Fst x where
 -- Present 'a' (Snd 'a' | (99,'a',False,1.3))
 -- Val 'a'
 --
-data L2 p
+data L2 p deriving Show
 
 instance ( Show (ExtractL2T (PP p x))
          , ExtractL2C (PP p x)
@@ -1683,7 +1681,8 @@ instance ( Show (ExtractL2T (PP p x))
         let b = extractL2C p
         in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
-data Snd
+data Snd deriving Show
+
 type SndT = L2 Id
 
 instance P SndT x => P Snd x where
@@ -1702,7 +1701,7 @@ instance P SndT x => P Snd x where
 -- Present False (Thd False | (99,'a',False,1.3))
 -- Val False
 --
-data L3 p
+data L3 p deriving Show
 
 instance ( Show (ExtractL3T (PP p x))
          , ExtractL3C (PP p x)
@@ -1719,7 +1718,7 @@ instance ( Show (ExtractL3T (PP p x))
         let b = extractL3C p
         in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
-data Thd
+data Thd deriving Show
 type ThdT = L3 Id
 
 instance P ThdT x => P Thd x where
@@ -1738,7 +1737,7 @@ instance P ThdT x => P Thd x where
 -- Present "someval" (L4 "someval" | (99,'a',False,"someval"))
 -- Val "someval"
 --
-data L4 p
+data L4 p deriving Show
 
 instance ( Show (ExtractL4T (PP p x))
          , ExtractL4C (PP p x)
@@ -1760,7 +1759,7 @@ instance ( Show (ExtractL4T (PP p x))
 -- >>> pz @(L5 Id) (10,"Abc",'x',True,1)
 -- Val 1
 --
-data L5 p
+data L5 p deriving Show
 
 instance ( Show (ExtractL5T (PP p x))
          , ExtractL5C (PP p x)
@@ -1783,7 +1782,7 @@ instance ( Show (ExtractL5T (PP p x))
 -- >>> pz @(L6 Id) (10,"Abc",'x',True,1,99)
 -- Val 99
 --
-data L6 p
+data L6 p deriving Show
 
 instance ( Show (ExtractL6T (PP p x))
          , ExtractL6C (PP p x)
@@ -1805,7 +1804,7 @@ instance ( Show (ExtractL6T (PP p x))
 -- >>> pz @(Map' Pred Id) [1..5]
 -- Val [0,1,2,3,4]
 --
-data Map' p q
+data Map' p q deriving Show
 
 instance ( Show (PP p a)
          , P p a
@@ -1837,7 +1836,7 @@ instance ( Show (PP p a)
 -- >>> pz @(Map Pred) [1..5]
 -- Val [0,1,2,3,4]
 --
-data Map p
+data Map p deriving Show
 
 instance ( Show (PP p a)
          , P p a
@@ -1893,7 +1892,8 @@ instance ( Show (PP p a)
 -- Present 3 ((>>) 3 | {'3})
 -- Val 3
 --
-data Do (ps :: [k]) -- infixr same as >>
+data Do (ps :: [k]) deriving Show
+-- infixr same as >>
 
 instance (P (DoExpandT ps) a) => P (Do ps) a where
   type PP (Do ps) a = PP (DoExpandT ps) a
@@ -1917,7 +1917,8 @@ type family DoExpandT (ps :: [k]) :: Type where -- need Type not k else No insta
 -- Present 6 ((>>) 6 | {'6})
 -- Val 6
 --
-data DoL (ps :: [k]) -- infixl unlike >>
+data DoL (ps :: [k]) deriving Show
+-- infixl unlike >>
 
 instance (P (DoExpandLT ps) a) => P (DoL ps) a where
   type PP (DoL ps) a = PP (DoExpandLT ps) a
@@ -1946,7 +1947,7 @@ type family DoExpandLT (ps :: [k]) :: Type where
 -- >>> pz @(Fst && (Length Snd == 4)) (True,[12,11,12,13,14])
 -- Val False
 --
-data p && q
+data p && q deriving Show
 infixr 3 &&
 
 instance ( P p a
@@ -1982,7 +1983,7 @@ instance ( P p a
 -- True (True &&~ True)
 -- Val True
 --
-data p &&~ q
+data p &&~ q deriving Show
 infixr 3 &&~
 
 instance ( P p a
@@ -2015,7 +2016,7 @@ instance ( P p a
 -- >>> pz @(Not Fst || (Length Snd == 4)) (True,[12,11,12,13,14])
 -- Val False
 --
-data p || q
+data p || q deriving Show
 infixr 2 ||
 
 instance ( P p a
@@ -2048,7 +2049,7 @@ instance ( P p a
 -- False (False ||~ False | (9 > 10) ||~ (9 > 9))
 -- Val False
 --
-data p ||~ q
+data p ||~ q deriving Show
 infixr 2 ||~
 
 instance ( P p a
@@ -2087,7 +2088,7 @@ instance ( P p a
 -- >>> pz @(Fst ~> (Length Snd >= 4)) (False,[11,12,13,14])
 -- Val True
 --
-data p ~> q
+data p ~> q deriving Show
 infixr 1 ~>
 
 instance ( P p a
@@ -2145,7 +2146,7 @@ instance ( P p a
 -- >>> pz @Swap (True,12,"asfd")
 -- Val (True,"asfd",12)
 --
-data Swap
+data Swap deriving Show
 
 class Bifunctor p => SwapC p where
   swapC :: p a b -> p b a
@@ -2193,7 +2194,7 @@ instance ( Show (p a b)
 -- >>> pz @('(,) 4 $ 'True) ()
 -- Val (4,True)
 --
-data (p :: k -> k1) $ (q :: k)
+data (p :: k -> k1) $ (q :: k) deriving Show
 infixr 0 $
 
 instance P (p q) a => P (p $ q) a where
@@ -2222,7 +2223,7 @@ instance P (p q) a => P (p $ q) a where
 -- Present 'a' (Thd 'a' | ("W",9,'a'))
 -- Val 'a'
 --
-data (q :: k) & (p :: k -> k1)
+data (q :: k) & (p :: k -> k1) deriving Show
 infixl 1 &
 
 instance P (p q) a => P (q & p) a where
@@ -2260,7 +2261,7 @@ instance P (p q) a => P (q & p) a where
 -- Present Left 123 ((>>) Left 123 | {Swap Left 123 | Right 123})
 -- Val (Left 123)
 --
-data Pure (t :: Type -> Type) p
+data Pure (t :: Type -> Type) p deriving Show
 instance ( P p x
          , Show (PP p x)
          , Show (t (PP p x))
@@ -2289,7 +2290,7 @@ instance ( P p x
 -- Present True (Coerce True | Any {getAny = True})
 -- Val True
 --
-data Coerce (t :: k)
+data Coerce (t :: k) deriving Show
 
 instance ( Show a
          , Show t
@@ -2341,7 +2342,7 @@ instance GetWeekDay 'Saturday where
 -- >>> pz @L11 ((10,"ss"),2)
 -- Val 10
 --
-data L11
+data L11 deriving Show
 type L11T = MsgI "L11:" (L1 (L1 Id))
 
 instance P L11T x => P L11 x where
@@ -2353,7 +2354,7 @@ instance P L11T x => P L11 x where
 -- >>> pz @L12 ((10,"ss"),2)
 -- Val "ss"
 --
-data L12
+data L12 deriving Show
 type L12T = MsgI "L12:" (L2 (L1 Id))
 
 instance P L12T x => P L12 x where
@@ -2365,7 +2366,7 @@ instance P L12T x => P L12 x where
 -- >>> pz @L13 ((10,"ss",4.5),2)
 -- Val 4.5
 --
-data L13
+data L13 deriving Show
 type L13T = MsgI "L13:" (L3 (L1 Id))
 
 instance P L13T x => P L13 x where
@@ -2377,7 +2378,7 @@ instance P L13T x => P L13 x where
 -- >>> pz @L21 ('x',(10,"ss",4.5),2)
 -- Val 10
 --
-data L21
+data L21 deriving Show
 type L21T = MsgI "L21:" (L1 (L2 Id))
 
 instance P L21T x => P L21 x where
@@ -2389,7 +2390,7 @@ instance P L21T x => P L21 x where
 -- >>> pz @L22 ('z',(10,"ss",4.5),2)
 -- Val "ss"
 --
-data L22
+data L22 deriving Show
 type L22T = MsgI "L22:" (L2 (L2 Id))
 
 instance P L22T x => P L22 x where
@@ -2401,7 +2402,7 @@ instance P L22T x => P L22 x where
 -- >>> pz @L23 ('x',(10,"ss",4.5),2)
 -- Val 4.5
 --
-data L23
+data L23 deriving Show
 type L23T = MsgI "L23:" (L3 (L2 Id))
 
 instance P L23T x => P L23 x where
@@ -2413,7 +2414,7 @@ instance P L23T x => P L23 x where
 -- >>> pz @L31 (1,2,('c',4))
 -- Val 'c'
 --
-data L31
+data L31 deriving Show
 type L31T = MsgI "L31:" (L1 (L3 Id))
 
 instance P L31T x => P L31 x where
@@ -2425,7 +2426,7 @@ instance P L31T x => P L31 x where
 -- >>> pz @L32 (1,2,('c',4))
 -- Val 4
 --
-data L32
+data L32 deriving Show
 type L32T = MsgI "L32:" (L2 (L3 Id))
 
 instance P L32T x => P L32 x where
@@ -2437,7 +2438,7 @@ instance P L32T x => P L32 x where
 -- >>> pz @L33 (1,2,('c',4,False))
 -- Val False
 --
-data L33
+data L33 deriving Show
 type L33T = MsgI "L33:" (L3 (L3 Id))
 
 instance P L33T x => P L33 x where

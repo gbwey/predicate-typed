@@ -14,6 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
           promoted 'Semigroup' and 'Monoid' functions
 -}
@@ -69,7 +70,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 -- >>> pz @('(10 >> FromInteger _,"def") <> Id) (SG.Sum 12, "_XYZ")
 -- Val (Sum {getSum = 22},"def_XYZ")
 --
-data p <> q
+data p <> q deriving Show
 infixr 6 <>
 
 instance ( Semigroup (PP p x)
@@ -117,7 +118,7 @@ type S a = SG.WrappedMonoid a
 -- >>> pz @(Fst <> Snd) ("abc","def") -- same as above but more direct
 -- Val "abcdef"
 --
-data Sap (t :: Type)
+data Sap (t :: Type) deriving Show
 type SapT (t :: Type) = Wrap t Fst <> Wrap t Snd >> Unwrap
 
 instance P (SapT t) x => P (Sap t) x where
@@ -132,7 +133,7 @@ instance P (SapT t) x => P (Sap t) x where
 -- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) >> MConcat Id) [7 :: Int,6,1,3,5] -- monoid so need eg Int
 -- Val (Sum {getSum = 22},Max {getMax = 7})
 --
-data MConcat p
+data MConcat p deriving Show
 
 instance ( PP p x ~ [a]
          , P p x
@@ -157,7 +158,7 @@ instance ( PP p x ~ [a]
 -- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) >> ToNEList >> SConcat Id) [7,6,1,3,5]
 -- Val (Sum {getSum = 22},Max {getMax = 7})
 --
-data SConcat p
+data SConcat p deriving Show
 
 instance ( PP p x ~ NonEmpty a
          , P p x
@@ -182,7 +183,7 @@ instance ( PP p x ~ NonEmpty a
 --
 
 -- no Monoid for Maybe a unless a is also a monoid but can use empty!
-data MEmptyT' t
+data MEmptyT' t deriving Show
 instance ( Show (PP t a)
          , Monoid (PP t a)
          ) => P (MEmptyT' t) a where
@@ -220,7 +221,7 @@ instance ( Show (PP t a)
 -- Present Just (Sum {getSum = 0}) (FMap MEmptyT Sum {getSum = 0})
 -- Val (Just (Sum {getSum = 0}))
 --
-data MEmptyT (t :: Type)
+data MEmptyT (t :: Type) deriving Show
 type MEmptyTT (t :: Type) = MEmptyT' (Hole t)
 
 instance P (MEmptyTT t) x => P (MEmptyT t) x where
@@ -233,7 +234,7 @@ instance P (MEmptyTT t) x => P (MEmptyT t) x where
 -- Present "" ((>>) "" | {MEmptyT ""})
 -- Val ""
 --
-data MEmptyP
+data MEmptyP deriving Show
 type MEmptyPT = MEmptyT' Unproxy -- expects a proxy: so only some things work with this: eg MaybeIn
 
 instance P MEmptyPT x => P MEmptyP x where
@@ -265,7 +266,7 @@ instance P MEmptyPT x => P MEmptyP x where
 -- Val "abcabcabcabc"
 --
 
-data STimes n p
+data STimes n p deriving Show
 instance ( P n a
          , Integral (PP n a)
          , Semigroup (PP p a)

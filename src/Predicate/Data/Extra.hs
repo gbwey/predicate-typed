@@ -14,6 +14,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      extra promoted functions
 -}
@@ -145,7 +146,7 @@ import Data.Tree
 -- Present Just 'x' ((<$) 'x')
 -- Val (Just 'x')
 --
-data p <$ q
+data p <$ q deriving Show
 infixl 4 <$
 
 instance ( P p x
@@ -174,7 +175,7 @@ instance ( P p x
 -- >>> pz @(Fst <* Snd) (Just "abc",Just 20)
 -- Val (Just "abc")
 --
-data p <* q
+data p <* q deriving Show
 infixl 4 <*
 
 type ArrowRT p q = q <* p
@@ -185,7 +186,7 @@ type ArrowRT p q = q <* p
 -- Present Just 'a' ((<*) Just 'a' | p=Just 'a' | q=Just 4)
 -- Val (Just 'a')
 --
-data p *> q
+data p *> q deriving Show
 infixl 4 *>
 
 instance P (ArrowRT p q) x => P (p *> q) x where
@@ -229,7 +230,7 @@ instance ( Show (t c)
 -- Present "cdefab" ((<|>) "cdefab" | p="cdef" | q="ab")
 -- Val "cdefab"
 --
-data p <|> q
+data p <|> q deriving Show
 infixl 3 <|>
 
 instance ( P p x
@@ -262,7 +263,7 @@ instance ( P p x
 -- Present "hello" (Extract "hello" | (10,"hello"))
 -- Val "hello"
 --
-data Extract
+data Extract deriving Show
 instance ( Show (t a)
          , Show a
          , Comonad t
@@ -278,7 +279,7 @@ instance ( Show (t a)
 -- >>> pz @Duplicate (20,"abc")
 -- Val (20,(20,"abc"))
 --
-data Duplicate
+data Duplicate deriving Show
 
 instance ( Show (t a)
          , Show (t (t a))
@@ -298,7 +299,7 @@ instance ( Show (t a)
 -- >>> pz @Join  ["ab","cd","","ef"]
 -- Val "abcdef"
 --
-data Join
+data Join deriving Show
 
 instance ( Show (t (t a))
          , Show (t a)
@@ -349,7 +350,7 @@ instance ( Show (t (t a))
 -- >>> pz @('True $& 4 $& Id) (,)
 -- Val (4,True)
 --
-data p $$ q
+data p $$ q deriving Show
 infixl 0 $$
 
 instance ( P p x
@@ -381,7 +382,8 @@ instance ( P p x
 -- >>> pz @("def" $& Id) ("abc"<>)
 -- Val "abcdef"
 --
-data q $& p -- flips the args eg a & b & (,) = (b,a)
+data q $& p deriving Show
+-- flips the args eg a & b & (,) = (b,a)
 infixr 1 $&
 
 instance ( P p x
@@ -410,7 +412,7 @@ instance ( P p x
 -- >>> pz @Sequence [Just 10, Just 20, Just 30, Nothing, Just 40]
 -- Val Nothing
 --
-data Sequence
+data Sequence deriving Show
 
 instance ( Show (f (t a))
          , Show (t (f a))
@@ -449,7 +451,7 @@ instance ( Show (f (t a))
 -- Present Nothing ((>>) Nothing | {Sequence Nothing | [Just 1,Just 2,Just 3,Nothing,Nothing]})
 -- Val Nothing
 --
-data Traverse p
+data Traverse p deriving Show
 type TraverseT p = FMap p >> Sequence
 
 instance P (TraverseT p) x => P (Traverse p) x where
@@ -458,7 +460,7 @@ instance P (TraverseT p) x => P (Traverse p) x where
 
 -- | just run the effect ignoring the result passing the original value through
 -- for example for use with Stdout so it doesnt interfere with the @a@ on the rhs unless there is an failure
-data Skip p
+data Skip p deriving Show
 
 instance ( Show (PP p a)
          , P p a
@@ -472,7 +474,7 @@ instance ( Show (PP p a)
       Right p -> mkNode opts (Val a) (msg0 <> " " <> showL opts p) [hh pp]
 
 -- | run @p@ for the effect and then run @q@ using that original value
-data p |> q
+data p |> q deriving Show
 type SkipLT p q = Skip p >> q
 infixr 1 |>
 
@@ -481,7 +483,7 @@ instance P (SkipLT p q) x => P (p |> q) x where
   eval _ = eval (Proxy @(SkipLT p q))
 
 -- | run run @p@ and then @q@ for the effect but using the result from @p@
-data p >| q
+data p >| q deriving Show
 type SkipRT p q = p >> Skip q
 infixr 1 >|
 
@@ -490,7 +492,7 @@ instance P (SkipRT p q) x => P (p >| q) x where
   eval _ = eval (Proxy @(SkipRT p q))
 
 -- | run both @p@ and @q@ for their effects but ignoring the results
-data p >|> q
+data p >|> q deriving Show
 type SkipBothT p q = Skip p >> Skip q
 infixr 1 >|>
 
@@ -573,7 +575,7 @@ instance P (SkipBothT p q) x => P (p >|> q) x where
 -- Present 43 (JustDef Nothing)
 -- Val 43
 --
-data HeadDef p q
+data HeadDef p q deriving Show
 type HeadDefT p q = JustDef p (q >> Uncons >> FMap Fst)
 
 instance P (HeadDefT p q) x => P (HeadDef p q) x where
@@ -612,7 +614,7 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 -- Fail "msg=Abc def"
 --
 
-data HeadFail msg q
+data HeadFail msg q deriving Show
 type HeadFailT msg q = JustFail msg (q >> Uncons >> FMap Fst)
 
 instance P (HeadFailT msg q) x => P (HeadFail msg q) x where
@@ -634,7 +636,7 @@ instance P (HeadFailT msg q) x => P (HeadFail msg q) x where
 -- Val [11,12,13,14,15]
 --
 
-data TailDef p q
+data TailDef p q deriving Show
 type TailDefT p q = JustDef p (q >> Uncons >> FMap Snd)
 
 instance P (TailDefT p q) x => P (TailDef p q) x where
@@ -649,7 +651,7 @@ instance P (TailDefT p q) x => P (TailDef p q) x where
 -- Fail "a=4 b=someval"
 --
 
-data TailFail msg q
+data TailFail msg q deriving Show
 type TailFailT msg q = JustFail msg (q >> Uncons >> FMap Snd)
 
 instance P (TailFailT msg q) x => P (TailFail msg q) x where
@@ -679,7 +681,7 @@ instance P (TailFailT msg q) x => P (TailFail msg q) x where
 -- Val 0
 --
 
-data LastDef p q
+data LastDef p q deriving Show
 type LastDefT p q = JustDef p (q >> Unsnoc >> FMap Snd)
 
 instance P (LastDefT p q) x => P (LastDef p q) x where
@@ -687,7 +689,7 @@ instance P (LastDefT p q) x => P (LastDef p q) x where
   eval _ = eval (Proxy @(LastDefT p q))
 
 -- | takes the init of a list-like object or fails with the given message
-data LastFail msg q
+data LastFail msg q deriving Show
 type LastFailT msg q = JustFail msg (q >> Unsnoc >> FMap Snd)
 
 instance P (LastFailT msg q) x => P (LastFail msg q) x where
@@ -708,7 +710,7 @@ instance P (LastFailT msg q) x => P (LastFail msg q) x where
 -- Present [10,11,12,13,14] (JustDef Just)
 -- Val [10,11,12,13,14]
 --
-data InitDef p q
+data InitDef p q deriving Show
 type InitDefT p q = JustDef p (q >> Unsnoc >> FMap Fst)
 
 instance P (InitDefT p q) x => P (InitDef p q) x where
@@ -716,7 +718,7 @@ instance P (InitDefT p q) x => P (InitDef p q) x where
   eval _ = eval (Proxy @(InitDefT p q))
 
 -- | takes the init of a list-like object or fails with the given message
-data InitFail msg q
+data InitFail msg q deriving Show
 type InitFailT msg q = JustFail msg (q >> Unsnoc >> FMap Fst)
 
 instance P (InitFailT msg q) x => P (InitFail msg q) x where
@@ -731,7 +733,7 @@ instance P (InitFailT msg q) x => P (InitFail msg q) x where
 -- >>> pz @(Map '(Id,IsPrime)) [0..12]
 -- Val [(0,False),(1,False),(2,True),(3,True),(4,False),(5,True),(6,False),(7,True),(8,False),(9,False),(10,False),(11,True),(12,False)]
 --
-data IsPrime
+data IsPrime deriving Show
 
 instance ( x ~ a
          , Show a
@@ -751,7 +753,7 @@ instance ( x ~ a
 -- >>> pz @(ScanN 4 PrimeNext Id) 3
 -- Val [3,5,7,11,13]
 --
-data PrimeNext
+data PrimeNext deriving Show
 
 instance ( Show x
          , Integral x
@@ -776,7 +778,7 @@ instance ( Show x
 -- >>> pz @(ScanN 6 PrimePrev Id) 11
 -- Val [11,7,5,3,2,2,2]
 --
-data PrimePrev
+data PrimePrev deriving Show
 
 instance ( Show x
          , Integral x
@@ -794,7 +796,7 @@ instance ( Show x
 -- >>> pz @(Primes Id) 5
 -- Val [2,3,5,7,11]
 --
-data Primes n
+data Primes n deriving Show
 
 instance ( Integral (PP n x)
          , P n x
@@ -826,7 +828,7 @@ instance ( Integral (PP n x)
 -- >>> pz @(PrimeFactors Id) (-30)
 -- Fail "PrimeFactors number<=0"
 --
-data PrimeFactors n
+data PrimeFactors n deriving Show
 
 instance ( Integral (PP n x)
          , P n x
@@ -858,7 +860,7 @@ instance ( Integral (PP n x)
 -- False (IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])
 -- Val False
 --
-data IsLuhn
+data IsLuhn deriving Show
 
 instance x ~ [Int]
          => P IsLuhn x where
@@ -891,14 +893,14 @@ instance x ~ [Int]
 -- Val (Just (Sum {getSum = 10}))
 --
 
-data ProxyT' t
+data ProxyT' t deriving Show
 
 instance P (ProxyT' t) x where
   type PP (ProxyT' t) x = Proxy (PP t x)
   eval _ opts _ =
     pure $ mkNode opts (Val Proxy) "ProxyT" []
 
-data ProxyT (t :: Type)
+data ProxyT (t :: Type) deriving Show
 type ProxyTT (t :: Type) = ProxyT' (Hole t)
 
 instance P (ProxyT t) x where
@@ -943,7 +945,7 @@ instance P (ProxyT t) x where
 -- True (Catch caught exception[OneP:expected one element(empty)])
 -- Val True
 --
-data Catch p q
+data Catch p q deriving Show
 
 -- | run an expression @p@ and on failure print a custom error @s@ using the error string and the input value
 --
@@ -969,7 +971,7 @@ data Catch p q
 -- Error msg=OneP:expected one element(2) err s=[10,11] (Catch default condition failed)
 -- Fail "msg=OneP:expected one element(2) err s=[10,11]"
 --
-data Catch' p s
+data Catch' p s deriving Show
 type CatchT' p s = Catch p (FailCatchT s) -- eg set eg s=PrintF "%d" Id or PrintF "%s" (ShowP Id)
 type FailCatchT s = Fail (Snd >> Unproxy) (Fst >> s)
 
@@ -1001,7 +1003,7 @@ instance ( P p x
 -- Present 10 (Thd 10 | (2,9,10))
 -- Val 10
 --
-data Dot (ps :: [Type -> Type]) (q :: Type)
+data Dot (ps :: [Type -> Type]) (q :: Type) deriving Show
 instance (P (DotExpandT ps q) a) => P (Dot ps q) a where
   type PP (Dot ps q) a = PP (DotExpandT ps q) a
   eval _ = eval (Proxy @(DotExpandT ps q))
@@ -1021,7 +1023,7 @@ type family DotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 -- Present 2 (Snd 2 | ('a',2))
 -- Val 2
 --
-data RDot (ps :: [Type -> Type]) (q :: Type)
+data RDot (ps :: [Type -> Type]) (q :: Type) deriving Show
 instance P (RDotExpandT ps q) a => P (RDot ps q) a where
   type PP (RDot ps q) a = PP (RDotExpandT ps q) a
   eval _ = eval (Proxy @(RDotExpandT ps q))
@@ -1057,7 +1059,7 @@ type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
 -- Present "ss" (K '"ss")
 -- Val "ss"
 --
-data K (p :: k) (q :: k1)
+data K (p :: k) (q :: k1) deriving Show
 instance P p a => P (K p q) a where
   type PP (K p q) a = PP p a
   eval _ = eval (Proxy @(MsgI "K " p))
@@ -1068,7 +1070,7 @@ instance P p a => P (K p q) a where
 -- Present 6 ((>>) 6 | {Len 6 | "abcdef"})
 -- Val 6
 --
-data Lift p q
+data Lift p q deriving Show
 type LiftT p q = q >> p
 
 instance P (LiftT p q) x => P (Lift p q) x where
@@ -1106,7 +1108,8 @@ instance P (LiftT p q) x => P (Lift p q) x where
 -- >>> pz @('(Proxy (W 12),Id) >> Apply1 ((+) Id)) 9
 -- Val 21
 --
-data Apply1 (p :: Type -> Type) -- will not work unless p :: Type -> Type: cant be polymorphic in k
+data Apply1 (p :: Type -> Type) deriving Show
+-- will not work unless p :: Type -> Type: cant be polymorphic in k deriving Show
 instance forall p q x . (P (p q) x)
    => P (Apply1 p) (Proxy q, x) where
   type PP (Apply1 p) (Proxy q, x) = PP (p q) x
@@ -1128,7 +1131,7 @@ instance forall p q x . (P (p q) x)
 -- Present ("abc",13) ('("abc",13))
 -- Val ("abc",13)
 --
-data Apply2 (p :: Type -> Type -> Type)
+data Apply2 (p :: Type -> Type -> Type) deriving Show
 instance forall p (q :: Type) (r :: Type) x . (P (p q r) x)
    => P (Apply2 p) ((Proxy q,Proxy r), x) where
   type PP (Apply2 p) ((Proxy q,Proxy r), x) = PP (p q r) x
@@ -1159,7 +1162,7 @@ instance forall p (q :: Type) (r :: Type) x . (P (p q r) x)
 -- >>> pz @(PartitionsBy (L11 ==! L21) (L11 < L21) Id) [10,9,9,1,9,4]
 -- Val [[9],[1,4,9],[9,10]]
 --
-data PartitionsBy p q r
+data PartitionsBy p q r deriving Show
 type PartitionsByT p q r = SortBy p (Zip r (0 ... (Length r - 1))) >> GroupBy q Id >> SortOn (Head >> Snd) Id >> Map (Map Fst)
 
 instance P (PartitionsByT p q r) x => P (PartitionsBy p q r) x where
@@ -1174,7 +1177,7 @@ instance P (PartitionsByT p q r) x => P (PartitionsBy p q r) x where
 -- >>> pz @(Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Map (Snd >> IMap (GuardBool (PrintT "bad value=%d %s" Id) (Snd >> ReadP Int Id < 255)) Id)) "123.222.99.3"
 -- Val [[True,True,True,True]]
 --
-data IMap p q
+data IMap p q deriving Show
 type IMapT p q = ZipWith p (0 ... (Length q - 1)) q
 
 instance P (IMapT p q) x => P (IMap p q) x where
@@ -1186,7 +1189,7 @@ instance P (IMapT p q) x => P (IMap p q) x where
 -- >>> pz @IList "abcdef"
 -- Val [(0,'a'),(1,'b'),(2,'c'),(3,'d'),(4,'e'),(5,'f')]
 --
-data IList
+data IList deriving Show
 type IListT = Zip (0 ... (Len - 1)) Id
 
 instance P IListT x => P IList x where
@@ -1314,7 +1317,7 @@ instance P IListT x => P IList x where
 -- Val (Just (Sum {getSum = 20}))
 --
 
-data FMap p
+data FMap p deriving Show
 
 instance ( Traversable n
          , P p a
@@ -1341,7 +1344,7 @@ instance ( Traversable n
 -- >>> pz @(FMap (Second (Succ <$> Id))) [(True, (These 12 'c'))]
 -- Val [(True,These 12 'd')]
 --
-data p <$> q
+data p <$> q deriving Show
 infixl 4 <$>
 
 instance ( Traversable n
@@ -1385,7 +1388,7 @@ _fmapImpl opts proxyp msg0 hhs na = do
 -- >>> pz @('[1,2,3] <&> Succ) ()
 -- Val [2,3,4]
 --
-data p <&> q
+data p <&> q deriving Show
 infixl 1 <&>
 type FMapFlipT p q = q <$> p
 
@@ -1409,7 +1412,7 @@ instance P (FMapFlipT p q) x => P (p <&> q) x where
 -- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
 --
 
-data FPair p q
+data FPair p q deriving Show
 
 instance ( Applicative n
          , PP p a ~ n x
@@ -1437,7 +1440,7 @@ instance ( Applicative n
 -- >>> pz @(Fst <:> Snd) ("abc",[10,12,14])
 -- Val [('a',10),('a',12),('a',14),('b',10),('b',12),('b',14),('c',10),('c',12),('c',14)]
 --
-data p <:> q
+data p <:> q deriving Show
 type FPairT p q = FPair p q
 infixl 6 <:>
 
@@ -1458,7 +1461,7 @@ instance P (FPairT p q) x => P (p <:> q) x where
 -- >>> pz @(FFish Uncons (Fst >> Lookup "abcdef" Id) [3,14,12]) ()
 -- Val (Just 'd')
 --
-data FFish amb bmc a
+data FFish amb bmc a deriving Show
 type FFishT amb bmc a = a >> amb >> FMap bmc >> Join
 
 instance P (FFishT p q r) x => P (FFish p q r) x where
@@ -1473,7 +1476,7 @@ instance P (FFishT p q r) x => P (FFish p q r) x where
 -- >>> pz @(Uncons >>= (Snd >> HeadMay)) "abcdef"
 -- Val (Just 'b')
 --
-data ma >>= amb
+data ma >>= amb deriving Show
 type FBindT ma amb = ma >> FMap amb >> Join
 infixl 1 >>=
 
@@ -1491,7 +1494,7 @@ instance P (FBindT p q) x => P (p >>= q) x where
 -- Present Just 99 ((>>) Just 99 | {FMap Fst 99 | (99,[7,3])})
 -- Val (Just 99)
 --
-data HeadMay
+data HeadMay deriving Show
 type HeadMayT = Uncons >> FMap Fst
 
 instance P HeadMayT x => P HeadMay x where
@@ -1503,7 +1506,7 @@ instance P HeadMayT x => P HeadMay x where
 -- >>> pz @LastMay "hello"
 -- Val (Just 'o')
 --
-data LastMay
+data LastMay deriving Show
 type LastMayT = Unsnoc >> FMap Snd
 
 instance P LastMayT x => P LastMay x where
@@ -1515,7 +1518,7 @@ instance P LastMayT x => P LastMay x where
 -- >>> pz @TailMay "hello"
 -- Val (Just "ello")
 --
-data TailMay
+data TailMay deriving Show
 type TailMayT = Uncons >> FMap Snd
 
 instance P TailMayT x => P TailMay x where
@@ -1527,7 +1530,7 @@ instance P TailMayT x => P TailMay x where
 -- >>> pz @InitMay "hello"
 -- Val (Just "hell")
 --
-data InitMay
+data InitMay deriving Show
 type InitMayT = Unsnoc >> FMap Fst
 
 instance P InitMayT x => P InitMay x where
@@ -1545,7 +1548,8 @@ instance P InitMayT x => P InitMay x where
 -- >>> pz @( Flip ('(,,) 1) 2 Id) "ab"
 -- Val (1,"ab",2)
 --
-data Flip (p :: k1 -> k2 -> k3) (q :: k2) (r :: k1) -- needs explicit types
+data Flip (p :: k1 -> k2 -> k3) (q :: k2) (r :: k1) deriving Show
+-- needs explicit types
 
 instance P (p r q) x => P (Flip p q r) x where
   type PP (Flip p q r) x = PP (p r q) x
@@ -1579,21 +1583,21 @@ instance P (p r q) x => P (Flip p q r) x where
 -- >>> pz @(Unproxy' Fst Snd) (Proxy @(Partition Even Snd),(True,[8,1,5,2,3,4,6]))
 -- Val ([8,2,4,6],[1,5,3])
 --
--- >>> pl @(Proxy Snd >> Unproxy' Id (W '( 'True,2))) () -- have to wrap with W
+-- >>> pl @(Proxy Snd >> Unproxy' Id '( 'True,2)) () -- have to wrap with W
 -- Present 2 ((>>) 2 | {Unproxy' | Snd 2 | (True,2)})
 -- Val 2
 --
--- >>> pl @(Proxy (Fst <> Snd) >> Unproxy' Id (W '("aa","bb"))) ()
+-- >>> pl @(Proxy (Fst <> Snd) >> Unproxy' Id '("aa","bb")) ()
 -- Present "aabb" ((>>) "aabb" | {Unproxy' | "aa" <> "bb" = "aabb"})
 -- Val "aabb"
 --
--- >>> pz @(Unproxy' Id (W 'EQ)) (Nothing @Succ)
+-- >>> pz @(Unproxy' Id 'EQ) (Nothing @Succ)
 -- Val GT
 --
 -- >>> pz @(Unproxy' Fst Snd) (Proxy @Succ,EQ)
 -- Val GT
 --
--- >>> pz @(Unproxy' Fst Snd) (Nothing @(W Snd),(1,EQ)) -- have to wrap with W as it has a Show instance which is needed by Snd
+-- >>> pz @(Unproxy' Fst Snd) (Nothing @Snd,(1,EQ))
 -- Val EQ
 --
 -- >>> pz @(Unproxy' Fst Snd) (Proxy @(FMap Succ),Just 23)
@@ -1602,14 +1606,14 @@ instance P (p r q) x => P (Flip p q r) x where
 -- >>> pz @(Unproxy' Id (1 ... 12)) (Proxy @(FMap Succ))
 -- Val [2,3,4,5,6,7,8,9,10,11,12,13]
 --
--- >>> pz @(Unproxy' Id (W '( 'True, MkJust 12))) (Proxy @(FMap $ FMap Succ))
+-- >>> pz @(Unproxy' Id '( 'True, MkJust 12)) (Proxy @(FMap $ FMap Succ))
 --Val (True,Just 13)
 --
-data Unproxy' (p :: Type) (q :: Type)
+data Unproxy' p q deriving Show
 
 type family ExtractUnproxyT pa :: Type where
   ExtractUnproxyT (Proxy a) = W a -- have to wrap to get symbols and nats to work
-  -- Proxy is more reliable as it has a Show instance: anything else is iffy
+  -- Proxy is more reliable as it has a Show instance and allows non-Type kinds (ie Nat/Symbol/ and promoted types dont have a Show instance)
   ExtractUnproxyT (_t a) = a  -- assume 'a' is already Type -- doesnt work for Snd ie functions so not great: unless wrapped by W
   ExtractUnproxyT _ = GL.TypeError ('GL.Text "ExtractUnproxyT: only supports a t a style wrapper")
 

@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted 'Maybe' functions
 -}
@@ -65,7 +66,7 @@ import Control.Applicative (Alternative(empty))
 -- >>> pz @(Just' >> Succ) Nothing
 -- Fail "Just' found Nothing"
 --
-data Just'
+data Just' deriving Show
 instance Show a => P Just' (Maybe a) where
   type PP Just' (Maybe a) = a
   eval _ opts lr =
@@ -75,7 +76,8 @@ instance Show a => P Just' (Maybe a) where
          Just a -> mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
 -- | constructs a Nothing for a given type
-data MkNothing' t -- works always! MaybeBool is a good alternative and then dont need the extra 't'
+data MkNothing' t deriving Show
+-- works always! MaybeBool is a good alternative and then dont need the extra 't'
 
 -- for this to be useful has to have 't' else we end up with tons of problems
 instance P (MkNothing' t) a where
@@ -85,7 +87,7 @@ instance P (MkNothing' t) a where
     in pure $ mkNode opts (Val Nothing) msg0 []
 
 -- | constructs a Nothing for a given type
-data MkNothing (t :: Type)
+data MkNothing (t :: Type) deriving Show
 type MkNothingT (t :: Type) = MkNothing' (Hole t)
 
 instance P (MkNothing t) x where
@@ -97,7 +99,7 @@ instance P (MkNothing t) x where
 -- >>> pz @(MkJust Id) 44
 -- Val (Just 44)
 --
-data MkJust p
+data MkJust p deriving Show
 instance ( PP p x ~ a
          , P p x
          , Show a
@@ -238,7 +240,7 @@ instance ( PP p x ~ a
 -- Present [] (MaybeIn(Nothing) [] | Proxy)
 -- Val []
 --
-data MaybeIn p q
+data MaybeIn p q deriving Show
 
 -- tricky: the nothing case is the proxy of PP q a: ie proxy of the final result
 instance ( P q a
@@ -272,7 +274,7 @@ instance ( P q a
 -- >>> pz @IsJust (Just 'a')
 -- Val True
 --
-data IsJust
+data IsJust deriving Show
 
 instance x ~ Maybe a
          => P IsJust x where
@@ -295,7 +297,7 @@ instance x ~ Maybe a
 -- Error 'Just(empty) ('(,))
 -- Fail "'Just(empty)"
 --
-data IsNothing
+data IsNothing deriving Show
 
 instance x ~ Maybe a
          => P IsNothing x where
@@ -312,7 +314,7 @@ instance x ~ Maybe a
 -- Present [4,5] ((>>) [4,5] | {Concat [4,5] | [[],[],[],[4],[5]]})
 -- Val [4,5]
 --
-data MapMaybe p q
+data MapMaybe p q deriving Show
 type MapMaybeT p q = ConcatMap (p >> MaybeIn MEmptyP '[Id]) q
 
 instance P (MapMaybeT p q) x => P (MapMaybe p q) x where
@@ -325,7 +327,7 @@ instance P (MapMaybeT p q) x => P (MapMaybe p q) x where
 -- Present "acd" ((>>) "acd" | {Concat "acd" | ["a","","c","d",""]})
 -- Val "acd"
 --
-data CatMaybes
+data CatMaybes deriving Show
 type CatMaybesT = MapMaybe Id Id
 
 instance P CatMaybesT x => P CatMaybes x where
@@ -349,7 +351,7 @@ pu @(If 'True (MkJust 10) (EmptyT Maybe)) ()  -- doesnt work
 <interactive>:211:1: error:
     * Couldn't match type 'Int' with '()' arising from a use of 'pu'
 -}
-data MaybeBool b p
+data MaybeBool b p deriving Show
 
 type MaybeBoolT b p = EmptyBool Maybe b p
 
@@ -366,7 +368,7 @@ instance P (MaybeBoolT b p) x => P (MaybeBool b p) x where
 -- >>> pz @(EmptyBool [] (Id > 4) 'True) 1
 -- Val []
 --
-data EmptyBool t b p
+data EmptyBool t b p deriving Show
 
 instance ( Show (PP p a)
          , P b a
@@ -432,7 +434,7 @@ instance ( Show (PP p a)
 -- Present Sum {getSum = 0} (JustDef Nothing)
 -- Val (Sum {getSum = 0})
 --
-data JustDef p q
+data JustDef p q deriving Show
 
 instance ( PP p x ~ a
          , PP q x ~ Maybe a
@@ -470,7 +472,7 @@ instance ( PP p x ~ a
 -- >>> pz @(JustFail (PrintF "oops=%d" Snd) Fst) (Just 'x', 123)
 -- Val 'x'
 --
-data JustFail p q
+data JustFail p q deriving Show
 
 instance ( PP p x ~ String
          , PP q x ~ Maybe a

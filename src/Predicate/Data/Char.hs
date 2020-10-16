@@ -14,6 +14,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
 {- |
      promoted character functions
@@ -75,7 +76,7 @@ import qualified Data.Type.Equality as DE
 -- >>> pz @(Char1 "aBc") ()
 -- Val 'a'
 --
-data Char1 (s :: Symbol)  -- gets the first char from the Symbol [requires that Symbol is not empty]
+data Char1 (s :: Symbol) deriving Show
 instance ( KnownSymbol s
          , FailUnlessT (GL.CmpSymbol s "" DE.== 'GT)
               ('GL.Text "Char1 symbol cannot be empty")
@@ -88,7 +89,7 @@ instance ( KnownSymbol s
 
 
 
-data C (s :: Symbol)
+data C (s :: Symbol) deriving Show
 type CT s = Char1 s
 
 instance P (CT s) x => P (C s) x where
@@ -101,7 +102,7 @@ instance P (CT s) x => P (C s) x where
 -- >>> pz @(Map '(IsControl, IsLatin1, IsHexDigit, IsOctDigit, IsDigit, IsPunctuation, IsSeparator, IsSpace)) "abc134"
 -- Val [(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,False,False,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False),(False,True,True,True,True,False,False,False)]
 --
-data IsCharSet (cs :: CharSet)
+data IsCharSet (cs :: CharSet) deriving Show
 
 instance ( x ~ Char
          , GetCharSet cs
@@ -125,7 +126,7 @@ instance ( x ~ Char
 -- Val True
 --
 
-data IsLower
+data IsLower deriving Show
 type IsLowerT = IsCharSet 'CLower
 
 instance P IsLowerT x => P IsLower x where
@@ -134,7 +135,7 @@ instance P IsLowerT x => P IsLower x where
 
 -- | predicate similar to 'Data.Char.isUpper'
 --
-data IsUpper
+data IsUpper deriving Show
 type IsUpperT = IsCharSet 'CUpper
 
 instance P IsUpperT x => P IsUpper x where
@@ -149,7 +150,7 @@ instance P IsUpperT x => P IsUpper x where
 -- >>> pz @IsDigit '9'
 -- Val True
 --
-data IsDigit
+data IsDigit deriving Show
 type IsDigitT = IsCharSet 'CNumber
 instance P IsDigitT x => P IsDigit x where
   type PP IsDigit x = Bool
@@ -166,7 +167,7 @@ instance P IsDigitT x => P IsDigit x where
 -- >>> pz @IsSpace 'x'
 -- Val False
 --
-data IsSpace
+data IsSpace deriving Show
 type IsSpaceT = IsCharSet 'CSpace
 instance P IsSpaceT x => P IsSpace x where
   type PP IsSpace x = Bool
@@ -174,7 +175,7 @@ instance P IsSpaceT x => P IsSpace x where
 
 -- | predicate similar to 'Data.Char.isPunctuation'
 --
-data IsPunctuation
+data IsPunctuation deriving Show
 type IsPunctuationT = IsCharSet 'CPunctuation
 instance P IsPunctuationT x => P IsPunctuation x where
   type PP IsPunctuation x = Bool
@@ -182,7 +183,7 @@ instance P IsPunctuationT x => P IsPunctuation x where
 
 -- | predicate similar to 'Data.Char.isControl'
 --
-data IsControl
+data IsControl deriving Show
 type IsControlT = IsCharSet 'CControl
 instance P IsControlT x => P IsControl x where
   type PP IsControl x = Bool
@@ -196,7 +197,7 @@ instance P IsControlT x => P IsControl x where
 -- >>> pz @IsHexDigit 'g'
 -- Val False
 --
-data IsHexDigit
+data IsHexDigit deriving Show
 type IsHexDigitT = IsCharSet 'CHexDigit
 instance P IsHexDigitT x => P IsHexDigit x where
   type PP IsHexDigit x = Bool
@@ -204,7 +205,7 @@ instance P IsHexDigitT x => P IsHexDigit x where
 
 -- | predicate similar to 'Data.Char.isOctDigit'
 --
-data IsOctDigit
+data IsOctDigit deriving Show
 type IsOctDigitT = IsCharSet 'COctDigit
 instance P IsOctDigitT x => P IsOctDigit x where
   type PP IsOctDigit x = Bool
@@ -212,7 +213,7 @@ instance P IsOctDigitT x => P IsOctDigit x where
 
 -- | predicate similar to 'Data.Char.isSeparator'
 --
-data IsSeparator
+data IsSeparator deriving Show
 type IsSeparatorT = IsCharSet 'CSeparator
 instance P IsSeparatorT x => P IsSeparator x where
   type PP IsSeparator x = Bool
@@ -220,7 +221,7 @@ instance P IsSeparatorT x => P IsSeparator x where
 
 -- | predicate similar to 'Data.Char.isLatin1'
 --
-data IsLatin1
+data IsLatin1 deriving Show
 type IsLatin1T = IsCharSet 'CLatin1
 instance P IsLatin1T x => P IsLatin1 x where
   type PP IsLatin1 x = Bool
@@ -264,7 +265,7 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- Error Bool(2) [] (False || False | (IsUpperAll | "efgHi") || (IsLowerAll | "efgHi")) (["a","98","efgHi"])
 -- Fail "Bool(2) [] (False || False | (IsUpperAll | \"efgHi\") || (IsLowerAll | \"efgHi\"))"
 --
-data IsCharSetAll (cs :: CharSet)
+data IsCharSetAll (cs :: CharSet) deriving Show
 
 instance ( GetCharSet cs
          , Show a
@@ -329,14 +330,14 @@ instance GetCharSet 'CLatin1 where
 -- >>> pz @IsLowerAll ""
 -- Val True
 --
-data IsLowerAll
+data IsLowerAll deriving Show
 type IsLowerAllT = IsCharSetAll 'CLower
 
 instance P IsLowerAllT x => P IsLowerAll x where
   type PP IsLowerAll x = PP IsLowerAllT x
   eval _ = evalBool (Proxy @IsLowerAllT)
 
-data IsUpperAll
+data IsUpperAll deriving Show
 type IsUpperAllT = IsCharSetAll 'CUpper
 
 instance P IsUpperAllT x => P IsUpperAll x where
@@ -351,7 +352,7 @@ instance P IsUpperAllT x => P IsUpperAll x where
 -- >>> pz @IsDigitAll "929"
 -- Val True
 --
-data IsDigitAll
+data IsDigitAll deriving Show
 type IsDigitAllT = IsCharSetAll 'CNumber
 instance P IsDigitAllT x => P IsDigitAll x where
   type PP IsDigitAll x = Bool
@@ -368,19 +369,19 @@ instance P IsDigitAllT x => P IsDigitAll x where
 -- >>> pz @IsSpaceAll ""
 -- Val True
 --
-data IsSpaceAll
+data IsSpaceAll deriving Show
 type IsSpaceAllT = IsCharSetAll 'CSpace
 instance P IsSpaceAllT x => P IsSpaceAll x where
   type PP IsSpaceAll x = Bool
   eval _ = evalBool (Proxy @IsSpaceAllT)
 
-data IsPunctuationAll
+data IsPunctuationAll deriving Show
 type IsPunctuationAllT = IsCharSetAll 'CPunctuation
 instance P IsPunctuationAllT x => P IsPunctuationAll x where
   type PP IsPunctuationAll x = Bool
   eval _ = evalBool (Proxy @IsPunctuationAllT)
 
-data IsControlAll
+data IsControlAll deriving Show
 type IsControlAllT = IsCharSetAll 'CControl
 instance P IsControlAllT x => P IsControlAll x where
   type PP IsControlAll x = Bool
@@ -394,25 +395,25 @@ instance P IsControlAllT x => P IsControlAll x where
 -- >>> pz @IsHexDigitAll "01egfA"
 -- Val False
 --
-data IsHexDigitAll
+data IsHexDigitAll deriving Show
 type IsHexDigitAllT = IsCharSetAll 'CHexDigit
 instance P IsHexDigitAllT x => P IsHexDigitAll x where
   type PP IsHexDigitAll x = Bool
   eval _ = evalBool (Proxy @IsHexDigitAllT)
 
-data IsOctDigitAll
+data IsOctDigitAll deriving Show
 type IsOctDigitAllT = IsCharSetAll 'COctDigit
 instance P IsOctDigitAllT x => P IsOctDigitAll x where
   type PP IsOctDigitAll x = Bool
   eval _ = evalBool (Proxy @IsOctDigitAllT)
 
-data IsSeparatorAll
+data IsSeparatorAll deriving Show
 type IsSeparatorAllT = IsCharSetAll 'CSeparator
 instance P IsSeparatorAllT x => P IsSeparatorAll x where
   type PP IsSeparatorAll x = Bool
   eval _ = evalBool (Proxy @IsSeparatorAllT)
 
-data IsLatin1All
+data IsLatin1All deriving Show
 type IsLatin1AllT = IsCharSetAll 'CLatin1
 instance P IsLatin1AllT x => P IsLatin1All x where
   type PP IsLatin1All x = Bool
@@ -424,7 +425,7 @@ instance P IsLatin1AllT x => P IsLatin1All x where
 -- >>> pz @ToLower "HeLlO wOrld!"
 -- Val "hello world!"
 --
-data ToLower
+data ToLower deriving Show
 
 instance ( Show a
          , DTL.IsText a
@@ -440,7 +441,7 @@ instance ( Show a
 -- >>> pz @ToUpper "HeLlO wOrld!"
 -- Val "HELLO WORLD!"
 --
-data ToUpper
+data ToUpper deriving Show
 
 instance ( Show a
          , DTL.IsText a
@@ -461,7 +462,7 @@ instance ( Show a
 -- >>> pz @(ToTitle >> ReadP Color Id) "red"
 -- Val Red
 --
-data ToTitle
+data ToTitle deriving Show
 
 instance ( Show a
          , DTL.IsText a

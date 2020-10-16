@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted 'Either' functions
 -}
@@ -70,7 +71,7 @@ import Data.Either (isLeft, isRight, partitionEithers)
 -- >>> pz @(Left' >> Succ) (Right 'a')
 -- Fail "Left' found Right"
 --
-data Left'
+data Left' deriving Show
 instance Show a => P Left' (Either a x) where
   type PP Left' (Either a x) = a
   eval _ opts lr =
@@ -87,7 +88,7 @@ instance Show a => P Left' (Either a x) where
 -- >>> pz @(Right' >> Succ) (Left 'a')
 -- Fail "Right' found Left"
 --
-data Right'
+data Right' deriving Show
 instance Show a => P Right' (Either x a) where
   type PP Right' (Either x a) = a
   eval _ opts lr =
@@ -128,7 +129,7 @@ instance Show a => P Right' (Either x a) where
 -- False ((|||) Left False | True)
 -- Val False
 --
-data p ||| q
+data p ||| q deriving Show
 infixr 2 |||
 type EitherIn p q = p ||| q
 
@@ -165,7 +166,7 @@ instance ( Show (PP p a)
 -- >>> pz @IsLeft (Left 'a')
 -- Val True
 --
-data IsLeft
+data IsLeft deriving Show
 
 instance x ~ Either a b
        => P IsLeft x where
@@ -180,7 +181,7 @@ instance x ~ Either a b
 -- >>> pz @IsRight (Left "aa")
 -- Val False
 --
-data IsRight
+data IsRight deriving Show
 
 instance x ~ Either a b
          => P IsRight x where
@@ -224,7 +225,7 @@ instance x ~ Either a b
 -- Present Right 12 ((+++) Right 12 | 12)
 -- Val (Right 12)
 --
-data p +++ q
+data p +++ q deriving Show
 infixr 2 +++
 
 instance ( Show (PP p a)
@@ -275,7 +276,7 @@ instance ( Show (PP p a)
 -- Present ("xabz",[1,10]) (PartitionEithers ("xabz",[1,10]) | [Left 'x',Right 1,Left 'a',Left 'b',Left 'z',Right 10])
 -- Val ("xabz",[1,10])
 --
-data PartitionEithers
+data PartitionEithers deriving Show
 
 instance ( Show a
          , Show b
@@ -311,7 +312,7 @@ instance ( Show a
 -- Present Left "found left" (EitherBool(False) Left "found left")
 -- Val (Left "found left")
 --
-data EitherBool b p q
+data EitherBool b p q deriving Show
 
 instance ( Show (PP p a)
          , P p a
@@ -348,7 +349,7 @@ instance ( Show (PP p a)
 -- >>> pz @(EitherX (ShowP Id) (ShowP (Second Succ)) Snd) (9,Right 'x')
 -- Val "((9,Right 'x'),'y')"
 --
-data EitherX p q r
+data EitherX p q r deriving Show
 instance ( P r x
          , P p (x,a)
          , P q (x,b)
@@ -383,7 +384,7 @@ type family EitherXT lr x p where
       ':<>: 'GL.ShowType o)
 
 -- | 'Data.Either.Left' constructor
-data MkLeft' t p
+data MkLeft' t p deriving Show
 
 instance ( Show (PP p x)
          , P p x
@@ -403,7 +404,7 @@ instance ( Show (PP p x)
 -- >>> pz @(MkLeft _ Id) 44
 -- Val (Left 44)
 --
-data MkLeft (t :: Type) p
+data MkLeft (t :: Type) p deriving Show
 type MkLeftT (t :: Type) p = MkLeft' (Hole t) p
 
 instance P (MkLeftT t p) x => P (MkLeft t p) x where
@@ -411,7 +412,7 @@ instance P (MkLeftT t p) x => P (MkLeft t p) x where
   eval _ = eval (Proxy @(MkLeftT t p))
 
 -- | 'Data.Either.Right' constructor
-data MkRight' t p
+data MkRight' t p deriving Show
 
 instance ( Show (PP p x)
          , P p x
@@ -431,7 +432,7 @@ instance ( Show (PP p x)
 -- >>> pz @(MkRight _ Id) 44
 -- Val (Right 44)
 --
-data MkRight (t :: Type) p
+data MkRight (t :: Type) p deriving Show
 type MkRightT (t :: Type) p = MkRight' (Hole t) p
 
 instance P (MkRightT t p) x => P (MkRight t p) x where
@@ -457,7 +458,7 @@ instance P (MkRightT t p) x => P (MkRight t p) x where
 -- >>> pz @(LeftDef (MEmptyT (SG.Sum _)) Id) (Right 222)
 -- Val (Sum {getSum = 0})
 --
-data LeftDef p q
+data LeftDef p q deriving Show
 
 instance ( PP q x ~ Either a b
          , PP p (b,x) ~ a
@@ -498,7 +499,7 @@ instance ( PP q x ~ Either a b
 -- >>> pz @(RightDef (MEmptyT (SG.Sum _)) Id) (Left 222)
 -- Val (Sum {getSum = 0})
 --
-data RightDef p q
+data RightDef p q deriving Show
 
 instance ( PP q x ~ Either a b
          , PP p (a,x) ~ b
@@ -557,7 +558,7 @@ instance ( PP q x ~ Either a b
 -- Present "abc" (Left)
 -- Val "abc"
 --
-data LeftFail p q
+data LeftFail p q deriving Show
 
 instance ( PP p (b,x) ~ String
          , PP q x ~ Either a b
@@ -597,7 +598,7 @@ instance ( PP p (b,x) ~ String
 -- >>> pz @(RightFail (MEmptyT _) Id) (Left 222)
 -- Fail ""
 --
-data RightFail p q
+data RightFail p q deriving Show
 
 instance ( PP p (a,x) ~ String
          , PP q x ~ Either a b

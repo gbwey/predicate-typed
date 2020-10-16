@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted 'These' functions
 -}
@@ -85,7 +86,7 @@ import qualified Data.These.Combinators as TheseC
 -- Present ([1,4,10],"xy",[(9,'z'),(8,'y')]) (PartitionThese ([1,4,10],"xy",[(9,'z'),(8,'y')]) | [This 1,That 'x',This 4,That 'y',These 9 'z',This 10,These 8 'y'])
 -- Val ([1,4,10],"xy",[(9,'z'),(8,'y')])
 --
-data PartitionThese
+data PartitionThese deriving Show
 
 instance ( Show a
          , Show b
@@ -107,7 +108,7 @@ instance ( Show a
 -- >>> pz @(Thiss) [That 1, That 9, These 1 33]
 -- Val []
 --
-data Thiss
+data Thiss deriving Show
 type ThissT = PartitionThese >> Fst
 
 instance P ThissT x => P Thiss x where
@@ -120,7 +121,7 @@ instance P ThissT x => P Thiss x where
 -- Present "xy" ((>>) "xy" | {Snd "xy" | ([1,10,99],"xy",[])})
 -- Val "xy"
 --
-data Thats
+data Thats deriving Show
 type ThatsT = PartitionThese >> Snd
 
 instance P ThatsT x => P Thats x where
@@ -132,7 +133,7 @@ instance P ThatsT x => P Thats x where
 -- >>> pz @(ZipThese Id Tail >> Theses) [1..10]
 -- Val [(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,8),(8,9),(9,10)]
 --
-data Theses
+data Theses deriving Show
 type ThesesT = PartitionThese >> Thd
 
 instance P ThesesT x => P Theses x where
@@ -144,7 +145,7 @@ instance P ThesesT x => P Theses x where
 -- >>> pz @(ZipThese Id Tail >> Heres) [1..10]
 -- Val [1,2,3,4,5,6,7,8,9,10]
 --
-data Heres
+data Heres deriving Show
 
 instance ( Show a
          , Show b
@@ -160,7 +161,7 @@ instance ( Show a
 -- >>> pz @(ZipThese Id Tail >> Theres) [1..10]
 -- Val [2,3,4,5,6,7,8,9,10]
 --
-data Theres
+data Theres deriving Show
 
 instance ( Show a
          , Show b
@@ -197,7 +198,7 @@ instance ( Show a
 -- Present "b=rhs" (TheseX(That))
 -- Val "b=rhs"
 --
-data TheseX p q r s
+data TheseX p q r s deriving Show
 
 instance ( P s x
          , P p (x,a)
@@ -244,7 +245,7 @@ type family TheseXT lr x p where
 -- >>> pz @(Proxy Int >> MkThis' Unproxy 10) []
 -- Val (This 10)
 --
-data MkThis' t p
+data MkThis' t p deriving Show
 
 instance ( P p x
          , Show (PP p x)
@@ -270,7 +271,7 @@ instance ( P p x
 -- Val (This 'x')
 --
 
-data MkThis (t :: Type) p
+data MkThis (t :: Type) p deriving Show
 type MkThisT (t :: Type) p = MkThis' (Hole t) p
 
 instance P (MkThisT t p) x => P (MkThis t p) x where
@@ -289,7 +290,7 @@ instance P (MkThisT t p) x => P (MkThis t p) x where
 -- Present That 'x' (MkThat That 'x')
 -- Val (That 'x')
 --
-data MkThat' t p
+data MkThat' t p deriving Show
 
 instance ( Show (PP p x)
          , P p x
@@ -304,7 +305,7 @@ instance ( Show (PP p x)
         let d = That p
         in mkNode opts (Val d) (msg0 <> " That " <> showL opts p) [hh pp]
 
-data MkThat (t :: Type) p
+data MkThat (t :: Type) p deriving Show
 type MkThatT (t :: Type) p = MkThat' (Hole t) p
 
 instance P (MkThatT t p) x => P (MkThat t p) x where
@@ -323,7 +324,7 @@ instance P (MkThatT t p) x => P (MkThat t p) x where
 -- Present These 'x' True (MkThese These 'x' True)
 -- Val (These 'x' True)
 --
-data MkThese p q
+data MkThese p q deriving Show
 instance ( P p a
          , P q a
          , Show (PP p a)
@@ -339,7 +340,8 @@ instance ( P p a
         let d = These p q
         in mkNode opts (Val d) (msg0 <> " " <> showL opts d) [hh pp, hh qq]
 
-data IsTh (th :: These x y) -- x y can be anything
+data IsTh (th :: These x y) deriving Show
+-- x y can be anything
 
 -- trying to avoid Show instance cos of ambiguities
 instance ( x ~ These a b
@@ -366,7 +368,7 @@ instance ( x ~ These a b
 -- True (IsThis | This 12)
 -- Val True
 --
-data IsThis
+data IsThis deriving Show
 type IsThisT = IsTh ('This '())
 
 instance P IsThisT x => P IsThis x where
@@ -379,7 +381,7 @@ instance P IsThisT x => P IsThis x where
 -- False (IsThat | This 12)
 -- Val False
 --
-data IsThat
+data IsThat deriving Show
 type IsThatT = IsTh ('That '())
 
 instance P IsThatT x => P IsThat x where
@@ -407,7 +409,7 @@ instance P IsThatT x => P IsThat x where
 -- True (IsThese | These 1 (Sum {getSum = 12}))
 -- Val True
 --
-data IsThese
+data IsThese deriving Show
 type IsTheseT = IsTh ('These '() '())
 
 instance P IsTheseT x => P IsThese x where
@@ -451,7 +453,7 @@ instance P IsTheseT x => P IsThese x where
 -- Val ("no value",13)
 --
 
-data TheseIn p q r
+data TheseIn p q r deriving Show
 
 instance ( Show a
          , Show b
@@ -503,7 +505,7 @@ instance ( Show a
 -- Present ("abc",False) (TheseIn ("abc",False) | These "abc" False)
 -- Val ("abc",False)
 --
-data TheseId p q
+data TheseId p q deriving Show
 type TheseIdT p q = TheseIn '(Id, q) '(p, Id) Id
 
 instance P (TheseIdT p q) x => P (TheseId p q) x where
@@ -541,7 +543,7 @@ instance P (TheseIdT p q) x => P (TheseId p q) x where
 -- Val [('s',1),('d',2),('f',3),('x',4),('x',5)]
 --
 
-data ZipThese p q
+data ZipThese p q deriving Show
 
 instance ( PP p a ~ [x]
         , PP q a ~ [y]
@@ -601,7 +603,7 @@ simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
 -- Val ()
 --
 
-data ThisDef p q
+data ThisDef p q deriving Show
 
 instance ( PP q x ~ These a b
          , PP p x ~ a
@@ -646,7 +648,7 @@ instance ( PP q x ~ These a b
 -- >>> pz @(ThatDef (MEmptyT (SG.Sum _)) Id) (These 'x' 1120)
 -- Val (Sum {getSum = 0})
 --
-data ThatDef p q
+data ThatDef p q deriving Show
 
 instance ( PP q x ~ These a b
          , PP p x ~ b
@@ -702,7 +704,7 @@ instance ( PP q x ~ These a b
 -- Present ("abc",False) (TheseDef These)
 -- Val ("abc",False)
 --
-data TheseDef p q
+data TheseDef p q deriving Show
 
 instance ( PP q x ~ These a b
          , PP p x ~ (a,b)
@@ -753,7 +755,7 @@ instance ( PP q x ~ These a b
 -- Error sdf (ThisFail That)
 -- Fail "sdf"
 --
-data ThisFail p q
+data ThisFail p q deriving Show
 
 instance ( PP p x ~ String
          , PP q x ~ These a b
@@ -793,7 +795,7 @@ instance ( PP p x ~ String
 -- >>> pz @(ThatFail (MEmptyT _) Id) (This 222)
 -- Fail ""
 --
-data ThatFail p q
+data ThatFail p q deriving Show
 
 instance ( PP p x ~ String
          , PP q x ~ These a b
@@ -835,7 +837,7 @@ instance ( PP p x ~ String
 -- >>> pz @(TheseFail (MEmptyT _) Id) (That 222)
 -- Fail ""
 --
-data TheseFail p q
+data TheseFail p q deriving Show
 
 instance ( PP p x ~ String
          , PP q x ~ These a b
@@ -884,7 +886,7 @@ instance ( PP p x ~ String
 -- Present ((10,'c'),True) ((>>) ((10,'c'),True) | {Unassoc ((10,'c'),True) | (10,('c',True))})
 -- Val ((10,'c'),True)
 --
-data Assoc
+data Assoc deriving Show
 
 class AssocC p where
   assoc :: p (p a b) c -> p a (p b c)
@@ -947,7 +949,7 @@ instance ( AssocC p
 -- Present ((10,'c'),True) (Unassoc ((10,'c'),True) | (10,('c',True)))
 -- Val ((10,'c'),True)
 --
-data Unassoc
+data Unassoc deriving Show
 
 instance ( AssocC p
          , Show (p (p a b) c)
@@ -968,7 +970,7 @@ instance ( AssocC p
 -- >>> pz @(This' >> Succ) (That 'a')
 -- Fail "This' found That"
 --
-data This'
+data This' deriving Show
 instance Show a => P This' (These a x) where
   type PP This' (These a x) = a
   eval _ opts lr =
@@ -986,7 +988,7 @@ instance Show a => P This' (These a x) where
 -- >>> pz @(That' >> Succ) (This 'a')
 -- Fail "That' found This"
 --
-data That'
+data That' deriving Show
 instance Show a => P That' (These x a) where
   type PP That' (These x a) = a
   eval _ opts lr =
@@ -1007,7 +1009,7 @@ instance Show a => P That' (These x a) where
 -- >>> pz @(These' >> Second Succ) (That 8)
 -- Fail "These' found That"
 --
-data These'
+data These' deriving Show
 instance ( Show a
          , Show b
         ) => P These' (These a b) where

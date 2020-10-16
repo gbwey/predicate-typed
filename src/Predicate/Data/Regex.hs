@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted regular expression functions
 -}
@@ -72,7 +73,7 @@ import qualified Text.Regex.PCRE.Heavy as RH
 -- )
 -- Val False
 --
-data Re' (rs :: [ROpt]) p q
+data Re' (rs :: [ROpt]) p q deriving Show
 
 instance ( GetROpts rs
          , PP p x ~ String
@@ -156,7 +157,7 @@ instance ( GetROpts rs
 -- True (Catch did not fire)
 -- Val True
 --
-data Re p
+data Re p deriving Show
 type ReT p = Re' '[] p Id
 
 instance P (ReT p) x => P (Re p) x where
@@ -179,7 +180,7 @@ instance P (ReT p) x => P (Re p) x where
 -- >>> pz @(Rescan' '[] Snd "13:05:25") ('a',"^(\\d{2}):(\\d{2}):(\\d{2})$")
 -- Val [("13:05:25",["13","05","25"])]
 --
-data Rescan' (rs :: [ROpt]) p q
+data Rescan' (rs :: [ROpt]) p q deriving Show
 
 instance ( GetROpts rs
          , PP p x ~ String
@@ -262,7 +263,7 @@ instance ( GetROpts rs
 -- Present [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])] (Rescan (([[:xdigit:]]{2})) [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])] | wfeb12az)
 -- Val [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])]
 --
-data Rescan p
+data Rescan p deriving Show
 type RescanT p = Rescan' '[] p Id
 
 instance P (RescanT p) x => P (Rescan p) x where
@@ -275,7 +276,7 @@ instance P (RescanT p) x => P (Rescan p) x where
 -- >>> pz @(RescanRanges "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
 -- Val [((0,8),[(0,2),(3,5),(6,8)])]
 --
-data RescanRanges' (rs :: [ROpt]) p q
+data RescanRanges' (rs :: [ROpt]) p q deriving Show
 
 instance ( GetROpts rs
          , PP p x ~ String
@@ -302,7 +303,7 @@ instance ( GetROpts rs
                          mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
               (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) hhs
 
-data RescanRanges p q
+data RescanRanges p q deriving Show
 type RescanRangesT p q = RescanRanges' '[] p q
 
 instance P (RescanRangesT p q) x => P (RescanRanges p q) x where
@@ -318,7 +319,7 @@ instance P (RescanRangesT p q) x => P (RescanRanges p q) x where
 -- >>> pz @(Resplit' '[] (Singleton Fst) Snd) (':', "12:13:1")
 -- Val ["12","13","1"]
 --
-data Resplit' (rs :: [ROpt]) p q
+data Resplit' (rs :: [ROpt]) p q deriving Show
 
 instance ( GetROpts rs
          , PP p x ~ String
@@ -366,7 +367,7 @@ instance ( GetROpts rs
 -- Error ReadP Int () (Map(i=3, a="") excnt=1)
 -- Fail "ReadP Int ()"
 --
-data Resplit p
+data Resplit p deriving Show
 type ResplitT p = Resplit' '[] p Id
 
 instance P (ResplitT p) x => P (Resplit p) x where
@@ -378,7 +379,7 @@ instance P (ResplitT p) x => P (Resplit p) x where
 -- >>> pz @(ReplaceAllString 'ROverWrite "\\." ":" Id) "141.201.1.22"
 -- Val "141:201:1:22"
 --
-data ReplaceImpl (alle :: Bool) (rs :: [ROpt]) p q r
+data ReplaceImpl (alle :: Bool) (rs :: [ROpt]) p q r deriving Show
 
 instance ( GetBool b
          , GetROpts rs
@@ -420,21 +421,21 @@ instance ( GetBool b
                            RReplace3 s -> (if alle then RH.gsub else RH.sub) regex s r
                in mkNode opts (Val ret) (msg1 <> " " <> litL opts r <> litVerbose opts " | " ret) (hhs <> [hh rr])
 
-data ReplaceAll' (rs :: [ROpt]) p q r
+data ReplaceAll' (rs :: [ROpt]) p q r deriving Show
 type ReplaceAllT' (rs :: [ROpt]) p q r = ReplaceImpl 'True rs p q r
 
 instance P (ReplaceAllT' rs p q r) x => P (ReplaceAll' rs p q r) x where
   type PP (ReplaceAll' rs p q r) x = PP (ReplaceAllT' rs p q r) x
   eval _ = eval (Proxy @(ReplaceAllT' rs p q r))
 
-data ReplaceAll p q r
+data ReplaceAll p q r deriving Show
 type ReplaceAllT p q r = ReplaceAll' '[] p q r
 
 instance P (ReplaceAllT p q r) x => P (ReplaceAll p q r) x where
   type PP (ReplaceAll p q r) x = PP (ReplaceAllT p q r) x
   eval _ = eval (Proxy @(ReplaceAllT p q r))
 
-data ReplaceOne' (rs :: [ROpt]) p q r
+data ReplaceOne' (rs :: [ROpt]) p q r deriving Show
 type ReplaceOneT' (rs :: [ROpt]) p q r = ReplaceImpl 'False rs p q r
 
 instance P (ReplaceOneT' rs p q r) x => P (ReplaceOne' rs p q r) x where
@@ -456,7 +457,7 @@ instance P (ReplaceOneT' rs p q r) x => P (ReplaceOne' rs p q r) x where
 -- >>> pz @(Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z") "Date(1593460089052+0800)"
 -- Val 2020-06-30 03:48:09.052 +0800
 --
-data ReplaceOne p q r
+data ReplaceOne p q r deriving Show
 type ReplaceOneT p q r = ReplaceOne' '[] p q r
 
 instance P (ReplaceOneT p q r) x => P (ReplaceOne p q r) x where
@@ -489,28 +490,28 @@ instance P (ReplaceOneT p q r) x => P (ReplaceOne p q r) x where
 -- Present "123AbC456abcdef" (ReplaceAll (abc) 123AbC456abc | 123AbC456abcdef)
 -- Val "123AbC456abcdef"
 --
-data ReplaceAllString' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r
+data ReplaceAllString' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r deriving Show
 type ReplaceAllStringT' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r = ReplaceAll' rs p (ReplaceFn o q) r
 
 instance P (ReplaceAllStringT' rs o p q r) x => P (ReplaceAllString' rs o p q r) x where
   type PP (ReplaceAllString' rs o p q r) x = PP (ReplaceAllStringT' rs o p q r) x
   eval _ = eval (Proxy @(ReplaceAllStringT' rs o p q r))
 
-data ReplaceAllString o p q r
+data ReplaceAllString o p q r deriving Show
 type ReplaceAllStringT o p q r = ReplaceAllString' '[] o p q r
 
 instance P (ReplaceAllStringT o p q r) x => P (ReplaceAllString o p q r) x where
   type PP (ReplaceAllString o p q r) x = PP (ReplaceAllStringT o p q r) x
   eval _ = eval (Proxy @(ReplaceAllStringT o p q r))
 
-data ReplaceOneString' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r
+data ReplaceOneString' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r deriving Show
 type ReplaceOneStringT' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r = ReplaceOne' rs p (ReplaceFn o q) r
 
 instance P (ReplaceOneStringT' rs o p q r) x => P (ReplaceOneString' rs o p q r) x where
   type PP (ReplaceOneString' rs o p q r) x = PP (ReplaceOneStringT' rs o p q r) x
   eval _ = eval (Proxy @(ReplaceOneStringT' rs o p q r))
 
-data ReplaceOneString (o :: ReplaceFnSub) p q r
+data ReplaceOneString (o :: ReplaceFnSub) p q r deriving Show
 type ReplaceOneStringT (o :: ReplaceFnSub) p q r = ReplaceOneString' '[] o p q r
 
 instance P (ReplaceOneStringT o p q r) x => P (ReplaceOneString o p q r) x where
@@ -519,7 +520,7 @@ instance P (ReplaceOneStringT o p q r) x => P (ReplaceOneString o p q r) x where
 
 -- | Simple replacement string: see 'ReplaceAllString' and 'ReplaceOneString'
 --
-data ReplaceFn (o :: ReplaceFnSub) p
+data ReplaceFn (o :: ReplaceFnSub) p deriving Show
 
 instance ( GetReplaceFnSub r
          , PP p x ~ String
@@ -540,7 +541,7 @@ instance ( GetReplaceFnSub r
 --
 -- Requires "Text.Show.Functions"
 --
-data ReplaceFn1 p
+data ReplaceFn1 p deriving Show
 
 instance ( PP p x ~ (String -> [String] -> String)
          , P p x
@@ -562,7 +563,7 @@ instance ( PP p x ~ (String -> [String] -> String)
 -- >>> pz @(ReplaceAll "\\." (ReplaceFn2 Fst) Snd) (\x -> x <> ":" <> x, "141.201.1.22")
 -- Val "141.:.201.:.1.:.22"
 --
-data ReplaceFn2 p
+data ReplaceFn2 p deriving Show
 
 instance ( PP p x ~ (String -> String)
          , P p x
@@ -585,7 +586,7 @@ instance ( PP p x ~ (String -> String)
 -- >>> pz @(ReplaceAll "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" (ReplaceFn3 Fst) Snd) (\ys -> intercalate  " | " $ map (show . succ . readNote @Int "invalid int") ys, "141.201.1.22")
 -- Val "142 | 202 | 2 | 23"
 --
-data ReplaceFn3 p
+data ReplaceFn3 p deriving Show
 
 instance ( PP p x ~ ([String] -> String)
          , P p x

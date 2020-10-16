@@ -13,6 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
+{-# LANGUAGE EmptyDataDeriving #-}
 {- |
      promoted tuple functions
 -}
@@ -66,7 +67,7 @@ import GHC.TypeNats (Nat, KnownNat)
 -- Present (20,20) ((>>) (20,20) | {'(20,20)})
 -- Val (20,20)
 --
-data Dup
+data Dup deriving Show
 type DupT = W '(Id, Id)
 
 instance Show x => P Dup x where
@@ -110,7 +111,7 @@ instance Show x => P Dup x where
 -- `- [Error xyzzy]
 -- Fail "xyzzy"
 --
-data Pairs
+data Pairs deriving Show
 instance ([a] ~ x, Show a) => P Pairs x where
   type PP Pairs x = [(ExtractAFromTA x,ExtractAFromTA x)]
   eval _ opts as =
@@ -149,7 +150,7 @@ instance ([a] ~ x, Show a) => P Pairs x where
 -- Present (1,(1.4,("aaa",()))) ('(1,(1.4,("aaa",()))))
 -- Val (1,(1.4,("aaa",())))
 --
-data p &&& q
+data p &&& q deriving Show
 infixr 3 &&&
 type WAmpT p q = W '(p, q)
 
@@ -170,7 +171,7 @@ instance P (WAmpT p q) x => P (p &&& q) x where
 -- Present (4,("sadf",LT)) ((***) (4,("sadf",LT)) | ('x',("abv",[1])))
 -- Val (4,("sadf",LT))
 --
-data p *** q
+data p *** q deriving Show
 infixr 3 ***
 
 instance ( Show (PP p a)
@@ -197,7 +198,7 @@ instance ( Show (PP p a)
 -- >>> pz @(First Succ) (12,True)
 -- Val (13,True)
 --
-data First p
+data First p deriving Show
 type FirstT p = p *** Id
 
 instance P (FirstT p) x => P (First p) x where
@@ -209,7 +210,7 @@ instance P (FirstT p) x => P (First p) x where
 -- >>> pz @(Second Succ) (12,False)
 -- Val (12,True)
 --
-data Second q
+data Second q deriving Show
 type SecondT q = Id *** q
 
 instance P (SecondT q) x => P (Second q) x where
@@ -222,7 +223,7 @@ instance P (SecondT q) x => P (Second q) x where
 -- False (False (&*) True | (1 > 3))
 -- Val False
 --
-data AndA p q r
+data AndA p q r deriving Show
 instance ( PP r x ~ (a,b)
          , PP p a ~ Bool
          , PP q b ~ Bool
@@ -258,7 +259,7 @@ instance ( PP r x ~ (a,b)
 -- False ((>>) False | {False (&*) True | (4 > 4)})
 -- Val False
 --
-data p &* q
+data p &* q deriving Show
 type AndAT p q = AndA p q Id
 infixr 3 &*
 
@@ -272,7 +273,7 @@ instance P (AndAT p q) x => P (p &* q) x where
 -- True (False (|+) True)
 -- Val True
 --
-data OrA p q r
+data OrA p q r deriving Show
 instance ( PP r x ~ (a,b)
          , PP p a ~ Bool
          , PP q b ~ Bool
@@ -314,7 +315,7 @@ instance ( PP r x ~ (a,b)
 -- True (False (|+) True)
 -- Val True
 --
-data p |+ q
+data p |+ q deriving Show
 type OrAT p q = OrA p q Id
 infixr 3 |+
 
@@ -345,7 +346,7 @@ instance P (OrAT p q) x => P (p |+ q) x where
 -- Present (1999-01-01,2001-02-12) (Both)
 -- Val (1999-01-01,2001-02-12)
 --
-data Both p q
+data Both p q deriving Show
 instance ( ExtractL1C (PP q x)
          , ExtractL2C (PP q x)
          , P p (ExtractL1T (PP q x))
@@ -384,7 +385,7 @@ instance ( ExtractL1C (PP q x)
 -- >>> pz @(Lift (Tuple 3) Fst) ([1..5],True)
 -- Val (1,2,3)
 --
-data Tuple (n :: Nat)
+data Tuple (n :: Nat) deriving Show
 
 instance ( KnownNat n
          , TupleC n a
@@ -415,7 +416,7 @@ instance ( KnownNat n
 -- >>> pz @(F 3 1) [1..7]
 -- Val ([[6,7],[7]],[(1,2,3),(2,3,4),(3,4,5),(4,5,6),(5,6,7)])
 --
-data Tuple' (n :: Nat)
+data Tuple' (n :: Nat) deriving Show
 
 instance ( KnownNat n
          , TupleC n a
