@@ -44,7 +44,6 @@ module Predicate.Data.Extra (
   , type (<|>)
   , Extract
   , Duplicate
-  , Push
   , Pop
 
   , type ($$)
@@ -92,6 +91,7 @@ module Predicate.Data.Extra (
   , IList
   , Flip
   , Unproxy'
+  , ExtractPushT
 
  ) where
 import Predicate.Core
@@ -1469,7 +1469,7 @@ instance ( Applicative n
 -- >>> pz @(EnumFromTo Fst Snd <:> ('LT ... 'GT)) (10,11)
 -- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
 --
--- >>> pz @(MkJust Succ <:> MkJust 4) ()   -- broken: use Push Pop or <*> but not LiftA2
+-- >>> pz @(MkJust Succ <:> MkJust 4) ()   -- broken: use Pop or <*> but not LiftA2
 -- Fail "Succ IO e=Prelude.Enum.().succ: bad argument"
 --
 data p <:> q deriving Show
@@ -1775,7 +1775,7 @@ instance ( PP p x ~ proxy z -- loosen up to use proxy
 data LiftA2 p q r
 -- i provide the rhs as the environment to fa and fb? so fails Succ
 -- use <*> as it works way better
--- use Push to delay setting the environment and then use Pop to run against a specific environment
+-- use Proxy to delay setting the environment and then use Pop to run against a specific environment
 
 instance ( Traversable n
          , Applicative n
@@ -1806,35 +1806,39 @@ instance ( Traversable n
                       _ -> ttnc & ttString %~ (msg0 <>) . nullIf " "
             return $ z & ttVal' .~ Val ret & ttForest %~ (hhs <>)
 
--- | Push stashes a partially applied function for later use with Pop which applies an arg
+-- | Proxy holding a function that needs an extra parameter for later use with Pop which applies an arg q in an environment r
 --
--- >>> pz @(Push Length >> Pop IdT Snd '(1,'[1,2,3,4])) ()
+-- >>> pz @(Proxy Length >> Pop IdT Snd '(1,'[1,2,3,4])) ()
 -- Val 4
 --
--- >>> pz @(LiftA2 (Pop Fst Snd Id) (MkJust (Push (Lift Succ))) (MkJust 1)) ()
+-- >>> pz @(LiftA2 (Pop Fst Snd Id) (MkJust (Proxy (Lift Succ))) (MkJust 1)) ()
 -- Val (Just 2)
 --
--- >>> pz @(LiftA2 (Pop Fst Snd Id) (MkJust (Push ((*) 4))) (MkJust 3)) ()
+-- >>> pz @(LiftA2 (Pop Fst Snd Id) (MkJust (Proxy ((*) 4))) (MkJust 3)) ()
 -- Val (Just 12)
 --
--- >>> pz @(Pop Fst Snd Id <$> MkJust (Push ((*) 4)) <:> MkJust 3) ()
+-- >>> pz @(Pop Fst Snd Id <$> MkJust (Proxy ((*) 4)) <:> MkJust 3) ()
 -- Val (Just 12)
 --
-data Push (z :: k -> Type) deriving Show
+-- >>> pz @(Proxy (Lift "asdf") >> Pop Id 123 Id) ()
+-- Val "asdf"
+--
+-- >>> pz @(Proxy (K 1) >> Pop Id "abc" Id) ()
+-- Val 1
+--
+-- >>> pz @(Proxy (Flip K 1) >> Pop Id "abc" Id) ()
+-- Val "abc"
+--
 
-instance P (Push (z :: k -> Type)) x where
-  type PP (Push z) x = Proxy (Push z)
-  eval _ opts _ =
-    pure $ mkNode opts (Val (Proxy @(Push z))) "Push" []
 
--- p Push location
--- q arg to apply to p -- dont have to eval this cos is freely available
--- r environment to run the applied stuff in
--- | Pop applies extracts a Proxy Push @z@ and then applies a function to @q@ in the environment pointed to by @r@
+-- | Pop applies extracts a Proxy @z@ and then applies a function to @q@ in the environment pointed to by @r@
+--     p Proxy z ie location of the function z requiring one parameter
+--     q arg to apply to p -- dont have to eval this cos is freely available
+--     r environment to run the applied stuff (ie z q)
 data Pop p q r deriving Show
 
 instance ( P r x
-         , PP p x ~ Proxy (Push z)
+         , PP p x ~ Proxy (z :: k -> Type)
          , P (z q) (PP r x)
          ) => P (Pop p q r) x where
   type PP (Pop p q r) x = PP (ExtractPushT (PP p x) q) (PP r x)
@@ -1844,16 +1848,17 @@ instance ( P r x
     case getValueLR NoInline opts msg0 rr [] of
       Left e -> pure e
       Right r -> do
-        zz <- eval (Proxy @(ExtractPushT (PP p x) q)) opts r
+--        zz <- eval (Proxy @(ExtractPushT (PP p x) q)) opts r
+        zz <- eval (Proxy @(z q)) opts r
         case getValueLR NoInline opts msg0 zz [hh rr] of
           Left e -> pure e
           Right _z -> return $ mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh rr,hh zz]
 
-type family ExtractPushT p q where
-  ExtractPushT (Proxy (Push z)) q = z q
+type family ExtractPushT (p :: Type) (q :: k) :: Type where
+  ExtractPushT (Proxy z) q = z q
   ExtractPushT p q =
     GL.TypeError (
-     'GL.Text "ExtractPushT: only supports 'Proxy (Push z)' and 'q'"
+     'GL.Text "ExtractPushT: requires 'Proxy z' and z must be a function requiring one parameter!!"
        'GL.:$$:
      'GL.Text " p = "
        'GL.:<>:
