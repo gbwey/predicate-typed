@@ -790,7 +790,7 @@ primeFactors n =
 -- | primes stream
 --
 -- >>> take 10 primes
---[2,3,5,7,11,13,17,19,23,29]
+-- [2,3,5,7,11,13,17,19,23,29]
 --
 primes :: [Integer]
 primes = 2 : 3 : 5 : primes'

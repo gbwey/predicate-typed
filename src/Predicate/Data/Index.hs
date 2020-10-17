@@ -50,27 +50,27 @@ import Data.Proxy (Proxy(..))
 
 -- | index a value in an 'Ixed' container and if not found return the given default value
 --
--- >>> pl @(LookupDef' Fst Snd (Char1 "xx") Id) (['a'..'e'],2)
+-- >>> pl @(LookupDef' Snd Fst (Char1 "xx") Id) (['a'..'e'],2)
 -- Present 'c' (JustDef Just)
 -- Val 'c'
 --
--- >>> pl @(LookupDef' Fst Snd (Char1 "xx") Id) (['a'..'e'],999)
+-- >>> pl @(LookupDef' Snd Fst (Char1 "xx") Id) (['a'..'e'],999)
 -- Present 'x' (JustDef Nothing)
 -- Val 'x'
 --
--- >>> pl @(LookupDef' Fst Snd (Char1 "xx") Id) ([],2)
+-- >>> pl @(LookupDef' Snd Fst (Char1 "xx") Id) ([],2)
 -- Present 'x' (JustDef Nothing)
 -- Val 'x'
 --
--- >>> pl @(LookupDef' Fst Snd (Char1 "xx") Snd) ('w',([],2))
+-- >>> pl @(LookupDef' Snd Fst (Char1 "xx") Snd) ('w',([],2))
 -- Present 'x' (JustDef Nothing)
 -- Val 'x'
 --
--- >>> pl @(LookupDef' Fst Snd Fst Snd) ('x',(['a'..'e'],2))
+-- >>> pl @(LookupDef' Snd Fst Fst Snd) ('x',(['a'..'e'],2))
 -- Present 'c' (JustDef Just)
 -- Val 'c'
 --
--- >>> pl @(LookupDef' Fst Snd (MEmptyT _) Snd) ('x',(map SG.Min [10..15::Int], 3))
+-- >>> pl @(LookupDef' Snd Fst (MEmptyT _) Snd) ('x',(map SG.Min [10..15::Int], 3))
 -- Present Min {getMin = 13} (JustDef Just)
 -- Val (Min {getMin = 13})
 --
@@ -83,35 +83,23 @@ instance P (LookupDefT' v w p q) x => P (LookupDef' v w p q) x where
 
 -- | index a value in an 'Ixed' container and if not found return the given default value
 --
--- >>> pl @(LookupDef '[1,2,3,4,5,6] 4 Id) 23
+-- >>> pl @(LookupDef 4 '[1,2,3,4,5,6] Id) 23
 -- Present 5 (JustDef Just)
 -- Val 5
 --
--- >>> pl @(LookupDef '[1,2,3,4,5,6] 4 Fst) (23,'x')
+-- >>> pl @(LookupDef 4 '[1,2,3,4,5,6] Fst) (23,'x')
 -- Present 5 (JustDef Just)
 -- Val 5
 --
--- >>> pl @(LookupDef '[1,2,3,4,5,6] 99 Id) 23
+-- >>> pl @(LookupDef 99 '[1,2,3,4,5,6] Id) 23
 -- Present 23 (JustDef Nothing)
 -- Val 23
 --
--- >>> pl @(LookupDef '[1,2,3,4,5,6] 99 Fst) (23,'x')
--- Present 23 (JustDef Nothing)
--- Val 23
---
--- >>> pl @(LookupDef '[1,2,3,4,5,6] 4 999) (23,'x')
--- Present 5 (JustDef Just)
--- Val 5
---
--- >>> pl @(LookupDef '[1,2,3,4,5,6] 40 999) (23,'x')
--- Present 999 (JustDef Nothing)
--- Val 999
---
--- >>> pl @(LookupDef Fst 4 (MEmptyT _)) (map SG.Min [1::Int .. 10],'x')
+-- >>> pl @(LookupDef 4 Fst (MEmptyT _)) (map SG.Min [1::Int .. 10],'x')
 -- Present Min {getMin = 5} (JustDef Just)
 -- Val (Min {getMin = 5})
 --
--- >>> pl @(LookupDef Fst 999 (MEmptyT _)) (map SG.Min [1::Int .. 10],'x')
+-- >>> pl @(LookupDef 999 Fst (MEmptyT _)) (map SG.Min [1::Int .. 10],'x')
 -- Present Min {getMin = 9223372036854775807} (JustDef Nothing)
 -- Val (Min {getMin = 9223372036854775807})
 --
@@ -132,11 +120,11 @@ instance P (LookupFailT' msg v w q) x => P (LookupFail' msg v w q) x where
 
 -- | index a value in an 'Ixed' container and if not found fail with the given message
 --
--- >>> pl @(LookupFail "someval" Fst 999) (map SG.Min [1::Int .. 10],'x')
+-- >>> pl @(LookupFail "someval" 999 Fst) (map SG.Min [1::Int .. 10],'x')
 -- Error someval (JustFail Nothing)
 -- Fail "someval"
 --
--- >>> pl @(LookupFail (PrintF "char=%c" Snd) Fst 49) (map SG.Min [1::Int ..10],'x')
+-- >>> pl @(LookupFail (PrintF "char=%c" Snd) 49 Fst) (map SG.Min [1::Int ..10],'x')
 -- Error char=x (JustFail Nothing)
 -- Fail "char=x"
 --
@@ -431,67 +419,63 @@ instance P (BangBangT p q) a => P (p !! q) a where
 
 -- | 'lookup' leveraging 'Ixed': see '!!?'
 --
--- >>> pz @(Lookup Id 2) ["abc","D","eF","","G"]
+-- >>> pz @(Lookup 2 Id) ["abc","D","eF","","G"]
 -- Val (Just "eF")
 --
--- >>> pz @(Lookup Id 20) ["abc","D","eF","","G"]
+-- >>> pz @(Lookup 20 Id) ["abc","D","eF","","G"]
 -- Val Nothing
 --
--- >>> pl @(FromList (M.Map _ _) >> Lookup Id (Char1 "y")) [('x',True),('y',False)]
--- Present Just False ((>>) Just False | {Lookup('y') False | p=fromList [('x',True),('y',False)] | q='y'})
+-- >>> pl @(FromList (M.Map _ _) >> Lookup (Char1 "y") Id) [('x',True),('y',False)]
+-- Present Just False ((>>) Just False | {Lookup('y') False | q=fromList [('x',True),('y',False)] | p='y'})
 -- Val (Just False)
 --
--- >>> pl @(FromList (M.Map _ _) >> Lookup Id (Char1 "z")) [('x',True),('y',False)]
+-- >>> pl @(FromList (M.Map _ _) >> Lookup (Char1 "z") Id) [('x',True),('y',False)]
 -- Present Nothing ((>>) Nothing | {Lookup('z') not found})
 -- Val Nothing
 --
--- >>> pl @(FromList (M.Map _ _) >> Lookup Id %% Char1 "y") [('x',True),('y',False)]
--- Present Just False ((>>) Just False | {Lookup('y') False | p=fromList [('x',True),('y',False)] | q='y'})
+-- >>> pl @(FromList (M.Map _ _) >> Lookup (Char1 "y") Id) [('x',True),('y',False)]
+-- Present Just False ((>>) Just False | {Lookup('y') False | q=fromList [('x',True),('y',False)] | p='y'})
 -- Val (Just False)
 --
--- >>> pl @(Lookup Id 1) [('x',14),('y',3),('z',5)]
--- Present Just ('y',3) (Lookup(1) ('y',3) | p=[('x',14),('y',3),('z',5)] | q=1)
+-- >>> pl @(Lookup 1 Id) [('x',14),('y',3),('z',5)]
+-- Present Just ('y',3) (Lookup(1) ('y',3) | q=[('x',14),('y',3),('z',5)] | p=1)
 -- Val (Just ('y',3))
 --
--- >>> pl @(Lookup Id 14) [('x',14),('y',3),('z',5)]
+-- >>> pl @(Lookup 14 Id) [('x',14),('y',3),('z',5)]
 -- Present Nothing (Lookup(14) not found)
 -- Val Nothing
 --
--- >>> pl @(Lookup "abcdef" 3) ()
--- Present Just 'd' (Lookup(3) 'd' | p="abcdef" | q=3)
+-- >>> pl @(Lookup 3 "abcdef") ()
+-- Present Just 'd' (Lookup(3) 'd' | q="abcdef" | p=3)
 -- Val (Just 'd')
 --
--- >>> pl @(Lookup '[1,2,3,4,5,6] 4) ()
--- Present Just 5 (Lookup(4) 5 | p=[1,2,3,4,5,6] | q=4)
+-- >>> pl @(Lookup 4 '[1,2,3,4,5,6]) ()
+-- Present Just 5 (Lookup(4) 5 | q=[1,2,3,4,5,6] | p=4)
 -- Val (Just 5)
---
--- >>> pl @(FromList (M.Map _ _)) [(4,"x"),(5,"dd")]
--- Present fromList [(4,"x"),(5,"dd")] (FromList fromList [(4,"x"),(5,"dd")])
--- Val (fromList [(4,"x"),(5,"dd")])
 --
 data Lookup p q deriving Show
 
-instance ( P q a
-         , P p a
-         , Show (PP p a)
-         , Ixed (PP p a)
-         , PP q a ~ Index (PP p a)
-         , Show (Index (PP p a))
-         , Show (IxValue (PP p a))
+instance ( P p a
+         , P q a
+         , Show (PP q a)
+         , Ixed (PP q a)
+         , PP p a ~ Index (PP q a)
+         , Show (Index (PP q a))
+         , Show (IxValue (PP q a))
          )
    => P (Lookup p q) a where
-  type PP (Lookup p q) a = Maybe (IxValue (PP p a))
+  type PP (Lookup p q) a = Maybe (IxValue (PP q a))
   eval _ opts a = do
     let msg0 = "Lookup"
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
       Right (p,q,pp,qq) ->
-        let msg1 = msg0 <> "(" <> showL opts q <> ")"
+        let msg1 = msg0 <> "(" <> showL opts p <> ")"
             hhs = [hh pp, hh qq]
-        in case p ^? ix q of
+        in case q ^? ix p of
              Nothing -> mkNode opts (Val Nothing) (msg1 <> " not found") hhs
-             Just ret -> mkNode opts (Val (Just ret)) (show3' opts msg1 ret "p=" p <> showVerbose opts " | q=" q) hhs
+             Just ret -> mkNode opts (Val (Just ret)) (show3' opts msg1 ret "q=" q <> showVerbose opts " | p=" p) hhs
 
 -- | type operator version of 'Lookup'
 --
@@ -503,7 +487,7 @@ instance ( P q a
 -- Val True
 --
 data p !!? q deriving Show
-type BangBangQT p q = Lookup p q
+type BangBangQT p q = Lookup q p
 
 instance P (BangBangQT p q) a => P (p !!? q) a where
   type PP (p !!? q) a = PP (BangBangQT p q) a

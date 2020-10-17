@@ -799,7 +799,7 @@ instance P (SpanT p q) x => P (Span p q) x where
 -- Val [1,99,-98,2,99,-98,3,99,-98,4,99,-98,5]
 --
 -- >>> pz @(Intercalate '[99,100] Id) [1..5]
---Val [1,99,100,2,99,100,3,99,100,4,99,100,5]
+-- Val [1,99,100,2,99,100,3,99,100,4,99,100,5]
 --
 -- >>> pl @(Intercalate Fst Snd) ([0,1], [12,13,14,15,16])
 -- Present [12,0,1,13,0,1,14,0,1,15,0,1,16] (Intercalate [12,0,1,13,0,1,14,0,1,15,0,1,16] | [0,1] | [12,13,14,15,16])
@@ -2109,7 +2109,7 @@ instance ( x ~ [a]
         ret = nubOrd x
     in pure $ mkNode opts (Val ret) (show3 opts msg0 ret x) []
 
--- | zip cartesian product for lists: see 'Predicate.Data.Extra.FPair' for Applicative version
+-- | zip cartesian product for lists: see 'Predicate.Data.Extra.LiftA2' for Applicative version
 --
 -- >>> pz @(ZipCartesian (EnumFromTo Fst Snd) ('LT ... 'GT) ) (10,11)
 -- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]

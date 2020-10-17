@@ -1,3 +1,11 @@
+{-
+LiftA2 / <*> / FMap has Traversable and Applicative requirement but has better debugging
+<* / *> / FPair requires only Applicative but has no debugging
+LiftA2 Fst == <*
+LiftA2 Snd == *>
+FPair == <:> == LiftA2 Id
+FFish = >=>
+-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -21,6 +29,8 @@ module Predicate.Data.Extra (
     FMap
   , type (<$>)
   , type (<&>)
+  , type (<*>)
+  , LiftA2
   , FPair
   , FFish
   , type (>>=)
@@ -34,6 +44,8 @@ module Predicate.Data.Extra (
   , type (<|>)
   , Extract
   , Duplicate
+  , Push
+  , Pop
 
   , type ($$)
   , type ($&)
@@ -80,7 +92,6 @@ module Predicate.Data.Extra (
   , IList
   , Flip
   , Unproxy'
-  , ExtractUnproxyT
 
  ) where
 import Predicate.Core
@@ -92,7 +103,7 @@ import Predicate.Data.Numeric (type (-))
 import Predicate.Data.Maybe (JustDef, JustFail)
 import qualified GHC.TypeLits as GL
 import Data.Proxy (Proxy(..))
-import Control.Applicative (liftA2, Alternative((<|>)))
+import Control.Applicative
 import Control.Monad (join)
 import Data.Kind (Type)
 import Control.Comonad (Comonad(duplicate, extract))
@@ -173,30 +184,18 @@ instance ( P p x
 -- >>> pz @(Fst <* Snd) (Just "abc",Just 20)
 -- Val (Just "abc")
 --
+-- >>> pz @('["x","y"] <* '[1,2,3]) ()
+-- Val ["x","x","x","y","y","y"]
+--
 data p <* q deriving Show
 infixl 4 <*
 
-type ArrowRT p q = q <* p
-
--- | similar to Applicative 'Control.Applicative.*>'
---
--- >>> pl @(Fst *> Snd) (Just 4,Just 'a')
--- Present Just 'a' ((<*) Just 'a' | p=Just 'a' | q=Just 4)
--- Val (Just 'a')
---
-data p *> q deriving Show
-infixl 4 *>
-
-instance P (ArrowRT p q) x => P (p *> q) x where
-  type PP (p *> q) x = PP (ArrowRT p q) x
-  eval _ = eval (Proxy @(ArrowRT p q))
-
-instance ( Show (t c)
-         , P p x
+instance ( P p x
          , P q x
          , Show (t b)
+         , Show (t c)
          , Applicative t
-         , t b ~ PP p x
+         , PP p x ~ t b
          , PP q x ~ t c
          ) => P (p <* q) x where
   type PP (p <* q) x = PP p x
@@ -207,6 +206,36 @@ instance ( Show (t c)
       Left e -> e
       Right (p,q,pp,qq) ->
         let d = p <* q
+        in mkNode opts (Val d) (show3' opts msg0 p "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
+
+-- | similar to Applicative 'Control.Applicative.*>'
+--
+-- >>> pl @(Fst *> Snd) (Just 4,Just 'a')
+-- Present Just 'a' ((*>) Just 4 | p=Just 4 | q=Just 'a')
+-- Val (Just 'a')
+--
+-- >>> pz @('["x","y"] *> '[1,2,3]) ()
+-- Val [1,2,3,1,2,3]
+--
+data p *> q deriving Show
+infixl 4 *>
+
+instance ( P p x
+         , P q x
+         , Show (t b)
+         , Show (t c)
+         , Applicative t
+         , PP p x ~ t b
+         , PP q x ~ t c
+         ) => P (p *> q) x where
+  type PP (p *> q) x = PP q x
+  eval _ opts x = do
+    let msg0 = "(*>)"
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let d = p *> q
         in mkNode opts (Val d) (show3' opts msg0 p "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to 'Control.Applicative.<|>'
@@ -365,7 +394,7 @@ instance ( P p x
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq)  ->
+      Right (p,q,pp,qq) ->
         let d = p q
         in mkNode opts (Val d) (msg0 <> " " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
 
@@ -398,7 +427,7 @@ instance ( P p x
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq)  ->
+      Right (p,q,pp,qq) ->
         let d = p q
         in mkNode opts (Val d) (msg0 <> " " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
 
@@ -1394,8 +1423,7 @@ instance P (FMapFlipT p q) x => P (p <&> q) x where
   type PP (p <&> q) x = PP (FMapFlipT p q) x
   eval _ = eval (Proxy @(FMapFlipT p q))
 
-
--- | runs 'Control.Applicative.liftA2' (,) against two values
+-- | runs 'Control.Applicative.liftA2' (,) against two values: LiftA2 is traversable and provides better debugging
 --
 -- >>> pz @(FPair Fst Snd) (Just 10, Just True)
 -- Val (Just (10,True))
@@ -1426,7 +1454,7 @@ instance ( Applicative n
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq)  ->
+      Right (p,q,pp,qq) ->
         let d = liftA2 (,) p q
         in mkNode opts (Val d) msg0 [hh pp, hh qq]
 
@@ -1438,6 +1466,12 @@ instance ( Applicative n
 -- >>> pz @(Fst <:> Snd) ("abc",[10,12,14])
 -- Val [('a',10),('a',12),('a',14),('b',10),('b',12),('b',14),('c',10),('c',12),('c',14)]
 --
+-- >>> pz @(EnumFromTo Fst Snd <:> ('LT ... 'GT)) (10,11)
+-- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
+--
+-- >>> pz @(MkJust Succ <:> MkJust 4) ()   -- broken: use Push Pop or <*> but not LiftA2
+-- Fail "Succ IO e=Prelude.Enum.().succ: bad argument"
+--
 data p <:> q deriving Show
 type FPairT p q = FPair p q
 infixl 6 <:>
@@ -1445,7 +1479,6 @@ infixl 6 <:>
 instance P (FPairT p q) x => P (p <:> q) x where
   type PP (p <:> q) x = PP (FPairT p q) x
   eval _ = eval (Proxy @(FPairT p q))
-
 
 -- | similar to monad operator 'Control.Monad.>=>'
 --
@@ -1456,7 +1489,7 @@ instance P (FPairT p q) x => P (p <:> q) x where
 -- >>> pz @(FFish (ReadMaybe Day Id >> FMap Fst) (MkJust Succ) "2020-02-02") ()
 -- Val (Just 2020-02-03)
 --
--- >>> pz @(FFish Uncons (Fst >> Lookup "abcdef" Id) [3,14,12]) ()
+-- >>> pz @(FFish Uncons (Lookup Fst "abcdef") [3,14,12]) ()
 -- Val (Just 'd')
 --
 data FFish amb bmc a deriving Show
@@ -1474,6 +1507,27 @@ instance P (FFishT p q r) x => P (FFish p q r) x where
 -- >>> pz @(Uncons >>= (Snd >> HeadMay)) "abcdef"
 -- Val (Just 'b')
 --
+-- >>> pz @((1 ... 10) >>= EmptyBool [] Even '[Id,Id]) ()
+-- Val [[2,2],[4,4],[6,6],[8,8],[10,10]]
+--
+-- >>> pz @( (1 ... 10) >>= If Even '[Id,Id] (EmptyT [])) ()
+-- Val [2,2,4,4,6,6,8,8,10,10]
+--
+-- >>> pz @(Lookup 0 Id >>= Lookup 1 Id) [[1,2,3]]
+-- Val (Just 2)
+--
+-- >>> pz @(Lookup 4 Id >>= Lookup 1 Id) [[1,2,3]]
+-- Val Nothing
+--
+-- >>> pz @(Lookup 0 Id >>= Lookup 5 Id) [[1,2,3]]
+-- Val Nothing
+--
+-- >>> pz @(Lookup 0 Id >>= Lookup 1 Id >>= MaybeBool Even '(Id,"is even!")) [[1,2,3]]
+-- Val (Just (2,"is even!"))
+--
+-- >>> pz @(Lookup 0 Id >>= Lookup 1 Id >>= MaybeBool Even '(Id,"is even!")) [[1,5,3]]
+-- Val Nothing
+--
 data ma >>= amb deriving Show
 type FBindT ma amb = ma >> FMap amb >> Join
 infixl 1 >>=
@@ -1481,6 +1535,47 @@ infixl 1 >>=
 instance P (FBindT p q) x => P (p >>= q) x where
   type PP (p >>= q) x = PP (FBindT p q) x
   eval _ = eval (Proxy @(FBindT p q))
+
+-- | applicative bind similar to 'Control.Applicative.<*>' but functions have to be saturated: ie Len is ok but not Length
+--
+-- >>> pz @(MkJust '("sdf",Id) <*> MkJust 4) ()
+-- Val (Just ("sdf",4))
+--
+-- >>> pz @(MkJust Succ <*> MkJust 4) ()
+-- Val (Just 5)
+--
+-- >>> pz @(MkJust "abc" <*> MkJust "def") () -- no function to apply so has to choose ie first one
+-- Val (Just "abc")
+--
+-- >>> pz @('[1,2] <*> "abcdef") () -- [1,2] <* "abcdef" -- ie skips rhs "abcdef" but still runs the effects
+-- Val [1,2,1,2,1,2,1,2,1,2,1,2]
+--
+-- >>> pz @('[1,2] <:> "abcdef") ()
+-- Val [(1,'a'),(1,'b'),(1,'c'),(1,'d'),(1,'e'),(1,'f'),(2,'a'),(2,'b'),(2,'c'),(2,'d'),(2,'e'),(2,'f')]
+--
+-- >>> pz @(MkJust ((*) 3 Id) <*> MkJust 4) ()
+-- Val (Just 12)
+--
+-- >>> pz @(MkJust ((*) 3 Len) <*> MkJust '["aa","bb","c","d","e"]) ()
+-- Val (Just 15)
+--
+-- >>> pz @(ShowP Id <$> MkJust Succ <*> MkJust 4) ()
+-- Val (Just "5")
+--
+-- >>> pz @('["x","y"] <*> '[1,2,3]) ()
+-- Val ["x","y","x","y","x","y"]
+--
+data fab <*> fa deriving Show
+--type AppT fab fa = fab >>= (Id <$> fa) -- need some way to flip function application
+-- expecting (a -> b) -> f a -> f b
+-- but we want a -> (f (a -> b)) -> f b
+infixl 1 <*>
+
+type AppT fab fa = fa >>= (Id <$> fab) -- this works surprisingly well but args are flipped
+
+instance P (AppT p q) x => P (p <*> q) x where
+  type PP (p <*> q) x = PP (AppT p q) x
+  eval _ = eval (Proxy @(AppT p q))
 
 -- | similar to 'Safe.headMay'
 --
@@ -1559,6 +1654,7 @@ instance P (p r q) x => P (Flip p q r) x where
 
 -- | unproxy an expression: p is the location of Proxy z and q is the where the data for z
 --   unlike 'Apply1' and 'Apply2' does not require z to be of kind Type
+--
 -- >>> pl @(Unproxy' Fst Snd) (Proxy @Snd,("dd","ee"))
 -- Present "ee" (Unproxy' | Snd "ee" | ("dd","ee"))
 -- Val "ee"
@@ -1605,15 +1701,20 @@ instance P (p r q) x => P (Flip p q r) x where
 -- Val [2,3,4,5,6,7,8,9,10,11,12,13]
 --
 -- >>> pz @(Unproxy' Id '( 'True, MkJust 12)) (Proxy @(FMap $ FMap Succ))
---Val (True,Just 13)
+-- Val (True,Just 13)
 --
 data Unproxy' p q deriving Show
 
 type family ExtractUnproxyT pa :: Type where
   ExtractUnproxyT (Proxy a) = W a -- have to wrap to get symbols and nats to work
-  -- Proxy is more reliable as it has a Show instance and allows non-Type kinds (ie Nat/Symbol/ and promoted types dont have a Show instance)
-  ExtractUnproxyT (_t a) = a  -- assume 'a' is already Type -- doesnt work for Snd ie functions so not great: unless wrapped by W
-  ExtractUnproxyT _ = GL.TypeError ('GL.Text "ExtractUnproxyT: only supports a t a style wrapper")
+  -- Proxy works best as it allows non-Type kinds
+--  ExtractUnproxyT (_t a) = W a  -- assume 'a' is already Type -- doesnt work for Snd ie functions so not great: unless wrapped by W
+  ExtractUnproxyT (_t a) = a  -- assume 'a' is already Type so dont wrap it
+  -- eg Maybe/[],Either ... don't allow non-Type kinds
+  -- ok:    Nothing @Snd
+  -- notok: Nothing @"abc"
+  -- ok:    Nothing @(W "abc")
+  ExtractUnproxyT _ = GL.TypeError ('GL.Text "ExtractUnproxyT: only supports 't a' style wrapper")
 
 instance ( PP p x ~ proxy z -- loosen up to use proxy
          , PP z (PP q x) ~ w
@@ -1633,3 +1734,131 @@ instance ( PP p x ~ proxy z -- loosen up to use proxy
           Left e -> e
           Right _r -> mkNodeCopy opts rr (msg0 <> nullIf " | " (_ttString rr)) [hh qq,hh rr]
 
+-- | similar to 'Control.Applicative.liftA2'
+--
+-- >>> pan @(LiftA2 Id (MkJust 12) (MkJust "abc")) ()
+-- P LiftA2 Id (12,"abc")
+-- |
+-- +- P MkJust Just 12
+-- |  |
+-- |  `- P '12
+-- |
+-- +- P MkJust Just "abc"
+-- |  |
+-- |  `- P '"abc"
+-- |
+-- `- P Id (12,"abc")
+-- Val (Just (12,"abc"))
+--
+-- >>> pan @(LiftA2 Swap (MkJust 12) (MkNothing _)) ()
+-- P LiftA2 <skipped>
+-- |
+-- +- P MkJust Just 12
+-- |  |
+-- |  `- P '12
+-- |
+-- `- P MkNothing
+-- Val Nothing
+--
+-- >>> pz @(LiftA2 (ShowP Fst <> "---" <> ShowP Snd) Fst Snd) (Just 10, Just True)
+-- Val (Just "10---True")
+--
+-- >>> pz @(LiftA2 (Fst + Snd) Fst Snd) (Just 10, Just 13)
+-- Val (Just 23)
+--
+-- >>> pz @(LiftA2 Fst '["x","y"] '[1,2,3]) ()
+-- Val ["x","x","x","y","y","y"]
+--
+-- >>> pz @(LiftA2 Snd '["x","y"] '[1,2,3]) ()
+-- Val [1,2,3,1,2,3]
+--
+data LiftA2 p q r
+-- i provide the rhs as the environment to fa and fb? so fails Succ
+-- use <*> as it works way better
+-- use Push to delay setting the environment and then use Pop to run against a specific environment
+
+instance ( Traversable n
+         , Applicative n
+         , P p (a,b)
+         , P q x
+         , P r x
+         , PP p (a,b) ~ c
+         , PP q x ~ n a
+         , PP r x ~ n b
+         ) => P (LiftA2 p q r) x where
+  type PP (LiftA2 p q r) x = (ExtractTFromTA (PP q x)) (PP p (ExtractAFromTA (PP q x), ExtractAFromTA (PP r x)))
+  eval _ opts x = do
+    let msg0 = "LiftA2"
+    lr <- runPQ NoInline msg0 (Proxy @q) (Proxy @r) opts x []
+    case lr of
+      Left e -> pure e
+      Right (q,r,qq,rr) -> do
+        let w = liftA2 (,) q r
+        nttc <- traverse (fmap (\tt -> tt & ttString %~ litL opts
+                                  & ttForest .~ [hh tt]) . eval (Proxy @p) opts) w
+        let ttnc = sequence nttc
+        let hhs = [hh qq,hh rr]
+        case getValueLR Inline opts "" ttnc hhs of
+          Left e -> pure e
+          Right ret -> do
+            let z = case (_ttString ttnc,_ttForest ttnc) of
+                      ("",[]) -> ttnc & ttString .~ msg0 <> " <skipped>"
+                      _ -> ttnc & ttString %~ (msg0 <>) . nullIf " "
+            return $ z & ttVal' .~ Val ret & ttForest %~ (hhs <>)
+
+-- | Push stashes a partially applied function for later use with Pop which applies an arg
+--
+-- >>> pz @(Push Length >> Pop IdT Snd '(1,'[1,2,3,4])) ()
+-- Val 4
+--
+-- >>> pz @(LiftA2 (Pop Fst Snd Id) (MkJust (Push (Lift Succ))) (MkJust 1)) ()
+-- Val (Just 2)
+--
+-- >>> pz @(LiftA2 (Pop Fst Snd Id) (MkJust (Push ((*) 4))) (MkJust 3)) ()
+-- Val (Just 12)
+--
+-- >>> pz @(Pop Fst Snd Id <$> MkJust (Push ((*) 4)) <:> MkJust 3) ()
+-- Val (Just 12)
+--
+data Push (z :: k -> Type) deriving Show
+
+instance P (Push (z :: k -> Type)) x where
+  type PP (Push z) x = Proxy (Push z)
+  eval _ opts _ =
+    pure $ mkNode opts (Val (Proxy @(Push z))) "Push" []
+
+-- p Push location
+-- q arg to apply to p -- dont have to eval this cos is freely available
+-- r environment to run the applied stuff in
+-- | Pop applies extracts a Proxy Push @z@ and then applies a function to @q@ in the environment pointed to by @r@
+data Pop p q r deriving Show
+
+instance ( P r x
+         , PP p x ~ Proxy (Push z)
+         , P (z q) (PP r x)
+         ) => P (Pop p q r) x where
+  type PP (Pop p q r) x = PP (ExtractPushT (PP p x) q) (PP r x)
+  eval _ opts x = do
+    let msg0 = "Pop"
+    rr <- eval (Proxy @r) opts x
+    case getValueLR NoInline opts msg0 rr [] of
+      Left e -> pure e
+      Right r -> do
+        zz <- eval (Proxy @(ExtractPushT (PP p x) q)) opts r
+        case getValueLR NoInline opts msg0 zz [hh rr] of
+          Left e -> pure e
+          Right _z -> return $ mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh rr,hh zz]
+
+type family ExtractPushT p q where
+  ExtractPushT (Proxy (Push z)) q = z q
+  ExtractPushT p q =
+    GL.TypeError (
+     'GL.Text "ExtractPushT: only supports 'Proxy (Push z)' and 'q'"
+       'GL.:$$:
+     'GL.Text " p = "
+       'GL.:<>:
+     'GL.ShowType p
+       'GL.:$$:
+     'GL.Text " q = "
+       'GL.:<>:
+     'GL.ShowType q)

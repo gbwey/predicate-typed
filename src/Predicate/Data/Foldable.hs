@@ -218,7 +218,10 @@ instance ( Show l
 -- Error (!!) index not found (IxL('z') | fromList [('x',True),('y',False)])
 -- Fail "(!!) index not found"
 --
-
+-- >>> pl @(FromList (M.Map _ _)) [(4,"x"),(5,"dd")]
+-- Present fromList [(4,"x"),(5,"dd")] (FromList fromList [(4,"x"),(5,"dd")])
+-- Val (fromList [(4,"x"),(5,"dd")])
+--
 data FromList (t :: Type) deriving Show
 -- doesnt work with OverloadedLists unless you cast to [a] explicitly
 
