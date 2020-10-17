@@ -140,6 +140,7 @@ module Predicate.Util (
   , chkSize2
   , badLength
   , showIndex
+  , _Id
 
   ) where
 import Predicate.Misc
@@ -854,6 +855,9 @@ prefixNumberToTT ((i, _), t) = prefixMsg ("i=" <> show i <> ": ") t
 -- | prefix text in front of ttString
 prefixMsg :: String -> TT a -> TT a
 prefixMsg msg = ttString %~ (msg <>)
+
+_Id :: Lens (Identity a) (Identity b) a b
+_Id afb (Identity a) = Identity <$> afb a
 
 -- | a typeclass for choosing which monad to run in
 class Monad m => MonadEval m where
