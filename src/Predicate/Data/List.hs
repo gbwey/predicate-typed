@@ -17,7 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted list functions
+-- | promoted list functions
 module Predicate.Data.List (
 
  -- ** constructors

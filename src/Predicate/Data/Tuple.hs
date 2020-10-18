@@ -14,7 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted tuple functions
+-- | promoted tuple functions
 module Predicate.Data.Tuple (
 
     Dup

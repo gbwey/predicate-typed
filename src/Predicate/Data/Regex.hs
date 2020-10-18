@@ -14,7 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted regular expression functions
+-- | promoted regular expression functions
 module Predicate.Data.Regex (
 
   -- ** regex expressions

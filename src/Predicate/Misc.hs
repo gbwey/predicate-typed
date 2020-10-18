@@ -116,6 +116,8 @@ module Predicate.Misc (
   , errorInProgram
   , drawTreeU
   , readField
+  , asProxyLeft
+  , asProxyRight
 
   ) where
 import qualified GHC.TypeNats as GN
@@ -1054,3 +1056,9 @@ drawU (Node x ts0) = x : drawSubTrees ts0
         shift "\x251c\x2500" "\x2502 " (drawU t) ++ drawSubTrees ts
 
     shift one other = zipWith (++) (one : repeat other)
+
+asProxyRight :: proxy a -> proxy1 a -> proxy1 a
+asProxyRight = flip const
+
+asProxyLeft :: proxy a -> proxy1 a -> proxy a
+asProxyLeft = const

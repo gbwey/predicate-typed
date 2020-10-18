@@ -13,7 +13,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE NoStarIsType #-}
--- |     Dsl for evaluating and displaying type level expressions
+-- | a dsl for evaluating and displaying type level expressions
 module Predicate.Core (
 
  -- ** basic types
@@ -125,7 +125,7 @@ import qualified GHC.TypeLits as GL
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
 import Control.Lens
 import Data.Foldable (toList)
-import Data.Typeable (Typeable, Proxy(..))
+import Data.Typeable -- (Typeable, Proxy(..))
 import Data.Kind (Type)
 import Data.These (These(..))
 import Control.Monad (zipWithM)
@@ -134,7 +134,6 @@ import Data.Tree (Tree)
 import Data.Coerce (Coercible)
 import qualified Data.Semigroup as SG
 import Data.Tree.Lens (root)
---import GHC.Exts (Constraint)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -2445,4 +2444,3 @@ type L33T = MsgI "L33:" (L3 (L3 Id))
 instance P L33T x => P L33 x where
   type PP L33 x = PP L33T x
   eval _ = eval (Proxy @L33T)
-

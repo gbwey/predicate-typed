@@ -16,7 +16,7 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
--- |     promoted character functions
+-- | promoted character functions
 module Predicate.Data.Char (
  -- ** constructor
     Char1

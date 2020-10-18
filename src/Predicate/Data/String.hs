@@ -15,7 +15,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted String functions
+-- | promoted String functions
 module Predicate.Data.String (
     TrimBoth
   , TrimL

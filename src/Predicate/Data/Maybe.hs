@@ -14,7 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted 'Maybe' functions
+-- | promoted 'Maybe' functions
 module Predicate.Data.Maybe (
 
  -- ** boolean predicates

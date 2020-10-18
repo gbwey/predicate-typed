@@ -14,7 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted indexing functions
+-- | promoted indexing functions
 module Predicate.Data.Index (
   -- ** indexing expressions
     Ix

@@ -16,7 +16,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted enum functions
+-- | promoted enum functions
 module Predicate.Data.Enum (
 
   -- *** constructors

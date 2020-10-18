@@ -15,7 +15,7 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE ViewPatterns #-}
--- |     promoted foldable functions
+-- | promoted foldable functions
 module Predicate.Data.Foldable (
     Concat
   , ConcatMap

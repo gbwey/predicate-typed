@@ -21,7 +21,7 @@
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
--- |     Refinement type allowing the external type to differ from the internal type
+-- | a refinement type allowing the external type to differ from the internal type
 module Predicate.Refined2 (
 
   -- ** Refined2

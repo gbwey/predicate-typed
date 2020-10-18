@@ -16,7 +16,7 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE DerivingStrategies #-}
--- |   promoted io functions
+-- | promoted io functions
 module Predicate.Data.IO (
    -- ** file handling
     ReadFile

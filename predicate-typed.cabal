@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0612a5fc7835fdca0cdf242882b136fa33a981085dd64587d0417c69ce5a8996
+-- hash: d2229f481dfbc6ceb30b84514821954c02b44d078ed8616de00a6c511761be34
 
 name:           predicate-typed
 version:        0.7.4.0
@@ -79,11 +79,13 @@ library
     , binary
     , bytestring
     , comonad
+    , constraints
     , containers
     , deepseq
     , directory
     , hashable
     , lens
+    , lens-action
     , pcre-heavy >=1.0.0.2
     , pcre-light
     , pretty-terminal >=0.1.0.0
@@ -117,12 +119,14 @@ test-suite doctests
     , binary
     , bytestring
     , comonad
+    , constraints
     , containers
     , deepseq
     , directory
     , doctest
     , hashable
     , lens
+    , lens-action
     , pcre-heavy >=1.0.0.2
     , pcre-light
     , predicate-typed
@@ -163,11 +167,13 @@ test-suite predicate-typed-test
     , binary
     , bytestring
     , comonad
+    , constraints
     , containers
     , deepseq
     , directory
     , hashable
     , lens
+    , lens-action
     , pcre-heavy >=1.0.0.2
     , pcre-light
     , predicate-typed

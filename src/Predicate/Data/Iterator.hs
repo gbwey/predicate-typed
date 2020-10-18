@@ -14,7 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted iterator functions
+-- | promoted iterator functions
 module Predicate.Data.Iterator (
     Scanl
   , ScanN

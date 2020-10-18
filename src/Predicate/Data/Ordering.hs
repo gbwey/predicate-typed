@@ -14,7 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted 'Ordering' functions
+-- | promoted 'Ordering' functions
 module Predicate.Data.Ordering (
 
  -- ** compare expressions

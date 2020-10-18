@@ -16,7 +16,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted date time functions
+-- | promoted date time functions
 module Predicate.Data.DateTime (
 
   -- ** format

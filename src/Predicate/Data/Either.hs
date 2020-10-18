@@ -14,7 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted 'Either' functions
+-- | promoted 'Either' functions
 module Predicate.Data.Either (
 
  -- ** boolean predicates

@@ -21,7 +21,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DeriveGeneric #-}
--- |     Utility methods for Predicate / methods for displaying the evaluation tree
+-- | utility methods for Predicate / methods for displaying the evaluation tree
 module Predicate.Util (
  -- ** Val
     Val(..)

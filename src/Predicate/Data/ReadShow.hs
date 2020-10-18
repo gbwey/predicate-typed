@@ -14,7 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted read, show, and printf functions
+-- | promoted read, show, and printf functions
 module Predicate.Data.ReadShow (
 
     ShowP

@@ -33,6 +33,7 @@
 :set +t
 import Control.Applicative
 import Control.Lens
+import Control.Lens.Action
 import qualified Control.Lens as L
 import Control.Monad
 import Data.Char

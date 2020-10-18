@@ -25,10 +25,12 @@ dependencies:
 - bytestring
 - comonad
 - containers
+- constraints
 - deepseq
 - directory
 - hashable
 - lens
+- lens-action
 - pcre-heavy >= 1.0.0.2
 - pcre-light
 - pretty-terminal >= 0.1.0.0

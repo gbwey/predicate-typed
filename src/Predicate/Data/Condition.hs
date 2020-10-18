@@ -14,7 +14,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     promoted conditional functions
+-- | promoted conditional functions
 module Predicate.Data.Condition (
   -- ** conditional expressions
     If
@@ -35,6 +35,8 @@ module Predicate.Data.Condition (
   , BoolsN
 
   , ToGuardsT
+  , GuardsImpl
+
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -395,12 +397,16 @@ instance ( [a] ~ x
 
 instance ( [a] ~ x
          , Show a
+         , KnownNat n
          ) => P (GuardsImpl n ('[] :: [(k,k1)])) x where
   type PP (GuardsImpl n ('[] :: [(k,k1)])) x = x
 
-  eval _ opts [] = pure $ mkNode opts (Val []) "Guards:no data" []
-
   eval _ _ as@(_:_) = errorInProgram $ "GuardsImpl base case has extra data " ++ show as
+
+  eval _ opts [] =
+    let n = nat @n @Int
+    in pure $ mkNode opts (Val []) ("Guards(" ++ show n ++ ")") []
+
 
 instance ( PP prt (Int, a) ~ String
          , P prt (Int, a)
@@ -431,15 +437,12 @@ instance ( PP prt (Int, a) ~ String
          pure $ case getValueLR NoInline opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
             Left e -> e
             Right msgx -> mkNode opts (Fail msgx) (msgbase1 <> " " <> showL opts a) (hh pp : verboseList opts qq)
-       Right True ->
-         if pos == 0 then -- we are at the bottom of the tree
-            pure $ mkNode opts (Val [a]) msgbase2 [hh pp]
-         else do
-           ss <- eval (Proxy @(GuardsImpl n ps)) opts as
-           pure $ case getValueLR Inline opts "" ss [hh pp] of
-             Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-             Right zs -> ss & ttForest %~ (hh pp:)
-                            & ttVal' .~ Val (a:zs)
+       Right True -> do
+         ss <- eval (Proxy @(GuardsImpl n ps)) opts as
+         pure $ case getValueLR Inline opts "" ss [hh pp] of
+           Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
+           Right zs -> ss & ttForest %~ (hh pp:)
+                          & ttVal' .~ Val (a:zs)
 
 -- | GuardsQuick contain a type level list of conditions and one of matching values: on no match will fail using the first parameter
 --
@@ -450,11 +453,11 @@ instance ( PP prt (Int, a) ~ String
 -- Fail "Guards:invalid length(4) expected 3"
 --
 -- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 0 11 Id, Between 1 4 Id,Between 3 5 Id]) [10,2,5]
--- Present [10,2,5] (Guards)
+-- Present [10,2,5] (Guards(3))
 -- Val [10,2,5]
 --
 -- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,11,1999]
--- Present [31,11,1999] (Guards)
+-- Present [31,11,1999] (Guards(3))
 -- Val [31,11,1999]
 --
 -- >>> pl @(GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]) [31,11]
@@ -652,65 +655,16 @@ data GuardsDetailImpl (ps :: [(k,k1)]) deriving Show
 
 instance ( [a] ~ x
          , GetLen ps
-         , P (GuardsImplX (LenT ps) ps) x
+         , P (GuardsImpl (LenT ps) ps) x
          ) => P (GuardsDetailImpl ps) x where
-  type PP (GuardsDetailImpl ps) x = PP (GuardsImplX (LenT ps) ps) x
+  type PP (GuardsDetailImpl ps) x = PP (GuardsImpl (LenT ps) ps) x
   eval _ opts as = do
     let msg0 = "Guards"
         n = getLen @ps
     if n /= length as then
        let msg1 = msg0 <> badLength as n
        in pure $ mkNode opts (Fail msg1) "" []
-    else eval (Proxy @(GuardsImplX (LenT ps) ps)) opts as
-
-data GuardsImplX (n :: Nat) (os :: [(k,k1)]) deriving Show
-
-instance ( [a] ~ x
-         , Show a
-         , KnownNat n
-         ) => P (GuardsImplX n ('[] :: [(k,k1)])) x where
-  type PP (GuardsImplX n ('[] :: [(k,k1)])) x = x
-
-  eval _ _ as@(_:_) = errorInProgram $ "GuardsImplX base case has extra data " ++ show as
-
-  eval _ opts [] =
-    let n = nat @n @Int
-    in pure $ mkNode opts (Val []) ("Guards(" ++ show n ++ ")") []
-
-instance ( PP prt a ~ String
-         , P prt a
-         , KnownNat n
-         , GetLen ps
-         , P p a
-         , PP p a ~ Bool
-         , P (GuardsImplX n ps) x
-         , PP (GuardsImplX n ps) x ~ x
-         , Show a
-         , [a] ~ x
-         ) => P (GuardsImplX n ('(prt,p) ': ps)) x where
-  type PP (GuardsImplX n ('(prt,p) ': ps)) x = x
-
-  eval _ _ [] = errorInProgram "GuardsImplX n+1 case has no data"
-
-  eval _ opts (a:as) = do
-     let cpos = n-pos-1
-         msgbase1 = "Guard(" <> showIndex cpos <> ")"
-         msgbase2 = "Guards"
-         n = nat @n @Int
-         pos = getLen @ps
-     pp <- evalBoolHide @p opts a
-     case getValueLR NoInline opts (msgbase1 <> " p failed") pp [] of
-       Left e -> pure e
-       Right False -> do
-         qq <- eval (Proxy @prt) opts a -- only run prt when predicate is False
-         pure $ case getValueLR NoInline opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
-            Left e -> e
-            Right msgx -> mkNode opts (Fail msgx) (msgbase1 <> ":" <> showL opts a) (hh pp : verboseList opts qq)
-       Right True -> do
-         ss <- eval (Proxy @(GuardsImplX n ps)) opts as
-         pure $ case getValueLR NoInline opts (_ttString ss) ss [hh pp] of
-           Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
-           Right zs -> mkNode opts (Val (a:zs)) (msgbase1 <> " " <> showL opts a) [hh pp, hh ss]
+    else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
 
 data GuardsDetail prt (ps :: [(k0,k1)]) deriving Show
 type GuardsDetailT prt (ps :: [(k0,k1)]) = GuardsDetailImpl (ToGuardsDetailT prt ps)
@@ -719,9 +673,10 @@ instance P (GuardsDetailT prt ps) x => P (GuardsDetail prt ps) x where
   type PP (GuardsDetail prt ps) x = PP (GuardsDetailT prt ps) x
   eval _ = eval (Proxy @(GuardsDetailT prt ps))
 
+--type family ToGuardsDetailT prt os where
 type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
-  ToGuardsDetailT prt '[ '(s,p) ] = '(PrintT prt '(s,Id), p) : '[]
-  ToGuardsDetailT prt ( '(s,p) ': ps) = '(PrintT prt '(s,Id), p) ': ToGuardsDetailT prt ps
+  ToGuardsDetailT prt '[ '(s,p) ] = '(PrintT prt '(s,Snd), p) : '[]
+  ToGuardsDetailT prt ( '(s,p) ': ps) = '(PrintT prt '(s,Snd), p) ': ToGuardsDetailT prt ps
   ToGuardsDetailT _prt '[] = GL.TypeError ('GL.Text "ToGuardsDetailT cannot be empty")
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
@@ -733,7 +688,7 @@ type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
 -- Val [121,33,7,44]
 --
 -- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3,4]
--- Present [1,2,3,4] (Guards)
+-- Present [1,2,3,4] (Guards(4))
 -- Val [1,2,3,4]
 --
 -- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3,4,5]

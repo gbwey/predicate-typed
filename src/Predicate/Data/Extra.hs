@@ -15,7 +15,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- |     extra promoted functions
+-- | extra promoted functions
 module Predicate.Data.Extra (
  -- ** functor
     FMap
@@ -49,6 +49,8 @@ module Predicate.Data.Extra (
   , Pop0
   , Pop1
   , Pop2
+  , Pop1'
+  , Pop2'
   , PApp
   , PApp2
   , Proxify
@@ -106,7 +108,6 @@ import Predicate.Data.Enum (type (...))
 import Predicate.Data.Numeric (type (-))
 import Predicate.Data.Maybe (JustDef, JustFail)
 import qualified GHC.TypeLits as GL
-import Data.Proxy (Proxy(..))
 import Control.Applicative
 import Control.Monad (join)
 import Data.Kind (Type)
@@ -114,6 +115,8 @@ import Control.Comonad (Comonad(duplicate, extract))
 import Control.Lens
 import qualified Safe (headNote, cycleNote)
 import Data.Tree (Tree)
+--import Data.Proxy (Proxy(..))
+import Data.Typeable
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -124,6 +127,8 @@ import Data.Tree (Tree)
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Functor.Identity
 -- >>> import Data.These
+-- >>> import Control.Lens.Action
+-- >>> :m + Data.Typeable
 
 -- | similar to 'Control.Applicative.<$'
 --
@@ -1655,11 +1660,7 @@ instance ( Traversable n
                       _ -> ttnc & ttString %~ (msg0 <>) . nullIf " "
             return $ z & ttVal' .~ Val ret & ttForest %~ (hhs <>)
 
--- works fine as is even tho complex
---type family LiftA2T p q r x where
---  LiftA2T (p :: t a) q r x = (ExtractTFromTA (PP q x)) (PP p (ExtractAFromTA (PP q x), ExtractAFromTA (PP r x)))
-
--- | Proxy holding a function that needs an extra parameter for later use with Pop1 which applies an arg q in an environment r
+-- | applies Proxy @p@ to @q@ in the environment pointed to by @r@
 --
 -- >>> pz @(Pop1 Fst L22 Snd) (Proxy @Length,(False,('x',"abcdef")))
 -- Val 6
@@ -1691,10 +1692,6 @@ instance ( Traversable n
 -- >>> pz @(Pop1 (Proxy ('(,) 'True)) Len "abc") ()
 -- Val (True,3)
 
--- | Pop1 applies extracts a Proxy @z@ and then applies a function to @q@ in the environment pointed to by @r@
---     p Proxy z ie location of the function z requiring one parameter
---     q arg to apply to p -- dont have to eval this cos is freely available
---     r environment to run the applied stuff (ie z q)
 data Pop1 p q r deriving Show
 
 instance ( P r x
@@ -1714,7 +1711,51 @@ instance ( P r x
           Left e -> pure e
           Right _z -> return $ mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh rr,hh zz]
 
--- | apply q and r to Proxy p then run in environment s
+type family Pop1T (p :: Type) (q :: k) r :: Type where
+  Pop1T (Proxy (z :: _k -> _k1)) q r = PP (z q) r
+  Pop1T p q r =
+    GL.TypeError (
+     'GL.Text "Pop1T: requires 'Proxy z' and z must be a function requiring one parameter!!"
+       'GL.:$$: 'GL.Text " p = " 'GL.:<>: 'GL.ShowType p
+       'GL.:$$: 'GL.Text " q = " 'GL.:<>: 'GL.ShowType q
+       'GL.:$$: 'GL.Text " r = " 'GL.:<>: 'GL.ShowType r
+    )
+
+-- | apply @p@ to @q@ and runs in environment @r@ where @p@ and @q@ point to proxies
+--
+-- >>> pz @(Pop1' (Proxy ((<>) Snd)) (Proxy Fst) Id) ("abc","def")
+-- Val "defabc"
+--
+data Pop1' p q r deriving Show
+
+instance ( P r x
+         , PP p x ~ Proxy (z :: k -> k1)
+         , PP q x ~ Proxy (w :: k)
+         , P (z w) (PP r x)
+         ) => P (Pop1' p q r) x where
+  type PP (Pop1' p q r) x = Pop1'T (PP p x) (PP q x) (PP r x)
+  eval _ opts x = do
+    let msg0 = "Pop1'"
+    rr <- eval (Proxy @r) opts x
+    case getValueLR NoInline opts msg0 rr [] of
+      Left e -> pure e
+      Right r -> do
+        zz <- eval (Proxy @(z w)) opts r
+        case getValueLR NoInline opts msg0 zz [hh rr] of
+          Left e -> pure e
+          Right _z -> return $ mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh rr,hh zz]
+
+type family Pop1'T p q r where
+  Pop1'T (Proxy (z :: k -> _k1)) (Proxy (w :: k)) r = PP (z w) r
+  Pop1'T p q r =
+    GL.TypeError (
+     'GL.Text "Pop1'T: requires 'Proxy z' and z must be a function requiring one parameter!!"
+       'GL.:$$: 'GL.Text " p = " 'GL.:<>: 'GL.ShowType p
+       'GL.:$$: 'GL.Text " q = " 'GL.:<>: 'GL.ShowType q
+       'GL.:$$: 'GL.Text " r = " 'GL.:<>: 'GL.ShowType r
+    )
+
+-- | apply Proxy @p@ to @q@ and @r@ then run in environment @s@
 --
 -- >>> pz @(Pop2 (Proxy '(,)) Fst 14 Id) ([1..4],'True)
 -- Val ([1,2,3,4],14)
@@ -1749,17 +1790,50 @@ type family Pop2T (p :: Type) (q :: k) (r :: k1) s where
        'GL.:$$: 'GL.Text " s = " 'GL.:<>: 'GL.ShowType s
     )
 
-type family Pop1T (p :: Type) (q :: k) r :: Type where
-  Pop1T (Proxy (z :: _k -> _k1)) q r = PP (z q) r
-  Pop1T p q r =
+-- | Applies @p@ to @q@ and @r@ proxies and runs in environment @s@ where @p@, @q@, and @r@ point to proxies
+--
+-- >>> pz @(Pop2' (Proxy '(,)) (Proxy 1) (Proxy "sss") ()) ()
+-- Val (1,"sss")
+--
+-- >>> pz @(Pop2' (Proxy '(,)) (Proxy L31) (Proxy (Fst % Snd)) '(11,99,'("ss",3))) ()
+-- Val ("ss",1 % 9)
+--
+-- >>> pz @(Pop2' Fst Snd Thd (L4 Id)) (Proxy @'(,), Proxy @L31, Proxy @(Fst % Snd), (11,99,("ss",3)))
+-- Val ("ss",1 % 9)
+--
+data Pop2' p q r s deriving Show
+
+instance ( P s x
+         , PP p x ~ Proxy (z :: k -> k1 -> k2)
+         , PP q x ~ Proxy (w :: k)
+         , PP r x ~ Proxy (v :: k1)
+         , P (z w v) (PP s x)
+         ) => P (Pop2' p q r s) x where
+  type PP (Pop2' p q r s) x = Pop2'T (PP p x) (PP q x) (PP r x) (PP s x)
+  eval _ opts x = do
+    let msg0 = "Pop2'"
+    ss <- eval (Proxy @s) opts x
+    case getValueLR NoInline opts msg0 ss [] of
+      Left e -> pure e
+      Right s -> do
+        zz <- eval (Proxy @(z w v)) opts s
+        case getValueLR NoInline opts msg0 zz [hh ss] of
+          Left e -> pure e
+          Right _z -> return $ mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh ss,hh zz]
+
+-- pass all the arguments in!!! else ghc gets confused
+type family Pop2'T p q r s where
+  Pop2'T (Proxy (z :: k -> k1 -> _k2)) (Proxy (w :: k)) (Proxy (v :: k1)) s = PP (z w v) s
+  Pop2'T p q r s =
     GL.TypeError (
-     'GL.Text "Pop1T: requires 'Proxy z' and z must be a function requiring one parameter!!"
+     'GL.Text "Pop2'T: requires 'Proxy z' and z must be a function requiring one parameter!!"
        'GL.:$$: 'GL.Text " p = " 'GL.:<>: 'GL.ShowType p
        'GL.:$$: 'GL.Text " q = " 'GL.:<>: 'GL.ShowType q
        'GL.:$$: 'GL.Text " r = " 'GL.:<>: 'GL.ShowType r
+       'GL.:$$: 'GL.Text " s = " 'GL.:<>: 'GL.ShowType s
     )
 
--- | applicative bind of 2 Proxies p and q: Proxy (z :: k -> k1) <*> Proxy (w :: k) = Proxy (u :: k1)
+-- | applicative bind of proxies p and q: Proxy (z :: k -> k1) <*> Proxy (w :: k) = Proxy (u :: k1)
 --
 -- >>> pz @(PApp Fst Snd >> Pop0 Id '("abcdef",99)) (Proxy @('(,) (Fst >> Len)), Proxy @16)
 -- Val (6,16)
@@ -1779,9 +1853,9 @@ instance ( PP p x ~ Proxy (z :: k -> k1)
   eval _ opts _ =
     pure $ mkNode opts (Val (Proxy @(z w))) "PApp" []
 
-type family PAppT p q where
---  PAppT (Proxy (z :: k -> k1)) (Proxy (w :: k)) = (z w)
-  PAppT (Proxy z) (Proxy w) = Proxy (z w)
+type family PAppT (p :: Type) (q :: Type) :: Type where
+  PAppT (Proxy (z :: k -> k1)) (Proxy (w :: k)) = Proxy (z w :: k1)
+  --PAppT (Proxy z) (Proxy w) = Proxy (z w)
   PAppT p q =
     GL.TypeError (
      'GL.Text "PAppT: requires 'Proxy z' and 'Proxy w' get applied to each other"
@@ -1789,7 +1863,7 @@ type family PAppT p q where
        'GL.:$$: 'GL.Text " q = " 'GL.:<>: 'GL.ShowType q
     )
 
--- | applicative bind of 3 Proxies p, q, and r: Proxy (z :: k -> k1 -> k2) <*> Proxy (w :: k) <*> Proxy (v :: k1) = Proxy (u :: k2)
+-- | applicative bind of proxies p, q, and r: Proxy (z :: k -> k1 -> k2) <*> Proxy (w :: k) <*> Proxy (v :: k1) = Proxy (u :: k2)
 --
 -- >>> pz @(PApp2 (Proxy '(,)) (Proxy 2) (Proxy 'True) >> Pop0 Id ()) ()
 -- Val (2,True)
@@ -1814,8 +1888,7 @@ instance ( PP p x ~ Proxy (z :: k -> k1 -> k2)
   eval _ opts _ =
     pure $ mkNode opts (Val (Proxy @(z w v))) "PApp2" []
 
--- | unproxy an expression: p is the location of Proxy z and q is the where the data for z
---   runs an expression inside the proxy p with environment q
+-- | run the proxy @p@ in environment @q@
 --
 -- >>> pl @(Pop0 (Proxy '(Head,Len)) "abcdef") ()
 -- Present ('a',6) (Pop0 | '('a',6))
@@ -1896,58 +1969,36 @@ type family Pop0T p q where
        'GL.:$$: 'GL.Text " p = " 'GL.:<>: 'GL.ShowType p
        'GL.:$$: 'GL.Text " q = " 'GL.:<>: 'GL.ShowType q
    )
-{-
-pu @(PApp (Proxy '(,)) (Proxy 4) >> PApp Id (Proxy Fst) >> Pop0 Id (W '(1,2))) ()
-Val (4,1)
-
-pz @(PApp (Proxy '(,)) (Proxy 4) >> PApp Id (Proxy Fst) >> Pop0 Id '( 'True,"hello")) ()
-Val (4,True)
-
->pan @(PApp (Proxy (MsgI "hello ")) Fst >> Pop0 Id '(1,2,3)) (Proxy @"there",())
-P (>>) "there"
-|
-+- P PApp
-|
-`- P Pop0 | hello '"there"
-   |
-   +- P '(,,)
-   |  |
-   |  +- P '1
-   |  |
-   |  +- P '2
-   |  |
-   |  `- P '3
-   |
-   `- P hello '"there"
-Val "there"
--}
-{- doesnt work
-data PApp2 p q r deriving Show
-type PApp2T p q r = PApp p q >> PApp Id r
-
-instance P (PApp2T p q r) x => P (PApp2 p q r) x where
-  type PP (PApp2 p q r) x = PP (PApp2T p q r) x
-  eval _ = eval (Proxy @(PApp2T p q r))
--}
--- | create a Proxy z given a proxy z
+-- | create a Proxy z from proxy z where z is the expression pointed to by @p@ -- Proxify alway returns Val (Proxy @z)
 --
--- >>> pz @(Proxify (MkJust 1)) ()
--- Val Proxy
+-- >>> pz @(Proxify Fst) ([True],13) ^! acts . _Val . only (Proxy @Bool)
 --
--- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^. _Id . ttVal . _Val == Proxy @Int
+-- >>> pz @(Proxify (MkJust 1)) () ^!? acts . _Val . to typeRep
+-- Just Int
+--
+-- >>> pz @(Proxify (FailT [Double] "abc")) () ^!? acts . _Val . to typeRep
+-- Just Double
+--
+-- >>> pz @(Proxify "abc") () ^!? acts . _Val . to typeRep
+-- Just Char
+--
+-- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Double) ^!? acts . ttVal . _Val . to typeRep
+-- Just Double
+--
+-- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? _Id . ttVal . _Val == Just (Proxy @Int)
 -- True
 --
--- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^. _Wrapped @(Identity _) . ttVal . _Val == Proxy @Int
+-- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? _Wrapped @(Identity _) . ttVal . _Val == Just (Proxy @Int)
 -- True
 --
 -- >>> eval (Proxy @(Proxify Id)) defOpts (Nothing @Double) ^. to runIdentity . ttVal . singular _Val == Proxy @Double
 -- True
 --
--- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^?! folded @Identity . ttVal . _Val == Proxy @Int
+-- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? folded @Identity . ttVal . _Val == Just (Proxy @Int)
 -- True
 data Proxify p
-instance ( PP p x ~ proxy z
-         ) => P (Proxify p) x where
+instance PP p x ~ proxy (z :: k)
+      => P (Proxify p) x where
   type PP (Proxify p) x = ProxifyT (PP p x)
   eval _ opts _ =
     pure $ mkNode opts (Val (Proxy @z)) "Proxify" []
