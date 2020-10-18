@@ -37,7 +37,7 @@ module Predicate.Util (
   , TT(..)
   , ttVal
   , ttVal'
-  , ttValBool'
+  , ttValBool
   , ttValP
   , ttString
   , ttForest
@@ -406,7 +406,7 @@ validateValP bp bt =
 -- True
 --
 fixTTBool :: TT Bool -> TT Bool
-fixTTBool = over ttValBool' id
+fixTTBool = over ttValBool id
 
 -- | creates a Boolean node for a predicate type
 mkNodeB :: POpts
@@ -860,11 +860,21 @@ _Id :: Lens (Identity a) (Identity b) a b
 _Id afb (Identity a) = Identity <$> afb a
 
 -- | a typeclass for choosing which monad to run in
+--
+-- >>> hasIO @IO
+-- True
+--
+-- >>> hasIO @Identity
+-- False
+--
+
 class Monad m => MonadEval m where
   runIO :: IO a -> m (Maybe a)
   catchit :: a -> m (Either String a)
   catchitNF :: NFData a => a -> m (Either String a)
   liftEval :: m a -> IO a
+  hasIO :: Bool
+  hasIO = False
 
 -- | 'Identity' instance for evaluating the expression
 instance MonadEval Identity where
@@ -872,6 +882,7 @@ instance MonadEval Identity where
   catchit = catchitIdentityUnsafe
   catchitNF = catchitNFIdentityUnsafe
   liftEval = return . runIdentity
+
 
 {-# NOINLINE catchitIdentityUnsafe #-}
 catchitIdentityUnsafe :: a -> Identity (Either String a)
@@ -888,6 +899,7 @@ instance MonadEval IO where
   catchit v = E.evaluate (Right $! v) `E.catch` (\(E.SomeException e) -> pure $ Left ("IO e=" <> show e))
   catchitNF v = E.evaluate (Right $!! v) `E.catch` (\(E.SomeException e) -> pure $ Left ("IO e=" <> show e))
   liftEval = id
+  hasIO = True
 
 -- | strip ansi characters from a string and print it (for doctests)
 removeAnsi :: Show a => Either String a -> IO ()
@@ -1278,20 +1290,20 @@ val2PBool afb bt = bt <$ afb r
 
 -- | lens that ensures _ttValP is in sync with _ttVal
 --
--- >>> (TT ValP (Val True) "xxx" [] & ttValBool' %~ \b -> fmap not b) == TT FalseP (Val False) "xxx" []
+-- >>> (TT ValP (Val True) "xxx" [] & ttValBool %~ \b -> fmap not b) == TT FalseP (Val False) "xxx" []
 -- True
 --
--- >>> (TT ValP (Val True) "xxx" [] & ttValBool' .~ Fail "abc") == TT (FailP "abc") (Fail "abc") "xxx" []
+-- >>> (TT ValP (Val True) "xxx" [] & ttValBool .~ Fail "abc") == TT (FailP "abc") (Fail "abc") "xxx" []
 -- True
 --
--- >>> (TT ValP (Val True) "xxx" [] & ttValBool' %~ id) == TT TrueP (Val True) "xxx" []
+-- >>> (TT ValP (Val True) "xxx" [] & ttValBool %~ id) == TT TrueP (Val True) "xxx" []
 -- True
 --
--- >>> (TT FalseP (Val True) "xxx" [] & ttValBool' %~ id) == TT TrueP (Val True) "xxx" []
+-- >>> (TT FalseP (Val True) "xxx" [] & ttValBool %~ id) == TT TrueP (Val True) "xxx" []
 -- True
 --
-ttValBool' :: a ~ Bool => Lens' (TT a) (Val Bool)
-ttValBool' afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
+ttValBool :: a ~ Bool => Lens' (TT a) (Val Bool)
+ttValBool afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
   where f = \case
                Fail e -> FailP e
                Val True -> TrueP

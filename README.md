@@ -39,7 +39,7 @@ To run the examples you will need these settings (ghc>=8.6)
   * OAN ascii without colors
   * OU unicode plus colors (for Windows: chcp 65001)
 
-* BoolT is an ADT that holds the return value from evaluating the type level expression
+* Val is an ADT that holds the result of evaluating the type level expression
    * Val a : 'a' is any value
    * Fail String : indicates a failure with an error message
 

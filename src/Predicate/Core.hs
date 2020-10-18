@@ -161,7 +161,7 @@ evalBool :: ( MonadEval m
               -> a
               -> m (TT (PP p a))
 evalBool p opts = fmap fixTTBool . eval p opts
--- evalBool p opts = (over (mapped . ttValBool') id) . eval p opts
+-- evalBool p opts = (over (mapped . ttValBool) id) . eval p opts
 
 
 evalQuick :: forall opts p i
@@ -883,6 +883,16 @@ instance Show a => P 'Proxy a where
   eval _ opts a =
     let b = Proxy @a
     in pure $ mkNode opts (Val b) ("'Proxy" <> showVerbose opts " | " a) []
+
+-- | evaluate the type level expression in IO
+--
+-- >>> pl @(Between 4 10 Id) 7 & mapped . _Val %~ not
+-- True (4 <= 7 <= 10)
+-- Val False
+--
+-- >>> eval (Proxy @'True) defOpts 7 & mapped . ttValBool . _Val %~ not
+-- TT {_ttValP = FalseP, _ttVal = Val False, _ttString = "'True", _ttForest = []}
+--
 
 pu, pl, pa, pan, panv, pab, pub, pav, puv, pz
   :: forall p a

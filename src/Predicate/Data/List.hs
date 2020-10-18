@@ -736,7 +736,6 @@ instance P (FilterT p q) x => P (Filter p q) x where
 data Break p q deriving Show
 
 -- only process up to the pivot! only process while Right False
--- a predicate can return ValP not just TrueP
 instance ( P p x
          , PP q a ~ [x]
          , PP p x ~ Bool
