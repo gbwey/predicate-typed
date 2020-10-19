@@ -14,11 +14,13 @@ module Predicate.Prelude (
   , module Predicate.Data.Iterator
   , module Predicate.Data.IO
   , module Predicate.Data.Json
+  , module Predicate.Data.Lifted
   , module Predicate.Data.List
   , module Predicate.Data.Maybe
   , module Predicate.Data.Monoid
   , module Predicate.Data.Numeric
   , module Predicate.Data.Ordering
+  , module Predicate.Data.Proxy
   , module Predicate.Data.ReadShow
   , module Predicate.Data.Regex
   , module Predicate.Data.String
@@ -39,11 +41,13 @@ import Predicate.Data.Index
 import Predicate.Data.Iterator
 import Predicate.Data.IO
 import Predicate.Data.Json
+import Predicate.Data.Lifted
 import Predicate.Data.List
 import Predicate.Data.Maybe
 import Predicate.Data.Monoid
 import Predicate.Data.Numeric
 import Predicate.Data.Ordering
+import Predicate.Data.Proxy
 import Predicate.Data.ReadShow
 import Predicate.Data.Regex
 import Predicate.Data.String

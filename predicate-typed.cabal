@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d2229f481dfbc6ceb30b84514821954c02b44d078ed8616de00a6c511761be34
+-- hash: 5dd855d882d363ecae3d2a5fd9089d6ee7efd67f121d20366f952ad0933a5a44
 
 name:           predicate-typed
 version:        0.7.4.0
@@ -44,11 +44,13 @@ library
       Predicate.Data.IO
       Predicate.Data.Iterator
       Predicate.Data.Json
+      Predicate.Data.Lifted
       Predicate.Data.List
       Predicate.Data.Maybe
       Predicate.Data.Monoid
       Predicate.Data.Numeric
       Predicate.Data.Ordering
+      Predicate.Data.Proxy
       Predicate.Data.ReadShow
       Predicate.Data.Regex
       Predicate.Data.String

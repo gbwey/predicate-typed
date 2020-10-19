@@ -32,6 +32,10 @@ import Text.Show.Functions ()
 import Data.Tree.Lens
 import qualified Safe (readNote)
 
+import Data.Kind (Type)
+--import Data.Proxy
+import qualified GHC.TypeLits as GL
+
 suite :: TestTree
 suite =
   let s = "TestRefined3"
@@ -332,3 +336,35 @@ expect3 :: (HasCallStack, Show i, Show r, Eq i, Eq r)
   -> IO ()
 expect3 lhs (rhs,mr) =
   (@?=) (maybe (Left $ toRResults3 rhs) Right mr) lhs
+
+testKindSignature3A :: Either Msg3
+    (Refined3 OU
+      Id
+      (PApp (Proxy (Lift "abc" :: Type -> Type)) (Proxy ()) >> 'True)
+      Id
+      ())
+testKindSignature3A = newRefined3 ()
+
+testKindSignature3B :: Either Msg3
+   (Refined3 OU
+     Id
+     (Pop1' (Proxy (Lift "abc" :: GL.Nat -> Type)) (Proxy 4) () >> 'True)
+     Id
+     ())
+testKindSignature3B = newRefined3 ()
+
+testKindSignature3C :: Either Msg3
+   (Refined3 OU
+     Id
+     (Pop2' (Proxy ('(,) :: Type -> Bool -> (Type,Bool))) (Proxy (W "bbb")) Fst Snd >> Snd)
+     Id
+     (Proxy 'True, Int))
+testKindSignature3C = newRefined3 (Proxy @'True,1234)
+
+testKindSignature3D :: Either Msg3
+   (Refined3 OU
+     (Second (ReadP Int Id))
+     (PApp2 (Proxy ('(,) :: GL.Symbol -> Bool -> (GL.Symbol,Bool))) (Proxy "bbb") Fst >> Pop0 Id () >> Snd)
+     (Second (ShowP Id))
+     (Proxy 'True, String))
+testKindSignature3D = newRefined3 (Proxy @'True,"1234")

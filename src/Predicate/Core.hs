@@ -141,6 +141,9 @@ import Data.Tree.Lens (root)
 -- >>> :set -XNoOverloadedLists
 -- >>> import Predicate.Prelude
 -- >>> import Data.Time
+-- >>> :m + Control.Lens
+-- >>> :m + Control.Lens.Action
+-- >>> :m + Data.Typeable
 
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Predicate.Core.>>'
 class P p a where
@@ -2290,11 +2293,17 @@ instance ( P p x
 -- Present True (Coerce True | Any {getAny = True})
 -- Val True
 --
-data Coerce (t :: k) deriving Show
+-- >>> pz @(Proxy 'True >> Coerce (Proxy 'False)) () ^!? acts . _Val . to typeRep
+-- Just 'False
+--
+-- >>> pz @(Proxy Int >> Coerce (Proxy (String,Char))) () ^!? acts . _Val . to typeRep
+-- Just ([Char],Char)
 
-instance ( Show a
+data Coerce (t :: k) deriving Show -- has to be the same kind: Type to Type or Bool to Bool ...
+
+instance ( Coercible t a
+         , Show a
          , Show t
-         , Coercible t a
          ) => P (Coerce t) a where
   type PP (Coerce t) a = t
   eval _ opts a =

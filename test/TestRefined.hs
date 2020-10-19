@@ -21,6 +21,9 @@ import Data.Aeson
 import qualified Safe (readNote)
 import Control.Applicative (liftA2)
 import Control.Arrow (left)
+import Data.Kind (Type)
+import Data.Proxy
+import qualified GHC.TypeLits as GL
 
 suite :: TestTree
 suite =
@@ -88,3 +91,24 @@ testRefinedJ a =
    case newRefined @opts @p a of
      Left (Msg0 _bp _top e bpc) -> error $ bpc ++ "\n" ++ e
      Right r -> eitherDecode @(Refined opts p a) $ encode r
+
+testKindSignature0A :: Either Msg0
+    (Refined
+      OU
+      (PApp (Proxy (Lift "abc" :: Type -> Type)) (Proxy ()) >> 'True)
+      ())
+testKindSignature0A = newRefined ()
+
+testKindSignature0B :: Either Msg0
+     (Refined
+       OU
+       (Pop1' (Proxy (Lift "abc" :: GL.Nat -> Type)) (Proxy 4) () >> 'True)
+       ())
+testKindSignature0B = newRefined ()
+
+testKindSignature0C :: Either Msg0
+      (Refined
+        OU
+        (Pop2' (Proxy ('(,) :: Type -> Bool -> (Type,Bool))) (Proxy (W "bbb")) Fst Snd >> Snd)
+        (Proxy 'True, Int))
+testKindSignature0C = newRefined (Proxy @'True,1234)
