@@ -54,6 +54,13 @@ module Predicate.Data.Extra (
   , PApp
   , PApp2
   , Proxify
+  , PAppT
+  , PApp2T
+  , Pop0T
+  , Pop1T
+  , Pop2T
+  , Pop1'T
+  , Pop2'T
 
   -- ** function application
   , type ($$)
@@ -129,6 +136,7 @@ import Data.Typeable
 -- >>> import Data.These
 -- >>> import Control.Lens.Action
 -- >>> :m + Data.Typeable
+-- >>> :m + Data.Ratio
 
 -- | similar to 'Control.Applicative.<$'
 --
@@ -1726,6 +1734,18 @@ type family Pop1T (p :: Type) (q :: k) r :: Type where
 -- >>> pz @(Pop1' (Proxy ((<>) Snd)) (Proxy Fst) Id) ("abc","def")
 -- Val "defabc"
 --
+-- >>> pz @(Pop1' (Proxy ((>>) Snd)) (Proxy (Resplit "\\." >> Map (ReadP Int Id))) Id) (1,"123.33.5")
+-- Val [123,33,5]
+--
+-- >>> pz @(Pop1' (Proxy (Lift Snd)) (Proxy Fst) Id) ((True,2),("abc",1 % 4))
+-- Val 2
+--
+-- >>> pz @(Pop1' Fst Snd Thd) (Proxy @(Lift Snd), Proxy @Fst,((True,2),("abc",1 % 4)))
+-- Val 2
+--
+-- >>> pz @(Pop1' Fst Snd '( '( 'True,2),'("abc",1 % 4))) (Proxy @(Lift Snd), Proxy @Fst)
+-- Val 2
+--
 data Pop1' p q r deriving Show
 
 instance ( P r x
@@ -1884,10 +1904,19 @@ instance ( PP p x ~ Proxy (z :: k -> k1 -> k2)
          , PP q x ~ Proxy (w :: k)
          , PP r x ~ Proxy (v :: k1)
          ) => P (PApp2 p q r) x where
-  type PP (PApp2 p q r) x = PAppT (PAppT (PP p x) (PP q x)) (PP r x)
+  type PP (PApp2 p q r) x = PApp2T (PP p x) (PP q x) (PP r x)
   eval _ opts _ =
     pure $ mkNode opts (Val (Proxy @(z w v))) "PApp2" []
 
+type family PApp2T (p :: Type) (q :: Type) (r :: Type) where
+  PApp2T (Proxy (z :: k -> k1 -> k2)) (Proxy (w :: k)) (Proxy (v :: k1)) = Proxy (z w v :: k2)
+  PApp2T p q r =
+    GL.TypeError (
+     'GL.Text "PApp2T: requires 'Proxy z', 'Proxy w' and 'Proxy v': z is applied to w and v"
+       'GL.:$$: 'GL.Text " p = " 'GL.:<>: 'GL.ShowType p
+       'GL.:$$: 'GL.Text " q = " 'GL.:<>: 'GL.ShowType q
+       'GL.:$$: 'GL.Text " r = " 'GL.:<>: 'GL.ShowType r
+   )
 -- | run the proxy @p@ in environment @q@
 --
 -- >>> pl @(Pop0 (Proxy '(Head,Len)) "abcdef") ()
