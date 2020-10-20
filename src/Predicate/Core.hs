@@ -1183,7 +1183,7 @@ instance Typeable a => P Unproxy (Proxy (a :: Type)) where
   type PP Unproxy (Proxy a) = a
   eval _ opts _ =
     let msg0 = "Unproxy(" <> showT @a <> ")"
-    in pure $ mkNode opts (Fail msg0) "you probably meant to get access to the type of PP only and not evaluate" []
+    in pure $ mkNode opts (Fail msg0) "you probably meant to get access to the type of PP only and not evaluate (see Pop0)" []
 
 -- | similar to 'length'
 --

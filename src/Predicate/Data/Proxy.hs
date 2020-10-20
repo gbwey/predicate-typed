@@ -26,14 +26,6 @@ module Predicate.Data.Proxy (
   , Pop2'
   , PApp
   , PApp2
- -- *** proxy type families
-  , Pop0T
-  , Pop1T
-  , Pop2T
-  , Pop1'T
-  , Pop2'T
-  , PAppT
-  , PApp2T
 
  ) where
 import Predicate.Core
@@ -120,9 +112,9 @@ instance ( P q x
       Left e -> pure e
       Right q -> do
         zz <- eval (Proxy @z) opts q
-        case getValueLR NoInline opts msg0 zz [hh qq] of
-          Left e -> pure e
-          Right _z -> return $ mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh qq,hh zz]
+        pure $ case getValueLR NoInline opts msg0 zz [hh qq] of
+          Left e -> e
+          Right _z -> mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh qq,hh zz]
 
 -- the key is to pass all the vars into the type family so ghc can figure stuff out
 type family Pop0T (p :: Type) (q :: Type) :: Type where
@@ -181,9 +173,9 @@ instance ( P r x
       Right r -> do
 --        zz <- eval (Proxy @(Pop1T (PP p x) q)) opts r
         zz <- eval (Proxy @(z q)) opts r
-        case getValueLR NoInline opts msg0 zz [hh rr] of
-          Left e -> pure e
-          Right _z -> return $ mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh rr,hh zz]
+        pure $ case getValueLR NoInline opts msg0 zz [hh rr] of
+          Left e -> e
+          Right _z -> mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh rr,hh zz]
 
 type family Pop1T (p :: Type) (q :: k) (r :: Type) :: Type where
   Pop1T (Proxy z) q r = PP (z q) r
@@ -234,9 +226,9 @@ instance ( P r x
       Left e -> pure e
       Right r -> do
         zz <- eval (Proxy @(z w)) opts r
-        case getValueLR NoInline opts msg0 zz [hh rr] of
-          Left e -> pure e
-          Right _z -> return $ mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh rr,hh zz]
+        pure $ case getValueLR NoInline opts msg0 zz [hh rr] of
+          Left e -> e
+          Right _z -> mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh rr,hh zz]
 
 type family Pop1'T (p :: Type) (q :: Type) (r :: Type) :: Type where
   Pop1'T (Proxy z) (Proxy w) r = PP (z w) r
@@ -271,9 +263,9 @@ instance ( P s x
       Left e -> pure e
       Right s -> do
         zz <- eval (Proxy @(z q r)) opts s
-        case getValueLR NoInline opts msg0 zz [hh ss] of
-          Left e -> pure e
-          Right _z -> return $ mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh ss,hh zz]
+        pure $ case getValueLR NoInline opts msg0 zz [hh ss] of
+          Left e -> e
+          Right _z -> mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh ss,hh zz]
 
 -- pass all the arguments in!!! else ghc gets confused
 type family Pop2T (p :: Type) (q :: k) (r :: k1) (s :: Type) :: Type where
@@ -315,11 +307,11 @@ instance ( P s x
       Left e -> pure e
       Right s -> do
         zz <- eval (Proxy @(z w v)) opts s
-        case getValueLR NoInline opts msg0 zz [hh ss] of
-          Left e -> pure e
-          Right _z -> return $ mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh ss,hh zz]
+        pure $ case getValueLR NoInline opts msg0 zz [hh ss] of
+          Left e -> e
+          Right _z -> mkNodeCopy opts zz (msg0 <> nullIf " | " (_ttString zz)) [hh ss,hh zz]
 
--- pass all the arguments in!!! else ghc gets confused
+-- pass in all the arguments otherwise ghc gets confused
 type family Pop2'T (p :: Type) (q :: Type) (r :: Type) (s :: Type) :: Type where
   Pop2'T (Proxy z) (Proxy w) (Proxy v) s = PP (z w v) s
 --  Pop2'T (Proxy (z :: k -> k1 -> k2)) (Proxy (w :: k)) (Proxy (v :: k1)) s = PP (z w v :: k2) s
@@ -345,6 +337,33 @@ type family Pop2'T (p :: Type) (q :: Type) (r :: Type) (s :: Type) :: Type where
 --
 -- >>> pz @(PApp (PApp (Proxy ('(,) :: GL.Nat -> GL.Symbol -> (GL.Nat,GL.Symbol))) (Proxy 1)) (Proxy "abc")) () ^!? acts . _Val . to typeRep
 -- Just ('(,) Nat Symbol 1 "abc")
+--
+-- >>> pz @(PApp (Proxy '(,)) (Proxy 4) >> PApp Id (Proxy Fst) >> Pop0 Id (W '(1,2))) ()
+-- Val (4,1)
+--
+-- >>> pz @(PApp (Proxy '(,)) (Proxy 4) >> PApp Id (Proxy Fst) >> Pop0 Id '( 'True,"hello")) ()
+-- Val (4,True)
+--
+-- >>> pan @(PApp (Proxy (MsgI "hello ")) Fst >> Pop0 Id '(1,2,3)) (Proxy @"there",())
+-- P (>>) "there"
+-- |
+-- +- P PApp
+-- |
+-- `- P Pop0 | hello '"there"
+--    |
+--    +- P '(,,)
+--    |  |
+--    |  +- P '1
+--    |  |
+--    |  +- P '2
+--    |  |
+--    |  `- P '3
+--    |
+--    `- P hello '"there"
+-- Val "there"
+--
+-- >>> pz @(PApp (Proxy Proxy) (Proxy "abc") >> Pop0 Id () >> Pop0 Id () ) ()
+-- Val "abc"
 --
 data PApp p q deriving Show
 
@@ -430,7 +449,8 @@ type family PApp2T (p :: Type) (q :: Type) (r :: Type) :: Type where
 --
 -- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? folded @Identity . ttVal . _Val == Just (Proxy @Int)
 -- True
-data Proxify p
+data Proxify p deriving Show
+
 instance PP p x ~ proxy (z :: k)
       => P (Proxify p) x where
   type PP (Proxify p) x = ProxifyT (PP p x)

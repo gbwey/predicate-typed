@@ -2024,15 +2024,12 @@ instance ( P p x
                     LT -> (isPrefixOf, "IsPrefix")
                     EQ -> (isInfixOf, "IsInfix")
                     GT -> (isSuffixOf, "IsSuffix")
-    pp <- eval (Proxy @p) opts x
-    case getValueLR NoInline opts msg0 pp [] of
-        Left e -> pure e
-        Right s0 -> do
-          let msg1 = msg0 <> " | " <> showL opts s0
-          qq <- eval (Proxy @q) opts x
-          pure $ case getValueLR NoInline opts (msg1 <> " q failed") qq [hh pp] of
-            Left e -> e
-            Right s1 -> mkNodeB opts (ff s0 s1) (msg1 <> " " <> showL opts s1) [hh pp, hh qq]
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let msg1 = msg0 <> " | " <> showL opts p
+        in mkNodeB opts (ff p q) (msg1 <> " " <> showL opts q) [hh pp, hh qq]
 
 -- | similar to 'Data.List.isPrefixOf'
 --

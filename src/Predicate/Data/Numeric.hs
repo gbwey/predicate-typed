@@ -64,7 +64,7 @@ module Predicate.Data.Numeric (
   , ShowBase
   , ShowBaseN
   , UnShowBaseN
-  , Bits
+  , ToBits
 
  ) where
 import Predicate.Core
@@ -401,18 +401,14 @@ instance ( P p a
   type PP (p ^ q) a = PP p a
   eval _ opts a = do
     let msg0 = "Pow"
-    pp <- eval (Proxy @p) opts a
-    case getValueLR NoInline opts msg0 pp [] of
-      Left e -> pure e
-      Right p -> do
-        qq <- eval (Proxy @q) opts a
-        pure $ case getValueLR NoInline opts msg0 qq [hh pp] of
-          Left e -> e
-          Right q ->
-                let hhs = [hh pp, hh qq]
-                in if q < 0 then mkNode opts (Fail (msg0 <> " negative exponent")) "" hhs
-                   else let d = p ^ q
-                        in mkNode opts (Val d) (showL opts p <> " ^ " <> showL opts q <> " = " <> showL opts d) hhs
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let hhs = [hh pp, hh qq]
+        in if q < 0 then mkNode opts (Fail (msg0 <> " negative exponent")) "" hhs
+           else let d = p ^ q
+                in mkNode opts (Val d) (showL opts p <> " ^ " <> showL opts q <> " = " <> showL opts d) hhs
 
 -- | similar to 'GHC.Float.(**)'
 --
@@ -1099,17 +1095,16 @@ instance ( PP p x ~ a
 
 -- | convert to bits
 --
--- >>> pl @(Bits 123 >> UnShowBaseN 2) ()
+-- >>> pl @(ToBits 123 >> UnShowBaseN 2) ()
 -- Present 123 ((>>) 123 | {UnShowBaseN | 2 | [1,1,1,1,0,1,1]})
 -- Val 123
 --
-data Bits p deriving Show
-type BitsT p = ShowBaseN 2 p
+data ToBits p deriving Show
+type ToBitsT p = ShowBaseN 2 p
 
-instance P (BitsT p) x => P (Bits p) x where
-  type PP (Bits p) x = PP (BitsT p) x
-  eval _ = eval (Proxy @(BitsT p))
-
+instance P (ToBitsT p) x => P (ToBits p) x where
+  type PP (ToBits p) x = PP (ToBitsT p) x
+  eval _ = eval (Proxy @(ToBitsT p))
 
 -- | reverse 'ShowBaseN'
 --

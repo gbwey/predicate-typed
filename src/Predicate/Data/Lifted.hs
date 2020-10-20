@@ -1,5 +1,4 @@
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -87,6 +86,7 @@ import Data.Proxy (Proxy(..))
 -- >>> :m + Data.Ratio
 -- >>> :m + Control.Lens
 -- >>> :m + Control.Lens.Action
+-- >>> :m + System.Random
 
 -- | similar to 'Control.Applicative.<$'
 --
@@ -305,7 +305,7 @@ instance ( Show (t (t a))
         d = join tta
     in pure $ mkNode opts (Val d) (show3 opts msg0 d tta) []
 
--- | function application for expressions: similar to 'GHC.Base.$'
+-- | function application for pure functions appearing on the rhs: similar to 'GHC.Base.$'
 --
 -- >>> :m + Text.Show.Functions
 -- >>> pz @(Fst $$ Snd) ((*16),4)
@@ -341,8 +341,14 @@ instance ( Show (t (t a))
 -- >>> pz @('True $& 4 $& Id $$ "aa") (,,)
 -- Val (4,True,"aa")
 --
--- >>> pz @('True $& 4 $& Id) (,)
--- Val (4,True)
+-- >>> pz @(Id $$ '(100,120)) (flip randomR (mkStdGen 7))
+-- Val (114,320112 40692)
+--
+-- >>> pz @(Id $$ GenPure 12) (randomR ('a','f'))
+-- Val ('f',520182 40692)
+--
+-- >>> pz @(Id $$ GenIO) (randomR ('a','f')) ^!? acts . _Val . _1 . nearly 'a' (`elem` ['a'..'f'])
+-- Just ()
 --
 data p $$ q deriving Show
 infixl 0 $$
@@ -375,6 +381,9 @@ instance ( P p x
 --
 -- >>> pz @("def" $& Id) ("abc"<>)
 -- Val "abcdef"
+--
+-- >>> pz @('True $& 4 $& Id) (,)
+-- Val (4,True)
 --
 data q $& p deriving Show
 -- flips the args eg a & b & (,) = (b,a)
@@ -791,7 +800,9 @@ instance P (LiftT p q) x => P (Lift p q) x where
 -- Present Just (Sum {getSum = 10}) (FMap Coerce Sum {getSum = 10} | 10)
 -- Val (Just (Sum {getSum = 10}))
 --
-
+-- >>> pz @(Proxy Char >> FMap Succ) () ^!? acts . _Val . to typeRep
+-- Just Char
+--
 data FMap p deriving Show
 
 instance ( Traversable n
@@ -884,6 +895,9 @@ instance P (FMapFlipT p q) x => P (p <&> q) x where
 --
 -- >>> pz @(FPair (EnumFromTo Fst Snd) ('LT ... 'GT) ) (10,11)
 -- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
+--
+-- >>> pz @(LiftA2 (Fst * Snd) (FromList (ZipList _) << (10...15)) (FromList (ZipList _) << (1...10))) ()
+-- Val (ZipList {getZipList = [10,22,36,52,70,90]})
 --
 data FPair p q deriving Show
 
@@ -983,6 +997,12 @@ instance P (FFishT p q r) x => P (FFish p q r) x where
 --
 -- >>> pz @(Lookup 0 Id >>= Lookup 1 Id >>= MaybeBool Even '(Id,"is even!")) [[1,5,3]]
 -- Val Nothing
+--
+-- >>> pz @((48...55) >>= '[ '[ToEnum Char << Id,ToEnum Char << (Id+3),ToEnum Char << (Id+6)] ]) ()
+-- Val ["036","147","258","369","47:","58;","69<","7:="]
+--
+-- >>> pz @((48...55) >>= '[ Map (ToEnum Char) << '[ Id, Id+3 ,Id+6 ] ]) ()
+-- Val ["036","147","258","369","47:","58;","69<","7:="]
 --
 data ma >>= amb deriving Show
 type MBindT ma amb = ma >> FMap amb >> Join
@@ -1095,7 +1115,7 @@ instance P (p r q) x => P (Flip p q r) x where
 -- Val [3,3,11]
 --
 
-data LiftA2 p q r
+data LiftA2 p q r deriving Show
 -- i provide the rhs as the environment to fa and fb? so fails Succ
 -- use <*> as it works way better
 -- use Proxy to delay setting the environment and then use Pop1 to run against a specific environment
@@ -1128,4 +1148,3 @@ instance ( Traversable n
                       ("",[]) -> ttnc & ttString .~ msg0 <> " <skipped>"
                       _ -> ttnc & ttString %~ (msg0 <>) . nullIf " "
             return $ z & ttVal' .~ Val ret & ttForest %~ (hhs <>)
-

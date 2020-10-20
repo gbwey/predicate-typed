@@ -94,7 +94,6 @@ allTests =
   , expectBT (Val (111,'b')) $ pl @('(123,Char1 "c") >> (Id - 12 *** Pred)) ()
   , expectBT (Fail "'Nothing found Just") $ pl @'Nothing (Just 12)
 
-  -- need to fill in the types for both even in ghci
   , expectBT (Val [Just 1,Just 2,Just 3,Just 4]) $ pl @Sequence (Just [1..4])
 
   , expectBT (Val [13,2,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> Map' (ReadP Int Id) Snd) "13-02-1999"

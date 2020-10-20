@@ -3,6 +3,7 @@ module Predicate.Prelude (
     module Predicate.Core
   , module Predicate.Util
   , module Predicate.Misc
+  , module Predicate.Data.Bits
   , module Predicate.Data.Char
   , module Predicate.Data.Condition
   , module Predicate.Data.DateTime
@@ -30,6 +31,7 @@ module Predicate.Prelude (
 import Predicate.Core
 import Predicate.Misc
 import Predicate.Util
+import Predicate.Data.Bits
 import Predicate.Data.Char
 import Predicate.Data.Condition
 import Predicate.Data.DateTime

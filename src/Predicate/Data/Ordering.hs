@@ -37,10 +37,8 @@ module Predicate.Data.Ordering (
   , Lt
   , Ne
   , type (==!)
-  , OrdP
   , OrdA'
   , OrdA
-  , OrdI
   , type (===~)
   , Cmp
   , CmpI
@@ -77,12 +75,47 @@ import Data.Function (on)
 -- True (5 > 4)
 -- Val True
 --
-type Gt n = Id > n
-type Ge n = Id >= n
-type Same n = Id == n
-type Le n = Id <= n
-type Lt n = Id < n
-type Ne n = Id /= n
+data Gt n deriving Show
+type GtT n = Id > n
+
+instance P (GtT n) x => P (Gt n) x where
+  type PP (Gt n) x = PP (GtT n) x
+  eval _ = eval (Proxy @(GtT n))
+
+data Ge n deriving Show
+type GeT n = Id >= n
+
+instance P (GeT n) x => P (Ge n) x where
+  type PP (Ge n) x = PP (GeT n) x
+  eval _ = eval (Proxy @(GeT n))
+
+data Same n deriving Show
+type SameT n = Id == n
+
+instance P (SameT n) x => P (Same n) x where
+  type PP (Same n) x = PP (SameT n) x
+  eval _ = eval (Proxy @(SameT n))
+
+data Le n deriving Show
+type LeT n = Id <= n
+
+instance P (LeT n) x => P (Le n) x where
+  type PP (Le n) x = PP (LeT n) x
+  eval _ = eval (Proxy @(LeT n))
+
+data Lt n deriving Show
+type LtT n = Id < n
+
+instance P (LtT n) x => P (Lt n) x where
+  type PP (Lt n) x = PP (LtT n) x
+  eval _ = eval (Proxy @(LtT n))
+
+data Ne n deriving Show
+type NeT n = Id /= n
+
+instance P (NeT n) x => P (Ne n) x where
+  type PP (Ne n) x = PP (NeT n) x
+  eval _ = eval (Proxy @(NeT n))
 
 -- | compare if expression @p@ is greater than @q@
 --
@@ -287,8 +320,6 @@ instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
 data p ==! q deriving Show
 infix 4 ==!
 
-type OrdP p q = p ==! q
-
 instance ( Ord (PP p a)
          , PP p a ~ PP q a
          , P p a
@@ -354,7 +385,6 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 -- Val True
 --
 
-type OrdI p q = p ===~ q
 data p ===~ q deriving Show
 infix 4 ===~
 
@@ -516,8 +546,17 @@ instance P AllNegativeT x => P AllNegative x where
   type PP AllNegative x = PP AllNegativeT x
   eval _ = evalBool (Proxy @AllNegativeT)
 
+data Positive deriving Show
+type PositiveT = Gt 0
 
-type Positive = Gt 0
+instance P PositiveT x => P Positive x where
+  type PP Positive x = PP PositiveT x
+  eval _ = evalBool (Proxy @PositiveT)
 
-type Negative = Lt 0
+data Negative deriving Show
+type NegativeT = Lt 0
+
+instance P NegativeT x => P Negative x where
+  type PP Negative x = PP NegativeT x
+  eval _ = evalBool (Proxy @NegativeT)
 

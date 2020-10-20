@@ -211,15 +211,13 @@ instance ( GetBool ignore
                     LT -> (isPrefixOf, "IsPrefixC")
                     EQ -> (isInfixOf, "IsInfixC")
                     GT -> (isSuffixOf, "IsSuffixC")
-    pp <- eval (Proxy @p) opts x
-    case getValueLR NoInline opts msg0 pp [] of
-        Left e -> pure e
-        Right s0 -> do
-          let msg1 = msg0 <> (if ignore then "I" else "") <> " | " <> s0
-          qq <- eval (Proxy @q) opts x
-          pure $ case getValueLR NoInline opts (msg1 <> " q failed") qq [hh pp] of
-            Left e -> e
-            Right s1 -> mkNodeB opts (on ff lwr s0 s1) (msg1 <> " " <> litL opts s1) [hh pp, hh qq]
+
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let msg1 = msg0 <> (if ignore then "I" else "") <> " | " <> p
+        in mkNodeB opts (on ff lwr p q) (msg1 <> " " <> litL opts q) [hh pp, hh qq]
 
 -- | similar to 'isPrefixOf' for strings
 --

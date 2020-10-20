@@ -35,7 +35,6 @@ module Predicate.Data.Either (
   , RightDef
   , RightFail
   , EitherBool
-  , EitherIn
   , PartitionEithers
 
  -- ** miscellaneous
@@ -119,17 +118,16 @@ instance Show a => P Right' (Either x a) where
 -- Present "True" ((|||) Right "True" | True)
 -- Val "True"
 --
--- >>> pl @(EitherIn (Not Id) Id) (Right True)
+-- >>> pl @(Not Id ||| Id) (Right True)
 -- Present True ((|||) Right True | True)
 -- Val True
 --
--- >>> pl @(EitherIn (Not Id) Id) (Left True)
+-- >>> pl @(Not Id ||| Id) (Left True)
 -- False ((|||) Left False | True)
 -- Val False
 --
 data p ||| q deriving Show
 infixr 2 |||
-type EitherIn p q = p ||| q
 
 instance ( Show (PP p a)
          , P p a
