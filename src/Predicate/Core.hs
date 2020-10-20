@@ -2298,7 +2298,14 @@ instance ( P p x
 --
 -- >>> pz @(Proxy Int >> Coerce (Proxy (String,Char))) () ^!? acts . _Val . to typeRep
 -- Just ([Char],Char)
-
+--
+-- >>> import qualified GHC.Exts as GE
+-- >>> pz @(Proxy GE.Any >> Coerce (Proxy Int)) () ^!? acts . _Val . to typeRep
+-- Just Int
+--
+-- >>> pz @(Proxy '(_,_) >> Coerce (Proxy '(Float,Int))) () ^!? acts . _Val . to typeRep
+-- Just ('(,) * * Float Int)
+--
 data Coerce (t :: k) deriving Show -- has to be the same kind: Type to Type or Bool to Bool ...
 
 instance ( Coercible t a

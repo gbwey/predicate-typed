@@ -57,7 +57,6 @@ module Predicate.Data.Lifted (
   , RDot
   , K
   , Lift
-  , AnyK
 
 -- ** error handling
   , Catch
@@ -1130,13 +1129,3 @@ instance ( Traversable n
                       _ -> ttnc & ttString %~ (msg0 <>) . nullIf " "
             return $ z & ttVal' .~ Val ret & ttForest %~ (hhs <>)
 
--- | returns a Proxy to 'AnyT'
---
--- >>> pz @(Pop2 (Proxy (+)) 99 9 () >> AnyK) () ^!? acts . _Val . only (Proxy @AnyT)
--- Just ()
-
-data AnyK deriving Show
-instance P AnyK x where
-  type PP AnyK x = Proxy AnyT
-  eval _ opts _ =
-    pure $ mkNode opts (Val Proxy) "AnyK" []

@@ -41,7 +41,6 @@ import Predicate.Misc
 import Predicate.Util
 import qualified GHC.TypeLits as GL
 import Data.Kind (Type)
---import Control.Lens
 import Data.Typeable
 -- $setup
 -- >>> :set -XDataKinds
@@ -50,9 +49,10 @@ import Data.Typeable
 -- >>> import Predicate.Prelude
 -- >>> import Control.Lens
 -- >>> import Control.Lens.Action
+-- >>> import qualified Data.Semigroup as SG
 -- >>> :m + Data.Ratio
 
--- | run the proxy @p@ in environment @q@
+-- | run the proxy @p@ in the environment pointed to by @q@
 --
 -- >>> pl @(Pop0 (Proxy '(Head,Len)) "abcdef") ()
 -- Present ('a',6) (Pop0 | '('a',6))
@@ -196,7 +196,7 @@ type family Pop1T (p :: Type) (q :: k) (r :: Type) :: Type where
        'GL.:$$: 'GL.Text " r = " 'GL.:<>: 'GL.ShowType r
     )
 
--- | apply @p@ to @q@ and runs in environment @r@ where @p@ and @q@ point to proxies : needs kind signatures on @p@
+-- | apply Proxy @p@ to Proxy @q@ and run in the environment pointed to by @r@ : needs kind signatures on @p@
 --
 -- >>> pz @(Pop1' (Proxy ((<>) Snd)) (Proxy Fst) Id) ("abc","def")
 -- Val "defabc"
@@ -212,6 +212,12 @@ type family Pop1T (p :: Type) (q :: k) (r :: Type) :: Type where
 --
 -- >>> pz @(Pop1' Fst Snd '( '( 'True,2),'("abc",1 % 4))) (Proxy @(Lift Snd), Proxy @Fst)
 -- Val 2
+--
+-- >>> pz @(Pop1' (Proxy MEmptyT) (Proxy (SG.Sum _)) ()) ()
+-- Val (Sum {getSum = 0})
+--
+-- >>> pz @(Pop1' (Proxy MEmptyT) (PApp (Proxy SG.Sum) (Proxy Float)) ()) ()
+-- Val (Sum {getSum = 0.0})
 --
 data Pop1' p q r deriving Show
 
@@ -243,10 +249,13 @@ type family Pop1'T (p :: Type) (q :: Type) (r :: Type) :: Type where
        'GL.:$$: 'GL.Text " r = " 'GL.:<>: 'GL.ShowType r
     )
 
--- | apply Proxy @p@ to @q@ and @r@ then run in environment @s@ : needs kind signatures on @p@
+-- | apply Proxy @p@ to @q@ and @r@ then run in the environment pointed to by @s@ : needs kind signatures on @p@
 --
 -- >>> pz @(Pop2 (Proxy '(,)) Fst 14 Id) ([1..4],'True)
 -- Val ([1,2,3,4],14)
+--
+-- >>> pz @(Pop2' (Proxy Pure) (Proxy SG.Sum) (Proxy Id) Id) 123
+-- Val (Sum {getSum = 123})
 --
 data Pop2 p q r s deriving Show
 
@@ -279,7 +288,7 @@ type family Pop2T (p :: Type) (q :: k) (r :: k1) (s :: Type) :: Type where
        'GL.:$$: 'GL.Text " s = " 'GL.:<>: 'GL.ShowType s
     )
 
--- | Applies @p@ to @q@ and @r@ proxies and runs in environment @s@ where @p@, @q@, and @r@ point to proxies : needs kind signatures on @p@
+-- | Applies Proxy @p@ to Proxy @q@ and Proxy @r@ and runs in the environment pointed to by @s@ : needs kind signatures on @p@
 --
 -- >>> pz @(Pop2' (Proxy '(,)) (Proxy 1) (Proxy "sss") ()) ()
 -- Val (1,"sss")
@@ -323,7 +332,7 @@ type family Pop2'T (p :: Type) (q :: Type) (r :: Type) (s :: Type) :: Type where
        'GL.:$$: 'GL.Text " s = " 'GL.:<>: 'GL.ShowType s
     )
 
--- | applicative bind of proxies p and q: Proxy (z :: k -> k1) <*> Proxy (w :: k) = Proxy (u :: k1) : needs kind signatures on @p@
+-- | applies Proxy @p@ to Proxy @q@ and returns a Proxy: needs kind signatures on @p@
 --
 -- >>> pz @(PApp Fst Snd >> Pop0 Id '("abcdef",99)) (Proxy @('(,) (Fst >> Len)), Proxy @16)
 -- Val (6,16)
@@ -333,6 +342,9 @@ type family Pop2'T (p :: Type) (q :: Type) (r :: Type) (s :: Type) :: Type where
 --
 -- >>> pz @('(Id,PApp (Proxy '(,)) (Proxy (Fst >> Len))) >> Second (PApp Id (Proxy 16)) >> Pop0 Snd Fst) ("abcdefg",101) -- or can call PApp2
 -- Val (7,16)
+--
+-- >>> pz @(PApp (PApp (Proxy ('(,) :: GL.Nat -> GL.Symbol -> (GL.Nat,GL.Symbol))) (Proxy 1)) (Proxy "abc")) () ^!? acts . _Val . to typeRep
+-- Just ('(,) Nat Symbol 1 "abc")
 --
 data PApp p q deriving Show
 
@@ -353,6 +365,7 @@ type family PAppT (p :: Type) (q :: Type) :: Type where
        'GL.:$$: 'GL.Text " q = " 'GL.:<>: 'GL.ShowType q
     )
 
+-- | applies Proxy @p@ to Proxy @q@ and Proxy @r@ and returns a Proxy: needs kind signatures on @p@
 -- | applicative bind of proxies p, q, and r: Proxy (z :: k -> k1 -> k2) <*> Proxy (w :: k) <*> Proxy (v :: k1) = Proxy (u :: k2) : needs kind signatures on @p@
 --
 -- >>> pz @(PApp2 (Proxy '(,)) (Proxy 2) (Proxy 'True) >> Pop0 Id ()) ()
@@ -389,7 +402,7 @@ type family PApp2T (p :: Type) (q :: Type) (r :: Type) :: Type where
        'GL.:$$: 'GL.Text " r = " 'GL.:<>: 'GL.ShowType r
    )
 
--- | create a Proxy z from proxy z where z is the expression pointed to by @p@ -- Proxify alway returns Val (Proxy @z)
+-- | create a Proxy z from proxy z where z is the expression pointed to by @p@ : Proxify alway returns Val (Proxy @z)
 --
 -- >>> pz @(Proxify Fst) ([True],13) ^!? acts . _Val . only (Proxy @Bool)
 -- Just ()

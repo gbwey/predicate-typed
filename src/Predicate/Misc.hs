@@ -34,7 +34,6 @@ module Predicate.Misc (
   , type (%%)
   , type (%&)
   , type (<%>)
-  , AnyT
   , ExtractAFromList
   , ExtractAFromTA
   , ExtractTFromTA
@@ -478,9 +477,6 @@ type family T5_4 x where
 -- | extract @i@ part of 5 tuple from the type level for use with 'Predicate.Refined3.Refined3'
 type family T5_5 x where
   T5_5 '(_,_,_,_,i) = i
-
--- | represents any kind
-type family AnyT :: k where {}
 
 -- | type family to extract @a@ from @t a@
 type family ExtractAFromTA (ta :: Type) :: Type where

@@ -31,6 +31,9 @@ import Data.Tree.Lens
 import Control.Lens
 import Control.Arrow (left)
 import qualified Safe (readNote)
+import Data.Kind (Type)
+import qualified GHC.TypeLits as GL
+import qualified Data.Semigroup as SG
 
 suite :: TestTree
 suite =
@@ -303,3 +306,53 @@ test2d :: IO (Either Msg2 (Refined2 OAN
     (ToDay > 'Just (MkDay '(2020,05,31)))
     ()))
 test2d = newRefined2P' Proxy ()
+
+testKindSignature2A :: Either Msg2
+    (Refined2 OU
+      Id
+      (PApp (Proxy (Lift "abc" :: Type -> Type)) (Proxy ()) >> 'True)
+      ())
+testKindSignature2A = newRefined2 ()
+
+testKindSignature2B :: Either Msg2
+   (Refined2 OU
+     Id
+     (Pop1' (Proxy (Lift "abc" :: GL.Nat -> Type)) (Proxy 4) () >> 'True)
+     ())
+testKindSignature2B = newRefined2 ()
+
+testKindSignature2C :: Either Msg2
+   (Refined2 OU
+     Id
+     (Pop2' (Proxy ('(,) :: Type -> Bool -> (Type,Bool))) (Proxy (W "bbb")) Fst Snd >> Snd)
+     (Proxy 'True, Int))
+testKindSignature2C = newRefined2 (Proxy @'True,1234)
+
+testKindSignature2D :: Either Msg2
+   (Refined2 OU
+     (Second (ReadP Int Id))
+     (PApp2 (Proxy ('(,) :: GL.Symbol -> Bool -> (GL.Symbol,Bool))) (Proxy "bbb") Fst >> Pop0 Id () >> Snd)
+     (Proxy 'True, String))
+testKindSignature2D = newRefined2 (Proxy @'True,"1234")
+
+testKindSignature2E :: Either Msg2
+   (Refined2 OU
+     '(Id,4 % 6)
+     (Pop1 (Proxy (MkJust :: Type -> Type)) L13 Id >> Just' >> Len > 3)
+     (Int,Int,String))
+testKindSignature2E = newRefined2 (1,2,"defghi")
+
+-- awkward cos FoldMap t p has p for location of stuff and then we need to run in a context (usually Id relative to p)
+testKindSignature2F :: Either Msg2
+   (Refined2 OU
+     (Second (Map (ReadP Int '[Id])))
+     (Pop2 (Proxy (FoldMap :: Type -> Type -> Type)) (SG.Product Int) Snd Id >> Id > 4)
+     (Char,String))
+testKindSignature2F = newRefined2 ('x',"23498")
+
+testKindSignature2G :: Either Msg2
+   (Refined2 OU
+     (Id <> Id)
+     (PApp (Proxy ((<>) :: GL.Symbol -> GL.Symbol -> Type)) Id >> PApp Id (Proxy "def") >> Pop0 Id () >> Len > 6)
+     (Proxy "1234"))
+testKindSignature2G = newRefined2 (Proxy @"1234")

@@ -33,7 +33,6 @@ import Data.Tree.Lens
 import qualified Safe (readNote)
 
 import Data.Kind (Type)
---import Data.Proxy
 import qualified GHC.TypeLits as GL
 
 suite :: TestTree

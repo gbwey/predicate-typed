@@ -21,13 +21,14 @@ import Data.Ratio
 
 import Data.Typeable
 import Control.Lens
+import Control.Lens.Action
 import Data.Time
 import Text.Show.Functions ()
 import qualified Data.Monoid as MM
 import qualified Data.Semigroup as SG
 import Data.These
 import GHC.TypeLits (Nat)
-
+import qualified GHC.Exts as GE (Any)
 suite :: TestTree
 suite =
   let s = "TestPredicate"
@@ -85,6 +86,11 @@ allTests =
   , expectBT (Fail "incorrect length: found 10 but expected 11 in [1234567890]") $ pl @(Luhn' 11) "1234567890"
   , (@?=) (Just "abc") ((_Fail # "abc") ^? _Fail)
   , (@?=) (Just 'x') ((_Val # 'x') ^? _Val)
+
+  , expectEQR (Just ()) (pz @(Proxy GE.Any) () ^!? acts . _Val . only (Proxy @GE.Any))
+  , expectEQR (Just ()) (pz @(Proxy GE.Any) () ^!? acts . _Val . only (Proxy @_))
+  , expectEQR (Just ()) (pz @(Proxy _) () ^!? acts . _Val . only (Proxy @GE.Any))
+
   , expectBT (Val (111,'b')) $ pl @('(123,Char1 "c") >> (Id - 12 *** Pred)) ()
   , expectBT (Fail "'Nothing found Just") $ pl @'Nothing (Just 12)
 
@@ -194,3 +200,4 @@ type Ip6Test = Resplit ":"
 -- checks that each digit is between 0 and n-1
 type MM1 (n :: Nat) = Map' (ReadBase Int n) Ones
 type MM2 (n :: Nat) = ExitWhen "found empty" IsEmpty >> Guard "0<=x<n" (All (Ge 0 && Lt n))
+

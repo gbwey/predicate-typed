@@ -80,5 +80,6 @@ import qualified Test.QuickCheck as Q
 import qualified Data.Binary as B
 import Data.Binary (Binary)
 import System.IO
---import Control.Lens.Action
 import System.Console.Pretty
+import Data.Kind
+import Data.Typeable
