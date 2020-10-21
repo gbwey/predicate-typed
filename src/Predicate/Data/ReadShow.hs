@@ -28,12 +28,14 @@ module Predicate.Data.ReadShow (
   , PrintC
   , PrintL
   , PrintT
+  , PrintI
 
  ) where
 import Predicate.Core
 import Predicate.Misc
 import Predicate.Util
-import GHC.TypeLits (Nat,KnownNat)
+import Predicate.Data.Tuple (ToITuple, ToITupleList, ReverseITuple)
+import GHC.TypeLits (Nat)
 import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
 import Text.Printf (PrintfArg, printf, PrintfType)
@@ -246,11 +248,11 @@ instance ( PrintfArg a
 -- | print for flat n-tuples of size two or larger
 --
 -- >>> pl @(PrintT "%d %s %s %s" '(Fst, Snd, Snd,Snd)) (10,"Asdf")
--- Present "10 Asdf Asdf Asdf" (PrintT [10 Asdf Asdf Asdf] | s=%d %s %s %s)
+-- Present "10 Asdf Asdf Asdf" ((>>) "10 Asdf Asdf Asdf" | {PrintI [10 Asdf Asdf Asdf] | s=%d %s %s %s})
 -- Val "10 Asdf Asdf Asdf"
 --
 -- >>> pl @(PrintT "%c %d %s" Id) ('x', 10,"Asdf")
--- Present "x 10 Asdf" (PrintT [x 10 Asdf] | s=%c %d %s)
+-- Present "x 10 Asdf" ((>>) "x 10 Asdf" | {PrintI [x 10 Asdf] | s=%c %d %s})
 -- Val "x 10 Asdf"
 --
 -- >>> pz @(PrintT "fst=%s snd=%03d" Id) ("ab",123)
@@ -260,140 +262,133 @@ instance ( PrintfArg a
 -- Val "fst=ab snd=123 thd=xx"
 --
 -- >>> pl @(PrintT "%s %d %c %s" '(W "xyz", Fst, Snd, Thd)) (123,'x',"ab")
--- Present "xyz 123 x ab" (PrintT [xyz 123 x ab] | s=%s %d %c %s)
+-- Present "xyz 123 x ab" ((>>) "xyz 123 x ab" | {PrintI [xyz 123 x ab] | s=%s %d %c %s})
 -- Val "xyz 123 x ab"
 --
 -- >>> pl @(PrintT "%d %c %s" Id) (123,'x')
--- Error PrintT(IO e=printf: argument list ended prematurely) (PrintT %d %c %s)
--- Fail "PrintT(IO e=printf: argument list ended prematurely)"
+-- Error PrintI(IO e=printf: argument list ended prematurely) (PrintI %d %c %s | ('x',(123,())))
+-- Fail "PrintI(IO e=printf: argument list ended prematurely)"
 --
 -- >>> pl @(PrintT "%d %c %s" Id) (123,'x',"abc",11)
--- Error PrintT(IO e=printf: formatting string ended prematurely) (PrintT %d %c %s)
--- Fail "PrintT(IO e=printf: formatting string ended prematurely)"
+-- Error PrintI(IO e=printf: formatting string ended prematurely) (PrintI %d %c %s | (11,("abc",('x',(123,())))))
+-- Fail "PrintI(IO e=printf: formatting string ended prematurely)"
 --
 -- >>> pl @(PrintT "lhs = %d rhs = %s" Id) (123,"asdf")
--- Present "lhs = 123 rhs = asdf" (PrintT [lhs = 123 rhs = asdf] | s=lhs = %d rhs = %s)
+-- Present "lhs = 123 rhs = asdf" ((>>) "lhs = 123 rhs = asdf" | {PrintI [lhs = 123 rhs = asdf] | s=lhs = %d rhs = %s})
 -- Val "lhs = 123 rhs = asdf"
 --
 -- >>> pl @(PrintT "d=%03d s=%s" Id) (9,"ab")
--- Present "d=009 s=ab" (PrintT [d=009 s=ab] | s=d=%03d s=%s)
+-- Present "d=009 s=ab" ((>>) "d=009 s=ab" | {PrintI [d=009 s=ab] | s=d=%03d s=%s})
 -- Val "d=009 s=ab"
 --
 -- >>> pl @(PrintT "d=%03d s=%s c=%c f=%4.2f" Id) (9,"ab",'x',1.54)
--- Present "d=009 s=ab c=x f=1.54" (PrintT [d=009 s=ab c=x f=1.54] | s=d=%03d s=%s c=%c f=%4.2f)
+-- Present "d=009 s=ab c=x f=1.54" ((>>) "d=009 s=ab c=x f=1.54" | {PrintI [d=009 s=ab c=x f=1.54] | s=d=%03d s=%s c=%c f=%4.2f})
 -- Val "d=009 s=ab c=x f=1.54"
 --
 -- >>> pl @(PrintT "d=%03d s=%s" Id) (9, "ab",'x',1.54)
--- Error PrintT(IO e=printf: formatting string ended prematurely) (PrintT d=%03d s=%s)
--- Fail "PrintT(IO e=printf: formatting string ended prematurely)"
+-- Error PrintI(IO e=printf: formatting string ended prematurely) (PrintI d=%03d s=%s | (1.54,('x',("ab",(9,())))))
+-- Fail "PrintI(IO e=printf: formatting string ended prematurely)"
 --
 -- >>> pl @(PrintT "lhs = %d rhs = %s c=%d" Id) (123,"asdf",'x')
--- Present "lhs = 123 rhs = asdf c=120" (PrintT [lhs = 123 rhs = asdf c=120] | s=lhs = %d rhs = %s c=%d)
+-- Present "lhs = 123 rhs = asdf c=120" ((>>) "lhs = 123 rhs = asdf c=120" | {PrintI [lhs = 123 rhs = asdf c=120] | s=lhs = %d rhs = %s c=%d})
 -- Val "lhs = 123 rhs = asdf c=120"
 --
 -- >>> pl @(PrintT "hello d=%d %c %s" '(12, Char1 "z", "someval")) ()
--- Present "hello d=12 z someval" (PrintT [hello d=12 z someval] | s=hello d=%d %c %s)
+-- Present "hello d=12 z someval" ((>>) "hello d=12 z someval" | {PrintI [hello d=12 z someval] | s=hello d=%d %c %s})
 -- Val "hello d=12 z someval"
 --
 -- >>> pl @(PrintT "ipaddress %03d.%03d.%03d.%03d" '(1,2,3,4)) ()
--- Present "ipaddress 001.002.003.004" (PrintT [ipaddress 001.002.003.004] | s=ipaddress %03d.%03d.%03d.%03d)
+-- Present "ipaddress 001.002.003.004" ((>>) "ipaddress 001.002.003.004" | {PrintI [ipaddress 001.002.003.004] | s=ipaddress %03d.%03d.%03d.%03d})
 -- Val "ipaddress 001.002.003.004"
 --
+
+type PrintTT s p = p >> ToITuple >> ReverseITuple >> PrintI s
 data PrintT s p deriving Show
+
+instance P (PrintTT s p) x => P (PrintT s p) x where
+  type PP (PrintT s p) x = PP (PrintTT s p) x
+  eval _ = eval (Proxy @(PrintTT s p))
+
+-- | prints inductive tuples in reverse order
+--
+-- >>> pz @(PrintI "d=%d s=%s f=%f") (1.73,("abc",(12,())))
+-- Val "d=12 s=abc f=1.73"
+--
+-- >>> pz @(PrintI "d=%d s=%s f=%f") ("abc",(12,()))
+-- Fail "PrintI(IO e=printf: argument list ended prematurely)"
+--
+-- >>> pz @(PrintI "d=%s s=%d") ("abc",('x',()))
+-- Fail "PrintI(IO e=printf: bad formatting char 's')"
+--
+data PrintI s deriving Show
 instance ( PrintC bs
-         , (b,bs) ~ InductTupleP y
-         , InductTupleC y
+         , (b,bs) ~ x
          , PrintfArg b
          , PP s x ~ String
-         , PP p x ~ y
          , P s x
-         , P p x
-         , CheckT (PP p x) ~ 'True
-         ) => P (PrintT s p) x where
-  type PP (PrintT s p) x = String
+         ) => P (PrintI s) x where
+  type PP (PrintI s) x = String
   eval _ opts x = do
-    let msg0 = "PrintT"
-    lrx <- runPQ NoInline msg0 (Proxy @s) (Proxy @p) opts x []
-    case lrx of
+    let msg0 = "PrintI"
+    ss <- eval (Proxy @s) opts x
+    case getValueLR NoInline opts msg0 ss [] of
       Left e -> pure e
-      Right (s,y,ss,pp) -> do
-        let hhs = [hh ss, hh pp]
-        lr <- catchitNF (prtC @bs s (inductTupleC y))
+      Right s -> do
+        let hhs = [hh ss]
+        lr <- catchitNF (prtC @bs s x)
         pure $ case lr of
           Left e -> mkNode opts (Fail (msg0 <> "(" <> e <> ")")) (msg0 <> " " <> s) hhs
           Right ret -> mkNode opts (Val ret) (msg0 <> " [" <> litL opts ret <> "] | s=" <> litL opts s) hhs
 
-
 -- | print for lists  -- use 'PrintT' as it is safer than 'PrintL'
 --
 -- >>> pl @(PrintL 4 "%s %s %s %s" '[W "xyz", ShowP Fst, ShowP Snd, Thd]) (123,'x',"ab")
--- Present "xyz 123 'x' ab" (PrintL(4) [xyz 123 'x' ab] | s=%s %s %s %s)
+-- Present "xyz 123 'x' ab" ((>>) "xyz 123 'x' ab" | {PrintI [xyz 123 'x' ab] | s=%s %s %s %s})
 -- Val "xyz 123 'x' ab"
 --
--- >>> pz @(PrintL 1 "%05d" '[Id]) 123  -- tick is required for a one element list (use 'PrintF')
+-- >>> pz @(PrintL 1 "%05d" '[Id]) 123  -- tick is required for a one element lis)
 -- Val "00123"
 --
 -- >>> pz @(PrintL 2 "%d %05d" [Fst,Snd]) (29,123)
 -- Val "29 00123"
 --
 -- >>> pl @(PrintL 3 "first=%d second=%d third=%d" Id) [10,11,12]
--- Present "first=10 second=11 third=12" (PrintL(3) [first=10 second=11 third=12] | s=first=%d second=%d third=%d)
+-- Present "first=10 second=11 third=12" ((>>) "first=10 second=11 third=12" | {PrintI [first=10 second=11 third=12] | s=first=%d second=%d third=%d})
 -- Val "first=10 second=11 third=12"
 --
 -- >>> pl @(PrintL 2 "first=%d second=%d third=%d" Id) [10,11,12]
--- Error PrintL(2) arg count=3 (wrong length 3)
--- Fail "PrintL(2) arg count=3"
+-- Error toITupleListC: expected exactly 2 values (ToITupleList(2) instead found 3)
+-- Fail "toITupleListC: expected exactly 2 values"
 --
 -- >>> pl @(PrintL 4 "first=%d second=%d third=%d" Id) [10,11,12]
--- Error PrintL(4) arg count=3 (wrong length 3)
--- Fail "PrintL(4) arg count=3"
+-- Error toITupleListC: expected exactly 4 values (ToITupleList(4) instead found 3)
+-- Fail "toITupleListC: expected exactly 4 values"
 --
 -- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4]
--- Present "001.002.003.004" (PrintL(4) [001.002.003.004] | s=%03d.%03d.%03d.%03d)
+-- Present "001.002.003.004" ((>>) "001.002.003.004" | {PrintI [001.002.003.004] | s=%03d.%03d.%03d.%03d})
 -- Val "001.002.003.004"
 --
 -- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4,5]
--- Error PrintL(4) arg count=5 (wrong length 5)
--- Fail "PrintL(4) arg count=5"
+-- Error toITupleListC: expected exactly 4 values (ToITupleList(4) instead found 5)
+-- Fail "toITupleListC: expected exactly 4 values"
 --
 -- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3]
--- Error PrintL(4) arg count=3 (wrong length 3)
--- Fail "PrintL(4) arg count=3"
+-- Error toITupleListC: expected exactly 4 values (ToITupleList(4) instead found 3)
+-- Fail "toITupleListC: expected exactly 4 values"
 --
 -- >>> pl @(PrintL 4 "%03d.%03d.%03d.%03d" Id) [1,2,3,4]
--- Present "001.002.003.004" (PrintL(4) [001.002.003.004] | s=%03d.%03d.%03d.%03d)
+-- Present "001.002.003.004" ((>>) "001.002.003.004" | {PrintI [001.002.003.004] | s=%03d.%03d.%03d.%03d})
 -- Val "001.002.003.004"
 --
 -- >>> pl @(PrintL 4 "%d %4d %-d %03d" Id) [1..4]
--- Present "1    2 3 004" (PrintL(4) [1    2 3 004] | s=%d %4d %-d %03d)
+-- Present "1    2 3 004" ((>>) "1    2 3 004" | {PrintI [1    2 3 004] | s=%d %4d %-d %03d})
 -- Val "1    2 3 004"
 --
 
+type PrintLT (n :: Nat) s p = p >> ToITupleList n >> ReverseITuple >> PrintI s
 data PrintL (n :: Nat) s p deriving Show
 
-instance ( KnownNat n
-         , PrintC bs
-         , (b,bs) ~ InductListP n a
-         , InductListC n a
-         , PrintfArg b
-         , PP s x ~ String
-         , PP p x ~ [a]
-         , P s x
-         , P p x
-         ) => P (PrintL n s p) x where
-  type PP (PrintL n s p) x = String
-  eval _ opts x = do
-    let msg0 = "PrintL(" ++ show n ++ ")"
-        n = nat @n
-    lrx <- runPQ NoInline msg0 (Proxy @s) (Proxy @p) opts x []
-    case lrx of
-      Left e -> pure e
-      Right (s,p,ss,pp) -> do
-        let hhs = [hh ss, hh pp]
-        if length p /= n then pure $ mkNode opts (Fail (msg0 <> " arg count=" ++ show (length p))) ("wrong length " ++ show (length p)) hhs
-        else do
-          lr <- catchitNF (prtC @bs s (inductListC @n @a p))
-          pure $ case lr of
-            Left e -> mkNode opts (Fail (msg0 <> "(" <> e <> ")")) ("s=" <> s) hhs
-            Right ret -> mkNode opts (Val ret) (msg0 <> " [" <> litL opts ret <> "] | s=" <> litL opts s) hhs
+instance P (PrintLT n s p) x => P (PrintL n s p) x where
+  type PP (PrintL n s p) x = PP (PrintLT n s p) x
+  eval _ = eval (Proxy @(PrintLT n s p))
 

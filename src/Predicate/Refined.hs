@@ -66,6 +66,7 @@ import Control.DeepSeq (NFData)
 -- >>> :set -XNoOverloadedLists
 -- >>> :m + Predicate.Prelude
 -- >>> import qualified Control.Arrow as AR
+-- >>> :m + Text.Show.Functions
 
 -- | a simple refinement type that ensures the predicate @p@ holds for the type @a@
 --
@@ -319,6 +320,10 @@ newRefined' a = do
 -- >>> AR.left m0BoolE $ newRefined @OZ @(Snd !! Fst >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Left (Right False)
 --
+-- >>> newRefined @OU @((Id $$ 13) > 100) (\x -> x * 14) ^? _Right . to unRefined . to ($ 99)
+-- Just 1386
+--
+
 newRefined :: forall opts p a
     . RefinedC opts p a
    => a

@@ -17,20 +17,30 @@
 -- | promoted tuple functions
 module Predicate.Data.Tuple (
 
+ -- ** arrows
     Dup
   , First
   , Second
   , type (&&&)
   , type (***)
   , Both
-  , Pairs
+
+ -- ** flat tuples
   , Tuple
   , Tuple'
+  , Pairs
 
+ -- ** boolean
   , AndA
   , type (&*)
   , OrA
   , type (|+)
+
+ -- ** inductive tuples
+  , EachITuple
+  , ToITuple
+  , ReverseITuple
+  , ToITupleList
 
  ) where
 import Predicate.Core
@@ -46,6 +56,8 @@ import GHC.TypeNats (Nat, KnownNat)
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
 -- >>> import Predicate.Prelude
+-- >>> import qualified Data.Semigroup as SG
+-- >>> :m + Data.Ratio
 
 -- | duplicate a value into a tuple
 --
@@ -425,3 +437,98 @@ instance ( KnownNat n
     let msg0 = "Tuple'(" ++ show n ++ ")"
         n = nat @n @Int
     in pure $ mkNode opts (Val (getTupleC @n as)) msg0 []
+
+-- | run @p@ with inductive tuples
+--
+-- >>> pz @(EachITuple Succ) (False,(2,(LT,('c',()))))
+-- Val (True,(3,(EQ,('d',()))))
+--
+-- >>> pz @(EachITuple (Id + (4 >> FromIntegral _))) (1,(1/4,(5%6,())))
+-- Val (5 % 1,(17 % 4,(29 % 6,())))
+--
+-- >>> pz @(ToITuple >> EachITuple (Id + (4 >> FromIntegral _))) (1000,1/4,5%6)
+-- Val (1004 % 1,(17 % 4,(29 % 6,())))
+--
+-- >>> pz @(ToITuple >> EachITuple ((Id >> FromIntegral _) + (4 >> FromIntegral _))) (1000::Integer,17::Int)
+-- Val (1004,(21,()))
+--
+-- >>> pz @(ToITuple >> EachITuple (Dup >> Fst<>Snd)) (SG.Min 1,SG.First 'x',"abcd")
+-- Val (Min {getMin = 1},(First {getFirst = 'x'},("abcdabcd",())))
+--
+data EachITuple p deriving Show
+
+instance ( P p b
+         , P (EachITuple p) bs
+         ) => P (EachITuple p) (b,bs) where
+  type PP (EachITuple p) (b,bs) = (PP p b, PP (EachITuple p) bs)
+  eval _ opts (b,bs) = do
+    let msg0 = "EachITuple"
+    pp <- eval (Proxy @p) opts b
+    case getValueLR NoInline opts msg0 pp [] of
+      Left e -> pure e
+      Right p -> do
+        qq <- eval (Proxy @(EachITuple p)) opts bs
+        pure $ case getValueLR NoInline opts msg0 qq [] of
+          Left e -> e
+          Right q ->
+            mkNode opts (Val (p,q)) msg0 [hh pp, hh qq]
+
+instance P (EachITuple p) () where
+  type PP (EachITuple p) () = ()
+  eval _ opts () = do
+    let msg0 = "EachITuple eof"
+    pure $ mkNode opts (Val ()) msg0 []
+
+-- | create inductive tuples from flat tuples
+--
+-- >>> pz @(ToITuple >> EachITuple Succ) (1,2,False,'x')
+-- Val (2,(3,(True,('y',()))))
+--
+data ToITuple deriving Show
+
+instance ToITupleC x => P ToITuple x where
+  type PP ToITuple x = ToITupleP x
+  eval _ opts x = do
+    let msg0 = "ToITuple"
+    pure $ mkNode opts (Val (toITupleC x)) msg0 []
+
+-- | reverse an inductive tuple
+--
+-- >>> pz @ReverseITuple (1.4,(1,(2,(False,('x',())))))
+-- Val ('x',(False,(2,(1,(1.4,())))))
+--
+data ReverseITuple deriving Show
+
+instance P ReverseITuple () where
+  type PP ReverseITuple () = ()
+  eval _ opts () = do
+    let msg0 = "ReverseITuple"
+    pure $ mkNode opts (Val ()) msg0 []
+
+instance ReverseITupleC x xs () => P ReverseITuple (x,xs) where
+  type PP ReverseITuple (x,xs) = ReverseITupleT x xs ()
+  eval _ opts (x,xs) = do
+    let msg0 = "ReverseITuple"
+    pure $ mkNode opts (Val (reverseITupleC x xs ())) msg0 []
+
+-- | create inductive tuples from a list of the exact size @n@
+--
+-- >>> pz @(ToITupleList 4 >> EachITuple Succ) ['a','c','y','B']
+-- Val ('b',('d',('z',('C',()))))
+--
+-- >>> pz @(ToITupleList 4) ['a','c','y','B']
+-- Val ('a',('c',('y',('B',()))))
+--
+-- >>> pz @(Take 10 Id >> ToITupleList 10) ['a'..'z']
+-- Val ('a',('b',('c',('d',('e',('f',('g',('h',('i',('j',()))))))))))
+--
+data ToITupleList (n :: Nat) deriving Show
+
+instance (KnownNat n, ToITupleListC n a, xs ~ [a]) => P (ToITupleList n) xs where
+  type PP (ToITupleList n) xs = ToITupleListP n (ExtractAFromTA xs)
+  eval _ opts xs =
+    let msg0 = "ToITupleList(" <> show n <> ")"
+        n = nat @n @Int
+    in pure $ case toITupleListC @n @a xs of
+         Left e -> mkNode opts (Fail e) (msg0 <> " instead found " <> show (length xs)) []
+         Right d -> mkNode opts (Val d) msg0 []

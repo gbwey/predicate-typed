@@ -58,11 +58,14 @@ module Predicate.Misc (
   , GetOrdering(..)
   , OrderingP(..)
   , GetOrd(..)
-  , InductTupleC(..)
-  , InductListC(..)
-  , TupleC(..)
   , nat
   , symb
+
+ -- ** inductive tuples
+  , ToITupleC(..)
+  , ToITupleListC(..)
+  , ReverseITupleC(..)
+  , TupleC(..)
 
  -- ** extract from n-tuple
   , T4_1
@@ -293,116 +296,134 @@ type family LenT (xs :: [k]) :: Nat where
   LenT '[] = 0
   LenT (_x ': xs) = 1 GN.+ LenT xs
 
--- | takes a flat n-tuple and creates a reversed inductive tuple. see 'Predicate.Data.ReadShow.PrintT'
+-- | takes a flat n-tuple and creates an inductive tuple. see 'Predicate.Data.ReadShow.PrintT'
 --
--- >>> inductTupleC (123,'x',False,"abc")
--- ("abc",(False,('x',(123,()))))
+-- >>> toITupleC (123,'x',False,"abc")
+-- (123,('x',(False,("abc",()))))
 --
--- >>> inductTupleC (123,'x')
--- ('x',(123,()))
+-- >>> toITupleC (123,'x')
+-- (123,('x',()))
 --
-class InductTupleC x where
-  type InductTupleP x
-  inductTupleC :: x -> InductTupleP x
-instance (GL.TypeError ('GL.Text "InductTupleC: inductive tuple cannot be empty")) => InductTupleC () where
-  type InductTupleP () = ()
-  inductTupleC () = ()
-instance InductTupleC (a,b) where
-  type InductTupleP (a,b) = (b,(a,()))
-  inductTupleC (a,b) = (b,(a,()))
-instance InductTupleC (a,b,c) where
-  type InductTupleP (a,b,c) = (c,(b,(a,())))
-  inductTupleC (a,b,c) = (c,(b,(a,())))
-instance InductTupleC (a,b,c,d) where
-  type InductTupleP (a,b,c,d) = (d,(c,(b,(a,()))))
-  inductTupleC (a,b,c,d) = (d,(c,(b,(a,()))))
-instance InductTupleC (a,b,c,d,e) where
-  type InductTupleP (a,b,c,d,e) = (e,(d,(c,(b,(a,())))))
-  inductTupleC (a,b,c,d,e) = (e,(d,(c,(b,(a,())))))
-instance InductTupleC (a,b,c,d,e,f) where
-  type InductTupleP (a,b,c,d,e,f) = (f,(e,(d,(c,(b,(a,()))))))
-  inductTupleC (a,b,c,d,e,f) = (f,(e,(d,(c,(b,(a,()))))))
-instance InductTupleC (a,b,c,d,e,f,g) where
-  type InductTupleP (a,b,c,d,e,f,g) = (g,(f,(e,(d,(c,(b,(a,())))))))
-  inductTupleC (a,b,c,d,e,f,g) = (g,(f,(e,(d,(c,(b,(a,())))))))
-instance InductTupleC (a,b,c,d,e,f,g,h) where
-  type InductTupleP (a,b,c,d,e,f,g,h) = (h,(g,(f,(e,(d,(c,(b,(a,()))))))))
-  inductTupleC (a,b,c,d,e,f,g,h) = (h,(g,(f,(e,(d,(c,(b,(a,()))))))))
-instance InductTupleC (a,b,c,d,e,f,g,h,i) where
-  type InductTupleP (a,b,c,d,e,f,g,h,i) = (i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))
-  inductTupleC (a,b,c,d,e,f,g,h,i) = (i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))
-instance InductTupleC (a,b,c,d,e,f,g,h,i,j) where
-  type InductTupleP (a,b,c,d,e,f,g,h,i,j) = (j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))
-  inductTupleC (a,b,c,d,e,f,g,h,i,j) = (j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))
-instance InductTupleC (a,b,c,d,e,f,g,h,i,j,k) where
-  type InductTupleP (a,b,c,d,e,f,g,h,i,j,k) = (k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))))
-  inductTupleC (a,b,c,d,e,f,g,h,i,j,k) = (k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))))
-instance InductTupleC (a,b,c,d,e,f,g,h,i,j,k,l) where
-  type InductTupleP (a,b,c,d,e,f,g,h,i,j,k,l) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
-  inductTupleC (a,b,c,d,e,f,g,h,i,j,k,l) = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
 
--- | takes a list and converts to a reversed inductive tuple. see 'Predicate.Data.ReadShow.PrintL'
+class ToITupleC x where
+  type ToITupleP x
+  toITupleC :: x -> ToITupleP x
+instance (GL.TypeError ('GL.Text "ToITupleC: inductive tuple cannot be empty")) => ToITupleC () where
+  type ToITupleP () = ()
+  toITupleC () = ()
+instance ToITupleC (a,b) where
+  type ToITupleP (a,b) = (a,(b,()))
+  toITupleC (a,b) = (a,(b,()))
+instance ToITupleC (a,b,c) where
+  type ToITupleP (a,b,c) = (a,(b,(c,())))
+  toITupleC (a,b,c) = (a,(b,(c,())))
+instance ToITupleC (a,b,c,d) where
+  type ToITupleP (a,b,c,d) = (a,(b,(c,(d,()))))
+  toITupleC (a,b,c,d) = (a,(b,(c,(d,()))))
+instance ToITupleC (a,b,c,d,e) where
+  type ToITupleP (a,b,c,d,e) = (a,(b,(c,(d,(e,())))))
+  toITupleC (a,b,c,d,e) = (a,(b,(c,(d,(e,())))))
+instance ToITupleC (a,b,c,d,e,f) where
+  type ToITupleP (a,b,c,d,e,f) = (a,(b,(c,(d,(e,(f,()))))))
+  toITupleC (a,b,c,d,e,f) = (a,(b,(c,(d,(e,(f,()))))))
+instance ToITupleC (a,b,c,d,e,f,g) where
+  type ToITupleP (a,b,c,d,e,f,g) = (a,(b,(c,(d,(e,(f,(g,())))))))
+  toITupleC (a,b,c,d,e,f,g) = (a,(b,(c,(d,(e,(f,(g,())))))))
+instance ToITupleC (a,b,c,d,e,f,g,h) where
+  type ToITupleP (a,b,c,d,e,f,g,h) = (a,(b,(c,(d,(e,(f,(g,(h,()))))))))
+  toITupleC (a,b,c,d,e,f,g,h) = (a,(b,(c,(d,(e,(f,(g,(h,()))))))))
+instance ToITupleC (a,b,c,d,e,f,g,h,i) where
+  type ToITupleP (a,b,c,d,e,f,g,h,i) = (a,(b,(c,(d,(e,(f,(g,(h,(i,())))))))))
+  toITupleC (a,b,c,d,e,f,g,h,i) = (a,(b,(c,(d,(e,(f,(g,(h,(i,())))))))))
+instance ToITupleC (a,b,c,d,e,f,g,h,i,j) where
+  type ToITupleP (a,b,c,d,e,f,g,h,i,j) = (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,()))))))))))
+  toITupleC (a,b,c,d,e,f,g,h,i,j) = (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,()))))))))))
+instance ToITupleC (a,b,c,d,e,f,g,h,i,j,k) where
+  type ToITupleP (a,b,c,d,e,f,g,h,i,j,k) = (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,())))))))))))
+  toITupleC (a,b,c,d,e,f,g,h,i,j,k) = (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,())))))))))))
+instance ToITupleC (a,b,c,d,e,f,g,h,i,j,k,l) where
+  type ToITupleP (a,b,c,d,e,f,g,h,i,j,k,l) = (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,()))))))))))))
+  toITupleC (a,b,c,d,e,f,g,h,i,j,k,l) = (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,()))))))))))))
+
+
+-- | takes a list of size @n@ and converts it to an inductive tuple. see 'Predicate.Data.ReadShow.PrintL'
 --
--- >>> inductListC @4 [10,12,13,1]
--- (1,(13,(12,(10,()))))
+-- >>> toITupleListC @4 [10,12,13,1]
+-- Right (10,(12,(13,(1,()))))
 --
--- >>> inductListC @2 ["ab","cc"]
--- ("cc",("ab",()))
+-- >>> toITupleListC @2 ["ab","cc"]
+-- Right ("ab",("cc",()))
 --
-class InductListC (n :: Nat) a where
-  type InductListP n a
-  inductListC :: [a] -> InductListP n a
-instance (GL.TypeError ('GL.Text "InductListC: inductive tuple cannot be empty")) => InductListC 0 a where
-  type InductListP 0 a = ()
-  inductListC _ = errorInProgram "InductListC 0: shouldnt be called"
-instance InductListC 1 a where
-  type InductListP 1 a = (a,())
-  inductListC [a] = (a,())
-  inductListC _ = errorInProgram "inductListC: expected 1 value"
-instance InductListC 2 a where
-  type InductListP 2 a = (a,(a,()))
-  inductListC [a,b] = (b,(a,()))
-  inductListC _ = errorInProgram "inductListC: expected 2 values"
-instance InductListC 3 a where
-  type InductListP 3 a = (a,(a,(a,())))
-  inductListC [a,b,c] = (c,(b,(a,())))
-  inductListC _ = errorInProgram "inductListC: expected 3 values"
-instance InductListC 4 a where
-  type InductListP 4 a = (a,(a,(a,(a,()))))
-  inductListC [a,b,c,d] = (d,(c,(b,(a,()))))
-  inductListC _ = errorInProgram "inductListC: expected 4 values"
-instance InductListC 5 a where
-  type InductListP 5 a = (a,(a,(a,(a,(a,())))))
-  inductListC [a,b,c,d,e] = (e,(d,(c,(b,(a,())))))
-  inductListC _ = errorInProgram "inductListC: expected 5 values"
-instance InductListC 6 a where
-  type InductListP 6 a = (a,(a,(a,(a,(a,(a,()))))))
-  inductListC [a,b,c,d,e,f] = (f,(e,(d,(c,(b,(a,()))))))
-  inductListC _ = errorInProgram "inductListC: expected 6 values"
-instance InductListC 7 a where
-  type InductListP 7 a = (a,(a,(a,(a,(a,(a,(a,())))))))
-  inductListC [a,b,c,d,e,f,g] = (g,(f,(e,(d,(c,(b,(a,())))))))
-  inductListC _ = errorInProgram "inductListC: expected 7 values"
-instance InductListC 8 a where
-  type InductListP 8 a = (a,(a,(a,(a,(a,(a,(a,(a,()))))))))
-  inductListC [a,b,c,d,e,f,g,h] = (h,(g,(f,(e,(d,(c,(b,(a,()))))))))
-  inductListC _ = errorInProgram "inductListC: expected 8 values"
-instance InductListC 9 a where
-  type InductListP 9 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,())))))))))
-  inductListC [a,b,c,d,e,f,g,h,i] = (i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))
-  inductListC _ = errorInProgram "inductListC: expected 9 values"
-instance InductListC 10 a where
-  type InductListP 10 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,()))))))))))
-  inductListC [a,b,c,d,e,f,g,h,i,j] = (j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))
-  inductListC _ = errorInProgram "inductListC: expected 10 values"
-instance InductListC 11 a where
-  type InductListP 11 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,())))))))))))
-  inductListC [a,b,c,d,e,f,g,h,i,j,k] = (k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,())))))))))))
-  inductListC _ = errorInProgram "inductListC: expected 11 values"
-instance InductListC 12 a where
-  type InductListP 12 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,()))))))))))))
-  inductListC [a,b,c,d,e,f,g,h,i,j,k,l] = (l,(k,(j,(i,(h,(g,(f,(e,(d,(c,(b,(a,()))))))))))))
-  inductListC _ = errorInProgram "inductListC: expected 12 values"
+-- >>> toITupleListC @10 [10,12,13,1]
+-- Left "toITupleListC: expected exactly 10 values"
+--
+-- >>> toITupleListC @2 [10,12,13,1]
+-- Left "toITupleListC: expected exactly 2 values"
+--
+class ToITupleListC (n :: Nat) a where
+  type ToITupleListP n a
+  toITupleListC :: [a] -> Either String (ToITupleListP n a)
+instance (GL.TypeError ('GL.Text "ToITupleListC: inductive tuple cannot be empty")) => ToITupleListC 0 a where
+  type ToITupleListP 0 a = ()
+  toITupleListC _ = Left "ToITupleListC 0: shouldnt be called"
+instance ToITupleListC 1 a where
+  type ToITupleListP 1 a = (a,())
+  toITupleListC [a] = Right (a,())
+  toITupleListC _ = Left "toITupleListC: expected exactly 1 value"
+instance ToITupleListC 2 a where
+  type ToITupleListP 2 a = (a,(a,()))
+  toITupleListC [a,b] = Right (a,(b,()))
+  toITupleListC _ = Left "toITupleListC: expected exactly 2 values"
+instance ToITupleListC 3 a where
+  type ToITupleListP 3 a = (a,(a,(a,())))
+  toITupleListC [a,b,c] = Right (a,(b,(c,())))
+  toITupleListC _ = Left "toITupleListC: expected exactly 3 values"
+instance ToITupleListC 4 a where
+  type ToITupleListP 4 a = (a,(a,(a,(a,()))))
+  toITupleListC [a,b,c,d] = Right (a,(b,(c,(d,()))))
+  toITupleListC _ = Left "toITupleListC: expected exactly 4 values"
+instance ToITupleListC 5 a where
+  type ToITupleListP 5 a = (a,(a,(a,(a,(a,())))))
+  toITupleListC [a,b,c,d,e] = Right (a,(b,(c,(d,(e,())))))
+  toITupleListC _ = Left "toITupleListC: expected exactly 5 values"
+instance ToITupleListC 6 a where
+  type ToITupleListP 6 a = (a,(a,(a,(a,(a,(a,()))))))
+  toITupleListC [a,b,c,d,e,f] = Right (a,(b,(c,(d,(e,(f,()))))))
+  toITupleListC _ = Left "toITupleListC: expected exactly 6 values"
+instance ToITupleListC 7 a where
+  type ToITupleListP 7 a = (a,(a,(a,(a,(a,(a,(a,())))))))
+  toITupleListC [a,b,c,d,e,f,g] = Right (a,(b,(c,(d,(e,(f,(g,())))))))
+  toITupleListC _ = Left "toITupleListC: expected exactly 7 values"
+instance ToITupleListC 8 a where
+  type ToITupleListP 8 a = (a,(a,(a,(a,(a,(a,(a,(a,()))))))))
+  toITupleListC [a,b,c,d,e,f,g,h] = Right (a,(b,(c,(d,(e,(f,(g,(h,()))))))))
+  toITupleListC _ = Left "toITupleListC: expected exactly 8 values"
+instance ToITupleListC 9 a where
+  type ToITupleListP 9 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,())))))))))
+  toITupleListC [a,b,c,d,e,f,g,h,i] = Right (a,(b,(c,(d,(e,(f,(g,(h,(i,())))))))))
+  toITupleListC _ = Left "toITupleListC: expected exactly 9 values"
+instance ToITupleListC 10 a where
+  type ToITupleListP 10 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,()))))))))))
+  toITupleListC [a,b,c,d,e,f,g,h,i,j] = Right (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,()))))))))))
+  toITupleListC _ = Left "toITupleListC: expected exactly 10 values"
+instance ToITupleListC 11 a where
+  type ToITupleListP 11 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,())))))))))))
+  toITupleListC [a,b,c,d,e,f,g,h,i,j,k] = Right (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,())))))))))))
+  toITupleListC _ = Left "toITupleListC: expected exactly 11 values"
+instance ToITupleListC 12 a where
+  type ToITupleListP 12 a = (a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,(a,()))))))))))))
+  toITupleListC [a,b,c,d,e,f,g,h,i,j,k,l] = Right (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,()))))))))))))
+  toITupleListC _ = Left "toITupleListC: expected exactly 12 values"
+
+class ReverseITupleC x xs ys where
+  type ReverseITupleT x xs ys
+  reverseITupleC :: x -> xs -> ys -> ReverseITupleT x xs ys
+instance ReverseITupleC x () ys  where
+  type ReverseITupleT x () ys = (x,ys)
+  reverseITupleC x () ys = (x,ys)
+instance ReverseITupleC w ws (x, ys) => ReverseITupleC x (w,ws) ys  where
+  type ReverseITupleT x (w,ws) ys = (ReverseITupleT w ws (x,ys))
+  reverseITupleC x (w,ws) ys = reverseITupleC w ws (x,ys)
 
 -- partially apply the 2nd arg to an ADT -- $ and & work with functions only
 -- doesnt apply more than once because we need to eval it

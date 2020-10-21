@@ -86,6 +86,8 @@ import Data.Proxy (Proxy(..))
 -- >>> :set -XTemplateHaskell
 -- >>> :set -XTypeApplications
 -- >>> :m + Data.Time
+-- >>> :m + Control.Lens
+-- >>> :m + Text.Show.Functions
 
 -- | credit card with luhn algorithm
 --
@@ -315,4 +317,22 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, String
 --
 -- >>> newRefined2 @OZ @(ReadP Value Id) @'True "Number 123.4"
 -- Right (Refined2 {r2In = Number 123.4, r2Out = "Number 123.4"})
+--
+-- >>> newRefined @OU @((Id $$ 13) > 100) (\x -> x * 14)
+-- Right (Refined <function>)
+--
+-- >>> newRefined2 @OU @(Id $$ 13) @(Id > 100) (\x -> x * 14) ^? _Right . to r2Out
+-- Just <function>
+--
+-- >>> newRefined2 @OU @(Id $$ 13) @(Id > 100) (\x -> x * 14) ^? _Right . to r2In
+-- Just 182
+--
+-- >>> newRefined2 @OU @(Id $$ 13) @(Id > 100) (\x -> x * 14) ^? _Right . to (($ 13) . r2Out)
+-- Just 182
+--
+-- >>> newRefined2 @OZ @(Pop0 Fst Id) @(Len > 1) (Proxy @Snd,"Abcdef") ^? _Right . to r2In
+-- Just "Abcdef"
+--
+-- >>> newRefined2 @OZ @(Pop0 Fst Id >> Len) @(Id > 1) (Proxy @Snd,"Abcdef") ^? _Right . to r2In
+-- Just 6
 --
