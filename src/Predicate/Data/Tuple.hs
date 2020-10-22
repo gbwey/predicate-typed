@@ -48,6 +48,8 @@ import Predicate.Misc
 import Predicate.Util
 import Data.Proxy (Proxy(Proxy))
 import GHC.TypeNats (Nat, KnownNat)
+import qualified GHC.TypeLits as GL
+import Control.Lens
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -387,7 +389,7 @@ instance ( ExtractL1C (PP q x)
 -- Val ('a','b','c','d')
 --
 -- >>> pz @(Tuple 4) "abc"
--- Fail "Tuple(4):not enough elements"
+-- Fail "Tuple(4) not enough elements(3)"
 --
 -- >>> pz @(Fst >> Tuple 3) ([1..5],True)
 -- Val (1,2,3)
@@ -398,6 +400,9 @@ instance ( ExtractL1C (PP q x)
 data Tuple (n :: Nat) deriving Show
 
 instance ( KnownNat n
+         , FailWhenT (n GL.<=? 1)
+                  ('GL.Text "Tuple:n cannot be less than two but found n="
+                   'GL.:<>: 'GL.ShowType n)
          , TupleC n a
          , x ~ [a]
          , Show a
@@ -407,7 +412,7 @@ instance ( KnownNat n
     let msg0 = "Tuple(" ++ show n ++ ")"
         n = nat @n @Int
     in pure $ case getTupleC @n as of
-         Left es -> mkNode opts (Fail (msg0 <> ":not enough elements")) (showVerbose opts " | " es) []
+         Left es -> mkNode opts (Fail (msg0 <> " not enough elements(" <> show (length as) <> ")")) (showVerbose opts " | " es) []
          Right r -> mkNode opts (Val r) msg0 []
 
 -- | create a n tuple from a list
@@ -421,6 +426,10 @@ instance ( KnownNat n
 -- >>> pz @(Tuple' 4) []
 -- Val (Left [])
 --
+-- >>> pl @(Tuple' 4) "abc"
+-- Present Left "abc" (Tuple'(4) not enough elements(3))
+-- Val (Left "abc")
+--
 -- >>> :set -XPolyKinds
 -- >>> type F n i = ChunksOf' n i Id >> Map (Tuple' n) >> PartitionEithers
 -- >>> pz @(F 3 1) [1..7]
@@ -429,6 +438,9 @@ instance ( KnownNat n
 data Tuple' (n :: Nat) deriving Show
 
 instance ( KnownNat n
+         , FailWhenT (n GL.<=? 1)
+                  ('GL.Text "Tuple':n cannot be less than two but found n="
+                   'GL.:<>: 'GL.ShowType n)
          , TupleC n a
          , x ~ [a]
          ) => P (Tuple' n) x where
@@ -436,7 +448,10 @@ instance ( KnownNat n
   eval _ opts as =
     let msg0 = "Tuple'(" ++ show n ++ ")"
         n = nat @n @Int
-    in pure $ mkNode opts (Val (getTupleC @n as)) msg0 []
+        lr = getTupleC @n as
+    in pure $ case lr of
+         Left e -> mkNode opts (Val (Left e)) (msg0 <> " not enough elements(" <> show (length as) <> ")") []
+         Right ret -> mkNode opts (Val (Right ret)) msg0 []
 
 -- | run @p@ with inductive tuples
 --
@@ -471,12 +486,13 @@ instance ( P p b
         pure $ case getValueLR NoInline opts msg0 qq [] of
           Left e -> e
           Right q ->
-            mkNode opts (Val (p,q)) msg0 [hh pp, hh qq]
+            qq & ttVal' . _Val .~ (p,q)
+               & ttForest %~ (hh pp:)
 
 instance P (EachITuple p) () where
   type PP (EachITuple p) () = ()
   eval _ opts () = do
-    let msg0 = "EachITuple eof"
+    let msg0 = "EachITuple"
     pure $ mkNode opts (Val ()) msg0 []
 
 -- | create inductive tuples from flat tuples
@@ -524,7 +540,12 @@ instance ReverseITupleC x xs () => P ReverseITuple (x,xs) where
 --
 data ToITupleList (n :: Nat) deriving Show
 
-instance (KnownNat n, ToITupleListC n a, xs ~ [a]) => P (ToITupleList n) xs where
+instance ( KnownNat n
+         , FailWhenT (n GL.<=? 0)
+                  ('GL.Text "ToITupleList:n cannot be 0")
+         , ToITupleListC n a
+         , xs ~ [a]
+         ) => P (ToITupleList n) xs where
   type PP (ToITupleList n) xs = ToITupleListP n (ExtractAFromTA xs)
   eval _ opts xs =
     let msg0 = "ToITupleList(" <> show n <> ")"

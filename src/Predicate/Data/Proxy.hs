@@ -98,6 +98,12 @@ import Data.Typeable
 -- >>> pz @('(Id, PApp (Proxy '(,)) (Proxy 4)) >> Second (PApp Id (Proxy Fst)) >> Pop0 Snd Fst) ("abc",True)
 -- Val (4,"abc")
 --
+-- >>> pz @(Pop1 (Proxy Proxy) "abc" () >> Pop0 Id ()) ()
+-- Val "abc"
+--
+-- >>> pz @(Proxy (Proxy (Proxy "asdff")) >> Pop0 Id () >> Pop0 Id () >> Pop0 Id ()) ()
+-- Val "asdff"
+--
 data Pop0 p q deriving Show
 
 instance ( P q x
@@ -209,6 +215,9 @@ type family Pop1T (p :: Type) (q :: k) (r :: Type) :: Type where
 --
 -- >>> pz @(Pop1' (Proxy MEmptyT) (PApp (Proxy SG.Sum) (Proxy Float)) ()) ()
 -- Val (Sum {getSum = 0.0})
+--
+-- >>> pz @(Pop1' (Proxy Proxy) (Proxy Fst) () >> Pop0 Id '("abc",1234)) ()
+-- Val "abc"
 --
 data Pop1' p q r deriving Show
 
