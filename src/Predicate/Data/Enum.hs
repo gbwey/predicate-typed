@@ -274,7 +274,6 @@ instance ( Show x
 -- Present EQ (PredB EQ | GT)
 -- Val EQ
 --
-
 data PredB p q deriving Show
 
 instance P (PredBT' q) x => P (PredB' q) x where
@@ -299,7 +298,6 @@ instance P (PredBT' q) x => P (PredB' q) x where
 -- Present "abcd" ((>>) "abcd" | {Map "abcd" | [97,98,99,100]})
 -- Val "abcd"
 --
-
 data FromEnum' p deriving Show
 
 instance ( Show a
@@ -334,19 +332,7 @@ instance ( Show x
     in pure $ mkNode opts (Val n) (show3 opts msg0 n x) []
 
 
-
--- | unsafe 'toEnum' function
---
--- >>> pz @(ToEnum Char) 120
--- Val 'x'
---
--- >>> pl @(Map FromEnum >> Map (Id - 97 >> ToEnum Ordering)) "abcde"
--- Error ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2) (Map(i=3, a=100) excnt=2)
--- Fail "ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2)"
---
--- >>> pl @((ToEnum Day *** ToEnum Day) >> EnumFromTo Fst Snd) (0,5)
--- Present [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] ((>>) [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] | {1858-11-17 ... 1858-11-22})
--- Val [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22]
+-- | unsafe 'toEnum' function that allows you to specify the target @p@ and a pointer to a type @t@
 --
 data ToEnum' t p deriving Show
 
@@ -369,6 +355,19 @@ instance ( PP p x ~ a
           Left e -> mkNode opts (Fail (msg0 <> " " <> e)) (showL opts p) [hh pp]
           Right n -> mkNode opts (Val n) (show3 opts msg0 n p) [hh pp]
 
+-- | unsafe 'toEnum' function
+--
+-- >>> pz @(ToEnum Char) 120
+-- Val 'x'
+--
+-- >>> pl @(Map FromEnum >> Map (Id - 97 >> ToEnum Ordering)) "abcde"
+-- Error ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2) (Map(i=3, a=100) excnt=2)
+-- Fail "ToEnum IO e=Prelude.Enum.Ordering.toEnum: bad argument(2)"
+--
+-- >>> pl @((ToEnum Day *** ToEnum Day) >> EnumFromTo Fst Snd) (0,5)
+-- Present [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] ((>>) [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] | {1858-11-17 ... 1858-11-22})
+-- Val [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22]
+--
 data ToEnum (t :: Type) deriving Show
 type ToEnumT (t :: Type) = ToEnum' (Hole t) Id
 
@@ -414,7 +413,6 @@ instance ( P def (Proxy (PP t a))
 -- Present EQ (ToEnumBDef EQ | 1)
 -- Val EQ
 --
-
 data ToEnumBDef (t :: Type) def deriving Show
 type ToEnumBDefT (t :: Type) def = ToEnumBDef' (Hole t) def
 

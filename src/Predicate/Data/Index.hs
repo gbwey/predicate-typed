@@ -251,7 +251,6 @@ instance P (IxT' n) x => P (Ix' n) x where
 -- Present 'x' (IxL(15) index not found)
 -- Val 'x'
 --
-
 data IxL p q def deriving Show
 -- p is the big value and q is the index and def is the default
 
@@ -409,7 +408,6 @@ instance ( P q a
 -- Error (!!) index not found (IxL(14))
 -- Fail "(!!) index not found"
 --
-
 data p !! q deriving Show
 type BangBangT p q = IxL p q (FailP "(!!) index not found")
 

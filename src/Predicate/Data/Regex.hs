@@ -269,11 +269,6 @@ instance P (RescanT p) x => P (Rescan p) x where
   eval _ = eval (Proxy @(RescanT p))
 
 
--- | see 'RH.scanRanges'
---
--- >>> pz @(RescanRanges "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
--- Val [((0,8),[(0,2),(3,5),(6,8)])]
---
 data RescanRanges' (rs :: [ROpt]) p q deriving Show
 
 instance ( GetROpts rs
@@ -301,6 +296,11 @@ instance ( GetROpts rs
                          mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
               (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) hhs
 
+-- | see 'RH.scanRanges'
+--
+-- >>> pz @(RescanRanges "^(\\d{2}):(\\d{2}):(\\d{2})$" Id) "13:05:25"
+-- Val [((0,8),[(0,2),(3,5),(6,8)])]
+--
 data RescanRanges p q deriving Show
 type RescanRangesT p q = RescanRanges' '[] p q
 

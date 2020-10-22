@@ -72,7 +72,6 @@ import Data.Void (Void)
 -- Present [[99]] (Scanl [[99]] | b=[99] | as=[])
 -- Val [[99]]
 --
-
 data Scanl p q r deriving Show
 -- scanr :: (a -> b -> b) -> b -> [a] -> [b]
 -- result is scanl but signature is flipped ((a,b) -> b) -> b -> [a] -> [b]
@@ -210,7 +209,6 @@ instance P (ScanNAT q) x => P (ScanNA q) x where
 -- >>> pz @(FoldN 4 (Id <> Id) Id) "abc" -- same as above
 -- Val "abcabcabcabcabcabcabcabcabcabcabcabcabcabcabcabc"
 --
-
 data FoldN n p q deriving Show
 type FoldNT n p q = ScanN n p q >> Last
 
@@ -259,7 +257,6 @@ instance P (FoldNT n p q) x => P (FoldN n p q) x where
 -- Present (True,11) ((>>) (True,11) | {Last (True,11) | [(True,-10),(True,2),(True,3),(True,4),(True,10),(True,11)]})
 -- Val (True,11)
 --
-
 data Foldl p q r deriving Show
 type FoldLT p q r = Scanl p q r >> Last
 
@@ -362,7 +359,6 @@ type family UnfoldrT mbs where
 -- >>> pz @(UnfoldN 10 (RandomRNext Int 1 100 Id) Id) (mkStdGen 3)
 -- Val [64,94,33,26,12,8,81,41,21,89]
 --
-
 data UnfoldN n p s deriving Show
 
 -- have to rewrite (a,s) to (a,(s,n)) hence the L11 ...
@@ -613,7 +609,6 @@ instance P (RepeatT n p) a => P (Repeat n p) a where
 -- Present "xy" ((>>) "xy" | {'"xy"})
 -- Val "xy"
 --
-
 data DoN (n :: Nat) p deriving Show
 type DoNT (n :: Nat) p = Do (RepeatT n p)
 instance P (DoNT n p) a => P (DoN n p) a where

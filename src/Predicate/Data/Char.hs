@@ -86,7 +86,11 @@ instance ( KnownSymbol s
        c:_ -> pure $ mkNode opts (Val c) ("Char1 " <> showL opts c) []
 
 
-
+-- | extracts the first character from a non empty 'GHC.TypeLits.Symbol': shorthand for 'Char1'
+--
+-- >>> pz @(C "aBc") ()
+-- Val 'a'
+--
 data C (s :: Symbol) deriving Show
 type CT s = Char1 s
 
@@ -123,7 +127,6 @@ instance ( x ~ Char
 -- >>> pz @IsLower 'a'
 -- Val True
 --
-
 data IsLower deriving Show
 type IsLowerT = IsCharSet 'CLower
 
@@ -335,6 +338,7 @@ instance P IsLowerAllT x => P IsLowerAll x where
   type PP IsLowerAll x = PP IsLowerAllT x
   eval _ = evalBool (Proxy @IsLowerAllT)
 
+-- | predicate for determining if a string is all uppercase
 data IsUpperAll deriving Show
 type IsUpperAllT = IsCharSetAll 'CUpper
 
@@ -373,12 +377,14 @@ instance P IsSpaceAllT x => P IsSpaceAll x where
   type PP IsSpaceAll x = Bool
   eval _ = evalBool (Proxy @IsSpaceAllT)
 
+-- | predicate for determining if a string has all punctuation
 data IsPunctuationAll deriving Show
 type IsPunctuationAllT = IsCharSetAll 'CPunctuation
 instance P IsPunctuationAllT x => P IsPunctuationAll x where
   type PP IsPunctuationAll x = Bool
   eval _ = evalBool (Proxy @IsPunctuationAllT)
 
+-- | predicate for determining if a string has all control chars
 data IsControlAll deriving Show
 type IsControlAllT = IsCharSetAll 'CControl
 instance P IsControlAllT x => P IsControlAll x where
@@ -399,18 +405,21 @@ instance P IsHexDigitAllT x => P IsHexDigitAll x where
   type PP IsHexDigitAll x = Bool
   eval _ = evalBool (Proxy @IsHexDigitAllT)
 
+-- | predicate for determining if the string is all octal digits
 data IsOctDigitAll deriving Show
 type IsOctDigitAllT = IsCharSetAll 'COctDigit
 instance P IsOctDigitAllT x => P IsOctDigitAll x where
   type PP IsOctDigitAll x = Bool
   eval _ = evalBool (Proxy @IsOctDigitAllT)
 
+-- | predicate for determining if the string has all separators
 data IsSeparatorAll deriving Show
 type IsSeparatorAllT = IsCharSetAll 'CSeparator
 instance P IsSeparatorAllT x => P IsSeparatorAll x where
   type PP IsSeparatorAll x = Bool
   eval _ = evalBool (Proxy @IsSeparatorAllT)
 
+-- | predicate for determining if the string is all latin chars
 data IsLatin1All deriving Show
 type IsLatin1AllT = IsCharSetAll 'CLatin1
 instance P IsLatin1AllT x => P IsLatin1All x where

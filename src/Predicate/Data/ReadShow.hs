@@ -135,20 +135,6 @@ instance P (ReadPT t p) x => P (ReadP t p) x where
   type PP (ReadP t p) x = PP (ReadPT t p) x
   eval _ = eval (Proxy @(ReadPT t p))
 
-
--- [] (a,s) (a,[])
-
--- | Read but returns the Maybe of the value and any remaining unparsed string
---
--- >>> pz @(ReadMaybe Int Id) "123x"
--- Val (Just (123,"x"))
---
--- >>> pz @(ReadMaybe Int Id) "123"
--- Val (Just (123,""))
---
--- >>> pz @(ReadMaybe Int Id) "x123"
--- Val Nothing
---
 data ReadMaybe' t p deriving Show
 
 instance ( P p x
@@ -171,6 +157,17 @@ instance ( P p x
            [(b,rest)] -> mkNode opts (Val (Just (b,rest))) (lit3 opts msg1 b "" s) hhs
            o -> mkNode opts (Val Nothing) (msg1 <> " failed" <> showVerbose opts " " o) hhs
 
+-- | Read but returns the Maybe of the value and any remaining unparsed string
+--
+-- >>> pz @(ReadMaybe Int Id) "123x"
+-- Val (Just (123,"x"))
+--
+-- >>> pz @(ReadMaybe Int Id) "123"
+-- Val (Just (123,""))
+--
+-- >>> pz @(ReadMaybe Int Id) "x123"
+-- Val Nothing
+--
 data ReadMaybe (t :: Type) p deriving Show
 type ReadMaybeT (t :: Type) p = ReadMaybe' (Hole t) p
 
@@ -301,9 +298,8 @@ instance ( PrintfArg a
 -- Present "ipaddress 001.002.003.004" ((>>) "ipaddress 001.002.003.004" | {PrintI [ipaddress 001.002.003.004] | s=ipaddress %03d.%03d.%03d.%03d})
 -- Val "ipaddress 001.002.003.004"
 --
-
-type PrintTT s p = p >> ToITuple >> ReverseITuple >> PrintI s
 data PrintT s p deriving Show
+type PrintTT s p = p >> ToITuple >> ReverseITuple >> PrintI s
 
 instance P (PrintTT s p) x => P (PrintT s p) x where
   type PP (PrintT s p) x = PP (PrintTT s p) x
@@ -384,9 +380,8 @@ instance ( PrintC bs
 -- Present "1    2 3 004" ((>>) "1    2 3 004" | {PrintI [1    2 3 004] | s=%d %4d %-d %03d})
 -- Val "1    2 3 004"
 --
-
-type PrintLT (n :: Nat) s p = p >> ToITupleList n >> ReverseITuple >> PrintI s
 data PrintL (n :: Nat) s p deriving Show
+type PrintLT (n :: Nat) s p = p >> ToITupleList n >> ReverseITuple >> PrintI s
 
 instance P (PrintLT n s p) x => P (PrintL n s p) x where
   type PP (PrintL n s p) x = PP (PrintLT n s p) x

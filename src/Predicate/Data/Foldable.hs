@@ -346,7 +346,6 @@ instance ( Show a
 -- Present [9,2,7,4] (ToList fromList [('a',9),('b',2),('c',7),('d',4)])
 -- Val [9,2,7,4]
 --
-
 data ToList deriving Show
 instance ( Show (t a)
          , Foldable t
@@ -472,7 +471,6 @@ instance P NullT a => P Null a where
 -- Present 55 ((>>) 55 | {getSum = 55})
 -- Val 55
 --
-
 data FoldMap (t :: Type) p deriving Show
 type FoldMapT (t :: Type) p = Map' (Wrap t Id) p >> MConcat Id >> Unwrap
 

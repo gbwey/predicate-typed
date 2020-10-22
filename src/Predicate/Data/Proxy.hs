@@ -157,7 +157,6 @@ type family Pop0T (p :: Type) (q :: Type) :: Type where
 --
 -- >>> pz @(Pop1 (Proxy ('(,) 'True)) Len "abc") ()
 -- Val (True,3)
-
 data Pop1 p q r deriving Show
 
 instance ( P r x
@@ -399,7 +398,6 @@ type family PAppT (p :: Type) (q :: Type) :: Type where
 -- >>> pz @(PApp2 Fst Snd Thd >> Pop0 Id ()) (Proxy @(&&&), Proxy @(W "abc"), Proxy @(W 13))
 -- Val ("abc",13)
 --
-
 data PApp2 p q r deriving Show
 
 instance ( PP p x ~ Proxy (z :: k -> k1 -> k2)
@@ -449,6 +447,7 @@ type family PApp2T (p :: Type) (q :: Type) (r :: Type) :: Type where
 --
 -- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? folded @Identity . ttVal . _Val == Just (Proxy @Int)
 -- True
+--
 data Proxify p deriving Show
 
 instance PP p x ~ proxy (z :: k)

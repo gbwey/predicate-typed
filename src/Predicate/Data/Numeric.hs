@@ -143,10 +143,6 @@ instance P (FromIntegerT t) x => P (FromInteger t) x where
   type PP (FromInteger t) x = PP (FromIntegerT t) x
   eval _ = eval (Proxy @(FromIntegerT t))
 
--- | 'fromIntegral' function where you need to provide the type @t@ of the result
---
--- >>> pz @(FromIntegral (SG.Sum _)) 23
--- Val (Sum {getSum = 23})
 data FromIntegral' t n deriving Show
 
 instance ( Num (PP t a)
@@ -165,6 +161,11 @@ instance ( Num (PP t a)
         let b = fromIntegral n
         in mkNode opts (Val b) (show3 opts msg0 b n) [hh nn]
 
+-- | 'fromIntegral' function where you need to provide the type @t@ of the result
+--
+-- >>> pz @(FromIntegral (SG.Sum _)) 23
+-- Val (Sum {getSum = 23})
+--
 data FromIntegral (t :: Type) deriving Show
 type FromIntegralT (t :: Type) = FromIntegral' (Hole t) Id
 
@@ -193,7 +194,6 @@ instance P (FromIntegralT t) x => P (FromIntegral t) x where
 -- Present 5 % 3 (5 % 1 / 3 % 1 = 5 % 3)
 -- Val (5 % 3)
 --
-
 data ToRational p deriving Show
 
 instance ( a ~ PP p x
@@ -356,6 +356,7 @@ instance P (FloorT t) x => P (Floor t) x where
 data BinOp = BMult | BSub | BAdd
   deriving stock (Read, Show, Eq)
 
+-- | adds two values together pointed to by @p@ and @q@
 data p + q deriving Show
 infixl 6 +
 
@@ -365,6 +366,7 @@ instance P (AddT p q) x => P (p + q) x where
   type PP (p + q) x = PP (AddT p q) x
   eval _ = eval (Proxy @(AddT p q))
 
+-- | subtracts two values together pointed to by @p@ and @q@
 data p - q deriving Show
 infixl 6 -
 
@@ -374,6 +376,7 @@ instance P (SubT p q) x => P (p - q) x where
   type PP (p - q) x = PP (SubT p q) x
   eval _ = eval (Proxy @(SubT p q))
 
+-- | multiply two values together pointed to by @p@ and @q@
 data p * q deriving Show
 infixl 7 *
 
@@ -797,7 +800,6 @@ instance ( PP p a ~ PP q a
 -- Present (-1,12) (-1 `divMod` 13 = (-1,12))
 -- Val (-1,12)
 --
-
 data DivMod p q deriving Show
 
 instance ( PP p a ~ PP q a
@@ -844,7 +846,6 @@ instance ( PP p a ~ PP q a
 -- Present (-3,1) (10 `quotRem` -3 = (-3,1))
 -- Val (-3,1)
 --
-
 data QuotRem p q deriving Show
 
 instance ( PP p a ~ PP q a
@@ -866,6 +867,7 @@ instance ( PP p a ~ PP q a
              _ -> let d = p `quotRem` q
                   in mkNode opts (Val d) (showL opts p <> " `quotRem` " <> showL opts q <> " = " <> showL opts d) hhs
 
+-- | similar to 'quot'
 data Quot p q deriving Show
 type QuotT p q = QuotRem p q >> Fst
 
@@ -873,6 +875,7 @@ instance P (QuotT p q) x => P (Quot p q) x where
   type PP (Quot p q) x = PP (QuotT p q) x
   eval _ = eval (Proxy @(QuotT p q))
 
+-- | similar to 'rem'
 data Rem p q deriving Show
 type RemT p q = QuotRem p q >> Snd
 
@@ -895,6 +898,7 @@ instance P EvenT x => P Even x where
   type PP Even x = Bool
   eval _ = evalBool (Proxy @EvenT)
 
+-- | similar to 'odd'
 data Odd deriving Show
 type OddT = Mod Id 2 == 1
 
@@ -1047,7 +1051,6 @@ getValidBase n =
 -- Present "ffe0" (ShowBase(16) ffe0 | 65504)
 -- Val "ffe0"
 --
-
 data ShowBase (n :: Nat) deriving Show
 
 instance ( 2 GL.<= n

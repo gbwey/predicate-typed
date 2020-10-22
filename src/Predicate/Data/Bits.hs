@@ -126,11 +126,6 @@ instance ( P p a
             d = p `Bits.xor` q
         in mkNode opts (Val d) (showL opts p <> " .^. " <> showL opts q <> " = " <> showL opts d) hhs
 
--- | bitwise @and@ similar to 'Data.Bits..&.'
---
--- >>> pz @(344 .&. 123) ()
--- Val 88
---
 data BitFunction =
      BFShift
    | BFShiftL

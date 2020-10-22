@@ -113,6 +113,7 @@ instance ( PP p x ~ String
           Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> litL opts b) [hh pp]
 
+-- | similar to 'Data.ByteString.readFile'
 data ReadFileBinary p deriving Show
 
 instance ( PP p x ~ String
@@ -357,6 +358,7 @@ instance P Stdin x where
       Just (Left e) -> mkNode opts (Fail $ msg0 <> ":" <> e) "" []
       Just (Right ss) -> mkNode opts (Val ss) (msg0 <> "[" <> litVerbose opts "" ss <> "]") []
 
+-- | generate a random number: see 'System.Random.newStdGen'
 data GenIO deriving Show
 
 instance P GenIO x where

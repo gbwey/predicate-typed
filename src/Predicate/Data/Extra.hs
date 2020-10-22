@@ -181,7 +181,6 @@ instance P (HeadDefT p q) x => P (HeadDef p q) x where
 -- Error msg=Abc def (JustFail Nothing)
 -- Fail "msg=Abc def"
 --
-
 data HeadFail msg q deriving Show
 type HeadFailT msg q = JustFail msg (q >> Uncons >> FMap Fst)
 
@@ -203,7 +202,6 @@ instance P (HeadFailT msg q) x => P (HeadFail msg q) x where
 -- Present [11,12,13,14,15] (JustDef Just)
 -- Val [11,12,13,14,15]
 --
-
 data TailDef p q deriving Show
 type TailDefT p q = JustDef p (q >> Uncons >> FMap Snd)
 
@@ -218,7 +216,6 @@ instance P (TailDefT p q) x => P (TailDef p q) x where
 -- Error a=4 b=someval (JustFail Nothing)
 -- Fail "a=4 b=someval"
 --
-
 data TailFail msg q deriving Show
 type TailFailT msg q = JustFail msg (q >> Uncons >> FMap Snd)
 
@@ -248,7 +245,6 @@ instance P (TailFailT msg q) x => P (TailFail msg q) x where
 -- Present 0 (JustDef Nothing)
 -- Val 0
 --
-
 data LastDef p q deriving Show
 type LastDefT p q = JustDef p (q >> Unsnoc >> FMap Snd)
 

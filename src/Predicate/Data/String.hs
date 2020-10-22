@@ -257,7 +257,6 @@ instance P (IsPrefixCT p q) x => P (IsPrefixC p q) x where
 -- True (IsInfixC | ab xyzabw)
 -- Val True
 --
-
 data IsInfixC p q deriving Show
 type IsInfixCT p q = IsFixImplC 'EQ 'False p q
 

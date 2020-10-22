@@ -237,9 +237,6 @@ type family TheseXT lr x p where
 
 -- | 'Data.These.This' constructor
 --
--- >>> pz @(MkThis _ Id) 44
--- Val (This 44)
---
 -- >>> pz @(Proxy Int >> MkThis' Unproxy 10) []
 -- Val (This 10)
 --
@@ -268,7 +265,9 @@ instance ( P p x
 -- Present This 'x' (MkThis This 'x')
 -- Val (This 'x')
 --
-
+-- >>> pz @(MkThis _ Id) 44
+-- Val (This 44)
+--
 data MkThis (t :: Type) p deriving Show
 type MkThisT (t :: Type) p = MkThis' (Hole t) p
 
@@ -276,18 +275,6 @@ instance P (MkThisT t p) x => P (MkThis t p) x where
   type PP (MkThis t p) x = PP (MkThisT t p) x
   eval _ = eval (Proxy @(MkThisT t p))
 
--- | 'Data.These.That' constructor
---
--- >>> pz @(MkThat _ Id) 44
--- Val (That 44)
---
--- >>> pz @(MkThat _ "Abc" <> MkThis _ '[1,2] <> MkThese [3,4] "def") ()
--- Val (These [1,2,3,4] "Abcdef")
---
--- >>> pl @(MkThat () Id) 'x'
--- Present That 'x' (MkThat That 'x')
--- Val (That 'x')
---
 data MkThat' t p deriving Show
 
 instance ( Show (PP p x)
@@ -303,6 +290,18 @@ instance ( Show (PP p x)
         let d = That p
         in mkNode opts (Val d) (msg0 <> " That " <> showL opts p) [hh pp]
 
+-- | 'Data.These.That' constructor
+--
+-- >>> pz @(MkThat _ Id) 44
+-- Val (That 44)
+--
+-- >>> pz @(MkThat _ "Abc" <> MkThis _ '[1,2] <> MkThese [3,4] "def") ()
+-- Val (These [1,2,3,4] "Abcdef")
+--
+-- >>> pl @(MkThat () Id) 'x'
+-- Present That 'x' (MkThat That 'x')
+-- Val (That 'x')
+--
 data MkThat (t :: Type) p deriving Show
 type MkThatT (t :: Type) p = MkThat' (Hole t) p
 
@@ -450,7 +449,6 @@ instance P IsTheseT x => P IsThese x where
 -- Present ("no value",13) (TheseIn ("no value",13) | That 13)
 -- Val ("no value",13)
 --
-
 data TheseIn p q r deriving Show
 
 instance ( Show a
@@ -540,7 +538,6 @@ instance P (TheseIdT p q) x => P (TheseId p q) x where
 -- Present [('s',1),('d',2),('f',3),('x',4),('x',5)] ((>>) [('s',1),('d',2),('f',3),('x',4),('x',5)] | {Map [('s',1),('d',2),('f',3),('x',4),('x',5)] | [These 's' 1,These 'd' 2,These 'f' 3,That 4,That 5]})
 -- Val [('s',1),('d',2),('f',3),('x',4),('x',5)]
 --
-
 data ZipThese p q deriving Show
 
 instance ( PP p a ~ [x]
@@ -600,7 +597,6 @@ simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
 -- Present () (ThisDef That)
 -- Val ()
 --
-
 data ThisDef p q deriving Show
 
 instance ( PP q x ~ These a b

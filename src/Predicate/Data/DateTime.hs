@@ -156,7 +156,6 @@ instance ( ParseTime (PP t a)
 -- >>> pz @(ParseTimeP ZonedTime "%s%Q%z")  "153014400.000+0530"
 -- Val 1974-11-07 05:30:00 +0530
 --
-
 data ParseTimeP (t :: Type) p deriving Show
 type ParseTimePT (t :: Type) p = ParseTimeP' (Hole t) p Id
 

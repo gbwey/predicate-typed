@@ -82,6 +82,7 @@ instance P (GtT n) x => P (Gt n) x where
   type PP (Gt n) x = PP (GtT n) x
   eval _ = eval (Proxy @(GtT n))
 
+-- | compare if expression @p@ is greater than or equal to @q@
 data Ge n deriving Show
 type GeT n = Id >= n
 
@@ -89,6 +90,7 @@ instance P (GeT n) x => P (Ge n) x where
   type PP (Ge n) x = PP (GeT n) x
   eval _ = eval (Proxy @(GeT n))
 
+-- | compare if expression @p@ is equal to @q@
 data Same n deriving Show
 type SameT n = Id == n
 
@@ -96,6 +98,7 @@ instance P (SameT n) x => P (Same n) x where
   type PP (Same n) x = PP (SameT n) x
   eval _ = eval (Proxy @(SameT n))
 
+-- | compare if expression @p@ is less than or equal to @q@
 data Le n deriving Show
 type LeT n = Id <= n
 
@@ -103,6 +106,7 @@ instance P (LeT n) x => P (Le n) x where
   type PP (Le n) x = PP (LeT n) x
   eval _ = eval (Proxy @(LeT n))
 
+-- | compare if expression @p@ is less than to @q@
 data Lt n deriving Show
 type LtT n = Id < n
 
@@ -110,6 +114,7 @@ instance P (LtT n) x => P (Lt n) x where
   type PP (Lt n) x = PP (LtT n) x
   eval _ = eval (Proxy @(LtT n))
 
+-- | compare if expression @p@ is not equal to @q@
 data Ne n deriving Show
 type NeT n = Id /= n
 
@@ -316,7 +321,6 @@ instance P (CmpI 'CNe p q) x => P (p /=~ q) x where
 -- Present LT ((==!) "AbC" < "aBc")
 -- Val LT
 --
-
 data p ==! q deriving Show
 infix 4 ==!
 
@@ -384,7 +388,6 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 -- True (True && True)
 -- Val True
 --
-
 data p ===~ q deriving Show
 infix 4 ===~
 
@@ -546,6 +549,7 @@ instance P AllNegativeT x => P AllNegative x where
   type PP AllNegative x = PP AllNegativeT x
   eval _ = evalBool (Proxy @AllNegativeT)
 
+-- | a type level predicate for a positive number
 data Positive deriving Show
 type PositiveT = Gt 0
 
@@ -553,6 +557,7 @@ instance P PositiveT x => P Positive x where
   type PP Positive x = PP PositiveT x
   eval _ = evalBool (Proxy @PositiveT)
 
+-- | a type level predicate for a negative number
 data Negative deriving Show
 type NegativeT = Lt 0
 

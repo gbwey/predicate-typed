@@ -179,9 +179,7 @@ instance ( PP p x ~ NonEmpty a
 -- Present Nothing (MEmptyT Nothing)
 -- Val Nothing
 --
-
--- no Monoid for Maybe a unless a is also a monoid but can use empty!
-data MEmptyT' t deriving Show
+data MEmptyT' t deriving Show -- no Monoid for Maybe a unless a is also a monoid but can use empty!
 instance ( Show (PP t a)
          , Monoid (PP t a)
          ) => P (MEmptyT' t) a where
@@ -263,7 +261,6 @@ instance P MEmptyPT x => P MEmptyP x where
 -- Present "abcabcabcabc" (STimes 4 p="abc" "abcabcabcabc" | n=4 | "abc")
 -- Val "abcabcabcabc"
 --
-
 data STimes n p deriving Show
 instance ( P n a
          , Integral (PP n a)

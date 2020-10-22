@@ -841,7 +841,6 @@ instance ( P prt a
 -- Present [13] ((>>) [13] | {Map [13] | [12]})
 -- Val [13]
 --
-
 data ExitWhen prt p deriving Show
 type ExitWhenT prt p = Guard prt (Not p)
 

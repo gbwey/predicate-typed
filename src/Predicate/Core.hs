@@ -271,12 +271,13 @@ instance P p x => P (Hide p) x where
       tt <- eval (Proxy @p) opts x
       pure $ tt & ttForest .~ []
 
-data Hole (t :: Type) deriving Show
 
 -- | Acts as a proxy in this dsl where you can explicitly set the Type.
 --
 --  It is passed around as an argument to help the type checker when needed.
 --
+data Hole (t :: Type) deriving Show
+
 instance Typeable t => P (Hole t) a where
   type PP (Hole t) a = t -- can only be Type not Type -> Type (can use Proxy but then we go down the rabbithole)
   eval _ opts _ =

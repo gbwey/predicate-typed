@@ -285,7 +285,6 @@ instance ( P p x
 -- Present Just (1,[2,3,4,5]) (Uncons Just (1,[2,3,4,5]) | [1,2,3,4,5])
 -- Val (Just (1,[2,3,4,5]))
 --
-
 data Uncons deriving Show
 
 instance ( Show (ConsT s)
@@ -321,7 +320,6 @@ instance ( Show (ConsT s)
 -- Present Just ([1,2,3,4],5) (Unsnoc Just ([1,2,3,4],5) | [1,2,3,4,5])
 -- Val (Just ([1,2,3,4],5))
 --
-
 data Unsnoc deriving Show
 
 instance ( Show (ConsT s)
@@ -781,7 +779,6 @@ instance ( P p x
 -- Present ([1,2,3],[4,5,6,7,8,9,10,11]) (Break cnt=(3,8))
 -- Val ([1,2,3],[4,5,6,7,8,9,10,11])
 --
-
 data Span p q deriving Show
 type SpanT p q = Break (Not p) q
 
@@ -858,7 +855,6 @@ instance ( PP p x ~ [a]
 -- False (6 % 1 `elem` [13 % 2,12 % 1])
 -- Val False
 --
-
 data Elem p q deriving Show
 
 instance ( [PP p a] ~ PP q a
@@ -1101,7 +1097,23 @@ instance ( PP p a ~ [b]
 splitAtNeg :: Int -> [a] -> ([a], [a])
 splitAtNeg n as = splitAt (if n<0 then length as + n else n) as
 
-
+-- | take @n@ values from a list @p@: similar to 'Prelude.take'
+--
+-- >>> pz @(Take 3 Id) "abcdef"
+-- Val "abc"
+--
+-- >>> pz @(Take 3 Id) "ab"
+-- Val "ab"
+--
+-- >>> pz @(Take 10 Id) "abcdef"
+-- Val "abcdef"
+--
+-- >>> pz @(Take 0 Id) "abcdef"
+-- Val ""
+--
+-- >>> pz @(Take 10 Id) ""
+-- Val ""
+--
 data Take n p deriving Show
 type TakeT n p = SplitAt n p >> Fst
 
@@ -1109,6 +1121,7 @@ instance P (TakeT n p) x => P (Take n p) x where
   type PP (Take n p) x = PP (TakeT n p) x
   eval _ = eval (Proxy @(TakeT n p))
 
+-- | drop @n@ values from a list @p@: similar to 'Prelude.drop'
 data Drop n p deriving Show
 type DropT n p = SplitAt n p >> Snd
 
@@ -1262,7 +1275,6 @@ instance P (RemoveT p q) x => P (Remove p q) x where
 -- Present 1 (Head 1 | [1,2,3])
 -- Val 1
 --
-
 data Head deriving Show
 
 instance ( Cons x x (ConsT x) (ConsT x)
@@ -1289,7 +1301,6 @@ instance ( Cons x x (ConsT x) (ConsT x)
 -- Error Tail(empty)
 -- Fail "Tail(empty)"
 --
-
 data Tail deriving Show
 
 instance ( Cons x x (ConsT x) (ConsT x)
@@ -1315,7 +1326,6 @@ instance ( Cons x x (ConsT x) (ConsT x)
 -- Present 3 (Last 3 | [1,2,3])
 -- Val 3
 --
-
 data Last deriving Show
 
 instance ( Snoc x x (ConsT x) (ConsT x)
@@ -1523,6 +1533,7 @@ instance P (SortOnDescT p q) x => P (SortOnDesc p q) x where
   type PP (SortOnDesc p q) x = PP (SortOnDescT p q) x
   eval _ = eval (Proxy @(SortOnDescT p q))
 
+-- | simple sort: similar to 'Prelude.sort'
 data Sort deriving Show
 type SortT = SortOn Id Id
 
@@ -1815,7 +1826,6 @@ instance ( PP l a ~ x
 -- Error ZipR(0,4) rhs would be truncated (p=[] | q="abcd")
 -- Fail "ZipR(0,4) rhs would be truncated"
 --
-
 data ZipR r p q deriving Show
 instance ( PP r a ~ y
          , P r a
@@ -1991,7 +2001,6 @@ instance ( x ~ [a]
 -- >>> pz @Max []
 -- Fail "empty list"
 --
-
 data Max deriving Show
 
 instance ( x ~ [a]
