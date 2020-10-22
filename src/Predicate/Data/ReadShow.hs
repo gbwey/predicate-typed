@@ -316,6 +316,9 @@ instance P (PrintTT s p) x => P (PrintT s p) x where
 -- >>> pz @(PrintI "d=%s s=%d") ("abc",('x',()))
 -- Fail "PrintI(IO e=printf: bad formatting char 's')"
 --
+-- >>> pz @(PrintI "%s %s %d") (123,("sss",("bb",())))
+-- Val "bb sss 123"
+--
 data PrintI s deriving Show
 instance ( PrintC bs
          , (b,bs) ~ x

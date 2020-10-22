@@ -85,6 +85,8 @@ module Predicate.Misc (
   , ExtractL4C(..)
   , ExtractL5C(..)
   , ExtractL6C(..)
+  , ExtractL7C(..)
+  , ExtractL8C(..)
 
  -- ** primes
   , isPrime
@@ -638,6 +640,12 @@ instance ExtractL1C (a,b,c,d,e) where
 instance ExtractL1C (a,b,c,d,e,f) where
   type ExtractL1T (a,b,c,d,e,f) = a
   extractL1C (a,_,_,_,_,_) = a
+instance ExtractL1C (a,b,c,d,e,f,g) where
+  type ExtractL1T (a,b,c,d,e,f,g) = a
+  extractL1C (a,_,_,_,_,_,_) = a
+instance ExtractL1C (a,b,c,d,e,f,g,h) where
+  type ExtractL1T (a,b,c,d,e,f,g,h) = a
+  extractL1C (a,_,_,_,_,_,_,_) = a
 
 -- | extract the second element from a n-tuple
 class ExtractL2C tp where
@@ -658,6 +666,12 @@ instance ExtractL2C (a,b,c,d,e) where
 instance ExtractL2C (a,b,c,d,e,f) where
   type ExtractL2T (a,b,c,d,e,f) = b
   extractL2C (_,b,_,_,_,_) = b
+instance ExtractL2C (a,b,c,d,e,f,g) where
+  type ExtractL2T (a,b,c,d,e,f,g) = b
+  extractL2C (_,b,_,_,_,_,_) = b
+instance ExtractL2C (a,b,c,d,e,f,g,h) where
+  type ExtractL2T (a,b,c,d,e,f,g,h) = b
+  extractL2C (_,b,_,_,_,_,_,_) = b
 
 -- | extract the third element from a n-tuple
 class ExtractL3C tp where
@@ -678,6 +692,12 @@ instance ExtractL3C (a,b,c,d,e) where
 instance ExtractL3C (a,b,c,d,e,f) where
   type ExtractL3T (a,b,c,d,e,f) = c
   extractL3C (_,_,c,_,_,_) = c
+instance ExtractL3C (a,b,c,d,e,f,g) where
+  type ExtractL3T (a,b,c,d,e,f,g) = c
+  extractL3C (_,_,c,_,_,_,_) = c
+instance ExtractL3C (a,b,c,d,e,f,g,h) where
+  type ExtractL3T (a,b,c,d,e,f,g,h) = c
+  extractL3C (_,_,c,_,_,_,_,_) = c
 
 -- | extract the fourth element from a n-tuple
 class ExtractL4C tp where
@@ -698,6 +718,12 @@ instance ExtractL4C (a,b,c,d,e) where
 instance ExtractL4C (a,b,c,d,e,f) where
   type ExtractL4T (a,b,c,d,e,f) = d
   extractL4C (_,_,_,d,_,_) = d
+instance ExtractL4C (a,b,c,d,e,f,g) where
+  type ExtractL4T (a,b,c,d,e,f,g) = d
+  extractL4C (_,_,_,d,_,_,_) = d
+instance ExtractL4C (a,b,c,d,e,f,g,h) where
+  type ExtractL4T (a,b,c,d,e,f,g,h) = d
+  extractL4C (_,_,_,d,_,_,_,_) = d
 
 -- | extract the fifth element from a n-tuple
 class ExtractL5C tp where
@@ -718,6 +744,12 @@ instance ExtractL5C (a,b,c,d,e) where
 instance ExtractL5C (a,b,c,d,e,f) where
   type ExtractL5T (a,b,c,d,e,f) = e
   extractL5C (_,_,_,_,e,_) = e
+instance ExtractL5C (a,b,c,d,e,f,g) where
+  type ExtractL5T (a,b,c,d,e,f,g) = e
+  extractL5C (_,_,_,_,e,_,_) = e
+instance ExtractL5C (a,b,c,d,e,f,g,h) where
+  type ExtractL5T (a,b,c,d,e,f,g,h) = e
+  extractL5C (_,_,_,_,e,_,_,_) = e
 
 -- | extract the sixth element from a n-tuple
 class ExtractL6C tp where
@@ -738,6 +770,64 @@ instance ExtractL6C (a,b,c,d,e) where
 instance ExtractL6C (a,b,c,d,e,f) where
   type ExtractL6T (a,b,c,d,e,f) = f
   extractL6C (_,_,_,_,_,f) = f
+instance ExtractL6C (a,b,c,d,e,f,g) where
+  type ExtractL6T (a,b,c,d,e,f,g) = f
+  extractL6C (_,_,_,_,_,f,_) = f
+instance ExtractL6C (a,b,c,d,e,f,g,h) where
+  type ExtractL6T (a,b,c,d,e,f,g,h) = f
+  extractL6C (_,_,_,_,_,f,_,_) = f
+
+-- | extract the seventh element from a n-tuple
+class ExtractL7C tp where
+  type ExtractL7T tp
+  extractL7C :: tp -> ExtractL7T tp
+instance ExtractL7C (a,b) where
+  type ExtractL7T (a,b) = GL.TypeError ('GL.Text "L7 doesn't work for 2-tuples")
+  extractL7C _ = errorInProgram "L7 doesn't work for 2-tuples"
+instance ExtractL7C (a,b,c) where
+  type ExtractL7T (a,b,c) = GL.TypeError ('GL.Text "L7 doesn't work for 3-tuples")
+  extractL7C _ = errorInProgram "L7 doesn't work for 3-tuples"
+instance ExtractL7C (a,b,c,d) where
+  type ExtractL7T (a,b,c,d) = GL.TypeError ('GL.Text "L7 doesn't work for 4-tuples")
+  extractL7C _ = errorInProgram "L7 doesn't work for 4-tuples"
+instance ExtractL7C (a,b,c,d,e) where
+  type ExtractL7T (a,b,c,d,e) = GL.TypeError ('GL.Text "L7 doesn't work for 5-tuples")
+  extractL7C _ = errorInProgram "L7 doesn't work for 5-tuples"
+instance ExtractL7C (a,b,c,d,e,f) where
+  type ExtractL7T (a,b,c,d,e,f) = GL.TypeError ('GL.Text "L7 doesn't work for 6-tuples")
+  extractL7C _ = errorInProgram "L7 doesn't work for 6-tuples"
+instance ExtractL7C (a,b,c,d,e,f,g) where
+  type ExtractL7T (a,b,c,d,e,f,g) = g
+  extractL7C (_,_,_,_,_,_,g) = g
+instance ExtractL7C (a,b,c,d,e,f,g,h) where
+  type ExtractL7T (a,b,c,d,e,f,g,h) = g
+  extractL7C (_,_,_,_,_,_,g,_) = g
+
+-- | extract the eighth element from a n-tuple
+class ExtractL8C tp where
+  type ExtractL8T tp
+  extractL8C :: tp -> ExtractL8T tp
+instance ExtractL8C (a,b) where
+  type ExtractL8T (a,b) = GL.TypeError ('GL.Text "L8 doesn't work for 2-tuples")
+  extractL8C _ = errorInProgram "L8 doesn't work for 2-tuples"
+instance ExtractL8C (a,b,c) where
+  type ExtractL8T (a,b,c) = GL.TypeError ('GL.Text "L8 doesn't work for 3-tuples")
+  extractL8C _ = errorInProgram "L8 doesn't work for 3-tuples"
+instance ExtractL8C (a,b,c,d) where
+  type ExtractL8T (a,b,c,d) = GL.TypeError ('GL.Text "L8 doesn't work for 4-tuples")
+  extractL8C _ = errorInProgram "L8 doesn't work for 4-tuples"
+instance ExtractL8C (a,b,c,d,e) where
+  type ExtractL8T (a,b,c,d,e) = GL.TypeError ('GL.Text "L8 doesn't work for 5-tuples")
+  extractL8C _ = errorInProgram "L8 doesn't work for 5-tuples"
+instance ExtractL8C (a,b,c,d,e,f) where
+  type ExtractL8T (a,b,c,d,e,f) = GL.TypeError ('GL.Text "L8 doesn't work for 6-tuples")
+  extractL8C _ = errorInProgram "L8 doesn't work for 6-tuples"
+instance ExtractL8C (a,b,c,d,e,f,g) where
+  type ExtractL8T (a,b,c,d,e,f,g) = GL.TypeError ('GL.Text "L8 doesn't work for 7-tuples")
+  extractL8C _ = errorInProgram "L8 doesn't work for 7-tuples"
+instance ExtractL8C (a,b,c,d,e,f,g,h) where
+  type ExtractL8T (a,b,c,d,e,f,g,h) = h
+  extractL8C (_,_,_,_,_,_,_,h) = h
 
 -- | try to convert a list to a n-tuple
 class TupleC (n :: Nat) a where
@@ -779,6 +869,47 @@ instance TupleC 6 a where
                 a:b:c:d:e:f:_ -> Right (a,b,c,d,e,f)
                 o -> Left o
 
+-- | convert a list of at least 7 elements to a 7-tuple
+instance TupleC 7 a where
+  type TupleT 7 a = (a,a,a,a,a,a,a)
+  getTupleC = \case
+                a:b:c:d:e:f:g:_ -> Right (a,b,c,d,e,f,g)
+                o -> Left o
+
+-- | convert a list of at least 8 elements to a 8-tuple
+instance TupleC 8 a where
+  type TupleT 8 a = (a,a,a,a,a,a,a,a)
+  getTupleC = \case
+                a:b:c:d:e:f:g:h:_ -> Right (a,b,c,d,e,f,g,h)
+                o -> Left o
+
+-- | convert a list of at least 9 elements to a 9-tuple
+instance TupleC 9 a where
+  type TupleT 9 a = (a,a,a,a,a,a,a,a,a)
+  getTupleC = \case
+                a:b:c:d:e:f:g:h:i:_ -> Right (a,b,c,d,e,f,g,h,i)
+                o -> Left o
+
+-- | convert a list of at least 10 elements to a 10-tuple
+instance TupleC 10 a where
+  type TupleT 10 a = (a,a,a,a,a,a,a,a,a,a)
+  getTupleC = \case
+                a:b:c:d:e:f:g:h:i:j:_ -> Right (a,b,c,d,e,f,g,h,i,j)
+                o -> Left o
+
+-- | convert a list of at least 11 elements to a 11-tuple
+instance TupleC 11 a where
+  type TupleT 11 a = (a,a,a,a,a,a,a,a,a,a,a)
+  getTupleC = \case
+                a:b:c:d:e:f:g:h:i:j:k:_ -> Right (a,b,c,d,e,f,g,h,i,j,k)
+                o -> Left o
+
+-- | convert a list of at least 12 elements to a 12-tuple
+instance TupleC 12 a where
+  type TupleT 12 a = (a,a,a,a,a,a,a,a,a,a,a,a)
+  getTupleC = \case
+                a:b:c:d:e:f:g:h:i:j:k:l:_ -> Right (a,b,c,d,e,f,g,h,i,j,k,l)
+                o -> Left o
 
 -- | prime predicate
 --

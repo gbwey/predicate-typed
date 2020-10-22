@@ -81,6 +81,8 @@ module Predicate.Core (
   , L4
   , L5
   , L6
+  , L7
+  , L8
   , L11
   , L12
   , L13
@@ -1803,6 +1805,50 @@ instance ( Show (ExtractL6T (PP p x))
         let b = extractL6C p
         in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
+-- | similar to 7th element in a n-tuple
+--
+-- >>> pz @(L7 Id) (10,"Abc",'x',True,1,99,'a')
+-- Val 'a'
+--
+data L7 p deriving Show
+
+instance ( Show (ExtractL7T (PP p x))
+         , ExtractL7C (PP p x)
+         , P p x
+         , Show (PP p x)
+         ) => P (L7 p) x where
+  type PP (L7 p) x = ExtractL7T (PP p x)
+  eval _ opts x = do
+    let msg0 = "L7"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR NoInline opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = extractL7C p
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
+
+-- | similar to 8th element in a n-tuple
+--
+-- >>> pz @(L8 Id) (10,"Abc",'x',True,1,99,True,'a')
+-- Val 'a'
+--
+data L8 p deriving Show
+
+instance ( Show (ExtractL8T (PP p x))
+         , ExtractL8C (PP p x)
+         , P p x
+         , Show (PP p x)
+         ) => P (L8 p) x where
+  type PP (L8 p) x = ExtractL8T (PP p x)
+  eval _ opts x = do
+    let msg0 = "L8"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR NoInline opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        let b = extractL8C p
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
+
 -- | similar to 'map' for foldable
 --
 -- >>> pz @(Map' Pred Id) [1..5]
@@ -2173,6 +2219,8 @@ instance SwapC ((,,,,) a b c) where
   swapC (a,b,c,d,e) = (a,b,c,e,d)
 instance SwapC ((,,,,,) a b c d) where
   swapC (a,b,c,d,e,f) = (a,b,c,d,f,e)
+instance SwapC ((,,,,,,) a b c d e) where
+  swapC (a,b,c,d,e,f,g) = (a,b,c,d,e,g,f)
 
 instance ( Show (p a b)
          , SwapC p
