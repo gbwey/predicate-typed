@@ -64,7 +64,8 @@ module Predicate.Data.Lifted (
 -- ** error handling
   , Catch
   , Catch'
-
+ -- ** miscellaneous
+  , ELR(..)
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -1226,6 +1227,22 @@ instance ( Traversable n
 --       `- False Id False
 -- Val [This 2,This 3,That False,These 5 True]
 --
+-- >>> pl @(BiMap Succ Head) (EEmpty @Int @String)
+-- Present EEmpty (BiMap <skipped>)
+-- Val EEmpty
+--
+-- >>> pl @(BiMap Succ Head) (ELeft @Int @String 10)
+-- Present ELeft 11 (BiMap(L) Succ 11 | 10)
+-- Val (ELeft 11)
+--
+-- >>> pl @(BiMap Succ Head) (ERight @Int @String "xyz")
+-- Present ERight 'x' (BiMap(R) Head 'x' | "xyz")
+-- Val (ERight 'x')
+--
+-- >>> pl @(BiMap Succ Head) (EBoth @Int @String 10 "xyz")
+-- Present EBoth 11 'x' (BiMap(B) Succ 11 | 10 | Head 'x' | "xyz")
+-- Val (EBoth 11 'x')
+--
 data BiMap p q deriving Show
 
 instance ( Bitraversable n
@@ -1269,3 +1286,30 @@ _bimapImpl opts proxyp proxyq msg0 hhs nab = do
             in ttnb & ttVal' .~ Val ret
                  & ttForest %~ (hhs <>)
                  & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
+
+
+data ELR a b = EEmpty | ELeft a | ERight b | EBoth a b deriving (Show,Eq,Ord)
+
+instance Bifunctor ELR where
+  bimap f g x =
+    case x of
+      EEmpty -> EEmpty
+      ELeft a -> ELeft (f a)
+      ERight b -> ERight (g b)
+      EBoth a b -> EBoth (f a) (g b)
+
+instance Bifoldable ELR where
+  bifoldMap f g x =
+    case x of
+      EEmpty -> mempty
+      ELeft a -> f a
+      ERight b -> g b
+      EBoth a b -> f a <> g b
+
+instance Bitraversable ELR where
+  bitraverse f g x =
+    case x of
+      EEmpty -> pure EEmpty
+      ELeft a -> ELeft <$> f a
+      ERight b -> ERight <$> g b
+      EBoth a b -> EBoth <$> f a <*> g b
