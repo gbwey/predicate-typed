@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -77,7 +78,7 @@ import Control.Lens
 import Data.Tree (Tree)
 import Data.Proxy (Proxy(..))
 import Data.Bitraversable
-
+import Data.Bifoldable
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -677,6 +678,14 @@ instance P (LiftT p q) x => P (Lift p q) x where
 
 -- | similar to 'Data.Functor.<$>'
 --
+-- >>> pl @(FMap Succ) (Right 'a')
+-- Present Right 'b' (FMap Succ 'b' | 'a')
+-- Val (Right 'b')
+--
+-- >>> pl @(FMap Succ) (Left "Sf")
+-- Present Left "Sf" (FMap <skipped>)
+-- Val (Left "Sf")
+--
 -- >>> pz @(FMap (MkDay Id) >> Join) (Just (2020,01,01))
 -- Val (Just 2020-01-01)
 --
@@ -871,11 +880,11 @@ _fmapImpl opts proxyp msg0 hhs na = do
         let ttnb = sequenceA nttb
         pure $ case getValueLR Inline opts "" ttnb hhs of
           Left e -> e
-          Right ret -> let z = case (_ttString ttnb,_ttForest ttnb) of
-                                 ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"
-                                 _ -> ttnb & ttString %~ (msg0 <>) . nullIf " "
-                       in z & ttVal' .~ Val ret
-                            & ttForest %~ (hhs <>)
+          Right ret ->
+            let ind = if null ret then " <skipped>" else ""
+            in ttnb & ttVal' .~ Val ret
+                 & ttForest %~ (hhs <>)
+                 & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
 
 -- | similar to 'Data.Functor.<&>'
 --
@@ -1175,6 +1184,48 @@ instance ( Traversable n
 -- >>> pz @(BiMap Succ Pred) (True,12,'b')
 -- Val (True,13,'a')
 --
+-- >>> pl @(FMap $ BiMap Succ (Not Id)) [This @Int @Bool 1, This 2,That True,These 4 False]
+-- Present [This 2,This 3,That False,These 5 True] (FMap BiMap(L) Succ 2 | 1 | BiMap(L) Succ 3 | 2 | BiMap(R) Not (Id True) | BiMap(B) Succ 5 | 4 | Not (Id False))
+-- Val [This 2,This 3,That False,These 5 True]
+--
+-- >>> pl @(BiMap Succ (Not Id)) (This @Int @Bool 1)
+-- Present This 2 (BiMap(L) Succ 2 | 1)
+-- Val (This 2)
+--
+-- >>> pl @(BiMap Succ (Not Id)) (That @Int @Bool True)
+-- Present That False (BiMap(R) Not (Id True))
+-- Val (That False)
+--
+-- >>> pl @(BiMap Succ (Not Id)) (These @Int @Bool 1 True)
+-- Present These 2 False (BiMap(B) Succ 2 | 1 | Not (Id True))
+-- Val (These 2 False)
+--
+-- >>> pan @(FMap $ BiMap Succ (Not Id)) [This @Int @Bool 1, This 2,That True,These 4 False]
+-- P FMap BiMap(L) Succ 2 | BiMap(L) Succ 3 | BiMap(R) Not | BiMap(B) Succ 5 | Not
+-- |
+-- +- P BiMap(L) Succ 2
+-- |  |
+-- |  `- P Succ 2
+-- |
+-- +- P BiMap(L) Succ 3
+-- |  |
+-- |  `- P Succ 3
+-- |
+-- +- P BiMap(R) Not
+-- |  |
+-- |  `- False Not
+-- |     |
+-- |     `- True Id True
+-- |
+-- `- P BiMap(B) Succ 5 | Not
+--    |
+--    +- P Succ 5
+--    |
+--    `- True Not
+--       |
+--       `- False Id False
+-- Val [This 2,This 3,That False,These 5 True]
+--
 data BiMap p q deriving Show
 
 instance ( Bitraversable n
@@ -1208,8 +1259,13 @@ _bimapImpl opts proxyp proxyq msg0 hhs nab = do
         let ttnb = bisequence nttb
         pure $ case getValueLR Inline opts "" ttnb hhs of
           Left e -> e
-          Right ret -> let z = case (_ttString ttnb,_ttForest ttnb) of
-                                 ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"
-                                 _ -> ttnb & ttString %~ (msg0 <>) . nullIf " "
-                       in z & ttVal' .~ Val ret
-                            & ttForest %~ (hhs <>)
+          Right ret ->
+--            let ind = case bifoldMap (\x -> ([x],[])) (\x -> ([],[x])) ret of
+            let ind = case bifoldMap ((,mempty) . pure) ((mempty,) . pure) ret of
+                        ([], []) -> " <skipped>"
+                        (_:_, []) -> "(L)"
+                        ([], _:_) -> "(R)"
+                        (_:_, _:_) -> "(B)"
+            in ttnb & ttVal' .~ Val ret
+                 & ttForest %~ (hhs <>)
+                 & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
