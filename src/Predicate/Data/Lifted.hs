@@ -1243,6 +1243,26 @@ instance ( Traversable n
 -- Present EBoth 11 'x' (BiMap(B) Succ 11 | 10 | Head 'x' | "xyz")
 -- Val (EBoth 11 'x')
 --
+-- >>> pan @(FMap $ BiMap Succ Head) [EEmpty,ELeft 10,ERight "abc",EBoth 10 "xyz"]
+-- P FMap BiMap <skipped> | BiMap(L) Succ 11 | BiMap(R) Head 'a' | BiMap(B) Succ 11 | Head 'x'
+-- |
+-- +- P BiMap <skipped>
+-- |
+-- +- P BiMap(L) Succ 11
+-- |  |
+-- |  `- P Succ 11
+-- |
+-- +- P BiMap(R) Head 'a'
+-- |  |
+-- |  `- P Head 'a'
+-- |
+-- `- P BiMap(B) Succ 11 | Head 'x'
+--    |
+--    +- P Succ 11
+--    |
+--    `- P Head 'x'
+-- Val [EEmpty,ELeft 11,ERight 'a',EBoth 11 'x']
+--
 data BiMap p q deriving Show
 
 instance ( Bitraversable n
