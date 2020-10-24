@@ -61,6 +61,9 @@ import Data.Typeable
 -- >>> pz @((Id $$ 44) >> Pop1' (Proxy MEmptyT) ProxyT ())  SG.Product
 -- Val (Product {getProduct = 1})
 --
+-- >>> pz @((ProxyT << Fst) >> FMap Head) ([True],13) ^!? acts . _Val . to typeRep -- Proxify is easier
+-- Just Bool
+--
 data ProxyT deriving Show
 instance Show x => P ProxyT x where
   type PP ProxyT x = Proxy x

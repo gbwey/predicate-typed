@@ -337,51 +337,39 @@ instance P (OrAT p q) x => P (p |+ q) x where
 
 -- | applies @p@ to the first and second slot of an n-tuple (similar to '***')
 --
--- >>> pl @(Both Len Fst) (("abc",[10..17],1,2,3),True)
--- Present (3,8) (Both)
+-- >>> pl @(Fst >> Both Len) (("abc",[10..17]),True)
+-- Present (3,8) ((>>) (3,8) | {Both})
 -- Val (3,8)
 --
--- >>> pl @(Both Pred $ Fst) ((12,'z',[10..17]),True)
--- Present (11,'y') (Both)
+-- >>> pl @(Lift (Both Pred) Fst) ((12,'z'),True)
+-- Present (11,'y') ((>>) (11,'y') | {Both})
 -- Val (11,'y')
 --
--- >>> pl @(Both Succ Id) (4,'a')
+-- >>> pl @(Both Succ) (4,'a')
 -- Present (5,'b') (Both)
 -- Val (5,'b')
 --
--- >>> pl @(Both Len Fst) (("abc",[10..17]),True)
--- Present (3,8) (Both)
--- Val (3,8)
---
 -- >>> import Data.Time
--- >>> pl @(Both (ReadP Day Id) Id) ("1999-01-01","2001-02-12")
+-- >>> pl @(Both (ReadP Day Id)) ("1999-01-01","2001-02-12")
 -- Present (1999-01-01,2001-02-12) (Both)
 -- Val (1999-01-01,2001-02-12)
 --
-data Both p q deriving Show
-instance ( ExtractL1C (PP q x)
-         , ExtractL2C (PP q x)
-         , P p (ExtractL1T (PP q x))
-         , P p (ExtractL2T (PP q x))
-         , P q x
-   ) => P (Both p q) x where
-  type PP (Both p q) x = (PP p (ExtractL1T (PP q x)), PP p (ExtractL2T (PP q x)))
-  eval _ opts x = do
+data Both p deriving Show
+instance ( P p a
+         , P p a'
+   ) => P (Both p) (a,a') where
+  type PP (Both p) (a,a') = (PP p a, PP p a')
+  eval _ opts (a,a') = do
     let msg0 = "Both"
-    qq <- eval (Proxy @q) opts x
-    case getValueLR NoInline opts msg0 qq [] of
+    pp <- eval (Proxy @p) opts a
+    case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
-      Right q -> do
-        let (a,a') = (extractL1C q, extractL2C q)
-        pp <- eval (Proxy @p) opts a
-        case getValueLR NoInline opts msg0 pp [hh qq] of
-          Left e -> pure e
-          Right b -> do
-            pp' <- eval (Proxy @p) opts a'
-            pure $ case getValueLR NoInline opts msg0 pp' [hh qq, hh pp] of
-              Left e -> e
-              Right b' ->
-                mkNode opts (Val (b,b')) msg0 [hh qq, hh pp, hh pp']
+      Right b -> do
+        pp' <- eval (Proxy @p) opts a'
+        pure $ case getValueLR NoInline opts msg0 pp' [hh pp] of
+          Left e -> e
+          Right b' ->
+            mkNode opts (Val (b,b')) msg0 [hh pp, hh pp']
 
 -- | create a n tuple from a list
 --

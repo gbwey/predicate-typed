@@ -40,6 +40,9 @@ module Predicate.Data.Lifted (
  -- ** alternative
   , type (<|>)
 
+ -- ** bifunctor
+  , type BiMap
+
  -- ** comonad
   , Extract
   , Duplicate
@@ -73,6 +76,8 @@ import Control.Comonad (Comonad(duplicate, extract))
 import Control.Lens
 import Data.Tree (Tree)
 import Data.Proxy (Proxy(..))
+import Data.Bitraversable
+
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -349,6 +354,9 @@ instance ( Show (t (t a))
 --
 -- >>> pz @(Id $$ GenIO) (randomR ('a','f')) ^!? acts . _Val . _1 . nearly 'a' (`elem` ['a'..'f'])
 -- Just ()
+--
+-- >>> pz @((Id $$ "abc" $$ Wrap (SG.Sum _) 14) >> Id <> Id) These
+-- Val (These "abcabc" (Sum {getSum = 28}))
 --
 data p $$ q deriving Show
 infixl 0 $$
@@ -1148,3 +1156,60 @@ instance ( Traversable n
                       ("",[]) -> ttnc & ttString .~ msg0 <> " <skipped>"
                       _ -> ttnc & ttString %~ (msg0 <>) . nullIf " "
             return $ z & ttVal' .~ Val ret & ttForest %~ (hhs <>)
+
+
+-- | similar to 'Data.Bifunctor.bimap'
+--
+-- >>> pz @(BiMap Succ Head) (Left @_ @String 12) -- needs a type signature for Right
+-- Val (Left 13)
+--
+-- >>> pz @(BiMap Succ Head) (Right "xyz")
+-- Val (Right 'x')
+--
+-- >>> pz @(FMap (BiMap Succ Head)) [Right "xyz",Left 'a',Right "ab",Left 'x']
+-- Val [Right 'x',Left 'b',Right 'a',Left 'y']
+--
+-- >>> pz @(FMap (BiMap Succ Pred)) [These 12 'b', This 1, That 'd',That 'e']
+-- Val [These 13 'a',This 2,That 'c',That 'd']
+--
+-- >>> pz @(BiMap Succ Pred) (True,12,'b')
+-- Val (True,13,'a')
+--
+data BiMap p q deriving Show
+
+instance ( Bitraversable n
+         , P p a
+         , P q b
+         ) => P (BiMap p q) (n a b) where
+  type PP (BiMap p q) (n a b) = n (PP p a) (PP q b)
+  eval _ opts nab = do
+    let msg0 = "BiMap"
+    _bimapImpl opts (Proxy @p) (Proxy @q) msg0 [] nab
+
+_bimapImpl :: forall m n p q a b
+  . ( P p a
+    , P q b
+    , Bitraversable n
+    , MonadEval m
+    ) => POpts
+      -> Proxy p
+      -> Proxy q
+      -> String
+      -> [Tree PE]
+      -> n a b
+      -> m (TT (n (PP p a) (PP q b)))
+_bimapImpl opts proxyp proxyq msg0 hhs nab = do
+        nttb <- bitraverse
+                  (fmap (\tt -> tt & ttString %~ litL opts
+                                   & ttForest .~ [hh tt]) . eval proxyp opts)
+                  (fmap (\tt -> tt & ttString %~ litL opts
+                                   & ttForest .~ [hh tt]) . eval proxyq opts)
+                  nab
+        let ttnb = bisequence nttb
+        pure $ case getValueLR Inline opts "" ttnb hhs of
+          Left e -> e
+          Right ret -> let z = case (_ttString ttnb,_ttForest ttnb) of
+                                 ("",[]) -> ttnb & ttString .~ msg0 <> " <skipped>"
+                                 _ -> ttnb & ttString %~ (msg0 <>) . nullIf " "
+                       in z & ttVal' .~ Val ret
+                            & ttForest %~ (hhs <>)
