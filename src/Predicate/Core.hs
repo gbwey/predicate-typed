@@ -25,7 +25,7 @@ module Predicate.Core (
   , Hide
   , Width
   , Hole
-  , Unproxy
+  , UnproxyT
   , Len
   , Length
   , Map'
@@ -127,7 +127,8 @@ import qualified GHC.TypeLits as GL
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
 import Control.Lens
 import Data.Foldable (toList)
-import Data.Typeable -- (Typeable, Proxy(..))
+import Data.Proxy (Proxy(..))
+import Data.Typeable (Typeable)
 import Data.Kind (Type)
 import Data.These (These(..))
 import Control.Monad (zipWithM)
@@ -146,6 +147,8 @@ import Data.Tree.Lens (root)
 -- >>> :m + Control.Lens
 -- >>> :m + Control.Lens.Action
 -- >>> :m + Data.Typeable
+-- >>> :m + Text.Show.Functions
+-- >>> :m + Data.Ratio
 
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Predicate.Core.>>'
 class P p a where
@@ -319,6 +322,17 @@ instance P [] a where
     let msg0 = "[]"
     in pure $ mkNode opts (Val []) msg0 []
 
+-- | create a Proxy for a kind @t@
+--
+-- >>> pz @(Proxy 4) ()
+-- Val Proxy
+--
+-- >>> pz @(Proxy Int) ()
+-- Val Proxy
+--
+-- >>> pz @(Proxy "abc" >> Pop0 Id ()) ()
+-- Val "abc"
+--
 instance P (Proxy t) a where
   type PP (Proxy t) a = Proxy t
   eval _ opts _ =
@@ -878,16 +892,25 @@ instance ( Show a
                       in  mkNode opts (Val ret) (show3 opts msg0 ret (These a b)) [hh pp, hh qq]
          _ -> pure $ mkNode opts (Fail (msg0 <> " found " <> showThese th)) "" []
 
--- | converts the value to the corresponding 'Proxy'
+-- | converts the type to the corresponding 'Proxy'
 --
--- >>> pz @'Proxy 'x'
--- Val Proxy
+-- >>> pz @'Proxy 'x' ^!? acts . _Val . to typeRep
+-- Just Char
 --
-instance Show a => P 'Proxy a where
-  type PP 'Proxy a = Proxy a
-  eval _ opts a =
-    let b = Proxy @a
-    in pure $ mkNode opts (Val b) ("'Proxy" <> showVerbose opts " | " a) []
+-- >>> pz @'Proxy 45 ^!? acts . _Val . to typeRep
+-- Just Integer
+--
+-- >>> pz @'Proxy "abc" ^!? acts . _Val . to typeRep
+-- Just [Char]
+--
+-- >>> pz @(Pop1' (Proxy ToEnum) 'Proxy 2) LT
+-- Val GT
+--
+instance P 'Proxy t where
+  type PP 'Proxy t = Proxy t
+  eval _ opts _ =
+    let b = Proxy @t
+    in pure $ mkNode opts (Val b) "'Proxy" []
 
 -- | evaluate the type level expression in IO
 --
@@ -1179,13 +1202,13 @@ instance P (WrapT t p) x => P (Wrap t p) x where
   eval _ = eval (Proxy @(WrapT t p))
 
 
--- | used for type inference
-data Unproxy deriving Show
+-- | used internally for type inference
+data UnproxyT deriving Show
 
-instance Typeable a => P Unproxy (Proxy (a :: Type)) where
-  type PP Unproxy (Proxy a) = a
+instance Typeable t => P UnproxyT (Proxy (t :: Type)) where
+  type PP UnproxyT (Proxy t) = t
   eval _ opts _ =
-    let msg0 = "Unproxy(" <> showT @a <> ")"
+    let msg0 = "UnproxyT(" <> showT @t <> ")"
     in pure $ mkNode opts (Fail msg0) "you probably meant to get access to the type of PP only and not evaluate (see Pop0)" []
 
 -- | similar to 'length'
@@ -1365,9 +1388,9 @@ instance P (Fail (Hole t) p) x => P (FailT t p) x where
 -- Fail "oops"
 --
 data FailP p deriving Show
-instance P (Fail Unproxy p) x => P (FailP p) x where
-  type PP (FailP p) x = PP (Fail Unproxy p) x
-  eval _ = eval (Proxy @(Fail Unproxy p))
+instance P (Fail UnproxyT p) x => P (FailP p) x where
+  type PP (FailP p) x = PP (Fail UnproxyT p) x
+  eval _ = eval (Proxy @(Fail UnproxyT p))
 
 -- | gets the singleton value from a foldable
 --

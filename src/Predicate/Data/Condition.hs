@@ -154,7 +154,7 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
 -- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
 -- Fail "asdf"
 --
--- >>> pz @(Case (FailS "asdf" >> Snd >> Unproxy) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
+-- >>> pz @(Case (FailS "asdf" >> Snd >> UnproxyT) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
 -- Fail "asdf"
 --
 -- >>> pz @(Case (FailT _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "b"
@@ -190,7 +190,7 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2) deriving S
 -- Error no match (Case:otherwise failed:Proxy)
 -- Fail "no match"
 --
--- >>> pl @(Case (Fail (Snd >> Unproxy) (PrintF "no match for %03d" Fst)) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
+-- >>> pl @(Case (Fail (Snd >> UnproxyT) (PrintF "no match for %03d" Fst)) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Error no match for 015 (Case:otherwise failed)
 -- Fail "no match for 015"
 --
@@ -239,7 +239,7 @@ instance P (CaseT' ps qs r) x => P (Case' ps qs r) x where
   type PP (Case' ps qs r) x = PP (CaseT' ps qs r) x
   eval _ = eval (Proxy @(CaseT' ps qs r))
 
-type FailCaseT p = Fail (Snd >> Unproxy) (Fst >> p)
+type FailCaseT p = Fail (Snd >> UnproxyT) (Fst >> p)
 
 type CaseImplT e ps qs r = CaseImpl (LenT ps) e ps qs r
 

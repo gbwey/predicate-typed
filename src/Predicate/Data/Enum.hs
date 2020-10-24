@@ -51,7 +51,6 @@ import Safe (succMay, predMay, toEnumMay)
 import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
 import Data.Tree (Tree)
-
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -193,8 +192,14 @@ instance ( PP q x ~ a
 -- Error Succ IO e=Prelude.Enum.Bool.succ: bad argument (True)
 -- Fail "Succ IO e=Prelude.Enum.Bool.succ: bad argument"
 --
+-- >>> pz @Succ (Proxy @44)
+-- Fail "Succ IO e=Proxy.succ"
+--
 data Succ deriving Show
-
+{-
+>print $! (succ Proxy)
+*** Exception: Proxy.succ
+-}
 instance ( Show x
          , Enum x
          ) => P Succ x where
@@ -367,6 +372,15 @@ instance ( PP p x ~ a
 -- >>> pl @((ToEnum Day *** ToEnum Day) >> EnumFromTo Fst Snd) (0,5)
 -- Present [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] ((>>) [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22] | {1858-11-17 ... 1858-11-22})
 -- Val [1858-11-17,1858-11-18,1858-11-19,1858-11-20,1858-11-21,1858-11-22]
+--
+-- >>> pz @(ToEnum (Proxy ())) 0
+-- Val Proxy
+--
+-- >>> pz @(ToEnum (Proxy ())) 1
+-- Fail "ToEnum IO e=Proxy.toEnum: 0 expected"
+--
+-- >>> pz @(ToEnum (Proxy "sss") >> Pop0 Id ()) 0
+-- Val "sss"
 --
 data ToEnum (t :: Type) deriving Show
 type ToEnumT (t :: Type) = ToEnum' (Hole t) Id

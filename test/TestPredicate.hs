@@ -133,7 +133,7 @@ allTests =
   , expectBT (Val [10,12,13]) $ pl @CatMaybes [Just 10, Just 12, Nothing, Just 13]
 
 
-  , expectBT (Fail "abcsomeval") $ pl @(Fail (Snd >> Unproxy) (Fst <> "someval")) ("abc",Proxy @Int)
+  , expectBT (Fail "abcsomeval") $ pl @(Fail (Snd >> UnproxyT) (Fst <> "someval")) ("abc",Proxy @Int)
 
 
   , expectBT (Val [Left 1,Left 2,Right "fizz",Left 4,Right "buzz",Right "fizz",Left 7,Left 8,Right "fizz",Right "buzz",Left 11,Right "fizz",Left 13,Left 14,Right "fizzbuzz"]) $ pl @(Map Fizzbuzz''') [1..15]

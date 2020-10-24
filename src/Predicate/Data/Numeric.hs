@@ -137,7 +137,7 @@ instance ( Num (PP t a)
 --
 data FromInteger (t :: Type) deriving Show
 type FromIntegerT (t :: Type) = FromInteger' (Hole t) Id
---type FromIntegerP n = FromInteger' Unproxy n
+--type FromIntegerP n = FromInteger' UnproxyT n
 
 instance P (FromIntegerT t) x => P (FromInteger t) x where
   type PP (FromInteger t) x = PP (FromIntegerT t) x
@@ -165,6 +165,9 @@ instance ( Num (PP t a)
 --
 -- >>> pz @(FromIntegral (SG.Sum _)) 23
 -- Val (Sum {getSum = 23})
+--
+-- >>> pz @(Pop1' (Proxy FromIntegral) 'Proxy 44) (1 % 0)
+-- Val (44 % 1)
 --
 data FromIntegral (t :: Type) deriving Show
 type FromIntegralT (t :: Type) = FromIntegral' (Hole t) Id
@@ -253,7 +256,7 @@ instance P (FromRationalT t) x => P (FromRational t) x where
 
 -- | 'truncate' function where you need to provide the type @t@ of the result
 --
--- >>> pl @(Truncate' (Fst >> Unproxy) Snd) (Proxy @Integer,2.3)
+-- >>> pl @(Truncate' (Fst >> UnproxyT) Snd) (Proxy @Integer,2.3)
 -- Present 2 (Truncate 2 | 2.3)
 -- Val 2
 --

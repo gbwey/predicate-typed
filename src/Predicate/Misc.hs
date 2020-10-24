@@ -127,7 +127,8 @@ module Predicate.Misc (
 import qualified GHC.TypeNats as GN
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
-import Data.Typeable (Typeable, Proxy(Proxy), typeRep)
+import Data.Proxy (Proxy(Proxy))
+import Data.Typeable (Typeable, typeRep)
 import System.Console.Pretty (Color(..))
 import GHC.Exts (Constraint)
 import qualified Text.Regex.PCRE.Light as RL

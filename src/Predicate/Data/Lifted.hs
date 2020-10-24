@@ -563,7 +563,7 @@ data Catch p q deriving Show
 --
 data Catch' p s deriving Show
 type CatchT' p s = Catch p (FailCatchT s) -- eg set eg s=PrintF "%d" Id or PrintF "%s" (ShowP Id)
-type FailCatchT s = Fail (Snd >> Unproxy) (Fst >> s)
+type FailCatchT s = Fail (Snd >> UnproxyT) (Fst >> s)
 
 instance P (CatchT' p s) x => P (Catch' p s) x where
   type PP (Catch' p s) x = PP (CatchT' p s) x

@@ -231,7 +231,7 @@ instance P (MEmptyTT t) x => P (MEmptyT t) x where
 -- Val ""
 --
 data MEmptyP deriving Show
-type MEmptyPT = MEmptyT' Unproxy -- expects a proxy: so only some things work with this: eg MaybeIn
+type MEmptyPT = MEmptyT' UnproxyT -- expects a proxy: so only some things work with this: eg MaybeIn
 
 instance P MEmptyPT x => P MEmptyP x where
   type PP MEmptyP x = PP MEmptyPT x

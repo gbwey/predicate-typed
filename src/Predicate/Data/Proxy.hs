@@ -16,10 +16,14 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted functions for proxies
 module Predicate.Data.Proxy (
- -- ** proxy functions
-    Proxify
+  -- ** create a proxy from a type
+    ProxyT
+  , Proxy1T
+  , Proxy2T
+  , Proxify
+  -- ** simple proxy application
   , Pop0
-  -- *** require kind signatures on @p@
+  -- ** needs kind signatures on @p@
   , Pop1
   , Pop2
   , Pop1'
@@ -42,7 +46,75 @@ import Data.Typeable
 -- >>> import Control.Lens
 -- >>> import Control.Lens.Action
 -- >>> import qualified Data.Semigroup as SG
+-- >>> :m + Text.Show.Functions
 -- >>> :m + Data.Ratio
+
+
+-- | makes a proxy from a simple type: similar to the P instance for 'Proxy but requires a show instance
+--
+-- >>> pz @(Pop1' (Proxy FromInteger) ProxyT 123) (4 % 0)
+-- Val (123 % 1)
+--
+-- >>> pz @(Pop1' (Proxy MEmptyT) ProxyT ()) (SG.Product 4)
+-- Val (Product {getProduct = 1})
+--
+-- >>> pz @((Id $$ 44) >> Pop1' (Proxy MEmptyT) ProxyT ())  SG.Product
+-- Val (Product {getProduct = 1})
+--
+data ProxyT deriving Show
+instance Show x => P ProxyT x where
+  type PP ProxyT x = Proxy x
+  eval _ opts x =
+    let b = Proxy @x
+    in pure $ mkNode opts (Val b) ("ProxyT" <> showVerbose opts " | " x) []
+
+-- | makes a proxy from a one parameter container
+--
+-- >>> pz @(Pop1' (Proxy EmptyT) Proxy1T 123) Nothing
+-- Val Nothing
+--
+-- >>> pz @(Pop1' (Proxy EmptyT) Proxy1T 123) (Just 10)
+-- Val Nothing
+--
+-- >>> pz @((Id $$ ()) >> Pop1' (Proxy EmptyT) Proxy1T 123) Just
+-- Val Nothing
+--
+data Proxy1T deriving Show
+instance P Proxy1T x where
+  type PP Proxy1T x = Proxy (ExtractTFromTA x)
+  eval _ opts _ =
+    let b = Proxy @(ExtractTFromTA x)
+    in pure $ mkNode opts (Val b) "Proxy1T" []
+
+-- | makes a proxy from a two parameter container
+--
+-- >>> pz @(Pop1' (Proxy EmptyT) Proxy2T 123) (Left "ASf")
+-- Val (Left "")
+--
+-- >>> pz @(Pop1' (Proxy EmptyT) Proxy2T 123) (Right 1)
+-- Val (Left "")
+--
+-- >>> pz @((Id $$ "asdf") >> Pop1' (Proxy EmptyT) Proxy2T 123) Left
+-- Val (Left "")
+--
+-- >>> pz @((Id $$ "asdf") >> Pop1' (Proxy EmptyT) Proxy2T 123) Right
+-- Val (Left "")
+--
+-- >>> pz @(Pop1' (Proxy EmptyT) ((Id $$ "ss") >> Proxy2T) 123) Right
+-- Val (Left "")
+--
+-- >>> pz @(Pop1' (Proxy EmptyT) ((Id $$ "ss") >> Proxy2T) 123) Left
+-- Val (Left "")
+--
+data Proxy2T deriving Show
+instance P Proxy2T x where
+  type PP Proxy2T x = Proxy (Proxy2TT x)
+  eval _ opts _ =
+    let b = Proxy @(Proxy2TT x)
+    in pure $ mkNode opts (Val b) "Proxy2T" []
+
+type family Proxy2TT (x :: Type) :: (Type -> Type) where
+  Proxy2TT (t a _) = t a
 
 -- | run the proxy @p@ in the environment pointed to by @q@
 --
@@ -219,6 +291,12 @@ type family Pop1T (p :: Type) (q :: k) (r :: Type) :: Type where
 -- >>> pz @(Pop1' (Proxy Proxy) (Proxy Fst) () >> Pop0 Id '("abc",1234)) ()
 -- Val "abc"
 --
+-- >>> pz @(Pop1' (Proxy ToEnum) 'Proxy 100) 'a'
+-- Val 'd'
+--
+-- >>> pz @(Pop1' (Proxy ToEnum) 'Proxy 120) (undefined :: Char)
+-- Val 'x'
+--
 data Pop1' p q r deriving Show
 
 instance ( P r x
@@ -373,6 +451,12 @@ type family Pop2'T (p :: Type) (q :: Type) (r :: Type) (s :: Type) :: Type where
 -- >>> pz @(PApp (Proxy Proxy) (Proxy "abc") >> Pop0 Id () >> Pop0 Id () ) ()
 -- Val "abc"
 --
+-- >>> pz @(PApp (Proxy '(,,)) (Proxy 10) >> PApp Id (Proxy "ss") >> PApp Id (Proxy Fst) >> Pop0 Id '(13 % 44,C "x")) ()
+-- Val (10,"ss",13 % 44)
+--
+-- >>> pz @('(Id,PApp (Proxy '(,,)) (Proxy 10) >> PApp Id (Proxy "ss") >> PApp Id (Proxy Fst)) >> Pop0 Snd Fst) (13 % 44,'x')
+-- Val (10,"ss",13 % 44)
+--
 data PApp p q deriving Show
 
 instance ( PP p x ~ Proxy (z :: k -> k1)
@@ -471,3 +555,4 @@ type family ProxifyT p where
      'GL.Text "ProxifyT: requires any 'proxy z'"
        'GL.:$$: 'GL.Text " p = " 'GL.:<>: 'GL.ShowType p
       )
+

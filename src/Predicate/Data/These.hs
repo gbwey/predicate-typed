@@ -237,7 +237,7 @@ type family TheseXT lr x p where
 
 -- | 'Data.These.This' constructor
 --
--- >>> pz @(Proxy Int >> MkThis' Unproxy 10) []
+-- >>> pz @(Proxy Int >> MkThis' UnproxyT 10) []
 -- Val (This 10)
 --
 data MkThis' t p deriving Show
