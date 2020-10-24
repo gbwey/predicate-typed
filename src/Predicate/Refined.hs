@@ -262,7 +262,7 @@ newRefined' a = do
   pp <- evalBool (Proxy @p) o a
   let r = colorValBool o (_ttVal pp)
       s = prtTree o pp
-      msg0 = Msg0 (pp ^. ttVal . _ValEither) (topMessage pp) s r
+      msg0 = Msg0 (pp ^. ttVal' . _ValEither) (topMessage pp) s r
   pure $ case getValueLR NoInline o "" pp [] of
        Right True -> Right (Refined a)
        _ -> Left msg0

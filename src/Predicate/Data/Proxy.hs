@@ -529,19 +529,19 @@ type family PApp2T (p :: Type) (q :: Type) (r :: Type) :: Type where
 -- >>> pz @(Proxify "abc") () ^!? acts . _Val . to typeRep
 -- Just Char
 --
--- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Double) ^!? acts . ttVal . _Val . to typeRep
+-- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Double) ^!? acts . ttVal' . _Val . to typeRep
 -- Just Double
 --
--- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? _Id . ttVal . _Val == Just (Proxy @Int)
+-- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? _Id . ttVal' . _Val == Just (Proxy @Int)
 -- True
 --
--- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? _Wrapped @(Identity _) . ttVal . _Val == Just (Proxy @Int)
+-- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? _Wrapped @(Identity _) . ttVal' . _Val == Just (Proxy @Int)
 -- True
 --
--- >>> eval (Proxy @(Proxify Id)) defOpts (Nothing @Double) ^. to runIdentity . ttVal . singular _Val == Proxy @Double
+-- >>> eval (Proxy @(Proxify Id)) defOpts (Nothing @Double) ^. to runIdentity . ttVal' . singular _Val == Proxy @Double
 -- True
 --
--- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? folded @Identity . ttVal . _Val == Just (Proxy @Int)
+-- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? folded @Identity . ttVal' . _Val == Just (Proxy @Int)
 -- True
 --
 data Proxify p deriving Show

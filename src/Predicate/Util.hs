@@ -35,7 +35,6 @@ module Predicate.Util (
 
   -- ** TT
   , TT(..)
-  , ttVal
   , ttVal'
   , ttValBool
   , ttValP

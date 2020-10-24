@@ -263,8 +263,8 @@ instance ( P prt a
   eval _ opts a = do
     pp <- eval (Proxy @prt) opts a
     case getValueLR NoInline opts "MsgI" pp [] of
-         Left e -> pure e
-         Right msg -> prefixMsg msg <$> eval (Proxy @p) opts a
+      Left e -> pure e
+      Right msg -> prefixMsg msg <$> eval (Proxy @p) opts a
 
 -- | run the expression @p@ but remove the subtrees
 data Hide p deriving Show
@@ -273,8 +273,8 @@ data Hide p deriving Show
 instance P p x => P (Hide p) x where
   type PP (Hide p) x = PP p x
   eval _ opts x = do
-      tt <- eval (Proxy @p) opts x
-      pure $ tt & ttForest .~ []
+    tt <- eval (Proxy @p) opts x
+    pure $ tt & ttForest .~ []
 
 
 -- | Acts as a proxy in this dsl where you can explicitly set the Type.

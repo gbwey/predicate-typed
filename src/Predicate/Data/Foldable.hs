@@ -390,7 +390,7 @@ instance P NullT a => P Null a where
   type PP Null a = Bool
   eval _ = evalBool (Proxy @NullT)
 
--- | similar to a limited form of 'foldMap'
+-- | wraps each item in the foldable container and then unwraps the mconcatenated result: uses 'Control.Lens.Wrapped'
 --
 -- >>> pz @(FoldMap (SG.Sum _) Id) [44, 12, 3]
 -- Val 59

@@ -15,7 +15,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- | extra promoted functions
+{-# LANGUAGE DeriveTraversable #-}
+-- | lifted promoted functions
 module Predicate.Data.Lifted (
  -- ** functor
     FMap
@@ -590,7 +591,7 @@ instance ( P p x
     pp <- eval (Proxy @p) opts x
     case getValueLR NoInline opts msg0 pp [] of
       Left p -> do
-         let emsg = p ^. ttVal . singular _Fail -- extract the Fail string and push it back into the fail case
+         let emsg = p ^. ttVal' . singular _Fail -- extract the Fail string and push it back into the fail case
          qq <- eval (Proxy @q) opts ((emsg, x), Proxy @(PP p x))
          pure $ case getValueLR NoInline opts (msg0 <> " default condition failed") qq [hh pp] of
             Left e1 -> e1
@@ -884,8 +885,8 @@ _fmapImpl opts proxyp msg0 hhs na = do
           Right ret ->
             let ind = if null ret then " <skipped>" else ""
             in ttnb & ttVal' .~ Val ret
-                 & ttForest %~ (hhs <>)
-                 & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
+                    & ttForest %~ (hhs <>)
+                    & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
 
 -- | similar to 'Data.Functor.<&>'
 --
@@ -1155,18 +1156,7 @@ instance ( Traversable n
       Left e -> pure e
       Right (q,r,qq,rr) -> do
         let w = liftA2 (,) q r
-        nttc <- traverse (fmap (\tt -> tt & ttString %~ litL opts
-                                  & ttForest .~ [hh tt]) . eval (Proxy @p) opts) w
-        let ttnc = sequence nttc
-        let hhs = [hh qq,hh rr]
-        case getValueLR Inline opts "" ttnc hhs of
-          Left e -> pure e
-          Right ret -> do
-            let z = case (_ttString ttnc,_ttForest ttnc) of
-                      ("",[]) -> ttnc & ttString .~ msg0 <> " <skipped>"
-                      _ -> ttnc & ttString %~ (msg0 <>) . nullIf " "
-            return $ z & ttVal' .~ Val ret & ttForest %~ (hhs <>)
-
+        _fmapImpl opts (Proxy @p) msg0 [hh qq, hh rr] w
 
 -- | similar to 'Data.Bifunctor.bimap'
 --
@@ -1304,11 +1294,11 @@ _bimapImpl opts proxyp proxyq msg0 hhs nab = do
                         ([], _:_) -> "(R)"
                         (_:_, _:_) -> "(B)"
             in ttnb & ttVal' .~ Val ret
-                 & ttForest %~ (hhs <>)
-                 & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
+                    & ttForest %~ (hhs <>)
+                    & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
 
 
-data ELR a b = EEmpty | ELeft a | ERight b | EBoth a b deriving (Show,Eq,Ord)
+data ELR a b = EEmpty | ELeft a | ERight b | EBoth a b deriving (Show,Eq,Ord,Foldable,Functor,Traversable)
 
 instance Bifunctor ELR where
   bimap f g x =
