@@ -53,6 +53,7 @@ module Predicate.Core (
   , P(..)
 
   -- ** evaluation methods
+  , runP
   , runPQ
   , runPQBool
   , evalBool
@@ -132,6 +133,7 @@ import Data.Typeable (Typeable)
 import Data.Kind (Type)
 import Data.These (These(..))
 import Control.Monad (zipWithM)
+import Control.Arrow (right)
 import Data.List (find)
 import Data.Tree (Tree)
 import Data.Coerce (Coercible)
@@ -999,6 +1001,20 @@ runs :: forall optss p a
         => a
         -> IO (Val (PP p a))
 runs = run @(OptT optss) @p
+
+-- | convenience method to evaluate one expression
+runP ::  ( P p a
+         , MonadEval m)
+   => Inline
+   -> String
+   -> proxy p
+   -> POpts
+   -> a
+   -> [Tree PE]
+   -> m (Either (TT x) (PP p a, TT (PP p a)))
+runP inline msg0 proxyp opts a hhs = do
+    pp <- eval proxyp opts a
+    return $ right (,pp) $ getValueLR inline opts msg0 pp hhs
 
 -- | convenience method to evaluate two expressions using the same input and return the results
 runPQ :: ( P p a

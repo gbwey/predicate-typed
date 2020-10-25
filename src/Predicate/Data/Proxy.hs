@@ -538,9 +538,6 @@ type family PApp2T (p :: Type) (q :: Type) (r :: Type) :: Type where
 -- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? _Wrapped @(Identity _) . ttVal . _Val == Just (Proxy @Int)
 -- True
 --
--- >>> eval (Proxy @(Proxify Id)) defOpts (Nothing @Double) ^. to runIdentity . ttVal . singular _Val == Proxy @Double
--- True
---
 -- >>> eval (Proxy @(Proxify Id)) defOpts ([] @Int) ^? folded @Identity . ttVal . _Val == Just (Proxy @Int)
 -- True
 --

@@ -167,9 +167,9 @@ import GHC.Generics (Generic, Generic1)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 
--- | contains the untyped result from evaluating the expression tree
+-- | contains the untyped result from evaluating an expression
 data ValP =
-    FailP !String -- ^ fails the entire evaluation
+    FailP !String -- ^ evaluation failed
   | FalseP       -- ^ False predicate
   | TrueP        -- ^ True predicate
   | ValP     -- ^ Any value
@@ -241,7 +241,7 @@ instance Semigroup ValP where
 instance Monoid ValP where
   mempty = ValP
 
--- | contains the typed result from evaluating the expression
+-- | contains the typed result from evaluating an expression
 data Val a = Fail !String | Val !a
   deriving stock (Show, Eq, Ord, Read, Functor, Foldable, Traversable, Generic, Generic1)
 
@@ -315,7 +315,7 @@ instance Monoid a => Monoid (Val a) where
 -- [(Fail "some error message","")]
 --
 
--- | evaluation tree for predicates
+-- | typed tree holding the results of evaluating a type level expression
 data TT a = TT { _ttValP :: !ValP -- ^ display value
                , _ttVal :: !(Val a)  -- ^ the value at this root node
                , _ttString :: !String  -- ^ detailed information eg input and output and text
@@ -1076,7 +1076,7 @@ chkSize2 :: (Foldable t, Foldable u)
    -> [Tree PE]
    -> Either (TT x) ([a],[b])
 chkSize2 opts msg0 xs ys hhs =
- (,) <$> chkSize opts msg0 xs hhs <*> chkSize opts msg0 ys hhs
+  (,) <$> chkSize opts msg0 xs hhs <*> chkSize opts msg0 ys hhs
 
 -- | pretty print a message
 formatOMsg :: POpts -> String -> String
@@ -1260,7 +1260,7 @@ ttValBool afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
                Val True -> TrueP
                Val False -> FalseP
 
--- | lens that keeps ValP in sync with Val
+-- | lens from TT to Val that also keeps ValP in sync with Val
 --
 -- >>> (TT FalseP (Val True) "xxx" [] & ttVal %~ id) == TT ValP (Val True) "xxx" []
 -- True
