@@ -317,8 +317,8 @@ instance ( KnownNat n
   type PP (CaseImpl n e (p ': p1 ': ps) (q ': q1 ': qs) r) x = PP q (PP r x)
   eval _ opts z = do
     let cpos = n-pos-1
-        msgbase0 = "Case(" <> showIndex cpos <> " of " <> show (n-1) <> ")"
-        msgbase1 = "Case(" <> showIndex cpos <> ")"
+        msgbase0 = "Case(" <> show cpos <> " of " <> show (n-1) <> ")"
+        msgbase1 = "Case(" <> show cpos <> ")"
         n = nat @n
         pos = 1 + getLen @ps -- cos p1!
     rr <- eval (Proxy @r) opts z
@@ -442,7 +442,7 @@ instance ( PP prt (Int, a) ~ String
          pure $ case getValueLR Inline opts "" ss [hh pp] of
            Left e -> e -- shortcut else we get too compounding errors with the pp tree being added each time!
            Right zs -> ss & ttForest %~ (hh pp:)
-                          & ttVal' .~ Val (a:zs)
+                          & ttVal .~ Val (a:zs)
 
 -- | GuardsQuick contain a type level list of conditions and one of matching values: on no match will fail using the first parameter
 --
@@ -575,7 +575,7 @@ instance ( PP prt (Int, a) ~ String
 
   eval _ opts (a:as) = do
      let cpos = n-pos-1
-         msgbase1 = "Bool(" <> showIndex cpos <> ")"
+         msgbase1 = "Bool(" <> show cpos <> ")"
          msgbase2 = "Bools"
          n = nat @n @Int
          pos = getLen @ps

@@ -49,7 +49,7 @@ module Predicate.Data.Lifted (
   , Extract
   , Duplicate
 
-  -- ** function application
+ -- ** function application
   , type ($$)
   , type ($&)
   , Skip
@@ -62,9 +62,10 @@ module Predicate.Data.Lifted (
   , K
   , Lift
 
--- ** error handling
+ -- ** error handling
   , Catch
   , Catch'
+
  -- ** miscellaneous
   , ELR(..)
  ) where
@@ -591,7 +592,7 @@ instance ( P p x
     pp <- eval (Proxy @p) opts x
     case getValueLR NoInline opts msg0 pp [] of
       Left p -> do
-         let emsg = p ^. ttVal' . singular _Fail -- extract the Fail string and push it back into the fail case
+         let emsg = p ^. ttVal . singular _Fail -- extract the Fail string and push it back into the fail case
          qq <- eval (Proxy @q) opts ((emsg, x), Proxy @(PP p x))
          pure $ case getValueLR NoInline opts (msg0 <> " default condition failed") qq [hh pp] of
             Left e1 -> e1
@@ -884,7 +885,7 @@ _fmapImpl opts proxyp msg0 hhs na = do
           Left e -> e
           Right ret ->
             let ind = if null ret then " <skipped>" else ""
-            in ttnb & ttVal' .~ Val ret
+            in ttnb & ttVal .~ Val ret
                     & ttForest %~ (hhs <>)
                     & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
 
@@ -914,9 +915,6 @@ instance P (FMapFlipT p q) x => P (p <&> q) x where
 --
 -- >>> pz @(FPair (EnumFromTo Fst Snd) ('LT ... 'GT) ) (10,11)
 -- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
---
--- >>> pz @(LiftA2 (Fst * Snd) (FromList (ZipList _) << (10...15)) (FromList (ZipList _) << (1...10))) ()
--- Val (ZipList {getZipList = [10,22,36,52,70,90]})
 --
 data FPair p q deriving Show
 
@@ -1133,7 +1131,9 @@ instance P (p r q) x => P (Flip p q r) x where
 -- >>> pz @(LiftA2 (Pop0 Fst Snd) '[ Proxy Len ] '[ "abc", "def", "aaaaaaaaaaa"]) ()
 -- Val [3,3,11]
 --
-
+-- >>> pz @(LiftA2 (Fst * Snd) (FromList (ZipList _) << (10...15)) (FromList (ZipList _) << (1...10))) ()
+-- Val (ZipList {getZipList = [10,22,36,52,70,90]})
+--
 data LiftA2 p q r deriving Show
 -- i provide the rhs as the environment to fa and fb? so fails Succ
 -- use <*> as it works way better
@@ -1293,7 +1293,7 @@ _bimapImpl opts proxyp proxyq msg0 hhs nab = do
                         (_:_, []) -> "(L)"
                         ([], _:_) -> "(R)"
                         (_:_, _:_) -> "(B)"
-            in ttnb & ttVal' .~ Val ret
+            in ttnb & ttVal .~ Val ret
                     & ttForest %~ (hhs <>)
                     & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
 

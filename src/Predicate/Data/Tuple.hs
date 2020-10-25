@@ -474,7 +474,7 @@ instance ( P p b
         pure $ case getValueLR NoInline opts msg0 qq [] of
           Left e -> e
           Right q ->
-            qq & ttVal' .~ Val (p,q)
+            qq & ttVal .~ Val (p,q)
                & ttForest %~ (hh pp:)
 
 instance P (EachITuple p) () where

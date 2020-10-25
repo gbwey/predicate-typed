@@ -97,13 +97,13 @@ instance ( PP p (b,a) ~ b
           Left e -> pure e
           Right _ -> do
             let ff i b as' rs
-                 | i >= oRecursion opts = pure (rs, Left $ mkNode opts (Fail (msg0 <> ":recursion limit i=" <> showIndex i)) ("(b,as')=" <> showL opts (b,as')) [])
+                 | i >= oRecursion opts = pure (rs, Left $ mkNode opts (Fail (msg0 <> ":recursion limit i=" <> show i)) ("(b,as')=" <> showL opts (b,as')) [])
                  | otherwise =
                        case as' of
                          [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (Val q) (msg0 <> "(done)") [])], Right ())
                          a:as -> do
                             pp :: TT b <- evalHide @p opts (b,a)
-                            case getValueLR NoInline opts (msg0 <> " i=" <> showIndex i <> " a=" <> showL opts a) pp [] of
+                            case getValueLR NoInline opts (msg0 <> " i=" <> show i <> " a=" <> showL opts a) pp [] of
                                Left e  -> pure (rs,Left e)
                                Right b' -> ff (i+1) b' as (rs ++ [((i,b), pp)])
             (ts,lrx) :: ([((Int, b), TT b)], Either (TT [b]) ()) <- ff 1 q r []
@@ -331,10 +331,10 @@ instance ( PP q a ~ s
       Left e -> pure e
       Right q -> do
         let msg1 = msg0 <> " " <> showL opts q
-            ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (Fail (msg1 <> ":recursion limit i=" <> showIndex i)) ("s=" <> showL opts s) [])
+            ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (Fail (msg1 <> ":recursion limit i=" <> show i)) ("s=" <> showL opts s) [])
                       | otherwise = do
                               pp :: TT (PP p s) <- evalHide @p opts s
-                              case getValueLR NoInline opts (msg1 <> " i=" <> showIndex i <> " s=" <> show s) pp [] of
+                              case getValueLR NoInline opts (msg1 <> " i=" <> show i <> " s=" <> show s) pp [] of
                                    Left e  -> pure (rs, Left e)
                                    Right Nothing -> pure (rs ++ [((i,Nothing), pp)], Right ())
                                    Right w@(Just (_b,s')) -> ff (i+1) s' (rs ++ [((i,w), pp)])
@@ -516,8 +516,8 @@ instance ( KnownNat n
 
   eval _ opts (a:as) = do
      let cpos = n-pos-1
-         msgbase0 = "Para(" <> showIndex cpos <> " of " <> show (n-1) <> ")"
-         msgbase1 = "Para(" <> showIndex cpos <> ")"
+         msgbase0 = "Para(" <> show cpos <> " of " <> show (n-1) <> ")"
+         msgbase1 = "Para(" <> show cpos <> ")"
          n = nat @n
          pos = 1 + getLen @ps -- cos p1!
      pp <- eval (Proxy @p) opts a

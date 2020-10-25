@@ -1591,7 +1591,7 @@ instance ( P p a
                in case find (not . view _1) abcs of
                     Nothing -> mkNodeB opts True msg1 hhs
                     Just (_,(i,_),tt) ->
-                      mkNodeB opts False (msg1 <> " i=" ++ showIndex i ++ " " <> topMessage tt) hhs
+                      mkNodeB opts False (msg1 <> " i=" ++ show i ++ " " <> topMessage tt) hhs
 
 -- | similar to 'any'
 --
@@ -1640,7 +1640,7 @@ instance ( P p a
                in case find (view _1) abcs of
                     Nothing -> mkNodeB opts False msg1 hhs
                     Just (_,(i,_),tt) ->
-                      mkNodeB opts True (msg1 <> " i=" ++ showIndex i ++ " " <> topMessage tt) hhs
+                      mkNodeB opts True (msg1 <> " i=" ++ show i ++ " " <> topMessage tt) hhs
 
 -- | similar to 'fst'
 --

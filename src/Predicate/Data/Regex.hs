@@ -89,8 +89,8 @@ instance ( GetROpts rs
       Right (p,q,pp,qq) ->
         let msg1 = msg0 <> " (" <> p <> ")"
             hhs = [hh pp, hh qq]
-        in case compileRegex @rs opts msg1 p hhs of
-            Left tta -> tta
+        in case compileRegex @rs msg1 p of
+            Left (e,e1) -> mkNode opts (Fail e) e1 hhs
             Right regex ->
                let b = q RH.=~ regex
                in mkNodeB opts b (msg1 <> litVerbose opts " | " q) hhs
@@ -196,14 +196,14 @@ instance ( GetROpts rs
       Right (p,q,pp,qq) ->
         let msg1 = msg0 <> " (" <> p <> ")"
             hhs = [hh pp, hh qq]
-        in case compileRegex @rs opts msg1 p hhs of
-          Left tta -> tta
-          Right regex ->
-            case splitAt (oRecursion opts) $ RH.scan regex q of
-              (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
-              ([], _) -> -- this is a failure cos empty string returned: so reuse p?
-                         mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) [hh pp, hh qq]
-              (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) [hh pp, hh qq]
+        in case compileRegex @rs msg1 p of
+             Left (e,e1) -> mkNode opts (Fail e) e1 hhs
+             Right regex ->
+               case splitAt (oRecursion opts) $ RH.scan regex q of
+                 (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
+                 ([], _) -> -- this is a failure cos empty string returned: so reuse p?
+                             mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) [hh pp, hh qq]
+                 (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) [hh pp, hh qq]
 
 -- | see 'RH.scan'
 --
@@ -287,8 +287,8 @@ instance ( GetROpts rs
       Right (p,q,pp,qq) ->
         let msg1 = msg0 <> " (" <> p <> ")"
             hhs = [hh pp, hh qq]
-        in case compileRegex @rs opts msg1 p hhs of
-          Left tta -> tta
+        in case compileRegex @rs msg1 p of
+          Left (e,e1) -> mkNode opts (Fail e) e1 hhs
           Right regex ->
             case splitAt (oRecursion opts) $ RH.scanRanges regex q of
               (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
@@ -335,8 +335,8 @@ instance ( GetROpts rs
       Right (p,q,pp,qq) ->
         let msg1 = msg0 <> " (" <> p <> ")"
             hhs = [hh pp, hh qq]
-        in case compileRegex @rs opts msg1 p hhs of
-          Left tta -> tta
+        in case compileRegex @rs msg1 p of
+          Left (e,e1) -> mkNode opts (Fail e) e1 hhs
           Right regex ->
             case splitAt (oRecursion opts) $ RH.split regex q of
               (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
@@ -399,8 +399,8 @@ instance ( GetBool b
       Right (p,q,pp,qq) ->
         let msg1 = msg0 <> " (" <> p <> ")"
             hhs = [hh pp, hh qq]
-        in case compileRegex @rs opts msg1 p hhs of
-          Left tta -> pure tta
+        in case compileRegex @rs msg1 p of
+          Left (e,e1) -> pure $ mkNode opts (Fail e) e1 hhs
           Right regex -> do
             rr <- eval (Proxy @r) opts x
             pure $ case getValueLR NoInline opts msg0 rr hhs of

@@ -33,15 +33,14 @@ module Predicate.Util (
   , val2P
   , val2PBool
 
-  -- ** TT
+  -- ** TT typed tree
   , TT(..)
-  , ttVal'
+  , ttVal
   , ttValBool
-  , ttValP
   , ttString
   , ttForest
 
- -- ** PE
+ -- ** PE untyped tree
   , PE(..)
   , peValP
   , peString
@@ -132,28 +131,21 @@ module Predicate.Util (
   , MonadEval(..)
 
  -- ** miscellaneous
-  , compileRegex
   , hh
-  , removeAnsi
   , chkSize
   , chkSize2
   , badLength
-  , showIndex
-  , _Id
 
   ) where
 import Predicate.Misc
 import GHC.TypeLits (Symbol, Nat, KnownSymbol, KnownNat)
 import Control.Lens
 import Control.Arrow (Arrow((&&&)), ArrowChoice(left))
-import Data.List (intercalate, unfoldr, isInfixOf)
+import Data.List (intercalate, isInfixOf)
 import Data.Tree (drawTree, Forest, Tree(Node))
 import Data.Tree.Lens (root)
 import System.Console.Pretty (Color(..))
 import qualified System.Console.Pretty as C
-import qualified Text.Regex.PCRE.Heavy as RH
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TE
 import qualified Control.Exception as E
 import Control.DeepSeq (NFData, ($!!))
 import System.IO.Unsafe (unsafePerformIO)
@@ -330,7 +322,7 @@ data TT a = TT { _ttValP :: !ValP -- ^ display value
                , _ttForest :: !(Forest PE) -- ^ the child nodes
                } deriving stock (Functor, Read, Show, Eq, Foldable, Traversable, Generic, Generic1)
 
-makeLenses ''TT
+makeLensesFor [("_ttString","ttString"),("_ttForest","ttForest")] ''TT
 
 instance Semigroup (TT a) where
    TT bp bt ss ts <> TT bp1 bt1 ss1 ts1 =
@@ -349,7 +341,7 @@ instance Monad TT where
      case bt of
        Val a -> amb a & ttString %~ jamSS ss
                       & ttForest %~ (ts <>)
-       Fail e -> z & ttVal' .~ Fail e
+       Fail e -> z & ttVal .~ Fail e
 
 -- | creates a Node for the evaluation tree
 mkNodeCopy :: POpts
@@ -702,21 +694,6 @@ litBS o s =
   let i = oWidth o
   in litL' i (BS8.unpack (BS8.take i s))
 
--- | compile a regex using the type level symbol
-compileRegex :: forall rs a . GetROpts rs
-  => POpts
-  -> String
-  -> String
-  -> [Tree PE]
-  -> Either (TT a) RH.Regex
-compileRegex opts nm s hhs
-  | null s = Left (mkNode opts (Fail "Regex cannot be empty") nm hhs)
-  | otherwise =
-      let rs = getROpts @rs
-          mm = nm <> " " <> show rs
-          f e = mkNode opts (Fail "Regex failed to compile") (mm <> ":" <> e) hhs
-      in left f (RH.compileM (TE.encodeUtf8 (T.pack s)) (snd rs))
-
 -- | extract values from the trees or if there are errors return a tree with context
 splitAndAlign :: Show x =>
                     POpts
@@ -741,7 +718,7 @@ groupErrors =
 partitionTTExtended :: (w, TT a) -> Either ((w, TT x), String) (a, w, TT a)
 partitionTTExtended (s, t) =
   case _ttVal t of
-    Fail e -> Left ((s, t & ttVal' .~ Fail e), e)
+    Fail e -> Left ((s, t & ttVal .~ Fail e), e)
     Val a -> Right (a,s,t)
 
 formatList :: forall x z . Show x
@@ -788,10 +765,9 @@ data Long = Long | Short deriving (Show, Eq)
 -- | render 'Val' value with colors
 colorValLite :: Show a
     => POpts
-    -> Val a
-    -> ValP
+    -> (Val a, ValP)
     -> String
-colorValLite o bt bp' =
+colorValLite o (bt,bp') =
   let f = colorMe o bp
       bp = validateValP bp' bt
   in case bt of
@@ -855,9 +831,6 @@ prefixNumberToTT ((i, _), t) = prefixMsg ("i=" <> show i <> ": ") t
 prefixMsg :: String -> TT a -> TT a
 prefixMsg msg = ttString %~ (msg <>)
 
-_Id :: Lens (Identity a) (Identity b) a b
-_Id afb (Identity a) = Identity <$> afb a
-
 -- | a typeclass for choosing which monad to run in
 --
 -- >>> hasIO @IO
@@ -899,24 +872,6 @@ instance MonadEval IO where
   catchitNF v = E.evaluate (Right $!! v) `E.catch` (\(E.SomeException e) -> pure $ Left ("IO e=" <> show e))
   liftEval = id
   hasIO = True
-
--- | strip ansi characters from a string and print it (for doctests)
-removeAnsi :: Show a => Either String a -> IO ()
-removeAnsi = putStrLn . removeAnsiImpl
-
-removeAnsiImpl :: Show a => Either String a -> String
-removeAnsiImpl =
-  \case
-     Left e -> let esc = '\x1b'
-                   f :: String -> Maybe (String, String)
-                   f = \case
-                          [] -> Nothing
-                          c:cs | c == esc -> case break (=='m') cs of
-                                                  (_,'m':s) -> Just ("",s)
-                                                  _ -> Nothing
-                               | otherwise -> Just $ break (==esc) (c:cs)
-               in concat $ unfoldr f e
-     Right a -> show a
 
 -- composite types are used instead of type synonyms as showT (typeRep) unrolls the definition
 -- eg sqlhandler.encode/decode and parsejson* etc
@@ -1165,21 +1120,18 @@ badLength :: Foldable t
 badLength as n = ":invalid length(" <> show (length as) <> ") expected " ++ show n
 
 prtTree :: Show x => POpts -> TT x -> String
-prtTree opts pp =
+prtTree opts tt =
   case oDebug opts of
      DZero -> ""
 
      DLite ->
            formatOMsg opts " >>> "
-           <> colorValLite opts (pp ^. ttVal) (pp ^. ttValP)
+           <> colorValLite opts ((_ttVal &&& _ttValP) tt)
            <> " "
-           <> topMessage pp
+           <> topMessage tt
 
      _ -> formatOMsg opts ""
-          <> prtTreePure opts (hh pp)
-
-showIndex :: (Show i, Num i) => i -> String
-showIndex i = show (i+0)
+          <> prtTreePure opts (hh tt)
 
 verboseList :: POpts -> TT a -> [Tree PE]
 verboseList o tt
@@ -1287,7 +1239,7 @@ val2PBool afb bt = bt <$ afb r
               Val True -> TrueP
               Val False -> FalseP
 
--- | lens that ensures _ttValP is in sync with _ttVal
+-- | lens that keeps ValP in sync with Val for TT Bool
 --
 -- >>> (TT ValP (Val True) "xxx" [] & ttValBool %~ \b -> fmap not b) == TT FalseP (Val False) "xxx" []
 -- True
@@ -1308,21 +1260,20 @@ ttValBool afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
                Val True -> TrueP
                Val False -> FalseP
 
--- | lens that ensures _ttValP is in sync with _ttVal for TT Bool
+-- | lens that keeps ValP in sync with Val
 --
--- >>> (TT FalseP (Val True) "xxx" [] & ttVal' %~ id) == TT ValP (Val True) "xxx" []
+-- >>> (TT FalseP (Val True) "xxx" [] & ttVal %~ id) == TT ValP (Val True) "xxx" []
 -- True
 --
--- >>> (TT FalseP (Val 123) "xxx" [] & ttVal' .~ Fail "aa") == TT (FailP "aa") (Fail "aa") "xxx" []
+-- >>> (TT FalseP (Val 123) "xxx" [] & ttVal .~ Fail "aa") == TT (FailP "aa") (Fail "aa") "xxx" []
 -- True
 --
--- >>> (TT (FailP "sdf") (Val 123) "xxx" [] & ttVal' %~ fmap show) == TT ValP (Val "123") "xxx" []
+-- >>> (TT (FailP "sdf") (Val 123) "xxx" [] & ttVal %~ fmap show) == TT ValP (Val "123") "xxx" []
 -- True
 --
-ttVal' :: Lens (TT a) (TT b) (Val a) (Val b)
-ttVal' afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
+ttVal :: Lens (TT a) (TT b) (Val a) (Val b)
+ttVal afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
   where f = \case
                Fail e -> FailP e
                Val {} -> ValP
-
 

@@ -94,6 +94,7 @@ module Predicate.Misc (
   , primeFactors
 
   -- ** regular expressions
+  , compileRegex
   , ROpt(..)
   , GetROpts(..)
   , RReplace(..)
@@ -122,6 +123,8 @@ module Predicate.Misc (
   , readField
   , asProxyLeft
   , asProxyRight
+  , removeAnsi
+  , _Id
 
   ) where
 import qualified GHC.TypeNats as GN
@@ -131,7 +134,9 @@ import Data.Proxy (Proxy(Proxy))
 import Data.Typeable (Typeable, typeRep)
 import System.Console.Pretty (Color(..))
 import GHC.Exts (Constraint)
+import qualified Text.Regex.PCRE.Heavy as RH
 import qualified Text.Regex.PCRE.Light as RL
+import qualified Data.Text.Encoding as TE
 import qualified Data.Text as T
 import GHC.Word (Word8)
 import Data.Sequence (Seq)
@@ -144,7 +149,7 @@ import Data.ByteString (ByteString)
 import GHC.Stack (HasCallStack)
 import Data.Containers.ListUtils (nubOrd)
 import Control.Arrow (Arrow((***)),ArrowChoice(left))
-import Data.List (intercalate)
+import Data.List (intercalate, unfoldr)
 import qualified Safe (headNote)
 import qualified Text.Read.Lex as L
 import qualified Text.ParserCombinators.ReadPrec as PCR
@@ -152,6 +157,7 @@ import qualified GHC.Read as GR
 import Data.Char (isSpace)
 import qualified Control.Exception as E
 import Data.Tree (Tree(Node))
+import Control.Lens (Identity(..), Lens)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -1015,6 +1021,19 @@ instance GetBool 'True where
 instance GetBool 'False where
   getBool = False
 
+-- | compile a regex using type level options
+compileRegex :: forall rs . GetROpts rs
+  => String
+  -> String
+  -> Either (String, String) RH.Regex
+compileRegex nm s
+  | null s = Left ("Regex cannot be empty",nm)
+  | otherwise =
+      let rs = getROpts @rs
+          mm = nm <> " " <> show rs
+          f e = ("Regex failed to compile", mm <> ":" <> e)
+      in left f (RH.compileM (TE.encodeUtf8 (T.pack s)) (snd rs))
+
 -- | Regex options for Rescan Resplit Re etc
 data ROpt =
     Anchored -- ^ Force pattern anchoring
@@ -1211,3 +1230,25 @@ asProxyRight = flip const
 
 asProxyLeft :: proxy a -> proxy1 a -> proxy a
 asProxyLeft = const
+
+-- | strip ansi characters from a string and print it (for doctests)
+removeAnsi :: Show a => Either String a -> IO ()
+removeAnsi = putStrLn . removeAnsiImpl
+
+removeAnsiImpl :: Show a => Either String a -> String
+removeAnsiImpl =
+  \case
+     Left e -> let esc = '\x1b'
+                   f :: String -> Maybe (String, String)
+                   f = \case
+                          [] -> Nothing
+                          c:cs | c == esc -> case break (=='m') cs of
+                                                  (_,'m':s) -> Just ("",s)
+                                                  _ -> Nothing
+                               | otherwise -> Just $ break (==esc) (c:cs)
+               in concat $ unfoldr f e
+     Right a -> show a
+
+_Id :: Lens (Identity a) (Identity b) a b
+_Id afb (Identity a) = Identity <$> afb a
+
