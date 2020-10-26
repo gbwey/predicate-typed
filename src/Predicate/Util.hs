@@ -166,6 +166,7 @@ import GHC.Generics (Generic, Generic1)
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
+-- >>> :m + Control.Arrow
 
 -- | contains the untyped result from evaluating an expression
 data ValP =
@@ -1174,10 +1175,19 @@ _False =
        Val False -> Just ()
        _ -> Nothing
 
--- | iso for Val
+-- | iso for 'Val'
 --
 -- >>> Val 123 ^. _ValEither
 -- Right 123
+--
+-- >>> Val 123 & _ValEither %~ right' (show . succ)
+-- Val "124"
+--
+-- >>> Fail "abc" & _ValEither %~ ((<>"def") +++ (show . succ))
+-- Fail "abcdef"
+--
+-- >>> Right 1.2 & from _ValEither %~ fmap (show . (*10))
+-- Right "12.0"
 --
 -- >>> Val True ^. _ValEither
 -- Right True
@@ -1188,7 +1198,7 @@ _False =
 -- >>> Left "abc" ^. from _ValEither
 -- Fail "abc"
 --
--- >>> Right False ^. from _ValEither
+-- >>> _ValEither # Right False
 -- Val False
 --
 -- >>> [Just (Val 'x')] ^. mapping (mapping _ValEither)
@@ -1197,7 +1207,7 @@ _False =
 -- >>> Just (Fail "abcd") ^. mapping _ValEither
 -- Just (Left "abcd")
 --
-_ValEither :: Iso' (Val a) (Either String a)
+_ValEither :: Iso (Val a) (Val b) (Either String a) (Either String b)
 _ValEither = iso fw bw
   where fw = \case
                Val a -> Right a

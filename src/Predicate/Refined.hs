@@ -65,7 +65,7 @@ import Control.DeepSeq (NFData)
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
 -- >>> :m + Predicate.Prelude
--- >>> import qualified Control.Arrow as AR
+-- >>> :m + Control.Arrow
 -- >>> :m + Text.Show.Functions
 
 -- | a simple refinement type that ensures the predicate @p@ holds for the type @a@
@@ -272,13 +272,13 @@ newRefined' a = do
 -- >>> newRefined @OL @(ReadP Int Id > 99) "123"
 -- Right (Refined "123")
 --
--- >>> AR.left m0Long $ newRefined @OL @(ReadP Int Id > 99) "12"
+-- >>> left m0Long $ newRefined @OL @(ReadP Int Id > 99) "12"
 -- Left "False (12 > 99)"
 --
 -- >>> newRefined @OZ @(Between 10 14 Id) 13
 -- Right (Refined 13)
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Between 10 14 Id) 99
+-- >>> left m0BoolE $ newRefined @OZ @(Between 10 14 Id) 99
 -- Left (Right False)
 --
 -- >>> newRefined @OZ @(Last >> Len == 4) ["one","two","three","four"]
@@ -287,37 +287,37 @@ newRefined' a = do
 -- >>> newRefined @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1.99"
 -- Right (Refined "141.213.1.99")
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1"
+-- >>> left m0BoolE $ newRefined @OZ @(Re "^\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}$") "141.213.1"
 -- Left (Right False)
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Map' (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
+-- >>> left m0BoolE $ newRefined @OZ @(Map' (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4)) "141.213.1"
 -- Left (Left "bad length: found 3")
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Map' (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1.444"
+-- >>> left m0BoolE $ newRefined @OZ @(Map' (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1.444"
 -- Left (Left "Bool(3) [octet 3 out of range 444]")
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Map' (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1x34.444"
+-- >>> left m0BoolE $ newRefined @OZ @(Map' (ReadP Int Id) (Resplit "\\.") >> GuardBool (PrintF "bad length: found %d" Len) (Len == 4) && BoolsN (PrintT "octet %d out of range %d" Id) 4 (0 <..> 0xff)) "141.213.1x34.444"
 -- Left (Left "ReadP Int (1x34)")
 --
 -- >>> newRefined @OZ @(Map ('[Id] >> ReadP Int Id) >> IsLuhn) "12344"
 -- Right (Refined "12344")
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Map ('[Id] >> ReadP Int Id) >> IsLuhn) "12340"
+-- >>> left m0BoolE $ newRefined @OZ @(Map ('[Id] >> ReadP Int Id) >> IsLuhn) "12340"
 -- Left (Right False)
 --
 -- >>> newRefined @OZ @(Any IsPrime) [11,13,17,18]
 -- Right (Refined [11,13,17,18])
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(All IsPrime) [11,13,17,18]
+-- >>> left m0BoolE $ newRefined @OZ @(All IsPrime) [11,13,17,18]
 -- Left (Right False)
 --
 -- >>> newRefined @OZ @(Snd !! Fst >> Len > 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Right (Refined (2,["abc","defghij","xyzxyazsfd"]))
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Snd !! Fst >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
+-- >>> left m0BoolE $ newRefined @OZ @(Snd !! Fst >> Len > 5) (27,["abc","defghij","xyzxyazsfd"])
 -- Left (Left "(!!) index not found")
 --
--- >>> AR.left m0BoolE $ newRefined @OZ @(Snd !! Fst >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
+-- >>> left m0BoolE $ newRefined @OZ @(Snd !! Fst >> Len <= 5) (2,["abc","defghij","xyzxyazsfd"])
 -- Left (Right False)
 --
 -- >>> newRefined @OU @((Id $$ 13) > 100) (\x -> x * 14) ^? _Right . to unRefined . to ($ 99)
