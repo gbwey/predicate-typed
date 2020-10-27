@@ -120,7 +120,6 @@ module Predicate.Misc (
   , (~>)
   , errorInProgram
   , drawTreeU
-  , readField
   , asProxyLeft
   , asProxyRight
   , removeAnsi
@@ -151,9 +150,6 @@ import Data.Containers.ListUtils (nubOrd)
 import Control.Arrow (Arrow((***)),ArrowChoice(left))
 import Data.List (intercalate, unfoldr)
 import qualified Safe (headNote)
-import qualified Text.Read.Lex as L
-import qualified Text.ParserCombinators.ReadPrec as PCR
-import qualified GHC.Read as GR
 import Data.Char (isSpace)
 import qualified Control.Exception as E
 import Data.Tree (Tree(Node))
@@ -1169,13 +1165,6 @@ instance GetColor 'White where
   getColor = White
 instance GetColor 'Default where
   getColor = Default
-
--- | read a field and value using 'PCR.ReadPrec' parser
-readField :: String -> PCR.ReadPrec a -> PCR.ReadPrec a
-readField fieldName readVal = do
-        GR.expectP (L.Ident fieldName)
-        GR.expectP (L.Punc "=")
-        readVal
 
 -- | convenience method for optional display
 unlessNull :: (Foldable t, Monoid m) => t a -> m -> m

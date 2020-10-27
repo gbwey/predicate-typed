@@ -22,7 +22,7 @@ and then roundtrips the value to a string
 >type Hex opts = '(opts, ReadBase Int 16, Between 0 0xff Id, ShowBase 16, String)
 
 >newRefined3P (Proxy @(Hex OL)) "0000fe"
-Refined3 {r3In = 254, r3Out = "fe"}
+Refined3 254 "fe"
 ```
 1. `ReadBase Int 16`
     reads a hexadecimal string and returns 254
@@ -97,10 +97,10 @@ False 65535 <= 255
 ### Any valid Read/Show instance can be used with Refined3
 ```haskell
 >$$(refined3TH "13 % 3") :: ReadShowR OU Rational
-Refined3 {r3In = 13 % 3, r3Out = "13 % 3"}
+Refined3 (13 % 3) "13 % 3"
 
 >$$(refined3TH "2016-11-09") :: ReadShowR OU Day
-Refined3 {r3In = 2016-11-09, r3Out = "2016-11-09"}
+Refined3 2016-11-09 "2016-11-09"
 ```
 
 An example of an invalid refined3TH call
@@ -123,7 +123,7 @@ An example of an invalid refined3TH call
 #### This example is successful as it is a valid hexadecimal and is between 10 though 256
 ```haskell
 >eitherDecode' @(Refined3 OU (ReadBase Int 16) (Id > 10 && Id < 256) (ShowP Id) String) "\"00fe\""
-Right (Refined3 {r3In = 254, r3Out = "254"})
+Right (Refined3 254 "254")
 ```
 
 #### This example fails as the value is not a valid hexadecimal string

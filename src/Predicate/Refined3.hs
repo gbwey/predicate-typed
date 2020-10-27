@@ -33,7 +33,9 @@
 module Predicate.Refined3 (
 
   -- ** Refined3
-    Refined3(r3In, r3Out)
+    Refined3
+  , r3In
+  , r3Out
   , Refined3C
 
  -- ** display results
@@ -117,9 +119,16 @@ import Control.DeepSeq (rnf, rnf2, NFData)
 --
 -- Although a common scenario is String as input, you are free to choose any input type you like
 --
-data Refined3 (opts :: Opt) ip op fmt i = Refined3 { r3In :: !(PP ip i), r3Out :: !i }
+data Refined3 (opts :: Opt) ip op fmt i = Refined3 !(PP ip i) !i
 
 type role Refined3 phantom nominal nominal nominal nominal
+
+r3In :: Refined3 opts ip op fmt i -> PP ip i
+r3In (Refined3 ppi _) = ppi
+
+r3Out :: Refined3 opts ip op fmt i -> i
+r3Out (Refined3 _ i) = i
+
 
 -- | directly load values into 'Refined3'. It still checks to see that those values are valid
 unsafeRefined3' :: forall opts ip op fmt i
@@ -176,7 +185,7 @@ instance ( Refined3C opts ip op fmt i
 -- | 'IsString' instance for Refined3
 --
 -- >>> pureTryTest $ fromString @(Refined3 OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "523"
--- Right (Refined3 {r3In = 523, r3Out = "523"})
+-- Right (Refined3 523 "523")
 --
 -- >>> pureTryTest $ fromString @(Refined3 OL (ReadP Int Id) (Id > 12) (ShowP Id) String) "2"
 -- Left ()
@@ -192,17 +201,17 @@ instance ( Refined3C opts ip op fmt String
 -- read instance from -ddump-deriv
 -- | 'Read' instance for 'Refined3'
 --
--- >>> reads @(Refined3 OZ (ReadBase Int 16) (0 <..> 0xff) (ShowBase 16) String) "Refined3 {r3In = 254, r3Out = \"fe\"}"
--- [(Refined3 {r3In = 254, r3Out = "fe"},"")]
+-- >>> reads @(Refined3 OZ (ReadBase Int 16) (0 <..> 0xff) (ShowBase 16) String) "Refined3 254 \"fe\""
+-- [(Refined3 254 "fe","")]
 --
--- >>> reads @(Refined3 OZ (ReadBase Int 16) (0 <..> 0xff) (ShowBase 16) String) "Refined3 {r3In = 300, r3Out = \"12c\"}"
+-- >>> reads @(Refined3 OZ (ReadBase Int 16) (0 <..> 0xff) (ShowBase 16) String) "Refined3 300 \"12c\""
 -- []
 --
--- >>> reads @(Refined3 OZ (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}"
--- [(Refined3 {r3In = -1234, r3Out = "-4d2"},"")]
+-- >>> reads @(Refined3 OZ (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 (-1234) \"-4d2\""
+-- [(Refined3 (-1234) "-4d2","")]
 --
--- >>> reads @(Refined3 OZ (Map' (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined3 {r3In = [192,168,0,1], r3Out = \"192.168.0.1\"}"
--- [(Refined3 {r3In = [192,168,0,1], r3Out = "192.168.0.1"},"")]
+-- >>> reads @(Refined3 OZ (Map' (ReadP Int Id) (Resplit "\\.")) (GuardBool "len/=4" (Len == 4)) (PrintL 4 "%d.%d.%d.%d" Id) String) "Refined3 [192,168,0,1] \"192.168.0.1\""
+-- [(Refined3 [192,168,0,1] "192.168.0.1","")]
 --
 instance ( Eq i
          , Refined3C opts ip op fmt i
@@ -212,23 +221,18 @@ instance ( Eq i
     readPrec
       = GR.parens
           (PCR.prec
-             11
+             10
              (do GR.expectP (RL.Ident "Refined3")
-                 GR.expectP (RL.Punc "{")
-                 fld1 <- readField
-                               "r3In" (PCR.reset GR.readPrec)
-                 GR.expectP (RL.Punc ",")
-                 fld2 <- readField
-                               "r3Out" (PCR.reset GR.readPrec)
-                 GR.expectP (RL.Punc "}")
-
+                 fld1 <- PCR.step GR.readPrec
+                 fld2 <- PCR.step GR.readPrec
                  let (_ret,mr) = runIdentity $ eval3MSkip @opts @ip @op @fmt fld1
                  case mr of
                    Nothing -> fail ""
                    Just (Refined3 _r1 r2)
                      | r2 == fld2 -> pure (Refined3 fld1 fld2)
                      | otherwise -> fail "" -- cant display a decent failure message
-             ))
+             )
+           )
     readList = GR.readListDefault
     readListPrec = GR.readListPrecDefault
 
@@ -251,7 +255,7 @@ instance ( Refined3C opts ip op fmt i
 --
 -- >>> import qualified Data.Aeson as A
 -- >>> A.eitherDecode' @(Refined3 OZ (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe\""
--- Right (Refined3 {r3In = 254, r3Out = "fe"})
+-- Right (Refined3 254 "fe")
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined3 OAN (ReadBase Int 16) (Id > 10 && Id < 256) (ShowBase 16) String) "\"00fe443a\""
 -- Error in $: Refined3:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
@@ -344,7 +348,7 @@ genRefined3P _ g =
 -- >>> type K2 = MakeR3 '(OAN, ReadP Day Id, Between (ReadP Day "2019-05-30") (ReadP Day "2019-06-01") Id, ShowP Id, String)
 -- >>> r = unsafeRefined3' "2019-04-23" :: K1
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K1 (B.encode r)
--- Refined3 {r3In = 2019-04-23, r3Out = "2019-04-23"}
+-- Refined3 2019-04-23 "2019-04-23"
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
 -- Refined3:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
@@ -390,13 +394,13 @@ instance ( Refined3C opts ip op fmt i
 --
 -- >>> eg1 = mkProxy3 @'(OL, ReadP Int Id, Gt 10, ShowP Id, String)
 -- >>> newRefined3P eg1 "24"
--- Right (Refined3 {r3In = 24, r3Out = "24"})
+-- Right (Refined3 24 "24")
 --
 -- skip the 5-tuple and set each parameter individually using type application
 --
 -- >>> eg2 = mkProxy3 @_ @OL @(ReadP Int Id) @(Gt 10) @(ShowP Id)
 -- >>> newRefined3P eg2 "24"
--- Right (Refined3 {r3In = 24, r3Out = "24"})
+-- Right (Refined3 24 "24")
 --
 mkProxy3 ::
   forall z opts ip op fmt i
@@ -453,7 +457,7 @@ newRefined3P' _ i = do
 -- | same as 'newRefined3P' but skips the proxy and allows you to set each parameter individually using type application
 --
 -- >>> newRefined3 @OZ @(ReadBase Int 16) @(Lt 255) @(PrintF "%x" Id) "00fe"
--- Right (Refined3 {r3In = 254, r3Out = "fe"})
+-- Right (Refined3 254 "fe")
 --
 -- >>> newRefined3 @OZ @(ReadBase Int 16) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) @(PrintF "%x" Id) "00fe"
 -- Left Step 2. Failed Boolean Check(op) | 0xFE is too large
@@ -468,11 +472,11 @@ newRefined3P' _ i = do
 -- Left Step 2. Failed Boolean Check(op) | found length=5
 --
 -- >>> newRefined3 @OZ @(Map' (ReadP Int Id) (Resplit "\\.")) @(GuardBool (PrintF "found length=%d" Len) (Len == 4)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "198.162.3.1"
--- Right (Refined3 {r3In = [198,162,3,1], r3Out = "198.162.003.001"})
+-- Right (Refined3 [198,162,3,1] "198.162.003.001")
 --
 -- >>> :m + Data.Time.Calendar.WeekDate
 -- >>> newRefined3 @OZ @(MkDayExtra Id >> 'Just Id) @(GuardBool "expected a Sunday" (Thd == 7)) @(UnMkDay Fst) (2019,10,13)
--- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
+-- Right (Refined3 (2019-10-13,41,7) (2019,10,13))
 --
 -- >>> newRefined3 @OL @(MkDayExtra Id >> 'Just Id) @(Msg "expected a Sunday:" (Thd == 7)) @(UnMkDay Fst) (2019,10,12)
 -- Left Step 2. False Boolean Check(op) | {expected a Sunday: 6 == 7}
@@ -481,16 +485,16 @@ newRefined3P' _ i = do
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
 -- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S") @'True @(FormatTimeP "%H:%M:%S") "1:15:7"
--- Right (Refined3 {r3In = 01:15:07, r3Out = "01:15:07"})
+-- Right (Refined3 01:15:07 "01:15:07")
 --
 -- >>> newRefined3 @OL @(ParseTimeP TimeOfDay "%-H:%-M:%-S") @'True @(FormatTimeP "%H:%M:%S") "1:2:x"
 -- Left Step 1. Failed Initial Conversion(ip) | ParseTimeP TimeOfDay (%-H:%-M:%-S) failed to parse
 --
 -- >>> newRefined3 @OL @(Rescan "^(\\d{1,2}):(\\d{1,2}):(\\d{1,2})$" >> L2 Head >> Map (ReadP Int Id)) @(All (0 <..> 59) && Len == 3) @(PrintL 3 "%02d:%02d:%02d" Id) "1:2:3"
--- Right (Refined3 {r3In = [1,2,3], r3Out = "01:02:03"})
+-- Right (Refined3 [1,2,3] "01:02:03")
 --
 -- >>> newRefined3 @OL @(Resplit "\\." >> Map (ReadP Int Id)) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.251"
--- Right (Refined3 {r3In = [13,2,1,251], r3Out = "013.002.001.251"})
+-- Right (Refined3 [13,2,1,251] "013.002.001.251")
 --
 -- >>> newRefined3 @OZ @(Resplit "\\." >> Map (ReadP Int Id)) @(BoolsN "oops" 4 (Between 0 255 Id)) @(PrintL 4 "%03d.%03d.%03d.%03d" Id) "13.2.1.259"
 -- Left Step 2. Failed Boolean Check(op) | Bool(3) [oops]
@@ -513,7 +517,7 @@ newRefined3 = runIdentity . newRefined3'
 -- Left Step 2. Failed Boolean Check(op) | expected a Sunday
 --
 -- >>> newRefined3P (Proxy @(T4 _)) (2019,10,13)
--- Right (Refined3 {r3In = (2019-10-13,41,7), r3Out = (2019,10,13)})
+-- Right (Refined3 (2019-10-13,41,7) (2019,10,13))
 --
 newRefined3P :: forall opts ip op fmt i proxy
   . ( Refined3C opts ip op fmt i

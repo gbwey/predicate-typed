@@ -279,10 +279,7 @@ instance P p x => P (Hide p) x where
     pure $ tt & ttForest .~ []
 
 
--- | Acts as a proxy in this dsl where you can explicitly set the Type.
---
---  It is passed around as an argument to help the type checker when needed.
---
+-- | Acts as a proxy for a Type.
 data Hole (t :: Type) deriving Show
 
 instance Typeable t => P (Hole t) a where

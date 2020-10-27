@@ -95,7 +95,7 @@ import Data.Proxy (Proxy(..))
 -- Left Step 2. Failed Boolean Check(op) | invalid checkdigit
 --
 -- >>> newRefined2 @OZ @Luhnip @(Luhnop 11) "1234-5678-903"
--- Right (Refined2 {r2In = [1,2,3,4,5,6,7,8,9,0,3], r2Out = "1234-5678-903"})
+-- Right (Refined2 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
 --
 -- >>> pz @(Luhnip >> Luhnop 11) "79927398713"
 -- Val True
@@ -108,7 +108,7 @@ type Luhn (opts :: Opt) (n :: Nat) = '(opts, Luhnip, Luhnop n, String)
 -- | read in a valid datetime
 --
 -- >>> newRefined2 @OL @(Dtip LocalTime) @'True "2018-09-14 02:57:04"
--- Right (Refined2 {r2In = 2018-09-14 02:57:04, r2Out = "2018-09-14 02:57:04"})
+-- Right (Refined2 2018-09-14 02:57:04 "2018-09-14 02:57:04")
 --
 -- >>> newRefined2 @OL @(Dtip LocalTime) @'True "2018-09-99 12:12:12"
 -- Left Step 1. Failed Initial Conversion(ip) | ParseTimeP LocalTime (%F %T) failed to parse
@@ -133,7 +133,7 @@ type DateTimeN (opts :: Opt) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True
 -- | read in an ssn
 --
 -- >>> newRefined2 @OZ @Ssnip @Ssnop "134-01-2211"
--- Right (Refined2 {r2In = [134,1,2211], r2Out = "134-01-2211"})
+-- Right (Refined2 [134,1,2211] "134-01-2211")
 --
 -- >>> newRefined2 @OL @Ssnip @Ssnop "666-01-2211"
 -- Left Step 2. Failed Boolean Check(op) | Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))
@@ -152,7 +152,7 @@ type Ssn (opts :: Opt) = '(opts, Ssnip, Ssnop, String)
 -- | read in a time and validate it
 --
 -- >>> newRefined2 @OL @Hmsip @Hmsop' "23:13:59"
--- Right (Refined2 {r2In = [23,13,59], r2Out = "23:13:59"})
+-- Right (Refined2 [23,13,59] "23:13:59")
 --
 -- >>> newRefined2 @OL @Hmsip @Hmsop' "23:13:60"
 -- Left Step 2. Failed Boolean Check(op) | Bool(2) [seconds] (60 <= 59)
@@ -175,7 +175,7 @@ type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', String)
 -- | read in an ipv4 address and validate it
 --
 -- >>> newRefined2 @OZ @Ip4ip @Ip4op' "001.223.14.1"
--- Right (Refined2 {r2In = [1,223,14,1], r2Out = "001.223.14.1"})
+-- Right (Refined2 [1,223,14,1] "001.223.14.1")
 --
 -- >>> newRefined2 @OL @Ip4ip @Ip4op' "001.223.14.999"
 -- Left Step 2. Failed Boolean Check(op) | Bool(3) [octet 3 out of range 0-255 found 999] (999 <= 255)
@@ -210,7 +210,7 @@ ip6 = Proxy
 -- | validate isbn10
 --
 -- >>> newRefined2P (isbn10 @OZ) "0-306-40611-X"
--- Right (Refined2 {r2In = ([0,3,0,6,4,0,6,1,1],10), r2Out = "0-306-40611-X"})
+-- Right (Refined2 ([0,3,0,6,4,0,6,1,1],10) "0-306-40611-X")
 --
 -- >>> newRefined2P (isbn10 @OZ) "0-306-40611-9"
 -- Left Step 2. Failed Boolean Check(op) | mod 0 oops
@@ -224,7 +224,7 @@ isbn10 = Proxy
 -- | validate isbn13
 --
 -- >>> newRefined2P (isbn13 @OZ) "978-0-306-40615-7"
--- Right (Refined2 {r2In = [9,7,8,0,3,0,6,4,0,6,1,5,7], r2Out = "978-0-306-40615-7"})
+-- Right (Refined2 [9,7,8,0,3,0,6,4,0,6,1,5,7] "978-0-306-40615-7")
 --
 -- >>> newRefined2P (isbn13 @OZ) "978-0-306-40615-8"
 -- Left Step 2. Failed Boolean Check(op) | sum=101 mod 10=1
@@ -243,10 +243,10 @@ luhn11 = Proxy
 -- | convert a string from a given base \'i\' and store it internally as an base 10 integer
 --
 -- >>> newRefined2 @OZ @(ReadBase Int 16) @'True "00fe"
--- Right (Refined2 {r2In = 254, r2Out = "00fe"})
+-- Right (Refined2 254 "00fe")
 --
 -- >>> newRefined2 @OZ @(ReadBase Int 16) @(Between 100 400 Id) "00fe"
--- Right (Refined2 {r2In = 254, r2Out = "00fe"})
+-- Right (Refined2 254 "00fe")
 --
 -- >>> newRefined2 @OZ @(ReadBase Int 16) @(GuardSimple (Id < 400) >> 'True) "f0fe"
 -- Left Step 2. Failed Boolean Check(op) | (61694 < 400)
@@ -261,7 +261,7 @@ type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n, p, String)
 -- | Luhn check
 --
 -- >>> newRefined2 @OZ @Luhnip @(Luhnop 4) "1230"
--- Right (Refined2 {r2In = [1,2,3,0], r2Out = "1230"})
+-- Right (Refined2 [1,2,3,0] "1230")
 --
 -- >>> newRefined2 @OL @Luhnip @(Luhnop 4) "1234"
 -- Left Step 2. Failed Boolean Check(op) | invalid checkdigit
@@ -271,7 +271,7 @@ type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n, p, String)
 -- | convert a string from a given base \'i\' and store it internally as a base \'j\' string
 --
 -- >>> newRefined2 @OZ @(BaseIJip 16 2) @'True "fe"
--- Right (Refined2 {r2In = "11111110", r2Out = "fe"})
+-- Right (Refined2 "11111110" "fe")
 --
 -- >>> newRefined2 @OZ @(BaseIJip 16 2) @'True "fge"
 -- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
@@ -288,16 +288,16 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, String
 --
 -- >>> :m + Data.Ratio
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @'True "13 % 3"
--- Right (Refined2 {r2In = 13 % 3, r2Out = "13 % 3"})
+-- Right (Refined2 (13 % 3) "13 % 3")
 --
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @'True "13x % 3"
 -- Left Step 1. Failed Initial Conversion(ip) | ReadP Ratio Integer (13x % 3)
 --
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @(3 % 1 <..> 5 % 1) "13 % 3"
--- Right (Refined2 {r2In = 13 % 3, r2Out = "13 % 3"})
+-- Right (Refined2 (13 % 3) "13 % 3")
 --
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @(11 -% 2 <..> 3 -% 1) "-13 % 3"
--- Right (Refined2 {r2In = (-13) % 3, r2Out = "-13 % 3"})
+-- Right (Refined2 ((-13) % 3) "-13 % 3")
 --
 -- >>> newRefined2 @OZ @(ReadP Rational Id) @(Id > (15 % 1)) "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
@@ -309,14 +309,14 @@ type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, String
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
 -- >>> newRefined2 @OZ @(ReadP UTCTime Id) @'True "2018-10-19 14:53:11.5121359 UTC"
--- Right (Refined2 {r2In = 2018-10-19 14:53:11.5121359 UTC, r2Out = "2018-10-19 14:53:11.5121359 UTC"})
+-- Right (Refined2 2018-10-19 14:53:11.5121359 UTC "2018-10-19 14:53:11.5121359 UTC")
 --
 -- >>> :m + Data.Aeson
 -- >>> newRefined2 @OZ @(ReadP Value Id) @'True "String \"jsonstring\""
--- Right (Refined2 {r2In = String "jsonstring", r2Out = "String \"jsonstring\""})
+-- Right (Refined2 (String "jsonstring") "String \"jsonstring\"")
 --
 -- >>> newRefined2 @OZ @(ReadP Value Id) @'True "Number 123.4"
--- Right (Refined2 {r2In = Number 123.4, r2Out = "Number 123.4"})
+-- Right (Refined2 (Number 123.4) "Number 123.4")
 --
 -- >>> newRefined @OU @((Id $$ 13) > 100) (\x -> x * 14)
 -- Right (Refined <function>)

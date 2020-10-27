@@ -480,7 +480,6 @@ type family PAppT (p :: Type) (q :: Type) :: Type where
     )
 
 -- | applies Proxy @p@ to Proxy @q@ and Proxy @r@ and returns a Proxy: needs kind signatures on @p@
--- | applicative bind of proxies p, q, and r: Proxy (z :: k -> k1 -> k2) <*> Proxy (w :: k) <*> Proxy (v :: k1) = Proxy (u :: k2) : needs kind signatures on @p@
 --
 -- >>> pz @(PApp2 (Proxy '(,)) (Proxy 2) (Proxy 'True) >> Pop0 Id ()) ()
 -- Val (2,True)

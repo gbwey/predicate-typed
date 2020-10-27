@@ -59,9 +59,9 @@ namedTests =
 
 unnamedTests :: [IO ()]
 unnamedTests = [
-    (@?=) [(unsafeRefined3 255 "ff", "")] (reads @(Refined3 OAN (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 {r3In = 255, r3Out = \"ff\"}") -- escape quotes cos read instance for String
-  , (@?=) [] (reads @(Refined3 OAN (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 {r3In = 256, r3Out = \"100\"}")
-  , (@?=) [(unsafeRefined3 (-1234) "-4d2", "")] (reads @(Refined3 OAN (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 {r3In = -1234, r3Out = \"-4d2\"}")
+    (@?=) [(unsafeRefined3 255 "ff", "")] (reads @(Refined3 OAN (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 255 \"ff\"") -- escape quotes cos read instance for String
+  , (@?=) [] (reads @(Refined3 OAN (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 256 \"100\"")
+  , (@?=) [(unsafeRefined3 (-1234) "-4d2", "")] (reads @(Refined3 OAN (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 (-1234) \"-4d2\"")
 
   , (@?=) (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) (newRefined3 "1.2.3.4" :: Either Msg3 (Ip4R OAN))
 

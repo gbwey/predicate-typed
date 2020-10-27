@@ -123,7 +123,7 @@ import Data.Time (Day, UTCTime)
 -- Left Step 2. Failed Boolean Check(op) | invalid checkdigit
 --
 -- >>> newRefined3P (luhn11 @OZ) "1234-5678-903"
--- Right (Refined3 {r3In = [1,2,3,4,5,6,7,8,9,0,3], r3Out = "1234-5678-903"})
+-- Right (Refined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
 --
 -- >>> pz @(Luhnip >> Luhnop 11) "79927398713"
 -- Val True
@@ -153,7 +153,7 @@ luhn11 = mkProxy3'
 -- | read in a valid datetime
 --
 -- >>> newRefined3P (datetime1 @OL @LocalTime) "2018-09-14 02:57:04"
--- Right (Refined3 {r3In = 2018-09-14 02:57:04, r3Out = "2018-09-14 02:57:04"})
+-- Right (Refined3 2018-09-14 02:57:04 "2018-09-14 02:57:04")
 --
 -- >>> newRefined3P (datetime1 @OL @LocalTime) "2018-09-99 12:12:12"
 -- Left Step 1. Failed Initial Conversion(ip) | ParseTimeP LocalTime (%F %T) failed to parse
@@ -182,7 +182,7 @@ ssn = mkProxy3'
 -- | read in an ssn
 --
 -- >>> newRefined3P (ssn @OZ) "134-01-2211"
--- Right (Refined3 {r3In = [134,1,2211], r3Out = "134-01-2211"})
+-- Right (Refined3 [134,1,2211] "134-01-2211")
 --
 -- >>> newRefined3P (ssn @OL) "666-01-2211"
 -- Left Step 2. Failed Boolean Check(op) | Bool(0) [number for group 0 invalid: found 666] (True && False | (666 /= 666))
@@ -195,7 +195,7 @@ type SsnR (opts :: Opt) = MakeR3 (Ssn opts)
 -- | read in a time and validate it
 --
 -- >>> newRefined3P (hms @OL) "23:13:59"
--- Right (Refined3 {r3In = [23,13,59], r3Out = "23:13:59"})
+-- Right (Refined3 [23,13,59] "23:13:59")
 --
 -- >>> newRefined3P (hms @OL) "23:13:60"
 -- Left Step 2. Failed Boolean Check(op) | seconds invalid: found 60
@@ -216,7 +216,7 @@ type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', Hmsfmt, String)
 -- | read in an ipv4 address and validate it
 --
 -- >>> newRefined3P (ip4 @OZ) "001.223.14.1"
--- Right (Refined3 {r3In = [1,223,14,1], r3Out = "001.223.014.001"})
+-- Right (Refined3 [1,223,14,1] "001.223.014.001")
 --
 -- >>> newRefined3P (ip4 @OL) "001.223.14.999"
 -- Left Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 999
@@ -248,7 +248,7 @@ ip6 = Proxy
 -- | validate isbn10
 --
 -- >>> newRefined3P (isbn10 @OZ) "0-306-40611-X"
--- Right (Refined3 {r3In = ([0,3,0,6,4,0,6,1,1],10), r3Out = "030640611-X"})
+-- Right (Refined3 ([0,3,0,6,4,0,6,1,1],10) "030640611-X")
 --
 -- >>> newRefined3P (isbn10 @OZ) "0-306-40611-9"
 -- Left Step 2. Failed Boolean Check(op) | mod 0 oops
@@ -262,7 +262,7 @@ isbn10 = Proxy
 -- | validate isbn13
 --
 -- >>> newRefined3P (isbn13 @OZ) "978-0-306-40615-7"
--- Right (Refined3 {r3In = [9,7,8,0,3,0,6,4,0,6,1,5,7], r3Out = "978030640615-7"})
+-- Right (Refined3 [9,7,8,0,3,0,6,4,0,6,1,5,7] "978030640615-7")
 --
 -- >>> newRefined3P (isbn13 @OZ) "978-0-306-40615-8"
 -- Left Step 2. Failed Boolean Check(op) | sum=101 mod 10=1
@@ -276,10 +276,10 @@ isbn13 = Proxy
 -- | convert a string from a given base \'i\' and store it internally as an base 10 integer
 --
 -- >>> newRefined3P (base16 @OZ) "00fe"
--- Right (Refined3 {r3In = 254, r3Out = "fe"})
+-- Right (Refined3 254 "fe")
 --
 -- >>> newRefined3P (basen' @OZ @16 @(100 <..> 400)) "00fe"
--- Right (Refined3 {r3In = 254, r3Out = "fe"})
+-- Right (Refined3 254 "fe")
 --
 -- >>> newRefined3P (basen' @OZ @16 @(GuardSimple (Id < 400) >> 'True)) "f0fe"
 -- Left Step 2. Failed Boolean Check(op) | (61694 < 400)
@@ -320,7 +320,7 @@ datetimen = mkProxy3'
 -- | ensures that two numbers are in a given range (emulates 'Refined.Refined')
 --
 -- >>> newRefined3P (between @OZ @10 @16) 14
--- Right (Refined3 {r3In = 14, r3Out = 14})
+-- Right (Refined3 14 14)
 --
 -- >>> newRefined3P (between @OZ @10 @16) 17
 -- Left Step 2. False Boolean Check(op) | FalseP
@@ -348,7 +348,7 @@ type LuhnR (opts :: Opt) (n :: Nat) = MakeR3 (LuhnT opts n)
 -- | Luhn check
 --
 -- >>> newRefined3P (Proxy @(LuhnT OZ 4)) "1230"
--- Right (Refined3 {r3In = [1,2,3,0], r3Out = "1230"})
+-- Right (Refined3 [1,2,3,0] "1230")
 --
 -- >>> newRefined3P (Proxy @(LuhnT OL 4)) "1234"
 -- Left Step 2. False Boolean Check(op) | {True && False | (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}
@@ -379,7 +379,7 @@ oknot = mkProxy3
 -- | convert a string from a given base \'i\' and store it internally as a base \'j\' string
 --
 -- >>> newRefined3P (Proxy @(BaseIJ OZ 16 2)) "fe"
--- Right (Refined3 {r3In = "11111110", r3Out = "fe"})
+-- Right (Refined3 "11111110" "fe")
 --
 -- >>> newRefined3P (Proxy @(BaseIJ OZ 16 2)) "fge"
 -- Left Step 1. Failed Initial Conversion(ip) | invalid base 16
@@ -394,16 +394,16 @@ type BaseIJ' (opts :: Opt) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i >> S
 --
 -- >>> :m + Data.Ratio
 -- >>> newRefined3P (readshow @OZ @Rational) "13 % 3"
--- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
+-- Right (Refined3 (13 % 3) "13 % 3")
 --
 -- >>> newRefined3P (readshow @OZ @Rational) "13x % 3"
 -- Left Step 1. Failed Initial Conversion(ip) | ReadP Ratio Integer (13x % 3)
 --
 -- >>> newRefined3P (readshow' @OZ @Rational @(3 % 1 <..> 5 % 1)) "13 % 3"
--- Right (Refined3 {r3In = 13 % 3, r3Out = "13 % 3"})
+-- Right (Refined3 (13 % 3) "13 % 3")
 --
 -- >>> newRefined3P (Proxy @(ReadShow' OZ Rational (11 -% 2 <..> 3 -% 1))) "-13 % 3"
--- Right (Refined3 {r3In = (-13) % 3, r3Out = "(-13) % 3"})
+-- Right (Refined3 ((-13) % 3) "(-13) % 3")
 --
 -- >>> newRefined3P (Proxy @(ReadShow' OZ Rational (Id > (15 % 1)))) "13 % 3"
 -- Left Step 2. False Boolean Check(op) | FalseP
@@ -415,14 +415,14 @@ type BaseIJ' (opts :: Opt) (i :: Nat) (j :: Nat) p = '(opts, ReadBase Int i >> S
 -- Left Step 2. False Boolean Check(op) | FalseP
 --
 -- >>> newRefined3P (readshow @OZ @UTCTime) "2018-10-19 14:53:11.5121359 UTC"
--- Right (Refined3 {r3In = 2018-10-19 14:53:11.5121359 UTC, r3Out = "2018-10-19 14:53:11.5121359 UTC"})
+-- Right (Refined3 2018-10-19 14:53:11.5121359 UTC "2018-10-19 14:53:11.5121359 UTC")
 --
 -- >>> :m + Data.Aeson
 -- >>> newRefined3P (readshow @OZ @Value) "String \"jsonstring\""
--- Right (Refined3 {r3In = String "jsonstring", r3Out = "String \"jsonstring\""})
+-- Right (Refined3 (String "jsonstring") "String \"jsonstring\"")
 --
 -- >>> newRefined3P (readshow @OZ @Value) "Number 123.4"
--- Right (Refined3 {r3In = Number 123.4, r3Out = "Number 123.4"})
+-- Right (Refined3 (Number 123.4) "Number 123.4")
 --
 type ReadShow (opts :: Opt) (t :: Type) = '(opts, ReadP t Id, 'True, ShowP Id, String)
 type ReadShowR (opts :: Opt) (t :: Type) = MakeR3 (ReadShow opts t)

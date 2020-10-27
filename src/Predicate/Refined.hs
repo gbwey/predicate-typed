@@ -75,8 +75,10 @@ newtype Refined (opts :: Opt) p a = Refined a
   deriving newtype (Eq, Ord, NFData)
 
 -- | extract the value from Refined
-unRefined :: forall k (opts :: Opt) (p :: k) a. Refined opts p a -> a
-unRefined (Refined a) = a
+unRefined :: forall k (opts :: Opt) (p :: k) a
+   . Refined opts p a
+  -> a
+unRefined = coerce
 
 type role Refined phantom nominal nominal
 

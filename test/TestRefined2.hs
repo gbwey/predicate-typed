@@ -58,9 +58,9 @@ namedTests =
 
 unnamedTests :: [IO ()]
 unnamedTests = [
-    (@?=) [(unsafeRefined2 255 "ff", "")] (reads @(Refined2 OAN (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 {r2In = 255, r2Out = \"ff\"}") -- escape quotes cos read instance for String
-  , (@?=) [] (reads @(Refined2 OAN (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 {r2In = 256, r2Out = \"100\"}")
-  , (@?=) [(unsafeRefined2 (-1234) "-4d2", "")] (reads @(Refined2 OAN (ReadBase Int 16) (Id < 0) String) "Refined2 {r2In = -1234, r2Out = \"-4d2\"}")
+    (@?=) [(unsafeRefined2 255 "ff", "")] (reads @(Refined2 OAN (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 255 \"ff\"") -- escape quotes cos read instance for String
+  , (@?=) [] (reads @(Refined2 OAN (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 256 \"100\"")
+  , (@?=) [(unsafeRefined2 (-1234) "-4d2", "")] (reads @(Refined2 OAN (ReadBase Int 16) (Id < 0) String) "Refined2 (-1234) \"-4d2\"")
   , (@?=) (Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")) (newRefined2 "1.2.3.4" :: Either Msg2 (Ip4R OAN))
   , expectJ (Right (G4 (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))) (toFrom $ G4 @OAN (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.4"))
   , expectJ (Left ["Error in $.g4Ip", "False Boolean Check"]) (toFrom $ G4 @OAN (unsafeRefined2 12 "12") (unsafeRefined2 [1,2,3,4] "1.2.3.400"))

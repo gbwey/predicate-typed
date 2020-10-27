@@ -92,7 +92,7 @@ refinedFailMsg msg m =
 -- | creates a 'Refined2.Refined2' refinement type
 --
 -- >>> $$(refined2TH 100) :: Refined2 OAN Id (Between 100 125 Id) Int
--- Refined2 {r2In = 100, r2Out = 100}
+-- Refined2 100 100
 --
 -- @
 -- >$$(refined2TH 99) :: Refined2 OAN Id (Between 100 125 Id) Int
@@ -146,7 +146,7 @@ refined2THIO i = do
 -- | creates a 'Refined3.Refined3' refinement type
 --
 -- >>> $$(refined3TH 100) :: Refined3 OAN Id (Between 100 125 Id) Id Int
--- Refined3 {r3In = 100, r3Out = 100}
+-- Refined3 100 100
 --
 -- @
 -- >$$(refined3TH 99) :: Refined3 OAN Id (Between 100 125 Id) Id Int
@@ -170,7 +170,7 @@ refined2THIO i = do
 -- @
 --
 -- >>> $$(refined3TH @OL @(Resplit "\\." >> Map (ReadP Int Id)) @(All (0 <..> 0xff) && Len == 4) @(PrintL 4 "%03d.%03d.%03d.%03d" Id)  "200.2.3.4")
--- Refined3 {r3In = [200,2,3,4], r3Out = "200.002.003.004"}
+-- Refined3 [200,2,3,4] "200.002.003.004"
 --
 refined3TH :: forall opts ip op fmt i
   . ( Refined3C opts ip op fmt i
