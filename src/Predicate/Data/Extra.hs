@@ -81,10 +81,10 @@ import Data.Proxy (Proxy(..))
 -- >>> pz @(HeadDef 444 Id) [1..5]
 -- Val 1
 --
--- >>> pz @(HeadDef (Char1 "w") Id) (Seq.fromList "abcdef")
+-- >>> pz @(HeadDef (C "w") Id) (Seq.fromList "abcdef")
 -- Val 'a'
 --
--- >>> pz @(HeadDef (Char1 "w") Id) Seq.empty
+-- >>> pz @(HeadDef (C "w") Id) Seq.empty
 -- Val 'w'
 --
 -- >>> pz @(HeadDef (MEmptyT _) Id) ([] :: [SG.Sum Int])
@@ -103,11 +103,7 @@ import Data.Proxy (Proxy(..))
 -- Present 9 (JustDef Nothing)
 -- Val 9
 --
--- >>> pl @(HeadDef 9 Fst) ([1..5],True)
--- Present 1 (JustDef Just)
--- Val 1
---
--- >>> pl @(HeadDef 3 Fst) ([10..15],True)
+-- >>> pl @(HeadDef 99 Fst) ([10..15],True)
 -- Present 10 (JustDef Just)
 -- Val 10
 --
@@ -378,7 +374,7 @@ instance ( Show x
   type PP PrimeNext x = Integer
   eval _ opts x =
     let msg0 = "PrimeNext"
-        ret = Safe.headNote msg0 $ dropWhile (<= fromIntegral x) primes
+        ret = Safe.headNote msg0 $ dropWhile (<= fromIntegral x) primeStream
     in pure $ mkNode opts (Val ret) (msg0 <> showVerbose opts " | " x) []
 
 -- | get the next prime number
@@ -403,7 +399,7 @@ instance ( Show x
   type PP PrimePrev x = Integer
   eval _ opts x =
     let msg0 = "PrimePrev"
-        ret = case unsnoc $ takeWhile (< fromIntegral x) primes of
+        ret = case unsnoc $ takeWhile (< fromIntegral x) primeStream of
                 Just (_,p) -> p
                 Nothing -> 2
     in pure $ mkNode opts (Val ret) (msg0 <> showVerbose opts " | " x) []
@@ -425,7 +421,7 @@ instance ( Integral (PP n x)
     pure $ case getValueLR NoInline opts msg0 nn [] of
       Left e -> e
       Right (fromIntegral -> n) ->
-        let ret = take n primes
+        let ret = take n primeStream
         in mkNode opts (Val ret) (msg0 <> showVerbose opts " | " n) [hh nn]
 
 -- | prime factorisation of positive numbers

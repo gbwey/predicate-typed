@@ -81,6 +81,9 @@ instance ( P p a
 -- >>> pz @(344 .|. 123) ()
 -- Val 379
 --
+-- >>> pz @(Fst .|. Snd) (124,33)
+-- Val 125
+--
 data p .|. q deriving Show
 infixl 5 .|.
 
@@ -223,7 +226,7 @@ instance P (BitShiftRT p q) x => P (BitShiftR p q) x where
 
 -- | rotate by @p@ using @q@: similar to flipped version of 'Data.Bits.rotate'
 --
--- >>> pz @(BitRotate 2 7) ()
+-- >>> pz @(BitRotate 2 Id) 7
 -- Val 28
 --
 data BitRotate p q deriving Show
@@ -235,7 +238,7 @@ instance P (BitRotateT p q) x => P (BitRotate p q) x where
 
 -- | rotate left by @p@ using @q@: similar to flipped version of 'Data.Bits.rotateL'
 --
--- >>> pz @(BitRotateL 2 7) ()
+-- >>> pz @(BitRotateL 2 Id) 7
 -- Val 28
 --
 data BitRotateL p q deriving Show
@@ -247,8 +250,8 @@ instance P (BitRotateLT p q) x => P (BitRotateL p q) x where
 
 -- | rotate right by @p@ using @q@: similar to flipped version of 'Data.Bits.rotateR'
 --
--- >>> pz @(BitRotateR 2 7) ()
--- Val (-4611686018427387903)
+-- >>> pz @(BitRotateR 2 Id) 7
+-- Val 1
 --
 
 data BitRotateR p q deriving Show
@@ -260,7 +263,7 @@ instance P (BitRotateRT p q) x => P (BitRotateR p q) x where
 
 -- | set the bit at @p@ using @q@: similar to flipped version of 'Data.Bits.setBit'
 --
--- >>> pz @(BitSet 0 8) ()
+-- >>> pz @(BitSet 0 Id) 8
 -- Val 9
 --
 data BitSet p q deriving Show
@@ -272,7 +275,7 @@ instance P (BitSetT p q) x => P (BitSet p q) x where
 
 -- | clear the bit at @p@ using @q@: similar to flipped version of 'Data.Bits.clearBit'
 --
--- >>> pz @(BitClear 2 7) ()
+-- >>> pz @(BitClear 2 Id) 7
 -- Val 3
 --
 data BitClear p q deriving Show
@@ -284,7 +287,7 @@ instance P (BitClearT p q) x => P (BitClear p q) x where
 
 -- | complement the bit at @p@ using @q@: similar to flipped version of 'Data.Bits.complementBit'
 --
--- >>> pz @(BitComplement 1 7) ()
+-- >>> pz @(BitComplement 1 Id) 7
 -- Val 5
 --
 data BitComplement p q deriving Show
@@ -296,10 +299,10 @@ instance P (BitComplementT p q) x => P (BitComplement p q) x where
 
 -- | test the bit at @p@ using @q@: similar to flipped version of 'Data.Bits.testBit'
 --
--- >>> pz @(TestBit 2 7) ()
+-- >>> pz @(TestBit 2 Id) 7
 -- Val True
 --
--- >>> pz @(TestBit 2 8) ()
+-- >>> pz @(TestBit 2 Id) 8
 -- Val False
 --
 data TestBit p q deriving Show
@@ -324,11 +327,14 @@ instance ( P p a
 
 -- | count number of bits at @p@: similar to 'Data.Bits.popCount'
 --
--- >>> pz @(PopCount 7) ()
+-- >>> pz @(PopCount Id) 7
 -- Val 3
 --
--- >>> pz @(PopCount 8) ()
+-- >>> pz @(PopCount Id) 8
 -- Val 1
+--
+-- >>> pz @(PopCount Id) (-7)
+-- Val (-3)
 --
 data PopCount p deriving Show
 
@@ -348,10 +354,10 @@ instance ( P p a
 
 -- | create a 'Data.Bits.Bits' for type @t with the bit at @p@ and all the others set to zero: similar to 'Data.Bits.bit'
 --
--- >>> pz @(Bit Int 0) ()
+-- >>> pz @(Bit Int Id) 0
 -- Val 1
 --
--- >>> pz @(Bit Int 3) ()
+-- >>> pz @(Bit Int Id) 3
 -- Val 8
 --
 data Bit t p deriving Show

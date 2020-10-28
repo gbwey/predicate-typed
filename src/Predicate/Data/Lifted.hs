@@ -123,7 +123,7 @@ import Data.Bifoldable
 -- Val [True,True,True,True]
 --
 -- >>> import Data.Functor.Compose
--- >>> pl @(Char1 "ab" <$ Id) (Compose $ Just [1..4])
+-- >>> pl @(C "ab" <$ Id) (Compose $ Just [1..4])
 -- Present Compose (Just "aaaa") ((<$) 'a')
 -- Val (Compose (Just "aaaa"))
 --
@@ -335,7 +335,7 @@ instance ( Show (t (t a))
 -- >>> pz @(Id $$ "abc" $$ 'True) (,)
 -- Val ("abc",True)
 --
--- >>> pz @(Id $$ "asdf" $$ 99 $$ Char1 "A") (,,)
+-- >>> pz @(Id $$ "asdf" $$ 99 $$ C "A") (,,)
 -- Val ("asdf",99,'A')
 --
 -- >>> (fmap.fmap) ($ 9999) $ pz @Id (*33)
@@ -474,7 +474,8 @@ instance P (TraverseT p) x => P (Traverse p) x where
   eval _ = eval (Proxy @(TraverseT p))
 
 -- | just run the effect ignoring the result passing the original value through
--- for example for use with Stdout so it doesnt interfere with the @a@ on the rhs unless there is an failure
+--
+--   for example for use with Stdout so it doesnt interfere with the @a@ on the rhs unless it fails
 data Skip p deriving Show
 
 instance ( Show (PP p a)
@@ -535,7 +536,7 @@ instance P (SkipBothT p q) x => P (p >|> q) x where
 -- Present 10 (Catch did not fire)
 -- Val 10
 --
--- >>> pl @(Catch OneP 'True) [False]  -- cant know that this is Val False cos is driven by type of the list not the 'True part
+-- >>> pl @(Catch OneP 'True) [False]
 -- Present False (Catch did not fire)
 -- Val False
 --

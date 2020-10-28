@@ -1151,39 +1151,49 @@ instance ( x ~ [a]
                  in mkNode opts (Val b) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " xs) hhs
 
 
--- | calculate the amount to roundup to next n
+-- | calculate the amount to roundup to the next @n@
 --
 -- >>> pl @(RoundUp Fst Snd) (3,9)
--- Present 0 (RoundUp 3 `mod` 3 = 0)
+-- Present 0 (RoundUp 3 9 = 0)
 -- Val 0
 --
 -- >>> pl @(RoundUp Fst Snd) (3,10)
--- Present 2 (RoundUp 2 `mod` 3 = 2)
+-- Present 2 (RoundUp 3 10 = 2)
 -- Val 2
 --
 -- >>> pl @(RoundUp Fst Snd) (3,11)
--- Present 1 (RoundUp 1 `mod` 3 = 1)
+-- Present 1 (RoundUp 3 11 = 1)
 -- Val 1
 --
 -- >>> pl @(RoundUp Fst Snd) (3,12)
--- Present 0 (RoundUp 3 `mod` 3 = 0)
+-- Present 0 (RoundUp 3 12 = 0)
 -- Val 0
 --
 -- >>> pl @(RoundUp 3 0) ()
--- Present 0 (RoundUp 3 `mod` 3 = 0)
+-- Present 0 (RoundUp 3 0 = 0)
 -- Val 0
 --
 -- >>> pl @(RoundUp 0 10) ()
--- Error Mod zero denominator (RoundUp - | Mod)
--- Fail "Mod zero denominator"
+-- Error RoundUp 'n' cannot be zero
+-- Fail "RoundUp 'n' cannot be zero"
 --
 data RoundUp n p deriving Show
-type RoundUpT n p = (n - p `Mod` n) `Mod` n
 
-instance P (RoundUpT n p) x => P (RoundUp n p) x where
-  type PP (RoundUp n p) x = PP (RoundUpT n p) x
-  eval _ opts =
-    if isVerbose opts
-    then eval (Proxy @(MsgI "RoundUp " (RoundUpT n p))) opts
-    else eval (Proxy @(MsgI "RoundUp " (Hide (RoundUpT n p)))) opts
+instance ( Integral (PP n x)
+         , Show (PP n x)
+         , PP n x ~ PP p x
+         , P n x
+         , P p x
+         ) => P (RoundUp n p) x where
+  type PP (RoundUp n p) x = PP n x
+  eval _ opts x = do
+    let msg0 = "RoundUp"
+    lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @p) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right (n,p,nn,pp) ->
+         let hhs = [hh nn, hh pp]
+             d = (n - p `mod` n) `mod` n
+         in if n == 0 then mkNode opts (Fail (msg0 <> " 'n' cannot be zero")) "" hhs
+            else mkNode opts (Val d) (msg0 <> " " <> show n <> " " <> show p <> " = " <> show d) hhs
 

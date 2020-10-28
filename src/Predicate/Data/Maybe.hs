@@ -358,7 +358,8 @@ instance P (MaybeBoolT b p) x => P (MaybeBool b p) x where
   eval _ = eval (Proxy @(MaybeBoolT b p))
 
 -- | Convenient method to convert a value @p@ to an Alternative based on a predicate @b@
--- if @b@ then pure @p@ else empty
+--
+--   if @b@ is True then pure @p@ else empty
 --
 -- >>> pz @(EmptyBool [] (Id > 4) 'True) 24
 -- Val [True]

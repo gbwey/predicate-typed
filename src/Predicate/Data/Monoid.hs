@@ -88,8 +88,8 @@ instance ( Semigroup (PP p x)
         in mkNode opts (Val d) (showL opts p <> " <> " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
 
 -- | synonym for wrapping a monoid
-
 type S a = SG.WrappedMonoid a
+
 -- | semigroup append both sides of a tuple (ie uncurry (<>)) using 'Wrap' and then unwraps the final result
 --
 -- >>> pz @(Sap (SG.Sum _)) (4,5)

@@ -16,7 +16,6 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted conditional functions
 module Predicate.Data.Condition (
-  -- ** conditional expressions
     If
   , Case
   , Case'
@@ -29,14 +28,9 @@ module Predicate.Data.Condition (
   , GuardsN
   , GuardsDetail
   , GuardBool
-
   , Bools
   , BoolsQuick
   , BoolsN
-
-  , ToGuardsT
-  , GuardsImpl
-
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -342,9 +336,6 @@ instance ( KnownNat n
 
 data GuardsImpl (n :: Nat) (os :: [(k,k1)]) deriving Show
 
--- isbn 10 tests (dont need first guard as Zip enforces same length: handles case insensitive @x@ as check digit)
-
-
 -- | Guards contain a type level list of tuples the action to run on failure of the predicate and the predicate itself
 --   Each tuple validating against the corresponding value in a value list
 --
@@ -610,7 +601,6 @@ instance ( PP prt (Int, a) ~ String
 -- Error Bool(2) [id=2 val=99] (99 <= 59)
 -- Fail "Bool(2) [id=2 val=99] (99 <= 59)"
 --
-
 data BoolsQuick (prt :: k) (ps :: [k1]) deriving Show
 type BoolsQuickT (prt :: k) (ps :: [k1]) = Bools (ToGuardsT prt ps)
 

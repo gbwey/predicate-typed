@@ -51,6 +51,7 @@ module Predicate.Data.List (
   , Zip
   , ZipWith
   , ZipCartesian
+  , ZipPad
 
  -- ** higher order methods
   , Partition
@@ -134,7 +135,7 @@ import qualified Data.List.NonEmpty as NE
 -- >>> pz @(Snd ++ Fst) ([],[5])
 -- Val [5]
 --
--- >>> pz @(Char1 "xyz" :+ W "ab" ++ W "cdefg") ()
+-- >>> pz @(C "xyz" :+ W "ab" ++ W "cdefg") ()
 -- Val "xabcdefg"
 --
 -- >>> pz @([1,2,3] ++ EmptyList _) "somestuff"
@@ -232,7 +233,7 @@ instance ( P p x
 -- Present [1,2,3,4] ((+:) [1,2,3,4] | p=[1,2,3] | q=4)
 -- Val [1,2,3,4]
 --
--- >>> pl @("abc" +: Char1 "x") ()
+-- >>> pl @("abc" +: C "x") ()
 -- Present "abcx" ((+:) "abcx" | p="abc" | q='x')
 -- Val "abcx"
 --
@@ -1585,7 +1586,7 @@ instance ( Reversing t
 
 -- | creates a singleton from a value
 --
--- >>> pz @(Singleton (Char1 "aBc")) ()
+-- >>> pz @(Singleton (C "aBc")) ()
 -- Val "a"
 --
 -- >>> pz @(Singleton Id) False
@@ -1627,19 +1628,19 @@ instance P (EmptyList t) x where
 
 -- | like 'zipWith'
 --
--- >>> pz @(ZipWith Id (1...5) (Char1 "a" ... Char1 "e")) ()
+-- >>> pz @(ZipWith Id (1...5) (C "a" ... C "e")) ()
 -- Val [(1,'a'),(2,'b'),(3,'c'),(4,'d'),(5,'e')]
 --
--- >>> pz @(ZipWith (ShowP Fst <> ShowP Snd) (1...5) (Char1 "a" ... Char1 "e")) ()
+-- >>> pz @(ZipWith (ShowP Fst <> ShowP Snd) (1...5) (C "a" ... C "e")) ()
 -- Val ["1'a'","2'b'","3'c'","4'd'","5'e'"]
 --
--- >>> pz @(ZipWith (MkThese Fst Snd) (1...6) (Char1 "a" ... Char1 "f")) ()
+-- >>> pz @(ZipWith (MkThese Fst Snd) (1...6) (C "a" ... C "f")) ()
 -- Val [These 1 'a',These 2 'b',These 3 'c',These 4 'd',These 5 'e',These 6 'f']
 --
--- >>> pz @(ZipWith (MkThese Fst Snd) '[] (Char1 "a" ... Char1 "f")) ()
+-- >>> pz @(ZipWith (MkThese Fst Snd) '[] (C "a" ... C "f")) ()
 -- Fail "ZipWith(0,6) length mismatch"
 --
--- >>> pz @(ZipWith (MkThese Fst Snd) (1...3) (Char1 "a" ... Char1 "f")) ()
+-- >>> pz @(ZipWith (MkThese Fst Snd) (1...3) (C "a" ... C "f")) ()
 -- Fail "ZipWith(3,6) length mismatch"
 --
 data ZipWith p q r deriving Show
@@ -1681,19 +1682,19 @@ instance ( PP q a ~ [x]
 
 -- | Zip two lists to their maximum length using optional padding
 --
--- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("abc", [1..5])
+-- >>> pz @(ZipPad (C "Z") 99 Fst Snd) ("abc", [1..5])
 -- Val [('a',1),('b',2),('c',3),('Z',4),('Z',5)]
 --
--- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("abcdefg", [1..5])
+-- >>> pz @(ZipPad (C "Z") 99 Fst Snd) ("abcdefg", [1..5])
 -- Val [('a',1),('b',2),('c',3),('d',4),('e',5),('f',99),('g',99)]
 --
--- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("abcde", [1..5])
+-- >>> pz @(ZipPad (C "Z") 99 Fst Snd) ("abcde", [1..5])
 -- Val [('a',1),('b',2),('c',3),('d',4),('e',5)]
 --
--- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("", [1..5])
+-- >>> pz @(ZipPad (C "Z") 99 Fst Snd) ("", [1..5])
 -- Val [('Z',1),('Z',2),('Z',3),('Z',4),('Z',5)]
 --
--- >>> pz @(ZipPad (Char1 "Z") 99 Fst Snd) ("abcde", [])
+-- >>> pz @(ZipPad (C "Z") 99 Fst Snd) ("abcde", [])
 -- Val [('a',99),('b',99),('c',99),('d',99),('e',99)]
 --
 data ZipPad l r p q deriving Show
@@ -1806,23 +1807,23 @@ instance ( PP l a ~ x
 
 -- | zip two lists optionally padding the right hand side
 --
--- >>> pl @(ZipR (Char1 "Z") '[1,2,3] "abc") ()
+-- >>> pl @(ZipR (C "Z") '[1,2,3] "abc") ()
 -- Present [(1,'a'),(2,'b'),(3,'c')] (ZipR [(1,'a'),(2,'b'),(3,'c')] | p=[1,2,3] | q="abc")
 -- Val [(1,'a'),(2,'b'),(3,'c')]
 --
--- >>> pl @(ZipR (Char1 "Z") '[1,2,3] "ab") ()
+-- >>> pl @(ZipR (C "Z") '[1,2,3] "ab") ()
 -- Present [(1,'a'),(2,'b'),(3,'Z')] (ZipR [(1,'a'),(2,'b'),(3,'Z')] | p=[1,2,3] | q="ab")
 -- Val [(1,'a'),(2,'b'),(3,'Z')]
 --
--- >>> pl @(ZipR (Char1 "Z") '[1,2,3] "a") ()
+-- >>> pl @(ZipR (C "Z") '[1,2,3] "a") ()
 -- Present [(1,'a'),(2,'Z'),(3,'Z')] (ZipR [(1,'a'),(2,'Z'),(3,'Z')] | p=[1,2,3] | q="a")
 -- Val [(1,'a'),(2,'Z'),(3,'Z')]
 --
--- >>> pl @(ZipR (Char1 "Z") '[1,2] "abc") ()
+-- >>> pl @(ZipR (C "Z") '[1,2] "abc") ()
 -- Error ZipR(2,3) rhs would be truncated (p=[1,2] | q="abc")
 -- Fail "ZipR(2,3) rhs would be truncated"
 --
--- >>> pl @(ZipR (Char1 "Y") (EmptyT _) Id) "abcd"
+-- >>> pl @(ZipR (C "Y") (EmptyT _) Id) "abcd"
 -- Error ZipR(0,4) rhs would be truncated (p=[] | q="abcd")
 -- Fail "ZipR(0,4) rhs would be truncated"
 --
@@ -1911,7 +1912,7 @@ instance ( PP p a ~ [x]
 -- >>> pz @(EmptyT []) ()
 -- Val []
 --
--- >>> pz @(Char1 "x" >> EmptyT []) (13,True)
+-- >>> pz @(C "x" >> EmptyT []) (13,True)
 -- Val ""
 --
 -- >>> pz @(Fst >> EmptyT (Either String)) (13,True)

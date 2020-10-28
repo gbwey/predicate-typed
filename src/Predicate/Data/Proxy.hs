@@ -141,7 +141,7 @@ type family Proxy2TT (x :: Type) :: (Type -> Type) where
 -- >>> pz @(Pop0 Id () <> "def") (Nothing @(W "abc")) -- Proxy works for any kind!
 -- Val "abcdef"
 --
--- >>> pz @(Pop0 Id (Char1 "A")) (Proxy @Succ)
+-- >>> pz @(Pop0 Id (C "A")) (Proxy @Succ)
 -- Val 'B'
 --
 -- >>> pz @(Pop0 Fst Snd) (Proxy @(All1 Even),[1,5,2,3,4])

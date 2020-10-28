@@ -210,11 +210,11 @@ instance ( Show l
 -- Fred >>> Present fromList [1,2,5] ((>>) fromList [1,2,5] | {FromList fromList [1,2,5]})
 -- Val (fromList [1,2,5])
 --
--- >>> pl @(FromList (M.Map _ _) >> Id !! Char1 "y") [('x',True),('y',False)]
+-- >>> pl @(FromList (M.Map _ _) >> Id !! C "y") [('x',True),('y',False)]
 -- Present False ((>>) False | {IxL('y') False | p=fromList [('x',True),('y',False)] | q='y'})
 -- Val False
 --
--- >>> pl @(FromList (M.Map _ _) >> Id !! Char1 "z") [('x',True),('y',False)]
+-- >>> pl @(FromList (M.Map _ _) >> Id !! C "z") [('x',True),('y',False)]
 -- Error (!!) index not found (IxL('z') | fromList [('x',True),('y',False)])
 -- Fail "(!!) index not found"
 --

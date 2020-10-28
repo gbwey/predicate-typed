@@ -90,7 +90,7 @@ module Predicate.Misc (
 
  -- ** primes
   , isPrime
-  , primes
+  , primeStream
   , primeFactors
 
   -- ** regular expressions
@@ -107,6 +107,7 @@ module Predicate.Misc (
   , GetColor(..)
 
  -- ** miscellaneous
+  , SwapC(..)
   , showTK
   , showT
   , showThese
@@ -154,6 +155,8 @@ import Data.Char (isSpace)
 import qualified Control.Exception as E
 import Data.Tree (Tree(Node))
 import Control.Lens (Identity(..), Lens)
+import qualified Data.Semigroup as SG
+import Data.Bifunctor (Bifunctor)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -448,7 +451,6 @@ type family FlipT (d :: k1 -> k -> k2) (p :: k) (q :: k1) :: k2 where
 
 -- | 'if' at the type level
 type family IfT (b :: Bool) (t :: k) (f :: k) :: k where
-  -- IfT b x x = x -- todo: benefit? now it needs to eval both sides
   IfT 'True t _f = t
   IfT 'False _t f = f
 
@@ -942,11 +944,11 @@ primeFactors n =
 
 -- | primes stream
 --
--- >>> take 10 primes
+-- >>> take 10 primeStream
 -- [2,3,5,7,11,13,17,19,23,29]
 --
-primes :: [Integer]
-primes = 2 : 3 : 5 : primes'
+primeStream :: [Integer]
+primeStream = 2 : 3 : 5 : primes'
   where
     isPrime' [] _ = errorInProgram "primes is empty"
     isPrime' (p:ps) n = p*p > n || n `rem` p /= 0 && isPrime' ps n
@@ -1240,4 +1242,28 @@ removeAnsiImpl =
 
 _Id :: Lens (Identity a) (Identity b) a b
 _Id afb (Identity a) = Identity <$> afb a
+
+class Bifunctor p => SwapC p where
+  swapC :: p a b -> p b a
+instance SwapC Either where
+  swapC (Left a) = Right a
+  swapC (Right a) = Left a
+instance SwapC These where
+  swapC (This a) = That a
+  swapC (That b) = This b
+  swapC (These a b) = These b a
+instance SwapC SG.Arg where
+  swapC (SG.Arg a b) = SG.Arg b a
+instance SwapC (,) where
+  swapC (a,b) = (b,a)
+instance SwapC ((,,) a) where
+  swapC (a,b,c) = (a,c,b)
+instance SwapC ((,,,) a b) where
+  swapC (a,b,c,d) = (a,b,d,c)
+instance SwapC ((,,,,) a b c) where
+  swapC (a,b,c,d,e) = (a,b,c,e,d)
+instance SwapC ((,,,,,) a b c d) where
+  swapC (a,b,c,d,e,f) = (a,b,c,d,f,e)
+instance SwapC ((,,,,,,) a b c d e) where
+  swapC (a,b,c,d,e,f,g) = (a,b,c,d,e,g,f)
 

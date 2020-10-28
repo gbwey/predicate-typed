@@ -170,12 +170,10 @@ unnamedTests = [
   , expect3 (Left $ XTF [1,2,3,4,5,6,7,8,9,0,1] "invalid checkdigit") $ runIdentity $ eval3P (luhn11 @OZ) "12345678901"
 
   , expect3 (Right $ unsafeRefined3 ([12,13,14],TimeOfDay 12 13 14) "12:13:14") $ runIdentity $ eval3P hms2E "12:13:14"
---  , expect3 (Left (XTF ([12,13,99], TimeOfDay 12 13 99) "seconds invalid: found 99")) $ runIdentity $ eval3P hms2E "12:13:99"
 
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "001.002.003.004")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(ParaN 4 (PrintF "%03d" Id) >> Intercalate '["."] Id >> Concat) "1.2.3.4"
   , expect3 (Right (unsafeRefined3 [1,2,3,4] "abc__002__3__zzz")) $ runIdentity $ eval3M @OAN @Ip4ip @Ip4op' @(Para '[W "abc",PrintF "%03d" Id,PrintF "%d" Id,W "zzz"] >> Intercalate '["__"] Id >> Concat) "1.2.3.4"
 
-  -- keep the original value
   , expect3 (Right $ unsafeRefined3 ("1.2.3.4", [1,2,3,4]) "001.002.003.004") $ runIdentity $ eval3M @OAN @(Id &&& Ip4ip) @(Snd >> Ip4op') @(Snd >> ParaN 4 (PrintF "%03d" Id) >> Intercalate '["."] Id >> Concat) "1.2.3.4"
   , Right (unsafeRefined3 4 "someval val=004") @=? newRefined3P (Proxy @Tst1) "4"
   , Left FalseP @=? left m3ValP (newRefined3P (Proxy @Tst1) "255")
@@ -191,7 +189,6 @@ allProps =
   ]
 
 type HexLtR3 (opts :: Opt) = Refined3 opts (ReadBase Int 16) (Id < 500) (ShowBase 16) String
---type IntLtR3 (opts :: Opt) = Refined3 opts (ReadP Int Id) (Id < 10) (ShowP Id) String
 
 type Tst1 = '(OAN, ReadP Int Id, Between 1 7 Id, PrintF "someval val=%03d" Id, String)
 

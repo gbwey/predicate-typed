@@ -15,9 +15,11 @@
 {-# LANGUAGE NoStarIsType #-}
 -- | a dsl for evaluating and displaying type level expressions
 module Predicate.Core (
+ -- ** core class
+    P(..)
 
  -- ** basic types
-    Id
+  , Id
   , IdT
   , W
   , Msg
@@ -35,7 +37,7 @@ module Predicate.Core (
   , Coerce
   , OneP
 
-  -- ** tree evaluation
+  -- ** IO evaluation
   , pan
   , panv
   , pa
@@ -45,14 +47,11 @@ module Predicate.Core (
   , pav
   , puv
   , pl
+  , pz
   , run
   , runs
 
-  , pz
-
-  , P(..)
-
-  -- ** evaluation methods
+  -- ** pure evaluation
   , runP
   , runPQ
   , runPQBool
@@ -61,18 +60,18 @@ module Predicate.Core (
   , evalHide
   , evalQuick
 
- -- ** wrap, unwrap expressions
-  , Unwrap
+ -- ** wrap, unwrap
   , Wrap
   , Wrap'
+  , Unwrap
 
- -- ** failure expressions
+ -- ** failure
   , Fail
   , FailP
   , FailT
   , FailS
 
- -- ** tuple expressions
+ -- ** tuple
   , Fst
   , Snd
   , Thd
@@ -94,7 +93,7 @@ module Predicate.Core (
   , L32
   , L33
 
-  -- ** boolean expressions
+  -- ** boolean
   , type (&&)
   , type (&&~)
   , type (||)
@@ -102,6 +101,7 @@ module Predicate.Core (
   , type (~>)
   , Not
   , Between
+  , type (<..>)
   , All
   , Any
   , IdBool
@@ -112,14 +112,10 @@ module Predicate.Core (
   , type (<<)
   , type ($)
   , type (&)
+  , DoL
 
  -- ** miscellaneous
-  , type (<..>)
   , Swap
-  , SwapC(..)
-  , DoExpandT
-  , DoExpandLT
-  , DoL
 
   ) where
 import Predicate.Misc
@@ -137,7 +133,6 @@ import Control.Arrow (right)
 import Data.List (find)
 import Data.Tree (Tree)
 import Data.Coerce (Coercible)
-import qualified Data.Semigroup as SG
 import Data.Tree.Lens (root)
 -- $setup
 -- >>> :set -XDataKinds
@@ -151,6 +146,7 @@ import Data.Tree.Lens (root)
 -- >>> :m + Data.Typeable
 -- >>> :m + Text.Show.Functions
 -- >>> :m + Data.Ratio
+-- >>> import qualified Data.Semigroup as SG
 
 -- | This is the core class. Each instance of this class can be combined into a dsl using 'Predicate.Core.>>'
 class P p a where
@@ -662,7 +658,6 @@ instance ( Show (PP p a)
           Left e -> e
           Right q ->
             let ret = p:q
-            -- no gap between ' and ret!
             in mkNode opts (Val ret) ("'" <> showL opts ret <> litVerbose opts " " (topMessage pp) <> showVerbose opts " | " a) (verboseList opts pp <> [hh qq])
 
 -- | tries to extract @a@ from @Maybe a@ otherwise it fails: similar to 'Data.Maybe.fromJust'
@@ -2232,30 +2227,6 @@ instance ( P p a
 -- Val (True,"asfd",12)
 --
 data Swap deriving Show
-
-class Bifunctor p => SwapC p where
-  swapC :: p a b -> p b a
-instance SwapC Either where
-  swapC (Left a) = Right a
-  swapC (Right a) = Left a
-instance SwapC These where
-  swapC (This a) = That a
-  swapC (That b) = This b
-  swapC (These a b) = These b a
-instance SwapC SG.Arg where
-  swapC (SG.Arg a b) = SG.Arg b a
-instance SwapC (,) where
-  swapC (a,b) = (b,a)
-instance SwapC ((,,) a) where
-  swapC (a,b,c) = (a,c,b)
-instance SwapC ((,,,) a b) where
-  swapC (a,b,c,d) = (a,b,d,c)
-instance SwapC ((,,,,) a b c) where
-  swapC (a,b,c,d,e) = (a,b,c,e,d)
-instance SwapC ((,,,,,) a b c d) where
-  swapC (a,b,c,d,e,f) = (a,b,c,d,f,e)
-instance SwapC ((,,,,,,) a b c d e) where
-  swapC (a,b,c,d,e,f,g) = (a,b,c,d,e,g,f)
 
 instance ( Show (p a b)
          , SwapC p

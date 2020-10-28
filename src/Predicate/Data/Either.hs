@@ -40,6 +40,7 @@ module Predicate.Data.Either (
  -- ** miscellaneous
   , type (|||)
   , type (+++)
+  , EitherX
 
  ) where
 import Predicate.Core
@@ -437,7 +438,7 @@ instance P (MkRightT t p) x => P (MkRight t p) x where
 
 -- | extract the Left value from an 'Either' otherwise use the default value: similar to 'Data.Either.fromLeft'
 --
--- if there is no Left value then \p\ is passed the Right value and the whole context
+-- if there is no Left value then @p@ is passed the Right value and the whole context
 --
 -- >>> pz @(LeftDef (1 % 4) Id) (Left 20.4)
 -- Val (102 % 5)
@@ -478,7 +479,7 @@ instance ( PP q x ~ Either a b
 
 -- | extract the Right value from an 'Either': similar to 'Data.Either.fromRight'
 --
--- if there is no Right value then \p\ is passed the Left value and the whole context
+-- if there is no Right value then @p@ is passed the Left value and the whole context
 --
 -- >>> pz @(RightDef (1 % 4) Id) (Right 20.4)
 -- Val (102 % 5)
@@ -520,7 +521,7 @@ instance ( PP q x ~ Either a b
 
 -- | extract the Left value from an 'Either' otherwise fail with a message
 --
--- if there is no Left value then \p\ is passed the Right value and the whole context
+-- if there is no Left value then @p@ is passed the Right value and the whole context
 --
 -- >>> pz @(LeftFail "oops" Id) (Left 20.4)
 -- Val 20.4
@@ -580,7 +581,7 @@ instance ( PP p (b,x) ~ String
 
 -- | extract the Right value from an 'Either' otherwise fail with a message
 --
--- if there is no Right value then \p\ is passed the Left value and the whole context
+-- if there is no Right value then @p@ is passed the Left value and the whole context
 --
 -- >>> pz @(RightFail "oops" Id) (Right 20.4)
 -- Val 20.4

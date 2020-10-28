@@ -50,19 +50,19 @@ import Data.Proxy (Proxy(..))
 
 -- | index a value in an 'Ixed' container and if not found return the given default value
 --
--- >>> pl @(LookupDef' Snd Fst (Char1 "xx") Id) (['a'..'e'],2)
+-- >>> pl @(LookupDef' Snd Fst (C "xx") Id) (['a'..'e'],2)
 -- Present 'c' (JustDef Just)
 -- Val 'c'
 --
--- >>> pl @(LookupDef' Snd Fst (Char1 "xx") Id) (['a'..'e'],999)
+-- >>> pl @(LookupDef' Snd Fst (C "xx") Id) (['a'..'e'],999)
 -- Present 'x' (JustDef Nothing)
 -- Val 'x'
 --
--- >>> pl @(LookupDef' Snd Fst (Char1 "xx") Id) ([],2)
+-- >>> pl @(LookupDef' Snd Fst (C "xx") Id) ([],2)
 -- Present 'x' (JustDef Nothing)
 -- Val 'x'
 --
--- >>> pl @(LookupDef' Snd Fst (Char1 "xx") Snd) ('w',([],2))
+-- >>> pl @(LookupDef' Snd Fst (C "xx") Snd) ('w',([],2))
 -- Present 'x' (JustDef Nothing)
 -- Val 'x'
 --
@@ -243,11 +243,11 @@ instance P (IxT' n) x => P (Ix' n) x where
 -- >>> pz @(IxL Id 20 "notfound") ["abc","D","eF","","G"]
 -- Val "notfound"
 --
--- >>> pl @(IxL Id 1 (Char1 "x")) ("123" :: T.Text)
+-- >>> pl @(IxL Id 1 (C "x")) ("123" :: T.Text)
 -- Present '2' (IxL(1) '2' | p="123" | q=1)
 -- Val '2'
 --
--- >>> pl @(IxL Id 15 (Char1 "x")) ("123" :: T.Text)
+-- >>> pl @(IxL Id 15 (C "x")) ("123" :: T.Text)
 -- Present 'x' (IxL(15) index not found)
 -- Val 'x'
 --
@@ -320,19 +320,19 @@ instance ( P q a
 -- Present 3 (IxL("d") 3 | p=fromList [("a",0),("b",1),("c",2),("d",3)] | q="d")
 -- Val 3
 --
--- >>> pl @(Id !! ("d" >> Head)) (M.fromList $ zip "abcd" [0 ..]) -- had to String (instead of _) to keep this happy: ghci is fine
+-- >>> pl @(Id !! C "d") (M.fromList $ zip "abcd" [0 ..])
 -- Present 3 (IxL('d') 3 | p=fromList [('a',0),('b',1),('c',2),('d',3)] | q='d')
 -- Val 3
 --
--- >>> pl @(Id !! ("d" >> Head)) (Set.fromList "abcd") -- had to String (instead of _) to keep this happy: ghci is fine
+-- >>> pl @(Id !! C "d") (Set.fromList "abcd")
 -- Present () (IxL('d') () | p=fromList "abcd" | q='d')
 -- Val ()
 --
--- >>> pl @(Id !! HeadFail "failedn" "e") (Set.fromList "abcd") -- had to String (instead of _) to keep this happy: ghci is fine
+-- >>> pl @(Id !! HeadFail "failedn" "e") (Set.fromList "abcd")
 -- Error (!!) index not found (IxL('e'))
 -- Fail "(!!) index not found"
 --
--- >>> pl @(Id !! ("d" >> Head)) (M.fromList $ zip "abcd" [0 ..])   -- use Char1 "d" instead of "d" >> Head
+-- >>> pl @(Id !! C "d") (M.fromList $ zip "abcd" [0 ..])
 -- Present 3 (IxL('d') 3 | p=fromList [('a',0),('b',1),('c',2),('d',3)] | q='d')
 -- Val 3
 --
@@ -372,7 +372,7 @@ instance ( P q a
 -- Present 99 (IxL("s") 99 | p=fromList [("s",99),("t",1)] | q="s")
 -- Val 99
 --
--- >>> pl @(Id !! Char1 "d") (M.fromList $ zip "abcd" [0 ..])
+-- >>> pl @(Id !! C "d") (M.fromList $ zip "abcd" [0 ..])
 -- Present 3 (IxL('d') 3 | p=fromList [('a',0),('b',1),('c',2),('d',3)] | q='d')
 -- Val 3
 --
@@ -423,17 +423,13 @@ instance P (BangBangT p q) a => P (p !! q) a where
 -- >>> pz @(Lookup 20 Id) ["abc","D","eF","","G"]
 -- Val Nothing
 --
--- >>> pl @(FromList (M.Map _ _) >> Lookup (Char1 "y") Id) [('x',True),('y',False)]
+-- >>> pl @(FromList (M.Map _ _) >> Lookup (C "y") Id) [('x',True),('y',False)]
 -- Present Just False ((>>) Just False | {Lookup('y') False | q=fromList [('x',True),('y',False)] | p='y'})
 -- Val (Just False)
 --
--- >>> pl @(FromList (M.Map _ _) >> Lookup (Char1 "z") Id) [('x',True),('y',False)]
+-- >>> pl @(FromList (M.Map _ _) >> Lookup (C "z") Id) [('x',True),('y',False)]
 -- Present Nothing ((>>) Nothing | {Lookup('z') not found})
 -- Val Nothing
---
--- >>> pl @(FromList (M.Map _ _) >> Lookup (Char1 "y") Id) [('x',True),('y',False)]
--- Present Just False ((>>) Just False | {Lookup('y') False | q=fromList [('x',True),('y',False)] | p='y'})
--- Val (Just False)
 --
 -- >>> pl @(Lookup 1 Id) [('x',14),('y',3),('z',5)]
 -- Present Just ('y',3) (Lookup(1) ('y',3) | q=[('x',14),('y',3),('z',5)] | p=1)
@@ -477,11 +473,11 @@ instance ( P p a
 
 -- | type operator version of 'Lookup'
 --
--- >>> pl @((Id !!? Char1 "d") > MkJust 99 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
+-- >>> pl @((Id !!? C "d") > MkJust 99 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
 -- False (False || False | (Just 4 > Just 99) || (4 <= 3))
 -- Val False
 --
--- >>> pz @((Id !!? Char1 "d") > MkJust 2 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
+-- >>> pz @((Id !!? C "d") > MkJust 2 || Length Id <= 3) (M.fromList $ zip "abcd" [1..])
 -- Val True
 --
 data p !!? q deriving Show

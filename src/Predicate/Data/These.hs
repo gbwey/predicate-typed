@@ -534,7 +534,7 @@ instance P (TheseIdT p q) x => P (TheseId p q) x where
 -- Present "wxydef" ((>>) "wxydef" | {Map "wxydef" | [These 'w' 'a',These 'x' 'b',These 'y' 'c',That 'd',That 'e',That 'f']})
 -- Val "wxydef"
 --
--- >>> pl @(("sdf" &&& Id) >> ZipThese Fst Snd >> Map (TheseIn (Id &&& 0) (("x" >> Head) &&& Id) Id)) [1..5]
+-- >>> pl @(("sdf" &&& Id) >> ZipThese Fst Snd >> Map (TheseIn (Id &&& 0) (C "x" &&& Id) Id)) [1..5]
 -- Present [('s',1),('d',2),('f',3),('x',4),('x',5)] ((>>) [('s',1),('d',2),('f',3),('x',4),('x',5)] | {Map [('s',1),('d',2),('f',3),('x',4),('x',5)] | [These 's' 1,These 'd' 2,These 'f' 3,That 4,That 5]})
 -- Val [('s',1),('d',2),('f',3),('x',4),('x',5)]
 --
@@ -561,7 +561,6 @@ instance ( PP p a ~ [x]
             let d = simpleAlign p q
             in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
 
-
 simpleAlign :: [a] -> [b] -> [These a b]
 simpleAlign as [] = map This as
 simpleAlign [] bs = map That bs
@@ -569,7 +568,7 @@ simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
 
 
 -- | extract the This value from an 'These' otherwise use the default value
---   if there is no This value then \p\ is passed the whole context only
+--   if there is no This value then @p@ is passed the whole context only
 --
 -- >>> pz @(ThisDef (1 % 4) Id) (This 20.4)
 -- Val (102 % 5)
@@ -622,7 +621,7 @@ instance ( PP q x ~ These a b
 
 -- | extract the That value from an 'These' otherwise use the default value
 --
--- if there is no That value then \p\ is passed the whole context only
+-- if there is no That value then @p@ is passed the whole context only
 --
 -- >>> pz @(ThatDef (1 % 4) Id) (That 20.4)
 -- Val (102 % 5)
@@ -666,7 +665,7 @@ instance ( PP q x ~ These a b
 
 -- | extract the These value from an 'These' otherwise use the default value
 --
--- if there is no These value then \p\ is passed the whole context only
+-- if there is no These value then @p@ is passed the whole context only
 --
 -- >>> pz @(TheseDef '(1 % 4,"zz") Id) (These 20.4 "x")
 -- Val (102 % 5,"x")
@@ -723,7 +722,7 @@ instance ( PP q x ~ These a b
 
 -- | extract the This value from a 'These' otherwise fail with a message
 --
--- if there is no This value then \p\ is passed the whole context only
+-- if there is no This value then @p@ is passed the whole context only
 --
 -- >>> pz @(ThisFail "oops" Id) (This 20.4)
 -- Val 20.4
@@ -775,7 +774,7 @@ instance ( PP p x ~ String
 
 -- | extract the That value from a 'These' otherwise fail with a message
 --
--- if there is no That value then \p\ is passed the whole context only
+-- if there is no That value then @p@ is passed the whole context only
 --
 -- >>> pz @(ThatFail "oops" Id) (That 20.4)
 -- Val 20.4
@@ -817,7 +816,7 @@ instance ( PP p x ~ String
 
 -- | extract the These value from a 'These' otherwise fail with a message
 --
--- if there is no These value then \p\ is passed the whole context only
+-- if there is no These value then @p@ is passed the whole context only
 --
 -- >>> pz @(TheseFail "oops" Id) (These "abc" 20.4)
 -- Val ("abc",20.4)

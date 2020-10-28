@@ -25,7 +25,6 @@ module Predicate.Data.ReadShow (
 
   -- ** print expressions
   , PrintF
-  , PrintC
   , PrintL
   , PrintT
   , PrintI
@@ -290,7 +289,7 @@ instance ( PrintfArg a
 -- Present "lhs = 123 rhs = asdf c=120" ((>>) "lhs = 123 rhs = asdf c=120" | {PrintI [lhs = 123 rhs = asdf c=120] | s=lhs = %d rhs = %s c=%d})
 -- Val "lhs = 123 rhs = asdf c=120"
 --
--- >>> pl @(PrintT "hello d=%d %c %s" '(12, Char1 "z", "someval")) ()
+-- >>> pl @(PrintT "hello d=%d %c %s" '(12, C "z", "someval")) ()
 -- Present "hello d=12 z someval" ((>>) "hello d=12 z someval" | {PrintI [hello d=12 z someval] | s=hello d=%d %c %s})
 -- Val "hello d=12 z someval"
 --
