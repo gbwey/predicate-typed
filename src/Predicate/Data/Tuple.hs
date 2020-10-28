@@ -24,6 +24,7 @@ module Predicate.Data.Tuple (
   , type (&&&)
   , type (***)
   , Both
+  , On
 
  -- ** flat tuples
   , Tuple
@@ -50,6 +51,7 @@ import Data.Proxy (Proxy(Proxy))
 import GHC.TypeNats (Nat, KnownNat)
 import qualified GHC.TypeLits as GL
 import Control.Lens
+import Data.Kind (Type)
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -371,6 +373,38 @@ instance ( P p a
           Right b' ->
             mkNode opts (Val (b,b')) msg0 [hh pp, hh pp']
 
+-- | similar to 'Data.Function.on'
+--
+-- >>> pz @('(4,2) >> On (**) (FromIntegral _)) ()
+-- Val 16.0
+--
+-- >>> pz @(On (+) (Id * Id) >> Id ** (1 % 2 >> FromRational _)) (3,4)
+-- Val 5.0
+--
+data On (p :: Type -> Type -> k2) q deriving Show
+
+instance ( P q a
+         , P q a'
+         , P (p Fst Snd) (PP q a, PP q a')
+   ) => P (On p q) (a,a') where
+  type PP (On p q) (a,a') = PP (p Fst Snd) (PP q a, PP q a')
+  eval _ opts (a,a') = do
+    let msg0 = "On"
+    qq <- eval (Proxy @q) opts a
+    case getValueLR NoInline opts msg0 qq [] of
+      Left e -> pure e
+      Right b -> do
+        qq' <- eval (Proxy @q) opts a'
+        case getValueLR NoInline opts msg0 qq' [hh qq] of
+          Left e -> pure e
+          Right b' -> do
+            pp <- eval (Proxy @(p Fst Snd)) opts (b,b')
+            pure $ case getValueLR NoInline opts msg0 pp [hh qq, hh qq'] of
+              Left e -> e
+              Right p -> mkNode opts (Val p) msg0 [hh qq, hh qq', hh pp]
+
+type family OnT q ppa ppa' where
+  OnT q ppa ppa' = q ppa ppa'
 -- | create a n tuple from a list
 --
 -- >>> pz @(Tuple 4) "abcdefg"

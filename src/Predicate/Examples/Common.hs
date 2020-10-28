@@ -11,7 +11,7 @@
 {-# LANGUAGE NoStarIsType #-}
 -- | Common predicates for use with Refined, Refined2, and Refined3
 module Predicate.Examples.Common (
-  -- ** date time checkers
+  -- ** datetime
     DateNip
   , DateFmts
   , DateTimeFmts
@@ -22,7 +22,8 @@ module Predicate.Examples.Common (
   , Ddmmyyyyop
   , Ddmmyyyyop'
   , JsonMicrosoftDateTime
-  -- *** time checkers
+
+  -- ** time
   , Hmsip
   , Hmsop
   , Hmsop'
@@ -65,7 +66,6 @@ module Predicate.Examples.Common (
   , Isbn13ip
   , Isbn13op
   , Isbn13fmt
-
    ) where
 import Predicate.Prelude
 import GHC.TypeLits (Nat)

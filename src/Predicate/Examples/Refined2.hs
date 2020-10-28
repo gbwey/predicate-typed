@@ -12,22 +12,19 @@
 {-# LANGUAGE NoStarIsType #-}
 -- | Contains prepackaged 4-tuples to use with 'Refined2'
 module Predicate.Examples.Refined2 (
-  -- ** date time checkers
+ -- ** datetime
     DateTime1
   , datetime1
-
   , daten
   , DateN
   , datetimen
   , DateTimeN
   , DateTimeNR
 
-  -- *** time checkers
+  -- ** time
   , hms
   , Hms
   , HmsR
-
---  , hms'
   , Hms'
   , HmsR'
 

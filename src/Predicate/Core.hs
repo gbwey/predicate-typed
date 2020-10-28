@@ -15,11 +15,8 @@
 {-# LANGUAGE NoStarIsType #-}
 -- | a dsl for evaluating and displaying type level expressions
 module Predicate.Core (
- -- ** core class
-    P(..)
-
  -- ** basic types
-  , Id
+    Id
   , IdT
   , W
   , Msg
@@ -36,6 +33,9 @@ module Predicate.Core (
   , Pure
   , Coerce
   , OneP
+
+ -- ** core class
+  , P(..)
 
   -- ** IO evaluation
   , pan

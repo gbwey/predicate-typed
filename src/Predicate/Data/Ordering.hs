@@ -16,8 +16,6 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted 'Ordering' functions
 module Predicate.Data.Ordering (
-
- -- ** compare expressions
     type (>)
   , type (>=)
   , type (==)
@@ -42,7 +40,6 @@ module Predicate.Data.Ordering (
   , type (===~)
   , Cmp
   , CmpI
-
   , Asc
   , Asc'
   , Desc
@@ -51,7 +48,6 @@ module Predicate.Data.Ordering (
   , Positive
   , AllNegative
   , Negative
-
  ) where
 import Predicate.Core
 import Predicate.Misc

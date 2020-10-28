@@ -16,7 +16,6 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted indexing functions
 module Predicate.Data.Index (
-  -- ** indexing expressions
     Ix
   , Ix'
   , IxL
@@ -27,7 +26,6 @@ module Predicate.Data.Index (
   , LookupDef'
   , LookupFail
   , LookupFail'
-
  ) where
 import Predicate.Core
 import Predicate.Misc

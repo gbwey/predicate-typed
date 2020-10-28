@@ -16,8 +16,6 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted regular expression functions
 module Predicate.Data.Regex (
-
-  -- ** regex expressions
     Re
   , Re'
   , Rescan
@@ -38,7 +36,6 @@ module Predicate.Data.Regex (
   , ReplaceFn1
   , ReplaceFn2
   , ReplaceFn3
-
  ) where
 import Predicate.Core
 import Predicate.Misc

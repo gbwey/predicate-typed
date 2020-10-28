@@ -17,8 +17,6 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted 'Semigroup' and 'Monoid' functions
 module Predicate.Data.Monoid (
-
-  -- ** semigroup / monoid expressions
     type (<>)
   , MConcat
   , SConcat
@@ -28,7 +26,6 @@ module Predicate.Data.Monoid (
   , MEmptyT
   , MEmptyT'
   , MEmptyP
-
  ) where
 import Predicate.Core
 import Predicate.Misc

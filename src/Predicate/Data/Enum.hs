@@ -19,7 +19,7 @@
 -- | promoted enum functions
 module Predicate.Data.Enum (
 
-  -- *** constructors
+  -- ** constructors
     type (...)
   , EnumFromTo
   , EnumFromThenTo
@@ -37,7 +37,7 @@ module Predicate.Data.Enum (
   , ToEnumBDef'
   , ToEnumBFail
 
-  -- ** unsafe enum expressions
+  -- ** unsafe enums
   , Succ
   , SuccN
   , Pred

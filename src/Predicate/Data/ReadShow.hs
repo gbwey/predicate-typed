@@ -16,19 +16,18 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted read, show, and printf functions
 module Predicate.Data.ReadShow (
-
+ -- ** read-show
     ShowP
   , ReadP
   , ReadP'
   , ReadMaybe
   , ReadMaybe'
 
-  -- ** print expressions
+  -- ** print
   , PrintF
   , PrintL
   , PrintT
   , PrintI
-
  ) where
 import Predicate.Core
 import Predicate.Misc

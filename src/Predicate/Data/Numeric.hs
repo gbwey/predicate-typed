@@ -20,7 +20,7 @@
 -- | promoted numeric functions
 module Predicate.Data.Numeric (
 
-  -- ** numeric expressions
+  -- ** numeric
     type (+)
   , type (-)
   , type (*)
@@ -49,23 +49,23 @@ module Predicate.Data.Numeric (
   , LogBase
   , type (^)
   , type (**)
+  , DivI
   , RoundUp
 
-  -- *** rational numbers
+  -- ** rational numbers
   , type (%)
   , type (-%)
   , ToRational
   , FromRational
   , FromRational'
 
- -- ** read / show expressions
+ -- ** read-show
   , ReadBase
   , ReadBase'
   , ShowBase
   , ShowBaseN
   , UnShowBaseN
   , ToBits
-
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -542,6 +542,20 @@ instance ( PP p a ~ PP q a
          | otherwise ->
             let d = p / q
             in mkNode opts (Val d) (showL opts p <> " / " <> showL opts q <> " = " <> showL opts d) [hh pp, hh qq]
+
+-- | divide for integrals
+--
+-- >>> pz @(On (+) (Id * Id) >> (Id ** (DivI Double 1 2))) (3,4)
+-- Val 5.0
+--
+data DivI t p q deriving Show
+
+type DivIT t p q = (p >> FromIntegral t) / (q >> FromIntegral t)
+
+instance P (DivIT t p q) x => P (DivI t p q) x where
+  type PP (DivI t p q) x = PP (DivIT t p q) x
+  eval _ = eval (Proxy @(DivIT t p q))
+
 
 -- | creates a 'Rational' value
 --
@@ -1193,7 +1207,7 @@ instance ( Integral (PP n x)
       Left e -> e
       Right (n,p,nn,pp) ->
          let hhs = [hh nn, hh pp]
-             d = (n - p `mod` n) `mod` n
+             d = (n-p) `mod` n
          in if n == 0 then mkNode opts (Fail (msg0 <> " 'n' cannot be zero")) "" hhs
             else mkNode opts (Val d) (msg0 <> " " <> show n <> " " <> show p <> " = " <> show d) hhs
 

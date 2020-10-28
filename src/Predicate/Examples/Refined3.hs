@@ -12,21 +12,19 @@
 {-# LANGUAGE NoStarIsType #-}
 -- | Contains prepackaged 5-tuples and proxies to use with 'Refined3'
 module Predicate.Examples.Refined3 (
-  -- ** date time checkers
+  -- ** datetime
     datetime1
   , DateTime1
-
   , daten
   , DateN
   , datetimen
   , DateTimeN
   , DateTimeNR
 
-  -- *** time checkers
+  -- ** time
   , hms
   , Hms
   , HmsR
-
   , Hms'
   , HmsR'
 
