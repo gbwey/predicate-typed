@@ -1298,7 +1298,7 @@ _bimapImpl opts proxyp proxyq msg0 hhs nab = do
                     & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
 
 
-data ELR a b = EEmpty | ELeft a | ERight b | EBoth a b deriving (Show,Eq,Ord,Foldable,Functor,Traversable)
+data ELR a b = EEmpty | ELeft !a | ERight !b | EBoth !a !b deriving (Show,Eq,Ord,Foldable,Functor,Traversable)
 
 instance Bifunctor ELR where
   bimap f g x =

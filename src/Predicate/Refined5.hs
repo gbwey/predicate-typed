@@ -51,9 +51,6 @@ module Predicate.Refined5 (
   , unsafeRefined5
   , unsafeRefined5'
 
-  , replaceOpt5
-  , appendOpt5
-
  ) where
 import Predicate.Refined2 (Msg2(..), RResults2(..), prt2Impl, Refined2C)
 import Predicate.Refined (RefinedC)
@@ -431,16 +428,6 @@ eval5M i = do
 -- | type family for converting from a 4-tuple '(opts,ip,op,i) to a 'Refined5' type
 type family MakeR5 p where
   MakeR5 '(opts,ip,op,i) = Refined5 opts ip op i
-
-replaceOpt5 :: forall (opts :: Opt) opt0 ip op i
-   . Refined5 opt0 ip op i
-  -> Refined5 opts ip op i
-replaceOpt5 = coerce
-
-appendOpt5 :: forall (opts :: Opt) opt0 ip op i
-   . Refined5 opt0 ip op i
-  -> Refined5 (opt0 ':# opts) ip op i
-appendOpt5 = coerce
 
 evalBool5 :: forall opts p a
    . (PP p a ~ Bool, RefinedC opts p a)

@@ -976,7 +976,6 @@ run a = do
   pp <- eval (Proxy @p) opts a
   case oDebug opts of
     DZero -> pure ()
-    DLite -> unlessNullM (prtTree opts pp) putStrLn
     _ -> unlessNullM (prtTree opts pp) putStrLn
   return (_ttVal pp)
 

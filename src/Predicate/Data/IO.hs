@@ -328,8 +328,9 @@ instance ( GetFHandle fh
                      if b && w == WFWrite then pure $ Left $ "file [" <> s <> "] already exists"
                      else do
                             let md = case w of
-                                   WFAppend -> AppendMode
-                                   _ -> WriteMode
+                                       WFAppend -> AppendMode
+                                       WFWrite -> WriteMode
+                                       WFWriteForce -> WriteMode
                             fmap (left show) $ E.try @E.SomeException $ withFile s md (`hPutStr` ss)
           pure $ case mb of
             Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" [hh pp]

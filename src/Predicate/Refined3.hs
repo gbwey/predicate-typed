@@ -64,10 +64,6 @@ module Predicate.Refined3 (
   , genRefined3
   , genRefined3P
 
-  -- ** miscellaneous
-  , replaceOpt3
-  , appendOpt3
-
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -89,7 +85,6 @@ import Data.Char (isSpace)
 import Data.String (IsString(..))
 import Data.Hashable (Hashable(..))
 import GHC.Stack (HasCallStack)
-import Data.Coerce (coerce)
 import Control.DeepSeq (rnf, rnf2, NFData)
 -- $setup
 -- >>> :set -XDataKinds
@@ -649,9 +644,3 @@ prt3Impl opts v =
               <> outmsg m
               <> prtTreePure opts t3
          in mkMsg3 m n r (t3 ^. root . peValP)
-
-replaceOpt3 :: forall (opts :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 opts ip op fmt i
-replaceOpt3 = coerce
-
-appendOpt3 :: forall (opts :: Opt) opt0 ip op fmt i . Refined3 opt0 ip op fmt i -> Refined3 (opt0 ':# opts) ip op fmt i
-appendOpt3 = coerce

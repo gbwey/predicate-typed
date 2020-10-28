@@ -56,9 +56,6 @@ module Predicate.Refined2 (
   , unsafeRefined2
   , unsafeRefined2'
 
-  , replaceOpt2
-  , appendOpt2
-
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -80,7 +77,6 @@ import Data.String (IsString(..))
 import Data.Hashable (Hashable(..))
 import GHC.Stack (HasCallStack)
 import Test.QuickCheck
-import Data.Coerce (coerce)
 import Control.DeepSeq (rnf, rnf2, NFData)
 -- $setup
 -- >>> :set -XDataKinds
@@ -561,9 +557,3 @@ mkProxy2' = Proxy
 -- | type family for converting from a 4-tuple '(opts,ip,op,i) to a 'Refined2' type
 type family MakeR2 p where
   MakeR2 '(opts,ip,op,i) = Refined2 opts ip op i
-
-replaceOpt2 :: forall (opts :: Opt) opt0 ip op i . Refined2 opt0 ip op i -> Refined2 opts ip op i
-replaceOpt2 = coerce
-
-appendOpt2 :: forall (opts :: Opt) opt0 ip op i . Refined2 opt0 ip op i -> Refined2 (opt0 ':# opts) ip op i
-appendOpt2 = coerce

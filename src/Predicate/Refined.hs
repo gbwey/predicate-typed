@@ -36,9 +36,6 @@ module Predicate.Refined (
   , unsafeRefined
   , unsafeRefined'
 
-  , replaceOpt
-  , appendOpt
-
  ) where
 import Predicate.Core
 import Predicate.Misc (nullIf)
@@ -352,9 +349,3 @@ unsafeRefined' a =
                  DZero -> error bp
                  DLite -> error $ bp ++ nullIf "\n" s
                  _ -> error $ bp ++ nullIf "\n" s
-
-replaceOpt :: forall (opts :: Opt) opt0 p a . Refined opt0 p a -> Refined opts p a
-replaceOpt = coerce
-
-appendOpt :: forall (opts :: Opt) opt0 p a . Refined opt0 p a -> Refined (opt0 ':# opts) p a
-appendOpt = coerce

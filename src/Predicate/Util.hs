@@ -777,7 +777,7 @@ colorValLite o (bt,bp') =
                   FalseP -> f "False"
                   TrueP -> f "True"
                   ValP -> f "Present" <> " " <> show a
-                  FailP _ -> errorInProgram $ "colorValLite: unexpected FailP " ++ show (bt,bp)
+                  FailP {} -> errorInProgram $ "colorValLite: unexpected FailP " ++ show (bt,bp)
 
 colorValBool ::
       POpts
@@ -1152,7 +1152,8 @@ _True =
   prism' (const (Val True))
   $ \case
        Val True -> Just ()
-       _ -> Nothing
+       Val False -> Nothing
+       Fail {} -> Nothing
 
 -- | prism for Val False
 --
@@ -1173,7 +1174,8 @@ _False =
   prism' (const (Val False))
   $ \case
        Val False -> Just ()
-       _ -> Nothing
+       Val True -> Nothing
+       Fail {} -> Nothing
 
 -- | iso for 'Val'
 --
