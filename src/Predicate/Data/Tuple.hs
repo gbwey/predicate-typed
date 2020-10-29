@@ -403,8 +403,6 @@ instance ( P q a
               Left e -> e
               Right p -> mkNode opts (Val p) msg0 [hh qq, hh qq', hh pp]
 
-type family OnT q ppa ppa' where
-  OnT q ppa ppa' = q ppa ppa'
 -- | create a n tuple from a list
 --
 -- >>> pz @(Tuple 4) "abcdefg"
