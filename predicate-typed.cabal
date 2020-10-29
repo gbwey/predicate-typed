@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1d7c8b878622265a1b575228e3348c26089b177d9bf130ec8969468ceac7992c
+-- hash: 2fc659b2bae368a0a3ff4f727a492aa0eb2b5282c62052fa4bd885731ac482a0
 
 name:           predicate-typed
 version:        0.7.4.0
@@ -23,11 +23,6 @@ build-type:     Simple
 source-repository head
   type: git
   location: https://github.com/gbwey/predicate-typed
-
-flag coverage
-  description: run hpc tool and put files in separate folders
-  manual: True
-  default: False
 
 library
   exposed-modules:
@@ -92,7 +87,7 @@ library
     , pcre-heavy >=1.0.0.2
     , pcre-light
     , pretty-terminal >=0.1.0.0
-    , random
+    , random <=1.1
     , safe
     , string-conversions
     , template-haskell
@@ -102,8 +97,6 @@ library
     , time
   if impl(ghc >= 8.8)
     ghc-options: -fwrite-ide-info -hiedir=.hie -Widentities
-  if flag(coverage)
-    ghc-options: -fhpc -hpcdir hpc/lib/
   default-language: Haskell2010
 
 test-suite doctests
@@ -134,7 +127,7 @@ test-suite doctests
     , pcre-light
     , predicate-typed
     , pretty-terminal >=0.1.0.0
-    , random
+    , random <=1.1
     , safe
     , string-conversions
     , template-haskell
@@ -144,8 +137,6 @@ test-suite doctests
     , time
   if impl(ghc >= 8.8)
     ghc-options: -fwrite-ide-info -hiedir=.hie -Widentities
-  if flag(coverage)
-    ghc-options: -fhpc -hpcdir hpc/doctest/
   default-language: Haskell2010
 
 test-suite predicate-typed-test
@@ -181,7 +172,7 @@ test-suite predicate-typed-test
     , pcre-light
     , predicate-typed
     , pretty-terminal >=0.1.0.0
-    , random
+    , random <=1.1
     , safe
     , stm
     , string-conversions
@@ -195,6 +186,4 @@ test-suite predicate-typed-test
     , time
   if impl(ghc >= 8.8)
     ghc-options: -fwrite-ide-info -hiedir=.hie -Widentities
-  if flag(coverage)
-    ghc-options: -fhpc -hpcdir hpc/testspec/
   default-language: Haskell2010

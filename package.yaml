@@ -10,12 +10,6 @@ copyright:           2019 Grant Weyburne
 
 description:         Please see the README on GitHub at <https://github.com/gbwey/predicate-typed#readme>
 
-flags:
-  coverage:
-    description: run hpc tool and put files in separate folders
-    manual: yes
-    default: no
-
 dependencies:
 - base >= 4.7 && < 5
 - QuickCheck
@@ -34,7 +28,7 @@ dependencies:
 - pcre-heavy >= 1.0.0.2
 - pcre-light
 - pretty-terminal >= 0.1.0.0
-- random
+- random <=1.1
 - safe
 - string-conversions
 - template-haskell
@@ -61,10 +55,6 @@ library:
      - -fwrite-ide-info
      - -hiedir=.hie
      - -Widentities
-   - condition: flag(coverage)
-     ghc-options:
-     - -fhpc
-     - -hpcdir hpc/lib/
 
 tests:
   predicate-typed-test:
@@ -89,10 +79,6 @@ tests:
        - -fwrite-ide-info
        - -hiedir=.hie
        - -Widentities
-    -  condition: flag(coverage)
-       ghc-options:
-       - -fhpc
-       - -hpcdir hpc/testspec/
     dependencies:
     - base
     - predicate-typed
@@ -120,10 +106,6 @@ tests:
        - -fwrite-ide-info
        - -hiedir=.hie
        - -Widentities
-    -  condition: flag(coverage)
-       ghc-options:
-       - -fhpc
-       - -hpcdir hpc/doctest/
 
     dependencies:
     - base
