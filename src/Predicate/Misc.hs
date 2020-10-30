@@ -49,7 +49,7 @@ module Predicate.Misc (
   , JoinT
   , FailWhenT
   , FailUnlessT
-  , ZwischenT
+  , BetweenT
 
  -- ** extract values from the type level
   , GetBool(..)
@@ -127,7 +127,7 @@ module Predicate.Misc (
   , _Id
   , sum'
   , product'
-
+  , cmpOf
   ) where
 import qualified GHC.TypeNats as GN
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
@@ -151,7 +151,7 @@ import Data.ByteString (ByteString)
 import GHC.Stack (HasCallStack)
 import Data.Containers.ListUtils (nubOrd)
 import Control.Arrow (Arrow((***)),ArrowChoice(left))
-import Data.List (foldl', intercalate, unfoldr)
+import Data.List (foldl', intercalate, unfoldr, isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Safe (headNote)
 import Data.Char (isSpace)
 import qualified Control.Exception as E
@@ -165,15 +165,17 @@ import Data.Bifunctor (Bifunctor)
 -- >>> :set -XTypeOperators
 
 -- | type level Between
-type family ZwischenT (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
-  ZwischenT m n v =
+type family BetweenT (s :: Symbol) (a :: Nat) (b :: Nat) (v :: Nat) :: Constraint where
+  BetweenT s m n v =
      FailUnlessT (AndT (m GL.<=? v) (v GL.<=? n))
-            ('GL.Text "ZwischenT failure"
+            ('GL.Text s
+             ':<>: 'GL.Text " failed"
              ':$$: 'GL.ShowType v
-             ':$$: 'GL.Text " is outside of "
-             ':$$: 'GL.ShowType m
-             ':<>: 'GL.Text " and "
-             ':<>: 'GL.ShowType n)
+             ':<>: 'GL.Text " is outside the range ["
+             ':<>: 'GL.ShowType m
+             ':<>: 'GL.Text ".."
+             ':<>: 'GL.ShowType n
+             ':<>: 'GL.Text "]")
 
 -- | helper method that fails with a msg when True
 type family FailWhenT (b :: Bool) (msg :: GL.ErrorMessage) :: Constraint where
@@ -1273,3 +1275,9 @@ sum' = foldl' (+) 0
 
 product' :: (Foldable t, Num a) => t a -> a
 product' = foldl' (*) 1
+
+cmpOf :: Eq a => Ordering -> ([a] -> [a] -> Bool, String)
+cmpOf = \case
+           LT -> (isPrefixOf, "IsPrefix")
+           EQ -> (isInfixOf, "IsInfix")
+           GT -> (isSuffixOf, "IsSuffix")

@@ -39,7 +39,7 @@ import Predicate.Misc
 import Predicate.Util
 import qualified GHC.TypeLits as GL
 import Control.Lens
-import Data.List (dropWhileEnd, isInfixOf, isPrefixOf, isSuffixOf)
+import Data.List (dropWhileEnd)
 import qualified Data.Text.Lens as DTL
 import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
@@ -50,7 +50,7 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-
+import Control.Arrow (second)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -207,11 +207,7 @@ instance ( GetBool ignore
     let cmp = getOrdering @cmp
         ignore = getBool @ignore
         lwr = if ignore then map toLower else id
-        (ff,msg0) = case cmp of
-                    LT -> (isPrefixOf, "IsPrefixC")
-                    EQ -> (isInfixOf, "IsInfixC")
-                    GT -> (isSuffixOf, "IsSuffixC")
-
+        (ff,msg0) = second (<>"C") $ cmpOf cmp
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e

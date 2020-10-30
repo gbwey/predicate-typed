@@ -4,10 +4,10 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 49b80f7c774d6161d95e67e027ae1737c45fe7dd32161033aa5fe15db1471b84
+-- hash: 27025abbd4f913bb4b084f90b828539a965ba7c0b7b1eaada9454db7c0542abe
 
 name:           predicate-typed
-version:        0.7.4.0
+version:        0.7.4.1
 synopsis:       Predicates, Refinement types and Dsl
 description:    Please see the README on GitHub at <https://github.com/gbwey/predicate-typed#readme>
 category:       Data
@@ -92,6 +92,7 @@ library
     , template-haskell
     , text
     , th-lift
+    , th-lift-instances
     , these >=0.8
     , time
   if impl(ghc >= 8.8)
@@ -131,6 +132,7 @@ test-suite doctests
     , template-haskell
     , text
     , th-lift
+    , th-lift-instances
     , these >=0.8
     , time
   if impl(ghc >= 8.8)
@@ -179,6 +181,7 @@ test-suite predicate-typed-test
     , template-haskell
     , text
     , th-lift
+    , th-lift-instances
     , these >=0.8
     , time
   if impl(ghc >= 8.8)

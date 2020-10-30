@@ -1507,11 +1507,11 @@ instance ( Ord (PP p x)
 data p <..> q deriving Show
 infix 4 <..>
 
-type BetweenT p q = Between p q Id
+type BetweenOpT p q = Between p q Id
 
-instance P (BetweenT p q) x => P (p <..> q) x where
-  type PP (p <..> q) x = PP (BetweenT p q) x
-  eval _ = evalBool (Proxy @(BetweenT p q))
+instance P (BetweenOpT p q) x => P (p <..> q) x where
+  type PP (p <..> q) x = PP (BetweenOpT p q) x
+  eval _ = evalBool (Proxy @(BetweenOpT p q))
 
 -- | similar to 'all'
 --

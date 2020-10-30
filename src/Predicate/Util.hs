@@ -1,4 +1,5 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -162,6 +163,8 @@ import qualified Safe (initSafe, fromJustNote)
 import Control.Monad (ap)
 import Data.Bool (bool)
 import GHC.Generics (Generic, Generic1)
+import qualified Language.Haskell.TH.Lift as TH
+import Instances.TH.Lift ()
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -175,6 +178,7 @@ data ValP =
   | TrueP        -- ^ True predicate
   | ValP     -- ^ Any value
   deriving stock (Show, Ord, Eq, Read, Generic)
+  deriving TH.Lift
 
 makePrisms ''ValP
 
@@ -182,6 +186,7 @@ makePrisms ''ValP
 data PE = PE { _peValP :: !ValP -- ^ holds the result of running the predicate
              , _peString :: !String -- ^ optional strings to include in the results
              } deriving stock (Show, Read, Eq, Generic)
+               deriving TH.Lift
 
 makeLenses ''PE
 
@@ -245,6 +250,7 @@ instance Monoid ValP where
 -- | contains the typed result from evaluating an expression
 data Val a = Fail !String | Val !a
   deriving stock (Show, Eq, Ord, Read, Functor, Foldable, Traversable, Generic, Generic1)
+  deriving TH.Lift
 
 makePrisms ''Val
 
@@ -322,7 +328,9 @@ data TT a = TT { _ttValP :: !ValP -- ^ display value
                , _ttString :: !String  -- ^ detailed information eg input and output and text
                , _ttForest :: !(Forest PE) -- ^ the child nodes
                } deriving stock (Functor, Read, Show, Eq, Foldable, Traversable, Generic, Generic1)
+                 deriving TH.Lift
 
+-- dont expose lenses for _ttValP and _ttVal as they must be kept in sync: see ttVal
 makeLensesFor [("_ttString","ttString"),("_ttForest","ttForest")] ''TT
 
 instance Semigroup (TT a) where
@@ -377,16 +385,16 @@ mkNodeImpl opts (bp',bt) ss hs =
           in TT bp bt ss zs
       _ -> TT bp bt ss hs
 
--- | check that 'ValP' value is consistent with 'Val' a
+-- | check that the 'ValP' value is consistent with 'Val'
 validateValP :: ValP -> Val a -> ValP
 validateValP bp bt =
   case bt of
     Val _a -> case bp of
-                     FailP e -> errorInProgram $ "validateValP: found FailP for Val in Val e=" ++ e
+                     FailP e -> errorInProgram $ "validateValP: found Val and FailP e=" ++ e
                      _ -> bp
     Fail e -> case bp of
                 FailP e1 | e==e1 -> bp
-                         | otherwise -> errorInProgram $ "validateValP: found Fail but message mismatch in ValP " ++ show (e,e1)
+                         | otherwise -> errorInProgram $ "validateValP: found Fail and FailP but message mismatch in FailP " ++ show (e,e1)
                 _ -> errorInProgram $ "validateValP: found " ++ show bp ++ " expected FailP e=" ++ e
 
 -- | fix the 'ValP' value for the Bool case: ie use 'TrueP' and 'FalseP'
@@ -682,8 +690,8 @@ litL = litL' . oWidth
 
 litL' :: Int -> String -> String
 litL' i s =
-  let z = take i s
-  in z ++ if length z >= i then "..." else ""
+  let (z,e) = splitAt i s
+  in z ++ if null e then "" else "..."
 
 litBL :: POpts -> BL8.ByteString -> String
 litBL o s =
@@ -1251,7 +1259,7 @@ val2PBool afb bt = bt <$ afb r
               Val True -> TrueP
               Val False -> FalseP
 
--- | lens that keeps ValP in sync with Val for TT Bool
+-- | lens that keeps 'ValP' in sync with 'Val' for TT Bool
 --
 -- >>> (TT ValP (Val True) "xxx" [] & ttValBool %~ \b -> fmap not b) == TT FalseP (Val False) "xxx" []
 -- True
@@ -1272,7 +1280,7 @@ ttValBool afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
                Val True -> TrueP
                Val False -> FalseP
 
--- | lens from TT to Val that also keeps ValP in sync with Val
+-- | lens from 'TT' to 'Val' that also keeps 'ValP' in sync with 'Val'
 --
 -- >>> (TT FalseP (Val True) "xxx" [] & ttVal %~ id) == TT ValP (Val True) "xxx" []
 -- True

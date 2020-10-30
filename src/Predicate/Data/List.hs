@@ -104,7 +104,7 @@ import Predicate.Data.Ordering (type (==), OrdA', type (>))
 import Predicate.Data.Numeric (Mod)
 import Predicate.Data.Monoid (type (<>))
 import Control.Lens
-import Data.List (foldl', partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf, sortOn)
+import Data.List (foldl', partition, intercalate, inits, tails, unfoldr, sortOn)
 import Data.Proxy (Proxy(Proxy))
 import Control.Monad (zipWithM)
 import Data.Kind (Type)
@@ -2030,10 +2030,7 @@ instance ( P p x
   type PP (IsFixImpl cmp p q) x = Bool
   eval _ opts x = do
     let cmp = getOrdering @cmp
-        (ff,msg0) = case cmp of
-                    LT -> (isPrefixOf, "IsPrefix")
-                    EQ -> (isInfixOf, "IsInfix")
-                    GT -> (isSuffixOf, "IsSuffix")
+        (ff,msg0) = cmpOf cmp
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e

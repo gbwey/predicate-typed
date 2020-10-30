@@ -72,7 +72,6 @@ import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Ordering (type (==))
 import GHC.TypeLits (Nat,KnownNat)
-import qualified GHC.TypeLits as GL
 import Data.List (elemIndex)
 import Data.Function (fix)
 import Data.Typeable (Typeable, Proxy(Proxy))
@@ -81,7 +80,7 @@ import qualified Numeric
 import Data.Char (toLower)
 import Data.Ratio ((%))
 import GHC.Real (Ratio((:%)))
-import qualified Safe (fromJustNote)
+import qualified Safe (fromJustNote, atNote)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -958,7 +957,7 @@ instance ( Num (PP p x)
 data ReadBase' t (n :: Nat) p deriving Show
 
 instance ( Typeable (PP t x)
-         , ZwischenT 2 36 n
+         , BetweenT "ReadBase'" 2 36 n
          , Show (PP t x)
          , Num (PP t x)
          , KnownNat n
@@ -1074,8 +1073,7 @@ getValidBase n =
 --
 data ShowBase (n :: Nat) deriving Show
 
-instance ( 2 GL.<= n
-         , n GL.<= 36
+instance ( BetweenT "ShowBase" 2 36 n
          , KnownNat n
          , Integral x
          ) => P (ShowBase n) x where
@@ -1087,7 +1085,7 @@ instance ( 2 GL.<= n
         p :: Integer
         p = fromIntegral x
         (ff,a') = if p < 0 then (('-':), abs p) else (id,p)
-        b = Numeric.showIntAtBase (fromIntegral n) (xs !!) a' ""
+        b = Numeric.showIntAtBase (fromIntegral n) (Safe.atNote "ShowBase out of range" xs) a' ""
     in pure $ mkNode opts (Val (ff b)) (msg0 <> " " <> litL opts (ff b) <> showVerbose opts " | " p) []
 
 -- | Display a number at base >= 2 but just show as a list of ints: ignores the sign
