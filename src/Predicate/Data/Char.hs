@@ -19,8 +19,7 @@
 -- | promoted character functions
 module Predicate.Data.Char (
  -- ** constructor
-    Char1
-  , C
+    C
 
  -- ** character predicates
   , IsLower
@@ -71,32 +70,19 @@ import qualified Data.Type.Equality as DE
 
 -- | extracts the first character from a non empty 'GHC.TypeLits.Symbol'
 --
--- >>> pz @(Char1 "aBc") ()
--- Val 'a'
---
-data Char1 (s :: Symbol) deriving Show
-instance ( KnownSymbol s
-         , FailUnlessT (GL.CmpSymbol s "" DE.== 'GT)
-              ('GL.Text "Char1 symbol cannot be empty")
-         ) => P (Char1 s) a where
-  type PP (Char1 s) a = Char
-  eval _ opts _ =
-     case symb @s of
-       [] -> errorInProgram "Char1: found empty Symbol/string"
-       c:_ -> pure $ mkNode opts (Val c) ("Char1 " <> showL opts c) []
-
-
--- | extracts the first character from a non empty 'GHC.TypeLits.Symbol': shorthand for 'Char1'
---
 -- >>> pz @(C "aBc") ()
 -- Val 'a'
 --
 data C (s :: Symbol) deriving Show
-type CT s = Char1 s
-
-instance P (CT s) x => P (C s) x where
-  type PP (C s) x = PP (CT s) x
-  eval _ = eval (Proxy @(CT s))
+instance ( KnownSymbol s
+         , FailUnlessT (GL.CmpSymbol s "" DE.== 'GT)
+              ('GL.Text "C symbol cannot be empty")
+         ) => P (C s) a where
+  type PP (C s) a = Char
+  eval _ opts _ =
+     case symb @s of
+       [] -> errorInProgram "C: found empty Symbol/string"
+       c:_ -> pure $ mkNode opts (Val c) ("C " <> showL opts c) []
 
 
 -- | a predicate for determining if a character belongs to the given character set

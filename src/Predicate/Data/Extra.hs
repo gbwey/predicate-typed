@@ -485,7 +485,7 @@ instance x ~ [Int]
          Right _ ->
           let xs = zipWith (*) (reverse x) (Safe.cycleNote msg0 [1,2])
               ys = map (\w -> if w>=10 then w-9 else w) xs
-              z = sum ys
+              z = sum' ys
               ret = z `mod` 10
           in if ret == 0 then mkNodeB opts True (msg0 <> " | " <> showL opts x) []
              else mkNodeB opts False (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " x) []

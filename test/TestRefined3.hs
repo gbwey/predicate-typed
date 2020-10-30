@@ -59,7 +59,7 @@ namedTests =
 
 unnamedTests :: [IO ()]
 unnamedTests = [
-    (@?=) [(unsafeRefined3 255 "ff", "")] (reads @(Refined3 OAN (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 255 \"ff\"") -- escape quotes cos read instance for String
+    (@?=) [(unsafeRefined3 255 "ff", "")] (reads @(Refined3 OAN (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 255 \"ff\"") -- escape quotes because it is a read instance for String
   , (@?=) [] (reads @(Refined3 OAN (ReadBase Int 16) (Between 0 255 Id) (ShowBase 16) String) "Refined3 256 \"100\"")
   , (@?=) [(unsafeRefined3 (-1234) "-4d2", "")] (reads @(Refined3 OAN (ReadBase Int 16) (Id < 0) (ShowBase 16) String) "Refined3 (-1234) \"-4d2\"")
 

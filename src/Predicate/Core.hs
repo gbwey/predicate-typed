@@ -10,6 +10,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE NoStarIsType #-}
@@ -116,7 +117,6 @@ module Predicate.Core (
 
  -- ** miscellaneous
   , Swap
-
   ) where
 import Predicate.Misc
 import Predicate.Util
@@ -131,9 +131,11 @@ import Data.These (These(..))
 import Control.Monad (zipWithM)
 import Control.Arrow (right)
 import Data.List (find)
+import Data.Maybe (fromMaybe)
 import Data.Tree (Tree)
 import Data.Coerce (Coercible)
 import Data.Tree.Lens (root)
+import qualified Text.Regex.PCRE.Heavy as RH
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -1111,7 +1113,7 @@ instance ( P p a
                     if anyOf (ttForest . folded . root . peValP) (has _FailP) qq
                     then qq & ttForest %~ (hh pp:) -- we still need pp for context
                     else e
-          Right q -> mkNodeCopy opts qq (lit3 opts msg0 q "" (topMessageEgregious qq)) [hh pp, hh qq]
+          Right q -> mkNodeCopy opts qq (lit3 opts msg0 q "" (topMessageEgregious (_ttString qq))) [hh pp, hh qq]
 
 -- | infixl version of 'Predicate.Core.>>'
 data p >>> q deriving Show
@@ -1132,10 +1134,14 @@ instance P (LeftArrowsT p q) x => P (p << q) x where
   type PP (p << q) x = PP (LeftArrowsT p q) x
   eval _ = eval (Proxy @(LeftArrowsT p q))
 
--- bearbeiten! only used by >>
-topMessageEgregious :: TT a -> String
-topMessageEgregious pp = innermost (_ttString pp)
-  where innermost = ('{':) . reverse . ('}':) . takeWhile (/='{') . dropWhile (=='}') . reverse
+topMessageEgregious :: String -> String
+topMessageEgregious s =
+  let ret = fromMaybe "" $ (RH.scan topMessageExtractRe s ^? _last . _2 . _last)
+  in '{' : (if null ret then s else ret) <> "}"
+
+
+topMessageExtractRe :: RH.Regex
+topMessageExtractRe = [RH.re|^.*\{([^}]+)\}.*?|]
 
 -- | unwraps a value (see '_Wrapped'')
 --
@@ -1208,8 +1214,14 @@ instance P (WrapT t p) x => P (Wrap t p) x where
   type PP (Wrap t p) x = PP (WrapT t p) x
   eval _ = eval (Proxy @(WrapT t p))
 
-
 -- | used internally for type inference
+--
+-- >>> pz @(FromIntegral' (Proxy (SG.Sum _) >> UnproxyT) 23) ()
+-- Val (Sum {getSum = 23})
+--
+-- >>> pz @(FromIntegral' (Hole (SG.Sum _)) 23) () -- equivalent to Proxy UnproxyT above
+-- Val (Sum {getSum = 23})
+--
 data UnproxyT deriving Show
 
 instance Typeable t => P UnproxyT (Proxy (t :: Type)) where

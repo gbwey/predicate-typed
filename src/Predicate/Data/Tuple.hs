@@ -356,6 +356,9 @@ instance P (OrAT p q) x => P (p |+ q) x where
 -- Present (1999-01-01,2001-02-12) (Both)
 -- Val (1999-01-01,2001-02-12)
 --
+-- >>> pz @(Both (Id * Id) >> ((Fst + Snd) ** (DivI Double 1 2))) (3,4)
+-- Val 5.0
+--
 data Both p deriving Show
 instance ( P p a
          , P p a'
@@ -373,14 +376,21 @@ instance ( P p a
           Right b' ->
             mkNode opts (Val (b,b')) msg0 [hh pp, hh pp']
 
--- | similar to 'Data.Function.on'
+-- | similar to 'Data.Function.on': may require kind signatures: Both is a better choice
 --
 -- >>> pz @('(4,2) >> On (**) (FromIntegral _)) ()
+-- Val 16.0
+--
+-- >>> pz @('(4,2) >> Both (FromIntegral _) >> Fst ** Snd) () -- equivalent to the above but easier on ghc
 -- Val 16.0
 --
 -- >>> pz @(On (+) (Id * Id) >> Id ** (1 % 2 >> FromRational _)) (3,4)
 -- Val 5.0
 --
+-- >>> pz @(Both (Id * Id) >> ((Fst + Snd) ** (1 % 2 >> FromRational _))) (3,4) -- equivalent to the above but easier on ghc
+-- Val 5.0
+--
+
 data On (p :: Type -> Type -> k2) q deriving Show
 
 instance ( P q a
@@ -403,7 +413,7 @@ instance ( P q a
               Left e -> e
               Right p -> mkNode opts (Val p) msg0 [hh qq, hh qq', hh pp]
 
--- | create a n tuple from a list
+-- | create a @n@ tuple from a list or fail
 --
 -- >>> pz @(Tuple 4) "abcdefg"
 -- Val ('a','b','c','d')
@@ -435,7 +445,7 @@ instance ( KnownNat n
          Left es -> mkNode opts (Fail (msg0 <> " not enough elements(" <> show (length as) <> ")")) (showVerbose opts " | " es) []
          Right r -> mkNode opts (Val r) msg0 []
 
--- | create a n tuple from a list
+-- | create a @n@ tuple from a list and return as an Either
 --
 -- >>> pz @(Tuple' 4) "abcdefg"
 -- Val (Right ('a','b','c','d'))

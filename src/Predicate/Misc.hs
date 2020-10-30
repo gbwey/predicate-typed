@@ -125,6 +125,8 @@ module Predicate.Misc (
   , asProxyRight
   , removeAnsi
   , _Id
+  , sum'
+  , product'
 
   ) where
 import qualified GHC.TypeNats as GN
@@ -149,7 +151,7 @@ import Data.ByteString (ByteString)
 import GHC.Stack (HasCallStack)
 import Data.Containers.ListUtils (nubOrd)
 import Control.Arrow (Arrow((***)),ArrowChoice(left))
-import Data.List (intercalate, unfoldr)
+import Data.List (foldl', intercalate, unfoldr)
 import qualified Safe (headNote)
 import Data.Char (isSpace)
 import qualified Control.Exception as E
@@ -1188,7 +1190,6 @@ nullIf s t
 
 pureTryTest :: a -> IO (Either () a)
 pureTryTest = fmap (left (const ())) . E.try @E.SomeException . E.evaluate
---pureTryTest = over (mapped . _Left) (const ()) . E.try @E.SomeException . E.evaluate
 
 pureTryTestPred :: (String -> Bool)
                 -> a
@@ -1267,3 +1268,8 @@ instance SwapC ((,,,,,) a b c d) where
 instance SwapC ((,,,,,,) a b c d e) where
   swapC (a,b,c,d,e,f,g) = (a,b,c,d,e,g,f)
 
+sum' :: (Foldable t, Num a) => t a -> a
+sum' = foldl' (+) 0
+
+product' :: (Foldable t, Num a) => t a -> a
+product' = foldl' (*) 1

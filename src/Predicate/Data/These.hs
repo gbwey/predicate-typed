@@ -340,7 +340,7 @@ instance ( P p a
 data IsTh (th :: These x y) deriving Show
 -- x y can be anything
 
--- trying to avoid Show instance cos of ambiguities
+-- trying to avoid Show instance because more likely to have ambiguity errors
 instance ( x ~ These a b
          , Show a
          , Show b

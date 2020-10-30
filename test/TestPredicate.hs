@@ -91,7 +91,7 @@ allTests =
   , expectEQR (Just ()) (pz @(Proxy GE.Any) () ^!? acts . _Val . only (Proxy @_))
   , expectEQR (Just ()) (pz @(Proxy _) () ^!? acts . _Val . only (Proxy @GE.Any))
 
-  , expectBT (Val (111,'b')) $ pl @('(123,Char1 "c") >> (Id - 12 *** Pred)) ()
+  , expectBT (Val (111,'b')) $ pl @('(123,C "c") >> (Id - 12 *** Pred)) ()
   , expectBT (Fail "'Nothing found Just") $ pl @'Nothing (Just 12)
 
   , expectBT (Val [Just 1,Just 2,Just 3,Just 4]) $ pl @Sequence (Just [1..4])
@@ -116,7 +116,7 @@ allTests =
   , expectBT (Val (4,("aa",'x'))) $ pl @'(4,'(Fst,Snd)) ("aa",'x')
   , expectBT (Val (4,"aa",'x')) $ pl @'(4,Fst,Snd) ("aa",'x')
   , expectBT (Val (map ModifiedJulianDay [0,1,2,3,4,5])) $ pl @(Fst ... Snd) (ModifiedJulianDay 0, ModifiedJulianDay 5)
-  , expectBT (Val (4,'x')) $ pl @('(,) 4 %% Char1 "x") ()
+  , expectBT (Val (4,'x')) $ pl @('(,) 4 %% C "x") ()
   , expectBT (Val (4,"abc")) $ pl @('(,) %% 4 %% "abc") ()
   , expectBT (Val ("abc",4)) $ pl @(4 %& "abc" %& '(,)) ()
   , expectBT (Val ("abc",4)) $ pl @(FlipT '(,) 4 "abc") ()
@@ -187,7 +187,7 @@ type Fizzbuzz''' = Case (MkLeft String Fst) '[Id `Mod` 15 == 0, Id `Mod` 3 == 0,
 
 type Fizzbuzzs = Map Fizzbuzz
 type Fizzbuzzs2 = Map (Fizzbuzz >> If (Null' Snd) (MkLeft String Fst) (MkRight Int Snd))
--- best one cos leverages type info to determine Either a b
+-- best one as it leverages type info to determine Either a b
 type Fizzbuzzs3 = Map (Fizzbuzz >> If (Snd == "") (MkLeft' Snd Fst) (MkRight' Fst Snd))
 
 type Ip6Test = Resplit ":"

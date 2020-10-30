@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -95,7 +96,6 @@ import Data.Bifoldable
 -- >>> :m + Data.Ratio
 -- >>> :m + Control.Lens
 -- >>> :m + Control.Lens.Action
--- >>> :m + System.Random
 
 -- | similar to 'Control.Applicative.<$'
 --
@@ -349,15 +349,6 @@ instance ( Show (t (t a))
 --
 -- >>> pz @('True $& 4 $& Id $$ "aa") (,,)
 -- Val (4,True,"aa")
---
--- >>> pz @(Id $$ '(100,120)) (flip randomR (mkStdGen 7))
--- Val (114,320112 40692)
---
--- >>> pz @(Id $$ GenPure 12) (randomR ('a','f'))
--- Val ('f',520182 40692)
---
--- >>> pz @(Id $$ GenIO) (randomR ('a','f')) ^!? acts . _Val . _1 . nearly 'a' (`elem` ['a'..'f'])
--- Just ()
 --
 -- >>> pz @((Id $$ "abc" $$ Wrap (SG.Sum _) 14) >> Id <> Id) These
 -- Val (These "abcabc" (Sum {getSum = 28}))
@@ -1298,7 +1289,7 @@ _bimapImpl opts proxyp proxyq msg0 hhs nab = do
                     & ttForest %~ (hhs <>)
                     & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
 
-
+-- | adt for testing out possible outcomes of Bifoldable used in BiMap
 data ELR a b = EEmpty | ELeft !a | ERight !b | EBoth !a !b deriving (Show,Eq,Ord,Foldable,Functor,Traversable)
 
 instance Bifunctor ELR where
@@ -1324,3 +1315,11 @@ instance Bitraversable ELR where
       ELeft a -> ELeft <$> f a
       ERight b -> ERight <$> g b
       EBoth a b -> EBoth <$> f a <*> g b
+
+instance SwapC ELR where
+  swapC =
+    \case
+      EEmpty -> EEmpty
+      ELeft a -> ERight a
+      ERight b -> ELeft b
+      EBoth a b -> EBoth b a

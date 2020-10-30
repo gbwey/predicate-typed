@@ -58,7 +58,7 @@ namedTests =
 
 unnamedTests :: [IO ()]
 unnamedTests = [
-    (@?=) [(unsafeRefined2 255 "ff", "")] (reads @(Refined2 OAN (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 255 \"ff\"") -- escape quotes cos read instance for String
+    (@?=) [(unsafeRefined2 255 "ff", "")] (reads @(Refined2 OAN (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 255 \"ff\"") -- escape quotes as it is a read instance for String
   , (@?=) [] (reads @(Refined2 OAN (ReadBase Int 16) (0 <..> 0xff) String) "Refined2 256 \"100\"")
   , (@?=) [(unsafeRefined2 (-1234) "-4d2", "")] (reads @(Refined2 OAN (ReadBase Int 16) (Id < 0) String) "Refined2 (-1234) \"-4d2\"")
   , (@?=) (Right (unsafeRefined2 [1,2,3,4] "1.2.3.4")) (newRefined2 "1.2.3.4" :: Either Msg2 (Ip4R OAN))
@@ -161,7 +161,7 @@ unnamedTests = [
   , expect2 (Left $ XTF [1,2,3,4,5,6,7,8,9,0,1] "invalid checkdigit") $ runIdentity $ eval2P (luhn11 @OZ) "12345678901"
   ]
 
--- better to use Guard for op boolean check cos we get better errormessages
+-- better to use Guard for op boolean check as we get better error messages
 -- 1. packaged up as a promoted tuple
 type Tst3 (opts :: Opt) = '(opts, Map' (ReadP Int Id) (Resplit "\\."), (Len == 4) && All (0 <..> 0xff), String)
 
@@ -342,7 +342,7 @@ testKindSignature2E :: Either Msg2
      (Int,Int,String))
 testKindSignature2E = newRefined2 (1,2,"defghi")
 
--- awkward cos FoldMap t p has p for location of stuff and then we need to run in a context (usually Id relative to p)
+-- awkward as  FoldMap t p has p for location of stuff and then we need to run in a context (usually Id relative to p)
 testKindSignature2F :: Either Msg2
    (Refined2 OU
      (Second (Map (ReadP Int '[Id])))

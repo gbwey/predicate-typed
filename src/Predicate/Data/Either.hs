@@ -194,11 +194,11 @@ instance x ~ Either a b
 -- >>> pz @(ShowP Id +++ Reverse) (Right "hello")
 -- Val (Right "olleh")
 --
--- >>> pl @(HeadDef 'False Id +++ Id) (Right @[Bool] 1) -- need @[Bool] cos we said 'False!
+-- >>> pl @(HeadDef 'False Id +++ Id) (Right @[Bool] 1) -- need @[Bool] to match with 'False
 -- Present Right 1 ((+++) Right 1 | 1)
 -- Val (Right 1)
 --
--- >>> pl @(HeadDef 'False Id +++ Id) (Left [True,False]) -- need @[Bool] cos we said 'False!
+-- >>> pl @(HeadDef 'False Id +++ Id) (Left [True,False]) -- need @[Bool] to match with 'False!
 -- Present Left True ((+++) Left True | [True,False])
 -- Val (Left True)
 --
@@ -214,7 +214,7 @@ instance x ~ Either a b
 -- Present Right 1 ((+++) Right 1 | 1)
 -- Val (Right 1)
 --
--- >>> pl @(HeadDef () Id +++ Id) (Right @[()] 1) -- this breaks! cos Left doesnt have a type
+-- >>> pl @(HeadDef () Id +++ Id) (Right @[()] 1) -- this breaks! as Left doesnt have a type
 -- Present Right 1 ((+++) Right 1 | 1)
 -- Val (Right 1)
 --

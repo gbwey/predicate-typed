@@ -37,7 +37,7 @@ import Predicate.Misc
 import Predicate.Util
 import qualified GHC.TypeLits as GL
 import Data.Kind (Type)
-import Data.Typeable
+import Data.Typeable (Proxy(..))
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -48,7 +48,7 @@ import Data.Typeable
 -- >>> import qualified Data.Semigroup as SG
 -- >>> :m + Text.Show.Functions
 -- >>> :m + Data.Ratio
-
+-- >>> :m + Data.Typeable
 
 -- | makes a proxy from a simple type: similar to the P instance for 'Proxy but requires a show instance
 --

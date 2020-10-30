@@ -73,7 +73,8 @@ import Predicate.Util
 import Predicate.Data.Ordering (type (==))
 import GHC.TypeLits (Nat,KnownNat)
 import qualified GHC.TypeLits as GL
-import Data.List (elemIndex, unfoldr)
+import Data.List (elemIndex)
+import Data.Function (fix)
 import Data.Typeable (Typeable, Proxy(Proxy))
 import Data.Kind (Type)
 import qualified Numeric
@@ -91,6 +92,7 @@ import qualified Safe (fromJustNote)
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Time
 
+-- | 'fromInteger' function where you need to provide a reference to the type @t@ of the result
 data FromInteger' t n deriving Show
 
 instance ( Num (PP t a)
@@ -143,6 +145,7 @@ instance P (FromIntegerT t) x => P (FromInteger t) x where
   type PP (FromInteger t) x = PP (FromIntegerT t) x
   eval _ = eval (Proxy @(FromIntegerT t))
 
+-- | 'fromIntegral' function where you need to provide a reference to the type @t@ of the result
 data FromIntegral' t n deriving Show
 
 instance ( Num (PP t a)
@@ -215,7 +218,7 @@ instance ( a ~ PP p x
         let r = toRational a
         in mkNode opts (Val r) (show3 opts msg0 r a) [hh pp]
 
--- | 'fromRational' function where you need to provide the type @t@ of the result
+-- | 'fromRational' function where you need to provide a reference to the type @t@ of the result
 --
 -- >>> pl @(FromRational' Fst Snd) (1,2 % 5)
 -- Present 0.4 (FromRational 0.4 | 2 % 5)
@@ -254,7 +257,7 @@ instance P (FromRationalT t) x => P (FromRational t) x where
   type PP (FromRational t) x = PP (FromRationalT t) x
   eval _ = eval (Proxy @(FromRationalT t))
 
--- | 'truncate' function where you need to provide the type @t@ of the result
+-- | 'truncate' function where you need to provide a reference to the type @t@ of the result
 --
 -- >>> pl @(Truncate' (Fst >> UnproxyT) Snd) (Proxy @Integer,2.3)
 -- Present 2 (Truncate 2 | 2.3)
@@ -294,7 +297,7 @@ instance P (TruncateT t) x => P (Truncate t) x where
   type PP (Truncate t) x = PP (TruncateT t) x
   eval _ = eval (Proxy @(TruncateT t))
 
--- | 'ceiling' function where you need to provide the type @t@ of the result
+-- | 'ceiling' function where you need to provide a reference to the type @t@ of the result
 data Ceiling' t p deriving Show
 
 instance ( P p x
@@ -325,7 +328,7 @@ instance P (CeilingT t) x => P (Ceiling t) x where
   type PP (Ceiling t) x = PP (CeilingT t) x
   eval _ = eval (Proxy @(CeilingT t))
 
--- | 'floor' function where you need to provide the type @t@ of the result
+-- | 'floor' function where you need to provide a reference to the type @t@ of the result
 data Floor' t p deriving Show
 
 instance ( P p x
@@ -951,6 +954,7 @@ instance ( Num (PP p x)
         in mkNode opts (Val d) (show3 opts msg0 d p) [hh pp]
 
 -- supports negative numbers unlike readInt
+-- | Read a number using base 2 through a maximum of 36 with @t@ a reference to a type
 data ReadBase' t (n :: Nat) p deriving Show
 
 instance ( Typeable (PP t x)
@@ -1110,7 +1114,7 @@ instance ( PP p x ~ a
       Right (fromIntegral -> n,fromIntegral -> p,nn,pp) ->
          let hhs = [hh nn, hh pp]
          in if n < 2 then mkNode opts (Fail (msg0 <> " base must be greater than 1")) "" hhs
-            else let xs = reverse $ unfoldr (\s -> if s<1 then Nothing else Just (swapC (divMod s n))) (abs p)
+            else let xs = fix (\f s -> if s<1 then id else let (a,b) = divMod s n in f a . (b:)) (abs p) []
                  in mkNode opts (Val xs) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " p) hhs
 
 -- | convert to bits

@@ -133,7 +133,7 @@ instance P (LookupFailT msg v w) x => P (LookupFail msg v w) x where
   type PP (LookupFail msg v w) x = PP (LookupFailT msg v w) x
   eval _ = eval (Proxy @(LookupFailT msg v w))
 
--- | similar to 'Data.List.!!' using an 'Ixed' container
+-- | similar to 'Data.List.!!' for lists
 --
 -- >>> pz @(Ix 4 "not found") ["abc","D","eF","","G"]
 -- Val "G"
@@ -226,6 +226,7 @@ instance ( P def (Proxy a)
              Right _ -> mkNodeCopy opts pp msg1 [hh pp]
          Just a -> pure $ mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
+-- | similar to 'Data.List.!!' for lists with a default error message on failure
 data Ix' (n :: Nat) deriving Show
 type IxT' (n :: Nat) = Ix n (FailP "Ix index not found")
 

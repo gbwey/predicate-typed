@@ -340,23 +340,23 @@ instance ToStringC BL8.ByteString where
 instance ToStringC BS8.ByteString where
   toStringC = BS8.unpack
 
--- | 'fromString' function where you need to provide the type @t@ of the result
-data FromString' t s deriving Show
+-- | 'fromString' function where you need to provide a reference to the type @t@ of the result
+data FromString' t p deriving Show
 
-instance ( P s a
-         , PP s a ~ String
+instance ( P p a
+         , PP p a ~ String
          , Show (PP t a)
          , IsString (PP t a)
-         ) => P (FromString' t s) a where
-  type PP (FromString' t s) a = PP t a
+         ) => P (FromString' t p) a where
+  type PP (FromString' t p) a = PP t a
   eval _ opts a = do
     let msg0 = "FromString"
-    ss <- eval (Proxy @s) opts a
-    pure $ case getValueLR NoInline opts msg0 ss [] of
+    pp <- eval (Proxy @p) opts a
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
-      Right s ->
-        let b = fromString @(PP t a) s
-        in mkNode opts (Val b) (msg0 <> " " <> showL opts b) [hh ss]
+      Right p ->
+        let b = fromString @(PP t a) p
+        in mkNode opts (Val b) (msg0 <> " " <> showL opts b) [hh pp]
 
 -- | 'fromString' function where you need to provide the type @t@ of the result
 --

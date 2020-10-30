@@ -104,7 +104,7 @@ import Predicate.Data.Ordering (type (==), OrdA', type (>))
 import Predicate.Data.Numeric (Mod)
 import Predicate.Data.Monoid (type (<>))
 import Control.Lens
-import Data.List (partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf, sortOn)
+import Data.List (foldl', partition, intercalate, inits, tails, unfoldr, isInfixOf, isPrefixOf, isSuffixOf, sortOn)
 import Data.Proxy (Proxy(Proxy))
 import Control.Monad (zipWithM)
 import Data.Kind (Type)
@@ -1558,7 +1558,7 @@ instance ( x ~ [a]
   type PP Reverse x = x
   eval _ opts as =
     let msg0 = "Reverse"
-        d = reverse as
+        d = foldl' (flip (:)) [] as
     in pure $ mkNode opts (Val d) (show3 opts msg0 d as) []
 
 -- | reverses using 'reversing'
@@ -1948,7 +1948,7 @@ instance ( x ~ [a]
   type PP Sum x = ExtractAFromTA x
   eval _ opts as =
     let msg0 = "Sum"
-        v = sum as
+        v = sum' as
     in pure $ mkNode opts (Val v) (show3 opts msg0 v as) []
 
 -- | similar to 'Data.List.product'
@@ -1968,7 +1968,7 @@ instance ( x ~ [a]
   type PP Product x = ExtractAFromTA x
   eval _ opts as =
     let msg0 = "Product"
-        v = product as
+        v = product' as
     in pure $ mkNode opts (Val v) (show3 opts msg0 v as) []
 
 -- | similar to 'Data.List.minimum'
@@ -1990,9 +1990,9 @@ instance ( x ~ [a]
     let msg0 = "Min"
     pure $ case as' of
      [] -> mkNode opts (Fail "empty list") msg0 []
-     as@(_:_) ->
-       let v = minimum as
-       in mkNode opts (Val v) (show3 opts msg0 v as) []
+     xs@(a:as) ->
+       let v = foldl' min a as
+       in mkNode opts (Val v) (show3 opts msg0 v xs) []
 
 -- | similar to 'Data.List.maximum'
 --
@@ -2013,9 +2013,9 @@ instance ( x ~ [a]
     let msg0 = "Max"
     pure $ case as' of
       [] -> mkNode opts (Fail "empty list") msg0 []
-      as@(_:_) ->
-        let v = maximum as
-        in mkNode opts (Val v) (show3 opts msg0 v as) []
+      xs@(a:as) ->
+        let v = foldl' max a as
+        in mkNode opts (Val v) (show3 opts msg0 v xs) []
 
 data IsFixImpl (cmp :: Ordering) p q deriving Show
 

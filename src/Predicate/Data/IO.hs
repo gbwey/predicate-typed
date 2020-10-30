@@ -43,28 +43,13 @@ module Predicate.Data.IO (
   , TimeUtc
   , TimeZt
 
-  -- ** random
-  , GenIO
-  , GenPure
-  , GenNext
-  , GenSplit
-  , GenRange
-  , RandomNext
-  , RandomList
-  , RandomRNext
-  , RandomRList
-
  ) where
 import Predicate.Core
 import Predicate.Misc
 import Predicate.Util
-import Predicate.Data.Enum (type (...))
 import Predicate.Data.Maybe (IsJust)
-import Predicate.Data.Iterator (Foldl)
-import Predicate.Data.List (type (:+))
-import Predicate.Data.Monoid (type (<>), MEmptyT)
+import Predicate.Data.Monoid (type (<>))
 import Predicate.Data.ReadShow (ReadP)
-import Predicate.Data.Tuple (Second)
 import GHC.TypeLits (Symbol,KnownSymbol)
 import Data.Proxy (Proxy(Proxy))
 import qualified Control.Exception as E
@@ -75,7 +60,6 @@ import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
 import System.IO (hPutStr, withFile, IOMode(WriteMode, AppendMode))
 import System.Environment (getEnvironment, lookupEnv)
 import qualified Data.ByteString.Char8 as BS8
-import System.Random
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -358,160 +342,4 @@ instance P Stdin x where
       Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" []
       Just (Left e) -> mkNode opts (Fail $ msg0 <> ":" <> e) "" []
       Just (Right ss) -> mkNode opts (Val ss) (msg0 <> "[" <> litVerbose opts "" ss <> "]") []
-
--- | generate a random number: see 'System.Random.newStdGen'
-data GenIO deriving Show
-
-instance P GenIO x where
-  type PP GenIO x = StdGen
-  eval _ opts _ = do
-    let msg0 = "GenIO"
-    mg <- runIO newStdGen
-    pure $ case mg of
-      Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" []
-      Just g -> mkNode opts (Val g) (msg0 <> "[" <> showVerbose opts "" g <> "]") []
-
--- | similar to 'System.Random.mkStdGen'
---
--- >>> pz @(GenPure Id) 1234
--- Val 1235 1
---
-data GenPure p deriving Show
-
-instance (PP p x ~ Int, P p x) => P (GenPure p) x where
-  type PP (GenPure p) x = StdGen
-  eval _ opts x = do
-    let msg0 = "GenPure"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR NoInline opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let g = mkStdGen p
-        in mkNode opts (Val g) msg0 [hh pp]
-
--- | get the next random number of type @t@ using generator @r@ : similar to 'System.Random.random'
---
--- >>> pz @(UnfoldN 5 (RandomNext Bool Id) Id) (mkStdGen 3)
--- Val [True,True,False,True,True]
---
-data RandomNext (t :: Type) p deriving Show
-
-instance ( Random t
-         , P p x
-         , Show (PP p x)
-         , RandomGen (PP p x)
-         ) => P (RandomNext t p) x where
-  type PP (RandomNext t p) x = (t, PP p x)
-  eval _ opts x = do
-    let msg0 = "RandomNext"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR NoInline opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let (a,g) = random p
-        in mkNode opts (Val (a,g)) (msg0 <> "[" <> showVerbose opts "" g <> "]") [hh pp]
-
--- | get a list of @n@ random numbers of type @t@ using generator @p@: similar to 'System.Random.randoms'
---
--- >>> pz @(RandomList 10 Bool Id) (mkStdGen 4)
--- Val ([True,True,False,True,True,True,True,False,False,True],2036574526 1336516156)
---
-data RandomList n (t :: Type) p deriving Show
-type RandomListT n t p = Foldl (Fst >> Second (RandomNext t Id) >> '(L21 :+ Fst, L22)) '(MEmptyT [t],p) (1...n)
-
-instance P (RandomListT n t p) x => P (RandomList n t p) x where
-  type PP (RandomList n t p) x = PP (RandomListT n t p) x
-  eval _ = eval (Proxy @(RandomListT n t p))
-
-
--- | get the next random number of type @t@ in range between @p@ and @q@ using generator @r@ : similar to 'System.Random.randomR'
---
--- >>> pz @(Foldl (Fst >> Second (RandomRNext Int 1 100 Id) >> '(L21 :+ Fst, L22)) '( MEmptyT [Int] ,Id) (1...5)) (mkStdGen 3)
--- Val ([12,26,33,94,64],781515869 652912057)
---
--- >>> pz @(UnfoldN 10 (RandomRNext _ (C "A") (C "H") Id) Id) (mkStdGen 3)
--- Val "DBABDDEEEA"
---
-data RandomRNext (t :: Type) p q r deriving Show
-
-instance ( Random t
-         , P r x
-         , RandomGen (PP r x)
-         , Show (PP r x)
-         , PP p x ~ t
-         , PP q x ~ t
-         , P p x
-         , P q x
-         ) => P (RandomRNext t p q r) x where
-  type PP (RandomRNext t p q r) x = (t, PP r x)
-  eval _ opts x = do
-    let msg0 = "RandomRNext"
-    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
-    case lr of
-      Left e -> pure e
-      Right (p,q,pp,qq) -> do
-        rr <- eval (Proxy @r) opts x
-        pure $ case getValueLR NoInline opts msg0 rr [hh pp,hh qq] of
-          Left e -> e
-          Right r ->
-            let (a,g) = randomR (p,q) r
-            in mkNode opts (Val (a,g)) (msg0 <> "[" <> showVerbose opts "" g <> "]") [hh pp, hh qq, hh rr]
-
--- | list @n@ random numbers of type @t@ in range between @p@ and @q@ using generator @r@ : similar to 'System.Random.randomRs'
---
--- >>> pz @(RandomRList 10 Int 0 6 Id) (mkStdGen 1)
--- Val ([6,6,5,1,3,0,3,6,5,2],1244126523 1336516156)
---
--- >>> pz @(RandomRList 10 _ (C "A") (C "F") Id) (mkStdGen 1)
--- Val ("EEBCBEFBEF",1244126523 1336516156)
---
-data RandomRList n (t :: Type) p q r deriving Show
-type RandomRListT n t p q r = Foldl (Fst >> Second (RandomRNext t p q Id) >> '(L21 :+ Fst, L22)) '(MEmptyT [t],r) (1...n)
-
-instance P (RandomRListT n t p q r) x => P (RandomRList n t p q r) x where
-  type PP (RandomRList n t p q r) x = PP (RandomRListT n t p q r) x
-  eval _ = eval (Proxy @(RandomRListT n t p q r))
-
--- | similar to 'System.Random.split'
-data GenSplit p deriving Show
-
-instance (RandomGen (PP p x), P p x) => P (GenSplit p) x where
-  type PP (GenSplit p) x = (PP p x, PP p x)
-  eval _ opts x = do
-    let msg0 = "GenSplit"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR NoInline opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let g = split p
-        in mkNode opts (Val g) msg0 [hh pp]
-
-
--- | similar to 'System.Random.next'
-data GenNext p deriving Show
-
-instance (RandomGen (PP p x), P p x) => P (GenNext p) x where
-  type PP (GenNext p) x = (Int, PP p x)
-  eval _ opts x = do
-    let msg0 = "GenNext"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR NoInline opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let g = next p
-        in mkNode opts (Val g) msg0 [hh pp]
-
--- | similar to 'System.Random.genRange'
-data GenRange p deriving Show
-
-instance (RandomGen (PP p x), P p x) => P (GenRange p) x where
-  type PP (GenRange p) x = (Int, Int)
-  eval _ opts x = do
-    let msg0 = "GenRange"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR NoInline opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let g = genRange p
-        in mkNode opts (Val g) msg0 [hh pp]
 

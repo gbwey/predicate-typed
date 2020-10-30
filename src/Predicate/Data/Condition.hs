@@ -314,7 +314,7 @@ instance ( KnownNat n
         msgbase0 = "Case(" <> show cpos <> " of " <> show (n-1) <> ")"
         msgbase1 = "Case(" <> show cpos <> ")"
         n = nat @n
-        pos = 1 + getLen @ps -- cos p1!
+        pos = 1 + getLen @ps
     rr <- eval (Proxy @r) opts z
     case getValueLR NoInline opts msgbase0 rr [] of
       Left e -> pure e

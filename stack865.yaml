@@ -1,7 +1,0 @@
-resolver: lts-14.27
-
-packages:
-- .
-
-extra-deps:
-- pretty-terminal-0.1.0.0

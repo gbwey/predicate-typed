@@ -435,7 +435,7 @@ instance P NullT a => P Null a where
 -- Present 52 ((>>) 52 | {getSum = 52})
 -- Val 52
 --
--- >>> pl @(FoldMap (SG.Max _) Id) [14 :: Int,8,17,13] -- cos Bounded!
+-- >>> pl @(FoldMap (SG.Max _) Id) [14 :: Int,8,17,13] -- allowed as the values are Bounded!
 -- Present 17 ((>>) 17 | {getMax = 17})
 -- Val 17
 --
@@ -444,7 +444,7 @@ instance P NullT a => P Null a where
 -- Val True
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) [1..19]
--- False (False || False | ((>>) False | {1 == 0})}) || ((>>) False | {190 > 200}))
+-- False (False || False | ((>>) False | {1 == 0}) || ((>>) False | {190 > 200}))
 -- Val False
 --
 -- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) []

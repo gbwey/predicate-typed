@@ -354,11 +354,6 @@ type family UnfoldrT mbs where
   UnfoldrT (Maybe (b, _s)) = b
 
 -- | run @p@ @n@ times with state @s@
---
--- >>> :m + System.Random
--- >>> pz @(UnfoldN 10 (RandomRNext Int 1 100 Id) Id) (mkStdGen 3)
--- Val [64,94,33,26,12,8,81,41,21,89]
---
 data UnfoldN n p s deriving Show
 
 -- have to rewrite (a,s) to (a,(s,n)) hence the L11 ...
@@ -519,7 +514,7 @@ instance ( KnownNat n
          msgbase0 = "Para(" <> show cpos <> " of " <> show (n-1) <> ")"
          msgbase1 = "Para(" <> show cpos <> ")"
          n = nat @n
-         pos = 1 + getLen @ps -- cos p1!
+         pos = 1 + getLen @ps
      pp <- eval (Proxy @p) opts a
      case getValueLR NoInline opts msgbase0 pp [] of
        Left e -> pure e
