@@ -35,9 +35,6 @@ module Predicate.Core (
   , Coerce
   , OneP
 
- -- ** core class
-  , P(..)
-
   -- ** IO evaluation
   , pan
   , panv
@@ -114,6 +111,9 @@ module Predicate.Core (
   , type ($)
   , type (&)
   , DoL
+
+ -- ** core class
+  , P(..)
 
  -- ** miscellaneous
   , Swap
@@ -1502,6 +1502,14 @@ instance ( Ord (PP p x)
 -- Val True
 --
 -- >>> pz @(10 % 4 <..> 40 % 5) 33
+-- Val False
+--
+-- >>> pl @(Negate 7 <..> 20) (-4)
+-- True (-7 <= -4 <= 20)
+-- Val True
+--
+-- >>> pl @(Negate 7 <..> 20) 21
+-- False (21 <= 20)
 -- Val False
 --
 data p <..> q deriving Show

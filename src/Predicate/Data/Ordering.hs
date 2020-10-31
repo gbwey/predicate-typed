@@ -35,11 +35,9 @@ module Predicate.Data.Ordering (
   , Lt
   , Ne
   , type (==!)
-  , OrdA'
-  , OrdA
+  , Comparing
+  , Compare
   , type (===~)
-  , Cmp
-  , CmpI
   , Asc
   , Asc'
   , Desc
@@ -103,6 +101,15 @@ instance P (LeT n) x => P (Le n) x where
   eval _ = eval (Proxy @(LeT n))
 
 -- | compare if expression @p@ is less than to @q@
+--
+-- >>> pl @(Lt 4) 123
+-- False (123 < 4)
+-- Val False
+--
+-- >>> pl @(Lt 4) 1
+-- True (1 < 4)
+-- Val True
+--
 data Lt n deriving Show
 type LtT n = Id < n
 
@@ -243,6 +250,19 @@ instance P (CmpI 'CGe p q) x => P (p >=~ q) x where
   eval _ = evalBool (Proxy @(CmpI 'CGe p q))
 
 -- | case-insensitive compare if string expression @p@ is equal to @q@
+--
+-- >>> pl @("Abc" ==~ Id) "abc"
+-- True (Abc ==~ abc)
+-- Val True
+--
+-- >>> pl @(Fst ==~ Snd) ("aBc","AbC")
+-- True (aBc ==~ AbC)
+-- Val True
+--
+-- >>> pl @(Fst ==~ Snd && Fst == Snd) ("Abc","Abc")
+-- True (True && True)
+-- Val True
+--
 data p ==~ q deriving Show
 infix 4 ==~
 
@@ -336,19 +356,33 @@ instance ( Ord (PP p a)
         let d = compare p q
         in mkNode opts (Val d) (msg0 <> " " <> showL opts p <> " " <> prettyOrd d <> " " <> showL opts q) [hh pp, hh qq]
 
--- | similar to 'compare' but using a tuple as input
-data OrdA deriving Show
+-- | similar to 'compare' for a tuple
+--
+-- >>> pl @Compare ('b','A')
+-- Present GT ((==!) 'b' > 'A')
+-- Val GT
+--
+-- >>> pl @(Compare) (13,99)
+-- Present LT ((==!) 13 < 99)
+-- Val LT
+--
+data Compare deriving Show
 
-instance P (OrdA' Id Id) x => P OrdA x where
-  type PP OrdA x = PP (OrdA' Id Id) x
-  eval _ = eval (Proxy @(OrdA' Id Id))
+instance P (Comparing Id) x => P Compare x where
+  type PP Compare x = PP (Comparing Id) x
+  eval _ = eval (Proxy @(Comparing Id))
 
-data OrdA' p q deriving Show
-type OrdAT' p q = (Fst >> p) ==! (Snd >> q)
+-- | similar to 'Data.Ord.comparing' for a tuple
+--
+-- >>> pz @(Comparing Len) ("abc","123456")
+-- Val LT
+--
+data Comparing p deriving Show
+type ComparingT p = (Fst >> p) ==! (Snd >> p)
 
-instance P (OrdAT' p q) x => P (OrdA' p q) x where
-  type PP (OrdA' p q) x = PP (OrdAT' p q) x
-  eval _ = eval (Proxy @(OrdAT' p q))
+instance P (ComparingT p) x => P (Comparing p) x where
+  type PP (Comparing p) x = PP (ComparingT p) x
+  eval _ = eval (Proxy @(ComparingT p))
 
 -- | compare two strings ignoring case and return an ordering
 --
@@ -371,19 +405,6 @@ instance P (OrdAT' p q) x => P (OrdA' p q) x where
 -- Present EQ ((===~) Abc = abc)
 -- Val EQ
 --
---
--- >>> pl @("Abc" ==~ Id) "abc"
--- True (Abc ==~ abc)
--- Val True
---
--- >>> pl @(Fst ==~ Snd) ("aBc","AbC")
--- True (aBc ==~ AbC)
--- Val True
---
--- >>> pl @(Fst ==~ Snd && Fst == Snd) ("Abc","Abc")
--- True (True && True)
--- Val True
---
 data p ===~ q deriving Show
 infix 4 ===~
 
@@ -403,23 +424,6 @@ instance ( PP p a ~ String
         in mkNode opts (Val d) (msg0 <> " " <> p <> " " <> prettyOrd d <> " " <> q) [hh pp, hh qq]
 
 -- | compare two values using the given ordering @o@
---
--- >>> pl @(Lt 4) 123
--- False (123 < 4)
--- Val False
---
--- >>> pl @(Lt 4) 1
--- True (1 < 4)
--- Val True
---
--- >>> pl @(Negate 7 <..> 20) (-4)
--- True (-7 <= -4 <= 20)
--- Val True
---
--- >>> pl @(Negate 7 <..> 20) 21
--- False (21 <= 20)
--- Val False
---
 data Cmp (o :: OrderingP) p q deriving Show
 
 instance ( GetOrd o

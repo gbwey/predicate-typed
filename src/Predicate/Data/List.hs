@@ -66,6 +66,9 @@ module Predicate.Data.List (
   , Break
   , Span
   , Intercalate
+  , PartitionsBy
+  , IMap
+  , IList
 
  -- ** miscellaneous
   , Elem
@@ -100,8 +103,9 @@ module Predicate.Data.List (
 import Predicate.Core
 import Predicate.Misc
 import Predicate.Util
-import Predicate.Data.Ordering (type (==), OrdA', type (>))
-import Predicate.Data.Numeric (Mod)
+import Predicate.Data.Ordering (type (==), Comparing, type (>))
+import Predicate.Data.Numeric (Mod, type (-))
+import Predicate.Data.Enum (type (...))
 import Predicate.Data.Monoid (type (<>))
 import Control.Lens
 import Data.List (foldl', partition, intercalate, inits, tails, unfoldr, sortOn)
@@ -1415,11 +1419,11 @@ instance P Unzip3T x => P Unzip3 x where
 -- >>> pz @(SortBy ((L11 ==! L21) <> (L22 ==! L12)) Id) [(10,"ab"),(4,"x"),(20,"bbb"),(4,"a"),(4,"y")]
 -- Val [(4,"y"),(4,"x"),(4,"a"),(10,"ab"),(20,"bbb")]
 --
--- >>> pl @(SortBy (Swap >> OrdA' Fst Fst) Snd) ((),[('z',1),('a',10),('m',22)])
+-- >>> pl @(SortBy (Swap >> Comparing Fst) Snd) ((),[('z',1),('a',10),('m',22)])
 -- Present [('z',1),('m',22),('a',10)] (SortBy [('z',1),('m',22),('a',10)])
 -- Val [('z',1),('m',22),('a',10)]
 --
--- >>> pl @(SortBy (OrdA' Reverse Reverse) Id) ["az","by","cx","aa"]
+-- >>> pl @(SortBy (Comparing Reverse) Id) ["az","by","cx","aa"]
 -- Present ["aa","cx","by","az"] (SortBy ["aa","cx","by","az"])
 -- Val ["aa","cx","by","az"]
 --
@@ -1427,7 +1431,7 @@ instance P Unzip3T x => P Unzip3 x where
 -- Error pivot=5 value=3(2) (Partition(i=1, a=(5,3)) excnt=2 | SortBy)
 -- Fail "pivot=5 value=3(2)"
 --
--- >>> pl @(SortBy (If (Fst==50 && Snd==3) (FailT _ (PrintT "pivot=%d value=%d" Id)) OrdA) Snd) ((), [5,7,3,1,6,2,1,3])
+-- >>> pl @(SortBy (If (Fst==50 && Snd==3) (FailT _ (PrintT "pivot=%d value=%d" Id)) Compare) Snd) ((), [5,7,3,1,6,2,1,3])
 -- Present [1,1,2,3,3,5,6,7] (SortBy [1,1,2,3,3,5,6,7])
 -- Val [1,1,2,3,3,5,6,7]
 --
@@ -1511,7 +1515,7 @@ instance ( P p (a,a)
 -- Val [('a',9),('a',10),('m',10),('m',22),('z',1)]
 --
 data SortOn p q deriving Show
-type SortOnT p q = SortBy (OrdA' p p) q
+type SortOnT p q = SortBy (Comparing p) q
 
 instance P (SortOnT p q) x => P (SortOn p q) x where
   type PP (SortOn p q) x = PP (SortOnT p q) x
@@ -1528,7 +1532,7 @@ instance P (SortOnT p q) x => P (SortOn p q) x where
 -- Val [('z',1),('m',22),('a',10)]
 --
 data SortOnDesc p q deriving Show
-type SortOnDescT p q = SortBy (Swap >> OrdA' p p) q
+type SortOnDescT p q = SortBy (Swap >> Comparing p) q
 
 instance P (SortOnDescT p q) x => P (SortOnDesc p q) x where
   type PP (SortOnDesc p q) x = PP (SortOnDescT p q) x
@@ -2142,3 +2146,61 @@ instance ( PP p x ~ [a]
           Right _ ->
             let d = liftA2 (,) p q
             in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
+
+-- | experimental: sorts then partitions and then sorts each partitions based on the leftmost occurring value in the original list
+--   if the existing order of data is fine then use 'Predicate.Data.List.GroupBy' as you do not need this
+--
+-- >>> pz @(PartitionsBy (Fst ==! Snd) (L11 == L21) Id) [10,9,9,1,9]
+-- Val [[10],[9,9,9],[1]]
+--
+-- >>> pz @(PartitionsBy Compare (L11 < L21) Id) "efaffabec"
+-- Val ["a","f","f","abce","ef"]
+--
+-- >>> pz @(PartitionsBy 'GT 'True Id) "efaffabec"
+-- Val ["cebaffafe"]
+--
+-- >>> pz @(PartitionsBy 'GT 'False Id) "efaffabec"
+-- Val ["e","f","a","f","f","a","b","e","c"]
+--
+-- >>> pz @(PartitionsBy (Fst ==! Snd) (L12 > L22) Id) [10,9,9,1,9,4]
+-- Val [[9],[1],[9,10],[4,9]]
+--
+-- >>> pz @(PartitionsBy (L11 ==! L21) (L12 > L22) Id) "eddadc"
+-- Val ["d","a","de","cd"]
+--
+-- >>> pz @(PartitionsBy (L11 ==! L21) (L11 < L21) Id) [10,9,9,1,9,4]
+-- Val [[9],[1,4,9],[9,10]]
+--
+data PartitionsBy p q r deriving Show
+type PartitionsByT p q r = SortBy p (Zip r (0 ... (Length r - 1))) >> GroupBy q Id >> SortOn (Head >> Snd) Id >> Map (Map Fst)
+
+instance P (PartitionsByT p q r) x => P (PartitionsBy p q r) x where
+  type PP (PartitionsBy p q r) x = PP (PartitionsByT p q r) x
+  eval _ = eval (Proxy @(PartitionsByT p q r))
+
+-- | add an index to map
+--
+-- >>> pz @(Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Map (Snd >> IMap (GuardBool (PrintT "bad value=%d %s" Id) (Snd >> ReadP Int Id < 255)) Id)) "123.222.999.3"
+-- Fail "bad value=2 999"
+--
+-- >>> pz @(Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Map (Snd >> IMap (GuardBool (PrintT "bad value=%d %s" Id) (Snd >> ReadP Int Id < 255)) Id)) "123.222.99.3"
+-- Val [[True,True,True,True]]
+--
+data IMap p q deriving Show
+type IMapT p q = ZipWith p (0 ... (Length q - 1)) q
+
+instance P (IMapT p q) x => P (IMap p q) x where
+  type PP (IMap p q) x = PP (IMapT p q) x
+  eval _ = eval (Proxy @(IMapT p q))
+
+-- | add an index to list
+--
+-- >>> pz @IList "abcdef"
+-- Val [(0,'a'),(1,'b'),(2,'c'),(3,'d'),(4,'e'),(5,'f')]
+--
+data IList deriving Show
+type IListT = Zip (0 ... (Len - 1)) Id
+
+instance P IListT x => P IList x where
+  type PP IList x = PP IListT x
+  eval _ = eval (Proxy @IListT)
