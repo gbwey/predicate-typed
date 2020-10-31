@@ -671,26 +671,30 @@ type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
 
 -- | leverages 'RepeatT' for repeating predicates (passthrough method)
 --
--- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (0 <..> 0xff)) [121,33,7,256]
+-- >>> pz @(GuardsN 4 (PrintT "id=%d must be between 0 and 255, found %d" Id) (0 <..> 0xff)) [121,33,7,256]
 -- Fail "id=3 must be between 0 and 255, found 256"
 --
--- >>> pz @(GuardsN (PrintT "id=%d must be between 0 and 255, found %d" Id) 4 (0 <..> 0xff)) [121,33,7,44]
+-- >>> pz @(GuardsN 4 (PrintT "id=%d must be between 0 and 255, found %d" Id) (0 <..> 0xff)) [121,33,7,44]
 -- Val [121,33,7,44]
 --
--- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3,4]
+-- >>> pl @(GuardsN 4 (PrintT "guard(%d) %d is out of range" Id) (0 <..> 0xff)) [1,2,3,4]
 -- Present [1,2,3,4] (Guards(4))
 -- Val [1,2,3,4]
 --
--- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3,4,5]
+-- >>> pl @(GuardsN 4 (PrintT "guard(%d) %d is out of range" Id) (0 <..> 0xff)) [1,2,3,4,5]
 -- Error Guards:invalid length(5) expected 4
 -- Fail "Guards:invalid length(5) expected 4"
 --
--- >>> pl @(GuardsN (PrintT "guard(%d) %d is out of range" Id) 4 (0 <..> 0xff)) [1,2,3]
+-- >>> pl @(GuardsN 4 (PrintT "guard(%d) %d is out of range" Id) (0 <..> 0xff)) [1,2,3]
 -- Error Guards:invalid length(3) expected 4
 -- Fail "Guards:invalid length(3) expected 4"
 --
-data GuardsN prt (n :: Nat) p deriving Show
-type GuardsNT prt (n :: Nat) p = Guards (ToGuardsT prt (RepeatT n p))
+-- >>> pl @(Resplit "\\." >> Map (ReadP Int Id) >> GuardsN 4 (PrintT "invalid pos=%d val=%d" Id) (0 <..> 0xff)) "13.22.44.1231"
+-- Error invalid pos=3 val=1231 (Guard(3) 1231 | [13,22,44,1231])
+-- Fail "invalid pos=3 val=1231"
+--
+data GuardsN (n :: Nat) prt p deriving Show
+type GuardsNT (n :: Nat) prt p = Guards (ToGuardsT prt (RepeatT n p))
 
 instance ( x ~ [a]
          , P (GuardsNT prt n p) x

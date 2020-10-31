@@ -136,7 +136,6 @@ module Predicate.Util (
   , chkSize
   , chkSize2
   , badLength
-
   ) where
 import Predicate.Misc
 import GHC.TypeLits (Symbol, Nat, KnownSymbol, KnownNat)

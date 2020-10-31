@@ -132,7 +132,7 @@ type Ip4ip' = Map' (ReadP Int Id) (Rescan Ip4RE >> OneP >> Snd)
 -- | @op@ type for validating an ip4 address using a predicate
 type Ip4op' = BoolsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (0 <..> 0xff)
 -- | @op@ type for validating an ip4 address using a guard
-type Ip4op = GuardsN (PrintT "octet %d out of range 0-255 found %d" Id) 4 (0 <..> 0xff) >> 'True
+type Ip4op = GuardsN 4 (PrintT "octet %d out of range 0-255 found %d" Id) (0 <..> 0xff) >> 'True
 
 -- | @fmt@ type for formatting an ip4 address
 type Ip4fmt = PrintL 4 "%03d.%03d.%03d.%03d" Id

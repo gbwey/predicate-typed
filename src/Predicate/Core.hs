@@ -117,6 +117,7 @@ module Predicate.Core (
 
  -- ** miscellaneous
   , Swap
+  , unsafeEval
   ) where
 import Predicate.Misc
 import Predicate.Util
@@ -1136,9 +1137,8 @@ instance P (LeftArrowsT p q) x => P (p << q) x where
 
 topMessageEgregious :: String -> String
 topMessageEgregious s =
-  let ret = fromMaybe "" $ (RH.scan topMessageExtractRe s ^? _last . _2 . _last)
+  let ret = fromMaybe "" (RH.scan topMessageExtractRe s ^? _last . _2 . _last)
   in '{' : (if null ret then s else ret) <> "}"
-
 
 topMessageExtractRe :: RH.Regex
 topMessageExtractRe = [RH.re|^.*\{([^}]+)\}.*?|]
@@ -2527,3 +2527,18 @@ type L33T = MsgI "L33:" (L3 (L3 Id))
 instance P L33T x => P L33 x where
   type PP L33 x = PP L33T x
   eval _ = eval (Proxy @L33T)
+
+-- | for use with TH.Lift in a splice. returns a pure value or fails with a tree
+unsafeEval :: forall opts p a
+        . ( OptC opts
+          , Show (PP p a)
+          , P p a
+          )
+        => a
+        -> PP p a
+unsafeEval a =
+  let opts = getOpt @opts
+      pp = runIdentity $ eval (Proxy @p) opts a
+  in case _ttVal pp of
+       Val r -> r
+       Fail {} -> error $ "\n" <> prtTree opts pp
