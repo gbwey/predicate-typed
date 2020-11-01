@@ -175,6 +175,12 @@ instance P (ReT p) x => P (Re p) x where
 -- >>> pz @(Rescan' '[] Snd "13:05:25") ('a',"^(\\d{2}):(\\d{2}):(\\d{2})$")
 -- Val [("13:05:25",["13","05","25"])]
 --
+-- >>> pz @('(Id,Intercalate '["\\."] (Repeat 4 "([01]?\\d?\\d|2[0-4]\\d|25[0-5])") >> Concat) >> Rescan' '[] ("^" <> Snd <> "$") Fst) "1.2.3.255" -- have to use Rescan' here: Lift helps not!
+-- Val [("1.2.3.255",["1","2","3","255"])]
+--
+-- >>> pz @('(Id,Intercalate '["\\."] (Repeat 4 "([01]?\\d?\\d|2[0-4]\\d|25[0-5])") >> Concat) >> Rescan' '[] ("^" <> Snd <> "$") Fst >> FMap (Second (FMap (ReadP Int Id)))) "1.2.3.255"
+-- Val [("1.2.3.255",[1,2,3,255])]
+--
 data Rescan' (rs :: [ROpt]) p q deriving Show
 
 instance ( GetROpts rs

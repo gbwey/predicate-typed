@@ -40,6 +40,7 @@ module Predicate.Data.Tuple (
  -- ** inductive tuples
   , EachITuple
   , ToITuple
+  , FromITuple
   , ReverseITuple
   , ToITupleList
 
@@ -378,6 +379,9 @@ instance ( P p a
 
 -- | similar to 'Data.Function.on': may require kind signatures: Both is a better choice
 --
+-- >>> pz @(On (==!) Len) ("1ss","x2") -- or use Comparing or Both+Compare
+-- Val GT
+--
 -- >>> pz @('(4,2) >> On (**) (FromIntegral _)) ()
 -- Val 16.0
 --
@@ -390,7 +394,6 @@ instance ( P p a
 -- >>> pz @(Both (Id * Id) >> ((Fst + Snd) ** (1 % 2 >> FromRational _))) (3,4) -- equivalent to the above but easier on ghc
 -- Val 5.0
 --
-
 data On (p :: Type -> Type -> k2) q deriving Show
 
 instance ( P q a
@@ -537,6 +540,25 @@ instance ToITupleC x => P ToITuple x where
   eval _ opts x = do
     let msg0 = "ToITuple"
     pure $ mkNode opts (Val (toITupleC x)) msg0 []
+
+-- | create flat tuples from inductive tuples
+--
+-- >>> pz @FromITuple (2,(3,(True,('y',()))))
+-- Val (2,3,True,'y')
+--
+-- >>> pz @FromITuple ()
+-- Val ()
+--
+-- >>> pz @FromITuple (1,())
+-- Val 1
+--
+data FromITuple deriving Show
+
+instance FromITupleC x => P FromITuple x where
+  type PP FromITuple x = FromITupleP x
+  eval _ opts x = do
+    let msg0 = "FromITuple"
+    pure $ mkNode opts (Val (fromITupleC x)) msg0 []
 
 -- | reverse an inductive tuple
 --

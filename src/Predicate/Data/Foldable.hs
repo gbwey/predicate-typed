@@ -261,7 +261,7 @@ instance ( Show l
 -- >>> pz @Concat ["abc","D","eF","","G"]
 -- Val "abcDeFG"
 --
--- >>> pz @(Lift Concat Snd) ('x',["abc","D","eF","","G"])
+-- >>> pz @(Snd >> Concat) ('x',["abc","D","eF","","G"])
 -- Val "abcDeFG"
 --
 data Concat deriving Show

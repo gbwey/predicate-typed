@@ -63,6 +63,7 @@ module Predicate.Misc (
 
  -- ** inductive tuples
   , ToITupleC(..)
+  , FromITupleC(..)
   , ToITupleListC(..)
   , ReverseITupleC(..)
   , TupleC(..)
@@ -316,11 +317,10 @@ type family LenT (xs :: [k]) :: Nat where
 -- >>> toITupleC (123,'x')
 -- (123,('x',()))
 --
-
 class ToITupleC x where
   type ToITupleP x
   toITupleC :: x -> ToITupleP x
-instance (GL.TypeError ('GL.Text "ToITupleC: inductive tuple cannot be empty")) => ToITupleC () where
+instance (GL.TypeError ('GL.Text "ToITupleC: invalid empty tuple")) => ToITupleC () where
   type ToITupleP () = ()
   toITupleC () = ()
 instance ToITupleC (a,b) where
@@ -357,6 +357,56 @@ instance ToITupleC (a,b,c,d,e,f,g,h,i,j,k,l) where
   type ToITupleP (a,b,c,d,e,f,g,h,i,j,k,l) = (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,()))))))))))))
   toITupleC (a,b,c,d,e,f,g,h,i,j,k,l) = (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,()))))))))))))
 
+-- | takes an inductive tuple and creates a flat n-tuple
+--
+-- >>> fromITupleC (123,('x',(False,("abc",()))))
+-- (123,'x',False,"abc")
+--
+-- >>> fromITupleC (123,('x',()))
+-- (123,'x')
+--
+class FromITupleC x where
+  type FromITupleP x
+  fromITupleC :: x -> FromITupleP x
+instance FromITupleC () where
+  type FromITupleP () = ()
+  fromITupleC () = ()
+instance FromITupleC (a,()) where
+  type FromITupleP (a,()) = a
+  fromITupleC (a,()) = a
+instance FromITupleC (a,(b,())) where
+  type FromITupleP (a,(b,())) = (a,b)
+  fromITupleC (a,(b,())) = (a,b)
+instance FromITupleC (a,(b,(c,()))) where
+  type FromITupleP (a,(b,(c,()))) = (a,b,c)
+  fromITupleC (a,(b,(c,()))) = (a,b,c)
+instance FromITupleC (a,(b,(c,(d,())))) where
+  type FromITupleP (a,(b,(c,(d,())))) = (a,b,c,d)
+  fromITupleC (a,(b,(c,(d,())))) = (a,b,c,d)
+instance FromITupleC (a,(b,(c,(d,(e,()))))) where
+  type FromITupleP (a,(b,(c,(d,(e,()))))) = (a,b,c,d,e)
+  fromITupleC (a,(b,(c,(d,(e,()))))) = (a,b,c,d,e)
+instance FromITupleC (a,(b,(c,(d,(e,(f,())))))) where
+  type FromITupleP (a,(b,(c,(d,(e,(f,())))))) = (a,b,c,d,e,f)
+  fromITupleC (a,(b,(c,(d,(e,(f,())))))) = (a,b,c,d,e,f)
+instance FromITupleC (a,(b,(c,(d,(e,(f,(g,()))))))) where
+  type FromITupleP (a,(b,(c,(d,(e,(f,(g,()))))))) = (a,b,c,d,e,f,g)
+  fromITupleC (a,(b,(c,(d,(e,(f,(g,()))))))) = (a,b,c,d,e,f,g)
+instance FromITupleC (a,(b,(c,(d,(e,(f,(g,(h,())))))))) where
+  type FromITupleP (a,(b,(c,(d,(e,(f,(g,(h,())))))))) = (a,b,c,d,e,f,g,h)
+  fromITupleC (a,(b,(c,(d,(e,(f,(g,(h,())))))))) = (a,b,c,d,e,f,g,h)
+instance FromITupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,()))))))))) where
+  type FromITupleP (a,(b,(c,(d,(e,(f,(g,(h,(i,()))))))))) = (a,b,c,d,e,f,g,h,i)
+  fromITupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,()))))))))) = (a,b,c,d,e,f,g,h,i)
+instance FromITupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,())))))))))) where
+  type FromITupleP (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,())))))))))) = (a,b,c,d,e,f,g,h,i,j)
+  fromITupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,())))))))))) = (a,b,c,d,e,f,g,h,i,j)
+instance FromITupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,()))))))))))) where
+  type FromITupleP (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,()))))))))))) = (a,b,c,d,e,f,g,h,i,j,k)
+  fromITupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,()))))))))))) = (a,b,c,d,e,f,g,h,i,j,k)
+instance FromITupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,())))))))))))) where
+  type FromITupleP (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,())))))))))))) = (a,b,c,d,e,f,g,h,i,j,k,l)
+  fromITupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,())))))))))))) = (a,b,c,d,e,f,g,h,i,j,k,l)
 
 -- | takes a list of size @n@ and converts it to an inductive tuple. see 'Predicate.Data.ReadShow.PrintL'
 --

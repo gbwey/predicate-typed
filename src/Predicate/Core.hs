@@ -34,8 +34,9 @@ module Predicate.Core (
   , Pure
   , Coerce
   , OneP
+  , Swap
 
-  -- ** IO evaluation
+  -- ** impure evaluation
   , pan
   , panv
   , pa
@@ -48,6 +49,7 @@ module Predicate.Core (
   , pz
   , run
   , runs
+  , unsafeEval
 
   -- ** pure evaluation
   , runP
@@ -57,6 +59,7 @@ module Predicate.Core (
   , evalBoolHide
   , evalHide
   , evalQuick
+  , evalEither
 
  -- ** wrap, unwrap
   , Wrap
@@ -115,9 +118,6 @@ module Predicate.Core (
  -- ** core class
   , P(..)
 
- -- ** miscellaneous
-  , Swap
-  , unsafeEval
   ) where
 import Predicate.Misc
 import Predicate.Util
@@ -137,6 +137,7 @@ import Data.Tree (Tree)
 import Data.Coerce (Coercible)
 import Data.Tree.Lens (root)
 import qualified Text.Regex.PCRE.Heavy as RH
+import GHC.Stack (HasCallStack)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -2538,15 +2539,25 @@ instance P L33T x => P L33 x where
 
 -- | for use with TH.Lift in a splice. returns a pure value or fails with a tree
 unsafeEval :: forall opts p a
-        . ( OptC opts
+        . ( HasCallStack
+          , OptC opts
           , Show (PP p a)
           , P p a
           )
         => a
         -> PP p a
-unsafeEval a =
+unsafeEval = either (error . ("\n" <>)) id . evalEither @opts @p
+
+evalEither :: forall opts p a
+        . ( OptC opts
+          , Show (PP p a)
+          , P p a
+          )
+        => a
+        -> Either String (PP p a)
+evalEither a =
   let opts = getOpt @opts
       pp = runIdentity $ eval (Proxy @p) opts a
   in case _ttVal pp of
-       Val r -> r
-       Fail {} -> error $ "\n" <> prtTree opts pp
+       Val r -> Right r
+       Fail {} -> Left $ prtTree opts pp

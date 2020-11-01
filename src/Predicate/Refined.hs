@@ -87,7 +87,8 @@ type role Refined phantom nominal nominal
 -- >>> pureTryTest $ fromString @(Refined OL (ReadP Int Id >> Id > 244) String) "52"
 -- Left ()
 --
-instance RefinedC opts p String => IsString (Refined opts p String) where
+instance RefinedC opts p String
+      => IsString (Refined opts p String) where
   fromString s =
     case newRefined @opts @p s of
       Left w -> error $ "Refined(fromString):" ++ errorDisplay (getOpt @opts) w

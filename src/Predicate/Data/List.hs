@@ -2180,6 +2180,15 @@ instance P (PartitionsByT p q r) x => P (PartitionsBy p q r) x where
 
 -- | add an index to map
 --
+-- >>> pz @(IMap (Second Succ) Id) "hello"
+-- Val [(0,'i'),(1,'f'),(2,'m'),(3,'m'),(4,'p')]
+--
+-- >>> pz @(IMap (10 ^ Fst * Snd) Id >> Sum) [3,2,7,9]
+-- Val 9723
+--
+-- >>> pz @(IMap (2 ^ Fst * Snd) Id) [1,1,1,0,1,0,1]
+-- Val [1,2,4,0,16,0,64]
+--
 -- >>> pz @(Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Map (Snd >> IMap (GuardBool (PrintT "bad value=%d %s" Id) (Snd >> ReadP Int Id < 255)) Id)) "123.222.999.3"
 -- Fail "bad value=2 999"
 --

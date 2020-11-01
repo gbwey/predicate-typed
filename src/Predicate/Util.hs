@@ -28,11 +28,7 @@ module Predicate.Util (
     Val(..)
   , _Fail
   , _Val
-  , _True
-  , _False
   , _ValEither
-  , val2P
-  , val2PBool
 
   -- ** TT typed tree
   , TT(..)
@@ -365,7 +361,7 @@ mkNode :: POpts
        -> String
        -> [Tree PE]
        -> TT a
-mkNode opts = mkNodeImpl opts . (view val2P &&& id)
+mkNode opts = mkNodeImpl opts . (val2P &&& id)
 
 -- | creates a Node for the evaluation tree
 mkNodeImpl :: POpts
@@ -791,7 +787,7 @@ colorValBool ::
    -> Val Bool
    -> String
 colorValBool o r =
-  let f = colorMe o (r ^. val2PBool)
+  let f = colorMe o (val2PBool r)
   in case r of
       Fail e -> f "Fail" <> " " <> e
       Val False -> f "False"
@@ -1146,44 +1142,6 @@ verboseList o tt
   | isVerbose o = [hh tt]
   | otherwise = []
 
--- | prism for Val True
---
--- >>> Val True ^? _True
--- Just ()
---
--- >>> Val False ^? _True
--- Nothing
---
-_True :: a ~ Bool => Prism' (Val a) ()
-_True =
-  prism' (const (Val True))
-  $ \case
-       Val True -> Just ()
-       Val False -> Nothing
-       Fail {} -> Nothing
-
--- | prism for Val False
---
--- >>> (_True # ()) ^? _True
--- Just ()
---
--- >>> (_False # ()) ^? _False
--- Just ()
---
--- >>> Val False ^? _False
--- Just ()
---
--- >>> Val True ^? _False
--- Nothing
---
-_False :: a ~ Bool => Prism' (Val a) ()
-_False =
-  prism' (const (Val False))
-  $ \case
-       Val False -> Just ()
-       Val True -> Nothing
-       Fail {} -> Nothing
-
 -- | iso for 'Val'
 --
 -- >>> Val 123 ^. _ValEither
@@ -1223,40 +1181,40 @@ _ValEither = iso fw bw
                Fail e -> Left e
         bw = either Fail Val
 
--- | a lens from typed 'Val' to the untyped 'ValP'
+-- | converts from a typed 'Val' to the untyped 'ValP'
 --
--- >>> Val True ^. val2P
+-- >>> val2P (Val True)
 -- ValP
 --
--- >>> Val 123 ^. val2P
+-- >>> val2P (Val 123)
 -- ValP
 --
--- >>> Fail "abc" ^. val2P
+-- >>> val2P (Fail "abc")
 -- FailP "abc"
 --
-val2P :: Lens' (Val a) ValP
-val2P afb bt = bt <$ afb r
-  where r = case bt of
-              Fail e -> FailP e
-              Val {} -> ValP
+val2P :: Val a -> ValP
+val2P =
+  \case
+    Fail e -> FailP e
+    Val {} -> ValP
 
--- | a lens from typed 'Val' Bool to the untyped 'ValP'
+-- | converts from a typed 'Val' Bool to the untyped 'ValP'
 --
--- >>> Val True ^. val2PBool
+-- >>> val2PBool (Val True)
 -- TrueP
 --
--- >>> Val False ^. val2PBool
+-- >>> val2PBool (Val False)
 -- FalseP
 --
--- >>> Fail "abc" ^. val2PBool
+-- >>> val2PBool (Fail "abc")
 -- FailP "abc"
 --
-val2PBool :: a ~ Bool => Lens' (Val a) ValP
-val2PBool afb bt = bt <$ afb r
-  where r = case bt of
-              Fail e -> FailP e
-              Val True -> TrueP
-              Val False -> FalseP
+val2PBool :: a ~ Bool => Val a -> ValP
+val2PBool =
+  \case
+    Fail e -> FailP e
+    Val True -> TrueP
+    Val False -> FalseP
 
 -- | lens that keeps 'ValP' in sync with 'Val' for TT Bool
 --
@@ -1273,11 +1231,7 @@ val2PBool afb bt = bt <$ afb r
 -- True
 --
 ttValBool :: a ~ Bool => Lens' (TT a) (Val Bool)
-ttValBool afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
-  where f = \case
-               Fail e -> FailP e
-               Val True -> TrueP
-               Val False -> FalseP
+ttValBool afb tt = (\b -> tt { _ttValP = val2PBool b, _ttVal = b }) <$> afb (_ttVal tt)
 
 -- | lens from 'TT' to 'Val' that also keeps 'ValP' in sync with 'Val'
 --
@@ -1291,8 +1245,5 @@ ttValBool afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
 -- True
 --
 ttVal :: Lens (TT a) (TT b) (Val a) (Val b)
-ttVal afb tt = (\b -> tt { _ttValP = f b, _ttVal = b }) <$> afb (_ttVal tt)
-  where f = \case
-               Fail e -> FailP e
-               Val {} -> ValP
+ttVal afb tt = (\b -> tt { _ttValP = val2P b, _ttVal = b }) <$> afb (_ttVal tt)
 

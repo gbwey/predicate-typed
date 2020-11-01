@@ -330,8 +330,8 @@ newRefined5P' _ i = do
 -- >>> newRefined5 @OZ @(ReadBase Int 16) @(Lt 255) "00fe"
 -- Right (Refined5 254)
 --
--- >>> newRefined5 @OZ @(ReadBase Int 16) @(GuardBool (PrintF "0x%X is too large" Id) (Lt 253)) "00fe"
--- Left Step 2. Failed Boolean Check(op) | 0xFE is too large
+-- >>> newRefined5 @OZ @(ReadBase Int 16) @(GuardBool (PrintF "%#x is too large" Id) (Lt 253)) "00fe"
+-- Left Step 2. Failed Boolean Check(op) | 0xfe is too large
 --
 -- >>> newRefined5 @OZ @(ReadBase Int 16) @(Lt 255) "00fg"
 -- Left Step 1. Failed Initial Conversion(ip) | invalid base 16

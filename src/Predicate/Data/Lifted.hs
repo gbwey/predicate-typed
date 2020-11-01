@@ -658,6 +658,9 @@ instance P p a => P (K p q) a where
   type PP (K p q) a = PP p a
   eval _ = eval (Proxy @(MsgI "K " p))
 
+-- useful only when you need an extra arg function or p is a constant or p and Id can be the same
+-- also useful if you dont want to have parens cos of >>
+-- Lift Rescan Fst wont work as Id and Fst are different: how can regex pattern be the same as the value you are matching against!
 -- | Lift a no arg Adt to a function of one argument (for use with 'Dot' and 'RDot')
 --
 -- >>> pl @(Lift Len Snd) (True,"abcdef")

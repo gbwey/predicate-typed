@@ -238,6 +238,7 @@ type family Pop0T (p :: Type) (q :: Type) :: Type where
 --
 -- >>> pz @(Pop1 (Proxy ('(,) 'True)) Len "abc") ()
 -- Val (True,3)
+--
 data Pop1 p q r deriving Show
 
 instance ( P r x

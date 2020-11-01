@@ -92,22 +92,22 @@ import qualified Safe (fromJustNote, atNote)
 -- >>> import Data.Time
 
 -- | 'fromInteger' function where you need to provide a reference to the type @t@ of the result
-data FromInteger' t n deriving Show
+data FromInteger' t p deriving Show
 
 instance ( Num (PP t a)
-         , Integral (PP n a)
-         , P n a
+         , Integral (PP p a)
+         , P p a
          , Show (PP t a)
-         ) => P (FromInteger' t n) a where
-  type PP (FromInteger' t n) a = PP t a
+         ) => P (FromInteger' t p) a where
+  type PP (FromInteger' t p) a = PP t a
   eval _ opts a = do
     let msg0 = "FromInteger"
-    nn <- eval (Proxy @n) opts a
-    pure $ case getValueLR NoInline opts msg0 nn [] of
+    pp <- eval (Proxy @p) opts a
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
-      Right n ->
-        let b = fromInteger (fromIntegral n)
-        in mkNode opts (Val b) (msg0 <> " " <> showL opts b) [hh nn]
+      Right p ->
+        let b = fromInteger (fromIntegral p)
+        in mkNode opts (Val b) (msg0 <> " " <> showL opts b) [hh pp]
 
 -- | 'fromInteger' function where you need to provide the type @t@ of the result
 --
@@ -138,30 +138,30 @@ instance ( Num (PP t a)
 --
 data FromInteger (t :: Type) deriving Show
 type FromIntegerT (t :: Type) = FromInteger' (Hole t) Id
---type FromIntegerP n = FromInteger' UnproxyT n
+--type FromIntegerP p = FromInteger' UnproxyT n
 
 instance P (FromIntegerT t) x => P (FromInteger t) x where
   type PP (FromInteger t) x = PP (FromIntegerT t) x
   eval _ = eval (Proxy @(FromIntegerT t))
 
 -- | 'fromIntegral' function where you need to provide a reference to the type @t@ of the result
-data FromIntegral' t n deriving Show
+data FromIntegral' t p deriving Show
 
 instance ( Num (PP t a)
-         , Integral (PP n a)
-         , P n a
+         , Integral (PP p a)
+         , P p a
          , Show (PP t a)
-         , Show (PP n a)
-         ) => P (FromIntegral' t n) a where
-  type PP (FromIntegral' t n) a = PP t a
+         , Show (PP p a)
+         ) => P (FromIntegral' t p) a where
+  type PP (FromIntegral' t p) a = PP t a
   eval _ opts a = do
     let msg0 = "FromIntegral"
-    nn <- eval (Proxy @n) opts a
-    pure $ case getValueLR NoInline opts msg0 nn [] of
+    pp <- eval (Proxy @p) opts a
+    pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
-      Right n ->
-        let b = fromIntegral n
-        in mkNode opts (Val b) (show3 opts msg0 b n) [hh nn]
+      Right p ->
+        let b = fromIntegral p
+        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
 -- | 'fromIntegral' function where you need to provide the type @t@ of the result
 --
