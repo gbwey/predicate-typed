@@ -292,7 +292,7 @@ instance ( P r x
               Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ee <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
-            pure $ case getValueLR NoInline opts ("Case:otherwise failed" <> nullIf ":" (_ttString ee)) ee [hh rr, hh pp] of
+            pure $ case getValueLR NoInline opts ("Case:otherwise failed" <> nullIf ":" (ee ^. ttString)) ee [hh rr, hh pp] of
               Left e -> e
               Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) [hh rr, hh pp, hh ee]
 

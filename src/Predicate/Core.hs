@@ -976,7 +976,7 @@ run a = do
   case oDebug opts of
     DZero -> pure ()
     _ -> unlessNullM (prtTree opts pp) putStrLn
-  return (_ttVal pp)
+  return (pp ^. ttVal)
 
 -- | run expression with multiple options in a list
 --
@@ -1115,7 +1115,7 @@ instance ( P p a
                     if anyOf (ttForest . folded . root . peValP) (has _FailP) qq
                     then qq & ttForest %~ (hh pp:) -- we still need pp for context
                     else e
-          Right q -> mkNodeCopy opts qq (lit3 opts msg0 q "" (topMessageEgregious (_ttString qq))) [hh pp, hh qq]
+          Right q -> mkNodeCopy opts qq (lit3 opts msg0 q "" (topMessageEgregious (qq ^. ttString))) [hh pp, hh qq]
 
 -- | infixl version of 'Predicate.Core.>>'
 data p >>> q deriving Show
@@ -2558,6 +2558,6 @@ evalEither :: forall opts p a
 evalEither a =
   let opts = getOpt @opts
       pp = runIdentity $ eval (Proxy @p) opts a
-  in case _ttVal pp of
+  in case pp ^. ttVal of
        Val r -> Right r
        Fail {} -> Left $ prtTree opts pp

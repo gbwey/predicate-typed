@@ -31,7 +31,7 @@ module Predicate.Util (
   , _ValEither
 
   -- ** TT typed tree
-  , TT(..)
+  , TT
   , ttVal
   , ttValBool
   , ttString
@@ -211,10 +211,13 @@ instance Semigroup PE where
 -- | semigroup for ValP
 --
 -- >>> TrueP <> FalseP <> ValP
--- ValP
+-- FalseP
 --
 -- >>> ValP <> TrueP <> FalseP
 -- FalseP
+--
+-- >>> ValP <> TrueP <> ValP
+-- TrueP
 --
 -- >>> FailP "abc" <> (TrueP <> FalseP) <> FailP "def"
 -- FailP "abc | def"
@@ -235,9 +238,11 @@ instance Semigroup ValP where
    FailP s <> FailP s1 = FailP (jamSS s s1)
    FailP s <> _ = FailP s
    _ <> FailP s = FailP s
-   _ <> ValP = ValP
-   _ <> TrueP = TrueP
+   FalseP <> _ = FalseP
    _ <> FalseP = FalseP
+   TrueP <> _ = TrueP
+   _ <> TrueP = TrueP
+   ValP <> ValP = ValP
 
 instance Monoid ValP where
   mempty = ValP
@@ -339,13 +344,17 @@ instance Applicative TT where
   pure a = TT ValP (pure a) "" []
   (<*>) = ap
 
+fixTTValP :: ValP -> TT a -> TT a
+fixTTValP bp tt = tt { _ttValP = bp <> _ttValP tt }
+
 instance Monad TT where
   return = pure
-  z@(TT _ bt ss ts) >>= amb =
+  z@(TT bp bt ss ts) >>= amb =
      case bt of
-       Val a -> amb a & ttString %~ jamSS ss
-                      & ttForest %~ (ts <>)
-       Fail e -> z & ttVal .~ Fail e
+       Val a -> fixTTValP bp (amb a & ttString %~ jamSS ss
+                      & ttForest %~ (ts <>))
+
+       Fail e -> z { _ttVal = Fail e }
 
 -- | creates a Node for the evaluation tree
 mkNodeCopy :: POpts
