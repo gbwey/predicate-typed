@@ -1,5 +1,5 @@
 name:                predicate-typed
-version:             0.7.4.1
+version:             0.7.4.2
 github:              gbwey/predicate-typed
 synopsis:            Predicates, Refinement types and Dsl
 category:            Data

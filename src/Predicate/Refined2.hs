@@ -168,7 +168,7 @@ instance ( i ~ String
          ) => IsString (Refined2 opts ip op i) where
   fromString i =
     case newRefined2 i of
-      Left e -> error $ "Refined2(fromString):" ++ show e
+      Left e -> error $ "Refined2(IsString:fromString):" ++ show e
       Right r -> r
 
 -- read instance from -ddump-deriv
@@ -230,7 +230,7 @@ instance ( Refined2C opts ip op i
 -- Right (Refined2 254 "00fe")
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined2 OAN (ReadBase Int 16) (Id > 10 && Id < 256) String) "\"00fe443a\""
--- Error in $: Refined2:Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
+-- Error in $: Refined2(FromJSON:parseJSON):Step 2. False Boolean Check(op) | {True && False | (16663610 < 256)}
 -- *** Step 1. Success Initial Conversion(ip) (16663610) ***
 -- P ReadBase(Int,16) 16663610
 -- |
@@ -257,7 +257,7 @@ instance ( Refined2C opts ip op i
   parseJSON z = do
                   i <- parseJSON @i z
                   case newRefined2 i of
-                    Left e -> fail $ "Refined2:" ++ show e
+                    Left e -> fail $ "Refined2(FromJSON:parseJSON):" ++ show e
                     Right r -> return r
 
 -- | 'Arbitrary' instance for 'Refined2'
@@ -327,7 +327,7 @@ genRefined2P _ g =
 -- Refined2 2019-04-23 "2019-04-23"
 --
 -- >>> removeAnsi $ (view _3 +++ view _3) $ B.decodeOrFail @K2 (B.encode r)
--- Refined2:Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
+-- Refined2(Binary:get):Step 2. False Boolean Check(op) | {2019-05-30 <= 2019-04-23}
 -- *** Step 1. Success Initial Conversion(ip) (2019-04-23) ***
 -- P ReadP Day 2019-04-23
 -- |
@@ -352,7 +352,7 @@ instance ( Refined2C opts ip op i
   get = do
           i <- B.get @i
           case newRefined2 i of
-            Left e -> fail $ "Refined2:" ++ show e
+            Left e -> fail $ "Refined2(Binary:get):" ++ show e
             Right r -> return r
   put (Refined2 _ r) = B.put @i r
 

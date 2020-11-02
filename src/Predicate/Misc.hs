@@ -128,6 +128,7 @@ module Predicate.Misc (
   , _Id
   , sum'
   , product'
+  , cycle'
   , cmpOf
   ) where
 import qualified GHC.TypeNats as GN
@@ -680,7 +681,7 @@ errorInProgram s = error $ "programmer error:" <> s
 p ~> q = not p || q
 infixr 1 ~>
 
--- | extract the first element from a n-tuple
+-- | extract element 1 from a n-tuple
 class ExtractL1C tp where
   type ExtractL1T tp
   extractL1C :: tp -> ExtractL1T tp
@@ -706,7 +707,7 @@ instance ExtractL1C (a,b,c,d,e,f,g,h) where
   type ExtractL1T (a,b,c,d,e,f,g,h) = a
   extractL1C (a,_,_,_,_,_,_,_) = a
 
--- | extract the second element from a n-tuple
+-- | extract element 2 from a n-tuple
 class ExtractL2C tp where
   type ExtractL2T tp
   extractL2C :: tp -> ExtractL2T tp
@@ -732,13 +733,13 @@ instance ExtractL2C (a,b,c,d,e,f,g,h) where
   type ExtractL2T (a,b,c,d,e,f,g,h) = b
   extractL2C (_,b,_,_,_,_,_,_) = b
 
--- | extract the third element from a n-tuple
+-- | extract element 3 from a n-tuple
 class ExtractL3C tp where
   type ExtractL3T tp
   extractL3C :: tp -> ExtractL3T tp
 instance ExtractL3C (a,b) where
-  type ExtractL3T (a,b) = GL.TypeError ('GL.Text "Thd doesn't work for 2-tuples")
-  extractL3C _ = errorInProgram "Thd doesn't work for 2-tuples"
+  type ExtractL3T (a,b) = GL.TypeError ('GL.Text "L3 doesn't work for 2-tuples")
+  extractL3C _ = errorInProgram "L3 doesn't work for 2-tuples"
 instance ExtractL3C (a,b,c) where
   type ExtractL3T (a,b,c) = c
   extractL3C (_,_,c) = c
@@ -758,7 +759,7 @@ instance ExtractL3C (a,b,c,d,e,f,g,h) where
   type ExtractL3T (a,b,c,d,e,f,g,h) = c
   extractL3C (_,_,c,_,_,_,_,_) = c
 
--- | extract the fourth element from a n-tuple
+-- | extract element 4 from a n-tuple
 class ExtractL4C tp where
   type ExtractL4T tp
   extractL4C :: tp -> ExtractL4T tp
@@ -784,7 +785,7 @@ instance ExtractL4C (a,b,c,d,e,f,g,h) where
   type ExtractL4T (a,b,c,d,e,f,g,h) = d
   extractL4C (_,_,_,d,_,_,_,_) = d
 
--- | extract the fifth element from a n-tuple
+-- | extract element 5 from a n-tuple
 class ExtractL5C tp where
   type ExtractL5T tp
   extractL5C :: tp -> ExtractL5T tp
@@ -810,7 +811,7 @@ instance ExtractL5C (a,b,c,d,e,f,g,h) where
   type ExtractL5T (a,b,c,d,e,f,g,h) = e
   extractL5C (_,_,_,_,e,_,_,_) = e
 
--- | extract the sixth element from a n-tuple
+-- | extract element 6 from a n-tuple
 class ExtractL6C tp where
   type ExtractL6T tp
   extractL6C :: tp -> ExtractL6T tp
@@ -836,7 +837,7 @@ instance ExtractL6C (a,b,c,d,e,f,g,h) where
   type ExtractL6T (a,b,c,d,e,f,g,h) = f
   extractL6C (_,_,_,_,_,f,_,_) = f
 
--- | extract the seventh element from a n-tuple
+-- | extract element 7 from a n-tuple
 class ExtractL7C tp where
   type ExtractL7T tp
   extractL7C :: tp -> ExtractL7T tp
@@ -862,7 +863,7 @@ instance ExtractL7C (a,b,c,d,e,f,g,h) where
   type ExtractL7T (a,b,c,d,e,f,g,h) = g
   extractL7C (_,_,_,_,_,_,g,_) = g
 
--- | extract the eighth element from a n-tuple
+-- | extract element 8 from a n-tuple
 class ExtractL8C tp where
   type ExtractL8T tp
   extractL8C :: tp -> ExtractL8T tp
@@ -1006,7 +1007,11 @@ primeStream = 2 : 3 : 5 : primes'
   where
     isPrime' [] _ = errorInProgram "primes is empty"
     isPrime' (p:ps) n = p*p > n || n `rem` p /= 0 && isPrime' ps n
-    primes' = 7 : filter (isPrime' primes') (scanl (+) 11 $ cycle [2,4,2,4,6,2,6,4])
+    primes' = 7 : filter (isPrime' primes') (scanl (+) 11 $ cycle' [2,4,2,4,6,2,6,4])
+
+cycle' :: [a] -> [a]
+cycle' [] = []
+cycle' xs = xs' where xs' = xs ++ xs'
 
 -- | pretty print 'Ordering'
 prettyOrd :: Ordering -> String

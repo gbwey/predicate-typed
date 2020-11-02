@@ -233,7 +233,7 @@ instance P IsLatin1T x => P IsLatin1 x where
 -- True ((>>) True | {True (&*) True})
 -- Val True
 --
--- >>> pz @( '(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsDigitAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll)) "abc134"
+-- >>> pz @('(IsControlAll, IsLatin1All , IsHexDigitAll , IsOctDigitAll , IsDigitAll , IsPunctuationAll , IsSeparatorAll , IsSpaceAll)) "abc134"
 -- Val (False,True,True,False,False,False,False,False)
 --
 -- >>> pl @(SplitAts [1,2,10] Id >> Para '[IsLowerAll, IsDigitAll, IsUpperAll]) "abdefghi"

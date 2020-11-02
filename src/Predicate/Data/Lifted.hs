@@ -992,7 +992,7 @@ instance P (FFishT p q r) x => P (FFish p q r) x where
 -- >>> pz @((1 ... 10) >>= EmptyBool [] Even '[Id,Id]) ()
 -- Val [[2,2],[4,4],[6,6],[8,8],[10,10]]
 --
--- >>> pz @( (1 ... 10) >>= If Even '[Id,Id] (EmptyT [])) ()
+-- >>> pz @((1 ... 10) >>= If Even '[Id,Id] (EmptyT [])) ()
 -- Val [2,2,4,4,6,6,8,8,10,10]
 --
 -- >>> pz @(Lookup 0 Id >>= Lookup 1 Id) [[1,2,3]]
@@ -1071,10 +1071,10 @@ instance P (AppT p q) x => P (p <*> q) x where
 -- >>> pz @(Flip Map' Id Succ) [1..5]
 -- Val [2,3,4,5,6]
 --
--- >>> pz @( Flip '(,) 'True 2) ()
+-- >>> pz @(Flip '(,) 'True 2) ()
 -- Val (2,True)
 --
--- >>> pz @( Flip ('(,,) 1) 2 Id) "ab"
+-- >>> pz @(Flip ('(,,) 1) 2 Id) "ab"
 -- Val (1,"ab",2)
 --
 data Flip (p :: k1 -> k2 -> k3) (q :: k2) (r :: k1) deriving Show

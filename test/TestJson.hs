@@ -33,7 +33,7 @@ suite = testGroup "testjson"
   , testCase "testperson1 bad lastname lowercase first letter" $ expectIO (testPerson1 @OAN 4) (expectLeftWith ["lastName1", "invalid name", "diaz"])
   , testCase "testperson1 bad first name lowercase first letter" $ expectIO (testPerson1 @OAN 6) (expectLeftWith ["firstName1", "not upper first(d)"])
   , testCase "testperson1 age 99 out of range" $ expectIO (testPerson1 @OAN 5) (expectLeftWith ["Error in $[0].age1"])
-  , testCase "parse fail person1" $ expectBT (Fail "ParseJsonFile [Person1 'OZ](test3.json) Error in $[0].ipaddress1: Refined3:Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 260") $ pz @(ParseJsonFile [Person1 'OZ] "test3.json") ()
+  , testCase "parse fail person1" $ expectBT (Fail "ParseJsonFile [Person1 'OZ](test3.json) Error in $[0].ipaddress1: Refined3(FromJSON:parseJSON):Step 2. Failed Boolean Check(op) | octet 3 out of range 0-255 found 260") $ pz @(ParseJsonFile [Person1 'OZ] "test3.json") ()
   , testCase "parse ok person1" $ expectBT (Val 5) $ pl @(ParseJsonFile [Person1 OAN] "test2.json" >> Len) ()
   , testCase "missing file" $ expectBT (Fail "ParseJsonFile [Person1 'OZ](test2.jsoxxxn) file does not exist") $ pl @(ParseJsonFile [Person1 'OZ] "test2.jsoxxxn" >> Len) ()
 

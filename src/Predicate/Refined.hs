@@ -91,7 +91,7 @@ instance RefinedC opts p String
       => IsString (Refined opts p String) where
   fromString s =
     case newRefined @opts @p s of
-      Left w -> error $ "Refined(fromString):" ++ errorDisplay (getOpt @opts) w
+      Left w -> error $ "Refined(IsString:fromString):" ++ errorDisplay (getOpt @opts) w
       Right r -> r
 
 errorDisplay :: POpts -> Msg0 -> String

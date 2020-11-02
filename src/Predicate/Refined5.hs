@@ -148,7 +148,7 @@ instance ( i ~ String
          ) => IsString (Refined5 opts ip op i) where
   fromString i =
     case newRefined5 i of
-      Left e -> error $ "Refined5(fromString):" ++ show e
+      Left e -> error $ "Refined5(IsString:fromString):" ++ show e
       Right r -> r
 
 -- read instance from -ddump-deriv
@@ -210,14 +210,14 @@ instance ( Refined2C opts ip op i
 -- Right (Refined5 123)
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined5 OL (ReadBase Int 16) (Id > 10 && Id < 256) String) "9"
--- Error in $: Refined5:false boolean check | {False && True | (9 > 10)}
+-- Error in $: Refined5(FromJSON:parseJSON):false boolean check | {False && True | (9 > 10)}
 -- False
 --
 -- >>> A.eitherDecode' @(Refined5 OZ (ReadBase Int 16) (Id > 10 && Id < 256) String) "254"
 -- Right (Refined5 254)
 --
 -- >>> removeAnsi $ A.eitherDecode' @(Refined5 OAN (ReadBase Int 16) (Id > 10 && Id < 256) String) "12345"
--- Error in $: Refined5:false boolean check | {True && False | (12345 < 256)}
+-- Error in $: Refined5(FromJSON:parseJSON):false boolean check | {True && False | (12345 < 256)}
 -- False True && False | (12345 < 256)
 -- |
 -- +- True 12345 > 10
@@ -238,7 +238,7 @@ instance ( Refined2C opts ip op i
   parseJSON z = do
                   i <- parseJSON @(PP ip i) z
                   case evalBool5 @opts @op i of
-                    Left e -> fail $ "Refined5:" ++ e
+                    Left e -> fail $ "Refined5(FromJSON:parseJSON):" ++ e
                     Right _ -> return (Refined5 i)
 
 -- | 'Arbitrary' instance for 'Refined5'
@@ -293,7 +293,7 @@ instance ( Refined2C opts ip op i
   get = do
           i <- B.get @(PP ip i)
           case evalBool5 @opts @op i of
-            Left e -> fail $ "Refined5:Binary:" ++ e
+            Left e -> fail $ "Refined5(Binary:get):" ++ e
             Right _ -> return $ Refined5 i
   put (Refined5 r) = B.put @(PP ip i) r
 

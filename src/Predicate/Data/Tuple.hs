@@ -178,7 +178,7 @@ instance P (WAmpT p q) x => P (p &&& q) x where
 -- >>> pz @(Pred *** ShowP Id) (13, True)
 -- Val (12,"True")
 --
--- >>> pl @(FlipT (***) Len (Id * 12)) (99,"cdef")
+-- >>> pl @(Flip (***) Len (Id * 12)) (99,"cdef")
 -- Present (1188,4) ((***) (1188,4) | (99,"cdef"))
 -- Val (1188,4)
 --

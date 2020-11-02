@@ -49,7 +49,7 @@ import Predicate.Data.List (Uncons, Unsnoc)
 import Predicate.Data.Maybe (JustDef, JustFail)
 import Predicate.Data.Lifted (FMap)
 import Control.Lens
-import qualified Safe (headNote, cycleNote)
+import qualified Safe (headNote)
 import Data.Proxy (Proxy(..))
 -- $setup
 -- >>> :set -XDataKinds
@@ -475,11 +475,11 @@ instance x ~ [Int]
     let msg0 = "IsLuhn"
     in pure $ case chkSize opts msg0 x [] of
          Left e -> e
-         Right _ ->
-          let xs = zipWith (*) (reverse x) (Safe.cycleNote msg0 [1,2])
+         Right ws ->
+          let xs = zipWith (*) (ws ^. reversed) (cycle' [1,2])
               ys = map (\w -> if w>=10 then w-9 else w) xs
               z = sum' ys
               ret = z `mod` 10
-          in if ret == 0 then mkNodeB opts True (msg0 <> " | " <> showL opts x) []
-             else mkNodeB opts False (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " x) []
+          in if ret == 0 then mkNodeB opts True (msg0 <> " | " <> showL opts ws) []
+             else mkNodeB opts False (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " ws) []
 

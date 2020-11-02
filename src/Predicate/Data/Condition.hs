@@ -529,11 +529,11 @@ instance ( [a] ~ x
         n = getLen @ps
     case chkSize opts msg1 as [] of
       Left e -> pure e
-      Right _ ->
-        if n /= length as then
-           let msg2 = msg0 <> badLength as n
+      Right ws ->
+        if n /= length ws then
+           let msg2 = msg0 <> badLength ws n
            in pure $ mkNode opts (Fail msg2) "" []
-        else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts as
+        else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts ws
 
 data BoolsImpl (n :: Nat) (os :: [(k,k1)]) deriving Show
 

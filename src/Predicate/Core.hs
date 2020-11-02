@@ -1922,7 +1922,7 @@ instance ( Show (PP p a)
     case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
       Right q -> do
-        case chkSize opts msg0 (toList q) [hh qq] of
+        case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
           Right xs -> do
             ts <- zipWithM (\i a -> ((i, a),) <$> evalHide @p opts a) [0::Int ..] xs

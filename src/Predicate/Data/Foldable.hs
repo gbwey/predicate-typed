@@ -53,7 +53,6 @@ import qualified Data.List.NonEmpty as N
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified GHC.Exts as GE
 import Data.List (findIndex)
-import qualified Safe (cycleNote)
 -- $setup
 -- >>> import Predicate.Prelude
 -- >>> :set -XDataKinds
@@ -286,15 +285,17 @@ instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
   eval _ = eval (Proxy @(ConcatMapT p q))
 
 
--- | similar to 'cycle' but for a fixed number @n@
+-- | similar to 'cycle' but for a fixed number @n@: for an empty list it just returns an empty list
 --
 -- >>> pz @(Cycle 5 Id) [1,2]
 -- Val [1,2,1,2,1]
 --
+-- >>> pz @(Cycle 5 Id) []
+-- Val []
+--
 data Cycle n p deriving Show
 
 instance ( Show a
-         , Show (t a)
          , PP p x ~ t a
          , P p x
          , Integral (PP n x)
@@ -311,10 +312,10 @@ instance ( Show a
         let hhs = [hh nn, hh pp]
         in case chkSize opts msg0 p hhs of
             Left e ->  e
-            Right _ ->
+            Right ps ->
               let msg1 = msg0 <> "(" <> show n <> ")"
-                  d = take n (Safe.cycleNote msg0 (toList p))
-              in mkNode opts (Val d) (show3 opts msg1 d p) hhs
+                  d = take n (cycle' ps)
+              in mkNode opts (Val d) (show3 opts msg1 d ps) hhs
 
 
 -- | similar to 'toList'

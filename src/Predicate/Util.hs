@@ -341,7 +341,7 @@ instance Monoid a => Monoid (TT a) where
    mempty = TT mempty mempty mempty mempty
 
 instance Applicative TT where
-  pure a = TT ValP (pure a) "" []
+  pure a = TT ValP (Val a) "" []
   (<*>) = ap
 
 fixTTValP :: ValP -> TT a -> TT a
@@ -351,9 +351,9 @@ instance Monad TT where
   return = pure
   z@(TT bp bt ss ts) >>= amb =
      case bt of
-       Val a -> fixTTValP bp (amb a & ttString %~ jamSS ss
-                      & ttForest %~ (ts <>))
-
+       Val a -> fixTTValP bp $ amb a
+                  & ttString %~ jamSS ss
+                  & ttForest %~ (ts <>)
        Fail e -> z { _ttVal = Fail e }
 
 -- | creates a Node for the evaluation tree
