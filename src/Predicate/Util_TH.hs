@@ -72,6 +72,7 @@ refinedTH i =
        Left m -> fail $ refinedFailMsg @opts msg0 m
        Right r -> [||r||]
 
+-- | creates a 'Refined.Refined' refinement type running in IO
 refinedTHIO :: forall opts p i
   . (TH.Lift i, RefinedC opts p i)
   => i

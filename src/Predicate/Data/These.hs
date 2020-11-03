@@ -71,7 +71,7 @@ import qualified Data.These.Combinators as TheseC
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
 
--- | similar to 'partitionThese'. returns a 3-tuple with the results so use 'Fst' 'Snd' 'Thd' to extract
+-- | similar to 'Data.These.partitionThese'. returns a 3-tuple with the results so use 'Fst' 'Snd' 'Thd' to extract
 --
 -- >>> pz @PartitionThese [This 'a', That 2, This 'c', These 'z' 1, That 4, These 'a' 2, That 99]
 -- Val ("ac",[2,4,99],[('z',1),('a',2)])
@@ -95,7 +95,7 @@ instance ( Show a
         b = partitionThese as
     in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
 
--- | similar to 'TheseC.catThis'
+-- | similar to 'Data.These.Combinators.catThis'
 --
 -- >>> pz @(Thiss) [That 1, This 'a', These 'b' 33, This 'd', That 4]
 -- Val "ad"
@@ -113,7 +113,7 @@ instance P ThissT x => P Thiss x where
   type PP Thiss x = PP ThissT x
   eval _ = eval (Proxy @ThissT)
 
--- | similar to 'TheseC.catThat'
+-- | similar to 'Data.These.Combinators.catThat'
 --
 -- >>> pl @Thats [This 1, This 10,That 'x', This 99, That 'y']
 -- Present "xy" ((>>) "xy" | {Snd "xy" | ([1,10,99],"xy",[])})
@@ -126,7 +126,7 @@ instance P ThatsT x => P Thats x where
   type PP Thats x = PP ThatsT x
   eval _ = eval (Proxy @ThatsT)
 
--- | similar to 'TheseC.catThese'
+-- | similar to 'Data.These.Combinators.catThese'
 --
 -- >>> pz @(ZipThese Id Tail >> Theses) [1..10]
 -- Val [(1,2),(2,3),(3,4),(4,5),(5,6),(6,7),(7,8),(8,9),(9,10)]
@@ -138,7 +138,7 @@ instance P ThesesT x => P Theses x where
   type PP Theses x = PP ThesesT x
   eval _ = eval (Proxy @ThesesT)
 
--- | similar to 'TheseC.catHere'
+-- | similar to 'Data.These.Combinators.catHere'
 --
 -- >>> pz @(ZipThese Id Tail >> Heres) [1..10]
 -- Val [1,2,3,4,5,6,7,8,9,10]
@@ -154,7 +154,7 @@ instance ( Show a
         b = TheseC.catHere as
     in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
 
--- | similar to 'TheseC.catThere'
+-- | similar to 'Data.These.Combinators.catThere'
 --
 -- >>> pz @(ZipThese Id Tail >> Theres) [1..10]
 -- Val [2,3,4,5,6,7,8,9,10]
@@ -275,6 +275,7 @@ instance P (MkThisT t p) x => P (MkThis t p) x where
   type PP (MkThis t p) x = PP (MkThisT t p) x
   eval _ = eval (Proxy @(MkThisT t p))
 
+-- | similar to 'MkThat' where @t@ references the type
 data MkThat' t p deriving Show
 
 instance ( Show (PP p x)

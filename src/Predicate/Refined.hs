@@ -71,7 +71,7 @@ newtype Refined (opts :: Opt) p a = Refined a
   deriving stock (Show, TH.Lift)
   deriving newtype (Eq, Ord, NFData)
 
--- | extract the value from Refined
+-- | extract the value from 'Refined'
 unRefined :: forall k (opts :: Opt) (p :: k) a
    . Refined opts p a
   -> a
@@ -239,18 +239,21 @@ genRefined g =
           Just a -> pure $ unsafeRefined a
   in f 0
 
+-- | holds the results of creating a 'Refined' value for display
 data Msg0 = Msg0 { m0BoolE :: !(Either String Bool)
                  , m0Short :: !String
                  , m0Long :: !String
                  , m0ValBoolColor :: !String
                  } deriving Eq
 
+-- | verbose display of 'Msg0'
 showMsg0 :: Msg0 -> String
 showMsg0 (Msg0 a b c d) = "Msg0 [" ++ show a ++ "]\nShort[" ++ b ++ "]\nLong[" ++ c ++ "]\nColor[" ++ d ++ "]"
 
 instance Show Msg0 where
   show = m0Long
 
+-- | returns a 'Refined' value if @a@ is valid for the predicate @p@ for any 'MonadEval' instance
 newRefined' :: forall opts p a m
    . ( MonadEval m
      , RefinedC opts p a
@@ -267,7 +270,7 @@ newRefined' a = do
        Right True -> Right (Refined a)
        _ -> Left msg0
 
--- | returns a 'Refined' value if @a@ is valid for the predicate @p@
+-- | returns a pure 'Refined' value if @a@ is valid for the predicate @p@
 --
 -- >>> newRefined @OL @(ReadP Int Id > 99) "123"
 -- Right (Refined "123")
@@ -323,7 +326,6 @@ newRefined' a = do
 -- >>> newRefined @OU @((Id $$ 13) > 100) (\x -> x * 14) ^? _Right . to unRefined . to ($ 99)
 -- Just 1386
 --
-
 newRefined :: forall opts p a
     . RefinedC opts p a
    => a

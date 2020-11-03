@@ -630,17 +630,6 @@ instance ( x ~ [a]
   type PP (BoolsN prt n p) x = Bool
   eval _ = evalBool (Proxy @(BoolsNT prt n p))
 
--- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
---
--- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [13,59,61]
--- Fail "seconds invalid: found 61"
---
--- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [27,59,12]
--- Fail "hours invalid: found 27"
---
--- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [23,59,12]
--- Val [23,59,12]
---
 data GuardsDetailImpl (ps :: [(k,k1)]) deriving Show
 
 instance ( [a] ~ x
@@ -656,6 +645,17 @@ instance ( [a] ~ x
        in pure $ mkNode opts (Fail msg1) "" []
     else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
 
+-- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
+--
+-- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [13,59,61]
+-- Fail "seconds invalid: found 61"
+--
+-- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [27,59,12]
+-- Fail "hours invalid: found 27"
+--
+-- >>> pz @(GuardsDetail "%s invalid: found %d" '[ '("hours", Between 0 23 Id),'("minutes",Between 0 59 Id),'("seconds",Between 0 59 Id)]) [23,59,12]
+-- Val [23,59,12]
+--
 data GuardsDetail prt (ps :: [(k0,k1)]) deriving Show
 type GuardsDetailT prt (ps :: [(k0,k1)]) = GuardsDetailImpl (ToGuardsDetailT prt ps)
 

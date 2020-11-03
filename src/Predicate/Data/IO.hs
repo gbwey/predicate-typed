@@ -323,6 +323,7 @@ instance ( GetFHandle fh
 
 -- | read in a value of a given type from stdin with a prompt: similar to 'System.IO.readIO'
 type ReadIO (t :: Type) = ReadIO' t "Enter value"
+-- | similar to 'ReadIO' but allow the user to specify the prompt string @s@
 type ReadIO' (t :: Type) s = Stdout (s <> ":") >> Stdin >> ReadP t Id
 -- eg pa @(ReadIO Int + ReadIO Int) ()
 

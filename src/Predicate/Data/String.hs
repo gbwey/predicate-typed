@@ -79,7 +79,7 @@ instance ( FailUnlessT (OrT l r)
         b =  (fl . fr) p
      in pure $ mkNode opts (Val (b ^. DTL.packed)) (msg0 <> litL opts b <> litVerbose opts " | " p) []
 
--- | similar to 'T.stripStart'
+-- | similar to 'Data.Text.stripStart'
 --
 -- >>> pz @(Snd >> TrimL) (20," abc   ")
 -- Val "abc   "
@@ -91,7 +91,7 @@ instance P TrimLT x => P TrimL x where
   type PP TrimL x = PP TrimLT x
   eval _ = eval (Proxy @TrimLT)
 
--- | similar to 'T.stripEnd'
+-- | similar to 'Data.Text.stripEnd'
 --
 -- >>> pz @(Snd >> TrimR) (20," abc   ")
 -- Val " abc"
@@ -109,7 +109,7 @@ instance P TrimRT x => P TrimR x where
   type PP TrimR x = PP TrimRT x
   eval _ = eval (Proxy @TrimRT)
 
--- | similar to 'T.strip'
+-- | similar to 'Data.Text.strip'
 --
 -- >>> pz @(Snd >> TrimBoth) (20," abc   ")
 -- Val "abc"
@@ -154,7 +154,7 @@ instance ( GetBool l
                   in if after == p then Just before else Nothing
         in mkNode opts (Val (fmap (view DTL.packed) b)) (msg0 <> showL opts b <> litVerbose opts " | p=" p <> litVerbose opts " | q=" q) [hh pp, hh qq]
 
--- | similar to 'T.stripLeft'
+-- | similar to 'Data.Text.stripLeft'
 --
 -- >>> pz @(StripL "xyz" Id) "xyzHello"
 -- Val (Just "Hello")
@@ -172,7 +172,7 @@ instance P (StripLT p q) x => P (StripL p q) x where
   type PP (StripL p q) x = PP (StripLT p q) x
   eval _ = eval (Proxy @(StripLT p q))
 
--- | similar to 'T.stripRight'
+-- | similar to 'Data.Text.stripRight'
 --
 -- >>> pz @(StripR "xyz" Id) "Hello xyz"
 -- Val (Just "Hello ")
@@ -215,7 +215,7 @@ instance ( GetBool ignore
         let msg1 = msg0 <> (if ignore then "I" else "") <> " | " <> p
         in mkNodeB opts (on ff lwr p q) (msg1 <> " " <> litL opts q) [hh pp, hh qq]
 
--- | similar to 'isPrefixOf' for strings
+-- | similar to 'Data.List.isPrefixOf' for strings
 --
 -- >>> pl @(IsPrefixC "xy" Id) "xyzabw"
 -- True (IsPrefixC | xy xyzabw)
@@ -235,7 +235,7 @@ instance P (IsPrefixCT p q) x => P (IsPrefixC p q) x where
   type PP (IsPrefixC p q) x = PP (IsPrefixCT p q) x
   eval _ = evalBool (Proxy @(IsPrefixCT p q))
 
--- | similar to 'isInfixOf' for strings
+-- | similar to 'Data.List.isInfixOf' for strings
 --
 -- >>> pl @(IsInfixC "ab" Id) "xyzabw"
 -- True (IsInfixC | ab xyzabw)
@@ -260,7 +260,7 @@ instance P (IsInfixCT p q) x => P (IsInfixC p q) x where
   type PP (IsInfixC p q) x = PP (IsInfixCT p q) x
   eval _ = evalBool (Proxy @(IsInfixCT p q))
 
--- | similar to 'isSuffixOf' for strings
+-- | similar to 'Data.List.isSuffixOf' for strings
 --
 -- >>> pl @(IsSuffixC "bw" Id) "xyzabw"
 -- True (IsSuffixC | bw xyzabw)
@@ -280,7 +280,7 @@ instance P (IsSuffixCT p q) x => P (IsSuffixC p q) x where
   type PP (IsSuffixC p q) x = PP (IsSuffixCT p q) x
   eval _ = evalBool (Proxy @(IsSuffixCT p q))
 
--- | similar to case insensitive 'isPrefixOf' for strings
+-- | similar to case insensitive 'Data.List.isPrefixOf' for strings
 --
 -- >>> pz @(IsPrefixCI "abc" "aBcbCd") ()
 -- Val True
@@ -292,7 +292,7 @@ instance P (IsPrefixCIT p q) x => P (IsPrefixCI p q) x where
   type PP (IsPrefixCI p q) x = PP (IsPrefixCIT p q) x
   eval _ = evalBool (Proxy @(IsPrefixCIT p q))
 
--- | similar to case insensitive 'isInfixOf' for strings
+-- | similar to case insensitive 'Data.List.isInfixOf' for strings
 --
 -- >>> pl @(IsInfixCI "aB" Id) "xyzAbw"
 -- True (IsInfixCI | aB xyzAbw)
@@ -308,7 +308,7 @@ instance P (IsInfixCIT p q) x => P (IsInfixCI p q) x where
   type PP (IsInfixCI p q) x = PP (IsInfixCIT p q) x
   eval _ = evalBool (Proxy @(IsInfixCIT p q))
 
--- | similar to case insensitive 'isSuffixOf' for strings
+-- | similar to case insensitive 'Data.List.isSuffixOf' for strings
 --
 data IsSuffixCI p q deriving Show
 type IsSuffixCIT p q = IsFixImplC 'GT 'True p q

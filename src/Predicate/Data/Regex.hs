@@ -264,6 +264,9 @@ instance ( GetROpts rs
 -- Present [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])] (Rescan (([[:xdigit:]]{2})) [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])] | wfeb12az)
 -- Val [("fe",["fe"]),("b1",["b1"]),("2a",["2a"])]
 --
+-- >>> pz @(Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z") "Date(1593460089052+0800)"
+-- Val 2020-06-30 03:48:09.052 +0800
+--
 data Rescan p deriving Show
 type RescanT p = Rescan' '[] p Id
 
@@ -271,7 +274,7 @@ instance P (RescanT p) x => P (Rescan p) x where
   type PP (Rescan p) x = PP (RescanT p) x
   eval _ = eval (Proxy @(RescanT p))
 
-
+-- | similar to 'RescanRanges' but also allows the regex options @rs@ to be specified
 data RescanRanges' (rs :: [ROpt]) p q deriving Show
 
 instance ( GetROpts rs
@@ -375,11 +378,6 @@ instance P (ResplitT p) x => P (Resplit p) x where
   type PP (Resplit p) x = PP (ResplitT p) x
   eval _ = eval (Proxy @(ResplitT p))
 
--- | replaces regex @s@ with a string @s1@ inside the value: see 'RH.sub' and 'RH.gsub'
---
--- >>> pz @(ReplaceAllString 'ROverWrite "\\." ":" Id) "141.201.1.22"
--- Val "141:201:1:22"
---
 data ReplaceImpl (alle :: Bool) (rs :: [ROpt]) p q r deriving Show
 
 instance ( GetBool b
@@ -422,6 +420,7 @@ instance ( GetBool b
                            RReplace3 s -> (if alle then RH.gsub else RH.sub) regex s r
                in mkNode opts (Val ret) (msg1 <> " " <> litL opts r <> litVerbose opts " | " ret) (hhs <> [hh rr])
 
+-- | replaces all values using regex @p@ with a replacement function @q@ inside the value @r@ using regex options @rs@
 data ReplaceAll' (rs :: [ROpt]) p q r deriving Show
 type ReplaceAllT' (rs :: [ROpt]) p q r = ReplaceImpl 'True rs p q r
 
@@ -429,6 +428,7 @@ instance P (ReplaceAllT' rs p q r) x => P (ReplaceAll' rs p q r) x where
   type PP (ReplaceAll' rs p q r) x = PP (ReplaceAllT' rs p q r) x
   eval _ = eval (Proxy @(ReplaceAllT' rs p q r))
 
+-- | replaces all values using regex @p@ with a replacement function @q@ inside the value @r@
 data ReplaceAll p q r deriving Show
 type ReplaceAllT p q r = ReplaceAll' '[] p q r
 
@@ -436,6 +436,7 @@ instance P (ReplaceAllT p q r) x => P (ReplaceAll p q r) x where
   type PP (ReplaceAll p q r) x = PP (ReplaceAllT p q r) x
   eval _ = eval (Proxy @(ReplaceAllT p q r))
 
+-- | replaces the first value using regex @p@ with a replacement function @q@ inside the value @r@ using regex options @rs@
 data ReplaceOne' (rs :: [ROpt]) p q r deriving Show
 type ReplaceOneT' (rs :: [ROpt]) p q r = ReplaceImpl 'False rs p q r
 
@@ -443,27 +444,21 @@ instance P (ReplaceOneT' rs p q r) x => P (ReplaceOne' rs p q r) x where
   type PP (ReplaceOne' rs p q r) x = PP (ReplaceOneT' rs p q r) x
   eval _ = eval (Proxy @(ReplaceOneT' rs p q r))
 
--- | replace first occurrence of string @p@ with @q@ in @r@
---
--- >>> pl @(ReplaceOneString 'ROverWrite "abc" "def" Id) "123abc456abc"
--- Present "123def456abc" (ReplaceOne (abc) 123abc456abc | 123def456abc)
--- Val "123def456abc"
---
--- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z") "Date(1530144000123+0530)"
--- Val 2018-06-28 05:30:00.123 +0530
---
--- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z") "Date(1593460089052+0800)"
--- Val 2020-06-30 03:48:09.052 +0800
---
--- >>> pz @(Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z") "Date(1593460089052+0800)"
--- Val 2020-06-30 03:48:09.052 +0800
---
+-- | replaces first value using regex @p@ with a replacement function @q@ inside the value @r@
 data ReplaceOne p q r deriving Show
 type ReplaceOneT p q r = ReplaceOne' '[] p q r
 
 instance P (ReplaceOneT p q r) x => P (ReplaceOne p q r) x where
   type PP (ReplaceOne p q r) x = PP (ReplaceOneT p q r) x
   eval _ = eval (Proxy @(ReplaceOneT p q r))
+
+-- | replace all occurrences of string @p@ with @q@ in @r@ using regex options @rs@
+data ReplaceAllString' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r deriving Show
+type ReplaceAllStringT' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r = ReplaceAll' rs p (ReplaceFn o q) r
+
+instance P (ReplaceAllStringT' rs o p q r) x => P (ReplaceAllString' rs o p q r) x where
+  type PP (ReplaceAllString' rs o p q r) x = PP (ReplaceAllStringT' rs o p q r) x
+  eval _ = eval (Proxy @(ReplaceAllStringT' rs o p q r))
 
 -- | replace all occurrences of string @p@ with @q@ in @r@
 --
@@ -491,13 +486,9 @@ instance P (ReplaceOneT p q r) x => P (ReplaceOne p q r) x where
 -- Present "123AbC456abcdef" (ReplaceAll (abc) 123AbC456abc | 123AbC456abcdef)
 -- Val "123AbC456abcdef"
 --
-data ReplaceAllString' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r deriving Show
-type ReplaceAllStringT' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r = ReplaceAll' rs p (ReplaceFn o q) r
-
-instance P (ReplaceAllStringT' rs o p q r) x => P (ReplaceAllString' rs o p q r) x where
-  type PP (ReplaceAllString' rs o p q r) x = PP (ReplaceAllStringT' rs o p q r) x
-  eval _ = eval (Proxy @(ReplaceAllStringT' rs o p q r))
-
+-- >>> pz @(ReplaceAllString 'ROverWrite "\\." ":" Id) "141.201.1.22"
+-- Val "141:201:1:22"
+--
 data ReplaceAllString o p q r deriving Show
 type ReplaceAllStringT o p q r = ReplaceAllString' '[] o p q r
 
@@ -505,6 +496,7 @@ instance P (ReplaceAllStringT o p q r) x => P (ReplaceAllString o p q r) x where
   type PP (ReplaceAllString o p q r) x = PP (ReplaceAllStringT o p q r) x
   eval _ = eval (Proxy @(ReplaceAllStringT o p q r))
 
+-- | same as 'ReplaceOneString' but allow setting regex options with @rs@
 data ReplaceOneString' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r deriving Show
 type ReplaceOneStringT' (rs :: [ROpt]) (o :: ReplaceFnSub) p q r = ReplaceOne' rs p (ReplaceFn o q) r
 
@@ -512,6 +504,18 @@ instance P (ReplaceOneStringT' rs o p q r) x => P (ReplaceOneString' rs o p q r)
   type PP (ReplaceOneString' rs o p q r) x = PP (ReplaceOneStringT' rs o p q r) x
   eval _ = eval (Proxy @(ReplaceOneStringT' rs o p q r))
 
+-- | replace first occurrence of string @p@ with @q@ in @r@
+--
+-- >>> pl @(ReplaceOneString 'ROverWrite "abc" "def" Id) "123abc456abc"
+-- Present "123def456abc" (ReplaceOne (abc) 123abc456abc | 123def456abc)
+-- Val "123def456abc"
+--
+-- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z") "Date(1530144000123+0530)"
+-- Val 2018-06-28 05:30:00.123 +0530
+--
+-- >>> pz @(Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z") "Date(1593460089052+0800)"
+-- Val 2020-06-30 03:48:09.052 +0800
+--
 data ReplaceOneString (o :: ReplaceFnSub) p q r deriving Show
 type ReplaceOneStringT (o :: ReplaceFnSub) p q r = ReplaceOneString' '[] o p q r
 

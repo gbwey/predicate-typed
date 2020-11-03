@@ -1610,6 +1610,7 @@ instance P p x => P (Singleton p) x where
       Left e -> e
       Right p -> mkNode opts (Val [p]) msg0 [hh pp]
 
+-- | creates an empty list for the given pointer to a type @t@
 data EmptyList' t deriving Show
 
 instance P (EmptyList' t) x where

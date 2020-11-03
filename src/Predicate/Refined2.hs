@@ -97,9 +97,11 @@ import Control.DeepSeq (rnf, rnf2, NFData)
 --
 data Refined2 (opts :: Opt) ip op i = Refined2 !(PP ip i) !i
 
+-- | field accessor for the converted input value in 'Refined2'
 r2In :: Refined2 (opts :: Opt) ip op i -> PP ip i
 r2In (Refined2 ppi _) = ppi
 
+-- | field accessor for the original input value in 'Refined2'
 r2Out :: Refined2 (opts :: Opt) ip op i -> i
 r2Out (Refined2 _ i) = i
 
@@ -370,6 +372,7 @@ data RResults2 a =
      | RTTrue !a !(Tree PE) !(Tree PE) -- op true
      deriving Show
 
+-- | version for creating a 'Refined2' value that works for any 'MonadEval' instance
 newRefined2' :: forall opts ip op i m
   . ( MonadEval m
     , Refined2C opts ip op i
@@ -379,7 +382,7 @@ newRefined2' :: forall opts ip op i m
   -> m (Either Msg2 (Refined2 opts ip op i))
 newRefined2' = newRefined2P' Proxy
 
--- | same as 'newRefined2P' but runs in IO
+-- | same as 'newRefined2P' but runs for any MonadEval instance
 newRefined2P' :: forall opts ip op i proxy m
   . ( MonadEval m
     , Refined2C opts ip op i
@@ -392,7 +395,7 @@ newRefined2P' _ i = do
   (ret,mr) <- eval2M i
   return $ maybe (Left $ prt2Impl (getOpt @opts) ret) Right mr
 
--- | pure version for extracting Refined2
+-- | pure version for creating a 'Refined2' value
 --
 -- >>> newRefined2 @OZ @(ReadBase Int 16) @(Lt 255) "00fe"
 -- Right (Refined2 254 "00fe")
@@ -438,6 +441,15 @@ newRefined2 :: forall opts ip op i
     -> Either Msg2 (Refined2 opts ip op i)
 newRefined2 = newRefined2P Proxy
 
+-- | create a Refined2 using a 4-tuple proxy and aggregate the results on failure
+--
+-- >>> type T4 k = '(OZ, MkDayExtra Id >> 'Just Id, GuardBool "expected a Sunday" (Thd == 7), k)
+-- >>> newRefined2P (Proxy @(T4 _)) (2019,10,12)
+-- Left Step 2. Failed Boolean Check(op) | expected a Sunday
+--
+-- >>> newRefined2P (Proxy @(T4 _)) (2019,10,13)
+-- Right (Refined2 (2019-10-13,41,7) (2019,10,13))
+--
 newRefined2P :: forall opts ip op i
   . ( Refined2C opts ip op i
     , Show (PP ip i)
@@ -448,6 +460,7 @@ newRefined2P _ i =
   let (ret,mr) = runIdentity $ eval2M i
   in maybe (Left $ prt2Impl (getOpt @opts) ret) Right mr
 
+-- | create a Refined2 value using a 4-tuple proxy (see 'mkProxy2')
 eval2P :: forall opts ip op i m
   . ( Refined2C opts ip op i
     , MonadEval m
@@ -457,6 +470,7 @@ eval2P :: forall opts ip op i m
   -> m (RResults2 (PP ip i), Maybe (Refined2 opts ip op i))
 eval2P _ = eval2M
 
+-- | workhorse for creating 'Refined2' values
 eval2M :: forall opts ip op i m
   . ( MonadEval m
     , Refined2C opts ip op i
@@ -475,6 +489,7 @@ eval2M i = do
       (Left e,t2) -> (RTF a t1 e t2, Nothing)
    (Left e,t1) -> pure (RF e t1, Nothing)
 
+-- | holds the results of creating a 'Refined2' value for display
 data Msg2 = Msg2 { m2Desc :: !String
                  , m2Short :: !String
                  , m2Long :: !String
@@ -484,6 +499,7 @@ data Msg2 = Msg2 { m2Desc :: !String
 instance Show Msg2 where
   show (Msg2 a b c _d) = a <> nullIf " | " b <> nullIf "\n" c
 
+-- | format the output from creating a 'Refined2' value into 'Msg2'
 prt2Impl :: forall a . Show a
   => POpts
   -> RResults2 a

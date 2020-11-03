@@ -122,8 +122,6 @@ module Predicate.Misc (
   , (~>)
   , errorInProgram
   , drawTreeU
-  , asProxyLeft
-  , asProxyRight
   , removeAnsi
   , _Id
   , sum'
@@ -1009,6 +1007,7 @@ primeStream = 2 : 3 : 5 : primes'
     isPrime' (p:ps) n = p*p > n || n `rem` p /= 0 && isPrime' ps n
     primes' = 7 : filter (isPrime' primes') (scanl (+) 11 $ cycle' [2,4,2,4,6,2,6,4])
 
+-- | similar to 'cycle' but if the list is empty will return an empty list
 cycle' :: [a] -> [a]
 cycle' [] = []
 cycle' xs = xs' where xs' = xs ++ xs'
@@ -1274,12 +1273,6 @@ drawU (Node x ts0) = x : drawSubTrees ts0
 
     shift one other = zipWith (++) (one : repeat other)
 
-asProxyRight :: proxy a -> proxy1 a -> proxy1 a
-asProxyRight = flip const
-
-asProxyLeft :: proxy a -> proxy1 a -> proxy a
-asProxyLeft = const
-
 -- | strip ansi characters from a string and print it (for doctests)
 removeAnsi :: Show a => Either String a -> IO ()
 removeAnsi = putStrLn . removeAnsiImpl
@@ -1298,6 +1291,7 @@ removeAnsiImpl =
                in concat $ unfoldr f e
      Right a -> show a
 
+-- | 'Identity' lens
 _Id :: Lens (Identity a) (Identity b) a b
 _Id afb (Identity a) = Identity <$> afb a
 
@@ -1325,9 +1319,11 @@ instance SwapC ((,,,,,) a b c d) where
 instance SwapC ((,,,,,,) a b c d e) where
   swapC (a,b,c,d,e,f,g) = (a,b,c,d,e,g,f)
 
+-- | strict version of 'sum'
 sum' :: (Foldable t, Num a) => t a -> a
 sum' = foldl' (+) 0
 
+-- | strict version of 'product'
 product' :: (Foldable t, Num a) => t a -> a
 product' = foldl' (*) 1
 

@@ -54,7 +54,6 @@ module Predicate.Refined3 (
   , mkProxy3
   , mkProxy3'
   , MakeR3
-  , MakeR3'
 
   -- ** unsafe methods for creating Refined3
   , unsafeRefined3
@@ -118,9 +117,11 @@ data Refined3 (opts :: Opt) ip op fmt i = Refined3 !(PP ip i) !i
 
 type role Refined3 phantom nominal nominal nominal nominal
 
+-- | field accessor for the converted input value in 'Refined3'
 r3In :: Refined3 opts ip op fmt i -> PP ip i
 r3In (Refined3 ppi _) = ppi
 
+-- | field accessor for the converted output value in 'Refined3'
 r3Out :: Refined3 opts ip op fmt i -> i
 r3Out (Refined3 _ i) = i
 
@@ -414,9 +415,6 @@ mkProxy3' = Proxy
 type family MakeR3 p where
   MakeR3 '(opts,ip,op,fmt,i) = Refined3 opts ip op fmt i
 
-type family MakeR3' opts p where
-  MakeR3' opts '(ip,op,fmt,i) = Refined3 opts ip op fmt i
-
 -- | An ADT that summarises the results of evaluating Refined3 representing all possible states
 data RResults3 a =
        RF !String !(Tree PE)        -- Left e
@@ -436,7 +434,7 @@ newRefined3' :: forall opts ip op fmt i m
   -> m (Either Msg3 (Refined3 opts ip op fmt i))
 newRefined3' = newRefined3P' Proxy
 
--- | same as 'newRefined3P' but runs in IO
+-- | same as 'newRefined3P' but runs in any MonadEval instance
 newRefined3P' :: forall opts ip op fmt i proxy m
   . ( MonadEval m
     , Refined3C opts ip op fmt i
@@ -536,6 +534,7 @@ eval3P :: forall opts ip op fmt i m proxy
   -> m (RResults3 (PP ip i), Maybe (Refined3 opts ip op fmt i))
 eval3P _ = eval3M
 
+-- | workhorse for creating 'Refined3' values
 eval3M :: forall opts ip op fmt i m
   . ( MonadEval m
     , Refined3C opts ip op fmt i
@@ -558,7 +557,7 @@ eval3M i = do
       (Left e,t2) -> pure (RTF a t1 e t2, Nothing)
    (Left e,t1) -> pure (RF e t1, Nothing)
 
--- | creates Refined3 value but skips the initial conversion
+-- | creates a 'Refined3' value but skips the initial conversion
 eval3MSkip :: forall opts ip op fmt i m
   . ( MonadEval m
     , Refined3C opts ip op fmt i
@@ -580,6 +579,7 @@ eval3MSkip a = do
 mkNodeSkipP :: Tree PE
 mkNodeSkipP = Node (PE TrueP "skipped PP ip i = Id") []
 
+-- | holds the results of creating a 'Refined3' value for display
 data Msg3 = Msg3 { m3Desc :: !String
                  , m3Short :: !String
                  , m3Long :: !String

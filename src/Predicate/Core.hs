@@ -170,9 +170,8 @@ evalBool :: ( MonadEval m
               -> a
               -> m (TT (PP p a))
 evalBool p opts = fmap fixTTBool . eval p opts
--- evalBool p opts = (over (mapped . ttValBool) id) . eval p opts
 
-
+-- | A specialised form of 'eval' that returns the result or the error string on failure
 evalQuick :: forall opts p i
   . ( OptC opts
     , P p i
@@ -1165,6 +1164,7 @@ instance ( Show x
         d = x ^. _Wrapped'
     in pure $ mkNode opts (Val d) (show3 opts msg0 d x) []
 
+-- | similar to 'Wrap' where @t@ points to the type
 data Wrap' t p deriving Show
 
 instance ( Show (PP p x)
@@ -1207,7 +1207,6 @@ instance ( Show (PP p x)
 -- Present Sum {getSum = 25} (Sum {getSum = 13} <> Sum {getSum = 12} = Sum {getSum = 25})
 -- Val (Sum {getSum = 25})
 --
-
 data Wrap (t :: Type) p deriving Show
 type WrapT (t :: Type) p = Wrap' (Hole t) p
 
@@ -1671,20 +1670,6 @@ instance ( P p a
                       mkNodeB opts True (msg1 <> " i=" ++ show i ++ " " <> topMessage tt) hhs
 
 -- | similar to 'fst'
---
--- >>> pz @Fst (10,"Abc")
--- Val 10
---
--- >>> pz @Fst (10,"Abc",'x')
--- Val 10
---
--- >>> pz @Fst (10,"Abc",'x',False)
--- Val 10
---
--- >>> pl @Fst (99,'a',False,1.3)
--- Present 99 (Fst 99 | (99,'a',False,1.3))
--- Val 99
---
 data L1 p deriving Show
 
 instance ( Show (ExtractL1T (PP p x))
@@ -1702,6 +1687,21 @@ instance ( Show (ExtractL1T (PP p x))
         let b = extractL1C p
         in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
+-- | similar to 'fst'
+--
+-- >>> pz @Fst (10,"Abc")
+-- Val 10
+--
+-- >>> pz @Fst (10,"Abc",'x')
+-- Val 10
+--
+-- >>> pz @Fst (10,"Abc",'x',False)
+-- Val 10
+--
+-- >>> pl @Fst (99,'a',False,1.3)
+-- Present 99 (Fst 99 | (99,'a',False,1.3))
+-- Val 99
+--
 data Fst deriving Show
 type FstT = L1 Id
 
@@ -1710,17 +1710,6 @@ instance P FstT x => P Fst x where
   eval _ = eval (Proxy @FstT)
 
 -- | similar to 'snd'
---
--- >>> pz @Snd (10,"Abc")
--- Val "Abc"
---
--- >>> pz @Snd (10,"Abc",True)
--- Val "Abc"
---
--- >>> pl @Snd (99,'a',False,1.3)
--- Present 'a' (Snd 'a' | (99,'a',False,1.3))
--- Val 'a'
---
 data L2 p deriving Show
 
 instance ( Show (ExtractL2T (PP p x))
@@ -1738,6 +1727,18 @@ instance ( Show (ExtractL2T (PP p x))
         let b = extractL2C p
         in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
+-- | similar to 'snd'
+--
+-- >>> pz @Snd (10,"Abc")
+-- Val "Abc"
+--
+-- >>> pz @Snd (10,"Abc",True)
+-- Val "Abc"
+--
+-- >>> pl @Snd (99,'a',False,1.3)
+-- Present 'a' (Snd 'a' | (99,'a',False,1.3))
+-- Val 'a'
+--
 data Snd deriving Show
 
 type SndT = L2 Id
@@ -1747,17 +1748,6 @@ instance P SndT x => P Snd x where
   eval _ = eval (Proxy @SndT)
 
 -- | similar to 3rd element in a n-tuple
---
--- >>> pz @Thd (10,"Abc",133)
--- Val 133
---
--- >>> pz @Thd (10,"Abc",133,True)
--- Val 133
---
--- >>> pl @Thd (99,'a',False,1.3)
--- Present False (Thd False | (99,'a',False,1.3))
--- Val False
---
 data L3 p deriving Show
 
 instance ( Show (ExtractL3T (PP p x))
@@ -1775,6 +1765,18 @@ instance ( Show (ExtractL3T (PP p x))
         let b = extractL3C p
         in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
+-- | similar to 3rd element in a n-tuple
+--
+-- >>> pz @Thd (10,"Abc",133)
+-- Val 133
+--
+-- >>> pz @Thd (10,"Abc",133,True)
+-- Val 133
+--
+-- >>> pl @Thd (99,'a',False,1.3)
+-- Present False (Thd False | (99,'a',False,1.3))
+-- Val False
+--
 data Thd deriving Show
 type ThdT = L3 Id
 
@@ -2548,6 +2550,7 @@ unsafeEval :: forall opts p a
         -> PP p a
 unsafeEval = either (error . ("\n" <>)) id . evalEither @opts @p
 
+-- | run a type level computation and returns the value or a tree with the error
 evalEither :: forall opts p a
         . ( OptC opts
           , Show (PP p a)

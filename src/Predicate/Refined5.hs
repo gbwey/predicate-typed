@@ -303,6 +303,7 @@ instance ( Refined2C opts ip op i
          ) => Hashable (Refined5 opts ip op i) where
   hashWithSalt s (Refined5 b) = s + hash b
 
+-- | creating a 'Refined5' value for any 'MonadEval'
 newRefined5' :: forall opts ip op i m
   . ( MonadEval m
     , Refined2C opts ip op i
@@ -312,7 +313,7 @@ newRefined5' :: forall opts ip op i m
   -> m (Either Msg2 (Refined5 opts ip op i))
 newRefined5' = newRefined5P' Proxy
 
--- | same as 'newRefined5P' but runs in IO
+-- | same as 'newRefined5P' but runs for any MonadEval instance
 newRefined5P' :: forall opts ip op i proxy m
   . ( MonadEval m
     , Refined2C opts ip op i
@@ -325,7 +326,7 @@ newRefined5P' _ i = do
   (ret,mr) <- eval5M i
   return $ maybe (Left $ prt2Impl (getOpt @opts) ret) Right mr
 
--- | pure version for extracting Refined5
+-- | pure version for creating a 'Refined5' value
 --
 -- >>> newRefined5 @OZ @(ReadBase Int 16) @(Lt 255) "00fe"
 -- Right (Refined5 254)
@@ -371,6 +372,7 @@ newRefined5 :: forall opts ip op i
     -> Either Msg2 (Refined5 opts ip op i)
 newRefined5 = newRefined5P Proxy
 
+-- | create a Refined5 using a 4-tuple proxy and aggregate the results on failure
 newRefined5P :: forall opts ip op i
   . ( Refined2C opts ip op i
     , Show (PP ip i)
@@ -381,6 +383,7 @@ newRefined5P _ i =
   let (ret,mr) = runIdentity $ eval5M i
   in maybe (Left $ prt2Impl (getOpt @opts) ret) Right mr
 
+-- | create a 'Refined5' value using a 4-tuple proxy (see 'Predicate.Refined2.mkProxy2')
 eval5P :: forall opts ip op i m
   . ( Refined2C opts ip op i
     , MonadEval m
@@ -390,6 +393,7 @@ eval5P :: forall opts ip op i m
   -> m (RResults2 (PP ip i), Maybe (Refined5 opts ip op i))
 eval5P _ = eval5M
 
+-- | workhorse for creating 'Refined5' values
 eval5M :: forall opts ip op i m
   . ( MonadEval m
     , Refined2C opts ip op i

@@ -328,7 +328,7 @@ data TT a = TT { _ttValP :: !ValP -- ^ display value
                , _ttString :: !String  -- ^ detailed information eg input and output and text
                , _ttForest :: !(Forest PE) -- ^ the child nodes
                } deriving stock (Functor, Read, Show, Eq, Foldable, Traversable, Generic, Generic1)
-                 deriving TH.Lift
+                 deriving stock TH.Lift
 
 -- dont expose lenses for _ttValP and _ttVal as they must be kept in sync: see ttVal
 makeLensesFor [("_ttString","ttString"),("_ttForest","ttForest")] ''TT

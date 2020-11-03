@@ -133,6 +133,7 @@ instance P (ReadPT t p) x => P (ReadP t p) x where
   type PP (ReadP t p) x = PP (ReadPT t p) x
   eval _ = eval (Proxy @(ReadPT t p))
 
+-- | same as 'ReadMaybe' except @t@ is a pointer to the type
 data ReadMaybe' t p deriving Show
 
 instance ( P p x

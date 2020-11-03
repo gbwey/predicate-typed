@@ -389,27 +389,33 @@ instance P (ToEnumT t) x => P (ToEnum t) x where
   type PP (ToEnum t) x = PP (ToEnumT t) x
   eval _ = eval (Proxy @(ToEnumT t))
 
-data ToEnumBDef' t def deriving Show
+-- | bounded 'toEnum' function where @t@ refers to location of the type and @p@ the location of the input
+data ToEnumBDef' t def p deriving Show
 
 instance ( P def (Proxy (PP t a))
          , PP def (Proxy (PP t a)) ~ PP t a
-         , Show a
          , Show (PP t a)
+         , Show a
          , Bounded (PP t a)
          , Enum (PP t a)
-         , Integral a
-         ) => P (ToEnumBDef' t def) a where
-  type PP (ToEnumBDef' t def) a = PP t a
+         , Integral (PP p a)
+         , P p a
+         ) => P (ToEnumBDef' t def p) a where
+  type PP (ToEnumBDef' t def p) a = PP t a
   eval _ opts a = do
     let msg0 = "ToEnumBDef"
-    case toEnumMay $ fromIntegral a of
-      Nothing -> do
-         let msg1 = msg0 <> " out of range"
-         pp <- eval (Proxy @def) opts (Proxy @(PP t a))
-         pure $ case getValueLR NoInline opts msg1 pp [] of
-           Left e -> e
-           Right _ -> mkNodeCopy opts pp msg1 [hh pp]
-      Just n -> pure $ mkNode opts (Val n) (show3 opts msg0 n a) []
+    pp <- eval (Proxy @p) opts a
+    case getValueLR NoInline opts msg0 pp [] of
+      Left e -> pure e
+      Right (fromIntegral -> p) -> do
+        case toEnumMay p of
+          Nothing -> do
+             let msg1 = msg0 <> " out of range"
+             dd <- eval (Proxy @def) opts (Proxy @(PP t a))
+             pure $ case getValueLR NoInline opts msg1 dd [hh pp] of
+               Left e -> e
+               Right _ -> mkNodeCopy opts dd msg1 [hh pp, hh dd]
+          Just n -> pure $ mkNode opts (Val n) (show3 opts msg0 n a) [hh pp]
 
 -- | bounded 'toEnum' function
 --
@@ -428,7 +434,7 @@ instance ( P def (Proxy (PP t a))
 -- Val EQ
 --
 data ToEnumBDef (t :: Type) def deriving Show
-type ToEnumBDefT (t :: Type) def = ToEnumBDef' (Hole t) def
+type ToEnumBDefT (t :: Type) def = ToEnumBDef' (Hole t) def Id
 
 instance P (ToEnumBDefT t def) x => P (ToEnumBDef t def) x where
   type PP (ToEnumBDef t def) x = PP (ToEnumBDefT t def) x
@@ -448,7 +454,7 @@ instance P (ToEnumBDefT t def) x => P (ToEnumBDef t def) x where
 -- Fail "ToEnum bounded"
 --
 data ToEnumBFail (t :: Type) deriving Show
-type ToEnumBFailT (t :: Type) = ToEnumBDef' (Hole t) (FailP "ToEnum bounded")
+type ToEnumBFailT (t :: Type) = ToEnumBDef' (Hole t) (FailP "ToEnum bounded") Id
 
 instance P (ToEnumBFailT t) x => P (ToEnumBFail t) x where
   type PP (ToEnumBFail t) x = PP (ToEnumBFailT t) x
