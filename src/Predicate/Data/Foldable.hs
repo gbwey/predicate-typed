@@ -453,91 +453,91 @@ instance ( Traversable n
 
 -- | wraps each item in the foldable container and then unwraps the mconcatenated result: uses 'Control.Lens.Wrapped.Wrapped'
 --
--- >>> pz @(FoldAla (SG.Sum _) Id) [44, 12, 3]
+-- >>> pz @(FoldAla (SG.Sum _)) [44, 12, 3]
 -- Val 59
 --
--- >>> pz @(FoldAla (SG.Product _) Id) [44, 12, 3]
+-- >>> pz @(FoldAla (SG.Product _)) [44, 12, 3]
 -- Val 1584
 --
--- >>> type Ands' p = FoldAla SG.All p
--- >>> pz @(Ands' Id) [True,False,True,True]
+-- >>> type Ands' = FoldAla SG.All
+-- >>> pz @Ands' [True,False,True,True]
 -- Val False
 --
--- >>> pz @(Ands' Id) [True,True,True]
+-- >>> pz @Ands' [True,True,True]
 -- Val True
 --
--- >>> pz @(Ands' Id) []
+-- >>> pz @Ands' []
 -- Val True
 --
--- >>> type Ors' p = FoldAla SG.Any p
--- >>> pz @(Ors' Id) [False,False,False]
+-- >>> type Ors' = FoldAla SG.Any
+-- >>> pz @Ors' [False,False,False]
 -- Val False
 --
--- >>> pz @(Ors' Id) []
+-- >>> pz @Ors' []
 -- Val False
 --
--- >>> pz @(Ors' Id) [False,False,False,True]
+-- >>> pz @Ors' [False,False,False,True]
 -- Val True
 --
--- >>> type AllPositive' = FoldAla SG.All (Map Positive)
+-- >>> type AllPositive' = Map Positive >> FoldAla SG.All
 -- >>> pz @AllPositive' [3,1,-5,10,2,3]
 -- Val False
 --
--- >>> type AllNegative' = FoldAla SG.All (Map Negative)
+-- >>> type AllNegative' = Map Negative >> FoldAla SG.All
 -- >>> pz @AllNegative' [-1,-5,-10,-2,-3]
 -- Val True
 --
 -- >>> :set -XKindSignatures
--- >>> type Max' (t :: Type) = FoldAla (SG.Max t) Id -- requires t be Bounded for monoid instance
+-- >>> type Max' (t :: Type) = FoldAla (SG.Max t) -- requires t be Bounded for monoid instance
 -- >>> pz @(Max' Int) [10,4,5,12,3,4]
 -- Val 12
 --
--- >>> pl @(FoldAla (SG.Sum _) Id) [14,8,17,13]
+-- >>> pl @(FoldAla (SG.Sum _)) [14,8,17,13]
 -- Present 52 ((>>) 52 | {getSum = 52})
 -- Val 52
 --
--- >>> pl @(FoldAla (SG.Max _) Id) [14 :: Int,8,17,13] -- allowed as the values are Bounded!
+-- >>> pl @(FoldAla (SG.Max _)) [14 :: Int,8,17,13] -- allowed as the values are Bounded!
 -- Present 17 ((>>) 17 | {getMax = 17})
 -- Val 17
 --
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldAla (SG.Sum _) Id >> Gt 200)) [1..20]
+-- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldAla (SG.Sum _) >> Gt 200)) [1..20]
 -- True (False || True)
 -- Val True
 --
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldAla (SG.Sum _) Id >> Gt 200)) [1..19]
+-- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldAla (SG.Sum _) >> Gt 200)) [1..19]
 -- False (False || False | ((>>) False | {1 == 0}) || ((>>) False | {190 > 200}))
 -- Val False
 --
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldAla (SG.Sum _) Id >> Gt 200)) []
+-- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldAla (SG.Sum _) >> Gt 200)) []
 -- True (True || False)
 -- Val True
 --
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) &&& FoldAla (SG.Sum _) Id) [1..20]
+-- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) &&& FoldAla (SG.Sum _)) [1..20]
 -- Present (False,210) ('(False,210))
 -- Val (False,210)
 --
--- >>> pl @(FoldAla SG.Any Id) [False,False,True,False]
+-- >>> pl @(FoldAla SG.Any) [False,False,True,False]
 -- Present True ((>>) True | {getAny = True})
 -- Val True
 --
--- >>> pl @(FoldAla SG.All Id) [False,False,True,False]
+-- >>> pl @(FoldAla SG.All) [False,False,True,False]
 -- Present False ((>>) False | {getAll = False})
 -- Val False
 --
--- >>> pl @(FoldAla (SG.Sum _) Id) (Just 13)
+-- >>> pl @(FoldAla (SG.Sum _)) (Just 13)
 -- Present 13 ((>>) 13 | {getSum = 13})
 -- Val 13
 --
--- >>> pl @(FoldAla (SG.Sum _) Id) [1..10]
+-- >>> pl @(FoldAla (SG.Sum _)) [1..10]
 -- Present 55 ((>>) 55 | {getSum = 55})
 -- Val 55
 --
-data FoldAla (t :: Type) p deriving Show
-type FoldAlaT (t :: Type) p = Map' (Wrap t Id) p >> MConcat Id >> Unwrap
+data FoldAla (t :: Type) deriving Show
+type FoldAlaT (t :: Type) = Map' (Wrap t Id) Id >> MConcat Id >> Unwrap
 
-instance P (FoldAlaT t p) x => P (FoldAla t p) x where
-  type PP (FoldAla t p) x = PP (FoldAlaT t p) x
-  eval _ = eval (Proxy @(FoldAlaT t p))
+instance P (FoldAlaT t) x => P (FoldAla t) x where
+  type PP (FoldAla t) x = PP (FoldAlaT t) x
+  eval _ = eval (Proxy @(FoldAlaT t))
 
 -- | similar to 'Data.Foldable.and'
 --

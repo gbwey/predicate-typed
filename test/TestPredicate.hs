@@ -153,8 +153,6 @@ allTests =
   , expectBT (Val (2,True)) $ pz @( FlipT '(,) 'True 2) ()
   , expectBT (Val (1,"ab",2)) $ pz @( FlipT ('(,,) 1) 2 Id) "ab"
   , expectBT (Val 13) $ pz @(12 & Lift Succ) ()
-  , expectBT (Val 10) $ pz @('[1,2,3,4] & FoldAla (SG.Sum _)) ()
-
 
   -- test semigroup interaction
   , expectEQR (These (Val 6) (Fail "xyz | hello")) $ fmap This (pz @Predicate.Sum [1,2,3]) <> fmap That (pz @(FailS "xyz") 5) <> fmap That (pz @(FailS "hello") 1)

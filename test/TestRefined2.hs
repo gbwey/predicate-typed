@@ -342,11 +342,10 @@ testKindSignature2E :: Either Msg2
      (Int,Int,String))
 testKindSignature2E = newRefined2 (1,2,"defghi")
 
--- awkward as  FoldAla t p has p for location of stuff and then we need to run in a context (usually Id relative to p)
 testKindSignature2F :: Either Msg2
    (Refined2 OU
      (Second (Map (ReadP Int '[Id])))
-     (Pop2 (Proxy (FoldAla :: Type -> Type -> Type)) (SG.Product Int) Snd Id >> Id > 4)
+     (Pop1 (Proxy (FoldAla :: Type -> Type)) (SG.Product Int) Snd >> Id > 4)
      (Char,String))
 testKindSignature2F = newRefined2 ('x',"23498")
 
