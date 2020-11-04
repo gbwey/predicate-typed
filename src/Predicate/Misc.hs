@@ -1094,8 +1094,10 @@ compileRegex nm s
 data ROpt =
     Anchored -- ^ Force pattern anchoring
   | AutoCallout -- ^ Compile automatic callouts
---  | BsrAnycrlf --  \R matches only CR, LF, or CrlF
---  | BsrUnicode -- ^ \R matches all Unicode line endings
+{-
+  | BsrAnycrlf -- ^ \R matches only CR, LF, or CrlF
+  | BsrUnicode -- ^ \R matches all Unicode line endings
+-}
   | Caseless -- ^ Do caseless matching
   | DollarEndonly -- ^ dollar not to match newline at end
   | Dotall -- ^ matches anything including NL
@@ -1104,8 +1106,10 @@ data ROpt =
   | Extra -- ^ PCRE extra features (not much use currently)
   | Firstline -- ^ Force matching to be before newline
   | Multiline -- ^ caret and dollar match newlines within data
---  | NewlineAny -- ^ Recognize any Unicode newline sequence
---  | NewlineAnycrlf -- ^ Recognize CR, LF, and CrlF as newline sequences
+{-
+  | NewlineAny -- ^ Recognize any Unicode newline sequence
+  | NewlineAnycrlf -- ^ Recognize CR, LF, and CrlF as newline sequences
+-}
   | NewlineCr -- ^ Set CR as the newline sequence
   | NewlineCrlf -- ^ Set CrlF as the newline sequence
   | NewlineLf -- ^ Set LF as the newline sequence

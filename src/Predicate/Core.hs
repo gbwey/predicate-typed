@@ -35,6 +35,7 @@ module Predicate.Core (
   , Coerce
   , OneP
   , Swap
+  , Arg'
 
   -- ** impure evaluation
   , pan
@@ -138,6 +139,7 @@ import Data.Coerce (Coercible)
 import Data.Tree.Lens (root)
 import qualified Text.Regex.PCRE.Heavy as RH
 import GHC.Stack (HasCallStack)
+import qualified Data.Semigroup as SG
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -2564,3 +2566,44 @@ evalEither a =
   in case pp ^. ttVal of
        Val r -> Right r
        Fail {} -> Left $ prtTree opts pp
+
+-- | creates a 'Data.Semigroup.Arg' value using @p@ and @q@
+--
+-- >>> pz @('SG.Arg (C "S") 10) ()
+-- Val (Arg 'S' 10)
+--
+instance ( P p x
+         , P q x
+         , Show (PP p x)
+         , Show (PP q x)
+         ) => P ('SG.Arg p q) x where
+  type PP ('SG.Arg p q) x = SG.Arg (PP p x) (PP q x)
+  eval _ opts x = do
+    let msg0 = "'Arg"
+    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
+    pure $ case lr of
+      Left e -> e
+      Right (p,q,pp,qq) ->
+        let hhs = [hh pp, hh qq]
+            ret = SG.Arg p q
+        in mkNode opts (Val ret) (msg0 <> " " <> showL opts p <> " " <> showL opts q) hhs
+
+-- | extracts a tuple from 'Data.Semigroup.Arg'
+--
+-- >>> pz @('SG.Arg (C "S") 10 >> Arg') ()
+-- Val ('S',10)
+--
+-- >>> pz @Arg' (SG.Arg 'S' 10)
+-- Val ('S',10)
+--
+data Arg' deriving Show
+
+instance x ~ SG.Arg a b => P Arg' x where
+  type PP Arg' x = ArgT x
+  eval _ opts (SG.Arg a b) =
+    let msg0 = "Arg'"
+        ret = (a,b)
+    in pure $ mkNode opts (Val ret) msg0 []
+
+type family ArgT x where
+  ArgT (SG.Arg a b) = (a,b)

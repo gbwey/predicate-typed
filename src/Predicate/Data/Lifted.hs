@@ -44,7 +44,8 @@ module Predicate.Data.Lifted (
   , type (<|>)
 
  -- ** bifunctor
-  , type BiMap
+  , BiMap
+  , BiFoldMap
 
  -- ** comonad
   , Extract
@@ -1272,25 +1273,84 @@ _bimapImpl :: forall m n p q a b
       -> n a b
       -> m (TT (n (PP p a) (PP q b)))
 _bimapImpl opts proxyp proxyq msg0 hhs nab = do
-        nttb <- bitraverse
-                  (fmap (\tt -> tt & ttString %~ litL opts
-                                   & ttForest .~ [hh tt]) . eval proxyp opts)
-                  (fmap (\tt -> tt & ttString %~ litL opts
-                                   & ttForest .~ [hh tt]) . eval proxyq opts)
-                  nab
-        let ttnb = bisequence nttb
-        pure $ case getValueLR Inline opts "" ttnb hhs of
-          Left e -> e
-          Right ret ->
+  nttb <- bitraverse
+            (fmap (\tt -> tt & ttString %~ litL opts
+                             & ttForest .~ [hh tt]) . eval proxyp opts)
+            (fmap (\tt -> tt & ttString %~ litL opts
+                             & ttForest .~ [hh tt]) . eval proxyq opts)
+            nab
+  let ttnb = bisequence nttb
+  pure $ case getValueLR Inline opts "" ttnb hhs of
+    Left e -> e
+    Right ret ->
 --            let ind = case bifoldMap (\x -> ([x],[])) (\x -> ([],[x])) ret of
-            let ind = case bifoldMap ((,mempty) . pure) ((mempty,) . pure) ret of
-                        ([], []) -> " <skipped>"
-                        (_:_, []) -> "(L)"
-                        ([], _:_) -> "(R)"
-                        (_:_, _:_) -> "(B)"
-            in ttnb & ttVal .~ Val ret
-                    & ttForest %~ (hhs <>)
-                    & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
+      let ind = case bifoldMap ((,mempty) . pure) ((mempty,) . pure) ret of
+                  ([], []) -> " <skipped>"
+                  (_:_, []) -> "(L)"
+                  ([], _:_) -> "(R)"
+                  (_:_, _:_) -> "(B)"
+      in ttnb & ttVal .~ Val ret
+              & ttForest %~ (hhs <>)
+              & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
+
+-- | a version of 'Data.Bifoldable.bifoldMap'
+--
+-- >>> pl @(BiFoldMap Id Id) (Right [10..13])
+-- Present [10,11,12,13] (BiFoldMap(R) Id [10,11,12,13])
+-- Val [10,11,12,13]
+--
+-- >>> pl @(BiFoldMap Id Id) (Left [10..13])
+-- Present [10,11,12,13] (BiFoldMap(L) Id [10,11,12,13])
+-- Val [10,11,12,13]
+--
+-- >>> pl @(BiFoldMap Id Id) (SG.Arg [1..5] [10..13])
+-- Present [1,2,3,4,5,10,11,12,13] (BiFoldMap(B) Id [1,2,3,4,5] | Id [10,11,12,13])
+-- Val [1,2,3,4,5,10,11,12,13]
+--
+-- >>> pz @(BiFoldMap (Wrap (SG.Sum _) Id) (Wrap (SG.Sum _) Id)) (SG.Arg 1 4)
+-- Val (Sum {getSum = 5})
+--
+-- >>> pl @(BiFoldMap '( '[Id], '[]) '( '[], '[Id])) (SG.Arg "hap" "bcd")
+-- Present (["hap"],["bcd"]) (BiFoldMap(B) '(["hap"],[]) | '([],["bcd"]))
+-- Val (["hap"],["bcd"])
+--
+-- >>> pz @(BiFoldMap '( Wrap (SG.Sum _) Id, MEmptyT _) '( MEmptyT _, Id)) (SG.Arg 123 "xyz")
+-- Val (Sum {getSum = 123},"xyz")
+--
+-- >>> pl @(BiFoldMap '( Wrap (SG.Sum _) Id, MEmptyT _) '( MEmptyT _, Id)) (Left 123)
+-- Present (Sum {getSum = 123},()) (BiFoldMap(L) '(Sum {getSum = 123},()))
+-- Val (Sum {getSum = 123},())
+--
+data BiFoldMap p q deriving Show
+
+instance ( Bitraversable n
+         , Monoid t
+         , PP p a ~ t
+         , PP q b ~ t
+         , P p a
+         , P q b
+         ) => P (BiFoldMap p q) (n a b) where
+  type PP (BiFoldMap p q) (n a b) = PP p a
+  eval _ opts nab = do
+    let msg0 = "BiFoldMap"
+    nttb <- bitraverse
+              (fmap (\tt -> tt & ttString %~ litL opts
+                               & ttForest .~ [hh tt]) . eval (Proxy @p) opts)
+              (fmap (\tt -> tt & ttString %~ litL opts
+                               & ttForest .~ [hh tt]) . eval (Proxy @q) opts)
+              nab
+    let ttnb = bisequence nttb
+    pure $ case getValueLR Inline opts "" ttnb [] of
+      Left e -> e
+      Right ret ->
+        let ind = case bifoldMap ((,mempty) . pure) ((mempty,) . pure) ret of
+                    ([], []) -> " <skipped>"
+                    (_:_, []) -> "(L)"
+                    ([], _:_) -> "(R)"
+                    (_:_, _:_) -> "(B)"
+            d = bifoldMap id id ret
+        in ttnb & ttVal .~ Val d
+                & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
 
 -- | adt for testing out possible outcomes of Bifoldable used in BiMap
 data ELR a b = EEmpty | ELeft !a | ERight !b | EBoth !a !b deriving (Show,Eq,Ord,Foldable,Functor,Traversable)

@@ -127,6 +127,7 @@ import qualified Data.List.NonEmpty as NE
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
 -- >>> import qualified Data.Map.Strict as M
+-- >>> import qualified Data.Semigroup as SG
 -- >>> import qualified Data.Text as T
 -- >>> import Data.These
 -- >>> import Predicate.Prelude
@@ -584,6 +585,9 @@ instance ( P p x
 -- `- False i=14: 'y' == 'e'
 -- Val ["h","e","ll","o","    ","g","oo","d","b","y","e"]
 --
+-- >>> pz @(GroupBy (Fst == Snd)  Id) (map (uncurry SG.Arg) [(10,0),(9,4),(9,3),(1,1),(9,6)])
+-- Val [[Arg 10 0],[Arg 9 4,Arg 9 3],[Arg 1 1],[Arg 9 6]]
+--
 data GroupBy p q deriving Show
 
 instance ( Show x
@@ -721,7 +725,7 @@ instance P (FilterT p q) x => P (Filter p q) x where
 -- Val ([1,2],[3,4,5,6,7,8])
 --
 -- >>> pl @(Break (If (Gt 2) (FailT _ "ASfd") 'False) Id) [1..8]
--- Error ASfd (If True | Break predicate failed)
+-- Error ASfd (If 'True | Break predicate failed)
 -- Fail "ASfd"
 --
 -- >>> pl @(Break Snd Id) (zip [1..] [False,False,False,True,True,False])
@@ -2171,6 +2175,9 @@ instance ( PP p x ~ [a]
 --
 -- >>> pz @(PartitionsBy (L11 ==! L21) (L11 < L21) Id) [10,9,9,1,9,4]
 -- Val [[9],[1,4,9],[9,10]]
+--
+-- >>> pz @(PartitionsBy (Fst ==! Snd) (L11 == L21) Id) (map (uncurry SG.Arg) [(10,0),(9,4),(9,3),(1,1),(9,6)])
+-- Val [[Arg 10 0],[Arg 9 4,Arg 9 3,Arg 9 6],[Arg 1 1]]
 --
 data PartitionsBy p q r deriving Show
 type PartitionsByT p q r = SortBy p (Zip r (0 ... (Length r - 1))) >> GroupBy q Id >> SortOn (Head >> Snd) Id >> Map (Map Fst)

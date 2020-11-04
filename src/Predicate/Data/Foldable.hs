@@ -20,6 +20,7 @@ module Predicate.Data.Foldable (
     Concat
   , ConcatMap
   , Cycle
+  , FoldAla
   , FoldMap
 
   , ToListExt
@@ -402,15 +403,63 @@ instance P NullT a => P Null a where
   type PP Null a = Bool
   eval _ = evalBool (Proxy @NullT)
 
+-- | similar to 'Data.Foldable.foldMap'
+--
+-- >>> pl @(FoldMap (Wrap (SG.Sum _) Id)) (Left "x")
+-- Present Sum {getSum = 0} (FoldMap <skipped>)
+-- Val (Sum {getSum = 0})
+--
+-- >>> pz @(FoldMap (Wrap (SG.Sum _) Id)) [1..5]
+-- Val (Sum {getSum = 15})
+--
+-- >>> pl @(FoldMap (Wrap (SG.Sum _) Id)) (Right 123)
+-- Present Sum {getSum = 123} (FoldMap Wrap Sum {getSum = 123} | 123)
+-- Val (Sum {getSum = 123})
+--
+-- >>> pl @(FoldMap (Map Len)) (Just ["abc","defg","h"])
+-- Present [3,4,1] (FoldMap Map [3,4,1] | ["abc","defg","h"])
+-- Val [3,4,1]
+--
+-- >>> pz @(FoldMap (Map Len)) (Just ["abc","defg","h"])
+-- Val [3,4,1]
+--
+-- >>> pz @(FoldMap (Wrap (SG.Sum _) Len)) ["abc","defg","h"]
+-- Val (Sum {getSum = 8})
+--
+data FoldMap p deriving Show
+
+instance ( Traversable n
+         , Monoid t
+         , PP p a ~ t
+         , P p a
+         ) => P (FoldMap p) (n a) where
+  type PP (FoldMap p) (n a) = PP p a
+  eval _ opts na = do
+    let msg0 = "FoldMap"
+    nttb <- traverse
+              (fmap (\tt -> tt & ttString %~ litL opts
+                               & ttForest .~ [hh tt]) . eval (Proxy @p) opts)
+              na
+    let ttnb = sequenceA nttb
+    pure $ case getValueLR Inline opts "" ttnb [] of
+      Left e -> e
+      Right ret ->
+        let ind = case foldMap pure ret of
+                    [] -> " <skipped>"
+                    _:_ -> ""
+            d = foldMap id ret
+        in ttnb & ttVal .~ Val d
+                & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
+
 -- | wraps each item in the foldable container and then unwraps the mconcatenated result: uses 'Control.Lens.Wrapped.Wrapped'
 --
--- >>> pz @(FoldMap (SG.Sum _) Id) [44, 12, 3]
+-- >>> pz @(FoldAla (SG.Sum _) Id) [44, 12, 3]
 -- Val 59
 --
--- >>> pz @(FoldMap (SG.Product _) Id) [44, 12, 3]
+-- >>> pz @(FoldAla (SG.Product _) Id) [44, 12, 3]
 -- Val 1584
 --
--- >>> type Ands' p = FoldMap SG.All p
+-- >>> type Ands' p = FoldAla SG.All p
 -- >>> pz @(Ands' Id) [True,False,True,True]
 -- Val False
 --
@@ -420,7 +469,7 @@ instance P NullT a => P Null a where
 -- >>> pz @(Ands' Id) []
 -- Val True
 --
--- >>> type Ors' p = FoldMap SG.Any p
+-- >>> type Ors' p = FoldAla SG.Any p
 -- >>> pz @(Ors' Id) [False,False,False]
 -- Val False
 --
@@ -430,65 +479,65 @@ instance P NullT a => P Null a where
 -- >>> pz @(Ors' Id) [False,False,False,True]
 -- Val True
 --
--- >>> type AllPositive' = FoldMap SG.All (Map Positive)
+-- >>> type AllPositive' = FoldAla SG.All (Map Positive)
 -- >>> pz @AllPositive' [3,1,-5,10,2,3]
 -- Val False
 --
--- >>> type AllNegative' = FoldMap SG.All (Map Negative)
+-- >>> type AllNegative' = FoldAla SG.All (Map Negative)
 -- >>> pz @AllNegative' [-1,-5,-10,-2,-3]
 -- Val True
 --
 -- >>> :set -XKindSignatures
--- >>> type Max' (t :: Type) = FoldMap (SG.Max t) Id -- requires t be Bounded for monoid instance
+-- >>> type Max' (t :: Type) = FoldAla (SG.Max t) Id -- requires t be Bounded for monoid instance
 -- >>> pz @(Max' Int) [10,4,5,12,3,4]
 -- Val 12
 --
--- >>> pl @(FoldMap (SG.Sum _) Id) [14,8,17,13]
+-- >>> pl @(FoldAla (SG.Sum _) Id) [14,8,17,13]
 -- Present 52 ((>>) 52 | {getSum = 52})
 -- Val 52
 --
--- >>> pl @(FoldMap (SG.Max _) Id) [14 :: Int,8,17,13] -- allowed as the values are Bounded!
+-- >>> pl @(FoldAla (SG.Max _) Id) [14 :: Int,8,17,13] -- allowed as the values are Bounded!
 -- Present 17 ((>>) 17 | {getMax = 17})
 -- Val 17
 --
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) [1..20]
+-- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldAla (SG.Sum _) Id >> Gt 200)) [1..20]
 -- True (False || True)
 -- Val True
 --
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) [1..19]
+-- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldAla (SG.Sum _) Id >> Gt 200)) [1..19]
 -- False (False || False | ((>>) False | {1 == 0}) || ((>>) False | {190 > 200}))
 -- Val False
 --
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldMap (SG.Sum _) Id >> Gt 200)) []
+-- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) || (FoldAla (SG.Sum _) Id >> Gt 200)) []
 -- True (True || False)
 -- Val True
 --
--- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) &&& FoldMap (SG.Sum _) Id) [1..20]
+-- >>> pl @((Len >> (Elem Id '[4,7,1] || (Mod Id 3 >> Same 0))) &&& FoldAla (SG.Sum _) Id) [1..20]
 -- Present (False,210) ('(False,210))
 -- Val (False,210)
 --
--- >>> pl @(FoldMap SG.Any Id) [False,False,True,False]
+-- >>> pl @(FoldAla SG.Any Id) [False,False,True,False]
 -- Present True ((>>) True | {getAny = True})
 -- Val True
 --
--- >>> pl @(FoldMap SG.All Id) [False,False,True,False]
+-- >>> pl @(FoldAla SG.All Id) [False,False,True,False]
 -- Present False ((>>) False | {getAll = False})
 -- Val False
 --
--- >>> pl @(FoldMap (SG.Sum _) Id) (Just 13)
+-- >>> pl @(FoldAla (SG.Sum _) Id) (Just 13)
 -- Present 13 ((>>) 13 | {getSum = 13})
 -- Val 13
 --
--- >>> pl @(FoldMap (SG.Sum _) Id) [1..10]
+-- >>> pl @(FoldAla (SG.Sum _) Id) [1..10]
 -- Present 55 ((>>) 55 | {getSum = 55})
 -- Val 55
 --
-data FoldMap (t :: Type) p deriving Show
-type FoldMapT (t :: Type) p = Map' (Wrap t Id) p >> MConcat Id >> Unwrap
+data FoldAla (t :: Type) p deriving Show
+type FoldAlaT (t :: Type) p = Map' (Wrap t Id) p >> MConcat Id >> Unwrap
 
-instance P (FoldMapT t p) x => P (FoldMap t p) x where
-  type PP (FoldMap t p) x = PP (FoldMapT t p) x
-  eval _ = eval (Proxy @(FoldMapT t p))
+instance P (FoldAlaT t p) x => P (FoldAla t p) x where
+  type PP (FoldAla t p) x = PP (FoldAlaT t p) x
+  eval _ = eval (Proxy @(FoldAlaT t p))
 
 -- | similar to 'Data.Foldable.and'
 --

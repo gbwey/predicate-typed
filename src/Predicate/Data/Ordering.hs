@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-  {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
@@ -564,4 +564,3 @@ type NegativeT = Lt 0
 instance P NegativeT x => P Negative x where
   type PP Negative x = PP NegativeT x
   eval _ = evalBool (Proxy @NegativeT)
-

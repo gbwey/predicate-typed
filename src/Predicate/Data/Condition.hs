@@ -83,19 +83,19 @@ import Data.Bool (bool)
 -- Val [True,True,False,False,False]
 --
 -- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) ()) 45
--- Error failing with 45 (If True)
+-- Error failing with 45 (If 'True)
 -- Fail "failing with 45"
 --
 -- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (Id * 7)) 3
 -- Present 21 (If 'False 21)
 -- Val 21
 --
--- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (Id * 7 >> ShowP Id >> Ones)) 3
+-- >>> pl @(If (Gt 4) (FailT _ (PrintF "failing with %d" Id)) (Id * 7 >> ShowP Id >> Ones)) 3
 -- Present ["2","1"] (If 'False ["2","1"])
 -- Val ["2","1"]
 --
--- >>> pl @(If (Gt 4) (Fail (Hole _) (PrintF "failing with %d" Id)) (ShowP (Id * 7) >> Ones)) 19
--- Error failing with 19 (If True)
+-- >>> pl @(If (Gt 4) (FailT _ (PrintF "failing with %d" Id)) (ShowP (Id * 7) >> Ones)) 19
+-- Error failing with 19 (If 'True)
 -- Fail "failing with 19"
 --
 data If p q r deriving Show
@@ -117,7 +117,7 @@ instance ( Show (PP r a)
         qqrr <- if b
                 then eval (Proxy @q) opts a
                 else eval (Proxy @r) opts a
-        pure $ case getValueLR Inline opts (msg0 <> " " <> show b) qqrr [hh pp, hh qqrr] of
+        pure $ case getValueLR Inline opts (msg0 <> " '" <> show b) qqrr [hh pp, hh qqrr] of
           Left e -> e
           Right ret -> mkNodeCopy opts qqrr (msg0 <> " " <> bool "'False" "'True" b <> " " <> showL opts ret) [hh pp, hh qqrr]
 
@@ -135,31 +135,6 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
   ToGuardsT prt (p ': ps) = '(prt,p) ': ToGuardsT prt ps
 
 -- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
---
--- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 50
--- Val "50 is same50"
---
--- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 9
--- Val "9 is lt10"
---
--- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 3
--- Val "3 is lt4"
---
--- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
--- Fail "asdf"
---
--- >>> pz @(Case (FailS "asdf" >> Snd >> UnproxyT) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
--- Fail "asdf"
---
--- >>> pz @(Case (FailT _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "b"
--- Val "there"
---
--- >>> pz @(Case (FailT _ "x") '[Id == "a",Id == "b"] '["hey","there"] Id) "a"
--- Val "hey"
---
--- >>> pz @(Case (FailT _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "c"
--- Fail "x"
---
 data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
 -- ps = conditions
 -- qs = what to do [one to one with ps]
@@ -195,6 +170,30 @@ data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2) deriving S
 -- >>> pl @(Case (ShowP Fst >> Id <> Id <> Id) '[Same 1, Same 2, Same 3] '["eq1","eq2","eq3"] Id) 15
 -- Present "151515" (Case(0) "151515" | 15)
 -- Val "151515"
+--
+-- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 50
+-- Val "50 is same50"
+--
+-- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 9
+-- Val "9 is lt10"
+--
+-- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 3
+-- Val "3 is lt4"
+--
+-- >>> pz @(Case (FailT _ "asdf") '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
+-- Fail "asdf"
+--
+-- >>> pz @(Case (FailS "asdf" >> Snd >> UnproxyT) '[Lt 4,Lt 10,Same 50] '[PrintF "%d is lt4" Id, PrintF "%d is lt10" Id, PrintF "%d is same50" Id] Id) 99
+-- Fail "asdf"
+--
+-- >>> pz @(Case (FailT _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "b"
+-- Val "there"
+--
+-- >>> pz @(Case (FailT _ "x") '[Id == "a",Id == "b"] '["hey","there"] Id) "a"
+-- Val "hey"
+--
+-- >>> pz @(Case (FailT _ "x") '[Same "a",Same "b"] '["hey","there"] Id) "c"
+-- Fail "x"
 --
 data Case (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
 
@@ -397,7 +396,6 @@ instance ( [a] ~ x
   eval _ opts [] =
     let n = nat @n @Int
     in pure $ mkNode opts (Val []) ("Guards(" ++ show n ++ ")") []
-
 
 instance ( PP prt (Int, a) ~ String
          , P prt (Int, a)
