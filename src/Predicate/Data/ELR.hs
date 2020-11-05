@@ -660,6 +660,7 @@ partitionELR = foldMapStrict $
     ERight b -> ([],[],[b],[])
     EBoth a b -> ([],[],[],[(a,b)])
 
+-- | convert ELR to a tuple with default values
 fromELR :: a -> b -> ELR a b -> (a,b)
 fromELR a b =
   \case
@@ -669,41 +670,41 @@ fromELR a b =
     EBoth v w -> (v,w)
 
 -- | destructs an ELR value
---   @s@ points to the ELR value
---   @t@ points to the environment you want to pass in
---   @n@ @ENone@ receives @(PP t x)@
---   @p@ @ELeft a@ receives @(PP t x,a)@
---   @q@ @ERight b@ receives @(PP t x,b)@
---   @r@ @EBoth a b@ receives @(PP t x,(a,b))@
+--   @n@ @ENone@ receives @(PP s x)@
+--   @p@ @ELeft a@ receives @(PP s x,a)@
+--   @q@ @ERight b@ receives @(PP s x,b)@
+--   @r@ @EBoth a b@ receives @(PP s x,(a,b))@
+--   @s@ points to the environment you want to pass in
+--   @t@ points to the ELR value
 --
--- >>> pz @(ELRIn Id '(Snd,L12) '(L11,Snd) Snd Snd Fst) ((999,'a'), EBoth 12 'x')
+-- >>> pz @(ELRIn Id '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), EBoth 12 'x')
 -- Val (12,'x')
 --
--- >>> pz @(ELRIn Id '(Snd,L12) '(L11,Snd) Snd Snd Fst) ((999,'a'), ENone)
+-- >>> pz @(ELRIn Id '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), ENone)
 -- Val (999,'a')
 --
--- >>> pz @(ELRIn Id '(Snd,L12) '(L11,Snd) Snd Snd Fst) ((999,'a'), ERight 'z')
+-- >>> pz @(ELRIn Id '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), ERight 'z')
 -- Val (999,'z')
 --
--- >>> pz @(ELRIn 999 Snd (Snd >> Len) (Snd >> Fst + Length Snd) Id ()) (ELeft 13)
+-- >>> pz @(ELRIn 999 Snd (Snd >> Len) (Snd >> Fst + Length Snd) () Id) (ELeft 13)
 -- Val 13
 --
--- >>> pz @(ELRIn 999 Snd (Snd >> Len) (Snd >> Fst + Length Snd) Id ()) (ERight "abcdef")
+-- >>> pz @(ELRIn 999 Snd (Snd >> Len) (Snd >> Fst + Length Snd) () Id) (ERight "abcdef")
 -- Val 6
 --
--- >>> pl @(ELRIn "none" "left" "right" "both" Id ()) (ELeft (SG.Sum 12))
+-- >>> pl @(ELRIn "none" "left" "right" "both" () Id) (ELeft (SG.Sum 12))
 -- Present "left" (ELRIn "left" | ELeft Sum {getSum = 12})
 -- Val "left"
 --
--- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd Id ()) (EBoth "Ab" 13)
+-- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) (EBoth "Ab" 13)
 -- Present ("Ab",13) (ELRIn ("Ab",13) | EBoth ("Ab",13))
 -- Val ("Ab",13)
 --
--- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd Id ()) (ELeft "Ab")
+-- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) (ELeft "Ab")
 -- Present ("Ab",999) (ELRIn ("Ab",999) | ELeft "Ab")
 -- Val ("Ab",999)
 --
--- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd Id ()) ENone
+-- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) ENone
 -- Present ("",2) (ELRIn ("",2) | ENone ())
 -- Val ("",2)
 --
@@ -721,10 +722,10 @@ instance ( Show a
          , PP q (y,b) ~ PP r (y,(a,b))
          , P s x
          , P t x
-         , PP s x ~ ELR a b
-         , PP t x ~ y
+         , PP t x ~ ELR a b
+         , PP s x ~ y
          )  => P (ELRIn n p q r s t) x where
-  type PP (ELRIn n p q r s t) x = PP n (PP t x)
+  type PP (ELRIn n p q r s t) x = PP n (PP s x)
   eval _ opts x = do
     let msg0 = "ELRIn"
     lr <- runPQ NoInline msg0 (Proxy @s) (Proxy @t) opts x []
@@ -732,32 +733,32 @@ instance ( Show a
       Left e -> pure e
       Right (s,t,ss,tt) -> do
          let hhs = [hh ss, hh tt]
-         case s of
+         case t of
             ENone -> do
               let msg1 = "ENone "
                   msg2 = msg0 <> msg1
-              nn <- eval (Proxy @n) opts t
+              nn <- eval (Proxy @n) opts s
               pure $ case getValueLR NoInline opts (msg2 <> "n failed") nn hhs of
                    Left e -> e
                    Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 ()) (hhs ++ [hh nn])
             ELeft a -> do
               let msg1 = "ELeft "
                   msg2 = msg0 <> msg1
-              pp <- eval (Proxy @p) opts (t,a)
+              pp <- eval (Proxy @p) opts (s,a)
               pure $ case getValueLR NoInline opts (msg2 <> "p failed") pp hhs of
                    Left e -> e
                    Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 a) (hhs ++ [hh pp])
             ERight b -> do
               let msg1 = "ERight "
                   msg2 = msg0 <> msg1
-              qq <- eval (Proxy @q) opts (t,b)
+              qq <- eval (Proxy @q) opts (s,b)
               pure $ case getValueLR NoInline opts (msg2 <> "q failed") qq hhs of
                    Left e -> e
                    Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 b) (hhs ++ [hh qq])
             EBoth a b -> do
               let msg1 = "EBoth "
                   msg2 = msg0 <> msg1
-              rr <- eval (Proxy @r) opts (t,(a,b))
+              rr <- eval (Proxy @r) opts (s,(a,b))
               pure $ case getValueLR NoInline opts (msg2 <> "r failed") rr hhs of
                    Left e -> e
                    Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 (a,b)) (hhs ++ [hh rr])
@@ -777,7 +778,7 @@ instance ( Show a
 -- Val (123,"fromleft")
 --
 data ELRId n p q r deriving Show
-type ELRIdT n p q r = ELRIn n (Snd >> p) (Snd >> q) (Snd >> r) Id ()
+type ELRIdT n p q r = ELRIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
 
 instance P (ELRIdT n p q r) x => P (ELRId n p q r) x where
   type PP (ELRId n p q r) x = PP (ELRIdT n p q r) x
@@ -785,13 +786,13 @@ instance P (ELRIdT n p q r) x => P (ELRId n p q r) x where
 
 -- | provide the default pair in @s@ and @t@ refers to ELR
 --
--- >>> pz @(ELRDef Fst Snd) (EBoth 2 "xx",(999,"oops"))
+-- >>> pz @(ELRDef Fst Snd) ((999,"oops"),EBoth 2 "xx")
 -- Val (2,"xx")
 --
--- >>> pz @(ELRDef Fst Snd) (ENone,(999,"oops"))
+-- >>> pz @(ELRDef Fst Snd) ((999,"oops"),ENone)
 -- Val (999,"oops")
 --
--- >>> pz @(ELRDef Fst Snd) (ERight "ok",(999,"oops"))
+-- >>> pz @(ELRDef Fst Snd) ((999,"oops"),ERight "ok")
 -- Val (999,"ok")
 --
 data ELRDef s t deriving Show

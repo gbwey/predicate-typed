@@ -863,55 +863,55 @@ instance ( Show a
 --   @q@ @That b@ receives @(PP t x,b)@
 --   @r@ @These a b@ receives @(PP t x,(a,b))@
 --
--- >>> pz @(TheseIn '(Snd,L12) '(L11,Snd) Snd Snd Fst) ((999,'a'), These 12 'x')
+-- >>> pz @(TheseIn '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), These 12 'x')
 -- Val (12,'x')
 --
--- >>> pz @(TheseIn '(Snd,L12) '(L11,Snd) Snd Snd Fst) ((999,'a'), That 'z')
+-- >>> pz @(TheseIn '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), That 'z')
 -- Val (999,'z')
 --
--- >>> pz @(TheseIn Snd (Snd >> Len) (Snd >> Fst + Length Snd) Id ()) (This 13)
+-- >>> pz @(TheseIn Snd (Snd >> Len) (Snd >> Fst + Length Snd) () Id) (This 13)
 -- Val 13
 --
--- >>> pz @(TheseIn Snd (Snd >> Len) (Snd >> Fst + Length Snd) Id ()) (That "abcdef")
+-- >>> pz @(TheseIn Snd (Snd >> Len) (Snd >> Fst + Length Snd) () Id) (That "abcdef")
 -- Val 6
 --
--- >>> pl @(TheseIn "left" "right" "both" Id ()) (This (SG.Sum 12))
+-- >>> pl @(TheseIn "left" "right" "both" () Id) (This (SG.Sum 12))
 -- Present "left" (TheseIn "left" | This Sum {getSum = 12})
 -- Val "left"
 --
--- >>> pl @(TheseIn '(Snd,999) '("no value",Snd) Snd Id ()) (These "Ab" 13)
--- Present ("Ab",13) (TheseIn ("Ab",13) | These ("Ab",13))
+-- >>> pl @(TheseIn '(Snd,999) '("no value",Snd) Snd () Id) (These "Ab" 13)
+-- Present ("Ab",13) (TheseIn ("Ab",13) | These "Ab" 13)
 -- Val ("Ab",13)
 --
--- >>> pl @(TheseIn '(Snd,999) '("no value",Snd) Snd Id ()) (This "Ab")
+-- >>> pl @(TheseIn '(Snd,999) '("no value",Snd) Snd () Id) (This "Ab")
 -- Present ("Ab",999) (TheseIn ("Ab",999) | This "Ab")
 -- Val ("Ab",999)
 --
--- >>> pz @(TheseIn ((Fst + Snd) >> ShowP Id) Snd "Xx" Snd Fst) (9,This 123)
+-- >>> pz @(TheseIn ((Fst + Snd) >> ShowP Id) Snd "Xx" Fst Snd) (9,This 123)
 -- Val "132"
 --
--- >>> pz @(TheseIn '(Snd,"fromthis") '(Negate 99,Snd) Snd Id ()) (This 123)
+-- >>> pz @(TheseIn '(Snd,"fromthis") '(Negate 99,Snd) Snd () Id) (This 123)
 -- Val (123,"fromthis")
 --
--- >>> pz @(TheseIn '(Snd,"fromthis") '(Negate 99,Snd) Snd Id ()) (That "fromthat")
+-- >>> pz @(TheseIn '(Snd,"fromthis") '(Negate 99,Snd) Snd () Id) (That "fromthat")
 -- Val (-99,"fromthat")
 --
--- >>> pz @(TheseIn '(Snd,"fromthis") '(Negate 99,Snd) Snd Id ()) (These 123 "fromthese")
+-- >>> pz @(TheseIn '(Snd,"fromthis") '(Negate 99,Snd) Snd () Id) (These 123 "fromthese")
 -- Val (123,"fromthese")
 --
--- >>> pl @(TheseIn (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id ()) (These @Int 9 "rhs")
--- Present "a=9 b=rhs" (TheseIn "a=9 b=rhs" | These (9,"rhs"))
+-- >>> pl @(TheseIn (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) () Id) (These @Int 9 "rhs")
+-- Present "a=9 b=rhs" (TheseIn "a=9 b=rhs" | These 9 "rhs")
 -- Val "a=9 b=rhs"
 --
--- >>> pl @(TheseIn (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id ()) (This @Int 9)
+-- >>> pl @(TheseIn (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) () Id) (This @Int 9)
 -- Present "a=10" (TheseIn "a=10" | This 9)
 -- Val "a=10"
 --
--- >>> pl @(TheseIn (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) Id ()) (That @Int "rhs")
+-- >>> pl @(TheseIn (PrintF "a=%d" (Snd >> Succ)) ("b=" <> Snd) (PrintT "a=%d b=%s" Snd) () Id) (That @Int "rhs")
 -- Present "b=rhs" (TheseIn "b=rhs" | That "rhs")
 -- Val "b=rhs"
 --
--- >>> pz @(TheseIn ((Fst + Snd) >> ShowP Id) (ShowP Id) L22 Snd Fst) (9,This 123)
+-- >>> pz @(TheseIn ((Fst + Snd) >> ShowP Id) (ShowP Id) L22 Fst Snd) (9,This 123)
 -- Val "132"
 --
 data TheseIn p q r s t deriving Show
@@ -926,8 +926,8 @@ instance ( Show a
          , PP q (y,b) ~ PP r (y,(a,b))
          , P s x
          , P t x
-         , PP s x ~ These a b
-         , PP t x ~ y
+         , PP s x ~ y
+         , PP t x ~ These a b
          )  => P (TheseIn p q r s t) x where
   type PP (TheseIn p q r s t) x = TheseInT r (PP s x) (PP t x)
   eval _ opts x = do
@@ -937,31 +937,31 @@ instance ( Show a
       Left e -> pure e
       Right (s,t,ss,tt) -> do
          let hhs = [hh ss, hh tt]
-         case s of
+         case t of
             This a -> do
               let msg1 = "This "
                   msg2 = msg0 <> msg1
-              pp <- eval (Proxy @p) opts (t,a)
+              pp <- eval (Proxy @p) opts (s,a)
               pure $ case getValueLR NoInline opts (msg2 <> "p failed") pp hhs of
                    Left e -> e
                    Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 a) (hhs ++ [hh pp])
             That b -> do
               let msg1 = "That "
                   msg2 = msg0 <> msg1
-              qq <- eval (Proxy @q) opts (t,b)
+              qq <- eval (Proxy @q) opts (s,b)
               pure $ case getValueLR NoInline opts (msg2 <> "q failed") qq hhs of
                    Left e -> e
                    Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 b) (hhs ++ [hh qq])
             These a b -> do
               let msg1 = "These "
                   msg2 = msg0 <> msg1
-              rr <- eval (Proxy @r) opts (t,(a,b))
+              rr <- eval (Proxy @r) opts (s,(a,b))
               pure $ case getValueLR NoInline opts (msg2 <> "r failed") rr hhs of
                    Left e -> e
                    Right c -> mkNode opts (Val c) (show3' opts msg0 c "" (These a b)) (hhs ++ [hh rr])
 
-type family TheseInT r elr y where
-  TheseInT r (These a b) y = PP r (y,(a,b))
+type family TheseInT r y elr where
+  TheseInT r y (These a b) = PP r (y,(a,b))
 
 -- | simple version of 'TheseIn' with Id as the These value and the environment set to ()
 --
@@ -975,7 +975,7 @@ type family TheseInT r elr y where
 -- Val (123,"fromleft")
 --
 data TheseId p q r deriving Show
-type TheseIdT p q r = TheseIn (Snd >> p) (Snd >> q) (Snd >> r) Id ()
+type TheseIdT p q r = TheseIn (Snd >> p) (Snd >> q) (Snd >> r) () Id
 
 instance P (TheseIdT p q r) x => P (TheseId p q r) x where
   type PP (TheseId p q r) x = PP (TheseIdT p q r) x
@@ -983,10 +983,10 @@ instance P (TheseIdT p q r) x => P (TheseId p q r) x where
 
 -- | provide the default pair in @s@ and @t@ refers to These
 --
--- >>> pz @(TheseDef' Fst Snd) (These 2 "xx",(999,"oops"))
+-- >>> pz @(TheseDef' Fst Snd) ((999,"oops"),These 2 "xx")
 -- Val (2,"xx")
 --
--- >>> pz @(TheseDef' Fst Snd) (That "ok",(999,"oops"))
+-- >>> pz @(TheseDef' Fst Snd) ((999,"oops"),That "ok")
 -- Val (999,"ok")
 --
 data TheseDef' s t deriving Show
@@ -1034,13 +1034,11 @@ instance P (TheseDefT' s t) x => P (TheseDef' s t) x where
 -- Val ("no value",13)
 --
 data TheseDef'' p q r deriving Show
-type TheseDefT'' p q r = TheseIn (Snd >> p) (Snd >> q) (Snd >> r) Id ()
+type TheseDefT'' p q r = TheseIn (Snd >> p) (Snd >> q) (Snd >> r) () Id
 
 instance P (TheseDefT'' p q r) x => P (TheseDef'' p q r) x where
   type PP (TheseDef'' p q r) x = PP (TheseDefT'' p q r) x
   eval _ = eval (Proxy @(TheseDefT'' p q r))
-
-
 
 -- | TheseTuple: given a 'These' returns a tuple but you need to provide default values for both sides
 --
@@ -1057,7 +1055,7 @@ instance P (TheseDefT'' p q r) x => P (TheseDef'' p q r) x where
 -- Val ("abc",False)
 --
 data TheseTuple p q deriving Show
-type TheseTupleT p q = TheseIn '(Snd, q) '(p, Snd) Snd Id ()
+type TheseTupleT p q = TheseIn '(Snd, q) '(p, Snd) Snd () Id
 
 instance P (TheseTupleT p q) x => P (TheseTuple p q) x where
   type PP (TheseTuple p q) x = PP (TheseTupleT p q) x
