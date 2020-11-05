@@ -39,6 +39,8 @@ module Predicate.Data.Lifted (
 
  -- ** alternative
   , type (<|>)
+  , EmptyT
+  , EmptyT'
 
  -- ** bifunctor
   , BiMap
@@ -249,6 +251,50 @@ instance ( P p x
         let d = p <|> q
         in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) [hh pp, hh qq]
 
+-- | similar to 'Data.List.empty'
+--
+-- >>> pz @(EmptyT Maybe _) ()
+-- Val Nothing
+--
+-- >>> pz @(EmptyT [] _) ()
+-- Val []
+--
+-- >>> pz @(C "x" >> EmptyT [] String) (13,True)
+-- Val []
+--
+-- >>> pz @(Fst >> EmptyT (Either String) _) (13,True)
+-- Val (Left "")
+--
+-- >>> pz @(If 'True (MkJust 11) (EmptyT _ _)) ()
+-- Val (Just 11)
+--
+data EmptyT (t :: Type -> Type) (t1 :: Type) deriving Show
+type EmptyTT (t :: Type -> Type) (t1 :: Type) = EmptyT' t (Hole t1)
+
+instance Alternative t => P (EmptyT t t1) x where
+  type PP (EmptyT t t1) x = PP (EmptyTT t t1) x
+  eval _ = eval (Proxy @(EmptyTT t t1))
+
+-- | similar to 'Data.List.empty'
+--
+-- >>> pl @(If 'True (MkJust 11) (EmptyT' _ 0)) ()
+-- Present Just 11 (If 'True Just 11)
+-- Val (Just 11)
+--
+-- >>> pz @(If 'True (MkJust 11) (EmptyT' _ (Hole Int))) ()
+-- Val (Just 11)
+--
+-- >>> pz @(If 'False (MkJust 11) (EmptyT' _ (Hole Int))) ()
+-- Val Nothing
+
+data EmptyT' (t :: Type -> Type) p deriving Show
+
+instance Alternative t => P (EmptyT' t p) x where
+  type PP (EmptyT' t p) x = t (PP p x)
+  eval _ opts _ =
+    let msg0 = "EmptyT'"
+        b = empty @t
+    in pure $ mkNode opts (Val b) msg0 []
 
 -- | similar to 'Control.Comonad.extract'
 --
@@ -429,7 +475,7 @@ instance ( Show (f (t a))
 
 -- | like 'traverse'
 --
--- >>> pl @(Traverse (If (Gt 3) (Pure Maybe Id) (EmptyT Maybe))) [1..5]
+-- >>> pl @(Traverse (If (Gt 3) (Pure Maybe Id) (EmptyT Maybe _))) [1..5]
 -- Present Nothing ((>>) Nothing | {Sequence Nothing | [Nothing,Nothing,Nothing,Just 4,Just 5]})
 -- Val Nothing
 --
@@ -437,7 +483,7 @@ instance ( Show (f (t a))
 -- Present Nothing ((>>) Nothing | {Sequence Nothing | [Just 1,Just 2,Just 3,Nothing,Nothing]})
 -- Val Nothing
 --
--- >>> pl @(Traverse (If (Gt 0) (Pure Maybe Id) (EmptyT Maybe))) [1..5]
+-- >>> pl @(Traverse (If (Gt 0) (Pure Maybe Id) (EmptyT Maybe _))) [1..5]
 -- Present Just [1,2,3,4,5] ((>>) Just [1,2,3,4,5] | {Sequence Just [1,2,3,4,5] | [Just 1,Just 2,Just 3,Just 4,Just 5]})
 -- Val (Just [1,2,3,4,5])
 --
@@ -988,7 +1034,7 @@ instance P (FFishT p q r) x => P (FFish p q r) x where
 -- >>> pz @((1 ... 10) >>= EmptyBool [] Even '[Id,Id]) ()
 -- Val [[2,2],[4,4],[6,6],[8,8],[10,10]]
 --
--- >>> pz @((1 ... 10) >>= If Even '[Id,Id] (EmptyT [])) ()
+-- >>> pz @((1 ... 10) >>= If Even '[Id,Id] (EmptyT [] _)) ()
 -- Val [2,2,4,4,6,6,8,8,10,10]
 --
 -- >>> pz @(Lookup 0 Id >>= Lookup 1 Id) [[1,2,3]]

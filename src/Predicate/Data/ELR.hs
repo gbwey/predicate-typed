@@ -568,6 +568,7 @@ type family EBothT lr where
 -- Fail "ENone' found ERight"
 --
 data ENone' deriving Show
+
 instance P ENone' (ELR x y) where
   type PP ENone' (ELR x y) = ()
   eval _ opts lr =
@@ -587,6 +588,7 @@ instance P ENone' (ELR x y) where
 -- Fail "ELeft' found ERight"
 --
 data ELeft' deriving Show
+
 instance Show a => P ELeft' (ELR a x) where
   type PP ELeft' (ELR a x) = a
   eval _ opts lr =
@@ -606,6 +608,7 @@ instance Show a => P ELeft' (ELR a x) where
 -- Fail "ERight' found ELeft"
 --
 data ERight' deriving Show
+
 instance Show a => P ERight' (ELR x a) where
   type PP ERight' (ELR x a) = a
   eval _ opts lr =
@@ -628,6 +631,7 @@ instance Show a => P ERight' (ELR x a) where
 -- Fail "EBoth' found ERight"
 --
 data EBoth' deriving Show
+
 instance ( Show a
          , Show b
         ) => P EBoth' (ELR a b) where
@@ -679,6 +683,7 @@ fromELR a b =
     ELeft v -> (v,b)
     ERight w -> (a,w)
     EBoth v w -> (v,w)
+
 
 -- | destructs an ELR value
 --   @n@ @ENone@ receives @(PP s x)@
@@ -789,6 +794,7 @@ instance ( Show a
 -- Val (123,"fromleft")
 --
 data ELRId n p q r deriving Show
+
 type ELRIdT n p q r = ELRIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
 
 instance P (ELRIdT n p q r) x => P (ELRId n p q r) x where
@@ -807,6 +813,7 @@ instance P (ELRIdT n p q r) x => P (ELRId n p q r) x where
 -- Val (999,"ok")
 --
 data ELRDef s t deriving Show
+
 type ELRDefT s t = ELRIn Id '(Snd,L12) '(L11,Snd) Snd s t
 
 instance P (ELRDefT s t) x => P (ELRDef s t) x where
@@ -856,83 +863,94 @@ instance P (ELRDefT s t) x => P (ELRDef s t) x where
 -- Val ("no value",13)
 --
 data ELRDef'' n p q r deriving Show
+
 type ELRDefT'' n p q r = ELRIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
 
 instance P (ELRDefT'' n p q r) x => P (ELRDef'' n p q r) x where
   type PP (ELRDef'' n p q r) x = PP (ELRDefT'' n p q r) x
   eval _ = eval (Proxy @(ELRDefT'' n p q r))
 
--- | get ENone or run @p@: really only useful when p is set to Fail
+-- | get ENone or run @p@: really only useful when p is set to Fail: where @q@ is the environment and @r@ is the ELR value
 --
--- >>> pz @(ENoneDef (FailT _ "not ENone") Id) ENone
+-- >>> pz @(ENoneDef (FailT _ "not ENone") () Id) ENone
 -- Val ()
 --
--- >>> pz @(ENoneDef (FailT _ "not ENone") Id) (ELeft 1)
+-- >>> pz @(ENoneDef (FailT _ "not ENone") () Id) (ELeft 1)
 -- Fail "not ENone"
 --
-data ENoneDef p q deriving Show
-type ENoneDefT p q = ELRIn Id p p p () q
-
-instance P (ENoneDefT p q) x => P (ENoneDef p q) x where
-  type PP (ENoneDef p q) x = PP (ENoneDefT p q) x
-  eval _ = eval (Proxy @(ENoneDefT p q))
-
--- | get ELeft or default value
+-- >>> pz @(ENoneDef (FailT _ Id) Fst Snd) ("not right",EBoth 1 2)
+-- Fail "not right"
 --
--- >>> pz @(ELeftDef 999 Id) ENone
+data ENoneDef p q r deriving Show
+
+type ENoneDefT p q r = ELRIn Id (Fst >> p) (Fst >> p) (Fst >> p) q r
+
+instance P (ENoneDefT p q r) x => P (ENoneDef p q r) x where
+  type PP (ENoneDef p q r) x = PP (ENoneDefT p q r) x
+  eval _ = eval (Proxy @(ENoneDefT p q r))
+
+-- | get ELeft or use the default value @p@: @q@ is the environment and @r@ is the ELR value
+--
+-- >>> pz @(ELeftDef Id Fst Snd) (999,ENone)
 -- Val 999
 --
--- >>> pz @(ELeftDef 999 Id) (ERight "sdf")
+-- >>> pz @(ELeftDef 999 () Id) (ERight "sdf")
 -- Val 999
 --
--- >>> pz @(ELeftDef 999 Id) (ELeft 1)
+-- >>> pz @(ELeftDef 999 () Id) (ELeft 1)
 -- Val 1
 --
-data ELeftDef p q deriving Show
-type ELeftDefT p q = ELRIn p Snd p p () q
+data ELeftDef p q r deriving Show
 
-instance P (ELeftDefT p q) x => P (ELeftDef p q) x where
-  type PP (ELeftDef p q) x = PP (ELeftDefT p q) x
-  eval _ = eval (Proxy @(ELeftDefT p q))
+type ELeftDefT p q r = ELRIn p Snd (Fst >> p) (Fst >> p) q r
 
--- | get ERight or default value
+instance P (ELeftDefT p q r) x => P (ELeftDef p q r) x where
+  type PP (ELeftDef p q r) x = PP (ELeftDefT p q r) x
+  eval _ = eval (Proxy @(ELeftDefT p q r))
+
+-- | get ERight or use the default value @p@: @q@ is the environment and @r@ is the ELR value
 --
--- >>> pz @(ERightDef 999 Id) ENone
+-- >>> pz @(ERightDef 999 () Id) ENone
 -- Val 999
 --
--- >>> pz @(ERightDef 999 Id) (ELeft "sdf")
+-- >>> pz @(ERightDef 999 () Id) (ELeft "sdf")
 -- Val 999
 --
--- >>> pz @(ERightDef 999 Id) (ERight 1)
+-- >>> pz @(ERightDef 999 Fst Snd) (999,ERight 1)
 -- Val 1
 --
-data ERightDef p q deriving Show
-type ERightDefT p q = ELRIn p p Snd p () q
+data ERightDef p q r deriving Show
 
-instance P (ERightDefT p q) x => P (ERightDef p q) x where
-  type PP (ERightDef p q) x = PP (ERightDefT p q) x
-  eval _ = eval (Proxy @(ERightDefT p q))
+type ERightDefT p q r = ELRIn p (Fst >> p) Snd (Fst >> p) q r
 
--- | get EBoth or default value
+instance P (ERightDefT p q r) x => P (ERightDef p q r) x where
+  type PP (ERightDef p q r) x = PP (ERightDefT p q r) x
+  eval _ = eval (Proxy @(ERightDefT p q r))
+
+-- | get EBoth or use the default value @p@: @q@ is the environment and @r@ is the ELR value
 --
--- >>> pz @(EBothDef '(999,"xx") Id) ENone
+-- >>> pz @(EBothDef '(999,"xx") () Id) ENone
 -- Val (999,"xx")
 --
--- >>> pz @(EBothDef '(999,"xx") Id) (ERight "abc")
+-- >>> pz @(EBothDef '(999,"xx") () Id) (ERight "abc")
 -- Val (999,"xx")
 --
--- >>> pz @(EBothDef '(999,"xx") Id) (ELeft 1)
+-- >>> pz @(EBothDef '(999,"xx") () Id) (ELeft 1)
 -- Val (999,"xx")
 --
--- >>> pz @(EBothDef '(999,"xx") Id) (EBoth 1 "abc")
+-- >>> pz @(EBothDef '(999,"xx") () Id) (EBoth 1 "abc")
 -- Val (1,"abc")
 --
-data EBothDef p q deriving Show
-type EBothDefT p q = ELRIn p p p Snd () q
+-- >>> pz @(EBothDef Id Fst Snd) ((999,"xx"),ENone)
+-- Val (999,"xx")
+--
+data EBothDef p q r deriving Show
 
-instance P (EBothDefT p q) x => P (EBothDef p q) x where
-  type PP (EBothDef p q) x = PP (EBothDefT p q) x
-  eval _ = eval (Proxy @(EBothDefT p q))
+type EBothDefT p q r = ELRIn p (Fst >> p) (Fst >> p) Snd q r
+
+instance P (EBothDefT p q r) x => P (EBothDef p q r) x where
+  type PP (EBothDef p q r) x = PP (EBothDefT p q r) x
+  eval _ = eval (Proxy @(EBothDefT p q r))
 
 
 

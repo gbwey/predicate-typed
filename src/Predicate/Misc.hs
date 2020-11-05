@@ -152,12 +152,14 @@ import Data.ByteString (ByteString)
 import GHC.Stack (HasCallStack)
 import Data.Containers.ListUtils (nubOrd)
 import Control.Arrow (Arrow((***)),ArrowChoice(left))
-import Data.List (foldl', intercalate, unfoldr, isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (foldl', intercalate, unfoldr, isPrefixOf, isInfixOf)
 import qualified Safe (headNote)
 import Data.Char (isSpace)
 import qualified Control.Exception as E
 import Data.Tree (Tree(Node))
-import Control.Lens (Identity(..), Lens)
+import Control.Lens (Lens, reversed, view)
+import Data.Functor.Identity (Identity(..))
+import Data.Function (on)
 import qualified Data.Semigroup as SG
 import Data.Bifunctor (Bifunctor)
 -- $setup
@@ -1332,11 +1334,13 @@ sum' = foldl' (+) 0
 product' :: (Foldable t, Num a) => t a -> a
 product' = foldl' (*) 1
 
+-- | strict version of 'Data.Foldable.foldMap': replace with Data.Foldable.foldMap' when more generally available
 foldMapStrict :: (Foldable t, Monoid m) => (a -> m) -> t a -> m
-foldMapStrict f = foldl' (\ acc a -> acc <> f a) mempty
+foldMapStrict f = foldl' (\z a -> z <> f a) mempty
 
 cmpOf :: Eq a => Ordering -> ([a] -> [a] -> Bool, String)
 cmpOf = \case
            LT -> (isPrefixOf, "IsPrefix")
            EQ -> (isInfixOf, "IsInfix")
-           GT -> (isSuffixOf, "IsSuffix")
+--           GT -> (isSuffixOf, "IsSuffix")
+           GT -> (on isPrefixOf (view reversed), "IsSuffix")

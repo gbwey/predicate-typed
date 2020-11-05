@@ -475,7 +475,7 @@ instance x ~ [Int]
     let msg0 = "IsLuhn"
     in pure $ case chkSize opts msg0 x [] of
          Left e -> e
-         Right ws ->
+         Right (_,ws) ->
           let xs = zipWith (*) (ws ^. reversed) (cycle' [1,2])
               ys = map (\w -> if w>=10 then w-9 else w) xs
               z = sum' ys

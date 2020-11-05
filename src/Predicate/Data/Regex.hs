@@ -202,11 +202,12 @@ instance ( GetROpts rs
         in case compileRegex @rs msg1 p of
              Left (e,e1) -> mkNode opts (Fail e) e1 hhs
              Right regex ->
-               case splitAt (oRecursion opts) $ RH.scan regex q of
-                 (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
-                 ([], _) -> -- this is a failure because an empty string is returned: so reuse p?
-                             mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) [hh pp, hh qq]
-                 (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) [hh pp, hh qq]
+               let r = getMaxRecursionValue opts
+               in case splitAt r $ RH.scan regex q of
+                    (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show r ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
+                    ([], _) -> -- this is a failure because an empty string is returned: so reuse p?
+                                mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) [hh pp, hh qq]
+                    (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) [hh pp, hh qq]
 
 -- | see 'RH.scan'
 --
@@ -296,11 +297,12 @@ instance ( GetROpts rs
         in case compileRegex @rs msg1 p of
           Left (e,e1) -> mkNode opts (Fail e) e1 hhs
           Right regex ->
-            case splitAt (oRecursion opts) $ RH.scanRanges regex q of
-              (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
-              ([], _) -> -- this is a failure because an empty string is returned: so reuse p?
-                         mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
-              (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) hhs
+            let r = getMaxRecursionValue opts
+            in case splitAt r $ RH.scanRanges regex q of
+                 (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show r ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
+                 ([], _) -> -- this is a failure because an empty string is returned: so reuse p?
+                            mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
+                 (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) hhs
 
 -- | see 'RH.scanRanges'
 --
@@ -344,11 +346,12 @@ instance ( GetROpts rs
         in case compileRegex @rs msg1 p of
           Left (e,e1) -> mkNode opts (Fail e) e1 hhs
           Right regex ->
-            case splitAt (oRecursion opts) $ RH.split regex q of
-              (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show (oRecursion opts) ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
-              ([], _) -> -- this is a failure because an empty string is returned: so reuse p?
-                         mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
-              (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) hhs
+            let r = getMaxRecursionValue opts
+            in case splitAt r $ RH.split regex q of
+                 (b, _:_) -> mkNode opts (Fail ("Regex looping(" ++ show r ++ ")")) (msg1 <> " " <> show (take 10 b) <> "..." <> showVerbose opts " | " q) hhs
+                 ([], _) -> -- this is a failure because an empty string is returned: so reuse p?
+                            mkNode opts (Fail "Regex no results") (msg1 <> showVerbose opts " | " q) hhs
+                 (b, _) -> mkNode opts (Val b) (lit3 opts msg1 b "" q) hhs
 
 -- | splits a string on a regex delimiter: see 'RH.split'
 --

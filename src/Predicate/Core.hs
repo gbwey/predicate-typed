@@ -943,7 +943,7 @@ pab = run @OAB @p
 pav = run @OAV @p
 -- | display the evaluation tree using unicode and colors
 -- @
---   pu @'(Id, "abc", 123) [1..4]
+--   pu @'(Id, "abc", 'True) [1..4]
 -- @
 pu = run @OU @p
 -- | displays the evaluation tree using unicode and colors with background colors
@@ -1232,7 +1232,15 @@ instance Typeable t => P UnproxyT (Proxy (t :: Type)) where
     let msg0 = "UnproxyT(" <> showT @t <> ")"
     in pure $ mkNode opts (Fail msg0) "you probably meant to get access to the type of PP only and not evaluate (see Pop0)" []
 
--- | similar to 'length'
+-- | similar to 'Length' but displays the input value and works only for lists
+--
+-- >>> pl @Len "abcd"
+-- Present 4 (Len 4 | "abcd")
+-- Val 4
+--
+-- >>> pl @Len [1..3000]
+-- Present 3000 (Len 3000 | [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,7...)
+-- Val 3000
 --
 -- >>> pz @Len [10,4,5,12,3,4]
 -- Val 6
@@ -1244,16 +1252,22 @@ instance Typeable t => P UnproxyT (Proxy (t :: Type)) where
 -- Val True
 --
 data Len deriving Show
-instance ( Show a
-         , x ~ [a]
+
+instance ( x ~ [a]
+         , Show a
          ) => P Len x where
   type PP Len x = Int
-  eval _ opts as =
+  eval _ opts as' =
     let msg0 = "Len"
-        n = length as
-    in pure $ mkNode opts (Val n) (show3 opts msg0 n as) []
+    in pure $ case chkSize opts { oLarge = True } msg0 as' [] of
+         Left e -> e
+         Right (asLen,_) ->
+           mkNode opts (Val asLen) (show3 opts msg0 asLen as') []
 
 -- | similar to 'length' for 'Foldable' instances
+--
+-- >>> pz @(Length Snd) (123,"abcdefg") -- if this breaks then get rid of Show a!
+-- Val 7
 --
 -- >>> pz @(Length Id) (Left "aa")
 -- Val 0
@@ -1271,7 +1285,6 @@ data Length p deriving Show
 
 instance ( PP p x ~ t a
          , P p x
-         , Show (t a)
          , Foldable t
          ) => P (Length p) x where
   type PP (Length p) x = Int
@@ -1280,9 +1293,11 @@ instance ( PP p x ~ t a
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
-      Right p ->
-            let n = length p
-            in mkNode opts (Val n) (show3 opts msg0 n p) [hh pp]
+      Right p' ->
+        case chkSize opts { oLarge = True } msg0 p' [] of
+          Left e -> e
+          Right (pLen,_) ->
+            mkNode opts (Val pLen) (msg0 <> " " <> show pLen) [hh pp]
 
 -- | 'not' function
 --
@@ -1436,6 +1451,7 @@ instance P (Fail UnproxyT p) x => P (FailP p) x where
 -- Fail "OneP:expected one element(empty)"
 --
 data OneP deriving Show
+
 instance ( Foldable t
          , x ~ t a
          ) => P OneP x where
@@ -1445,8 +1461,10 @@ instance ( Foldable t
     pure $ case toList x of
       [] -> mkNode opts (Fail (msg0 <> ":expected one element(empty)")) "" []
       [a] -> mkNode opts (Val a) msg0 []
-      as -> let n = length as
-            in mkNode opts (Fail (msg0 <> ":expected one element(" <> show n <> ")")) "" []
+      as' -> case chkSize opts msg0 as' [] of
+               Left e -> e
+               Right (asLen,_) ->
+                 mkNode opts (Fail (msg0 <> ":expected one element(" <> show asLen <> ")")) "" []
 
 --type OneP = Guard "expected list of length 1" (Len == 1) >> Head
 --type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head
@@ -1610,13 +1628,13 @@ instance ( P p a
     let msg0 = "All"
     case chkSize opts msg0 x [] of
       Left e -> pure e
-      Right xs -> do
+      Right (xsLen,xs) -> do
         ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] xs
         pure $ case splitAndAlign opts msg0 ts of
              Left e -> e
              Right abcs ->
                let hhs = map (hh . prefixNumberToTT) ts
-                   msg1 = msg0 ++ "(" ++ showL opts (length x) ++ ")"
+                   msg1 = msg0 ++ "(" ++ showL opts xsLen ++ ")"
                in case find (not . view _1) abcs of
                     Nothing -> mkNodeB opts True msg1 hhs
                     Just (_,(i,_),tt) ->
@@ -1659,13 +1677,13 @@ instance ( P p a
     let msg0 = "Any"
     case chkSize opts msg0 x [] of
       Left e -> pure e
-      Right xs -> do
+      Right (xsLen,xs) -> do
         ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] xs
         pure $ case splitAndAlign opts msg0 ts of
              Left e -> e
              Right abcs ->
                let hhs = map (hh . prefixNumberToTT) ts
-                   msg1 = msg0 ++ "(" ++ showL opts (length xs) ++ ")"
+                   msg1 = msg0 ++ "(" ++ showL opts xsLen ++ ")"
                in case find (view _1) abcs of
                     Nothing -> mkNodeB opts False msg1 hhs
                     Just (_,(i,_),tt) ->
@@ -1928,7 +1946,7 @@ instance ( Show (PP p a)
       Right q -> do
         case chkSize opts msg0 q [hh qq] of
           Left e -> pure e
-          Right xs -> do
+          Right (_,xs) -> do
             ts <- zipWithM (\i a -> ((i, a),) <$> evalHide @p opts a) [0::Int ..] xs
             pure $ case splitAndAlign opts msg0 ts of
                  Left e -> e
@@ -1953,7 +1971,7 @@ instance ( Show (PP p a)
     let msg0 = "Map"
     case chkSize opts msg0 x [] of
       Left e -> pure e
-      Right xs -> do
+      Right (_,xs) -> do
         ts <- zipWithM (\i a -> ((i, a),) <$> evalHide @p opts a) [0::Int ..] xs
         pure $ case splitAndAlign opts msg0 ts of
              Left e -> e
@@ -2287,7 +2305,7 @@ instance P (p q) a => P (p $ q) a where
 -- | similar to 'Control.Lens.&' for expressions taking exactly on argument
 --
 -- >>> pl @(Id & L1 & Singleton & Length) (13,"xyzw")
--- Present 1 (Length 1 | [13])
+-- Present 1 (Length 1)
 -- Val 1
 --
 -- >>> pl @(2 & (&&&) "abc") ()

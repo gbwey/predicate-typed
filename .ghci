@@ -83,3 +83,6 @@ import System.IO
 import System.Console.Pretty
 import Data.Kind
 import Data.Typeable
+import Control.Arrow
+import qualified Safe
+import Data.Bool

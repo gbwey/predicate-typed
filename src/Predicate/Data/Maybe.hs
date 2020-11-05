@@ -344,11 +344,6 @@ instance P CatMaybesT x => P CatMaybes x where
 -- >>> pz @(MaybeBool 'True 10) ()
 -- Val (Just 10)
 --
-
---    pu @(If 'True (MkJust 10) (EmptyT Maybe)) ()  -- doesnt work
---    <interactive>:211:1: error:
---       * Couldn't match type 'Int' with '()' arising from a use of 'pu'
-
 data MaybeBool b p deriving Show
 
 type MaybeBoolT b p = EmptyBool Maybe b p

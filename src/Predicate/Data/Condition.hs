@@ -377,13 +377,16 @@ instance ( [a] ~ x
          , P (GuardsImpl (LenT ps) ps) x
          ) => P (Guards ps) x where
   type PP (Guards ps) x = PP (GuardsImpl (LenT ps) ps) x
-  eval _ opts as = do
+  eval _ opts as' = do
     let msg0 = "Guards"
         n = getLen @ps
-    if n /= length as then
-       let msg1 = msg0 <> badLength as n
-       in pure $ mkNode opts (Fail msg1) "" []
-    else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
+    case chkSize opts msg0 as' [] of
+      Left e -> pure e
+      Right (asLen,as) ->
+        if n /= asLen then
+           let msg1 = msg0 <> badLength asLen n
+           in pure $ mkNode opts (Fail msg1) "" []
+        else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
 
 instance ( [a] ~ x
          , Show a
@@ -527,9 +530,9 @@ instance ( [a] ~ x
         n = getLen @ps
     case chkSize opts msg1 as [] of
       Left e -> pure e
-      Right ws ->
-        if n /= length ws then
-           let msg2 = msg0 <> badLength ws n
+      Right (wsLen,ws) ->
+        if n /= wsLen then
+           let msg2 = msg0 <> badLength wsLen n
            in pure $ mkNode opts (Fail msg2) "" []
         else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts ws
 
@@ -635,13 +638,16 @@ instance ( [a] ~ x
          , P (GuardsImpl (LenT ps) ps) x
          ) => P (GuardsDetailImpl ps) x where
   type PP (GuardsDetailImpl ps) x = PP (GuardsImpl (LenT ps) ps) x
-  eval _ opts as = do
+  eval _ opts as' = do
     let msg0 = "Guards"
         n = getLen @ps
-    if n /= length as then
-       let msg1 = msg0 <> badLength as n
-       in pure $ mkNode opts (Fail msg1) "" []
-    else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
+    case chkSize opts msg0 as' [] of
+      Left e -> pure e
+      Right (asLen,as) ->
+        if n /= asLen then
+           let msg1 = msg0 <> badLength asLen n
+           in pure $ mkNode opts (Fail msg1) "" []
+        else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
 
 -- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
 --

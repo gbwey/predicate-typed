@@ -97,7 +97,7 @@ instance ( PP p (b,a) ~ b
           Left e -> pure e
           Right _ -> do
             let ff i b as' rs
-                 | i >= oRecursion opts = pure (rs, Left $ mkNode opts (Fail (msg0 <> ":recursion limit i=" <> show i)) ("(b,as')=" <> showL opts (b,as')) [])
+                 | i >= getMaxRecursionValue opts = pure (rs, Left $ mkNode opts (Fail (msg0 <> ":recursion limit i=" <> show i)) ("(b,as')=" <> showL opts (b,as')) [])
                  | otherwise =
                        case as' of
                          [] -> pure (rs, Right ()) -- ++ [((i,q), mkNode opts (Val q) (msg0 <> "(done)") [])], Right ())
@@ -331,7 +331,7 @@ instance ( PP q a ~ s
       Left e -> pure e
       Right q -> do
         let msg1 = msg0 <> " " <> showL opts q
-            ff i s rs | i >= oRecursion opts = pure (rs, Left $ mkNode opts (Fail (msg1 <> ":recursion limit i=" <> show i)) ("s=" <> showL opts s) [])
+            ff i s rs | i >= getMaxRecursionValue opts = pure (rs, Left $ mkNode opts (Fail (msg1 <> ":recursion limit i=" <> show i)) ("s=" <> showL opts s) [])
                       | otherwise = do
                               pp :: TT (PP p s) <- evalHide @p opts s
                               case getValueLR NoInline opts (msg1 <> " i=" <> show i <> " s=" <> show s) pp [] of
@@ -458,13 +458,16 @@ instance ( [a] ~ x
          , P (ParaImpl (LenT ps) ps) x
          ) => P (Para ps) x where
   type PP (Para ps) x = PP (ParaImpl (LenT ps) ps) x
-  eval _ opts as = do
+  eval _ opts as' = do
     let msg0 = "Para"
         n = getLen @ps
-    if n /= length as then
-       let msg1 = msg0 <> badLength as n
-       in pure $ mkNode opts (Fail msg1) "" []
-    else eval (Proxy @(ParaImpl (LenT ps) ps)) opts as
+    case chkSize opts msg0 as' [] of
+      Left e -> pure e
+      Right (asLen,as) ->
+        if n /= asLen then
+           let msg1 = msg0 <> badLength asLen n
+           in pure $ mkNode opts (Fail msg1) "" []
+        else eval (Proxy @(ParaImpl (LenT ps) ps)) opts as
 
 -- only allow non empty lists -- might need [a] ~ x but it seems fine
 instance GL.TypeError ('GL.Text "ParaImpl '[] invalid: requires at least one value in the list")

@@ -40,7 +40,9 @@ module Predicate.Data.Either (
  -- ** miscellaneous
   , type (|||)
   , type (+++)
-  , EitherX
+  , EitherIn
+  , LeftDef'
+  , RightDef'
 
  ) where
 import Predicate.Core
@@ -335,51 +337,6 @@ instance ( Show (PP p a)
           Left e -> e
           Right q -> mkNode opts (Val (Right q)) (msg0 <> "(True) Right " <> showL opts q) [hh bb, hh qq]
 
--- | similar to 'Control.Arrow.|||' but additionally gives @p@ and @q@ the original input
---
--- >>> pz @(EitherX (ShowP (L11 + Snd)) (ShowP Id) Snd) (9,Left 123)
--- Val "132"
---
--- >>> pz @(EitherX (ShowP (L11 + Snd)) (ShowP Id) Snd) (9,Right 'x')
--- Val "((9,Right 'x'),'x')"
---
--- >>> pz @(EitherX (ShowP Id) (ShowP (Second Succ)) Snd) (9,Right 'x')
--- Val "((9,Right 'x'),'y')"
---
-data EitherX p q r deriving Show
-instance ( P r x
-         , P p (x,a)
-         , P q (x,b)
-         , PP r x ~ Either a b
-         , PP p (x,a) ~ c
-         , PP q (x,b) ~ c
-         ) => P (EitherX p q r) x where
-  type PP (EitherX p q r) x = EitherXT (PP r x) x p
-  eval _ opts x = do
-    let msg0 = "EitherX"
-    rr <- eval (Proxy @r) opts x
-    case getValueLR NoInline opts msg0 rr [] of
-      Left e -> pure e
-      Right (Left a) -> do
-        let msg1 = msg0 <> "(Left)"
-        pp <- eval (Proxy @p) opts (x,a)
-        pure $ case getValueLR NoInline opts msg1 pp [hh rr] of
-          Left e -> e
-          Right _ -> mkNodeCopy opts pp msg1 [hh rr, hh pp]
-      Right (Right b) -> do
-        let msg1 = msg0 <> "(Right)"
-        qq <- eval (Proxy @q) opts (x,b)
-        pure $ case getValueLR NoInline opts msg1 qq [hh rr] of
-          Left e -> e
-          Right _ -> mkNodeCopy opts qq msg1 [hh rr, hh qq]
-
-type family EitherXT lr x p where
-  EitherXT (Either a _b) x p = PP p (x,a)
-  EitherXT o _ _ = GL.TypeError (
-      'GL.Text "EitherXT: expected 'Either a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
-
 -- | 'Data.Either.Left' constructor
 data MkLeft' t p deriving Show
 
@@ -617,3 +574,102 @@ instance ( PP p (a,x) ~ String
             pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
               Right p -> mkNode opts (Fail p) (msg0 <> " Left") [hh qq, hh pp]
+
+
+-- | destructor for Either (similar to 'Control.Arrow.|||' but with an extra environment @s@)
+--   @p@ @Left a@ receives @(PP t x,a)@
+--   @q@ @Right b@ receives @(PP t x,b)@
+--   @s@ points to the environment you want to pass in
+--   @t@ points to the Either value
+--
+-- >>> pz @(EitherIn (ShowP (Fst + Snd)) (ShowP Id) Fst Snd) (9,Left 123)
+-- Val "132"
+--
+-- >>> pz @(EitherIn (ShowP (Fst + Snd)) (ShowP Id) Fst Snd) (9,Right 'x')
+-- Val "(9,'x')"
+--
+-- >>> pz @(EitherIn (ShowP Id) (ShowP (Second Succ)) Fst Snd) (9,Right 'x')
+-- Val "(9,'y')"
+--
+-- >>> pz @(EitherIn (FailT _ (PrintF ("found left=%d") Snd)) (Second Succ) Fst Snd) (9,Right 'x')
+-- Val (9,'y')
+--
+-- >>> pz @(EitherIn (FailT _ (PrintF ("found left=%d") Snd)) (Second Succ) Fst Snd) (9,Left 13)
+-- Fail "found left=13"
+--
+data EitherIn p q s t deriving Show
+
+instance ( Show a
+         , Show b
+         , Show (PP q (y,b))
+         , P p (y,a)
+         , P q (y,b)
+         , PP p (y,a) ~ PP q (y,b)
+         , P s x
+         , P t x
+         , PP s x ~ y
+         , PP t x ~ Either a b
+         )  => P (EitherIn p q s t) x where
+  type PP (EitherIn p q s t) x = EitherInT p (PP s x) (PP t x)
+  eval _ opts x = do
+    let msg0 = "EitherIn"
+    lr <- runPQ NoInline msg0 (Proxy @s) (Proxy @t) opts x []
+    case lr of
+      Left e -> pure e
+      Right (s,t,ss,tt) -> do
+         let hhs = [hh ss, hh tt]
+         case t of
+            Left a -> do
+              let msg1 = "Left "
+                  msg2 = msg0 <> msg1
+              pp <- eval (Proxy @p) opts (s,a)
+              pure $ case getValueLR NoInline opts (msg2 <> "p failed") pp hhs of
+                   Left e -> e
+                   Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 a) (hhs ++ [hh pp])
+            Right b -> do
+              let msg1 = "Right "
+                  msg2 = msg0 <> msg1
+              qq <- eval (Proxy @q) opts (s,b)
+              pure $ case getValueLR NoInline opts (msg2 <> "q failed") qq hhs of
+                   Left e -> e
+                   Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 b) (hhs ++ [hh qq])
+
+type family EitherInT p y elr where
+  EitherInT p y (Either a _) = PP p (y,a)
+  EitherInT _ _ o = GL.TypeError (
+      'GL.Text "EitherInT: expected 'Either a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+-- | get Left or use the default value @p@: @q@ is the environment and @r@ is the ELR value
+--
+-- >>> pz @(LeftDef' 999 () Id) (Right "sdf")
+-- Val 999
+--
+-- >>> pz @(LeftDef' 999 () Id) (Left 1)
+-- Val 1
+--
+data LeftDef' p q r deriving Show
+
+type LeftDefT' p q r = EitherIn Snd (Fst >> p) q r
+
+instance P (LeftDefT' p q r) x => P (LeftDef' p q r) x where
+  type PP (LeftDef' p q r) x = PP (LeftDefT' p q r) x
+  eval _ = eval (Proxy @(LeftDefT' p q r))
+
+-- | get Right or use the default value @p@: @q@ is the environment and @r@ is the ELR value
+--
+-- >>> pz @(RightDef' 999 () Id) (Left "sdf")
+-- Val 999
+--
+-- >>> pz @(RightDef' 999 Fst Snd) (999,Right 1)
+-- Val 1
+--
+data RightDef' p q r deriving Show
+
+type RightDefT' p q r = EitherIn (Fst >> p) Snd q r
+
+instance P (RightDefT' p q r) x => P (RightDef' p q r) x where
+  type PP (RightDef' p q r) x = PP (RightDefT' p q r) x
+  eval _ = eval (Proxy @(RightDefT' p q r))
+

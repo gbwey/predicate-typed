@@ -279,8 +279,9 @@ genRefined5P _ g =
         case mi of
           Nothing ->
              let o = getOpt @opts
-             in if cnt >= oRecursion o
-                then error $ setOtherEffects o ("genRefined5P recursion exceeded(" ++ show (oRecursion o) ++ ")")
+                 r = getMaxRecursionValue o
+             in if cnt >= r
+                then error $ setOtherEffects o ("genRefined5P recursion exceeded(" ++ show r ++ ")")
              else f (cnt+1)
           Just i -> pure $ unsafeRefined5 i
   in f 0

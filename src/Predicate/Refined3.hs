@@ -326,8 +326,9 @@ genRefined3P _ g =
         case mppi of
           Nothing ->
              let o = getOpt @opts
-             in if cnt >= oRecursion o
-                then error $ setOtherEffects o ("genRefined3P recursion exceeded(" ++ show (oRecursion o) ++ ")")
+                 r = getMaxRecursionValue o
+             in if cnt >= r
+                then error $ setOtherEffects o ("genRefined3P recursion exceeded(" ++ show r ++ ")")
                 else f (cnt+1)
           Just ppi ->
              case evalQuick @opts @fmt ppi of

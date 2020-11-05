@@ -441,12 +441,15 @@ instance ( KnownNat n
          , Show a
          ) => P (Tuple n) x where
   type PP (Tuple n) x = TupleT n (ExtractAFromList x)
-  eval _ opts as =
+  eval _ opts xs' =
     let msg0 = "Tuple(" ++ show n ++ ")"
         n = nat @n @Int
-    in pure $ case getTupleC @n as of
-         Left es -> mkNode opts (Fail (msg0 <> " not enough elements(" <> show (length as) <> ")")) (showVerbose opts " | " es) []
-         Right r -> mkNode opts (Val r) msg0 []
+    in pure $ case chkSize opts msg0 xs' [] of
+        Left e -> e
+        Right (xsLen,xs) ->
+          case getTupleC @n xs of
+            Left es -> mkNode opts (Fail (msg0 <> " not enough elements(" <> show xsLen <> ")")) (showVerbose opts " | " es) []
+            Right r -> mkNode opts (Val r) msg0 []
 
 -- | create a @n@ tuple from a list and return as an Either
 --
@@ -478,13 +481,16 @@ instance ( KnownNat n
          , x ~ [a]
          ) => P (Tuple' n) x where
   type PP (Tuple' n) x = Either x (TupleT n (ExtractAFromList x))
-  eval _ opts as =
+  eval _ opts xs' =
     let msg0 = "Tuple'(" ++ show n ++ ")"
         n = nat @n @Int
-        lr = getTupleC @n as
-    in pure $ case lr of
-         Left e -> mkNode opts (Val (Left e)) (msg0 <> " not enough elements(" <> show (length as) <> ")") []
-         Right ret -> mkNode opts (Val (Right ret)) msg0 []
+    in pure $ case chkSize opts msg0 xs' [] of
+      Left e -> e
+      Right (xsLen,xs) ->
+        let lr = getTupleC @n xs
+        in case lr of
+             Left e -> mkNode opts (Val (Left e)) (msg0 <> " not enough elements(" <> show xsLen <> ")") []
+             Right ret -> mkNode opts (Val (Right ret)) msg0 []
 
 -- | run @p@ with inductive tuples
 --
@@ -599,9 +605,13 @@ instance ( KnownNat n
          , xs ~ [a]
          ) => P (ToITupleList n) xs where
   type PP (ToITupleList n) xs = ToITupleListP n (ExtractAFromTA xs)
-  eval _ opts xs =
+  eval _ opts xs' =
     let msg0 = "ToITupleList(" <> show n <> ")"
         n = nat @n @Int
-    in pure $ case toITupleListC @n @a xs of
-         Left e -> mkNode opts (Fail e) (msg0 <> " instead found " <> show (length xs)) []
-         Right d -> mkNode opts (Val d) msg0 []
+    in pure $ case chkSize opts msg0 xs' [] of
+         Left e -> e
+         Right (xsLen,xs) ->
+           case toITupleListC @n @a xs of
+             Left e -> mkNode opts (Fail e) (msg0 <> " instead found " <> show xsLen) []
+             Right d -> mkNode opts (Val d) msg0 []
+

@@ -74,13 +74,13 @@ instance Show x => P ProxyT x where
 
 -- | makes a proxy from a one parameter container
 --
--- >>> pz @(Pop1' (Proxy EmptyT) Proxy1T 123) Nothing
+-- >>> pz @(Pop2' (Proxy EmptyT) Proxy1T (Proxy Int) 123) Nothing
 -- Val Nothing
 --
--- >>> pz @(Pop1' (Proxy EmptyT) Proxy1T 123) (Just 10)
+-- >>> pz @(Pop2' (Proxy EmptyT) Proxy1T (Proxy Int) 123) (Just 10)
 -- Val Nothing
 --
--- >>> pz @((Id $$ ()) >> Pop1' (Proxy EmptyT) Proxy1T 123) Just
+-- >>> pz @((Id $$ ()) >> Pop2' (Proxy EmptyT) Proxy1T (Proxy Int) 123) Just
 -- Val Nothing
 --
 data Proxy1T deriving Show
@@ -92,22 +92,22 @@ instance P Proxy1T x where
 
 -- | makes a proxy from a two parameter container
 --
--- >>> pz @(Pop1' (Proxy EmptyT) Proxy2T 123) (Left "ASf")
+-- >>> pz @(Pop2' (Proxy EmptyT) Proxy2T (Proxy Int) 123) (Left "ASf")
 -- Val (Left "")
 --
--- >>> pz @(Pop1' (Proxy EmptyT) Proxy2T 123) (Right 1)
+-- >>> pz @(Pop2' (Proxy EmptyT) Proxy2T (Proxy Int) 123) (Right 1)
 -- Val (Left "")
 --
--- >>> pz @((Id $$ "asdf") >> Pop1' (Proxy EmptyT) Proxy2T 123) Left
+-- >>> pz @((Id $$ "asdf") >> Pop2' (Proxy EmptyT) Proxy2T (Proxy Int) 123) Left
 -- Val (Left "")
 --
--- >>> pz @((Id $$ "asdf") >> Pop1' (Proxy EmptyT) Proxy2T 123) Right
+-- >>> pz @((Id $$ "asdf") >> Pop2' (Proxy EmptyT) Proxy2T (Proxy Int) 123) Right
 -- Val (Left "")
 --
--- >>> pz @(Pop1' (Proxy EmptyT) ((Id $$ "ss") >> Proxy2T) 123) Right
+-- >>> pz @(Pop2' (Proxy EmptyT) ((Id $$ "ss") >> Proxy2T) (Proxy Int) 123) Right
 -- Val (Left "")
 --
--- >>> pz @(Pop1' (Proxy EmptyT) ((Id $$ "ss") >> Proxy2T) 123) Left
+-- >>> pz @(Pop2' (Proxy EmptyT) ((Id $$ "ss") >> Proxy2T) (Proxy Int) 123) Left
 -- Val (Left "")
 --
 data Proxy2T deriving Show

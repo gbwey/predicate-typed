@@ -25,7 +25,6 @@ module Predicate.Data.List (
   , type (+:)
   , type (++)
   , Singleton
-  , EmptyT
   , EmptyList
   , EmptyList'
 
@@ -117,7 +116,7 @@ import Control.Arrow (Arrow((***), (&&&)))
 import qualified Data.Sequence as Seq
 import Data.Bool (bool)
 import qualified Data.Map.Strict as M
-import Control.Applicative (Alternative(empty), liftA2)
+import Control.Applicative (liftA2)
 import Data.Containers.ListUtils (nubOrd)
 import qualified Data.List.NonEmpty as NE
 -- $setup
@@ -227,7 +226,7 @@ instance ( P p x
 -- >>> pz @(Fst +: Snd) ([],5)
 -- Val [5]
 --
--- >>> pz @(EmptyT [] +: 5) 5
+-- >>> pz @(EmptyT [] _ +: 5) 5
 -- Val [5]
 --
 -- >>> pl @('[1,2,3] +: 4) ()
@@ -412,10 +411,10 @@ instance ( P p x
     qq <- eval (Proxy @q) opts a'
     case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
-      Right q ->
-        case chkSize opts msg0 q [hh qq] of
+      Right q' ->
+        case chkSize opts msg0 q' [hh qq] of
           Left e -> pure e
-          Right _ -> do
+          Right (_,q) -> do
              ts <- zipWithM (\i a -> ((i, a),) <$> evalBoolHide @p opts a) [0::Int ..] q
              pure $ case splitAndAlign opts msg0 ts of
                Left e -> e
@@ -510,10 +509,10 @@ instance ( P p x
     qq <- eval (Proxy @q) opts a'
     case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
-      Right q ->
-        case chkSize opts msg0 q [hh qq] of
+      Right q' ->
+        case chkSize opts msg0 q' [hh qq] of
           Left e -> pure e
-          Right _ -> do
+          Right (_,q) -> do
              ts <- zipWithM (\i a -> ((i, a),) <$> evalHide @p opts a) [0::Int ..] q
              pure $ case splitAndAlign opts msg0 ts of
                    Left e -> e
@@ -602,10 +601,10 @@ instance ( Show x
     qq <- eval (Proxy @q) opts a'
     case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
-      Right q ->
-        case chkSize opts msg0 q [hh qq] of
+      Right q' ->
+        case chkSize opts msg0 q' [hh qq] of
           Left e -> pure e
-          Right _ ->
+          Right (_,q) ->
              case q of
                [] -> pure $ mkNode opts (Val []) (show3' opts msg0 q "s=" q) [hh qq]
                [_] -> let ret = [q]
@@ -754,10 +753,10 @@ instance ( P p x
     qq <- eval (Proxy @q) opts a'
     case getValueLR NoInline opts msg0 qq [] of
       Left e -> pure e
-      Right q ->
-        case chkSize opts msg0 q [hh qq] of
+      Right q' ->
+        case chkSize opts msg0 q' [hh qq] of
           Left e -> pure e
-          Right _ -> do
+          Right (_,q) -> do
             let ff [] zs = pure (zs, [], Nothing) -- [(ia,qq)] extras | the rest of the data | optional last pivot or failure
                 ff ((i,a):ias) zs = do
                    pp <- evalBoolHide @p opts a
@@ -828,11 +827,11 @@ instance ( PP p x ~ [a]
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq) ->
+      Right (p',q',pp,qq) ->
         let hhs = [hh pp, hh qq]
-        in case chkSize2 opts msg0 p q hhs of
+        in case chkSize2 opts msg0 p' q' hhs of
           Left e -> e
-          Right _ ->
+          Right ((_,p),(_,q)) ->
             let d = intercalate p (map pure q)
             in mkNode opts (Val d) (show3 opts msg0 d p <> showVerbose opts " | " q) hhs
 
@@ -936,11 +935,11 @@ data Ones deriving Show
 
 instance x ~ [a] => P Ones x where
   type PP Ones x = [x]
-  eval _ opts x =
+  eval _ opts x' =
     let msg0 = "Ones"
-    in pure $ case chkSize opts msg0 x [] of
+    in pure $ case chkSize opts msg0 x' [] of
           Left e -> e
-          Right _ ->
+          Right (_,x) ->
             let d = map pure x
             in mkNode opts (Val d) msg0 []
 
@@ -967,13 +966,15 @@ instance ( P n a
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR NoInline opts (msg1 <> " q failed") qq hhs of
           Left e -> e
-          Right q ->
-            let l = length q
-                diff = if n<=l then 0 else n-l
-                bs = if lft
-                     then replicate diff p <> q
-                     else q <> replicate diff p
-            in mkNode opts (Val bs) (show3 opts msg1 bs q) (hhs <> [hh qq])
+          Right q' ->
+            case chkSize opts msg0 q' [] of
+              Left e -> e
+              Right (qLen,q) ->
+                let diff = if n<=qLen then 0 else n-qLen
+                    bs = if lft
+                         then replicate diff p <> q
+                         else q <> replicate diff p
+                in mkNode opts (Val bs) (show3 opts msg1 bs q) (hhs <> [hh qq])
 
 -- | left pad @q@ with @n@ values from @p@
 --
@@ -1057,11 +1058,15 @@ instance ( P ns x
     lr <- runPQ NoInline msg0 (Proxy @ns) (Proxy @p) opts x []
     pure $ case lr of
       Left e -> e
-      Right (ns,p,nn,pp) ->
-        let zs = foldr (\n k s -> let (a,b) = splitAtNeg (fromIntegral n) s
-                                  in a:k b
-                       ) (\as -> [as | not (null as)]) ns p
-        in mkNode opts (Val zs) (show3' opts msg0 zs "ns=" ns <> showVerbose opts " | " p) [hh nn, hh pp]
+      Right (ns,p',nn,pp) ->
+        let hhs = [hh nn, hh pp]
+        in case chkSize opts msg0 p' hhs of
+             Left e -> e
+             Right (pLen,p) ->
+               let zs = foldr (\n k s -> let (a,b) = splitAtNeg pLen (fromIntegral n) s
+                                         in a:k b
+                              ) (\as -> [as | not (null as)]) ns p
+               in mkNode opts (Val zs) (show3' opts msg0 zs "ns=" ns <> showVerbose opts " | " p) hhs
 
 -- | similar to 'Data.List.splitAt'
 --
@@ -1098,13 +1103,17 @@ instance ( PP p a ~ [b]
     lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @p) opts a []
     pure $ case lr of
       Left e -> e -- (Left e, tt')
-      Right (fromIntegral -> n,p,pp,qq) ->
-        let msg1 = msg0 <> " " <> showL opts n <> " " <> showL opts p
-            ret = splitAtNeg n p
-       in mkNode opts (Val ret) (show3' opts msg1 ret "n=" n <> showVerbose opts " | " p) [hh pp, hh qq]
+      Right (fromIntegral -> n,p',nn,pp) ->
+        let hhs = [hh nn, hh pp]
+        in case chkSize opts msg0 p' hhs of
+             Left e -> e
+             Right (pLen,p) ->
+               let msg1 = msg0 <> " " <> showL opts n <> " " <> showL opts p
+                   ret = splitAtNeg pLen n p
+               in mkNode opts (Val ret) (show3' opts msg1 ret "n=" n <> showVerbose opts " | " p) hhs
 
-splitAtNeg :: Int -> [a] -> ([a], [a])
-splitAtNeg n as = splitAt (if n<0 then length as + n else n) as
+splitAtNeg :: Int -> Int -> [a] -> ([a], [a])
+splitAtNeg len n as = splitAt (if n<0 then len + n else n) as
 
 -- | take @n@ values from a list @p@: similar to 'Prelude.take'
 --
@@ -1475,7 +1484,7 @@ instance ( P p (a,a)
                             Right rr ->
                               pure $  mkNode opts (Val (ll ++ w : rr))
                                      (msg0 <> " lhs=" <> showL opts ll <> " pivot " <> showL opts w <> " rhs=" <> showL opts rr)
-                                     (hh pp : [hh lhs | length ll > 1] ++ [hh rhs | length rr > 1])
+                                     (hh pp : [hh lhs | lengthGreaterThanOne ll] ++ [hh rhs | lengthGreaterThanOne rr])
         ret <- ff as
         pure $ case getValueLR NoInline opts msg0 ret [hh qq] of
           Left _e -> ret -- dont rewrap else will double up messages: already handled
@@ -1634,7 +1643,6 @@ instance P (EmptyList t) x where
   type PP (EmptyList t) x = PP (EmptyListT t) x
   eval _ = eval (Proxy @(EmptyListT t))
 
-
 -- | like 'zipWith'
 --
 -- >>> pz @(ZipWith Id (1...5) (C "a" ... C "e")) ()
@@ -1669,13 +1677,12 @@ instance ( PP q a ~ [x]
     lr <- runPQ NoInline msg0 (Proxy @q) (Proxy @r) opts a []
     case lr of
       Left e -> pure e
-      Right (q,r,qq,rr) ->
+      Right (q',r',qq,rr) ->
         let hhs = [hh qq, hh rr]
-        in case chkSize2 opts msg0 q r hhs of
+        in case chkSize2 opts msg0 q' r' hhs of
           Left e -> pure e
-          Right _ -> do
-            let lls = (length q, length r)
-            if uncurry (==) lls then do
+          Right ((qLen,q),(rLen,r)) -> do
+            if qLen == rLen then do
                ts <- zipWithM (\i (x,y) -> ((i, (x,y)),) <$> evalHide @p opts (x,y)) [0::Int ..] (zip q r)
                pure $ case splitAndAlign opts msg0 ts of
                  Left e -> e
@@ -1686,7 +1693,7 @@ instance ( PP q a ~ [x]
                    in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
 
              else do
-                   let msg1 = msg0 ++ show lls
+                   let msg1 = msg0 ++ show (qLen,rLen)
                    pure $ mkNode opts (Fail (msg1 <> " length mismatch")) (showVerbose opts "q=" q <> showVerbose opts " | r=" r) hhs
 
 -- | Zip two lists to their maximum length using optional padding
@@ -1725,12 +1732,12 @@ instance ( PP l a ~ x
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
-      Right (p,q,pp,qq) -> do
+      Right (p',q',pp,qq) -> do
         let hhs = [hh pp, hh qq]
-        case chkSize2 opts msg0 p q hhs of
+        case chkSize2 opts msg0 p' q' hhs of
           Left e -> pure e
-          Right _ ->
-            case compare (length p) (length q) of
+          Right ((pLen,p),(qLen,q)) -> do
+            case compare pLen qLen of
               LT -> do
                 ll <- eval (Proxy @l) opts a
                 pure $ case getValueLR NoInline opts (msg0 <> " l failed") ll hhs of
@@ -1776,7 +1783,7 @@ instance ( PP l a ~ x
 -- Present [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')] (ZipL [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')] | p=[1 % 1,2 % 1,3 % 1] | q="abcde")
 -- Val [(1 % 1,'a'),(2 % 1,'b'),(3 % 1,'c'),(99 % 4,'d'),(99 % 4,'e')]
 --
--- >>> pl @(ZipL "X" (EmptyT _) Id) "abcd"
+-- >>> pl @(ZipL "X" (EmptyT _ _) Id) "abcd"
 -- Present [("X",'a'),("X",'b'),("X",'c'),("X",'d')] (ZipL [("X",'a'),("X",'b'),("X",'c'),("X",'d')] | p=[] | q="abcd")
 -- Val [("X",'a'),("X",'b'),("X",'c'),("X",'d')]
 --
@@ -1797,14 +1804,13 @@ instance ( PP l a ~ x
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
-      Right (p,q,pp,qq) -> do
+      Right (p',q',pp,qq) -> do
         let hhs = [hh pp, hh qq]
-        case chkSize2 opts msg0 p q hhs of
+        case chkSize2 opts msg0 p' q' hhs of
           Left e -> pure e
-          Right _ -> do
-            let lls = (length p,length q)
-            case uncurry compare lls of
-              GT -> let msg1 = msg0 ++ show lls
+          Right ((pLen,p),(qLen,q)) -> do
+            case compare pLen qLen of
+              GT -> let msg1 = msg0 ++ show (pLen,qLen)
                     in pure $ mkNode opts (Fail (msg1 ++ " rhs would be truncated")) (showVerbose opts "p=" p <> showVerbose opts " | q=" q) hhs
               _ -> do
                      ll <- eval (Proxy @l) opts a
@@ -1832,7 +1838,7 @@ instance ( PP l a ~ x
 -- Error ZipR(2,3) rhs would be truncated (p=[1,2] | q="abc")
 -- Fail "ZipR(2,3) rhs would be truncated"
 --
--- >>> pl @(ZipR (C "Y") (EmptyT _) Id) "abcd"
+-- >>> pl @(ZipR (C "Y") (EmptyT _ _) Id) "abcd"
 -- Error ZipR(0,4) rhs would be truncated (p=[] | q="abcd")
 -- Fail "ZipR(0,4) rhs would be truncated"
 --
@@ -1852,14 +1858,13 @@ instance ( PP r a ~ y
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     case lr of
       Left e -> pure e
-      Right (p,q,pp,qq) -> do
+      Right (p',q',pp,qq) -> do
         let hhs = [hh pp, hh qq]
-        case chkSize2 opts msg0 p q hhs of
+        case chkSize2 opts msg0 p' q' hhs of
           Left e -> pure e
-          Right _ -> do
-            let lls = (length p,length q)
-            case uncurry compare lls of
-              LT -> let msg1 = msg0 ++ show lls
+          Right ((pLen,p),(qLen,q)) -> do
+            case compare pLen qLen of
+              LT -> let msg1 = msg0 ++ show (pLen,qLen)
                     in pure $ mkNode opts (Fail (msg1 ++ " rhs would be truncated")) (showVerbose opts "p=" p <> showVerbose opts " | q=" q) hhs
               _ -> do
                      rr <- eval (Proxy @r) opts a
@@ -1901,41 +1906,16 @@ instance ( PP p a ~ [x]
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq) ->
+      Right (p',q',pp,qq) ->
         let hhs = [hh pp, hh qq]
-        in case chkSize2 opts msg0 p q hhs of
+        in case chkSize2 opts msg0 p' q' hhs of
           Left e -> e
-          Right _ ->
-            let lls = (length p, length q)
-            in case uncurry compare lls of
+          Right ((pLen,p),(qLen,q)) -> do
+            case compare pLen qLen of
                  EQ -> let d = zip p q
                        in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
-                 _ -> let msg1 = msg0 ++ show lls
+                 _ -> let msg1 = msg0 ++ show (pLen,qLen)
                       in mkNode opts (Fail (msg1 <> " length mismatch")) (showVerbose opts "p=" p <> showVerbose opts " | q=" q) hhs
-
--- | similar to 'Data.List.empty'
---
--- >>> pz @(EmptyT Maybe) ()
--- Val Nothing
---
--- >>> pz @(EmptyT []) ()
--- Val []
---
--- >>> pz @(C "x" >> EmptyT []) (13,True)
--- Val ""
---
--- >>> pz @(Fst >> EmptyT (Either String)) (13,True)
--- Val (Left "")
---
-data EmptyT (t :: Type -> Type) deriving Show
-
-instance Alternative t => P (EmptyT t) x where
-  type PP (EmptyT t) x = t x
-  eval _ opts _ =
-    let msg0 = "EmptyT"
-        b = empty @t
-    in pure $ mkNode opts (Val b) msg0 []
-
 
 -- | similar to 'Data.List.sum'
 --
@@ -2144,11 +2124,11 @@ instance ( PP p x ~ [a]
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq) ->
+      Right (p',q',pp,qq) ->
         let hhs = [hh pp, hh qq]
-        in case chkSize2 opts msg0 p q hhs of
+        in case chkSize2 opts msg0 p' q' hhs of
           Left e -> e
-          Right _ ->
+          Right ((_,p),(_,q)) ->
             let d = liftA2 (,) p q
             in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
 

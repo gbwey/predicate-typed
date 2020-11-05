@@ -51,6 +51,7 @@ import Safe (succMay, predMay, toEnumMay)
 import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
 import Data.Tree (Tree)
+import Control.Lens (under,enum)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -242,7 +243,7 @@ instance ( Show a
     case lr of
       Left e -> pure e
       Right (fromIntegral -> n :: Int,p,nn,pp) -> do
-        lr1 <- catchit (toEnum (fromEnum p + n))
+        lr1 <- catchit (under enum (+n) p)
         pure $ case lr1 of
           Left e -> mkNode opts (Fail (msg0 <> " " <> e)) (litL opts (msg0 <> " " <> show n <> " " <> show p)) [hh nn, hh pp]
           Right r -> mkNode opts (Val r) (litL opts (msg0 <> " " <> show n <> " " <> show p)) [hh nn, hh pp]
@@ -343,7 +344,6 @@ data ToEnum' t p deriving Show
 
 instance ( PP p x ~ a
          , P p x
-         , Show a
          , Enum (PP t x)
          , Show (PP t x)
          , Integral a
@@ -354,8 +354,8 @@ instance ( PP p x ~ a
     pp <- eval (Proxy @p) opts x
     case getValueLR NoInline opts msg0 pp [] of
       Left e -> pure e
-      Right p -> do
-        lr <- catchit (toEnum $! fromIntegral p)
+      Right (fromIntegral -> p) -> do
+        lr <- catchit (toEnum p)
         pure $ case lr of
           Left e -> mkNode opts (Fail (msg0 <> " " <> e)) (showL opts p) [hh pp]
           Right n -> mkNode opts (Val n) (show3 opts msg0 n p) [hh pp]

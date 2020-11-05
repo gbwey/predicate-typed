@@ -268,6 +268,12 @@ instance ( Show l
 
 -- | similar to 'concat'
 --
+-- >>> pz @Concat (Just "abc")
+-- Val "abc"
+--
+-- >>> pz @Concat (Left 123)
+-- Val []
+--
 -- >>> pz @Concat ["abc","D","eF","","G"]
 -- Val "abcDeFG"
 --
@@ -276,9 +282,9 @@ instance ( Show l
 --
 data Concat deriving Show
 
-instance ( Show a
-         , Show x
+instance ( Show x
          , x ~ t [a]
+         , Show a
          , Foldable t
          ) => P Concat x where
   type PP Concat x = ExtractAFromTA x
@@ -306,8 +312,8 @@ instance P (ConcatMapT p q) x => P (ConcatMap p q) x where
 --
 data Cycle n p deriving Show
 
-instance ( Show a
-         , PP p x ~ t a
+instance ( PP p x ~ t a
+         , Show x
          , P p x
          , Integral (PP n x)
          , P n x
@@ -323,10 +329,10 @@ instance ( Show a
         let hhs = [hh nn, hh pp]
         in case chkSize opts msg0 p hhs of
             Left e ->  e
-            Right ps ->
+            Right (_,ps) ->
               let msg1 = msg0 <> "(" <> show n <> ")"
                   d = take n (cycle' ps)
-              in mkNode opts (Val d) (show3 opts msg1 d ps) hhs
+              in mkNode opts (Val d) (showVerbose opts msg1 x) hhs
 
 
 -- | similar to 'toList'
@@ -557,18 +563,20 @@ instance P (FoldAlaT t) x => P (FoldAla t) x where
 data Ands deriving Show
 
 instance ( x ~ t a
-         , Show (t a)
          , Foldable t
          , a ~ Bool
          ) => P Ands x where
   type PP Ands x = Bool
-  eval _ opts x =
+  eval _ opts x' =
     let msg0 = "Ands"
-        msg1 = msg0 ++ "(" ++ show (length x) ++ ")"
-        w = case findIndex not (toList x) of
-              Nothing -> ""
-              Just i -> " i="++show i
-    in pure $ mkNodeB opts (and x) (msg1 <> w <> showVerbose opts " | " x) []
+    in pure $ case chkSize opts msg0 x' [] of
+         Left e -> e
+         Right (xLen,x) ->
+           let msg1 = msg0 ++ "(" ++ show xLen ++ ")"
+               w = case findIndex not x of
+                     Nothing -> ""
+                     Just i -> " i="++show i
+           in mkNodeB opts (and x) (msg1 <> w <> showVerbose opts " | " x) []
 
 -- | similar to 'Data.Foldable.or'
 --
@@ -586,16 +594,18 @@ instance ( x ~ t a
 data Ors deriving Show
 
 instance ( x ~ t a
-         , Show x
          , Foldable t
          , a ~ Bool
          ) => P Ors x where
   type PP Ors x = Bool
-  eval _ opts x =
+  eval _ opts x' =
     let msg0 = "Ors"
-        msg1 = msg0 ++ "(" ++ show (length x) ++ ")"
-        w = case findIndex id (toList x) of
-              Nothing -> ""
-              Just i -> " i=" ++ show i
-    in pure $ mkNodeB opts (or x) (msg1 <> w <> showVerbose opts " | " x) []
+    in pure $ case chkSize opts msg0 x' [] of
+         Left e -> e
+         Right (xLen,x) ->
+           let msg1 = msg0 ++ "(" ++ show xLen ++ ")"
+               w = case findIndex id x of
+                     Nothing -> ""
+                     Just i -> " i="++show i
+           in mkNodeB opts (or x) (msg1 <> w <> showVerbose opts " | " x) []
 

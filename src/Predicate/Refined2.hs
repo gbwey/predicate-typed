@@ -309,9 +309,10 @@ genRefined2P _ g =
         mi <- suchThatMaybe g (isJust . snd . runIdentity . eval2M @opts @ip @op)
         case mi of
           Nothing ->
-             if cnt >= oRecursion o
-             then error $ setOtherEffects o ("genRefined2P recursion exceeded(" ++ show (oRecursion o) ++ ")")
-             else f (cnt+1)
+             let r = getMaxRecursionValue o
+             in if cnt >= r
+                then error $ setOtherEffects o ("genRefined2P recursion exceeded(" ++ show r ++ ")")
+                else f (cnt+1)
           Just i ->
              case newRefined2 i of
                Left e -> errorInProgram $ "conversion failed:" ++ show e

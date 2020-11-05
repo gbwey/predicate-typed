@@ -1,5 +1,4 @@
 import Test.DocTest
--- main = doctest ["src", "--verbose"]
 main :: IO ()
 
 main = doctest ["src","-XNoStarIsType"]

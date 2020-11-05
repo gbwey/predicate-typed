@@ -28,7 +28,7 @@ module Predicate.Data.These (
   , MkThat'
   , MkThese
 
- -- ** get rid of These
+ -- ** destructors
   , This'
   , That'
   , These'
@@ -45,9 +45,11 @@ module Predicate.Data.These (
   , Heres
   , TheseIn
   , TheseId
+  , ThesePair
+  , ThisDef'
+  , ThatDef'
   , TheseDef'
-  , TheseDef''
-  , TheseTuple
+  , TheseInSimple
   , PartitionThese
 
  -- ** miscellaneous
@@ -375,11 +377,11 @@ instance P IsTheseT x => P IsThese x where
 -- >>> pz @(ZipThese '[] '[]) "aBcDeF"
 -- Val []
 --
--- >>> pl @(ZipThese Fst Snd >> Map (TheseDef'' Id Id Fst)) (['w'..'y'],['a'..'f'])
+-- >>> pl @(ZipThese Fst Snd >> Map (TheseInSimple Id Id Fst)) (['w'..'y'],['a'..'f'])
 -- Present "wxydef" ((>>) "wxydef" | {Map "wxydef" | [These 'w' 'a',These 'x' 'b',These 'y' 'c',That 'd',That 'e',That 'f']})
 -- Val "wxydef"
 --
--- >>> pl @(("sdf" &&& Id) >> ZipThese Fst Snd >> Map (TheseDef'' (Id &&& 0) (C "x" &&& Id) Id)) [1..5]
+-- >>> pl @(("sdf" &&& Id) >> ZipThese Fst Snd >> Map (TheseInSimple (Id &&& 0) (C "x" &&& Id) Id)) [1..5]
 -- Present [('s',1),('d',2),('f',3),('x',4),('x',5)] ((>>) [('s',1),('d',2),('f',3),('x',4),('x',5)] | {Map [('s',1),('d',2),('f',3),('x',4),('x',5)] | [These 's' 1,These 'd' 2,These 'f' 3,That 4,That 5]})
 -- Val [('s',1),('d',2),('f',3),('x',4),('x',5)]
 --
@@ -858,12 +860,21 @@ instance ( Show a
          That _ -> mkNode opts (Fail (msg0 <> " found That")) "" []
          These a b -> mkNode opts (Val (a,b)) (msg0 <> " " <> showL opts (a,b)) []
 
--- | destructs an These value
---   @s@ points to the These value
---   @t@ points to the environment you want to pass in
+-- | destructor for These (similar to 'Data.These.these' but with an extra environment @s@)
 --   @p@ @This a@ receives @(PP t x,a)@
 --   @q@ @That b@ receives @(PP t x,b)@
 --   @r@ @These a b@ receives @(PP t x,(a,b))@
+--   @s@ points to the environment you want to pass in
+--   @t@ points to the These value
+--
+-- >>> pz @(TheseIn Snd Fst L21 Fst Snd) (999,This 123)
+-- Val 123
+--
+-- >>> pz @(TheseIn Snd Fst L21 Fst Snd) (999,That 123)
+-- Val 999
+--
+-- >>> pz @(TheseIn Snd Fst L21 Fst Snd) (999,These 9 11)
+-- Val 9
 --
 -- >>> pz @(TheseIn '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), These 12 'x')
 -- Val (12,'x')
@@ -989,81 +1000,126 @@ instance P (TheseIdT p q r) x => P (TheseId p q r) x where
 
 -- | provide the default pair in @s@ and @t@ refers to These
 --
--- >>> pz @(TheseDef' Fst Snd) ((999,"oops"),These 2 "xx")
+-- >>> pz @(ThesePair Fst Snd) ((999,"oops"),These 2 "xx")
 -- Val (2,"xx")
 --
--- >>> pz @(TheseDef' Fst Snd) ((999,"oops"),That "ok")
+-- >>> pz @(ThesePair Fst Snd) ((999,"oops"),That "ok")
 -- Val (999,"ok")
 --
-data TheseDef' s t deriving Show
-type TheseDefT' s t = TheseIn '(Snd,L12) '(L11,Snd) Snd s t
+data ThesePair s t deriving Show
+type ThesePairT s t = TheseIn '(Snd,L12) '(L11,Snd) Snd s t
 
-instance P (TheseDefT' s t) x => P (TheseDef' s t) x where
-  type PP (TheseDef' s t) x = PP (TheseDefT' s t) x
-  eval _ = eval (Proxy @(TheseDefT' s t))
+instance P (ThesePairT s t) x => P (ThesePair s t) x where
+  type PP (ThesePair s t) x = PP (ThesePairT s t) x
+  eval _ = eval (Proxy @(ThesePairT s t))
 
 
--- | similar to 'Data.These.these'
+-- | similar to 'Data.These.these' but without any environment
 --
--- >>> pz @(TheseDef'' Id Len (Fst + Length Snd)) (This 13)
+-- >>> pz @(TheseInSimple Id Len (Fst + Length Snd)) (This 13)
 -- Val 13
 --
--- >>> pz @(TheseDef'' Id Len (Fst + Length Snd)) (That "this is a long string")
+-- >>> pz @(TheseInSimple Id Len (Fst + Length Snd)) (That "this is a long string")
 -- Val 21
 --
--- >>> pz @(TheseDef'' Id Len (Fst + Length Snd)) (These 20 "somedata")
+-- >>> pz @(TheseInSimple Id Len (Fst + Length Snd)) (These 20 "somedata")
 -- Val 28
 --
--- >>> pz @(TheseDef'' (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (That "this is a long string")
+-- >>> pz @(TheseInSimple (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (That "this is a long string")
 -- Val (Right "this is a long string")
 --
--- >>> pz @(TheseDef'' (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 1 "this is a long string")
+-- >>> pz @(TheseInSimple (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 1 "this is a long string")
 -- Val (Right "this is a long string")
 --
--- >>> pz @(TheseDef'' (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 100 "this is a long string")
+-- >>> pz @(TheseInSimple (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (These 100 "this is a long string")
 -- Val (Left 100)
 --
--- >>> pl @(TheseDef'' "this" "that" "these") (This (SG.Sum 12))
+-- >>> pl @(TheseInSimple "this" "that" "these") (This (SG.Sum 12))
 -- Present "this" (TheseIn "this" | This Sum {getSum = 12})
 -- Val "this"
 --
--- >>> pl @(TheseDef'' (Id &&& 999) ("no value" &&& Id) Id) (These "Ab" 13)
+-- >>> pl @(TheseInSimple (Id &&& 999) ("no value" &&& Id) Id) (These "Ab" 13)
 -- Present ("Ab",13) (TheseIn ("Ab",13) | These "Ab" 13)
 -- Val ("Ab",13)
 --
--- >>> pl @(TheseDef'' (Id &&& 999) ("no value" &&& Id) Id) (This "Ab")
+-- >>> pl @(TheseInSimple (Id &&& 999) ("no value" &&& Id) Id) (This "Ab")
 -- Present ("Ab",999) (TheseIn ("Ab",999) | This "Ab")
 -- Val ("Ab",999)
 --
--- >>> pl @(TheseDef'' (Id &&& 999) ("no value" &&& Id) Id) (That 13)
+-- >>> pl @(TheseInSimple (Id &&& 999) ("no value" &&& Id) Id) (That 13)
 -- Present ("no value",13) (TheseIn ("no value",13) | That 13)
 -- Val ("no value",13)
 --
-data TheseDef'' p q r deriving Show
-type TheseDefT'' p q r = TheseIn (Snd >> p) (Snd >> q) (Snd >> r) () Id
+data TheseInSimple p q r deriving Show
+type TheseInSimpleT p q r = TheseIn (Snd >> p) (Snd >> q) (Snd >> r) () Id
 
-instance P (TheseDefT'' p q r) x => P (TheseDef'' p q r) x where
-  type PP (TheseDef'' p q r) x = PP (TheseDefT'' p q r) x
-  eval _ = eval (Proxy @(TheseDefT'' p q r))
+instance P (TheseInSimpleT p q r) x => P (TheseInSimple p q r) x where
+  type PP (TheseInSimple p q r) x = PP (TheseInSimpleT p q r) x
+  eval _ = eval (Proxy @(TheseInSimpleT p q r))
 
--- | TheseTuple: given a 'These' returns a tuple but you need to provide default values for both sides
---
--- >>> pl @(TheseTuple "xyz" 'True ) (This "abc")
--- Present ("abc",True) (TheseIn ("abc",True) | This "abc")
--- Val ("abc",True)
---
--- >>> pl @(TheseTuple "xyz" 'True) (That False)
--- Present ("xyz",False) (TheseIn ("xyz",False) | That False)
--- Val ("xyz",False)
---
--- >>> pl @(TheseTuple "xyz" 'True) (These "abc" False)
--- Present ("abc",False) (TheseIn ("abc",False) | These "abc" False)
--- Val ("abc",False)
---
-data TheseTuple p q deriving Show
-type TheseTupleT p q = TheseIn '(Snd, q) '(p, Snd) Snd () Id
 
-instance P (TheseTupleT p q) x => P (TheseTuple p q) x where
-  type PP (TheseTuple p q) x = PP (TheseTupleT p q) x
-  eval _ = eval (Proxy @(TheseTupleT p q))
+-- | get This or use the default value @p@: @q@ is the environment and @r@ is the These value
+--
+-- >>> pz @(ThisDef' Id Fst Snd) (999,These 1 "xx")
+-- Val 999
+--
+-- >>> pz @(ThisDef' 999 () Id) (That "sdf")
+-- Val 999
+--
+-- >>> pz @(ThisDef' 999 () Id) (This 1)
+-- Val 1
+--
+data ThisDef' p q r deriving Show
+
+type ThisDefT' p q r = TheseIn Snd (Fst >> p) (Fst >> p) q r
+
+instance P (ThisDefT' p q r) x => P (ThisDef' p q r) x where
+  type PP (ThisDef' p q r) x = PP (ThisDefT' p q r) x
+  eval _ = eval (Proxy @(ThisDefT' p q r))
+
+-- | get That or use the default value @p@: @q@ is the environment and @r@ is the These value
+--
+-- >>> pz @(ThatDef' 999 () Id) (These "x" 1)
+-- Val 999
+--
+-- >>> pz @(ThatDef' 999 () Id) (This "sdf")
+-- Val 999
+--
+-- >>> pz @(ThatDef' 999 Fst Snd) (999,That 1)
+-- Val 1
+--
+data ThatDef' p q r deriving Show
+
+type ThatDefT' p q r = TheseIn (Fst >> p) Snd (Fst >> p) q r
+
+instance P (ThatDefT' p q r) x => P (ThatDef' p q r) x where
+  type PP (ThatDef' p q r) x = PP (ThatDefT' p q r) x
+  eval _ = eval (Proxy @(ThatDefT' p q r))
+
+-- | get These or use the default value @p@: @q@ is the environment and @r@ is the These value
+--
+-- >>> pz @(TheseDef' '(999,"xx") () Id) (These 12 "yy")
+-- Val (12,"yy")
+--
+-- >>> pz @(TheseDef' '(999,"xx") () Id) (That "abc")
+-- Val (999,"xx")
+--
+-- >>> pz @(TheseDef' '(999,"xx") () Id) (This 1)
+-- Val (999,"xx")
+--
+-- >>> pz @(TheseDef' '(999,"xx") () Id) (These 1 "abc")
+-- Val (1,"abc")
+--
+-- >>> pz @(TheseDef' Id Fst Snd) ((999,"xx"),That "yy")
+-- Val (999,"xx")
+--
+data TheseDef' p q r deriving Show
+
+type TheseDefT' p q r = TheseIn (Fst >> p) (Fst >> p) Snd q r
+
+instance P (TheseDefT' p q r) x => P (TheseDef' p q r) x where
+  type PP (TheseDef' p q r) x = PP (TheseDefT' p q r) x
+  eval _ = eval (Proxy @(TheseDefT' p q r))
+
+
 

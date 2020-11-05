@@ -1,3 +1,4 @@
+{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -132,6 +133,8 @@ module Predicate.Util (
   , chkSize
   , chkSize2
   , badLength
+  , getMaxRecursionValue
+  , lengthGreaterThanOne
   ) where
 import Predicate.Misc
 import GHC.TypeLits (Symbol, Nat, KnownSymbol, KnownNat)
@@ -160,6 +163,7 @@ import Data.Bool (bool)
 import GHC.Generics (Generic, Generic1)
 import qualified Language.Haskell.TH.Lift as TH
 import Instances.TH.Lift ()
+import Control.Applicative (liftA3)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -466,7 +470,9 @@ data HOpts f =
         , oDisp :: !(HKD f Disp) -- ^ display the tree using the normal tree or unicode
         , oColor :: !(HKD f (String, PColor)) -- ^ color palette used
         , oMsg :: ![String] -- ^ messages associated with type
-        , oRecursion :: !(HKD f Int) -- ^ max recursion
+        , oRecursion :: !(HKD f Int) -- ^ max recursion for small values
+        , oRecursionLarge :: !(HKD f Int) -- ^ max recursion for large values eg for Text
+        , oLarge :: !(HKD f Bool) -- ^ use large value recursion
         , oOther :: !(HKD f (Bool, SColor, SColor)) -- ^ other message effects
         , oNoColor :: !(HKD f Bool) -- ^ no colors
         }
@@ -497,6 +503,8 @@ reifyOpts h =
         )
         (oMsg defOpts <> oMsg h)
         (fromMaybe (oRecursion defOpts) (coerce (oRecursion h)))
+        (fromMaybe (oRecursionLarge defOpts) (coerce (oRecursionLarge h)))
+        (fromMaybe (oLarge defOpts) (coerce (oLarge h)))
         (if fromMaybe (oNoColor defOpts) (coerce (oNoColor h))
            then otherDef
            else fromMaybe (oOther defOpts) (coerce (oOther h))
@@ -511,9 +519,17 @@ setWidth i = mempty { oWidth = pure i }
 setMessage :: String -> HOpts Last
 setMessage s = mempty { oMsg = pure s }
 
--- | set maximum recursion eg when running regex
+-- | set maximum recursion for small values eg when running regex
 setRecursion :: Int -> HOpts Last
 setRecursion i = mempty { oRecursion = pure i }
+
+-- | set maximum recursion for large values
+setRecursionLarge :: Int -> HOpts Last
+setRecursionLarge i = mempty { oRecursionLarge = pure i }
+
+-- | set maximum recursion eg when running regex
+setLarge :: Bool -> HOpts Last
+setLarge b = mempty { oLarge = pure b }
 
 -- | set color of title message
 setOther :: Bool
@@ -556,10 +572,10 @@ setDebug d =
 
 -- | monoid opts
 instance Monoid (HOpts Last) where
-  mempty = HOpts mempty mempty mempty mempty mempty mempty mempty mempty
+  mempty = HOpts mempty mempty mempty mempty mempty mempty mempty mempty mempty mempty
 
 instance Semigroup (HOpts Last) where
-  HOpts a b c d e f g h <> HOpts a' b' c' d' e' f' g' h'
+  HOpts a b c d e f g h i j <> HOpts a' b' c' d' e' f' g' h' i' j'
      = HOpts (a <> a')
              (b <> b')
              (c <> c')
@@ -568,6 +584,8 @@ instance Semigroup (HOpts Last) where
              (f <> f')
              (g <> g')
              (h <> h')
+             (i <> i')
+             (j <> j')
 
 --seqPOptsM :: HOpts Last -> Maybe (HOpts Identity)
 --seqPOptsM h = coerce (HOpts <$> oWidth h <*> oDebug h <*> oDisp h <*> oColor h)
@@ -586,6 +604,8 @@ defOpts = HOpts
     , oColor = colorDef
     , oMsg = mempty
     , oRecursion = 100
+    , oRecursionLarge = 10_000
+    , oLarge = False
     , oOther = otherDef
     , oNoColor = False
     }
@@ -725,8 +745,14 @@ splitAndAlign opts msgs ts =
 groupErrors :: [String] -> String
 groupErrors =
      intercalate " | "
-   . map (\xs@(x :| _) -> x <> (if length xs > 1 then "(" <> show (length xs) <> ")" else ""))
+   . map (\xs@(x :| _) -> x <> let ll = length xs in (if ll > 1 then "(" <> show ll <> ")" else ""))
    . N.group
+
+lengthGreaterThanOne :: [a] -> Bool
+lengthGreaterThanOne =
+  \case
+    _:_:_ -> True
+    _ -> False
 
 partitionTTExtended :: (w, TT a) -> Either ((w, TT x), String) (a, w, TT a)
 partitionTTExtended (s, t) =
@@ -894,6 +920,8 @@ data Opt =
   | OWidth !Nat           -- ^ set display width
   | OMsg !Symbol          -- ^ set text to add context to a failure message for refined types
   | ORecursion !Nat       -- ^ set recursion limit eg for regex
+  | ORecursionLarge !Nat  -- ^ set recursion limit for large fields
+  | OLarge !Bool          -- ^ use large recursion
   | OOther                -- ^ set effects for messages
      !Bool    -- ^ set underline
      !Color   -- ^ set foreground color
@@ -940,6 +968,10 @@ instance KnownSymbol s => OptC ('OMsg s) where
    getOptC = setMessage (symb @s)
 instance KnownNat n => OptC ('ORecursion n) where
    getOptC = setRecursion (nat @n)
+instance KnownNat n => OptC ('ORecursionLarge n) where
+   getOptC = setRecursionLarge (nat @n)
+instance GetBool b => OptC ('OLarge b) where
+   getOptC = setLarge (getBool @b)
 instance ( GetBool b
          , GetColor c1
          , GetColor c2
@@ -1073,12 +1105,17 @@ chkSize :: Foldable t
    -> String
    -> t a
    -> [Tree PE]
-   -> Either (TT x) [a]
+   -> Either (TT x) (Int,[a])
 chkSize opts msg0 xs hhs =
-  let mx = oRecursion opts
+  let mx = getMaxRecursionValue opts
   in case splitAt mx (toList xs) of
-    (zs,[]) -> Right zs
+    (zs,[]) -> Right (length zs,zs)
     (_,_:_) -> Left $ mkNode opts (Fail (msg0 <> " list size exceeded")) ("max is " ++ show mx) hhs
+
+getMaxRecursionValue :: POpts -> Int
+getMaxRecursionValue =
+  liftA3 bool oRecursion oRecursionLarge oLarge
+
 
 -- | deal with possible recursion on two lists
 chkSize2 :: (Foldable t, Foldable u)
@@ -1087,7 +1124,7 @@ chkSize2 :: (Foldable t, Foldable u)
    -> t a
    -> u b
    -> [Tree PE]
-   -> Either (TT x) ([a],[b])
+   -> Either (TT x) ((Int,[a]),(Int,[b]))
 chkSize2 opts msg0 xs ys hhs =
   (,) <$> chkSize opts msg0 xs hhs <*> chkSize opts msg0 ys hhs
 
@@ -1126,11 +1163,10 @@ type family OptT (xs :: [Opt]) where
   OptT (x ': xs) = x ':# OptT xs
 
 -- | message to display when the length of a foldable is exceeded
-badLength :: Foldable t
-          => t a
+badLength :: Int
           -> Int
           -> String
-badLength as n = ":invalid length(" <> show (length as) <> ") expected " ++ show n
+badLength asLen n = ":invalid length(" <> show asLen <> ") expected " ++ show n
 
 prtTree :: Show x => POpts -> TT x -> String
 prtTree opts tt =
@@ -1255,4 +1291,3 @@ ttValBool afb tt = (\b -> tt { _ttValP = val2PBool b, _ttVal = b }) <$> afb (_tt
 --
 ttVal :: Lens (TT a) (TT b) (Val a) (Val b)
 ttVal afb tt = (\b -> tt { _ttValP = val2P b, _ttVal = b }) <$> afb (_ttVal tt)
-

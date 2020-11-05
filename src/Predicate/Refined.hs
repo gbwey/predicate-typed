@@ -233,8 +233,9 @@ genRefined g =
         case ma of
           Nothing ->
              let o = getOpt @opts
-             in if cnt >= oRecursion o
-                then error $ setOtherEffects o ("genRefined recursion exceeded(" ++ show (oRecursion o) ++ ")")
+                 r = getMaxRecursionValue o
+             in if cnt >= r
+                then error $ setOtherEffects o ("genRefined recursion exceeded(" ++ show r ++ ")")
                 else f (cnt+1)
           Just a -> pure $ unsafeRefined a
   in f 0
