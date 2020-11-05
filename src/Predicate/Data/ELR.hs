@@ -23,14 +23,27 @@
 {-# LANGUAGE DeriveLift #-}
 -- | ELR related methods
 module Predicate.Data.ELR (
- -- ** functor
+ -- definition
     ELR(..)
 
+ -- ** destructors
   , ENone'
   , ELeft'
   , ERight'
   , EBoth'
 
+  , ELRIn
+  , ELRId
+  , ELRDef
+  , ELRDef''
+  , PartitionELR
+
+  , ENoneDef
+  , ELeftDef
+  , ERightDef
+  , EBothDef
+
+ -- ** constructors
   , MkENone
   , MkELeft
   , MkERight
@@ -40,21 +53,18 @@ module Predicate.Data.ELR (
   , MkELeft'
   , MkERight'
 
+ -- ** boolean predicates
   , IsENone
   , IsELeft
   , IsERight
   , IsEBoth
 
+ -- ** miscellaneous
   , getBifoldInfo
   , showELR
   , GetELR(..)
-  , PartitionELR
   , partitionELR
   , fromELR
-  , ELRIn
-  , ELRId
-  , ELRDef
-  , ELRDef''
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -851,4 +861,78 @@ type ELRDefT'' n p q r = ELRIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
 instance P (ELRDefT'' n p q r) x => P (ELRDef'' n p q r) x where
   type PP (ELRDef'' n p q r) x = PP (ELRDefT'' n p q r) x
   eval _ = eval (Proxy @(ELRDefT'' n p q r))
+
+-- | get ENone or run @p@: really only useful when p is set to Fail
+--
+-- >>> pz @(ENoneDef (FailT _ "not ENone") Id) ENone
+-- Val ()
+--
+-- >>> pz @(ENoneDef (FailT _ "not ENone") Id) (ELeft 1)
+-- Fail "not ENone"
+--
+data ENoneDef p q deriving Show
+type ENoneDefT p q = ELRIn Id p p p () q
+
+instance P (ENoneDefT p q) x => P (ENoneDef p q) x where
+  type PP (ENoneDef p q) x = PP (ENoneDefT p q) x
+  eval _ = eval (Proxy @(ENoneDefT p q))
+
+-- | get ELeft or default value
+--
+-- >>> pz @(ELeftDef 999 Id) ENone
+-- Val 999
+--
+-- >>> pz @(ELeftDef 999 Id) (ERight "sdf")
+-- Val 999
+--
+-- >>> pz @(ELeftDef 999 Id) (ELeft 1)
+-- Val 1
+--
+data ELeftDef p q deriving Show
+type ELeftDefT p q = ELRIn p Snd p p () q
+
+instance P (ELeftDefT p q) x => P (ELeftDef p q) x where
+  type PP (ELeftDef p q) x = PP (ELeftDefT p q) x
+  eval _ = eval (Proxy @(ELeftDefT p q))
+
+-- | get ERight or default value
+--
+-- >>> pz @(ERightDef 999 Id) ENone
+-- Val 999
+--
+-- >>> pz @(ERightDef 999 Id) (ELeft "sdf")
+-- Val 999
+--
+-- >>> pz @(ERightDef 999 Id) (ERight 1)
+-- Val 1
+--
+data ERightDef p q deriving Show
+type ERightDefT p q = ELRIn p p Snd p () q
+
+instance P (ERightDefT p q) x => P (ERightDef p q) x where
+  type PP (ERightDef p q) x = PP (ERightDefT p q) x
+  eval _ = eval (Proxy @(ERightDefT p q))
+
+-- | get EBoth or default value
+--
+-- >>> pz @(EBothDef '(999,"xx") Id) ENone
+-- Val (999,"xx")
+--
+-- >>> pz @(EBothDef '(999,"xx") Id) (ERight "abc")
+-- Val (999,"xx")
+--
+-- >>> pz @(EBothDef '(999,"xx") Id) (ELeft 1)
+-- Val (999,"xx")
+--
+-- >>> pz @(EBothDef '(999,"xx") Id) (EBoth 1 "abc")
+-- Val (1,"abc")
+--
+data EBothDef p q deriving Show
+type EBothDefT p q = ELRIn p p p Snd () q
+
+instance P (EBothDefT p q) x => P (EBothDef p q) x where
+  type PP (EBothDef p q) x = PP (EBothDefT p q) x
+  eval _ = eval (Proxy @(EBothDefT p q))
+
+
 

@@ -63,6 +63,8 @@ import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
 import Data.These (partitionThese, These(..))
 import qualified Data.These.Combinators as TheseC
+import qualified GHC.TypeLits as GL
+import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -962,6 +964,10 @@ instance ( Show a
 
 type family TheseInT r y elr where
   TheseInT r y (These a b) = PP r (y,(a,b))
+  TheseInT _ _ o = GL.TypeError (
+      'GL.Text "TheseInT: expected 'These a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
 
 -- | simple version of 'TheseIn' with Id as the These value and the environment set to ()
 --
