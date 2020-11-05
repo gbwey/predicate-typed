@@ -54,6 +54,7 @@ module Predicate.Data.ELR (
   , ELRIn
   , ELRId
   , ELRDef
+  , ELRDef''
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -697,7 +698,7 @@ fromELR a b =
 -- Val "left"
 --
 -- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) (EBoth "Ab" 13)
--- Present ("Ab",13) (ELRIn ("Ab",13) | EBoth ("Ab",13))
+-- Present ("Ab",13) (ELRIn ("Ab",13) | EBoth "Ab" 13)
 -- Val ("Ab",13)
 --
 -- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) (ELeft "Ab")
@@ -761,7 +762,7 @@ instance ( Show a
               rr <- eval (Proxy @r) opts (s,(a,b))
               pure $ case getValueLR NoInline opts (msg2 <> "r failed") rr hhs of
                    Left e -> e
-                   Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 (a,b)) (hhs ++ [hh rr])
+                   Right c -> mkNode opts (Val c) (show3' opts msg0 c "" (EBoth a b)) (hhs ++ [hh rr])
 
 -- | simple version of 'ELRIn' with Id as the ELR value and the environment set to ()
 --
@@ -801,4 +802,53 @@ type ELRDefT s t = ELRIn Id '(Snd,L12) '(L11,Snd) Snd s t
 instance P (ELRDefT s t) x => P (ELRDef s t) x where
   type PP (ELRDef s t) x = PP (ELRDefT s t) x
   eval _ = eval (Proxy @(ELRDefT s t))
+
+-- | similar to 'Predicate.Data.These.TheseDef'''
+--
+-- >>> pz @(ELRDef'' 999 Id Len (Fst + Length Snd)) (ELeft 13)
+-- Val 13
+--
+-- >>> pz @(ELRDef'' 999 Id Len (Fst + Length Snd)) ENone
+-- Val 999
+--
+-- >>> pz @(ELRDef'' 999 Id Len (Fst + Length Snd)) (ERight "this is a long string")
+-- Val 21
+--
+-- >>> pz @(ELRDef'' 999 Id Len (Fst + Length Snd)) (EBoth 20 "somedata")
+-- Val 28
+--
+-- >>> pz @(ELRDef'' (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (ERight "this is a long string")
+-- Val (Right "this is a long string")
+--
+-- >>> pz @(ELRDef'' (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) ENone
+-- Fail "err"
+--
+-- >>> pz @(ELRDef'' (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (EBoth 1 "this is a long string")
+-- Val (Right "this is a long string")
+--
+-- >>> pz @(ELRDef'' (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (EBoth 100 "this is a long string")
+-- Val (Left 100)
+--
+-- >>> pl @(ELRDef'' "none" "left" "right" "both") (ELeft (SG.Sum 12))
+-- Present "left" (ELRIn "left" | ELeft Sum {getSum = 12})
+-- Val "left"
+--
+-- >>> pl @(ELRDef'' (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (EBoth "Ab" 13)
+-- Present ("Ab",13) (ELRIn ("Ab",13) | EBoth "Ab" 13)
+-- Val ("Ab",13)
+--
+-- >>> pl @(ELRDef'' (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ELeft "Ab")
+-- Present ("Ab",999) (ELRIn ("Ab",999) | ELeft "Ab")
+-- Val ("Ab",999)
+--
+-- >>> pl @(ELRDef'' (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ERight 13)
+-- Present ("no value",13) (ELRIn ("no value",13) | ERight 13)
+-- Val ("no value",13)
+--
+data ELRDef'' n p q r deriving Show
+type ELRDefT'' n p q r = ELRIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
+
+instance P (ELRDefT'' n p q r) x => P (ELRDef'' n p q r) x where
+  type PP (ELRDef'' n p q r) x = PP (ELRDefT'' n p q r) x
+  eval _ = eval (Proxy @(ELRDefT'' n p q r))
 
