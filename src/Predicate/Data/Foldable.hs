@@ -49,7 +49,7 @@ import Predicate.Data.Monoid (MConcat)
 import Control.Lens
 import Data.Typeable (Typeable, Proxy(Proxy))
 import Data.Kind (Type)
-import Data.Foldable (Foldable(toList))
+import Data.Foldable (Foldable(toList,fold))
 import qualified Data.List.NonEmpty as N
 import Data.List.NonEmpty (NonEmpty(..))
 import qualified GHC.Exts as GE
@@ -426,6 +426,9 @@ instance P NullT a => P Null a where
 -- >>> pz @(FoldMap (Wrap (SG.Sum _) Len)) ["abc","defg","h"]
 -- Val (Sum {getSum = 8})
 --
+-- >>> pz @(FoldMap (FoldMap (Wrap (SG.Sum _) Id))) (Just [1..10])
+-- Val (Sum {getSum = 55})
+--
 data FoldMap p deriving Show
 
 instance ( Traversable n
@@ -447,7 +450,7 @@ instance ( Traversable n
         let ind = case foldMap pure ret of
                     [] -> " <skipped>"
                     _:_ -> ""
-            d = foldMap id ret
+            d = fold ret
         in ttnb & ttVal .~ Val d
                 & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
 
@@ -533,7 +536,7 @@ instance ( Traversable n
 -- Val 55
 --
 data FoldAla (t :: Type) deriving Show
-type FoldAlaT (t :: Type) = Map' (Wrap t Id) Id >> MConcat Id >> Unwrap
+type FoldAlaT (t :: Type) = Map' (Wrap t Id) Id >> MConcat >> Unwrap
 
 instance P (FoldAlaT t) x => P (FoldAla t) x where
   type PP (FoldAla t) x = PP (FoldAlaT t) x

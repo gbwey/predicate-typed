@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1cbf6c9b513c819809aea5c7ba639f8270876d5ac8734ba14595ede9fbbc5a41
+-- hash: 11ef853b839b7ba93d8a082360a840c2f17b859a902e3508819f96c8ead0bef2
 
 name:           predicate-typed
 version:        0.7.4.2
@@ -33,6 +33,7 @@ library
       Predicate.Data.Condition
       Predicate.Data.DateTime
       Predicate.Data.Either
+      Predicate.Data.ELR
       Predicate.Data.Enum
       Predicate.Data.Extra
       Predicate.Data.Foldable

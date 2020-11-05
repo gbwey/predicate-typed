@@ -126,6 +126,7 @@ module Predicate.Misc (
   , _Id
   , sum'
   , product'
+  , foldMapStrict
   , cycle'
   , cmpOf
   ) where
@@ -1330,6 +1331,9 @@ sum' = foldl' (+) 0
 -- | strict version of 'product'
 product' :: (Foldable t, Num a) => t a -> a
 product' = foldl' (*) 1
+
+foldMapStrict :: (Foldable t, Monoid m) => (a -> m) -> t a -> m
+foldMapStrict f = foldl' (\ acc a -> acc <> f a) mempty
 
 cmpOf :: Eq a => Ordering -> ([a] -> [a] -> Bool, String)
 cmpOf = \case

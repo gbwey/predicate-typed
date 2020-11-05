@@ -122,28 +122,23 @@ instance P (SapT t) x => P (Sap t) x where
 
 -- | similar to 'mconcat'
 --
--- >>> pz @(MConcat Id) [SG.Sum 44, SG.Sum 12, SG.Sum 3]
+-- >>> pz @MConcat [SG.Sum 44, SG.Sum 12, SG.Sum 3]
 -- Val (Sum {getSum = 59})
 --
--- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) >> MConcat Id) [7 :: Int,6,1,3,5] -- monoid so need eg Int
+-- >>> pz @(Map '(Pure SG.Sum Id, Pure SG.Max Id) >> MConcat) [7 :: Int,6,1,3,5] -- monoid so need eg Int
 -- Val (Sum {getSum = 22},Max {getMax = 7})
 --
-data MConcat p deriving Show
+data MConcat deriving Show
 
-instance ( PP p x ~ [a]
-         , P p x
+instance ( x ~ [a]
          , Show a
          , Monoid a
-         ) => P (MConcat p) x where
-  type PP (MConcat p) x = ExtractAFromList (PP p x)
-  eval _ opts x = do
+         ) => P MConcat x where
+  type PP MConcat x = ExtractAFromList x
+  eval _ opts x =
     let msg0 = "MConcat"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR NoInline opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        let b = mconcat p
-        in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
+        b = mconcat x
+    in pure $ mkNode opts (Val b) (show3 opts msg0 b x) []
 
 -- | similar to 'SG.sconcat'
 --

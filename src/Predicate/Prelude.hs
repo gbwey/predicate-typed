@@ -8,6 +8,7 @@ module Predicate.Prelude (
   , module Predicate.Data.Condition
   , module Predicate.Data.DateTime
   , module Predicate.Data.Either
+  , module Predicate.Data.ELR
   , module Predicate.Data.Enum
   , module Predicate.Data.Extra
   , module Predicate.Data.Foldable
@@ -36,6 +37,7 @@ import Predicate.Data.Char
 import Predicate.Data.Condition
 import Predicate.Data.DateTime
 import Predicate.Data.Either
+import Predicate.Data.ELR
 import Predicate.Data.Enum
 import Predicate.Data.Extra
 import Predicate.Data.Foldable

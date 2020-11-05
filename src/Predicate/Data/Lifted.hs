@@ -1,6 +1,4 @@
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -16,7 +14,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{-# LANGUAGE DeriveTraversable #-}
 -- | lifted promoted functions
 module Predicate.Data.Lifted (
  -- ** functor
@@ -67,13 +64,11 @@ module Predicate.Data.Lifted (
  -- ** error handling
   , Catch
   , Catch'
-
- -- ** miscellaneous
-  , ELR(..)
  ) where
 import Predicate.Core
 import Predicate.Misc
 import Predicate.Util
+import Predicate.Data.ELR (getBifoldInfo)
 import qualified GHC.TypeLits as GL
 import Control.Applicative
 import Control.Monad (join)
@@ -1213,9 +1208,9 @@ instance ( Traversable n
 --       `- False Id False
 -- Val [This 2,This 3,That False,These 5 True]
 --
--- >>> pl @(BiMap Succ Head) (EEmpty @Int @String)
--- Present EEmpty (BiMap <skipped>)
--- Val EEmpty
+-- >>> pl @(BiMap Succ Head) (ENone @Int @String)
+-- Present ENone (BiMap <skipped>)
+-- Val ENone
 --
 -- >>> pl @(BiMap Succ Head) (ELeft @Int @String 10)
 -- Present ELeft 11 (BiMap(L) Succ 11 | 10)
@@ -1229,7 +1224,7 @@ instance ( Traversable n
 -- Present EBoth 11 'x' (BiMap(B) Succ 11 | 10 | Head 'x' | "xyz")
 -- Val (EBoth 11 'x')
 --
--- >>> pan @(FMap $ BiMap Succ Head) [EEmpty,ELeft 10,ERight "abc",EBoth 10 "xyz"]
+-- >>> pan @(FMap $ BiMap Succ Head) [ENone,ELeft 10,ERight "abc",EBoth 10 "xyz"]
 -- P FMap BiMap <skipped> | BiMap(L) Succ 11 | BiMap(R) Head 'a' | BiMap(B) Succ 11 | Head 'x'
 -- |
 -- +- P BiMap <skipped>
@@ -1247,7 +1242,7 @@ instance ( Traversable n
 --    +- P Succ 11
 --    |
 --    `- P Head 'x'
--- Val [EEmpty,ELeft 11,ERight 'a',EBoth 11 'x']
+-- Val [ENone,ELeft 11,ERight 'a',EBoth 11 'x']
 --
 data BiMap p q deriving Show
 
@@ -1283,12 +1278,7 @@ _bimapImpl opts proxyp proxyq msg0 hhs nab = do
   pure $ case getValueLR Inline opts "" ttnb hhs of
     Left e -> e
     Right ret ->
---            let ind = case bifoldMap (\x -> ([x],[])) (\x -> ([],[x])) ret of
-      let ind = case bifoldMap ((,mempty) . pure) ((mempty,) . pure) ret of
-                  ([], []) -> " <skipped>"
-                  (_:_, []) -> "(L)"
-                  ([], _:_) -> "(R)"
-                  (_:_, _:_) -> "(B)"
+      let ind = getBifoldInfo ret
       in ttnb & ttVal .~ Val ret
               & ttForest %~ (hhs <>)
               & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
@@ -1321,6 +1311,9 @@ _bimapImpl opts proxyp proxyq msg0 hhs nab = do
 -- Present (Sum {getSum = 123},()) (BiFoldMap(L) '(Sum {getSum = 123},()))
 -- Val (Sum {getSum = 123},())
 --
+-- >>> pz @(BiFoldMap (MEmptyT _) $ FoldMap (FoldMap (Wrap (SG.Sum _) Id))) (Right (Just [1..10]))
+-- Val (Sum {getSum = 55})
+--
 data BiFoldMap p q deriving Show
 
 instance ( Bitraversable n
@@ -1343,46 +1336,7 @@ instance ( Bitraversable n
     pure $ case getValueLR Inline opts "" ttnb [] of
       Left e -> e
       Right ret ->
-        let ind = case bifoldMap ((,mempty) . pure) ((mempty,) . pure) ret of
-                    ([], []) -> " <skipped>"
-                    (_:_, []) -> "(L)"
-                    ([], _:_) -> "(R)"
-                    (_:_, _:_) -> "(B)"
-            d = bifoldMap id id ret
+        let d = bifoldMap id id ret
+            ind = getBifoldInfo ret
         in ttnb & ttVal .~ Val d
                 & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
-
--- | adt for testing out possible outcomes of Bifoldable used in BiMap
-data ELR a b = EEmpty | ELeft !a | ERight !b | EBoth !a !b deriving (Show,Eq,Ord,Foldable,Functor,Traversable)
-
-instance Bifunctor ELR where
-  bimap f g x =
-    case x of
-      EEmpty -> EEmpty
-      ELeft a -> ELeft (f a)
-      ERight b -> ERight (g b)
-      EBoth a b -> EBoth (f a) (g b)
-
-instance Bifoldable ELR where
-  bifoldMap f g x =
-    case x of
-      EEmpty -> mempty
-      ELeft a -> f a
-      ERight b -> g b
-      EBoth a b -> f a <> g b
-
-instance Bitraversable ELR where
-  bitraverse f g x =
-    case x of
-      EEmpty -> pure EEmpty
-      ELeft a -> ELeft <$> f a
-      ERight b -> ERight <$> g b
-      EBoth a b -> EBoth <$> f a <*> g b
-
-instance SwapC ELR where
-  swapC =
-    \case
-      EEmpty -> EEmpty
-      ELeft a -> ERight a
-      ERight b -> ELeft b
-      EBoth a b -> EBoth b a
