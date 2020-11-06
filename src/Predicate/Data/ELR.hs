@@ -34,8 +34,8 @@ module Predicate.Data.ELR (
 
   , ELRIn
   , ELRId
-  , ELRDef
-  , ELRDef''
+  , ELRPair
+  , ELRInSimple
   , PartitionELR
 
   , ENoneDef
@@ -801,74 +801,74 @@ instance P (ELRIdT n p q r) x => P (ELRId n p q r) x where
   type PP (ELRId n p q r) x = PP (ELRIdT n p q r) x
   eval _ = eval (Proxy @(ELRIdT n p q r))
 
--- | provide the default pair in @s@ and @t@ refers to ELR
+-- | creates a pair where the values are filled in by @s@ and @t@ holds the ELR value
 --
--- >>> pz @(ELRDef Fst Snd) ((999,"oops"),EBoth 2 "xx")
+-- >>> pz @(ELRPair Fst Snd) ((999,"oops"),EBoth 2 "xx")
 -- Val (2,"xx")
 --
--- >>> pz @(ELRDef Fst Snd) ((999,"oops"),ENone)
+-- >>> pz @(ELRPair Fst Snd) ((999,"oops"),ENone)
 -- Val (999,"oops")
 --
--- >>> pz @(ELRDef Fst Snd) ((999,"oops"),ERight "ok")
+-- >>> pz @(ELRPair Fst Snd) ((999,"oops"),ERight "ok")
 -- Val (999,"ok")
 --
-data ELRDef s t deriving Show
+data ELRPair s t deriving Show
 
-type ELRDefT s t = ELRIn Id '(Snd,L12) '(L11,Snd) Snd s t
+type ELRPairT s t = ELRIn Id '(Snd,L12) '(L11,Snd) Snd s t
 
-instance P (ELRDefT s t) x => P (ELRDef s t) x where
-  type PP (ELRDef s t) x = PP (ELRDefT s t) x
-  eval _ = eval (Proxy @(ELRDefT s t))
+instance P (ELRPairT s t) x => P (ELRPair s t) x where
+  type PP (ELRPair s t) x = PP (ELRPairT s t) x
+  eval _ = eval (Proxy @(ELRPairT s t))
 
--- | similar to 'Predicate.Data.These.TheseDef'''
+-- | similar to 'ELRIn' but without an environment @s@ and uses Id for @t@
 --
--- >>> pz @(ELRDef'' 999 Id Len (Fst + Length Snd)) (ELeft 13)
+-- >>> pz @(ELRInSimple 999 Id Len (Fst + Length Snd)) (ELeft 13)
 -- Val 13
 --
--- >>> pz @(ELRDef'' 999 Id Len (Fst + Length Snd)) ENone
+-- >>> pz @(ELRInSimple 999 Id Len (Fst + Length Snd)) ENone
 -- Val 999
 --
--- >>> pz @(ELRDef'' 999 Id Len (Fst + Length Snd)) (ERight "this is a long string")
+-- >>> pz @(ELRInSimple 999 Id Len (Fst + Length Snd)) (ERight "this is a long string")
 -- Val 21
 --
--- >>> pz @(ELRDef'' 999 Id Len (Fst + Length Snd)) (EBoth 20 "somedata")
+-- >>> pz @(ELRInSimple 999 Id Len (Fst + Length Snd)) (EBoth 20 "somedata")
 -- Val 28
 --
--- >>> pz @(ELRDef'' (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (ERight "this is a long string")
+-- >>> pz @(ELRInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (ERight "this is a long string")
 -- Val (Right "this is a long string")
 --
--- >>> pz @(ELRDef'' (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) ENone
+-- >>> pz @(ELRInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) ENone
 -- Fail "err"
 --
--- >>> pz @(ELRDef'' (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (EBoth 1 "this is a long string")
+-- >>> pz @(ELRInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (EBoth 1 "this is a long string")
 -- Val (Right "this is a long string")
 --
--- >>> pz @(ELRDef'' (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (EBoth 100 "this is a long string")
+-- >>> pz @(ELRInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (EBoth 100 "this is a long string")
 -- Val (Left 100)
 --
--- >>> pl @(ELRDef'' "none" "left" "right" "both") (ELeft (SG.Sum 12))
+-- >>> pl @(ELRInSimple "none" "left" "right" "both") (ELeft (SG.Sum 12))
 -- Present "left" (ELRIn "left" | ELeft Sum {getSum = 12})
 -- Val "left"
 --
--- >>> pl @(ELRDef'' (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (EBoth "Ab" 13)
+-- >>> pl @(ELRInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (EBoth "Ab" 13)
 -- Present ("Ab",13) (ELRIn ("Ab",13) | EBoth "Ab" 13)
 -- Val ("Ab",13)
 --
--- >>> pl @(ELRDef'' (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ELeft "Ab")
+-- >>> pl @(ELRInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ELeft "Ab")
 -- Present ("Ab",999) (ELRIn ("Ab",999) | ELeft "Ab")
 -- Val ("Ab",999)
 --
--- >>> pl @(ELRDef'' (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ERight 13)
+-- >>> pl @(ELRInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ERight 13)
 -- Present ("no value",13) (ELRIn ("no value",13) | ERight 13)
 -- Val ("no value",13)
 --
-data ELRDef'' n p q r deriving Show
+data ELRInSimple n p q r deriving Show
 
-type ELRDefT'' n p q r = ELRIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
+type ELRInSimpleT n p q r = ELRIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
 
-instance P (ELRDefT'' n p q r) x => P (ELRDef'' n p q r) x where
-  type PP (ELRDef'' n p q r) x = PP (ELRDefT'' n p q r) x
-  eval _ = eval (Proxy @(ELRDefT'' n p q r))
+instance P (ELRInSimpleT n p q r) x => P (ELRInSimple n p q r) x where
+  type PP (ELRInSimple n p q r) x = PP (ELRInSimpleT n p q r) x
+  eval _ = eval (Proxy @(ELRInSimpleT n p q r))
 
 -- | get ENone or run @p@: really only useful when p is set to Fail: where @q@ is the environment and @r@ is the ELR value
 --

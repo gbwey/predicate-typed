@@ -405,6 +405,7 @@ instance ( Show (t a)
 --
 data Null deriving Show
 type NullT = Null' Id
+
 instance P NullT a => P Null a where
   type PP Null a = Bool
   eval _ = evalBool (Proxy @NullT)

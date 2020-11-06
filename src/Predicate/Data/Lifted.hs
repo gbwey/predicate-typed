@@ -41,6 +41,7 @@ module Predicate.Data.Lifted (
   , type (<|>)
   , EmptyT
   , EmptyT'
+  , EmptyBool
 
  -- ** bifunctor
   , BiMap
@@ -268,6 +269,9 @@ instance ( P p x
 -- >>> pz @(If 'True (MkJust 11) (EmptyT _ _)) ()
 -- Val (Just 11)
 --
+-- >>> pz @(EmptyT [] _ <> "123") ()
+-- Val "123"
+--
 data EmptyT (t :: Type -> Type) (t1 :: Type) deriving Show
 type EmptyTT (t :: Type -> Type) (t1 :: Type) = EmptyT' t (Hole t1)
 
@@ -275,7 +279,13 @@ instance Alternative t => P (EmptyT t t1) x where
   type PP (EmptyT t t1) x = PP (EmptyTT t t1) x
   eval _ = eval (Proxy @(EmptyTT t t1))
 
--- | similar to 'Data.List.empty'
+-- | similar to 'Data.List.empty' where @t@ is the type of the container and @t1@ is a reference to the type of the items in the container
+--
+-- >>> pz @(EmptyT' [] "x") ()
+-- Val []
+--
+-- >>> pz @(EmptyT' (Either String) (1 % 1)) ()
+-- Val (Left "")
 --
 -- >>> pl @(If 'True (MkJust 11) (EmptyT' _ 0)) ()
 -- Present Just 11 (If 'True Just 11)
@@ -295,6 +305,38 @@ instance Alternative t => P (EmptyT' t p) x where
     let msg0 = "EmptyT'"
         b = empty @t
     in pure $ mkNode opts (Val b) msg0 []
+
+-- | Convenient method to convert a value @p@ to an Alternative based on a predicate @b@
+--
+--   if @b@ is True then pure @p@ else empty
+--
+-- >>> pz @(EmptyBool [] (Id > 4) 'True) 24
+-- Val [True]
+--
+-- >>> pz @(EmptyBool [] (Id > 4) 'True) 1
+-- Val []
+--
+data EmptyBool t b p deriving Show
+
+instance ( Show (PP p a)
+         , P b a
+         , P p a
+         , PP b a ~ Bool
+         , Alternative t
+         ) => P (EmptyBool t b p) a where
+  type PP (EmptyBool t b p) a = t (PP p a)
+  eval _ opts z = do
+    let msg0 = "EmptyBool"
+    bb <- evalBool (Proxy @b) opts z
+    case getValueLR NoInline opts (msg0 <> " b failed") bb [] of
+      Left e -> pure e
+      Right True -> do
+        pp <- eval (Proxy @p) opts z
+        pure $ case getValueLR NoInline opts (msg0 <> " p failed") pp [hh bb] of
+          Left e -> e
+          Right p -> mkNode opts (Val (pure p)) (msg0 <> "(False) Just " <> showL opts p) [hh bb, hh pp]
+      Right False -> pure $ mkNode opts (Val empty) (msg0 <> "(True)") [hh bb]
+
 
 -- | similar to 'Control.Comonad.extract'
 --

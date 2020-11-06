@@ -1117,8 +1117,8 @@ instance ( PP p x ~ a
 
 -- | convert to bits
 --
--- >>> pl @(ToBits 123 >> UnShowBaseN 2) ()
--- Present 123 ((>>) 123 | {UnShowBaseN | 2 | [1,1,1,1,0,1,1]})
+-- >>> pl @(UnShowBaseN 2 (ToBits 123)) ()
+-- Present 123 (UnShowBaseN | 2 | [1,1,1,1,0,1,1])
 -- Val 123
 --
 data ToBits p deriving Show
@@ -1128,44 +1128,44 @@ instance P (ToBitsT p) x => P (ToBits p) x where
   type PP (ToBits p) x = PP (ToBitsT p) x
   eval _ = eval (Proxy @(ToBitsT p))
 
--- | reverse 'ShowBaseN'
+-- | reverse 'ShowBaseN': doesn't enforce that the values are in range of the given base
 --
--- >>> pz @(UnShowBaseN 2) [1,0,0,1,0]
+-- >>> pz @(UnShowBaseN 2 Id) [1,0,0,1,0]
 -- Val 18
 --
--- >>> pz @(UnShowBaseN 2) [1,1,1]
+-- >>> pz @(UnShowBaseN Fst Snd) (2,[1,1,1])
 -- Val 7
 --
--- >>> pz @(UnShowBaseN 16) [7,0,3,1]
+-- >>> pz @(UnShowBaseN 16 Id) [7,0,3,1]
 -- Val 28721
 --
--- >>> pz @(UnShowBaseN 16) [0]
+-- >>> pz @(UnShowBaseN 16 Id) [0]
 -- Val 0
 --
--- >>> pz @(UnShowBaseN 16) []
+-- >>> pz @(UnShowBaseN 16 Id) []
 -- Val 0
 --
-data UnShowBaseN n deriving Show
+data UnShowBaseN n p deriving Show
 
-instance ( x ~ [a]
+instance ( PP p x ~ [a]
          , PP n x ~ b
          , P n x
+         , P p x
          , Integral a
          , Integral b
-         ) => P (UnShowBaseN n) x where
-  type PP (UnShowBaseN n) x = Integer
+         ) => P (UnShowBaseN n p) x where
+  type PP (UnShowBaseN n p) x = Integer
   eval _ opts x = do
     let msg0 = "UnShowBaseN"
-    nn <- eval (Proxy @n) opts x
-    pure $ case getValueLR NoInline opts msg0 nn [] of
+    lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @p) opts x []
+    pure $ case lr of
       Left e -> e
-      Right (fromIntegral -> n) ->
-         let xs = map fromIntegral x
-             hhs = [hh nn]
+      Right (fromIntegral -> n,p,nn,pp) ->
+         let xs = map fromIntegral p
+             hhs = [hh nn, hh pp]
          in if n < 2 then mkNode opts (Fail (msg0 <> " base must be greater than 1")) "" hhs
             else let b = snd $ foldr (\a (m,tot) -> (m*n, a*m+tot)) (1,0) xs
                  in mkNode opts (Val b) (msg0 <> showVerbose opts " | " n <> showVerbose opts " | " xs) hhs
-
 
 -- | calculate the amount to roundup to the next @n@
 --

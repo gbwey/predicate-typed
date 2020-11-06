@@ -34,7 +34,6 @@ module Predicate.Data.Maybe (
   , CatMaybes
   , MaybeIn
   , MaybeBool
-  , EmptyBool
 
  ) where
 import Predicate.Core
@@ -42,10 +41,10 @@ import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Foldable (ConcatMap)
 import Predicate.Data.Monoid (MEmptyP)
+import Predicate.Data.Lifted (EmptyBool)
 import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
 import Data.Maybe (isJust, isNothing)
-import Control.Applicative (Alternative(empty))
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -351,37 +350,6 @@ type MaybeBoolT b p = EmptyBool Maybe b p
 instance P (MaybeBoolT b p) x => P (MaybeBool b p) x where
   type PP (MaybeBool b p) x = PP (MaybeBoolT b p) x
   eval _ = eval (Proxy @(MaybeBoolT b p))
-
--- | Convenient method to convert a value @p@ to an Alternative based on a predicate @b@
---
---   if @b@ is True then pure @p@ else empty
---
--- >>> pz @(EmptyBool [] (Id > 4) 'True) 24
--- Val [True]
---
--- >>> pz @(EmptyBool [] (Id > 4) 'True) 1
--- Val []
---
-data EmptyBool t b p deriving Show
-
-instance ( Show (PP p a)
-         , P b a
-         , P p a
-         , PP b a ~ Bool
-         , Alternative t
-         ) => P (EmptyBool t b p) a where
-  type PP (EmptyBool t b p) a = t (PP p a)
-  eval _ opts z = do
-    let msg0 = "EmptyBool"
-    bb <- evalBool (Proxy @b) opts z
-    case getValueLR NoInline opts (msg0 <> " b failed") bb [] of
-      Left e -> pure e
-      Right True -> do
-        pp <- eval (Proxy @p) opts z
-        pure $ case getValueLR NoInline opts (msg0 <> " p failed") pp [hh bb] of
-          Left e -> e
-          Right p -> mkNode opts (Val (pure p)) (msg0 <> "(False) Just " <> showL opts p) [hh bb, hh pp]
-      Right False -> pure $ mkNode opts (Val empty) (msg0 <> "(True)") [hh bb]
 
 -- | extract the value from a 'Maybe' otherwise use the default value: similar to 'Data.Maybe.fromMaybe'
 --

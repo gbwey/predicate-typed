@@ -363,9 +363,9 @@ instance ( P p a
 -- Val (fromList "abc")
 --
 data FromString (t :: Type) p deriving Show
-type FromStringPT (t :: Type) p = FromString' (Hole t) p
+type FromStringT (t :: Type) p = FromString' (Hole t) p
 
-instance P (FromStringPT t p) x => P (FromString t p) x where
-  type PP (FromString t p) x = PP (FromStringPT t p) x
-  eval _ = eval (Proxy @(FromStringPT t p))
+instance P (FromStringT t p) x => P (FromString t p) x where
+  type PP (FromString t p) x = PP (FromStringT t p) x
+  eval _ = eval (Proxy @(FromStringT t p))
 
