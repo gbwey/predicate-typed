@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 11ef853b839b7ba93d8a082360a840c2f17b859a902e3508819f96c8ead0bef2
+-- hash: 66fedcf5c17485adc7e7753986e985249761b345f2d40eaec2af084c274ae454
 
 name:           predicate-typed
 version:        0.7.4.2
@@ -53,6 +53,7 @@ library
       Predicate.Data.String
       Predicate.Data.These
       Predicate.Data.Tuple
+      Predicate.ELR
       Predicate.Examples.Common
       Predicate.Examples.Refined2
       Predicate.Examples.Refined3

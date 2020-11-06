@@ -1,5 +1,4 @@
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -16,18 +15,11 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveLift #-}
 -- | ELR related methods
 module Predicate.Data.ELR (
- -- definition
-    ELR(..)
 
  -- ** destructors
-  , ENone'
+    ENone'
   , ELeft'
   , ERight'
   , EBoth'
@@ -59,112 +51,19 @@ module Predicate.Data.ELR (
   , IsERight
   , IsEBoth
 
- -- ** miscellaneous
-  , getBifoldInfo
-  , showELR
-  , GetELR(..)
-  , partitionELR
-  , fromELR
+  , These2ELR
+  , ELR2These
  ) where
 import Predicate.Core
-import Predicate.Misc
 import Predicate.Util
-import qualified GHC.TypeLits as GL
-import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
+import Predicate.ELR
 import Data.Kind (Type)
 import Control.Lens
 import Data.Proxy (Proxy(..))
-import Data.Bitraversable
-import Data.Bifoldable
-import GHC.Generics (Generic)
-import Control.DeepSeq (NFData)
-import Control.Monad (ap)
-import qualified Language.Haskell.TH.Lift as TH
+import Data.These
 -- $setup
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
-
--- | returns the filled status of a Bifoldable container
-getBifoldInfo :: Bifoldable bi => bi a b -> String
-getBifoldInfo bi =
-  case bifoldMap (const (ELeft ())) (const (ERight ())) bi of
-    ENone -> " <skipped>"
-    ELeft () -> "(L)"
-    ERight () -> "(R)"
-    EBoth () () -> "(B)"
-
--- | similar to 'Data.These' with an additional empty constructor to support a Monoid instance
-data ELR a b =
-     ENone -- ^ empty constructor
-   | ELeft !a  -- ^ similar to 'Data.These.This'
-   | ERight !b -- ^ similar to 'Data.These.That'
-   | EBoth !a !b -- ^ similar to 'Data.These.These'
-   deriving stock (Show,Eq,Ord,Foldable,Functor,Traversable,Generic,TH.Lift)
-   deriving anyclass NFData
-
-instance (Semigroup a, Semigroup b) => Semigroup (ELR a b) where
-  ENone <> x' = x'
-  x <> ENone = x
-  ELeft a <> ELeft a' = ELeft (a <> a')
-  ELeft a <> ERight b' = EBoth a b'
-  ELeft a <> EBoth a' b' = EBoth (a <> a') b'
-  ERight b <> ELeft a' = EBoth a' b
-  ERight b <> ERight b' = ERight (b <> b')
-  ERight b <> EBoth a' b' = EBoth a' (b <> b')
-  EBoth a b <> ELeft a' = EBoth (a <> a') b
-  EBoth a b <> ERight b' = EBoth a (b <> b')
-  EBoth a b <> EBoth a' b' = EBoth (a <> a') (b <> b')
-
-instance (Monoid a, Monoid b) => Monoid (ELR a b) where
-  mempty = ENone
-
-instance Semigroup x => Applicative (ELR x) where
-  pure = ERight
-  (<*>) = ap
-
-instance Semigroup x => Monad (ELR x) where
-  return = pure
-  ENone >>= _ = ENone
-  ELeft x >>= _ = ELeft x
-  ERight a >>= amb = amb a
-  EBoth x a >>= amb =
-    case amb a of
-      ENone -> ELeft x
-      EBoth y b -> EBoth (x <> y) b
-      ELeft y -> ELeft (x <> y)
-      ERight b -> EBoth x b
-
-instance Bifunctor ELR where
-  bimap f g =
-    \case
-      ENone -> ENone
-      ELeft a -> ELeft (f a)
-      ERight b -> ERight (g b)
-      EBoth a b -> EBoth (f a) (g b)
-
-instance Bifoldable ELR where
-  bifoldMap f g =
-    \case
-      ENone -> mempty
-      ELeft a -> f a
-      ERight b -> g b
-      EBoth a b -> f a <> g b
-
-instance Bitraversable ELR where
-  bitraverse f g =
-    \case
-      ENone -> pure ENone
-      ELeft a -> ELeft <$> f a
-      ERight b -> ERight <$> g b
-      EBoth a b -> EBoth <$> f a <*> g b
-
-instance SwapC ELR where
-  swapC =
-    \case
-      ENone -> ENone
-      ELeft a -> ERight a
-      ERight b -> ELeft b
-      EBoth a b -> EBoth b a
 
 -- | 'ENone' constructor
 --
@@ -275,6 +174,9 @@ instance P (MkERightT t p) x => P (MkERight t p) x where
 -- Present EBoth 'x' True (MkEBoth)
 -- Val (EBoth 'x' True)
 --
+-- >>> pz @(MkENone _ _ <> MkELeft _ '[1] <> MkERight _ "abc" <> MkELeft _ '[2] <> MkEBoth '[3,4,5] "def") ()
+-- Val (EBoth [1,2,3,4,5] "abcdef")
+--
 data MkEBoth p q deriving Show
 instance ( P p a
          , P q a
@@ -379,185 +281,6 @@ type IsEBothT = IsELR ('EBoth '() '())
 instance P IsEBothT x => P IsEBoth x where
   type PP IsEBoth x = PP IsEBothT x
   eval _ = evalBool (Proxy @IsEBothT)
-
--- | extracts the () from type level @ENone@ if the value exists
---
--- >>> pl @'ENone ENone
--- Present () ('ENone)
--- Val ()
---
--- >>> pz @'ENone (ERight "aaa")
--- Fail "'ENone found ERight"
---
-instance x ~ ELR a b => P 'ENone x where
-  type PP 'ENone x = ()
-  eval _ opts x =
-    let msg0 = "'ENone"
-    in pure $ case x of
-      ELeft {} -> mkNode opts (Fail (msg0 <> " found ELeft")) "" []
-      ENone -> mkNode opts (Val ()) msg0 []
-      ERight {} -> mkNode opts (Fail (msg0 <> " found ERight")) "" []
-      EBoth {} -> mkNode opts (Fail (msg0 <> " found EBoth")) "" []
-
--- | extracts the @a@ from type level @ELeft a@ if the value exists
---
--- >>> pl @('ELeft Id) (ELeft 12)
--- Present 12 ('ELeft)
--- Val 12
---
--- >>> pz @('ELeft Id) (ERight "aaa")
--- Fail "'ELeft found ERight"
---
--- >>> pz @('ELeft Id) (EBoth 999 "aaa")
--- Fail "'ELeft found EBoth"
---
--- >>> pl @('ELeft Id) (ERight 12)
--- Error 'ELeft found ERight
--- Fail "'ELeft found ERight"
---
-instance ( PP p x ~ ELR a b
-         , P p x
-         )
-    => P ('ELeft p) x where
-  type PP ('ELeft p) x = ELeftT (PP p x)
-  eval _ opts x = do
-    let msg0 = "'ELeft"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR NoInline opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        case p of
-          ENone -> mkNode opts (Fail (msg0 <> " found ENone")) "" [hh pp]
-          ELeft a -> mkNode opts (Val a) msg0 [hh pp]
-          ERight {} -> mkNode opts (Fail (msg0 <> " found ERight")) "" [hh pp]
-          EBoth {} -> mkNode opts (Fail (msg0 <> " found EBoth")) "" [hh pp]
-
--- | extracts the @b@ from type level @ERight b@ if the value exists
---
--- >>> pz @('ERight Id) (ERight 123)
--- Val 123
---
--- >>> pz @('ERight Id) (ELeft "aaa")
--- Fail "'ERight found ELeft"
---
--- >>> pz @('ERight Id) (EBoth 44 "aaa")
--- Fail "'ERight found EBoth"
---
-instance ( PP p x ~ ELR a b
-         , P p x
-         )
-    => P ('ERight p) x where
-  type PP ('ERight p) x = ERightT (PP p x)
-  eval _ opts x = do
-    let msg0 = "'ERight"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR NoInline opts msg0 pp [] of
-      Left e -> e
-      Right p ->
-        case p of
-          ENone -> mkNode opts (Fail (msg0 <> " found ENone")) "" [hh pp]
-          ELeft {} -> mkNode opts (Fail (msg0 <> " found ELeft")) "" [hh pp]
-          ERight b -> mkNode opts (Val b) msg0 [hh pp]
-          EBoth {} -> mkNode opts (Fail (msg0 <> " found EBoth")) "" [hh pp]
-
--- | extracts the (a,b) from type level @EBoth a b@ if the value exists
---
--- >>> pz @('EBoth Id Id) (EBoth 123 "abc")
--- Val (123,"abc")
---
--- >>> pz @('EBoth Id 5) (EBoth 123 "abcde")
--- Val (123,5)
---
--- >>> pz @('EBoth Id Id) (ELeft "aaa")
--- Fail "'EBoth found ELeft"
---
--- >>> pz @('EBoth Id Id) (ERight "aaa")
--- Fail "'EBoth found ERight"
---
-instance ( Show a
-         , Show b
-         , P p a
-         , P q b
-         , Show (PP p a)
-         , Show (PP q b)
-         ) => P ('EBoth p q) (ELR a b) where
-  type PP ('EBoth p q) (ELR a b) = (PP p a, PP q b)
-  eval _ opts th = do
-    let msg0 = "'EBoth"
-    case th of
-      EBoth a b -> do
-        pp <- eval (Proxy @p) opts a
-        case getValueLR NoInline opts msg0 pp [] of
-           Left e -> pure e
-           Right p -> do
-             qq <- eval (Proxy @q) opts b
-             pure $ case getValueLR NoInline opts (msg0 <> " q failed p=" <> showL opts p) qq [hh pp] of
-                Left e -> e
-                Right q ->
-                  let ret =(p,q)
-                  in  mkNode opts (Val ret) (show3 opts msg0 ret (EBoth a b)) [hh pp, hh qq]
-      _ -> pure $ mkNode opts (Fail (msg0 <> " found " <> showELR th)) "" []
-
--- | display constructor name for 'ELR'
-showELR :: ELR a b -> String
-showELR = \case
-  ENone -> "ENone"
-  ELeft {} -> "ELeft"
-  ERight {} -> "ERight"
-  EBoth {} -> "EBoth"
-
--- | get 'ELR' from typelevel [type application order is a b then th if explicit kind for th else is first parameter!
-class GetELR (th :: ELR a b) where
-  getELR :: (String, ELR w v -> Bool)
-instance GetELR 'ENone where
-  getELR = ("ENone", isENone)
-instance GetELR ('ELeft x) where
-  getELR = ("ELeft", isELeft)
-instance GetELR ('ERight y) where
-  getELR = ("ERight", isERight)
-instance GetELR ('EBoth x y) where
-  getELR = ("EBoth", isEBoth)
-
-isENone, isELeft, isERight, isEBoth :: ELR a b -> Bool
-isENone ENone = True
-isENone _ = False
-
-isELeft ELeft {} = True
-isELeft _ = False
-
-isERight ERight {} = True
-isERight _ = False
-
-isEBoth EBoth {} = True
-isEBoth _ = False
-
-type family ENoneT lr where
-  ENoneT (ELR _ _) = ()
-  ENoneT o = GL.TypeError (
-      'GL.Text "ENoneT: expected 'ELR a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
-
-type family ELeftT lr where
-  ELeftT (ELR a _) = a
-  ELeftT o = GL.TypeError (
-      'GL.Text "ELeftT: expected 'ELR a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
-
-type family ERightT lr where
-  ERightT (ELR _ b) = b
-  ERightT o = GL.TypeError (
-      'GL.Text "ERightT: expected 'ELR a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
-
-type family EBothT lr where
-  EBothT (ELR a b) = (a,b)
-  EBothT o = GL.TypeError (
-      'GL.Text "EBothT: expected 'ELR a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
 
 -- | tries to extract a () from the 'ENone' constructor
 --
@@ -665,25 +388,6 @@ instance ( Show a
     let msg0 = "PartitionELR"
         b = partitionELR as
     in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
-
--- | partition ELR into 4 lists for each constructor: foldMap (yep ...)
-partitionELR :: [ELR a b] -> ([()], [a], [b], [(a,b)])
-partitionELR = foldMapStrict $
-  \case
-    ENone -> ([()],[],[],[])
-    ELeft a -> ([],[a],[],[])
-    ERight b -> ([],[],[b],[])
-    EBoth a b -> ([],[],[],[(a,b)])
-
--- | convert ELR to a tuple with default values
-fromELR :: a -> b -> ELR a b -> (a,b)
-fromELR a b =
-  \case
-    ENone -> (a,b)
-    ELeft v -> (v,b)
-    ERight w -> (a,w)
-    EBoth v w -> (v,w)
-
 
 -- | destructs an ELR value
 --   @n@ @ENone@ receives @(PP s x)@
@@ -952,5 +656,36 @@ instance P (EBothDefT p q r) x => P (EBothDef p q r) x where
   type PP (EBothDef p q r) x = PP (EBothDefT p q r) x
   eval _ = eval (Proxy @(EBothDefT p q r))
 
+-- | converts 'ELR' to 'These'
+--
+-- >>> pz @ELR2These ENone
+-- Val Nothing
+--
+-- >>> pz @ELR2These (ELeft 123)
+-- Val (Just (This 123))
+--
+data ELR2These deriving Show
 
+instance P ELR2These (ELR a b) where
+  type PP ELR2These (ELR a b) = Maybe (These a b)
+  eval _ opts x =
+    let msg0 = "ELR2These"
+        b = x ^. _elr2These
+    in pure $ mkNode opts (Val b) msg0 []
 
+-- | converts 'These' to 'ELR'
+--
+-- >>> pz @These2ELR (These 12 'x')
+-- Val (EBoth 12 'x')
+--
+-- >>> pz @These2ELR (This 123)
+-- Val (ELeft 123)
+--
+data These2ELR deriving Show
+
+instance P These2ELR (These a b) where
+  type PP These2ELR (These a b) = ELR a b
+  eval _ opts x =
+    let msg0 = "These2ELR"
+        b = _elr2These # Just x
+    in pure $ mkNode opts (Val b) msg0 []

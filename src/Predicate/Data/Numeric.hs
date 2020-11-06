@@ -1037,14 +1037,6 @@ instance P (ReadBaseT t n) x => P (ReadBase t n) x where
   type PP (ReadBase t n) x = PP (ReadBaseT t n) x
   eval _ = eval (Proxy @(ReadBaseT t n))
 
-getValidBase :: Int -> String
-getValidBase n =
-  let xs = ['0'..'9'] <> ['a'..'z']
-      len = length xs
-  in if n > len || n < 2
-     then errorInProgram $ "getValidBase: oops invalid base valid is 2 thru " ++ show len ++ " found " ++ show n
-     else take n xs
-
 -- | Display a number at base 2 to 36, similar to 'Numeric.showIntAtBase' but passes the sign through
 --
 -- >>> pz @(ShowBase 16) 4077

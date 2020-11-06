@@ -54,8 +54,6 @@ module Predicate.Data.These (
 
  -- ** miscellaneous
   , ZipThese
-  , Assoc
-  , Unassoc
 
  ) where
 import Predicate.Core
@@ -291,7 +289,7 @@ instance ( x ~ These a b
   type PP (IsTh th) x = Bool
   eval _ opts x =
     let msg0 = "Is"
-        (t,f) = getThese @th
+        (t,f) = getThese @_ @_ @th
         b = f x
     in pure $ mkNodeB opts b (msg0 <> t <> showVerbose opts " | " x) []
 
@@ -407,11 +405,6 @@ instance ( PP p a ~ [x]
           Right _ ->
             let d = simpleAlign p q
             in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
-
-simpleAlign :: [a] -> [b] -> [These a b]
-simpleAlign as [] = map This as
-simpleAlign [] bs = map That bs
-simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
 
 -- | extract the This value from an 'These' otherwise use the default value
 --   if there is no This value then @p@ is passed the whole context only
@@ -698,107 +691,6 @@ instance ( PP p x ~ String
             pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
               Right p -> mkNode opts (Fail p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
-
-
--- | assoc using 'AssocC'
---
--- >>> pz @Assoc (This (These 123 'x'))
--- Val (These 123 (This 'x'))
---
--- >>> pz @Assoc ((99,'a'),True)
--- Val (99,('a',True))
---
--- >>> pz @Assoc ((99,'a'),True)
--- Val (99,('a',True))
---
--- >>> pz @Assoc (Right "Abc" :: Either (Either () ()) String)
--- Val (Right (Right "Abc"))
---
--- >>> pz @Assoc (Left (Left 'x'))
--- Val (Left 'x')
---
--- >>> pl @Assoc ((10,'c'),True)
--- Present (10,('c',True)) (Assoc (10,('c',True)) | ((10,'c'),True))
--- Val (10,('c',True))
---
--- >>> pl @(Assoc >> Unassoc) ((10,'c'),True)
--- Present ((10,'c'),True) ((>>) ((10,'c'),True) | {Unassoc ((10,'c'),True) | (10,('c',True))})
--- Val ((10,'c'),True)
---
-data Assoc deriving Show
-
-class AssocC p where
-  assoc :: p (p a b) c -> p a (p b c)
-  unassoc :: p a (p b c) -> p (p a b) c
-instance AssocC Either where
-  assoc (Left (Left a)) = Left a
-  assoc (Left (Right b)) = Right (Left b)
-  assoc (Right b) = Right (Right b)
-  unassoc (Left a) = Left (Left a)
-  unassoc (Right (Left b)) = Left (Right b)
-  unassoc (Right (Right b)) = Right b
-instance AssocC These where
-  assoc (This (This a)) = This a
-  assoc (This (That b)) = That (This b)
-  assoc (That b) = That (That b)
-  assoc (These (This a) c) = These a (That c)
-  assoc (These (That b) c) = That (These b c)
-  assoc (These (These a b) c) = These a (These b c)
-  assoc (This (These a b)) = These a (This b)
-  unassoc (This a) = This (This a)
-  unassoc (That (This b)) = This (That b)
-  unassoc (That (That b)) = That b
-  unassoc (These a (That c)) = These (This a) c
-  unassoc (That (These b c)) = These (That b) c
-  unassoc (These a (These b c)) = These (These a b) c
-  unassoc (These a (This b)) = This (These a b)
-
-instance AssocC (,) where
-  assoc ((a,b),c) = (a,(b,c))
-  unassoc (a,(b,c)) = ((a,b),c)
-
-instance ( AssocC p
-         , Show (p (p a b) c)
-         , Show (p a (p b c))
-         ) => P Assoc (p (p a b) c) where
-  type PP Assoc (p (p a b) c) = p a (p b c)
-  eval _ opts pabc =
-    let msg0 = "Assoc"
-        d = assoc pabc
-    in pure $ mkNode opts (Val d) (show3 opts msg0 d pabc) []
-
--- | unassoc using 'AssocC'
---
--- >>> pz @Unassoc (These 123 (This 'x'))
--- Val (This (These 123 'x'))
---
--- >>> pz @Unassoc (99,('a',True))
--- Val ((99,'a'),True)
---
--- >>> pz @Unassoc (This 10 :: These Int (These Bool ()))
--- Val (This (This 10))
---
--- >>> pz @Unassoc (Right (Right 123))
--- Val (Right 123)
---
--- >>> pz @Unassoc (Left 'x' :: Either Char (Either Bool Double))
--- Val (Left (Left 'x'))
---
--- >>> pl @Unassoc (10,('c',True))
--- Present ((10,'c'),True) (Unassoc ((10,'c'),True) | (10,('c',True)))
--- Val ((10,'c'),True)
---
-data Unassoc deriving Show
-
-instance ( AssocC p
-         , Show (p (p a b) c)
-         , Show (p a (p b c))
-         ) => P Unassoc (p a (p b c)) where
-  type PP Unassoc (p a (p b c)) = p (p a b) c
-  eval _ opts pabc =
-    let msg0 = "Unassoc"
-        d = unassoc pabc
-    in pure $ mkNode opts (Val d) (show3 opts msg0 d pabc) []
 
 
 -- | tries to extract a value from the 'Data.These.This' constructor
@@ -1120,6 +1012,4 @@ type TheseDefT' p q r = TheseIn (Fst >> p) (Fst >> p) Snd q r
 instance P (TheseDefT' p q r) x => P (TheseDef' p q r) x where
   type PP (TheseDef' p q r) x = PP (TheseDefT' p q r) x
   eval _ = eval (Proxy @(TheseDefT' p q r))
-
-
 

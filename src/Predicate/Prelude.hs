@@ -1,8 +1,9 @@
 -- | Dsl for evaluating and displaying type level expressions
 module Predicate.Prelude (
     module Predicate.Core
-  , module Predicate.Util
+  , module Predicate.ELR
   , module Predicate.Misc
+  , module Predicate.Util
   , module Predicate.Data.Bits
   , module Predicate.Data.Char
   , module Predicate.Data.Condition
@@ -30,6 +31,7 @@ module Predicate.Prelude (
   , module Predicate.Data.Tuple
  ) where
 import Predicate.Core
+import Predicate.ELR
 import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Bits

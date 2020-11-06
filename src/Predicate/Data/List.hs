@@ -1113,7 +1113,9 @@ instance ( PP p a ~ [b]
                in mkNode opts (Val ret) (show3' opts msg1 ret "n=" n <> showVerbose opts " | " p) hhs
 
 splitAtNeg :: Int -> Int -> [a] -> ([a], [a])
-splitAtNeg len n as = splitAt (if n<0 then len + n else n) as
+--splitAtNeg len n = splitAt (if n<0 then len + n else n)
+--splitAtNeg len = splitAt . liftA3 bool id (len+) (<0)
+splitAtNeg len = splitAt . ifM (<0) (len+) id
 
 -- | take @n@ values from a list @p@: similar to 'Prelude.take'
 --
@@ -2023,9 +2025,13 @@ instance ( P p x
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq) ->
-        let msg1 = msg0 <> " | " <> showL opts p
-        in mkNodeB opts (ff p q) (msg1 <> " " <> showL opts q) [hh pp, hh qq]
+      Right (p',q',pp,qq) ->
+        let hhs = [hh pp, hh qq]
+        in case chkSize2 opts msg0 p' q' hhs of
+          Left e -> e
+          Right ((_,p),(_,q)) ->
+            let msg1 = msg0 <> " | " <> showL opts p
+            in mkNodeB opts (ff p q) (msg1 <> " " <> showL opts q) hhs
 
 -- | similar to 'Data.List.isPrefixOf'
 --

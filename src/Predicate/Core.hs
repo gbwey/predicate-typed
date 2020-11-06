@@ -122,6 +122,7 @@ module Predicate.Core (
   ) where
 import Predicate.Misc
 import Predicate.Util
+import Predicate.ELR
 import qualified GHC.TypeLits as GL
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
 import Control.Lens
@@ -2625,3 +2626,122 @@ instance x ~ SG.Arg a b => P Arg' x where
 
 type family ArgT x where
   ArgT (SG.Arg a b) = (a,b)
+
+-- | extracts the () from type level @ENone@ if the value exists
+--
+-- >>> pl @'ENone ENone
+-- Present () ('ENone)
+-- Val ()
+--
+-- >>> pz @'ENone (ERight "aaa")
+-- Fail "'ENone found ERight"
+--
+instance x ~ ELR a b => P 'ENone x where
+  type PP 'ENone x = ()
+  eval _ opts x =
+    let msg0 = "'ENone"
+    in pure $ case x of
+      ELeft {} -> mkNode opts (Fail (msg0 <> " found ELeft")) "" []
+      ENone -> mkNode opts (Val ()) msg0 []
+      ERight {} -> mkNode opts (Fail (msg0 <> " found ERight")) "" []
+      EBoth {} -> mkNode opts (Fail (msg0 <> " found EBoth")) "" []
+
+-- | extracts the @a@ from type level @ELeft a@ if the value exists
+--
+-- >>> pl @('ELeft Id) (ELeft 12)
+-- Present 12 ('ELeft)
+-- Val 12
+--
+-- >>> pz @('ELeft Id) (ERight "aaa")
+-- Fail "'ELeft found ERight"
+--
+-- >>> pz @('ELeft Id) (EBoth 999 "aaa")
+-- Fail "'ELeft found EBoth"
+--
+-- >>> pl @('ELeft Id) (ERight 12)
+-- Error 'ELeft found ERight
+-- Fail "'ELeft found ERight"
+--
+instance ( PP p x ~ ELR a b
+         , P p x
+         )
+    => P ('ELeft p) x where
+  type PP ('ELeft p) x = ELeftT (PP p x)
+  eval _ opts x = do
+    let msg0 = "'ELeft"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR NoInline opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p of
+          ENone -> mkNode opts (Fail (msg0 <> " found ENone")) "" [hh pp]
+          ELeft a -> mkNode opts (Val a) msg0 [hh pp]
+          ERight {} -> mkNode opts (Fail (msg0 <> " found ERight")) "" [hh pp]
+          EBoth {} -> mkNode opts (Fail (msg0 <> " found EBoth")) "" [hh pp]
+
+-- | extracts the @b@ from type level @ERight b@ if the value exists
+--
+-- >>> pz @('ERight Id) (ERight 123)
+-- Val 123
+--
+-- >>> pz @('ERight Id) (ELeft "aaa")
+-- Fail "'ERight found ELeft"
+--
+-- >>> pz @('ERight Id) (EBoth 44 "aaa")
+-- Fail "'ERight found EBoth"
+--
+instance ( PP p x ~ ELR a b
+         , P p x
+         )
+    => P ('ERight p) x where
+  type PP ('ERight p) x = ERightT (PP p x)
+  eval _ opts x = do
+    let msg0 = "'ERight"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR NoInline opts msg0 pp [] of
+      Left e -> e
+      Right p ->
+        case p of
+          ENone -> mkNode opts (Fail (msg0 <> " found ENone")) "" [hh pp]
+          ELeft {} -> mkNode opts (Fail (msg0 <> " found ELeft")) "" [hh pp]
+          ERight b -> mkNode opts (Val b) msg0 [hh pp]
+          EBoth {} -> mkNode opts (Fail (msg0 <> " found EBoth")) "" [hh pp]
+
+-- | extracts the (a,b) from type level @EBoth a b@ if the value exists
+--
+-- >>> pz @('EBoth Id Id) (EBoth 123 "abc")
+-- Val (123,"abc")
+--
+-- >>> pz @('EBoth Id 5) (EBoth 123 "abcde")
+-- Val (123,5)
+--
+-- >>> pz @('EBoth Id Id) (ELeft "aaa")
+-- Fail "'EBoth found ELeft"
+--
+-- >>> pz @('EBoth Id Id) (ERight "aaa")
+-- Fail "'EBoth found ERight"
+--
+instance ( Show a
+         , Show b
+         , P p a
+         , P q b
+         , Show (PP p a)
+         , Show (PP q b)
+         ) => P ('EBoth p q) (ELR a b) where
+  type PP ('EBoth p q) (ELR a b) = (PP p a, PP q b)
+  eval _ opts th = do
+    let msg0 = "'EBoth"
+    case th of
+      EBoth a b -> do
+        pp <- eval (Proxy @p) opts a
+        case getValueLR NoInline opts msg0 pp [] of
+           Left e -> pure e
+           Right p -> do
+             qq <- eval (Proxy @q) opts b
+             pure $ case getValueLR NoInline opts (msg0 <> " q failed p=" <> showL opts p) qq [hh pp] of
+                Left e -> e
+                Right q ->
+                  let ret =(p,q)
+                  in  mkNode opts (Val ret) (show3 opts msg0 ret (EBoth a b)) [hh pp, hh qq]
+      _ -> pure $ mkNode opts (Fail (msg0 <> " found " <> showELR th)) "" []
+

@@ -44,6 +44,9 @@ module Predicate.Data.Tuple (
   , ReverseITuple
   , ToITupleList
 
+ -- ** assoc
+  , Assoc
+  , Unassoc
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -62,6 +65,7 @@ import Data.Kind (Type)
 -- >>> :set -XNoOverloadedLists
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
+-- >>> :m + Data.These
 -- >>> :m + Data.Ratio
 
 -- | duplicate a value into a tuple
@@ -614,4 +618,74 @@ instance ( KnownNat n
            case toITupleListC @n @a xs of
              Left e -> mkNode opts (Fail e) (msg0 <> " instead found " <> show xsLen) []
              Right d -> mkNode opts (Val d) msg0 []
+
+-- | assoc using 'AssocC'
+--
+-- >>> pz @Assoc (This (These 123 'x'))
+-- Val (These 123 (This 'x'))
+--
+-- >>> pz @Assoc ((99,'a'),True)
+-- Val (99,('a',True))
+--
+-- >>> pz @Assoc ((99,'a'),True)
+-- Val (99,('a',True))
+--
+-- >>> pz @Assoc (Right "Abc" :: Either (Either () ()) String)
+-- Val (Right (Right "Abc"))
+--
+-- >>> pz @Assoc (Left (Left 'x'))
+-- Val (Left 'x')
+--
+-- >>> pl @Assoc ((10,'c'),True)
+-- Present (10,('c',True)) (Assoc (10,('c',True)) | ((10,'c'),True))
+-- Val (10,('c',True))
+--
+-- >>> pl @(Assoc >> Unassoc) ((10,'c'),True)
+-- Present ((10,'c'),True) ((>>) ((10,'c'),True) | {Unassoc ((10,'c'),True) | (10,('c',True))})
+-- Val ((10,'c'),True)
+--
+data Assoc deriving Show
+
+instance ( AssocC p
+         , Show (p (p a b) c)
+         , Show (p a (p b c))
+         ) => P Assoc (p (p a b) c) where
+  type PP Assoc (p (p a b) c) = p a (p b c)
+  eval _ opts pabc =
+    let msg0 = "Assoc"
+        d = assoc pabc
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d pabc) []
+
+-- | unassoc using 'AssocC'
+--
+-- >>> pz @Unassoc (These 123 (This 'x'))
+-- Val (This (These 123 'x'))
+--
+-- >>> pz @Unassoc (99,('a',True))
+-- Val ((99,'a'),True)
+--
+-- >>> pz @Unassoc (This 10 :: These Int (These Bool ()))
+-- Val (This (This 10))
+--
+-- >>> pz @Unassoc (Right (Right 123))
+-- Val (Right 123)
+--
+-- >>> pz @Unassoc (Left 'x' :: Either Char (Either Bool Double))
+-- Val (Left (Left 'x'))
+--
+-- >>> pl @Unassoc (10,('c',True))
+-- Present ((10,'c'),True) (Unassoc ((10,'c'),True) | (10,('c',True)))
+-- Val ((10,'c'),True)
+--
+data Unassoc deriving Show
+
+instance ( AssocC p
+         , Show (p (p a b) c)
+         , Show (p a (p b c))
+         ) => P Unassoc (p a (p b c)) where
+  type PP Unassoc (p a (p b c)) = p (p a b) c
+  eval _ opts pabc =
+    let msg0 = "Unassoc"
+        d = unassoc pabc
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d pabc) []
 

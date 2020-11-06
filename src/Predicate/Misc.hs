@@ -129,6 +129,10 @@ module Predicate.Misc (
   , foldMapStrict
   , cycle'
   , cmpOf
+  , ifM
+  , AssocC(..)
+  , simpleAlign
+  , getValidBase
   ) where
 import qualified GHC.TypeNats as GN
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
@@ -152,16 +156,13 @@ import Data.ByteString (ByteString)
 import GHC.Stack (HasCallStack)
 import Data.Containers.ListUtils (nubOrd)
 import Control.Arrow (Arrow((***)),ArrowChoice(left))
-import Data.List (foldl', intercalate, unfoldr, isPrefixOf, isInfixOf)
+import Data.List (foldl', intercalate, unfoldr, isPrefixOf, isInfixOf, isSuffixOf)
 import qualified Safe (headNote)
 import Data.Char (isSpace)
 import qualified Control.Exception as E
 import Data.Tree (Tree(Node))
-import Control.Lens (Lens, reversed, view)
-import Data.Functor.Identity (Identity(..))
-import Data.Function (on)
+import Control.Lens
 import qualified Data.Semigroup as SG
-import Data.Bifunctor (Bifunctor)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -222,7 +223,7 @@ type family NotT (b :: Bool) :: Bool where
 -- >>> getLen @('This 1)
 -- 0
 --
-class GetLen xs where -- (xs :: [k]) will break it! ghc 8.6.5
+class GetLen xs where
   getLen :: Int
 instance GetLen '[] where
   getLen = 0
@@ -253,7 +254,7 @@ showThese = \case
   These {} -> "These"
 
 -- | get 'These' from typelevel
-class GetThese th where
+class GetThese (th :: These a b) where
   getThese :: (String, These w v -> Bool)
 instance GetThese ('This x) where
   getThese = ("This", isThis)
@@ -1049,7 +1050,7 @@ symb = GL.symbolVal (Proxy @s)
 --
 -- >>> getNats @'[10,12,1]
 -- [10,12,1]
-class GetNats as where
+class GetNats (as :: [Nat]) where
   getNats :: [Int]
 instance GetNats '[] where
   getNats = []
@@ -1063,7 +1064,7 @@ instance ( KnownNat n
 -- >>> getSymbs @'["abc","def","g"]
 -- ["abc","def","g"]
 --
-class GetSymbs ns where
+class GetSymbs (ns :: [Symbol]) where
   getSymbs :: [String]
 instance GetSymbs '[] where
   getSymbs = []
@@ -1342,5 +1343,81 @@ cmpOf :: Eq a => Ordering -> ([a] -> [a] -> Bool, String)
 cmpOf = \case
            LT -> (isPrefixOf, "IsPrefix")
            EQ -> (isInfixOf, "IsInfix")
---           GT -> (isSuffixOf, "IsSuffix")
-           GT -> (on isPrefixOf (view reversed), "IsSuffix")
+           GT -> (isSuffixOf, "IsSuffix")
+
+-- | lifted if statement
+ifM :: Monad m => m Bool -> m a -> m a -> m a
+ifM mb mt mf = do
+  b <- mb
+  if b then mt else mf
+
+
+class AssocC p where
+  assoc :: p (p a b) c -> p a (p b c)
+  unassoc :: p a (p b c) -> p (p a b) c
+instance AssocC Either where
+  assoc (Left (Left a)) = Left a
+  assoc (Left (Right b)) = Right (Left b)
+  assoc (Right b) = Right (Right b)
+  unassoc (Left a) = Left (Left a)
+  unassoc (Right (Left b)) = Left (Right b)
+  unassoc (Right (Right b)) = Right b
+instance AssocC These where
+  assoc (This (This a)) = This a
+  assoc (This (That b)) = That (This b)
+  assoc (That b) = That (That b)
+  assoc (These (This a) c) = These a (That c)
+  assoc (These (That b) c) = That (These b c)
+  assoc (These (These a b) c) = These a (These b c)
+  assoc (This (These a b)) = These a (This b)
+  unassoc (This a) = This (This a)
+  unassoc (That (This b)) = This (That b)
+  unassoc (That (That b)) = That b
+  unassoc (These a (That c)) = These (This a) c
+  unassoc (That (These b c)) = These (That b) c
+  unassoc (These a (These b c)) = These (These a b) c
+  unassoc (These a (This b)) = This (These a b)
+
+instance AssocC (,) where
+  assoc ((a,b),c) = (a,(b,c))
+  unassoc (a,(b,c)) = ((a,b),c)
+
+-- | zip two lists using These
+--
+-- >>> simpleAlign "ab" ""
+-- [This 'a',This 'b']
+--
+-- >>> simpleAlign "" "ab"
+-- [That 'a',That 'b']
+--
+-- >>> simpleAlign [1] "ab"
+-- [These 1 'a',That 'b']
+--
+-- >>> simpleAlign [] []
+-- []
+--
+-- >>> simpleAlign [1,2] "ab"
+-- [These 1 'a',These 2 'b']
+--
+simpleAlign :: [a] -> [b] -> [These a b]
+simpleAlign as [] = map This as
+simpleAlign [] bs = map That bs
+simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
+
+-- | get base values for n between 2 and 36
+--
+-- >>> getValidBase 36
+-- "0123456789abcdefghijklmnopqrstuvwxyz"
+--
+-- >>> getValidBase 2
+-- "01"
+--
+-- >>> getValidBase 8
+-- "01234567"
+--
+getValidBase :: Int -> String
+getValidBase n
+  | n < 2 = errorInProgram $ "getValidBase: oops invalid base: found n<2 ie " ++ show n
+  | n > 36 = errorInProgram $ "getValidBase: oops invalid base: found n>36 ie " ++ show n
+  | otherwise = take n (['0'..'9'] <> ['a'..'z'])
+

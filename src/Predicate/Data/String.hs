@@ -211,9 +211,13 @@ instance ( GetBool ignore
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
-      Right (p,q,pp,qq) ->
-        let msg1 = msg0 <> (if ignore then "I" else "") <> " | " <> p
-        in mkNodeB opts (on ff lwr p q) (msg1 <> " " <> litL opts q) [hh pp, hh qq]
+      Right (p',q',pp,qq) ->
+        let hhs = [hh pp, hh qq]
+        in case chkSize2 opts msg0 p' q' hhs of
+          Left e -> e
+          Right ((_,p),(_,q)) ->
+            let msg1 = msg0 <> (if ignore then "I" else "") <> " | " <> p
+            in mkNodeB opts (on ff lwr p q) (msg1 <> " " <> litL opts q) hhs
 
 -- | similar to 'Data.List.isPrefixOf' for strings
 --

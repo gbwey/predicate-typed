@@ -163,7 +163,6 @@ import Data.Bool (bool)
 import GHC.Generics (Generic, Generic1)
 import qualified Language.Haskell.TH.Lift as TH
 import Instances.TH.Lift ()
-import Control.Applicative (liftA3)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -436,6 +435,7 @@ getValLRFromTT = view (ttVal . _ValEither)
 hh :: TT a -> Tree PE
 hh (TT bp bt ss tt) = Node (PE (validateValP bp bt) ss) tt
 
+-- | flag for deciding whether to inline a tree or extend it
 data Inline = Inline | NoInline deriving (Show, Eq)
 
 -- | decorate the tree with more detail when there are errors but inline the error node
@@ -491,7 +491,7 @@ deriving stock instance
   , Show (HKD f (Bool, SColor, SColor))
   ) => Show (HOpts f)
 
--- | combine options ala monoid
+-- | convert to a usable option using defaults to fill in any gaps
 reifyOpts :: HOpts Last -> HOpts Identity
 reifyOpts h =
   HOpts (fromMaybe (oWidth defOpts) (coerce (oWidth h)))
@@ -570,7 +570,6 @@ setDebug :: Debug -> HOpts Last
 setDebug d =
   mempty { oDebug = pure d }
 
--- | monoid opts
 instance Monoid (HOpts Last) where
   mempty = HOpts mempty mempty mempty mempty mempty mempty mempty mempty mempty mempty
 
@@ -615,7 +614,9 @@ otherDef :: (Bool, SColor, SColor)
 otherDef = coerce (True, Default, Default)
 
 nocolor, colorDef :: (String, PColor)
+-- | skip colors
 nocolor = ("nocolor", PColor $ flip const)
+-- | use default coloring from 'Color5'
 colorDef = Safe.fromJustNote "colorDef" $ coerce $ oColor $ getOptC @Color5
 
 -- | how much detail to show in the expression tree
@@ -630,16 +631,23 @@ data Debug =
 isVerbose :: POpts -> Bool
 isVerbose = (DVerbose==) . oDebug
 
--- | color palettes
+-- | color palette for general display
 type Color1 = 'OColor "color1" 'Default 'Blue 'Default 'Red 'Black 'Cyan 'Black 'Yellow
+-- | color palette for general display
 type Color2 = 'OColor "color2" 'Default 'Magenta 'Default 'Red 'Black 'White 'Black 'Yellow
+-- | color palette for general display
 type Color3 = 'OColor "color3" 'Default 'Blue 'Red 'Default 'White 'Default 'Black 'Yellow
+-- | color palette for general display
 type Color4 = 'OColor "color4" 'Default 'Red 'Red 'Default 'Green 'Default 'Black 'Yellow
+-- | color palette for general display
 type Color5 = 'OColor "color5" 'Blue 'Default 'Red 'Default 'Cyan 'Default 'Yellow 'Default
 
+-- | color palette for effects used in 'Predicate.Core.Msg' and the refined modules
 type Other1 = 'OOther 'True 'Yellow 'Default
+-- | color palette for effects used in 'Predicate.Core.Msg' and the refined modules
 type Other2 = 'OOther 'True 'Default 'Default
 
+-- | display a message and three values where the last one is displayed in verbose mode
 show3 :: (Show a1, Show a2)
   => POpts
   -> String
@@ -648,6 +656,7 @@ show3 :: (Show a1, Show a2)
   -> String
 show3 opts msg0 ret = lit3 opts msg0 ret "" . show
 
+-- | display a message and four values where the last two are displayed in verbose mode
 show3' :: (Show a1, Show a2)
   => POpts
   -> String
@@ -657,6 +666,7 @@ show3' :: (Show a1, Show a2)
   -> String
 show3' opts msg0 ret fmt = lit3 opts msg0 ret fmt . show
 
+-- | display a message and four values where the last two are displayed in verbose mode
 lit3 :: Show a1
   => POpts
   -> String
@@ -670,7 +680,7 @@ lit3 opts msg0 ret fmt as
          msg0
       <> (if null msg0 then "" else " ")
       <> showL opts ret
-      <> litVerbose opts (" | " <> take 100 fmt) as
+      <> litVerbose opts (" | " <> litL opts fmt) as
 
 -- | more restrictive: only display data in verbose debug mode
 litVerbose :: POpts
@@ -685,9 +695,10 @@ showLitImpl :: POpts
             -> String
             -> String
 showLitImpl o i s a =
-  if oDebug o >= i || oDebug o == DLite then take 100 s <> litL o a
+  if oDebug o >= i || oDebug o == DLite then litL o s <> litL o a
   else ""
 
+-- | show the value in verbose mode
 showVerbose :: Show a
   => POpts
   -> String
@@ -701,14 +712,16 @@ showAImpl :: Show a
   -> String
   -> a
   -> String
-showAImpl o i s a = showLitImpl o i (take 100 s) (show a)
+showAImpl o i s a = showLitImpl o i s (show a)
 
+-- | display a showable value limited to the width found in the options
 showL :: Show a
   => POpts
   -> a
   -> String
 showL o = litL o . show
 
+-- | display a value limited to the width found in the options
 litL :: POpts -> String -> String
 litL = litL' . oWidth
 
@@ -717,15 +730,17 @@ litL' i s =
   let (z,e) = splitAt i s
   in z ++ if null e then "" else "..."
 
+-- | display lazy bytestring output up to the maximum width in the options
 litBL :: POpts -> BL8.ByteString -> String
 litBL o s =
   let i = oWidth o
-  in litL' i (BL8.unpack (BL8.take (fromIntegral i) s))
+  in litL' i (BL8.unpack (BL8.take (1+fromIntegral i) s))
 
+-- | display bytestring output up to the maximum width in the options
 litBS :: POpts -> BS8.ByteString -> String
 litBS o s =
   let i = oWidth o
-  in litL' i (BS8.unpack (BS8.take i s))
+  in litL' i (BS8.unpack (BS8.take (i+1) s))
 
 -- | extract values from the trees or if there are errors return a tree with context
 splitAndAlign :: Show x =>
@@ -748,6 +763,7 @@ groupErrors =
    . map (\xs@(x :| _) -> x <> let ll = length xs in (if ll > 1 then "(" <> show ll <> ")" else ""))
    . N.group
 
+-- | returns True if the list has more than one element
 lengthGreaterThanOne :: [a] -> Bool
 lengthGreaterThanOne =
   \case
@@ -775,6 +791,7 @@ toNodeString opts bpe =
   then errorInProgram $ "shouldnt be calling this if we are dropping details: toNodeString " <> show (oDebug opts) <> " " <> show bpe
   else colorValP Long opts (_peValP bpe) <> " " <> _peString bpe
 
+-- | returns True if there the debug option supports a display in tree format
 hasNoTree :: POpts -> Bool
 hasNoTree opts =
   case oDebug opts of
@@ -799,6 +816,7 @@ colorValP long o bp =
     ValP -> f "P"
   where f = colorMe o bp
 
+-- | flag for showing long or short output
 data Long = Long | Short deriving (Show, Eq)
 
 -- | render 'Val' value with colors
@@ -817,6 +835,7 @@ colorValLite o (bt,bp') =
                   ValP -> f "Present" <> " " <> show a
                   FailP {} -> errorInProgram $ "colorValLite: unexpected FailP " ++ show (bt,bp)
 
+-- | render coloured output for boolean values
 colorValBool ::
       POpts
    -> Val Bool
@@ -1044,18 +1063,30 @@ instance OptC 'OUV where
 instance OptC 'OUNV where
    getOptC = getOptC @('OANV ':# 'OUnicode)
 
--- | option synonyms to save a keystroke
+-- option synonyms to save a keystroke
+-- | debugging: no output
 type OZ = 'OZ     -- 'OAnsi ':# 'OColorOff ':# 'OZero
+-- | debugging: one line of summarised output without colors or effects
 type OL = 'OL     -- 'OAnsi ':# 'OColorOff ':# 'OLite ':# 'OWidth 200
+-- | ascii output with colours
 type OA = 'OA     -- 'OAnsi ':# Color5 ':# 'ONormal ':# Other2 ':# 'OWidth 100
+-- | ascii output with colours and bold background
 type OAB = 'OAB   -- 'OAnsi ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
+-- | ascii output without colours
 type OAN = 'OAN   -- 'OAnsi ':# 'OColorOff ':# 'ONormal ':# 'OWidth 100
+-- | ascii output without colours
 type OAV = 'OAV   -- 'OAnsi ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
+-- | ascii output without colours
 type OANV = 'OANV -- 'OAnsi ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
+-- | unicode output without colours
 type OU = 'OU     -- 'OUnicode ':# Color5 ':# 'ONormal ':# Other2 ':# 'OWidth 100
+-- | unicode output with colors and a bold background
 type OUB = 'OUB   -- 'OUnicode ':# Color1 ':# 'ONormal ':# Other1 ':# 'OWidth 100
+-- | unicode output without colours
 type OUN = 'OUN   -- 'OUnicode ':# 'OColorOff ':# 'OWidth 200
+-- | unicode output verbose with colours
 type OUV = 'OUV   -- 'OUnicode ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 200
+-- | unicode output without colours and verbose
 type OUNV = 'OUNV -- 'OUnicode ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
 
 _Debug :: Lens' POpts Debug
@@ -1112,11 +1143,6 @@ chkSize opts msg0 xs hhs =
     (zs,[]) -> Right (length zs,zs)
     (_,_:_) -> Left $ mkNode opts (Fail (msg0 <> " list size exceeded")) ("max is " ++ show mx) hhs
 
-getMaxRecursionValue :: POpts -> Int
-getMaxRecursionValue =
-  liftA3 bool oRecursion oRecursionLarge oLarge
-
-
 -- | deal with possible recursion on two lists
 chkSize2 :: (Foldable t, Foldable u)
    => POpts
@@ -1127,6 +1153,10 @@ chkSize2 :: (Foldable t, Foldable u)
    -> Either (TT x) ((Int,[a]),(Int,[b]))
 chkSize2 opts msg0 xs ys hhs =
   (,) <$> chkSize opts msg0 xs hhs <*> chkSize opts msg0 ys hhs
+
+-- | get the current recursion value depending on the oLarge flag
+getMaxRecursionValue :: POpts -> Int
+getMaxRecursionValue = ifM oLarge oRecursionLarge oRecursion
 
 -- | pretty print a message
 formatOMsg :: POpts -> String -> String
@@ -1168,6 +1198,7 @@ badLength :: Int
           -> String
 badLength asLen n = ":invalid length(" <> show asLen <> ") expected " ++ show n
 
+-- | render the output from TT depending on the debug options
 prtTree :: Show x => POpts -> TT x -> String
 prtTree opts tt =
   case oDebug opts of
@@ -1182,6 +1213,7 @@ prtTree opts tt =
      _ -> formatOMsg opts ""
           <> prtTreePure opts (hh tt)
 
+-- | return a singleton list of Tree if in verbose mode
 verboseList :: POpts -> TT a -> [Tree PE]
 verboseList o tt
   | isVerbose o = [hh tt]
@@ -1291,3 +1323,4 @@ ttValBool afb tt = (\b -> tt { _ttValP = val2PBool b, _ttVal = b }) <$> afb (_tt
 --
 ttVal :: Lens (TT a) (TT b) (Val a) (Val b)
 ttVal afb tt = (\b -> tt { _ttValP = val2P b, _ttVal = b }) <$> afb (_ttVal tt)
+
