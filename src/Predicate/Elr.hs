@@ -21,10 +21,10 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveLift #-}
--- | ELR definition
-module Predicate.ELR (
+-- | Elr definition
+module Predicate.Elr (
  -- definition
-    ELR(..)
+    Elr(..)
 
  -- ** prisms
   , _ENone
@@ -73,7 +73,7 @@ import Data.These (These(..))
 -- >>> import qualified Data.Semigroup as SG
 
 -- | similar to 'Data.These' with an additional empty constructor to support a Monoid instance
-data ELR a b =
+data Elr a b =
      ENone -- ^ empty constructor
    | ELeft !a  -- ^ similar to 'Data.These.This'
    | ERight !b -- ^ similar to 'Data.These.That'
@@ -81,9 +81,9 @@ data ELR a b =
    deriving stock (Show,Eq,Ord,Foldable,Functor,Traversable,Generic,TH.Lift)
    deriving anyclass NFData
 
-makePrisms ''ELR
+makePrisms ''Elr
 
-instance (Semigroup a, Semigroup b) => Semigroup (ELR a b) where
+instance (Semigroup a, Semigroup b) => Semigroup (Elr a b) where
   ENone <> x' = x'
   x <> ENone = x
   ELeft a <> ELeft a' = ELeft (a <> a')
@@ -96,14 +96,14 @@ instance (Semigroup a, Semigroup b) => Semigroup (ELR a b) where
   EBoth a b <> ERight b' = EBoth a (b <> b')
   EBoth a b <> EBoth a' b' = EBoth (a <> a') (b <> b')
 
-instance (Monoid a, Monoid b) => Monoid (ELR a b) where
+instance (Monoid a, Monoid b) => Monoid (Elr a b) where
   mempty = ENone
 
-instance Semigroup x => Applicative (ELR x) where
+instance Semigroup x => Applicative (Elr x) where
   pure = ERight
   (<*>) = ap
 
-instance Semigroup x => Monad (ELR x) where
+instance Semigroup x => Monad (Elr x) where
   return = pure
   ENone >>= _ = ENone
   ELeft x >>= _ = ELeft x
@@ -115,7 +115,7 @@ instance Semigroup x => Monad (ELR x) where
       ERight b -> EBoth x b
       EBoth y b -> EBoth (x <> y) b
 
-instance Bifunctor ELR where
+instance Bifunctor Elr where
   bimap f g =
     \case
       ENone -> ENone
@@ -123,7 +123,7 @@ instance Bifunctor ELR where
       ERight b -> ERight (g b)
       EBoth a b -> EBoth (f a) (g b)
 
-instance Bifoldable ELR where
+instance Bifoldable Elr where
   bifoldMap f g =
     \case
       ENone -> mempty
@@ -131,7 +131,7 @@ instance Bifoldable ELR where
       ERight b -> g b
       EBoth a b -> f a <> g b
 
-instance Bitraversable ELR where
+instance Bitraversable Elr where
   bitraverse f g =
     \case
       ENone -> pure ENone
@@ -139,17 +139,17 @@ instance Bitraversable ELR where
       ERight b -> ERight <$> g b
       EBoth a b -> EBoth <$> f a <*> g b
 
--- | display constructor name for 'ELR'
-showElr :: ELR a b -> String
+-- | display constructor name for 'Elr'
+showElr :: Elr a b -> String
 showElr = \case
   ENone -> "ENone"
   ELeft {} -> "ELeft"
   ERight {} -> "ERight"
   EBoth {} -> "EBoth"
 
--- | get 'ELR' from typelevel [type application order is a b then th if explicit kind for th else is first parameter!
-class GetElr (th :: ELR k k1) where
-  getElr :: (String, ELR w v -> Bool)
+-- | get 'Elr' from typelevel [type application order is a b then th if explicit kind for th else is first parameter!
+class GetElr (th :: Elr k k1) where
+  getElr :: (String, Elr w v -> Bool)
 instance GetElr 'ENone where
   getElr = ("ENone", isENone)
 instance GetElr ('ELeft x) where
@@ -159,7 +159,7 @@ instance GetElr ('ERight y) where
 instance GetElr ('EBoth x y) where
   getElr = ("EBoth", isEBoth)
 
-isENone, isELeft, isERight, isEBoth :: ELR a b -> Bool
+isENone, isELeft, isERight, isEBoth :: Elr a b -> Bool
 -- | predicate on ENone
 isENone ENone = True
 isENone _ = False
@@ -178,38 +178,38 @@ isEBoth _ = False
 
 -- | extract the relevant type for 'ENone'
 type family ENoneT lr where
-  ENoneT (ELR _ _) = ()
+  ENoneT (Elr _ _) = ()
   ENoneT o = GL.TypeError (
-      'GL.Text "ENoneT: expected 'ELR a b' "
+      'GL.Text "ENoneT: expected 'Elr a b' "
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
 -- | extract the relevant type for 'ELeft'
 type family ELeftT lr where
-  ELeftT (ELR a _) = a
+  ELeftT (Elr a _) = a
   ELeftT o = GL.TypeError (
-      'GL.Text "ELeftT: expected 'ELR a b' "
+      'GL.Text "ELeftT: expected 'Elr a b' "
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
 -- | extract the relevant type for 'ERight'
 type family ERightT lr where
-  ERightT (ELR _ b) = b
+  ERightT (Elr _ b) = b
   ERightT o = GL.TypeError (
-      'GL.Text "ERightT: expected 'ELR a b' "
+      'GL.Text "ERightT: expected 'Elr a b' "
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
 -- | extract the relevant types for 'EBoth'
 type family EBothT lr where
-  EBothT (ELR a b) = (a,b)
+  EBothT (Elr a b) = (a,b)
   EBothT o = GL.TypeError (
-      'GL.Text "EBothT: expected 'ELR a b' "
+      'GL.Text "EBothT: expected 'Elr a b' "
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
--- | partition ELR into 4 lists for each constructor: foldMap (yep ...)
-partitionElr :: [ELR a b] -> ([()], [a], [b], [(a,b)])
+-- | partition Elr into 4 lists for each constructor: foldMap (yep ...)
+partitionElr :: [Elr a b] -> ([()], [a], [b], [(a,b)])
 partitionElr = foldMapStrict $
   \case
     ENone -> ([()],[],[],[])
@@ -217,8 +217,8 @@ partitionElr = foldMapStrict $
     ERight b -> ([],[],[b],[])
     EBoth a b -> ([],[],[],[(a,b)])
 
--- | convert ELR to a tuple with default values
-fromElr :: a -> b -> ELR a b -> (a,b)
+-- | convert Elr to a tuple with default values
+fromElr :: a -> b -> Elr a b -> (a,b)
 fromElr a b =
   \case
     ENone -> (a,b)
@@ -226,7 +226,7 @@ fromElr a b =
     ERight w -> (a,w)
     EBoth v w -> (v,w)
 
--- | iso from 'ELR' to 'These'
+-- | iso from 'Elr' to 'These'
 --
 -- >>> ENone & _elr2These .~ Just (This 12)
 -- ELeft 12
@@ -234,7 +234,7 @@ fromElr a b =
 -- >>> ELeft 123 & _elr2These %~ fmap swapC
 -- ERight 123
 --
-_elr2These :: Iso (ELR a b) (ELR a' b') (Maybe (These a b)) (Maybe (These a' b'))
+_elr2These :: Iso (Elr a b) (Elr a' b') (Maybe (These a b)) (Maybe (These a' b'))
 _elr2These = iso fw bw
   where
   fw = \case
@@ -248,7 +248,7 @@ _elr2These = iso fw bw
          Just (That b) -> ERight b
          Just (These a b) -> EBoth a b
 
--- | iso from 'ELR' to a pair of 'Maybe's
+-- | iso from 'Elr' to a pair of 'Maybe's
 --
 -- >>> ENone ^. _elr2Maybe
 -- (Nothing,Nothing)
@@ -259,7 +259,7 @@ _elr2These = iso fw bw
 -- >>> EBoth 1 'a' ^. _elr2Maybe
 -- (Just 1,Just 'a')
 --
-_elr2Maybe :: Iso (ELR a b) (ELR a' b') (Maybe a, Maybe b) (Maybe a', Maybe b')
+_elr2Maybe :: Iso (Elr a b) (Elr a' b') (Maybe a, Maybe b) (Maybe a', Maybe b')
 _elr2Maybe = iso fw bw
   where
   fw = \case
@@ -273,7 +273,7 @@ _elr2Maybe = iso fw bw
           (Nothing, Just b) -> ERight b
           (Just a, Just b) -> EBoth a b
 
--- | 'GetLen' instances for 'ELR'
+-- | 'GetLen' instances for 'Elr'
 instance GetLen 'ENone where
   getLen = 0
 instance GetLen ('ELeft a) where
@@ -283,8 +283,8 @@ instance GetLen ('ERight b) where
 instance GetLen ('EBoth a b) where
   getLen = 1
 
--- | 'AssocC' instances for 'ELR'
-instance AssocC ELR where
+-- | 'AssocC' instances for 'Elr'
+instance AssocC Elr where
   assoc ENone = ENone
   assoc (ELeft ENone) = ENone
   assoc (EBoth ENone _) = ENone
@@ -308,7 +308,7 @@ instance AssocC ELR where
   unassoc (EBoth a (EBoth b c)) = EBoth (EBoth a b) c
   unassoc (EBoth a (ELeft b)) = ELeft (EBoth a b)
 
-instance SwapC ELR where
+instance SwapC Elr where
   swapC =
     \case
       ENone -> ENone
@@ -326,7 +326,7 @@ getBifoldInfo bi =
     EBoth () () -> "(B)"
 
 -- | similar to 'elr' without a separate EBoth combinator
-mergeElrWith :: c -> (a -> c) -> (b -> c) -> (c -> c -> c) -> ELR a b -> c
+mergeElrWith :: c -> (a -> c) -> (b -> c) -> (c -> c -> c) -> Elr a b -> c
 mergeElrWith c fa fb fcc =
   \case
     ENone -> c
@@ -334,8 +334,8 @@ mergeElrWith c fa fb fcc =
     ERight b -> fb b
     EBoth a b -> fcc (fa a) (fb b)
 
--- | destruct 'ELR'
-elr :: c -> (a -> c) -> (b -> c) -> (a -> b -> c) -> ELR a b -> c
+-- | destruct 'Elr'
+elr :: c -> (a -> c) -> (b -> c) -> (a -> b -> c) -> Elr a b -> c
 elr c fa fb fab =
   \case
     ENone -> c

@@ -122,7 +122,7 @@ module Predicate.Core (
   ) where
 import Predicate.Misc
 import Predicate.Util
-import Predicate.ELR
+import Predicate.Elr
 import qualified GHC.TypeLits as GL
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
 import Control.Lens
@@ -2642,7 +2642,7 @@ type family ArgT x where
 -- >>> pz @'ENone (ERight "aaa")
 -- Fail "'ENone found ERight"
 --
-instance x ~ ELR a b => P 'ENone x where
+instance x ~ Elr a b => P 'ENone x where
   type PP 'ENone x = ()
   eval _ opts x =
     let msg0 = "'ENone"
@@ -2668,7 +2668,7 @@ instance x ~ ELR a b => P 'ENone x where
 -- Error 'ELeft found ERight
 -- Fail "'ELeft found ERight"
 --
-instance ( PP p x ~ ELR a b
+instance ( PP p x ~ Elr a b
          , P p x
          )
     => P ('ELeft p) x where
@@ -2696,7 +2696,7 @@ instance ( PP p x ~ ELR a b
 -- >>> pz @('ERight Id) (EBoth 44 "aaa")
 -- Fail "'ERight found EBoth"
 --
-instance ( PP p x ~ ELR a b
+instance ( PP p x ~ Elr a b
          , P p x
          )
     => P ('ERight p) x where
@@ -2733,8 +2733,8 @@ instance ( Show a
          , P q b
          , Show (PP p a)
          , Show (PP q b)
-         ) => P ('EBoth p q) (ELR a b) where
-  type PP ('EBoth p q) (ELR a b) = (PP p a, PP q b)
+         ) => P ('EBoth p q) (Elr a b) where
+  type PP ('EBoth p q) (Elr a b) = (PP p a, PP q b)
   eval _ opts th = do
     let msg0 = "'EBoth"
     case th of

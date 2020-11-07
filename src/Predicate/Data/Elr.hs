@@ -15,8 +15,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE EmptyDataDeriving #-}
--- | ELR related methods
-module Predicate.Data.ELR (
+-- | Elr related methods
+module Predicate.Data.Elr (
 
  -- ** destructors
     ENone'
@@ -24,11 +24,11 @@ module Predicate.Data.ELR (
   , ERight'
   , EBoth'
 
-  , ELRIn
-  , ELRId
-  , ELRPair
-  , ELRInSimple
-  , PartitionELR
+  , ElrIn
+  , ElrId
+  , ElrPair
+  , ElrInSimple
+  , PartitionElr
 
   , ENoneDef
   , ELeftDef
@@ -51,12 +51,12 @@ module Predicate.Data.ELR (
   , IsERight
   , IsEBoth
 
-  , These2ELR
-  , ELR2These
+  , These2Elr
+  , Elr2These
  ) where
 import Predicate.Core
 import Predicate.Util
-import Predicate.ELR
+import Predicate.Elr
 import Data.Kind (Type)
 import Control.Lens
 import Data.Proxy (Proxy(..))
@@ -74,7 +74,7 @@ import Data.These (These)
 data MkENone' t t1 deriving Show
 
 instance P (MkENone' t t1) x where
-  type PP (MkENone' t t1) x = ELR (PP t x) (PP t1 x)
+  type PP (MkENone' t t1) x = Elr (PP t x) (PP t1 x)
   eval _ opts _ =
     let msg0 = "MkENone"
         d = ENone
@@ -102,7 +102,7 @@ data MkELeft' t p deriving Show
 
 instance P p x
       => P (MkELeft' t p) x where
-  type PP (MkELeft' t p) x = ELR (PP p x) (PP t x)
+  type PP (MkELeft' t p) x = Elr (PP p x) (PP t x)
   eval _ opts x = do
     let msg0 = "MkELeft"
     pp <- eval (Proxy @p) opts x
@@ -137,7 +137,7 @@ data MkERight' t p deriving Show
 
 instance P p x
       => P (MkERight' t p) x where
-  type PP (MkERight' t p) x = ELR (PP t x) (PP p x)
+  type PP (MkERight' t p) x = Elr (PP t x) (PP p x)
   eval _ opts x = do
     let msg0 = "MkERight"
     pp <- eval (Proxy @p) opts x
@@ -182,7 +182,7 @@ data MkEBoth p q deriving Show
 instance ( P p a
          , P q a
          ) => P (MkEBoth p q) a where
-  type PP (MkEBoth p q) a = ELR (PP p a) (PP q a)
+  type PP (MkEBoth p q) a = Elr (PP p a) (PP q a)
   eval _ opts a = do
     let msg0 = "MkEBoth"
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts a []
@@ -192,16 +192,16 @@ instance ( P p a
         let d = EBoth p q
         in mkNode opts (Val d) msg0 [hh pp, hh qq]
 
-data IsELR (th :: ELR x y) deriving Show
+data IsElr (th :: Elr x y) deriving Show
 -- x y can be anything
 
 -- trying to avoid Show instance because more likely to have ambiguity errors
-instance ( x ~ ELR a b
+instance ( x ~ Elr a b
          , Show a
          , Show b
          , GetElr th
-         ) => P (IsELR (th :: ELR x1 x2)) x where
-  type PP (IsELR th) x = Bool
+         ) => P (IsElr (th :: Elr x1 x2)) x where
+  type PP (IsElr th) x = Bool
   eval _ opts x =
     let msg0 = "Is"
         (t,f) = getElr @_ @_ @th
@@ -217,7 +217,7 @@ instance ( x ~ ELR a b
 -- Val False
 --
 data IsENone deriving Show
-type IsENoneT = IsELR 'ENone
+type IsENoneT = IsElr 'ENone
 
 instance P IsENoneT x => P IsENone x where
   type PP IsENone x = PP IsENoneT x
@@ -236,7 +236,7 @@ instance P IsENoneT x => P IsENone x where
 -- Val True
 --
 data IsELeft deriving Show
-type IsELeftT = IsELR ('ELeft '())
+type IsELeftT = IsElr ('ELeft '())
 
 instance P IsELeftT x => P IsELeft x where
   type PP IsELeft x = PP IsELeftT x
@@ -249,7 +249,7 @@ instance P IsELeftT x => P IsELeft x where
 -- Val False
 --
 data IsERight deriving Show
-type IsERightT = IsELR ('ERight '())
+type IsERightT = IsElr ('ERight '())
 
 instance P IsERightT x => P IsERight x where
   type PP IsERight x = PP IsERightT x
@@ -277,7 +277,7 @@ instance P IsERightT x => P IsERight x where
 -- Val True
 --
 data IsEBoth deriving Show
-type IsEBothT = IsELR ('EBoth '() '())
+type IsEBothT = IsElr ('EBoth '() '())
 
 instance P IsEBothT x => P IsEBoth x where
   type PP IsEBoth x = PP IsEBothT x
@@ -293,8 +293,8 @@ instance P IsEBothT x => P IsEBoth x where
 --
 data ENone' deriving Show
 
-instance P ENone' (ELR x y) where
-  type PP ENone' (ELR x y) = ()
+instance P ENone' (Elr x y) where
+  type PP ENone' (Elr x y) = ()
   eval _ opts lr =
     let msg0 = "ENone'"
     in pure $ case lr of
@@ -311,8 +311,8 @@ instance P ENone' (ELR x y) where
 --
 data ELeft' deriving Show
 
-instance Show a => P ELeft' (ELR a x) where
-  type PP ELeft' (ELR a x) = a
+instance Show a => P ELeft' (Elr a x) where
+  type PP ELeft' (Elr a x) = a
   eval _ opts lr =
     let msg0 = "ELeft'"
     in pure $ case lr of
@@ -329,8 +329,8 @@ instance Show a => P ELeft' (ELR a x) where
 --
 data ERight' deriving Show
 
-instance Show a => P ERight' (ELR x a) where
-  type PP ERight' (ELR x a) = a
+instance Show a => P ERight' (Elr x a) where
+  type PP ERight' (Elr x a) = a
   eval _ opts lr =
     let msg0 = "ERight'"
     in pure $ case lr of
@@ -352,76 +352,76 @@ data EBoth' deriving Show
 
 instance ( Show a
          , Show b
-        ) => P EBoth' (ELR a b) where
-  type PP EBoth' (ELR a b) = (a,b)
+        ) => P EBoth' (Elr a b) where
+  type PP EBoth' (Elr a b) = (a,b)
   eval _ opts lr =
     let msg0 = "EBoth'"
     in pure $ case lr of
          EBoth a b -> mkNode opts (Val (a,b)) (msg0 <> " " <> showL opts (a,b)) []
          _ -> mkNode opts (Fail (msg0 <> " found " <> showElr lr)) "" []
 
--- | similar to 'Predicate.Data.These.PartitionThese' for 'ELR'. returns a 4-tuple with the results so use 'Fst' 'Snd' 'Thd' 'L4' to extract
+-- | similar to 'Predicate.Data.These.PartitionThese' for 'Elr'. returns a 4-tuple with the results so use 'Fst' 'Snd' 'Thd' 'L4' to extract
 --
--- >>> pz @PartitionELR [ELeft 'a', ENone, ERight 2, ELeft 'c', EBoth 'z' 1, ERight 4, EBoth 'a' 2, ERight 99, ENone]
+-- >>> pz @PartitionElr [ELeft 'a', ENone, ERight 2, ELeft 'c', EBoth 'z' 1, ERight 4, EBoth 'a' 2, ERight 99, ENone]
 -- Val ([(),()],"ac",[2,4,99],[('z',1),('a',2)])
 --
--- >>> pz @PartitionELR [ELeft 4, ERight 'x', ERight 'y',EBoth 3 'b', ELeft 99, EBoth 5 'x']
+-- >>> pz @PartitionElr [ELeft 4, ERight 'x', ERight 'y',EBoth 3 'b', ELeft 99, EBoth 5 'x']
 -- Val ([],[4,99],"xy",[(3,'b'),(5,'x')])
 --
--- >>> pz @PartitionELR [ENone,ELeft 1,ERight 'x',ELeft 4,ERight 'y',EBoth 9 'z',ELeft 10,EBoth 8 'y']
+-- >>> pz @PartitionElr [ENone,ELeft 1,ERight 'x',ELeft 4,ERight 'y',EBoth 9 'z',ELeft 10,EBoth 8 'y']
 -- Val ([()],[1,4,10],"xy",[(9,'z'),(8,'y')])
 --
-data PartitionELR deriving Show
+data PartitionElr deriving Show
 
 instance ( Show a
          , Show b
-         ) => P PartitionELR [ELR a b] where
-  type PP PartitionELR [ELR a b] = ([()], [a], [b], [(a, b)])
+         ) => P PartitionElr [Elr a b] where
+  type PP PartitionElr [Elr a b] = ([()], [a], [b], [(a, b)])
   eval _ opts as =
-    let msg0 = "PartitionELR"
+    let msg0 = "PartitionElr"
         b = partitionElr as
     in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
 
--- | destructs an ELR value
+-- | destructs an Elr value
 --   @n@ @ENone@ receives @(PP s x)@
 --   @p@ @ELeft a@ receives @(PP s x,a)@
 --   @q@ @ERight b@ receives @(PP s x,b)@
 --   @r@ @EBoth a b@ receives @(PP s x,(a,b))@
 --   @s@ points to the environment you want to pass in
---   @t@ points to the ELR value
+--   @t@ points to the Elr value
 --
--- >>> pz @(ELRIn Id '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), EBoth 12 'x')
+-- >>> pz @(ElrIn Id '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), EBoth 12 'x')
 -- Val (12,'x')
 --
--- >>> pz @(ELRIn Id '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), ENone)
+-- >>> pz @(ElrIn Id '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), ENone)
 -- Val (999,'a')
 --
--- >>> pz @(ELRIn Id '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), ERight 'z')
+-- >>> pz @(ElrIn Id '(Snd,L12) '(L11,Snd) Snd Fst Snd) ((999,'a'), ERight 'z')
 -- Val (999,'z')
 --
--- >>> pz @(ELRIn 999 Snd (Snd >> Len) (Snd >> Fst + Length Snd) () Id) (ELeft 13)
+-- >>> pz @(ElrIn 999 Snd (Snd >> Len) (Snd >> Fst + Length Snd) () Id) (ELeft 13)
 -- Val 13
 --
--- >>> pz @(ELRIn 999 Snd (Snd >> Len) (Snd >> Fst + Length Snd) () Id) (ERight "abcdef")
+-- >>> pz @(ElrIn 999 Snd (Snd >> Len) (Snd >> Fst + Length Snd) () Id) (ERight "abcdef")
 -- Val 6
 --
--- >>> pl @(ELRIn "none" "left" "right" "both" () Id) (ELeft (SG.Sum 12))
--- Present "left" (ELRIn(ELeft) "left" | Sum {getSum = 12})
+-- >>> pl @(ElrIn "none" "left" "right" "both" () Id) (ELeft (SG.Sum 12))
+-- Present "left" (ElrIn(ELeft) "left" | Sum {getSum = 12})
 -- Val "left"
 --
--- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) (EBoth "Ab" 13)
--- Present ("Ab",13) (ELRIn(EBoth) ("Ab",13) | ("Ab",13))
+-- >>> pl @(ElrIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) (EBoth "Ab" 13)
+-- Present ("Ab",13) (ElrIn(EBoth) ("Ab",13) | ("Ab",13))
 -- Val ("Ab",13)
 --
--- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) (ELeft "Ab")
--- Present ("Ab",999) (ELRIn(ELeft) ("Ab",999) | "Ab")
+-- >>> pl @(ElrIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) (ELeft "Ab")
+-- Present ("Ab",999) (ElrIn(ELeft) ("Ab",999) | "Ab")
 -- Val ("Ab",999)
 --
--- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) ENone
--- Present ("",2) (ELRIn(ENone) ("",2) | ())
+-- >>> pl @(ElrIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) ENone
+-- Present ("",2) (ElrIn(ENone) ("",2) | ())
 -- Val ("",2)
 --
-data ELRIn n p q r s t deriving Show
+data ElrIn n p q r s t deriving Show
 
 instance ( Show a
          , Show b
@@ -435,12 +435,12 @@ instance ( Show a
          , PP q (y,b) ~ PP r (y,(a,b))
          , P s x
          , P t x
-         , PP t x ~ ELR a b
+         , PP t x ~ Elr a b
          , PP s x ~ y
-         )  => P (ELRIn n p q r s t) x where
-  type PP (ELRIn n p q r s t) x = PP n (PP s x)
+         )  => P (ElrIn n p q r s t) x where
+  type PP (ElrIn n p q r s t) x = PP n (PP s x)
   eval _ opts x = do
-    let msg0 = "ELRIn"
+    let msg0 = "ElrIn"
     lr <- runPQ NoInline msg0 (Proxy @s) (Proxy @t) opts x []
     case lr of
       Left e -> pure e
@@ -472,98 +472,98 @@ instance ( Show a
                    Left e -> e
                    Right c -> mkNodeCopy opts rr (show3 opts msg1 c (a,b)) hhs
 
--- | simple version of 'ELRIn' with Id as the ELR value and the environment set to ()
+-- | simple version of 'ElrIn' with Id as the Elr value and the environment set to ()
 --
--- >>> pz @(ELRId '(999,"oops") '(Id,"fromleft") '(888,Id) Id) (EBoth 222 "ok")
+-- >>> pz @(ElrId '(999,"oops") '(Id,"fromleft") '(888,Id) Id) (EBoth 222 "ok")
 -- Val (222,"ok")
 --
--- >>> pz @(ELRId '(999,"oops") '(Id,"fromleft") '(888,Id) Id) (ERight "ok")
+-- >>> pz @(ElrId '(999,"oops") '(Id,"fromleft") '(888,Id) Id) (ERight "ok")
 -- Val (888,"ok")
 --
--- >>> pz @(ELRId '(999,"oops") '(Id,"fromleft") '(888,Id) Id) ENone
+-- >>> pz @(ElrId '(999,"oops") '(Id,"fromleft") '(888,Id) Id) ENone
 -- Val (999,"oops")
 --
--- >>> pz @(ELRId '(999,"oops") '(Id,"fromleft") '(888,Id) Id) (ELeft 123)
+-- >>> pz @(ElrId '(999,"oops") '(Id,"fromleft") '(888,Id) Id) (ELeft 123)
 -- Val (123,"fromleft")
 --
-data ELRId n p q r deriving Show
+data ElrId n p q r deriving Show
 
-type ELRIdT n p q r = ELRIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
+type ElrIdT n p q r = ElrIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
 
-instance P (ELRIdT n p q r) x => P (ELRId n p q r) x where
-  type PP (ELRId n p q r) x = PP (ELRIdT n p q r) x
-  eval _ = eval (Proxy @(ELRIdT n p q r))
+instance P (ElrIdT n p q r) x => P (ElrId n p q r) x where
+  type PP (ElrId n p q r) x = PP (ElrIdT n p q r) x
+  eval _ = eval (Proxy @(ElrIdT n p q r))
 
--- | creates a pair where the values are filled in by @s@ and @t@ holds the ELR value
+-- | creates a pair where the values are filled in by @s@ and @t@ holds the Elr value
 --
--- >>> pz @(ELRPair Fst Snd) ((999,"oops"),EBoth 2 "xx")
+-- >>> pz @(ElrPair Fst Snd) ((999,"oops"),EBoth 2 "xx")
 -- Val (2,"xx")
 --
--- >>> pz @(ELRPair Fst Snd) ((999,"oops"),ENone)
+-- >>> pz @(ElrPair Fst Snd) ((999,"oops"),ENone)
 -- Val (999,"oops")
 --
--- >>> pz @(ELRPair Fst Snd) ((999,"oops"),ERight "ok")
+-- >>> pz @(ElrPair Fst Snd) ((999,"oops"),ERight "ok")
 -- Val (999,"ok")
 --
-data ELRPair s t deriving Show
+data ElrPair s t deriving Show
 
-type ELRPairT s t = ELRIn Id '(Snd,L12) '(L11,Snd) Snd s t
+type ElrPairT s t = ElrIn Id '(Snd,L12) '(L11,Snd) Snd s t
 
-instance P (ELRPairT s t) x => P (ELRPair s t) x where
-  type PP (ELRPair s t) x = PP (ELRPairT s t) x
-  eval _ = eval (Proxy @(ELRPairT s t))
+instance P (ElrPairT s t) x => P (ElrPair s t) x where
+  type PP (ElrPair s t) x = PP (ElrPairT s t) x
+  eval _ = eval (Proxy @(ElrPairT s t))
 
--- | similar to 'ELRIn' but without an environment @s@ and uses Id for @t@
+-- | similar to 'ElrIn' but without an environment @s@ and uses Id for @t@
 --
--- >>> pz @(ELRInSimple 999 Id Len (Fst + Length Snd)) (ELeft 13)
+-- >>> pz @(ElrInSimple 999 Id Len (Fst + Length Snd)) (ELeft 13)
 -- Val 13
 --
--- >>> pz @(ELRInSimple 999 Id Len (Fst + Length Snd)) ENone
+-- >>> pz @(ElrInSimple 999 Id Len (Fst + Length Snd)) ENone
 -- Val 999
 --
--- >>> pz @(ELRInSimple 999 Id Len (Fst + Length Snd)) (ERight "this is a long string")
+-- >>> pz @(ElrInSimple 999 Id Len (Fst + Length Snd)) (ERight "this is a long string")
 -- Val 21
 --
--- >>> pz @(ELRInSimple 999 Id Len (Fst + Length Snd)) (EBoth 20 "somedata")
+-- >>> pz @(ElrInSimple 999 Id Len (Fst + Length Snd)) (EBoth 20 "somedata")
 -- Val 28
 --
--- >>> pz @(ELRInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (ERight "this is a long string")
+-- >>> pz @(ElrInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (ERight "this is a long string")
 -- Val (Right "this is a long string")
 --
--- >>> pz @(ELRInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) ENone
+-- >>> pz @(ElrInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) ENone
 -- Fail "err"
 --
--- >>> pz @(ELRInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (EBoth 1 "this is a long string")
+-- >>> pz @(ElrInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (EBoth 1 "this is a long string")
 -- Val (Right "this is a long string")
 --
--- >>> pz @(ELRInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (EBoth 100 "this is a long string")
+-- >>> pz @(ElrInSimple (FailT _ "err") (MkLeft _ Id) (MkRight _ Id) (If (Fst > Length Snd) (MkLeft _ Fst) (MkRight _ Snd))) (EBoth 100 "this is a long string")
 -- Val (Left 100)
 --
--- >>> pl @(ELRInSimple "none" "left" "right" "both") (ELeft (SG.Sum 12))
--- Present "left" (ELRIn(ELeft) "left" | Sum {getSum = 12})
+-- >>> pl @(ElrInSimple "none" "left" "right" "both") (ELeft (SG.Sum 12))
+-- Present "left" (ElrIn(ELeft) "left" | Sum {getSum = 12})
 -- Val "left"
 --
--- >>> pl @(ELRInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (EBoth "Ab" 13)
--- Present ("Ab",13) (ELRIn(EBoth) ("Ab",13) | ("Ab",13))
+-- >>> pl @(ElrInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (EBoth "Ab" 13)
+-- Present ("Ab",13) (ElrIn(EBoth) ("Ab",13) | ("Ab",13))
 -- Val ("Ab",13)
 --
--- >>> pl @(ELRInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ELeft "Ab")
--- Present ("Ab",999) (ELRIn(ELeft) ("Ab",999) | "Ab")
+-- >>> pl @(ElrInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ELeft "Ab")
+-- Present ("Ab",999) (ElrIn(ELeft) ("Ab",999) | "Ab")
 -- Val ("Ab",999)
 --
--- >>> pl @(ELRInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ERight 13)
--- Present ("no value",13) (ELRIn(ERight) ("no value",13) | 13)
+-- >>> pl @(ElrInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ERight 13)
+-- Present ("no value",13) (ElrIn(ERight) ("no value",13) | 13)
 -- Val ("no value",13)
 --
-data ELRInSimple n p q r deriving Show
+data ElrInSimple n p q r deriving Show
 
-type ELRInSimpleT n p q r = ELRIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
+type ElrInSimpleT n p q r = ElrIn n (Snd >> p) (Snd >> q) (Snd >> r) () Id
 
-instance P (ELRInSimpleT n p q r) x => P (ELRInSimple n p q r) x where
-  type PP (ELRInSimple n p q r) x = PP (ELRInSimpleT n p q r) x
-  eval _ = eval (Proxy @(ELRInSimpleT n p q r))
+instance P (ElrInSimpleT n p q r) x => P (ElrInSimple n p q r) x where
+  type PP (ElrInSimple n p q r) x = PP (ElrInSimpleT n p q r) x
+  eval _ = eval (Proxy @(ElrInSimpleT n p q r))
 
--- | get ENone or run @p@: really only useful when p is set to Fail: where @q@ is the environment and @r@ is the ELR value
+-- | get ENone or run @p@: really only useful when p is set to Fail: where @q@ is the environment and @r@ is the Elr value
 --
 -- >>> pz @(ENoneDef (FailT _ "not ENone") () Id) ENone
 -- Val ()
@@ -576,13 +576,13 @@ instance P (ELRInSimpleT n p q r) x => P (ELRInSimple n p q r) x where
 --
 data ENoneDef p q r deriving Show
 
-type ENoneDefT p q r = ELRIn Id (Fst >> p) (Fst >> p) (Fst >> p) q r
+type ENoneDefT p q r = ElrIn Id (Fst >> p) (Fst >> p) (Fst >> p) q r
 
 instance P (ENoneDefT p q r) x => P (ENoneDef p q r) x where
   type PP (ENoneDef p q r) x = PP (ENoneDefT p q r) x
   eval _ = eval (Proxy @(ENoneDefT p q r))
 
--- | get ELeft or use the default value @p@: @q@ is the environment and @r@ is the ELR value
+-- | get ELeft or use the default value @p@: @q@ is the environment and @r@ is the Elr value
 --
 -- >>> pz @(ELeftDef Id Fst Snd) (999,ENone)
 -- Val 999
@@ -595,13 +595,13 @@ instance P (ENoneDefT p q r) x => P (ENoneDef p q r) x where
 --
 data ELeftDef p q r deriving Show
 
-type ELeftDefT p q r = ELRIn p Snd (Fst >> p) (Fst >> p) q r
+type ELeftDefT p q r = ElrIn p Snd (Fst >> p) (Fst >> p) q r
 
 instance P (ELeftDefT p q r) x => P (ELeftDef p q r) x where
   type PP (ELeftDef p q r) x = PP (ELeftDefT p q r) x
   eval _ = eval (Proxy @(ELeftDefT p q r))
 
--- | get ERight or use the default value @p@: @q@ is the environment and @r@ is the ELR value
+-- | get ERight or use the default value @p@: @q@ is the environment and @r@ is the Elr value
 --
 -- >>> pz @(ERightDef 999 () Id) ENone
 -- Val 999
@@ -614,13 +614,13 @@ instance P (ELeftDefT p q r) x => P (ELeftDef p q r) x where
 --
 data ERightDef p q r deriving Show
 
-type ERightDefT p q r = ELRIn p (Fst >> p) Snd (Fst >> p) q r
+type ERightDefT p q r = ElrIn p (Fst >> p) Snd (Fst >> p) q r
 
 instance P (ERightDefT p q r) x => P (ERightDef p q r) x where
   type PP (ERightDef p q r) x = PP (ERightDefT p q r) x
   eval _ = eval (Proxy @(ERightDefT p q r))
 
--- | get EBoth or use the default value @p@: @q@ is the environment and @r@ is the ELR value
+-- | get EBoth or use the default value @p@: @q@ is the environment and @r@ is the Elr value
 --
 -- >>> pz @(EBothDef '(999,"xx") () Id) ENone
 -- Val (999,"xx")
@@ -639,42 +639,42 @@ instance P (ERightDefT p q r) x => P (ERightDef p q r) x where
 --
 data EBothDef p q r deriving Show
 
-type EBothDefT p q r = ELRIn p (Fst >> p) (Fst >> p) Snd q r
+type EBothDefT p q r = ElrIn p (Fst >> p) (Fst >> p) Snd q r
 
 instance P (EBothDefT p q r) x => P (EBothDef p q r) x where
   type PP (EBothDef p q r) x = PP (EBothDefT p q r) x
   eval _ = eval (Proxy @(EBothDefT p q r))
 
--- | converts 'ELR' to 'These'
+-- | converts 'Elr' to 'These'
 --
--- >>> pz @ELR2These ENone
+-- >>> pz @Elr2These ENone
 -- Val Nothing
 --
--- >>> pz @ELR2These (ELeft 123)
+-- >>> pz @Elr2These (ELeft 123)
 -- Val (Just (This 123))
 --
-data ELR2These deriving Show
+data Elr2These deriving Show
 
-instance P ELR2These (ELR a b) where
-  type PP ELR2These (ELR a b) = Maybe (These a b)
+instance P Elr2These (Elr a b) where
+  type PP Elr2These (Elr a b) = Maybe (These a b)
   eval _ opts x =
-    let msg0 = "ELR2These"
+    let msg0 = "Elr2These"
         b = x ^. _elr2These
     in pure $ mkNode opts (Val b) msg0 []
 
--- | converts 'These' to 'ELR'
+-- | converts 'These' to 'Elr'
 --
--- >>> pz @These2ELR (These 12 'x')
+-- >>> pz @These2Elr (These 12 'x')
 -- Val (EBoth 12 'x')
 --
--- >>> pz @These2ELR (This 123)
+-- >>> pz @These2Elr (This 123)
 -- Val (ELeft 123)
 --
-data These2ELR deriving Show
+data These2Elr deriving Show
 
-instance P These2ELR (These a b) where
-  type PP These2ELR (These a b) = ELR a b
+instance P These2Elr (These a b) where
+  type PP These2Elr (These a b) = Elr a b
   eval _ opts x =
-    let msg0 = "These2ELR"
+    let msg0 = "These2Elr"
         b = _elr2These # Just x
     in pure $ mkNode opts (Val b) msg0 []

@@ -74,7 +74,7 @@ module Predicate.Data.Lifted (
 import Predicate.Core
 import Predicate.Misc
 import Predicate.Util
-import Predicate.ELR (getBifoldInfo)
+import Predicate.Elr (getBifoldInfo)
 import qualified GHC.TypeLits as GL
 import Control.Applicative
 import Control.Monad (join)

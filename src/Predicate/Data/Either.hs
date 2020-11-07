@@ -638,7 +638,7 @@ type family EitherInT p y lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
--- | get Left or use the default value @p@: @q@ is the environment and @r@ is the ELR value
+-- | get Left or use the default value @p@: @q@ is the environment and @r@ is the Elr value
 --
 -- >>> pz @(LeftDef' 999 () Id) (Right "sdf")
 -- Val 999
@@ -654,7 +654,7 @@ instance P (LeftDefT' p q r) x => P (LeftDef' p q r) x where
   type PP (LeftDef' p q r) x = PP (LeftDefT' p q r) x
   eval _ = eval (Proxy @(LeftDefT' p q r))
 
--- | get Right or use the default value @p@: @q@ is the environment and @r@ is the ELR value
+-- | get Right or use the default value @p@: @q@ is the environment and @r@ is the Elr value
 --
 -- >>> pz @(RightDef' 999 () Id) (Left "sdf")
 -- Val 999

@@ -1,7 +1,7 @@
 -- | Dsl for evaluating and displaying type level expressions
 module Predicate.Prelude (
     module Predicate.Core
-  , module Predicate.ELR
+  , module Predicate.Elr
   , module Predicate.Misc
   , module Predicate.Util
   , module Predicate.Data.Bits
@@ -9,7 +9,7 @@ module Predicate.Prelude (
   , module Predicate.Data.Condition
   , module Predicate.Data.DateTime
   , module Predicate.Data.Either
-  , module Predicate.Data.ELR
+  , module Predicate.Data.Elr
   , module Predicate.Data.Enum
   , module Predicate.Data.Extra
   , module Predicate.Data.Foldable
@@ -31,7 +31,7 @@ module Predicate.Prelude (
   , module Predicate.Data.Tuple
  ) where
 import Predicate.Core
-import Predicate.ELR
+import Predicate.Elr
 import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Bits
@@ -39,7 +39,7 @@ import Predicate.Data.Char
 import Predicate.Data.Condition
 import Predicate.Data.DateTime
 import Predicate.Data.Either
-import Predicate.Data.ELR
+import Predicate.Data.Elr
 import Predicate.Data.Enum
 import Predicate.Data.Extra
 import Predicate.Data.Foldable
