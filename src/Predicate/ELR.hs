@@ -31,8 +31,6 @@ module Predicate.ELR (
   , _ELeft
   , _ERight
   , _EBoth
-  , _ELeftish
-  , _ERightish
 
  -- ** isos
   , _elr2Maybe
@@ -245,51 +243,17 @@ _elr2These = iso fw bw
          Just (That b) -> ERight b
          Just (These a b) -> EBoth a b
 
--- | prism for 'ELeft' that accesses any left value
---
--- >>> ERight 123 ^? _ELeftish
--- Nothing
---
--- >>> ELeft 123 ^? _ELeftish
--- Just 123
---
--- >>> EBoth "Abc" 123 ^? _ELeftish
--- Just "Abc"
---
--- >>> ENone ^? _ELeftish
--- Nothing
---
-_ELeftish :: Prism (ELR a x) (ELR a' x) a a'
-_ELeftish = prism ELeft
-             $ \case
-                  ENone -> Left ENone
-                  ERight b -> Left (ERight b)
-                  ELeft a -> Right a
-                  EBoth a _ -> Right a
-
--- | prism for 'ERight' that accesses any right value
---
--- >>> ELeft 123 ^? _ERightish
--- Nothing
---
--- >>> ERight 123 ^? _ERightish
--- Just 123
---
--- >>> EBoth "Abc" 123 ^? _ERightish
--- Just 123
---
--- >>> ENone ^? _ERightish
--- Nothing
---
-_ERightish :: Prism (ELR x b) (ELR x b') b b'
-_ERightish = prism ERight
-             $ \case
-                  ENone -> Left ENone
-                  ELeft a -> Left (ELeft a)
-                  ERight b -> Right b
-                  EBoth _ b -> Right b
-
 -- | iso from 'ELR' to a pair of 'Maybe's
+--
+-- >>> ENone ^. _elr2Maybe
+-- (Nothing,Nothing)
+--
+-- >>> ELeft 123 ^. _elr2Maybe
+-- (Just 123,Nothing)
+--
+-- >>> EBoth 1 'a' ^. _elr2Maybe
+-- (Just 1,Just 'a')
+--
 _elr2Maybe :: Iso (ELR a b) (ELR a' b') (Maybe a, Maybe b) (Maybe a', Maybe b')
 _elr2Maybe = iso fw bw
   where
