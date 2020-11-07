@@ -204,8 +204,16 @@ instance P (MaybeBoolT b p) x => P (MaybeBool b p) x where
 
 -- | extract the value from a 'Maybe' otherwise use the default value: similar to 'Data.Maybe.fromMaybe'
 --
--- >>> pl @(JustDef 'True Id) Nothing
+-- >>> pl @(JustDef 'True Id) Nothing -- preserves TrueP/FalseP in the default case
 -- True (JustDef Nothing)
+-- Val True
+--
+-- >>> pl @(JustDef (Fst > 12) Snd) (3,Just False) -- ValP for normal case
+-- Present False (JustDef Just)
+-- Val False
+--
+-- >>> pl @(JustDef Fst Snd) (True,Nothing)
+-- Present True (JustDef Nothing)
 -- Val True
 --
 -- >>> pz @(JustDef (1 % 4) Id) (Just 20.4)
@@ -328,6 +336,14 @@ instance ( PP p x ~ String
 -- Present "just" (MaybeIn(Just) "just" | Sum {getSum = 12})
 -- Val "just"
 --
+-- >>> pl @(MaybeIn (Snd >> FailP "oops") Snd Fst Snd) ("abc", Nothing)
+-- Error oops (Proxy | MaybeIn(Nothing) n failed)
+-- Fail "oops"
+--
+-- >>> pl @(MaybeIn (Snd >> MEmptyP) Snd Fst Snd) ("abc", Nothing)
+-- Present () (MaybeIn(Nothing) () | ())
+-- Val ()
+--
 data MaybeIn n p s t deriving Show
 
 instance ( Show a
@@ -369,7 +385,6 @@ type family MaybeInT p y ma where
       'GL.Text "MaybeInT: expected 'Maybe a' "
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
-
 
 -- | simple version of 'MaybeIn' with Id as the Maybe value and the environment set to ()
 --

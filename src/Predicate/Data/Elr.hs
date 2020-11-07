@@ -421,6 +421,10 @@ instance ( Show a
 -- Present ("",2) (ElrIn(ENone) ("",2) | ())
 -- Val ("",2)
 --
+-- >>> pl @(ElrIn (FailT _ "none found") '(Snd,"fromleft") '(888,Snd) Snd () Id)  ENone
+-- Error none found (ElrIn(ENone) n failed)
+-- Fail "none found"
+--
 data ElrIn n p q r s t deriving Show
 
 instance ( Show a
@@ -485,6 +489,10 @@ instance ( Show a
 --
 -- >>> pz @(ElrId '(999,"oops") '(Id,"fromleft") '(888,Id) Id) (ELeft 123)
 -- Val (123,"fromleft")
+--
+-- >>> pl @(ElrId (FailT _ "none found" ) '(Id,"fromleft") '(888,Id) Id) ENone
+-- Error none found (ElrIn(ENone) n failed)
+-- Fail "none found"
 --
 data ElrId n p q r deriving Show
 
