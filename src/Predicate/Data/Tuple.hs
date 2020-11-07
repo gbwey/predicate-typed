@@ -452,16 +452,13 @@ instance ( KnownNat n
         Left e -> e
         Right (xsLen,xs) ->
           case getTupleC @n xs of
-            Left es -> mkNode opts (Fail (msg0 <> " not enough elements(" <> show xsLen <> ")")) (showVerbose opts " | " es) []
-            Right r -> mkNode opts (Val r) msg0 []
+            Nothing -> mkNode opts (Fail (msg0 <> " not enough elements(" <> show xsLen <> ")")) (showVerbose opts " | " xs) []
+            Just r -> mkNode opts (Val r) msg0 []
 
 -- | create a @n@ tuple from a list and return as an Either
 --
 -- >>> pz @(Tuple' 4) "abcdefg"
 -- Val (Right ('a','b','c','d'))
---
--- >>> pz @(Tuple' 4) "abc"
--- Val (Left "abc")
 --
 -- >>> pz @(Tuple' 4) []
 -- Val (Left [])
@@ -493,8 +490,8 @@ instance ( KnownNat n
       Right (xsLen,xs) ->
         let lr = getTupleC @n xs
         in case lr of
-             Left e -> mkNode opts (Val (Left e)) (msg0 <> " not enough elements(" <> show xsLen <> ")") []
-             Right ret -> mkNode opts (Val (Right ret)) msg0 []
+             Nothing -> mkNode opts (Val (Left xs)) (msg0 <> " not enough elements(" <> show xsLen <> ")") []
+             Just ret -> mkNode opts (Val (Right ret)) msg0 []
 
 -- | run @p@ with inductive tuples
 --

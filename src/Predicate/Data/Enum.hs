@@ -113,7 +113,7 @@ _enumDefault opts msg0 hhqq = do
    pp <- eval (Proxy @p) opts (Proxy @a)
    pure $ case getValueLR NoInline opts msg1 pp [hhqq] of
      Left e -> e
-     Right _ -> mkNodeCopy opts pp msg1 [hhqq, hh pp]
+     Right _ -> mkNodeCopy opts pp msg1 [hhqq]
 
 -- | bounded 'succ' function
 --
@@ -226,6 +226,9 @@ instance ( Show x
 --
 -- >>> pz @(SuccN 2 'LT) ()
 -- Val GT
+--
+-- >>> pz @(SuccN (Negate 3) (C "x")) ()
+-- Val 'u'
 --
 data SuccN n p deriving Show
 
@@ -414,7 +417,7 @@ instance ( P def (Proxy (PP t a))
              dd <- eval (Proxy @def) opts (Proxy @(PP t a))
              pure $ case getValueLR NoInline opts msg1 dd [hh pp] of
                Left e -> e
-               Right _ -> mkNodeCopy opts dd msg1 [hh pp, hh dd]
+               Right _ -> mkNodeCopy opts dd msg1 [hh pp]
           Just n -> pure $ mkNode opts (Val n) (show3 opts msg0 n a) [hh pp]
 
 -- | bounded 'toEnum' function

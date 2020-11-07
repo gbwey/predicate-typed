@@ -25,8 +25,6 @@ module Predicate.Data.List (
   , type (+:)
   , type (++)
   , Singleton
-  , EmptyList
-  , EmptyList'
 
  -- ** destructors
   , Uncons
@@ -110,7 +108,6 @@ import Control.Lens
 import Data.List (foldl', partition, intercalate, inits, tails, unfoldr, sortOn)
 import Data.Proxy (Proxy(Proxy))
 import Control.Monad (zipWithM)
-import Data.Kind (Type)
 import Data.Foldable (toList)
 import Control.Arrow (Arrow((***), (&&&)))
 import qualified Data.Sequence as Seq
@@ -1211,7 +1208,7 @@ instance ( PP p a ~ [b]
             in if n <= 0 then mkNode opts (Fail (msg0 <> " n<=0")) "" hhs1
                else if i < 1 then mkNode opts (Fail (msg0 <> " i<1")) "" hhs1
                else let ret = unfoldr (\s -> if null s then Nothing else Just (take n s,drop i s)) p
-                in mkNode opts (Val ret) (show3' opts msg1 ret "n,i=" (n,i) <> showVerbose opts " | " p) hhs1
+                    in mkNode opts (Val ret) (show3' opts msg1 ret "n,i=" (n,i) <> showVerbose opts " | " p) hhs1
 
 -- empty lists at the type level wont work here
 
@@ -1490,7 +1487,7 @@ instance ( P p (a,a)
         ret <- ff as
         pure $ case getValueLR NoInline opts msg0 ret [hh qq] of
           Left _e -> ret -- dont rewrap else will double up messages: already handled
-          Right xs -> mkNodeCopy opts ret (msg0 <> " " <> showL opts xs) [hh qq, hh ret]
+          Right xs -> mkNodeCopy opts ret (msg0 <> " " <> showL opts xs) [hh qq]
 
 -- | similar to 'Data.List.sortOn'
 --
@@ -1624,26 +1621,6 @@ instance P p x => P (Singleton p) x where
     pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p -> mkNode opts (Val [p]) msg0 [hh pp]
-
--- | creates an empty list for the given pointer to a type @t@
-data EmptyList' t deriving Show
-
-instance P (EmptyList' t) x where
-  type PP (EmptyList' t) x = [PP t x]
-  eval _ opts _ =
-    pure $ mkNode opts (Val []) "EmptyList" []
-
--- | creates an empty list for the given type
---
--- >>> pz @(Id :+ EmptyList _) 99
--- Val [99]
---
-data EmptyList (t :: Type) deriving Show
-type EmptyListT (t :: Type) = EmptyList' (Hole t)
-
-instance P (EmptyList t) x where
-  type PP (EmptyList t) x = PP (EmptyListT t) x
-  eval _ = eval (Proxy @(EmptyListT t))
 
 -- | like 'zipWith'
 --

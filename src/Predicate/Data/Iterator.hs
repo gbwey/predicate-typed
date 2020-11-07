@@ -113,7 +113,7 @@ instance ( PP p (b,a) ~ b
                    let vals = map (view _1) abcs
                        itts = map (view _2 &&& view _3) abcs
                    in case lrx of
-                        Left e -> mkNodeCopy opts e msg0 (hh qq : hh rr : map (hh . prefixNumberToTT) itts ++ [hh e])
+                        Left e -> mkNodeCopy opts e msg0 (hh qq : hh rr : map (hh . prefixNumberToTT) itts)
                         Right () -> mkNode opts (Val vals) (show3' opts msg0 vals "b=" q <> showVerbose opts " | as=" r) (hh qq : hh rr : map (hh . prefixNumberToTT) itts)
 
 -- | iterates n times keeping all the results
@@ -345,13 +345,13 @@ instance ( PP q a ~ s
                let vals = map (view _1) abcs
                    itts = map (view _2 &&& view _3) abcs
                in case lr of
-                   Left e -> mkNodeCopy opts e msg1 (hh qq : map (hh . prefixNumberToTT) itts ++ [hh e])
+                   Left e -> mkNodeCopy opts e msg1 (hh qq : map (hh . prefixNumberToTT) itts)
                    Right () ->
                      let ret = fst <$> catMaybes vals
                      in mkNode opts (Val ret) (show3' opts msg1 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
 
 type family UnfoldrT mbs where
-  UnfoldrT (Maybe (b, _s)) = b
+  UnfoldrT (Maybe (b, _)) = b
 
 -- | run @p@ @n@ times with state @s@
 data UnfoldN n p s deriving Show

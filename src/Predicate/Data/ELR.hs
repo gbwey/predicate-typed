@@ -60,10 +60,11 @@ import Predicate.ELR
 import Data.Kind (Type)
 import Control.Lens
 import Data.Proxy (Proxy(..))
-import Data.These
+import Data.These (These)
 -- $setup
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
+-- >>> :m + Data.These
 
 -- | 'ENone' constructor
 --
@@ -198,12 +199,12 @@ data IsELR (th :: ELR x y) deriving Show
 instance ( x ~ ELR a b
          , Show a
          , Show b
-         , GetELR th
+         , GetElr th
          ) => P (IsELR (th :: ELR x1 x2)) x where
   type PP (IsELR th) x = Bool
   eval _ opts x =
     let msg0 = "Is"
-        (t,f) = getELR @_ @_ @th
+        (t,f) = getElr @_ @_ @th
         b = f x
     in pure $ mkNodeB opts b (msg0 <> t <> showVerbose opts " | " x) []
 
@@ -298,9 +299,7 @@ instance P ENone' (ELR x y) where
     let msg0 = "ENone'"
     in pure $ case lr of
          ENone -> mkNode opts (Val ()) msg0 []
-         EBoth _ _ -> mkNode opts (Fail (msg0 <> " found EBoth")) "" []
-         ERight _ -> mkNode opts (Fail (msg0 <> " found ERight")) "" []
-         ELeft _ -> mkNode opts (Fail (msg0 <> " found ELeft")) "" []
+         _ -> mkNode opts (Fail (msg0 <> " found " <> showElr lr)) "" []
 
 -- | tries to extract a value from the 'ELeft' constructor
 --
@@ -317,10 +316,8 @@ instance Show a => P ELeft' (ELR a x) where
   eval _ opts lr =
     let msg0 = "ELeft'"
     in pure $ case lr of
-         ENone -> mkNode opts (Fail (msg0 <> " found ENone")) "" []
-         EBoth _ _ -> mkNode opts (Fail (msg0 <> " found EBoth")) "" []
-         ERight _ -> mkNode opts (Fail (msg0 <> " found ERight")) "" []
          ELeft a -> mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
+         _ -> mkNode opts (Fail (msg0 <> " found " <> showElr lr)) "" []
 
 -- | tries to extract a value from the 'ERight' constructor
 --
@@ -337,10 +334,8 @@ instance Show a => P ERight' (ELR x a) where
   eval _ opts lr =
     let msg0 = "ERight'"
     in pure $ case lr of
-         ENone -> mkNode opts (Fail (msg0 <> " found ENone")) "" []
-         EBoth _ _ -> mkNode opts (Fail (msg0 <> " found EBoth")) "" []
-         ELeft _ -> mkNode opts (Fail (msg0 <> " found ELeft")) "" []
          ERight a -> mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
+         _ -> mkNode opts (Fail (msg0 <> " found " <> showElr lr)) "" []
 
 -- | tries to extract the values from the 'EBoth' constructor
 --
@@ -362,10 +357,8 @@ instance ( Show a
   eval _ opts lr =
     let msg0 = "EBoth'"
     in pure $ case lr of
-         ENone -> mkNode opts (Fail (msg0 <> " found ENone")) "" []
-         ELeft _ -> mkNode opts (Fail (msg0 <> " found ELeft")) "" []
-         ERight _ -> mkNode opts (Fail (msg0 <> " found ERight")) "" []
          EBoth a b -> mkNode opts (Val (a,b)) (msg0 <> " " <> showL opts (a,b)) []
+         _ -> mkNode opts (Fail (msg0 <> " found " <> showElr lr)) "" []
 
 -- | similar to 'Predicate.Data.These.PartitionThese' for 'ELR'. returns a 4-tuple with the results so use 'Fst' 'Snd' 'Thd' 'L4' to extract
 --
@@ -386,7 +379,7 @@ instance ( Show a
   type PP PartitionELR [ELR a b] = ([()], [a], [b], [(a, b)])
   eval _ opts as =
     let msg0 = "PartitionELR"
-        b = partitionELR as
+        b = partitionElr as
     in pure $ mkNode opts (Val b) (show3 opts msg0 b as) []
 
 -- | destructs an ELR value
@@ -413,19 +406,19 @@ instance ( Show a
 -- Val 6
 --
 -- >>> pl @(ELRIn "none" "left" "right" "both" () Id) (ELeft (SG.Sum 12))
--- Present "left" (ELRIn "left" | ELeft Sum {getSum = 12})
+-- Present "left" (ELRIn(ELeft) "left" | Sum {getSum = 12})
 -- Val "left"
 --
 -- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) (EBoth "Ab" 13)
--- Present ("Ab",13) (ELRIn ("Ab",13) | EBoth "Ab" 13)
+-- Present ("Ab",13) (ELRIn(EBoth) ("Ab",13) | ("Ab",13))
 -- Val ("Ab",13)
 --
 -- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) (ELeft "Ab")
--- Present ("Ab",999) (ELRIn ("Ab",999) | ELeft "Ab")
+-- Present ("Ab",999) (ELRIn(ELeft) ("Ab",999) | "Ab")
 -- Val ("Ab",999)
 --
 -- >>> pl @(ELRIn '("",2) '(Snd,999) '("no value",Snd) Snd () Id) ENone
--- Present ("",2) (ELRIn ("",2) | ENone ())
+-- Present ("",2) (ELRIn(ENone) ("",2) | ())
 -- Val ("",2)
 --
 data ELRIn n p q r s t deriving Show
@@ -455,33 +448,29 @@ instance ( Show a
          let hhs = [hh ss, hh tt]
          case t of
             ENone -> do
-              let msg1 = "ENone "
-                  msg2 = msg0 <> msg1
+              let msg1 = msg0 <> "(ENone)"
               nn <- eval (Proxy @n) opts s
-              pure $ case getValueLR NoInline opts (msg2 <> "n failed") nn hhs of
+              pure $ case getValueLR NoInline opts (msg1 <> " n failed") nn hhs of
                    Left e -> e
-                   Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 ()) (hhs ++ [hh nn])
+                   Right c -> mkNodeCopy opts nn (show3 opts msg1 c ()) hhs
             ELeft a -> do
-              let msg1 = "ELeft "
-                  msg2 = msg0 <> msg1
+              let msg1 = msg0 <> "(ELeft)"
               pp <- eval (Proxy @p) opts (s,a)
-              pure $ case getValueLR NoInline opts (msg2 <> "p failed") pp hhs of
+              pure $ case getValueLR NoInline opts (msg1 <> " p failed") pp hhs of
                    Left e -> e
-                   Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 a) (hhs ++ [hh pp])
+                   Right c -> mkNodeCopy opts pp (show3 opts msg1 c a) hhs
             ERight b -> do
-              let msg1 = "ERight "
-                  msg2 = msg0 <> msg1
+              let msg1 = msg0 <> "(ERight)"
               qq <- eval (Proxy @q) opts (s,b)
-              pure $ case getValueLR NoInline opts (msg2 <> "q failed") qq hhs of
+              pure $ case getValueLR NoInline opts (msg1 <> " q failed") qq hhs of
                    Left e -> e
-                   Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 b) (hhs ++ [hh qq])
+                   Right c -> mkNodeCopy opts qq (show3 opts msg1 c b) hhs
             EBoth a b -> do
-              let msg1 = "EBoth "
-                  msg2 = msg0 <> msg1
+              let msg1 = msg0 <> "(EBoth)"
               rr <- eval (Proxy @r) opts (s,(a,b))
-              pure $ case getValueLR NoInline opts (msg2 <> "r failed") rr hhs of
+              pure $ case getValueLR NoInline opts (msg1 <> " r failed") rr hhs of
                    Left e -> e
-                   Right c -> mkNode opts (Val c) (show3' opts msg0 c "" (EBoth a b)) (hhs ++ [hh rr])
+                   Right c -> mkNodeCopy opts rr (show3 opts msg1 c (a,b)) hhs
 
 -- | simple version of 'ELRIn' with Id as the ELR value and the environment set to ()
 --
@@ -551,19 +540,19 @@ instance P (ELRPairT s t) x => P (ELRPair s t) x where
 -- Val (Left 100)
 --
 -- >>> pl @(ELRInSimple "none" "left" "right" "both") (ELeft (SG.Sum 12))
--- Present "left" (ELRIn "left" | ELeft Sum {getSum = 12})
+-- Present "left" (ELRIn(ELeft) "left" | Sum {getSum = 12})
 -- Val "left"
 --
 -- >>> pl @(ELRInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (EBoth "Ab" 13)
--- Present ("Ab",13) (ELRIn ("Ab",13) | EBoth "Ab" 13)
+-- Present ("Ab",13) (ELRIn(EBoth) ("Ab",13) | ("Ab",13))
 -- Val ("Ab",13)
 --
 -- >>> pl @(ELRInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ELeft "Ab")
--- Present ("Ab",999) (ELRIn ("Ab",999) | ELeft "Ab")
+-- Present ("Ab",999) (ELRIn(ELeft) ("Ab",999) | "Ab")
 -- Val ("Ab",999)
 --
 -- >>> pl @(ELRInSimple (FailT _ "err") (Id &&& 999) ("no value" &&& Id) Id) (ERight 13)
--- Present ("no value",13) (ELRIn ("no value",13) | ERight 13)
+-- Present ("no value",13) (ELRIn(ERight) ("no value",13) | 13)
 -- Val ("no value",13)
 --
 data ELRInSimple n p q r deriving Show

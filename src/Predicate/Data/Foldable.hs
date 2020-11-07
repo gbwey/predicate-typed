@@ -334,7 +334,6 @@ instance ( PP p x ~ t a
                   d = take n (cycle' ps)
               in mkNode opts (Val d) (showVerbose opts msg1 x) hhs
 
-
 -- | similar to 'toList'
 --
 -- >>> pz @ToList "aBc"

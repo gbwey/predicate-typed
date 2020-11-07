@@ -41,7 +41,10 @@ module Predicate.Data.Lifted (
   , type (<|>)
   , EmptyT
   , EmptyT'
+  , EmptyList
+  , EmptyList'
   , EmptyBool
+  , EmptyBool'
 
  -- ** bifunctor
   , BiMap
@@ -306,6 +309,30 @@ instance Alternative t => P (EmptyT' t p) x where
         b = empty @t
     in pure $ mkNode opts (Val b) msg0 []
 
+-- | creates an empty list for the given pointer to a type @t@
+--
+-- >>> pz @(EmptyList' 123 <> '[Id]) 99
+-- Val [99]
+--
+data EmptyList' (t :: k) deriving Show
+type EmptyListT' (t :: k) = EmptyT' [] t
+
+instance P (EmptyList' t) x where
+  type PP (EmptyList' t) x = PP (EmptyListT' t) x
+  eval _ = eval (Proxy @(EmptyListT' t))
+
+-- | creates an empty list for the given type
+--
+-- >>> pz @(Id :+ EmptyList _) 99
+-- Val [99]
+--
+data EmptyList (t :: Type) deriving Show
+type EmptyListT (t :: Type) = EmptyT [] t
+
+instance P (EmptyList t) x where
+  type PP (EmptyList t) x = PP (EmptyListT t) x
+  eval _ = eval (Proxy @(EmptyListT t))
+
 -- | Convenient method to convert a value @p@ to an Alternative based on a predicate @b@
 --
 --   if @b@ is True then pure @p@ else empty
@@ -335,6 +362,47 @@ instance ( Show (PP p a)
         pure $ case getValueLR NoInline opts (msg0 <> " p failed") pp [hh bb] of
           Left e -> e
           Right p -> mkNode opts (Val (pure p)) (msg0 <> "(False) Just " <> showL opts p) [hh bb, hh pp]
+      Right False -> pure $ mkNode opts (Val empty) (msg0 <> "(True)") [hh bb]
+
+
+-- | Convenient method to convert a value @p@ to an Alternative based on a predicate @b@
+--   the value of p drives the choice of Alternative to use for the empty
+--   similar to 'EmptyBool' but no need to provide @t@ as it is inferred from the resulting type of @p@
+--
+--   if @b@ is True then run @p@ else empty
+--
+-- >>> pz @(EmptyBool' (Id > 4) (MkJust (Id * 3))) 24
+-- Val (Just 72)
+--
+-- >>> pz @(EmptyBool' (Id > 4) (MkJust (Id * 3))) 2
+-- Val Nothing
+--
+-- >>> pz @(EmptyBool' (Len > 0) Head) ["Abcd","def","g"::String]
+-- Val "Abcd"
+--
+-- >>> pz @(EmptyBool' (Len > 0) Head) ([] :: [String])
+-- Val ""
+--
+data EmptyBool' b p deriving Show
+
+instance ( Show (PP p a)
+         , P b a
+         , P p a
+         , PP p a ~ t x
+         , PP b a ~ Bool
+         , Alternative t
+         ) => P (EmptyBool' b p) a where
+  type PP (EmptyBool' b p) a = PP p a
+  eval _ opts z = do
+    let msg0 = "EmptyBool'"
+    bb <- evalBool (Proxy @b) opts z
+    case getValueLR NoInline opts (msg0 <> " b failed") bb [] of
+      Left e -> pure e
+      Right True -> do
+        pp <- eval (Proxy @p) opts z
+        pure $ case getValueLR NoInline opts (msg0 <> " p failed") pp [hh bb] of
+          Left e -> e
+          Right p -> mkNodeCopy opts pp (msg0 <> "(False) Just " <> showL opts p) [hh bb]
       Right False -> pure $ mkNode opts (Val empty) (msg0 <> "(True)") [hh bb]
 
 
@@ -673,7 +741,7 @@ instance ( P p x
          pure $ case getValueLR NoInline opts (msg0 <> " default condition failed") qq [hh pp] of
             Left e1 -> e1
             Right _ -> mkNodeCopy opts qq (msg0 <> " caught exception[" <> emsg <> "]") [hh pp, hh qq]
-      Right _ -> pure $ mkNodeCopy opts pp (msg0 <> " did not fire") [hh pp]
+      Right _ -> pure $ mkNodeCopy opts pp (msg0 <> " did not fire") []
 
 -- | compose simple functions
 --

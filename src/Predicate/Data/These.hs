@@ -455,7 +455,7 @@ instance ( PP q x ~ These a b
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (Val p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
+              Right _ -> mkNodeCopy opts pp (msg0 <> " " <> showThese q) [hh qq]
 
 
 -- | extract the That value from an 'These' otherwise use the default value
@@ -500,7 +500,7 @@ instance ( PP q x ~ These a b
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (Val p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
+              Right _ -> mkNodeCopy opts pp (msg0 <> " " <> showThese q) [hh qq]
 
 -- | extract the These value from an 'These' otherwise use the default value
 --
@@ -556,7 +556,7 @@ instance ( PP q x ~ These a b
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (Val p) (msg0 <> " " <> showThese q) [hh qq, hh pp]
+              Right _ -> mkNodeCopy opts pp (msg0 <> " " <> showThese q) [hh qq]
 
 
 -- | extract the This value from a 'These' otherwise fail with a message

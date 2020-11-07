@@ -32,8 +32,9 @@ module Predicate.Data.Maybe (
   , JustFail
   , MapMaybe
   , CatMaybes
-  , MaybeIn
   , MaybeBool
+  , MaybeIn
+  , MaybeId
 
  ) where
 import Predicate.Core
@@ -45,6 +46,8 @@ import Predicate.Data.Lifted (EmptyBool)
 import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
 import Data.Maybe (isJust, isNothing)
+import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
+import qualified GHC.TypeLits as GL
 
 -- $setup
 -- >>> :set -XDataKinds
@@ -111,158 +114,6 @@ instance ( PP p x ~ a
         let d = Just p
         in mkNode opts (Val d) (msg0 <> " Just " <> showL opts p) [hh pp]
 
--- | similar to 'Data.Maybe.maybe'
---
--- provides a Proxy to the result of @q@ but does not provide the surrounding context
---
--- >>> pz @(MaybeIn "foundnothing" (ShowP Pred)) (Just 20)
--- Val "19"
---
--- >>> pz @(MaybeIn "found nothing" (ShowP Pred)) Nothing
--- Val "found nothing"
---
--- >>> pl @(MaybeIn 'True Id) (Nothing @Bool) -- need @() else breaks
--- True (MaybeIn(Nothing) True | Proxy)
--- Val True
---
--- >>> pl @(MaybeIn (FailT _ "failed4") Id) (Just 10)
--- Present 10 (MaybeIn(Just) 10 | 10)
--- Val 10
---
--- >>> pl @(MaybeIn 'False Id) (Nothing @Bool) -- breaks otherwise
--- False (MaybeIn(Nothing) False | Proxy)
--- Val False
---
--- >>> pl @(MaybeIn MEmptyP Id) (Just [1,2,3])
--- Present [1,2,3] (MaybeIn(Just) [1,2,3] | [1,2,3])
--- Val [1,2,3]
---
--- >>> pl @(MaybeIn MEmptyP Id) (Nothing @[Int])
--- Present [] (MaybeIn(Nothing) [] | Proxy)
--- Val []
---
--- >>> pl @(MaybeIn (FailP "err") Succ) (Just 116)
--- Present 117 (MaybeIn(Just) 117 | 116)
--- Val 117
---
--- >>> pl @(MaybeIn 99 Succ) (Nothing @Int)
--- Present 99 (MaybeIn(Nothing) 99 | Proxy)
--- Val 99
---
--- >>> pl @(MaybeIn (FailP "someval") Succ) (Nothing @())
--- Error someval (MaybeIn(Nothing))
--- Fail "someval"
---
--- >>> pl @(MaybeIn 'True 'False) (Nothing @())
--- True (MaybeIn(Nothing) True | Proxy)
--- Val True
---
--- >>> pl @(MaybeIn 'True 'False) (Just "aa")
--- False (MaybeIn(Just) False | "aa")
--- Val False
---
--- >>> pl @(MaybeIn MEmptyP (Fst ==! Snd)) (Just ('x','z'))
--- Present LT (MaybeIn(Just) LT | ('x','z'))
--- Val LT
---
--- >>> pl @(MaybeIn MEmptyP (Fst ==! Snd)) (Nothing @(Char,Char))
--- Present EQ (MaybeIn(Nothing) EQ | Proxy)
--- Val EQ
---
--- >>> pl @(MaybeIn (FailP "failed20") 'False) (Nothing @Int)
--- Error failed20 (MaybeIn(Nothing))
--- Fail "failed20"
---
--- >>> pl @(MaybeIn ('False >> FailS "failed21") 'False) (Nothing @Double)
--- Error failed21 (False | MaybeIn(Nothing))
--- Fail "failed21"
---
--- >>> pl @(MaybeIn (FailP "err") Id) (Nothing @Int)
--- Error err (MaybeIn(Nothing))
--- Fail "err"
---
--- >>> pl @(MaybeIn (FailP "err") Id) (Nothing @())
--- Error err (MaybeIn(Nothing))
--- Fail "err"
---
--- >>> pl @(MaybeIn MEmptyP Id) (Just (M.fromList [(1,'a')]))
--- Present fromList [(1,'a')] (MaybeIn(Just) fromList [(1,'a')] | fromList [(1,'a')])
--- Val (fromList [(1,'a')])
---
--- >>> pl @(MaybeIn MEmptyP Id) (Nothing @(M.Map () ()))
--- Present fromList [] (MaybeIn(Nothing) fromList [] | Proxy)
--- Val (fromList [])
---
--- >>> pl @(MaybeIn MEmptyP Ones) (Just @String "abc")
--- Present ["a","b","c"] (MaybeIn(Just) ["a","b","c"] | "abc")
--- Val ["a","b","c"]
---
--- >>> pl @(MaybeIn 99 Id) (Just 12)
--- Present 12 (MaybeIn(Just) 12 | 12)
--- Val 12
---
--- >>> pl @(MaybeIn 99 Id) Nothing
--- Present 99 (MaybeIn(Nothing) 99 | Proxy)
--- Val 99
---
--- >>> pl @(MaybeIn (99 -% 1) Id) Nothing
--- Present (-99) % 1 (MaybeIn(Nothing) (-99) % 1 | Proxy)
--- Val ((-99) % 1)
---
--- >>> pl @(MaybeIn 123 Id) (Nothing @Int)
--- Present 123 (MaybeIn(Nothing) 123 | Proxy)
--- Val 123
---
--- >>> pl @(MaybeIn 123 Id) (Just 9)
--- Present 9 (MaybeIn(Just) 9 | 9)
--- Val 9
---
--- >>> pl @(Uncons >> MaybeIn '(1,MEmptyT _) Id) []
--- Present (1,[]) ((>>) (1,[]) | {MaybeIn(Nothing) (1,[]) | Proxy})
--- Val (1,[])
---
--- >>> pl @(MaybeIn MEmptyP (ShowP Id >> Ones)) (Just 123)
--- Present ["1","2","3"] (MaybeIn(Just) ["1","2","3"] | 123)
--- Val ["1","2","3"]
---
--- >>> pl @(MaybeIn MEmptyP (ShowP Id >> Ones)) (Nothing @String)
--- Present [] (MaybeIn(Nothing) [] | Proxy)
--- Val []
---
--- >>> pl @(MaybeIn MEmptyP Ones) (Just @String "ab")
--- Present ["a","b"] (MaybeIn(Just) ["a","b"] | "ab")
--- Val ["a","b"]
---
--- >>> pl @(MaybeIn MEmptyP Ones) (Nothing @String)
--- Present [] (MaybeIn(Nothing) [] | Proxy)
--- Val []
---
-data MaybeIn p q deriving Show
-
--- tricky: the nothing case is the proxy of PP q a: ie proxy of the final result
-instance ( P q a
-         , Show a
-         , Show (PP q a)
-         , PP p (Proxy (PP q a)) ~ PP q a
-         , P p (Proxy (PP q a))
-         ) => P (MaybeIn p q) (Maybe a) where
-  type PP (MaybeIn p q) (Maybe a) = PP q a
-  eval _ opts ma = do
-    let msg0 = "MaybeIn"
-    case ma of
-      Nothing -> do
-        let msg1 = msg0 <> "(Nothing)"
-        pp <- eval (Proxy @p) opts (Proxy @(PP q a))
-        pure $ case getValueLR NoInline opts msg1 pp [] of
-          Left e -> e
-          Right b -> mkNodeCopy opts pp (msg1 <> " " <> showL opts b <> " | Proxy") [hh pp]
-      Just a -> do
-        let msg1 = msg0 <> "(Just)"
-        qq <- eval (Proxy @q) opts a
-        pure $ case getValueLR NoInline opts msg1 qq [] of
-          Left e -> e
-          Right b -> mkNodeCopy opts qq (show3 opts msg1 b a) [hh qq]
-
 -- | similar to 'Data.Maybe.isJust'
 --
 -- >>> pz @IsJust Nothing
@@ -312,7 +163,7 @@ instance x ~ Maybe a
 -- Val [4,5]
 --
 data MapMaybe p q deriving Show
-type MapMaybeT p q = ConcatMap (p >> MaybeIn MEmptyP '[Id]) q
+type MapMaybeT p q = ConcatMap (p >> MaybeId MEmptyP '[Id]) q
 
 instance P (MapMaybeT p q) x => P (MapMaybe p q) x where
   type PP (MapMaybe p q) x = PP (MapMaybeT p q) x
@@ -352,6 +203,10 @@ instance P (MaybeBoolT b p) x => P (MaybeBool b p) x where
   eval _ = eval (Proxy @(MaybeBoolT b p))
 
 -- | extract the value from a 'Maybe' otherwise use the default value: similar to 'Data.Maybe.fromMaybe'
+--
+-- >>> pl @(JustDef 'True Id) Nothing
+-- True (JustDef Nothing)
+-- Val True
 --
 -- >>> pz @(JustDef (1 % 4) Id) (Just 20.4)
 -- Val (102 % 5)
@@ -417,7 +272,7 @@ instance ( PP p x ~ a
             pp <- eval (Proxy @p) opts x
             pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
-              Right b -> mkNode opts (Val b) (msg0 <> " Nothing") [hh qq, hh pp]
+              Right _ -> mkNodeCopy opts pp (msg0 <> " Nothing") [hh qq]
 
 
 -- | extract the value from a 'Maybe' or fail with the given message
@@ -456,3 +311,127 @@ instance ( PP p x ~ String
             pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
               Right p -> mkNode opts (Fail p) (msg0 <> " Nothing") [hh qq, hh pp]
+
+-- | destructs an Maybe value
+--   @n@ @Nothing@ receives @(PP s x,Proxy result)@ (you can use the proxy with MEmptyP)
+--   @p@ @Just a@ receives @(PP s x,a)@
+--   @s@ points to the environment you want to pass in
+--   @t@ points to the Maybe value
+--
+-- >>> pz @(MaybeIn Fst Snd Fst Snd) ('a', Just 'x')
+-- Val 'x'
+--
+-- >>> pz @(MaybeIn Fst Snd Fst Snd) ('a', Nothing)
+-- Val 'a'
+--
+-- >>> pl @(MaybeIn "none" "just"() Id) (Just (SG.Sum 12))
+-- Present "just" (MaybeIn(Just) "just" | Sum {getSum = 12})
+-- Val "just"
+--
+data MaybeIn n p s t deriving Show
+
+instance ( Show a
+         , Show (PP p (y,a))
+         , P n (y,Proxy z)
+         , P p (y,a)
+         , PP n (y,Proxy z) ~ PP p (y,a)
+         , z ~ PP p (y,a)
+         , P s x
+         , P t x
+         , PP t x ~ Maybe a
+         , PP s x ~ y
+         )  => P (MaybeIn n p s t) x where
+  type PP (MaybeIn n p s t) x = MaybeInT p (PP s x) (PP t x)
+  eval _ opts x = do
+    let msg0 = "MaybeIn"
+    lr <- runPQ NoInline msg0 (Proxy @s) (Proxy @t) opts x []
+    case lr of
+      Left e -> pure e
+      Right (s,t,ss,tt) -> do
+         let hhs = [hh ss, hh tt]
+         case t of
+            Nothing -> do
+              let msg1 = msg0 <> "(Nothing)"
+              nn <- eval (Proxy @n) opts (s,Proxy @z)
+              pure $ case getValueLR NoInline opts (msg1 <> " n failed") nn hhs of
+                   Left e -> e
+                   Right c -> mkNodeCopy opts nn (show3 opts msg1 c ()) hhs
+            Just a -> do
+              let msg1 = msg0 <> "(Just)"
+              pp <- eval (Proxy @p) opts (s,a)
+              pure $ case getValueLR NoInline opts (msg1 <> " p failed") pp hhs of
+                   Left e -> e
+                   Right c -> mkNodeCopy opts pp (show3 opts msg1 c a) hhs
+
+type family MaybeInT p y ma where
+  MaybeInT p y (Maybe a) = PP p (y,a)
+  MaybeInT _ _ o = GL.TypeError (
+      'GL.Text "MaybeInT: expected 'Maybe a' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
+
+
+-- | simple version of 'MaybeIn' with Id as the Maybe value and the environment set to ()
+--
+-- >>> pz @(MaybeId '("x","oops") '(Id,"fromjust")) (Just "ok")
+-- Val ("ok","fromjust")
+--
+-- >>> pz @(MaybeId '("x","oops") '(Id,"fromjust")) Nothing
+-- Val ("x","oops")
+--
+-- >>> pz @(MaybeId "found nothing" (ShowP Pred)) (Just 20)
+-- Val "19"
+--
+-- >>> pz @(MaybeId "found nothing" (ShowP Pred)) Nothing
+-- Val "found nothing"
+--
+-- >>> pl @(MaybeId 'True Id) Nothing
+-- True (MaybeIn(Nothing) True | ())
+-- Val True
+--
+-- >>> pl @(MaybeId 'True IdBool) (Just False)
+-- False (MaybeIn(Just) False | False)
+-- Val False
+--
+-- >>> pl @(MaybeId (FailT _ "failed4") Id) (Just 10)
+-- Present 10 (MaybeIn(Just) 10 | 10)
+-- Val 10
+--
+-- >>> pl @(MaybeId 'False Id) Nothing
+-- False (MaybeIn(Nothing) False | ())
+-- Val False
+--
+-- >>> pl @(MaybeId (FailT _ "err") Id) Nothing
+-- Error err (Proxy | MaybeIn(Nothing) n failed)
+-- Fail "err"
+--
+-- >>> pz @(MaybeId 99 Id) (Just 12)
+-- Val 12
+--
+-- >>> pz @(MaybeId 99 Id) Nothing
+-- Val 99
+--
+-- >>> pl @(MaybeId MEmptyP Ones) (Just "ab")
+-- Present ["a","b"] (MaybeIn(Just) ["a","b"] | "ab")
+-- Val ["a","b"]
+--
+-- >>> pl @(MaybeId MEmptyP Ones) Nothing
+-- Present [] (MaybeIn(Nothing) [] | ())
+-- Val []
+--
+-- >>> pl @(MaybeId MEmptyP (Fst ==! Snd)) (Just ('x','z'))
+-- Present LT (MaybeIn(Just) LT | ('x','z'))
+-- Val LT
+--
+-- >>> pl @(MaybeId MEmptyP (Fst ==! Snd)) (Nothing @(Char,Char))
+-- Present EQ (MaybeIn(Nothing) EQ | ())
+-- Val EQ
+--
+data MaybeId n p deriving Show
+
+type MaybeIdT n p = MaybeIn (Snd >> n) (Snd >> p) () Id
+
+instance P (MaybeIdT n p) x => P (MaybeId n p) x where
+  type PP (MaybeId n p) x = PP (MaybeIdT n p) x
+  eval _ = eval (Proxy @(MaybeIdT n p))
+

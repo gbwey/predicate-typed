@@ -50,23 +50,24 @@ module Predicate.ELR (
 
  -- ** miscellaneous
   , getBifoldInfo
-  , showELR
-  , GetELR(..)
-  , partitionELR
-  , fromELR
-
+  , showElr
+  , GetElr(..)
+  , partitionElr
+  , fromElr
+  , mergeElrWith
+  , elr
  ) where
 import Predicate.Misc
 import qualified GHC.TypeLits as GL
 import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
 import Control.Lens
-import Data.Bitraversable
-import Data.Bifoldable
+import Data.Bitraversable (Bitraversable(..))
+import Data.Bifoldable (Bifoldable(bifoldMap))
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 import Control.Monad (ap)
 import qualified Language.Haskell.TH.Lift as TH
-import Data.These
+import Data.These (These(..))
 -- $setup
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
@@ -139,24 +140,24 @@ instance Bitraversable ELR where
       EBoth a b -> EBoth <$> f a <*> g b
 
 -- | display constructor name for 'ELR'
-showELR :: ELR a b -> String
-showELR = \case
+showElr :: ELR a b -> String
+showElr = \case
   ENone -> "ENone"
   ELeft {} -> "ELeft"
   ERight {} -> "ERight"
   EBoth {} -> "EBoth"
 
 -- | get 'ELR' from typelevel [type application order is a b then th if explicit kind for th else is first parameter!
-class GetELR (th :: ELR k k1) where
-  getELR :: (String, ELR w v -> Bool)
-instance GetELR 'ENone where
-  getELR = ("ENone", isENone)
-instance GetELR ('ELeft x) where
-  getELR = ("ELeft", isELeft)
-instance GetELR ('ERight y) where
-  getELR = ("ERight", isERight)
-instance GetELR ('EBoth x y) where
-  getELR = ("EBoth", isEBoth)
+class GetElr (th :: ELR k k1) where
+  getElr :: (String, ELR w v -> Bool)
+instance GetElr 'ENone where
+  getElr = ("ENone", isENone)
+instance GetElr ('ELeft x) where
+  getElr = ("ELeft", isELeft)
+instance GetElr ('ERight y) where
+  getElr = ("ERight", isERight)
+instance GetElr ('EBoth x y) where
+  getElr = ("EBoth", isEBoth)
 
 isENone, isELeft, isERight, isEBoth :: ELR a b -> Bool
 -- | predicate on ENone
@@ -175,6 +176,7 @@ isERight _ = False
 isEBoth EBoth {} = True
 isEBoth _ = False
 
+-- | extract the relevant type for 'ENone'
 type family ENoneT lr where
   ENoneT (ELR _ _) = ()
   ENoneT o = GL.TypeError (
@@ -182,6 +184,7 @@ type family ENoneT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | extract the relevant type for 'ELeft'
 type family ELeftT lr where
   ELeftT (ELR a _) = a
   ELeftT o = GL.TypeError (
@@ -189,6 +192,7 @@ type family ELeftT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | extract the relevant type for 'ERight'
 type family ERightT lr where
   ERightT (ELR _ b) = b
   ERightT o = GL.TypeError (
@@ -196,6 +200,7 @@ type family ERightT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | extract the relevant types for 'EBoth'
 type family EBothT lr where
   EBothT (ELR a b) = (a,b)
   EBothT o = GL.TypeError (
@@ -204,8 +209,8 @@ type family EBothT lr where
       ':<>: 'GL.ShowType o)
 
 -- | partition ELR into 4 lists for each constructor: foldMap (yep ...)
-partitionELR :: [ELR a b] -> ([()], [a], [b], [(a,b)])
-partitionELR = foldMapStrict $
+partitionElr :: [ELR a b] -> ([()], [a], [b], [(a,b)])
+partitionElr = foldMapStrict $
   \case
     ENone -> ([()],[],[],[])
     ELeft a -> ([],[a],[],[])
@@ -213,8 +218,8 @@ partitionELR = foldMapStrict $
     EBoth a b -> ([],[],[],[(a,b)])
 
 -- | convert ELR to a tuple with default values
-fromELR :: a -> b -> ELR a b -> (a,b)
-fromELR a b =
+fromElr :: a -> b -> ELR a b -> (a,b)
+fromElr a b =
   \case
     ENone -> (a,b)
     ELeft v -> (v,b)
@@ -320,3 +325,20 @@ getBifoldInfo bi =
     ERight () -> "(R)"
     EBoth () () -> "(B)"
 
+-- | similar to 'elr' without a separate EBoth combinator
+mergeElrWith :: c -> (a -> c) -> (b -> c) -> (c -> c -> c) -> ELR a b -> c
+mergeElrWith c fa fb fcc =
+  \case
+    ENone -> c
+    ELeft a -> fa a
+    ERight b -> fb b
+    EBoth a b -> fcc (fa a) (fb b)
+
+-- | destruct 'ELR'
+elr :: c -> (a -> c) -> (b -> c) -> (a -> b -> c) -> ELR a b -> c
+elr c fa fb fab =
+  \case
+    ENone -> c
+    ELeft a -> fa a
+    ERight b -> fb b
+    EBoth a b -> fab a b

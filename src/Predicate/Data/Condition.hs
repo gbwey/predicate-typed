@@ -119,7 +119,7 @@ instance ( Show (PP r a)
                 else eval (Proxy @r) opts a
         pure $ case getValueLR Inline opts (msg0 <> " '" <> show b) qqrr [hh pp, hh qqrr] of
           Left e -> e
-          Right ret -> mkNodeCopy opts qqrr (msg0 <> " " <> bool "'False" "'True" b <> " " <> showL opts ret) [hh pp, hh qqrr]
+          Right ret -> mkNodeCopy opts qqrr (msg0 <> " " <> bool "'False" "'True" b <> " " <> showL opts ret) [hh pp]
 
 type family GuardsT (ps :: [k]) where
   GuardsT '[] = '[]
@@ -288,12 +288,12 @@ instance ( P r x
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR NoInline opts msgbase0 qq [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
+              Right q -> mkNode opts (Val q) (show3 opts msgbase0 q a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
-            ee <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
-            pure $ case getValueLR NoInline opts ("Case:otherwise failed" <> nullIf ":" (ee ^. ttString)) ee [hh rr, hh pp] of
+            ww <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
+            pure $ case getValueLR NoInline opts ("Case:otherwise failed" <> nullIf ":" (ww ^. ttString)) ww [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) [hh rr, hh pp, hh ee]
+              Right w -> mkNode opts (Val w) (show3 opts msgbase0 w a) [hh rr, hh pp, hh ww]
 
 instance ( KnownNat n
          , GetLen ps
@@ -325,12 +325,12 @@ instance ( KnownNat n
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR NoInline opts msgbase0 qq [hh pp, hh rr] of
               Left e -> e
-              Right b -> mkNode opts (Val b) (show3 opts msgbase0 b a) (hh rr : hh pp : verboseList opts qq)
+              Right q -> mkNode opts (Val q) (show3 opts msgbase0 q a) (hh rr : hh pp : verboseList opts qq)
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
             pure $ case getValueLR Inline opts "" ww [hh rr, hh pp] of
               Left e -> e
-              Right b -> mkNode opts (Val b) (show3 opts msgbase1 b a) [hh rr, hh pp, hh ww]
+              Right w -> mkNode opts (Val w) (show3 opts msgbase1 w a) [hh rr, hh pp, hh ww]
 
 
 data GuardsImpl (n :: Nat) (os :: [(k,k1)]) deriving Show

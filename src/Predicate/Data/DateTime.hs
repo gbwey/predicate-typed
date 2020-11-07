@@ -91,8 +91,8 @@ instance ( PP p x ~ String
       Left e -> e
       Right (p,q,pp,qq) ->
         let msg1 = msg0 <> " (" <> p <> ")"
-            b = formatTime defaultTimeLocale p q
-        in mkNode opts (Val b) (msg1 <> " " <> litL opts b <> showVerbose opts " | " q) [hh pp, hh qq]
+            d = formatTime defaultTimeLocale p q
+        in mkNode opts (Val d) (msg1 <> " " <> litL opts d <> showVerbose opts " | " q) [hh pp, hh qq]
 
 -- | type level expression representing a formatted time
 --
@@ -135,7 +135,7 @@ instance ( ParseTime (PP t a)
         let msg1 = msg0 <> " (" <> p <> ")"
             hhs = [hh pp, hh qq]
         in case parseTimeM @Maybe @(PP t a) True defaultTimeLocale p q of
-             Just b -> mkNode opts (Val b) (lit3 opts msg1 b "fmt=" p <> showVerbose opts " | " q) hhs
+             Just d -> mkNode opts (Val d) (lit3 opts msg1 d "fmt=" p <> showVerbose opts " | " q) hhs
              Nothing -> mkNode opts (Fail (msg1 <> " failed to parse")) "" hhs
 -- | similar to 'Date.Time.parseTimeM'
 --

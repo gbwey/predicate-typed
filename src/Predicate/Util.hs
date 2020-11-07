@@ -365,7 +365,8 @@ mkNodeCopy :: POpts
        -> String
        -> [Tree PE]
        -> TT a
-mkNodeCopy opts = mkNodeImpl opts . (_ttValP &&& _ttVal)
+mkNodeCopy opts tt msg pes =
+  mkNodeImpl opts (_ttValP tt, _ttVal tt) msg (pes <> [hh tt])
 
 -- | creates a Node for the evaluation tree
 mkNode :: POpts

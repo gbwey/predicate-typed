@@ -322,7 +322,7 @@ instance ( P p a
       Right (fromIntegral -> p,q,pp,qq) ->
         let hhs = [hh pp, hh qq]
             d = Bits.testBit q p
-        in mkNode opts (Val d) (msg0 <> " " <> showL opts p <> " " <> showL opts q <> " = " <> showL opts d) hhs
+        in mkNodeB opts d (msg0 <> " " <> showL opts p <> " " <> showL opts q <> " = " <> showL opts d) hhs
 
 
 -- | count number of bits at @p@: similar to 'Data.Bits.popCount'

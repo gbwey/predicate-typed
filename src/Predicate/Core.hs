@@ -1117,7 +1117,7 @@ instance ( P p a
                     if anyOf (ttForest . folded . root . peValP) (has _FailP) qq
                     then qq & ttForest %~ (hh pp:) -- we still need pp for context
                     else e
-          Right q -> mkNodeCopy opts qq (lit3 opts msg0 q "" (topMessageEgregious (qq ^. ttString))) [hh pp, hh qq]
+          Right q -> mkNodeCopy opts qq (lit3 opts msg0 q "" (topMessageEgregious (qq ^. ttString))) [hh pp]
 
 -- | infixl version of 'Predicate.Core.>>'
 data p >>> q deriving Show
@@ -2282,7 +2282,7 @@ instance ( Show (p a b)
         d = swapC pabx
     in pure $ mkNode opts (Val d) (show3 opts msg0 d pabx) []
 
--- | like 'GHC.Base.$' for expressions taking exactly on argument
+-- | like 'GHC.Base.$' for expressions taking exactly on argument (similar is 'Predicate.Misc.%%')
 -- ie this doesnt work: pz @('(,) $ 4 $ 'True) ()
 --
 -- >>> pl @(L1 $ L2 $ Id) ((1,2),(3,4))
@@ -2295,6 +2295,9 @@ instance ( Show (p a b)
 --
 -- >>> pz @('(,) 4 $ 'True) ()
 -- Val (4,True)
+--
+-- >>> pz @('(,) %% 'True %% 'False) () -- cant do this with $
+-- Val (True,False)
 --
 data (p :: k -> k1) $ (q :: k) deriving Show
 infixr 0 $
@@ -2324,6 +2327,9 @@ instance P (p q) a => P (p $ q) a where
 -- >>> pl @(L3 $ L2 $ Fst) ((1,("X",9,'a')),(3,4))
 -- Present 'a' (Thd 'a' | ("X",9,'a'))
 -- Val 'a'
+--
+-- >>> pz @('True %& 'False %& '(,)) ()
+-- Val (False,True)
 --
 data (q :: k) & (p :: k -> k1) deriving Show
 infixl 1 &
@@ -2405,7 +2411,7 @@ instance ( P p x
 -- >>> pz @(Proxy '(_,_) >> Coerce (Proxy '(Float,Int))) () ^!? acts . _Val . to typeRep
 -- Just ('(,) * * Float Int)
 --
-data Coerce (t :: k) deriving Show -- has to be the same kind: Type to Type or Bool to Bool ...
+data Coerce (t :: Type) deriving Show
 
 instance ( Coercible t a
          , Show a
@@ -2741,7 +2747,7 @@ instance ( Show a
              pure $ case getValueLR NoInline opts (msg0 <> " q failed p=" <> showL opts p) qq [hh pp] of
                 Left e -> e
                 Right q ->
-                  let ret =(p,q)
+                  let ret = (p,q)
                   in  mkNode opts (Val ret) (show3 opts msg0 ret (EBoth a b)) [hh pp, hh qq]
-      _ -> pure $ mkNode opts (Fail (msg0 <> " found " <> showELR th)) "" []
+      _ -> pure $ mkNode opts (Fail (msg0 <> " found " <> showElr th)) "" []
 

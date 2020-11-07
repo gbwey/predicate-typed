@@ -45,7 +45,6 @@ module Predicate.Misc (
   , TheseT
   , FnT
   , ApplyConstT
-  , CheckT
   , JoinT
   , FailWhenT
   , FailUnlessT
@@ -490,13 +489,13 @@ instance ReverseITupleC w ws (x, ys) => ReverseITupleC x (w,ws) ys  where
   type ReverseITupleT x (w,ws) ys = (ReverseITupleT w ws (x,ys))
   reverseITupleC x (w,ws) ys = reverseITupleC w ws (x,ys)
 
--- partially apply the 2nd arg to an ADT -- $ and & work with functions only
--- doesnt apply more than once because we need to eval it
+-- | type level application: see 'Predicate.Core.$' which works for type level functions
 type family (p :: k -> k1) %% (q :: k) :: k1 where
   p %% q = p q
 
 infixl 9 %%
 
+-- | reverse type level application: see 'Predicate.Core.&' which works for type level functions
 type family (p :: k) %& (q :: k -> k1) :: k1 where
   p %& q = q p
 
@@ -579,8 +578,6 @@ type family ExtractTFromTA (ta :: Type) :: (Type -> Type) where
       ':$$: 'GL.Text "t a = "
       ':<>: 'GL.ShowType z)
 
-
--- todo: get ExtractAFromList failure to fire if wrong Type
 -- | type family to extract @a@ from a list of @a@
 type family ExtractAFromList (as :: Type) :: Type where
   ExtractAFromList [a] = a
@@ -589,6 +586,7 @@ type family ExtractAFromList (as :: Type) :: Type where
       ':$$: 'GL.Text "as = "
       ':<>: 'GL.ShowType z)
 
+-- | extract @a@ from a Maybe container
 type family MaybeT mb where
   MaybeT (Maybe a) = a
   MaybeT o = GL.TypeError (
@@ -596,7 +594,7 @@ type family MaybeT mb where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
-
+-- | extract @a@ from a Either container
 type family LeftT lr where
   LeftT (Either a _) = a
   LeftT o = GL.TypeError (
@@ -604,6 +602,7 @@ type family LeftT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | extract @b@ from a Either container
 type family RightT lr where
   RightT (Either _a b) = b
   RightT o = GL.TypeError (
@@ -611,6 +610,7 @@ type family RightT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | extract @a@ from a These container
 type family ThisT lr where
   ThisT (These a _b) = a
   ThisT o = GL.TypeError (
@@ -618,6 +618,7 @@ type family ThisT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | extract @b@ from a These container
 type family ThatT lr where
   ThatT (These _a b) = b
   ThatT o = GL.TypeError (
@@ -625,6 +626,7 @@ type family ThatT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | extract @a@ and @b@ from a These container
 type family TheseT lr where
   TheseT (These a b) = (a,b)
   TheseT o = GL.TypeError (
@@ -632,6 +634,7 @@ type family TheseT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
+-- | extract @b@ from an arrow type
 type family FnT ab :: Type where
   FnT (_a -> b) = b
   FnT ab = GL.TypeError (
@@ -649,18 +652,13 @@ type family JoinT x y where
        ':<>: 'GL.ShowType tb)
 
 type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
---type family ApplyConstT ta b where -- less restrictive so allows ('Just Int) Bool through!
-  ApplyConstT (t _a) b = t b
+  ApplyConstT (t _) b = t b
   ApplyConstT ta b = GL.TypeError (
        'GL.Text "ApplyConstT: (t a) b but found something else"
        ':$$: 'GL.Text "t a = "
        ':<>: 'GL.ShowType ta
        ':$$: 'GL.Text "b = "
        ':<>: 'GL.ShowType b)
-
-type family CheckT (tp :: Type) :: Bool where
-  CheckT () = GL.TypeError ('GL.Text "Printfn: inductive tuple cannot be empty")
-  CheckT _o = 'True
 
 errorInProgram :: HasCallStack => String -> x
 errorInProgram s = error $ "programmer error:" <> s
@@ -894,84 +892,84 @@ instance ExtractL8C (a,b,c,d,e,f,g,h) where
 -- | try to convert a list to a n-tuple
 class TupleC (n :: Nat) a where
   type TupleT n a
-  getTupleC :: [a] -> Either [a] (TupleT n a)
+  getTupleC :: [a] -> Maybe (TupleT n a)
 
 -- | convert a list of at least 2 elements to a 2-tuple
 instance TupleC 2 a where
   type TupleT 2 a = (a,a)
   getTupleC = \case
-                a:b:_ -> Right (a,b)
-                o -> Left o
+                a:b:_ -> Just (a,b)
+                _ -> Nothing
 
 -- | convert a list of at least 3 elements to a 3-tuple
 instance TupleC 3 a where
   type TupleT 3 a = (a,a,a)
   getTupleC = \case
-                a:b:c:_ -> Right (a,b,c)
-                o -> Left o
+                a:b:c:_ -> Just (a,b,c)
+                _ -> Nothing
 
 -- | convert a list of at least 4 elements to a 4-tuple
 instance TupleC 4 a where
   type TupleT 4 a = (a,a,a,a)
   getTupleC = \case
-                a:b:c:d:_ -> Right (a,b,c,d)
-                o -> Left o
+                a:b:c:d:_ -> Just (a,b,c,d)
+                _ -> Nothing
 
 -- | convert a list of at least 5 elements to a 5-tuple
 instance TupleC 5 a where
   type TupleT 5 a = (a,a,a,a,a)
   getTupleC = \case
-                a:b:c:d:e:_ -> Right (a,b,c,d,e)
-                o -> Left o
+                a:b:c:d:e:_ -> Just (a,b,c,d,e)
+                _ -> Nothing
 
 -- | convert a list of at least 6 elements to a 6-tuple
 instance TupleC 6 a where
   type TupleT 6 a = (a,a,a,a,a,a)
   getTupleC = \case
-                a:b:c:d:e:f:_ -> Right (a,b,c,d,e,f)
-                o -> Left o
+                a:b:c:d:e:f:_ -> Just (a,b,c,d,e,f)
+                _ -> Nothing
 
 -- | convert a list of at least 7 elements to a 7-tuple
 instance TupleC 7 a where
   type TupleT 7 a = (a,a,a,a,a,a,a)
   getTupleC = \case
-                a:b:c:d:e:f:g:_ -> Right (a,b,c,d,e,f,g)
-                o -> Left o
+                a:b:c:d:e:f:g:_ -> Just (a,b,c,d,e,f,g)
+                _ -> Nothing
 
 -- | convert a list of at least 8 elements to a 8-tuple
 instance TupleC 8 a where
   type TupleT 8 a = (a,a,a,a,a,a,a,a)
   getTupleC = \case
-                a:b:c:d:e:f:g:h:_ -> Right (a,b,c,d,e,f,g,h)
-                o -> Left o
+                a:b:c:d:e:f:g:h:_ -> Just (a,b,c,d,e,f,g,h)
+                _ -> Nothing
 
 -- | convert a list of at least 9 elements to a 9-tuple
 instance TupleC 9 a where
   type TupleT 9 a = (a,a,a,a,a,a,a,a,a)
   getTupleC = \case
-                a:b:c:d:e:f:g:h:i:_ -> Right (a,b,c,d,e,f,g,h,i)
-                o -> Left o
+                a:b:c:d:e:f:g:h:i:_ -> Just (a,b,c,d,e,f,g,h,i)
+                _ -> Nothing
 
 -- | convert a list of at least 10 elements to a 10-tuple
 instance TupleC 10 a where
   type TupleT 10 a = (a,a,a,a,a,a,a,a,a,a)
   getTupleC = \case
-                a:b:c:d:e:f:g:h:i:j:_ -> Right (a,b,c,d,e,f,g,h,i,j)
-                o -> Left o
+                a:b:c:d:e:f:g:h:i:j:_ -> Just (a,b,c,d,e,f,g,h,i,j)
+                _ -> Nothing
 
 -- | convert a list of at least 11 elements to a 11-tuple
 instance TupleC 11 a where
   type TupleT 11 a = (a,a,a,a,a,a,a,a,a,a,a)
   getTupleC = \case
-                a:b:c:d:e:f:g:h:i:j:k:_ -> Right (a,b,c,d,e,f,g,h,i,j,k)
-                o -> Left o
+                a:b:c:d:e:f:g:h:i:j:k:_ -> Just (a,b,c,d,e,f,g,h,i,j,k)
+                _ -> Nothing
 
 -- | convert a list of at least 12 elements to a 12-tuple
 instance TupleC 12 a where
   type TupleT 12 a = (a,a,a,a,a,a,a,a,a,a,a,a)
   getTupleC = \case
-                a:b:c:d:e:f:g:h:i:j:k:l:_ -> Right (a,b,c,d,e,f,g,h,i,j,k,l)
-                o -> Left o
+                a:b:c:d:e:f:g:h:i:j:k:l:_ -> Just (a,b,c,d,e,f,g,h,i,j,k,l)
+                _ -> Nothing
 
 -- | prime predicate
 --

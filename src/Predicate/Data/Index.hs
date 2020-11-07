@@ -223,7 +223,7 @@ instance ( P def (Proxy a)
            pp <- eval (Proxy @def) opts (Proxy @a)
            pure $ case getValueLR Inline opts msg1 pp [] of
              Left e -> e
-             Right _ -> mkNodeCopy opts pp msg1 [hh pp]
+             Right _ -> mkNodeCopy opts pp msg1 []
          Just a -> pure $ mkNode opts (Val a) (msg0 <> " " <> showL opts a) []
 
 -- | similar to 'Data.List.!!' for lists with a default error message on failure

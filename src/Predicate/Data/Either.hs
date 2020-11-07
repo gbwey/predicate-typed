@@ -148,14 +148,14 @@ instance ( Show (PP p a)
         pure $ case getValueLR NoInline opts msg0 pp [] of
           Left e -> e
           Right a1 -> let msg1 = msg0 ++ " Left"
-                      in mkNodeCopy opts pp (show3 opts msg1 a1 a) [hh pp]
+                      in mkNodeCopy opts pp (show3 opts msg1 a1 a) []
       Right a -> do
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR NoInline opts msg0 qq [] of
           Left e -> e
           Right a1 ->
             let msg1 = msg0 ++ " Right"
-            in mkNodeCopy opts qq (show3 opts msg1 a1 a) [hh qq]
+            in mkNodeCopy opts qq (show3 opts msg1 a1 a) []
 
 -- | similar to 'isLeft'
 --
@@ -242,16 +242,16 @@ instance ( Show (PP p a)
         pp <- eval (Proxy @p) opts a
         pure $ case getValueLR NoInline opts msg0 pp [] of
           Left e -> e
-          Right a1 ->
+          Right p ->
             let msg1 = msg0 ++ " Left"
-            in mkNode opts (Val (Left a1)) (msg1 <> " " <> showL opts a1 <> showVerbose opts " | " a) [hh pp]
+            in mkNode opts (Val (Left p)) (msg1 <> " " <> showL opts p <> showVerbose opts " | " a) [hh pp]
       Right a -> do
         qq <- eval (Proxy @q) opts a
         pure $ case getValueLR NoInline opts msg0 qq [] of
           Left e -> e
-          Right a1 ->
+          Right q ->
             let msg1 = msg0 ++ " Right"
-            in mkNode opts (Val (Right a1)) (msg1 <> " " <> showL opts a1 <> showVerbose opts " | " a) [hh qq]
+            in mkNode opts (Val (Right q)) (msg1 <> " " <> showL opts q <> showVerbose opts " | " a) [hh qq]
 
 -- | similar to 'partitionEithers'
 --
@@ -432,7 +432,7 @@ instance ( PP q x ~ Either a b
             pp <- eval (Proxy @p) opts (b,x)
             pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (Val p) (msg0 <> " Right") [hh qq, hh pp]
+              Right _ -> mkNodeCopy opts pp (msg0 <> " Right") [hh qq]
 
 -- | extract the Right value from an 'Either': similar to 'Data.Either.fromRight'
 --
@@ -473,8 +473,7 @@ instance ( PP q x ~ Either a b
             pp <- eval (Proxy @p) opts (a,x)
             pure $ case getValueLR NoInline opts msg0 pp [hh qq] of
               Left e -> e
-              Right p -> mkNode opts (Val p) (msg0 <> " Left") [hh qq, hh pp]
-
+              Right _ -> mkNodeCopy opts pp (msg0 <> " Left") [hh qq]
 
 -- | extract the Left value from an 'Either' otherwise fail with a message
 --
@@ -620,21 +619,19 @@ instance ( Show a
          let hhs = [hh ss, hh tt]
          case t of
             Left a -> do
-              let msg1 = "Left "
-                  msg2 = msg0 <> msg1
+              let msg1 = msg0 <> "(Left)"
               pp <- eval (Proxy @p) opts (s,a)
-              pure $ case getValueLR NoInline opts (msg2 <> "p failed") pp hhs of
+              pure $ case getValueLR NoInline opts (msg1 <> " p failed") pp hhs of
                    Left e -> e
-                   Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 a) (hhs ++ [hh pp])
+                   Right c -> mkNodeCopy opts pp (show3 opts msg1 c a) hhs
             Right b -> do
-              let msg1 = "Right "
-                  msg2 = msg0 <> msg1
+              let msg1 = msg0 <> "(Right)"
               qq <- eval (Proxy @q) opts (s,b)
-              pure $ case getValueLR NoInline opts (msg2 <> "q failed") qq hhs of
+              pure $ case getValueLR NoInline opts (msg1 <> " q failed") qq hhs of
                    Left e -> e
-                   Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 b) (hhs ++ [hh qq])
+                   Right c -> mkNodeCopy opts qq (show3 opts msg1 c b) hhs
 
-type family EitherInT p y elr where
+type family EitherInT p y lr where
   EitherInT p y (Either a _) = PP p (y,a)
   EitherInT _ _ o = GL.TypeError (
       'GL.Text "EitherInT: expected 'Either a b' "
