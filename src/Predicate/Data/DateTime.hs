@@ -384,7 +384,7 @@ instance ( P p x
         let (_, week, _dow) = toWeekDate p
         in mkNode opts (Val week) (show3 opts msg0 week p) [hh pp]
 
-class ToDayC a where
+class ToDayC (a :: Type) where
   getDay :: a -> Day
 instance ToDayC UTCTime where
   getDay = utctDay
@@ -399,7 +399,7 @@ instance ToDayC Rational where
 instance ToDayC CP.SystemTime where
   getDay = getDay . CP.systemToUTCTime
 
-class ToTimeC a where
+class ToTimeC (a :: Type) where
   getTime :: a -> TimeOfDay
 instance ToTimeC UTCTime where
   getTime = getTime . utctDayTime

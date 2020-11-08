@@ -32,6 +32,7 @@ module Predicate.Data.String (
   , IsSuffixCI
 
   , ToString
+  , ToStringC (..)
   , FromString
   , FromString'
  ) where
@@ -328,7 +329,7 @@ instance ToStringC x => P ToString x where
   type PP ToString x = String
   eval _ opts x = pure $ mkNode opts (Val (toStringC x)) "ToString" []
 
-class ToStringC a where
+class ToStringC (a :: Type) where
   toStringC :: a -> String
 instance ToStringC String where
   toStringC = id

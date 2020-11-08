@@ -28,6 +28,7 @@ module Predicate.Data.ReadShow (
   , PrintL
   , PrintT
   , PrintI
+  , PrintC(..)
  ) where
 import Predicate.Core
 import Predicate.Misc

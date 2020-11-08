@@ -54,6 +54,7 @@ module Predicate.Data.Elr (
   -- ** converters
   , These2Elr
   , Elr2These
+  , Elr2Maybe
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -687,5 +688,29 @@ instance P These2Elr (These a b) where
     let msg0 = "These2Elr"
         b = _elr2These # Just x
     in pure $ mkNode opts (Val b) msg0 []
+
+-- | converts 'Elr' to a pair of Maybes
+--
+-- >>> pz @Elr2Maybe ENone
+-- Val (Nothing,Nothing)
+--
+-- >>> pz @Elr2Maybe (ELeft 123)
+-- Val (Just 123,Nothing)
+--
+-- >>> pz @Elr2Maybe (EBoth 'x' 123)
+-- Val (Just 'x',Just 123)
+--
+-- >>> pz @Elr2Maybe (ERight 123)
+-- Val (Nothing,Just 123)
+--
+data Elr2Maybe deriving Show
+
+instance P Elr2Maybe (Elr a b) where
+  type PP Elr2Maybe (Elr a b) = (Maybe a, Maybe b)
+  eval _ opts x =
+    let msg0 = "Elr2Maybe"
+        b = x ^. _elr2Maybe
+    in pure $ mkNode opts (Val b) msg0 []
+
 
 

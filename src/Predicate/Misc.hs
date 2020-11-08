@@ -424,7 +424,7 @@ instance FromITupleC (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,())))))))))))) where
 -- >>> toITupleListC @2 [10,12,13,1]
 -- Left "toITupleListC: expected exactly 2 values"
 --
-class ToITupleListC (n :: Nat) a where
+class ToITupleListC (n :: Nat) (a :: Type) where
   type ToITupleListP n a
   toITupleListC :: [a] -> Either String (ToITupleListP n a)
 instance (GL.TypeError ('GL.Text "ToITupleListC: inductive tuple cannot be empty")) => ToITupleListC 0 a where
@@ -479,7 +479,7 @@ instance ToITupleListC 12 a where
   toITupleListC [a,b,c,d,e,f,g,h,i,j,k,l] = Right (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,()))))))))))))
   toITupleListC _ = Left "toITupleListC: expected exactly 12 values"
 
-class ReverseITupleC x xs ys where
+class ReverseITupleC (x :: Type) (xs :: Type) (ys :: Type) where
   type ReverseITupleT x xs ys
   reverseITupleC :: x -> xs -> ys -> ReverseITupleT x xs ys
 instance ReverseITupleC x () ys  where
@@ -682,7 +682,7 @@ p ~> q = not p || q
 infixr 1 ~>
 
 -- | extract element 1 from a n-tuple
-class ExtractL1C tp where
+class ExtractL1C (tp :: Type) where
   type ExtractL1T tp
   extractL1C :: tp -> ExtractL1T tp
 instance ExtractL1C (a,b) where
@@ -708,7 +708,7 @@ instance ExtractL1C (a,b,c,d,e,f,g,h) where
   extractL1C (a,_,_,_,_,_,_,_) = a
 
 -- | extract element 2 from a n-tuple
-class ExtractL2C tp where
+class ExtractL2C (tp :: Type) where
   type ExtractL2T tp
   extractL2C :: tp -> ExtractL2T tp
 instance ExtractL2C (a,b) where
@@ -734,7 +734,7 @@ instance ExtractL2C (a,b,c,d,e,f,g,h) where
   extractL2C (_,b,_,_,_,_,_,_) = b
 
 -- | extract element 3 from a n-tuple
-class ExtractL3C tp where
+class ExtractL3C (tp :: Type) where
   type ExtractL3T tp
   extractL3C :: tp -> ExtractL3T tp
 instance ExtractL3C (a,b) where
@@ -760,7 +760,7 @@ instance ExtractL3C (a,b,c,d,e,f,g,h) where
   extractL3C (_,_,c,_,_,_,_,_) = c
 
 -- | extract element 4 from a n-tuple
-class ExtractL4C tp where
+class ExtractL4C (tp :: Type) where
   type ExtractL4T tp
   extractL4C :: tp -> ExtractL4T tp
 instance ExtractL4C (a,b) where
@@ -786,7 +786,7 @@ instance ExtractL4C (a,b,c,d,e,f,g,h) where
   extractL4C (_,_,_,d,_,_,_,_) = d
 
 -- | extract element 5 from a n-tuple
-class ExtractL5C tp where
+class ExtractL5C (tp :: Type) where
   type ExtractL5T tp
   extractL5C :: tp -> ExtractL5T tp
 instance ExtractL5C (a,b) where
@@ -812,7 +812,7 @@ instance ExtractL5C (a,b,c,d,e,f,g,h) where
   extractL5C (_,_,_,_,e,_,_,_) = e
 
 -- | extract element 6 from a n-tuple
-class ExtractL6C tp where
+class ExtractL6C (tp :: Type) where
   type ExtractL6T tp
   extractL6C :: tp -> ExtractL6T tp
 instance ExtractL6C (a,b) where
@@ -838,7 +838,7 @@ instance ExtractL6C (a,b,c,d,e,f,g,h) where
   extractL6C (_,_,_,_,_,f,_,_) = f
 
 -- | extract element 7 from a n-tuple
-class ExtractL7C tp where
+class ExtractL7C (tp :: Type) where
   type ExtractL7T tp
   extractL7C :: tp -> ExtractL7T tp
 instance ExtractL7C (a,b) where
@@ -864,7 +864,7 @@ instance ExtractL7C (a,b,c,d,e,f,g,h) where
   extractL7C (_,_,_,_,_,_,g,_) = g
 
 -- | extract element 8 from a n-tuple
-class ExtractL8C tp where
+class ExtractL8C (tp :: Type) where
   type ExtractL8T tp
   extractL8C :: tp -> ExtractL8T tp
 instance ExtractL8C (a,b) where
@@ -890,7 +890,7 @@ instance ExtractL8C (a,b,c,d,e,f,g,h) where
   extractL8C (_,_,_,_,_,_,_,h) = h
 
 -- | try to convert a list to a n-tuple
-class TupleC (n :: Nat) a where
+class TupleC (n :: Nat) (a :: Type) where
   type TupleT n a
   getTupleC :: [a] -> Maybe (TupleT n a)
 
