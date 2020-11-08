@@ -17,6 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 -- | promoted foldable functions
 module Predicate.Data.Foldable (
+  -- ** functions
     Concat
   , ConcatMap
   , Cycle
@@ -40,7 +41,6 @@ module Predicate.Data.Foldable (
 
   , Ands
   , Ors
-
  ) where
 import Predicate.Core
 import Predicate.Misc

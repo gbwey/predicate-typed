@@ -16,6 +16,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted json encoding and decoding functions
 module Predicate.Data.Json (
+  -- ** functions
     ParseJson'
   , ParseJson
   , EncodeJson

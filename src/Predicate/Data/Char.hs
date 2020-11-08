@@ -44,6 +44,7 @@ module Predicate.Data.Char (
   , IsOctDigitAll
   , IsSeparatorAll
   , IsLatin1All
+
  -- ** change case
   , ToTitle
   , ToUpper

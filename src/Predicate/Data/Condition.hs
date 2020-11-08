@@ -16,6 +16,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted conditional functions
 module Predicate.Data.Condition (
+  -- ** functions
     If
   , Case
   , Case'
@@ -31,6 +32,11 @@ module Predicate.Data.Condition (
   , Bools
   , BoolsQuick
   , BoolsN
+
+  -- ** type families
+  , ToGuardsT
+  , ToGuardsDetailT
+  , GuardsT
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -667,7 +673,6 @@ instance P (GuardsDetailT prt ps) x => P (GuardsDetail prt ps) x where
   type PP (GuardsDetail prt ps) x = PP (GuardsDetailT prt ps) x
   eval _ = eval (Proxy @(GuardsDetailT prt ps))
 
---type family ToGuardsDetailT prt os where
 type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
   ToGuardsDetailT prt '[ '(s,p) ] = '(PrintT prt '(s,Snd), p) : '[]
   ToGuardsDetailT prt ( '(s,p) ': ps) = '(PrintT prt '(s,Snd), p) ': ToGuardsDetailT prt ps

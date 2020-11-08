@@ -42,7 +42,6 @@ module Predicate.Data.IO (
   -- ** date time
   , TimeUtc
   , TimeZt
-
  ) where
 import Predicate.Core
 import Predicate.Misc

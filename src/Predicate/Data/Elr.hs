@@ -51,6 +51,7 @@ module Predicate.Data.Elr (
   , IsERight
   , IsEBoth
 
+  -- ** converters
   , These2Elr
   , Elr2These
  ) where
@@ -686,3 +687,5 @@ instance P These2Elr (These a b) where
     let msg0 = "These2Elr"
         b = _elr2These # Just x
     in pure $ mkNode opts (Val b) msg0 []
+
+

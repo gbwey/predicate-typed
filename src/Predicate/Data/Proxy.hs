@@ -31,6 +31,17 @@ module Predicate.Data.Proxy (
   , PApp
   , PApp2
 
+ -- ** type families
+  , Proxy2TT
+  , Pop0T
+  , Pop1T
+  , Pop1'T
+  , Pop2T
+  , Pop2'T
+  , PAppT
+  , PApp2T
+  , ProxifyT
+
  ) where
 import Predicate.Core
 import Predicate.Misc

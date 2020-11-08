@@ -95,7 +95,6 @@ module Predicate.Data.List (
   , IsPrefix
   , IsInfix
   , IsSuffix
-
  ) where
 import Predicate.Core
 import Predicate.Misc

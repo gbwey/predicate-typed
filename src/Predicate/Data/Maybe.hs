@@ -36,6 +36,8 @@ module Predicate.Data.Maybe (
   , MaybeIn
   , MaybeId
 
+ -- ** type families
+  , MaybeInT
  ) where
 import Predicate.Core
 import Predicate.Misc

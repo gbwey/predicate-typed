@@ -22,6 +22,7 @@ module Predicate.Data.Lifted (
   , type (<&>)
 
  -- ** applicative
+  , Pure
   , type (<*>)
   , LiftA2
   , FPair
@@ -67,9 +68,16 @@ module Predicate.Data.Lifted (
   , K
   , Lift
 
+ -- ** coerce
+  , Coerce
+
  -- ** error handling
   , Catch
   , Catch'
+
+ -- ** type families
+  , DotExpandT
+  , RDotExpandT
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -85,6 +93,7 @@ import Data.Tree (Tree)
 import Data.Proxy (Proxy(..))
 import Data.Bitraversable
 import Data.Bifoldable
+import Data.Coerce (Coercible)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -1049,6 +1058,54 @@ instance P (FMapFlipT p q) x => P (p <&> q) x where
   type PP (p <&> q) x = PP (FMapFlipT p q) x
   eval _ = eval (Proxy @(FMapFlipT p q))
 
+
+-- | similar to 'pure'
+--
+-- >>> pz @(Pure Maybe Id) 4
+-- Val (Just 4)
+--
+-- >>> pz @(Pure [] Id) 4
+-- Val [4]
+--
+-- >>> pz @(Pure (Either String) Fst) (13,True)
+-- Val (Right 13)
+--
+-- >>> pl @(Pure Maybe Id) 'x'
+-- Present Just 'x' (Pure Just 'x' | 'x')
+-- Val (Just 'x')
+--
+-- >>> pl @(Pure (Either _) Id) 'x'
+-- Present Right 'x' (Pure Right 'x' | 'x')
+-- Val (Right 'x')
+--
+-- >>> pl @(Pure (Either _) Id >> Swap) 'x'
+-- Present Left 'x' ((>>) Left 'x' | {Swap Left 'x' | Right 'x'})
+-- Val (Left 'x')
+--
+-- >>> pl @(Pure (Either ()) Id >> Swap) 'x'
+-- Present Left 'x' ((>>) Left 'x' | {Swap Left 'x' | Right 'x'})
+-- Val (Left 'x')
+--
+-- >>> pl @(Pure (Either String) Id >> Swap) 123
+-- Present Left 123 ((>>) Left 123 | {Swap Left 123 | Right 123})
+-- Val (Left 123)
+--
+data Pure (t :: Type -> Type) p deriving Show
+instance ( P p x
+         , Show (PP p x)
+         , Show (t (PP p x))
+         , Applicative t
+         ) => P (Pure t p) x where
+  type PP (Pure t p) x = t (PP p x)
+  eval _ opts x = do
+    let msg0 = "Pure"
+    pp <- eval (Proxy @p) opts x
+    pure $ case getValueLR NoInline opts msg0 pp [] of
+      Left e -> e
+      Right a ->
+        let b = pure a
+        in mkNode opts (Val b) (show3 opts msg0 b a) [hh pp]
+
 -- | runs 'Control.Applicative.liftA2' (,) against two values: LiftA2 is traversable and provides better debugging
 --
 -- >>> pz @(FPair Fst Snd) (Just 10, Just True)
@@ -1496,3 +1553,42 @@ instance ( Bitraversable n
             ind = getBifoldInfo ret
         in ttnb & ttVal .~ Val d
                 & ttString %~ (msg0 <>) . (ind <>) . nullIf " "
+
+-- | similar to 'Data.Coerce.coerce'
+--
+-- >>> pz @(Coerce (SG.Sum Integer)) (Identity (-13))
+-- Val (Sum {getSum = -13})
+--
+-- >>> pl @(Coerce SG.Any) True
+-- Present Any {getAny = True} (Coerce Any {getAny = True} | True)
+-- Val (Any {getAny = True})
+--
+-- >>> pl @(Coerce Bool) (SG.Any True)
+-- Present True (Coerce True | Any {getAny = True})
+-- Val True
+--
+-- >>> pz @(Proxy 'True >> Coerce (Proxy 'False)) () ^!? acts . _Val . to typeRep
+-- Just 'False
+--
+-- >>> pz @(Proxy Int >> Coerce (Proxy (String,Char))) () ^!? acts . _Val . to typeRep
+-- Just ([Char],Char)
+--
+-- >>> import qualified GHC.Exts as GE
+-- >>> pz @(Proxy GE.Any >> Coerce (Proxy Int)) () ^!? acts . _Val . to typeRep
+-- Just Int
+--
+-- >>> pz @(Proxy '(_,_) >> Coerce (Proxy '(Float,Int))) () ^!? acts . _Val . to typeRep
+-- Just ('(,) * * Float Int)
+--
+data Coerce (t :: Type) deriving Show
+
+instance ( Coercible t a
+         , Show a
+         , Show t
+         ) => P (Coerce t) a where
+  type PP (Coerce t) a = t
+  eval _ opts a =
+    let msg0 = "Coerce"
+        d = a ^. coerced
+    in pure $ mkNode opts (Val d) (show3 opts msg0 d a) []
+

@@ -16,6 +16,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted iterator functions
 module Predicate.Data.Iterator (
+  -- ** functions
     Scanl
   , ScanN
   , ScanNA
@@ -34,6 +35,8 @@ module Predicate.Data.Iterator (
   , DoN
   , Repeat
 
+  -- ** type families
+  , UnfoldrT
  ) where
 import Predicate.Core
 import Predicate.Misc

@@ -55,6 +55,8 @@ module Predicate.Data.These (
  -- ** miscellaneous
   , ZipThese
 
+ -- ** type families
+  , TheseInT
  ) where
 import Predicate.Core
 import Predicate.Misc

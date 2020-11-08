@@ -40,7 +40,6 @@ module Predicate.Data.Extra (
 
  -- ** luhn check
   , IsLuhn
-
  ) where
 import Predicate.Core
 import Predicate.Misc

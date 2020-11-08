@@ -31,8 +31,6 @@ module Predicate.Core (
   , Map'
   , Map
   , Do
-  , Pure
-  , Coerce
   , OneP
   , Swap
   , Arg'
@@ -119,6 +117,10 @@ module Predicate.Core (
  -- ** core class
   , P(..)
 
+ -- ** type families
+  , DoExpandT
+  , DoExpandLT
+  , ArgT
   ) where
 import Predicate.Misc
 import Predicate.Util
@@ -136,7 +138,6 @@ import Control.Arrow (right)
 import Data.List (find)
 import Data.Maybe (fromMaybe)
 import Data.Tree (Tree)
-import Data.Coerce (Coercible)
 import Data.Tree.Lens (root)
 import qualified Text.Regex.PCRE.Heavy as RH
 import GHC.Stack (HasCallStack)
@@ -1923,7 +1924,7 @@ instance ( Show (ExtractL8T (PP p x))
         let b = extractL8C p
         in mkNode opts (Val b) (show3 opts msg0 b p) [hh pp]
 
--- | similar to 'map' for foldable
+-- | similar to 'map' for Foldable types
 --
 -- >>> pz @(Map' Pred Id) [1..5]
 -- Val [0,1,2,3,4]
@@ -2337,91 +2338,6 @@ infixl 1 &
 instance P (p q) a => P (q & p) a where
   type PP (q & p) a = PP (p q) a
   eval _ = eval (Proxy @(p q))
-
--- | similar to 'pure'
---
--- >>> pz @(Pure Maybe Id) 4
--- Val (Just 4)
---
--- >>> pz @(Pure [] Id) 4
--- Val [4]
---
--- >>> pz @(Pure (Either String) Fst) (13,True)
--- Val (Right 13)
---
--- >>> pl @(Pure Maybe Id) 'x'
--- Present Just 'x' (Pure Just 'x' | 'x')
--- Val (Just 'x')
---
--- >>> pl @(Pure (Either _) Id) 'x'
--- Present Right 'x' (Pure Right 'x' | 'x')
--- Val (Right 'x')
---
--- >>> pl @(Pure (Either _) Id >> Swap) 'x'
--- Present Left 'x' ((>>) Left 'x' | {Swap Left 'x' | Right 'x'})
--- Val (Left 'x')
---
--- >>> pl @(Pure (Either ()) Id >> Swap) 'x'
--- Present Left 'x' ((>>) Left 'x' | {Swap Left 'x' | Right 'x'})
--- Val (Left 'x')
---
--- >>> pl @(Pure (Either String) Id >> Swap) 123
--- Present Left 123 ((>>) Left 123 | {Swap Left 123 | Right 123})
--- Val (Left 123)
---
-data Pure (t :: Type -> Type) p deriving Show
-instance ( P p x
-         , Show (PP p x)
-         , Show (t (PP p x))
-         , Applicative t
-         ) => P (Pure t p) x where
-  type PP (Pure t p) x = t (PP p x)
-  eval _ opts x = do
-    let msg0 = "Pure"
-    pp <- eval (Proxy @p) opts x
-    pure $ case getValueLR NoInline opts msg0 pp [] of
-      Left e -> e
-      Right a ->
-        let b = pure a
-        in mkNode opts (Val b) (show3 opts msg0 b a) [hh pp]
-
--- | similar to 'Data.Coerce.coerce'
---
--- >>> pz @(Coerce (SG.Sum Integer)) (Identity (-13))
--- Val (Sum {getSum = -13})
---
--- >>> pl @(Coerce SG.Any) True
--- Present Any {getAny = True} (Coerce Any {getAny = True} | True)
--- Val (Any {getAny = True})
---
--- >>> pl @(Coerce Bool) (SG.Any True)
--- Present True (Coerce True | Any {getAny = True})
--- Val True
---
--- >>> pz @(Proxy 'True >> Coerce (Proxy 'False)) () ^!? acts . _Val . to typeRep
--- Just 'False
---
--- >>> pz @(Proxy Int >> Coerce (Proxy (String,Char))) () ^!? acts . _Val . to typeRep
--- Just ([Char],Char)
---
--- >>> import qualified GHC.Exts as GE
--- >>> pz @(Proxy GE.Any >> Coerce (Proxy Int)) () ^!? acts . _Val . to typeRep
--- Just Int
---
--- >>> pz @(Proxy '(_,_) >> Coerce (Proxy '(Float,Int))) () ^!? acts . _Val . to typeRep
--- Just ('(,) * * Float Int)
---
-data Coerce (t :: Type) deriving Show
-
-instance ( Coercible t a
-         , Show a
-         , Show t
-         ) => P (Coerce t) a where
-  type PP (Coerce t) a = t
-  eval _ opts a =
-    let msg0 = "Coerce"
-        d = a ^. coerced
-    in pure $ mkNode opts (Val d) (show3 opts msg0 d a) []
 
 {-
  -- | extracts the value level representation of the promoted 'DayOfWeek'

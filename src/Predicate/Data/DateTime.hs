@@ -47,7 +47,6 @@ module Predicate.Data.DateTime (
   , UnMkTime
   , UTCTimeToPosix
   , LocalTimeToUTC
-
  ) where
 import Predicate.Core
 import Predicate.Misc

@@ -16,6 +16,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted regular expression functions
 module Predicate.Data.Regex (
+  -- ** functions
     Re
   , Re'
   , Rescan

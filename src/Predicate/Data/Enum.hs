@@ -43,7 +43,6 @@ module Predicate.Data.Enum (
   , Pred
   , ToEnum
   , ToEnum'
-
  ) where
 import Predicate.Core
 import Predicate.Util

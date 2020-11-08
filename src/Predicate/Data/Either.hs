@@ -41,9 +41,12 @@ module Predicate.Data.Either (
   , type (|||)
   , type (+++)
   , EitherIn
+  , EitherId
   , LeftDef'
   , RightDef'
 
+ -- type families
+  , EitherInT
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -637,6 +640,22 @@ type family EitherInT p y lr where
       'GL.Text "EitherInT: expected 'Either a b' "
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
+
+-- | simple version of 'EitherIn' with Id as the Either value and the environment set to ()
+--
+-- >>> pz @(EitherId '(Id,"fromleft") '(888,Id)) (Right "ok")
+-- Val (888,"ok")
+--
+-- >>> pz @(EitherId '(Id,"fromleft") '(888,Id)) (Left 123)
+-- Val (123,"fromleft")
+--
+data EitherId p q deriving Show
+type EitherIdT p q = EitherIn (Snd >> p) (Snd >> q) () Id
+
+instance P (EitherIdT p q) x => P (EitherId p q) x where
+  type PP (EitherId p q) x = PP (EitherIdT p q) x
+  eval _ = eval (Proxy @(EitherIdT p q))
+
 
 -- | get Left or use the default value @p@: @q@ is the environment and @r@ is the Elr value
 --

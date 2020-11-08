@@ -16,6 +16,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted 'Ordering' functions
 module Predicate.Data.Ordering (
+  -- ** functions
     type (>)
   , type (>=)
   , type (==)

@@ -19,6 +19,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 -- | promoted bit manipulation functions
 module Predicate.Data.Bits (
+  -- ** functions
     type (.&.)
   , type (.|.)
   , type (.^.)
@@ -36,7 +37,6 @@ module Predicate.Data.Bits (
   , TestBit
   , Bit
   , ZeroBits
-
  ) where
 import Predicate.Core
 import Predicate.Util
@@ -323,7 +323,6 @@ instance ( P p a
         let hhs = [hh pp, hh qq]
             d = Bits.testBit q p
         in mkNodeB opts d (msg0 <> " " <> showL opts p <> " " <> showL opts q <> " = " <> showL opts d) hhs
-
 
 -- | count number of bits at @p@: similar to 'Data.Bits.popCount'
 --

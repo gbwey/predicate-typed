@@ -17,6 +17,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted String functions
 module Predicate.Data.String (
+  -- ** functions
     TrimBoth
   , TrimL
   , TrimR
