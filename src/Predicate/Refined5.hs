@@ -55,7 +55,6 @@ module Predicate.Refined5 (
 import Predicate.Refined2 (Msg2(..), RResults2(..), prt2Impl, Refined2C)
 import Predicate.Refined (RefinedC)
 import Predicate.Core
-import Predicate.Misc
 import Predicate.Util
 import Data.Proxy (Proxy(..))
 import Data.Aeson (ToJSON(..), FromJSON(..))
@@ -446,7 +445,7 @@ evalBool5 i =
           in if all isSpace zz then "FalseP" else "{" <> zz <> "}"
       w = case lr of
             Right True -> Right i
-            Right False -> Left $ "false boolean check" ++ nullIf " | " z
-            Left e -> Left $ "failed boolean check " ++ nullIf " | " e
+            Right False -> Left $ joinStrings "false boolean check" z
+            Left e -> Left $ joinStrings "failed boolean check " e
   in left (++ ("\n" ++ prtTreePure opts p2)) w
 

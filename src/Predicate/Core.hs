@@ -126,7 +126,7 @@ import Predicate.Misc
 import Predicate.Util
 import Predicate.Elr
 import qualified GHC.TypeLits as GL
-import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat)
+import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
 import Control.Lens
 import Data.Foldable (toList)
 import Data.Proxy (Proxy(..))
@@ -2098,7 +2098,7 @@ instance ( P p a
                   (False, True) -> topMessage pp
                   (True, False) -> topMessage qq
                   (False, False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
-        in mkNodeB opts (p&&q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> nullIf " | " zz) [hh pp, hh qq]
+        in mkNodeB opts (p&&q) (showL opts p <> " " <> msg0 <> " " <> joinStrings (showL opts q) zz) [hh pp, hh qq]
 
 -- | short circuit version of boolean And
 --
@@ -2237,7 +2237,7 @@ instance ( P p a
         let zz = case (p,q) of
                   (True,False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
                   _ -> ""
-        in mkNodeB opts (p~>q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> nullIf " | " zz) [hh pp, hh qq]
+        in mkNodeB opts (p~>q) (showL opts p <> " " <> msg0 <> " " <> joinStrings (showL opts q) zz) [hh pp, hh qq]
 
 
 -- | swaps using 'SwapC'
@@ -2344,41 +2344,6 @@ infixl 1 &
 instance P (p q) a => P (q & p) a where
   type PP (q & p) a = PP (p q) a
   eval _ = eval (Proxy @(p q))
-
-{-
- -- | extracts the value level representation of the promoted 'DayOfWeek'
- --
- -- >>> pz @'Monday ()
- -- Val Monday
- --
- -- >>> pz @'Sunday ()
- -- Val Sunday
- --
-instance GetWeekDay dy => P (dy :: DayOfWeek) a where
-  type PP dy a = DayOfWeek
-  eval _ opts _ =
-    let dy = getWeekDay @dy
-        msg = "'" <> showL opts dy
-    in pure $ mkNode opts (Val dy) msg []
-
--- | get weekday from the typelevel
-class GetWeekDay (dy :: DayOfWeek) where
-  getWeekDay :: DayOfWeek
-instance GetWeekDay 'Sunday where
-  getWeekDay = Sunday
-instance GetWeekDay 'Monday where
-  getWeekDay = Monday
-instance GetWeekDay 'Tuesday where
-  getWeekDay = Tuesday
-instance GetWeekDay 'Wednesday where
-  getWeekDay = Wednesday
-instance GetWeekDay 'Thursday where
-  getWeekDay = Thursday
-instance GetWeekDay 'Friday where
-  getWeekDay = Friday
-instance GetWeekDay 'Saturday where
-  getWeekDay = Saturday
--}
 
 -- | first element in a tuple followed by the first element
 --
@@ -2552,8 +2517,12 @@ instance x ~ SG.Arg a b => P Arg' x where
         ret = (a,b)
     in pure $ mkNode opts (Val ret) msg0 []
 
-type family ArgT x where
+type family ArgT (x :: Type) where
   ArgT (SG.Arg a b) = (a,b)
+  ArgT o = GL.TypeError (
+      'GL.Text "ArgT: expected 'SG.Arg a b' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
 
 -- | extracts the () from type level @ENone@ if the value exists
 --

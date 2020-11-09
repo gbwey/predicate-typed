@@ -218,7 +218,7 @@ instance ( GetBool ignore
         in case chkSize2 opts msg0 p' q' hhs of
           Left e -> e
           Right ((_,p),(_,q)) ->
-            let msg1 = msg0 <> (if ignore then "I" else "") <> " | " <> p
+            let msg1 = joinStrings (msg0 <> if ignore then "I" else "") p
             in mkNodeB opts (on ff lwr p q) (msg1 <> " " <> litL opts q) hhs
 
 -- | similar to 'Data.List.isPrefixOf' for strings

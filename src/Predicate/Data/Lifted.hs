@@ -749,7 +749,7 @@ instance ( P p x
          qq <- eval (Proxy @q) opts ((emsg, x), Proxy @(PP p x))
          pure $ case getValueLR NoInline opts (msg0 <> " default condition failed") qq [hh pp] of
             Left e1 -> e1
-            Right _ -> mkNodeCopy opts qq (msg0 <> " caught exception[" <> emsg <> "]") [hh pp, hh qq]
+            Right _ -> mkNodeCopy opts qq (msg0 <> " caught exception[" <> emsg <> "]") [hh pp]
       Right _ -> pure $ mkNodeCopy opts pp (msg0 <> " did not fire") []
 
 -- | compose simple functions

@@ -381,7 +381,7 @@ instance ( Show a
                    Left e -> e
                    Right c -> mkNodeCopy opts pp (show3 opts msg1 c a) hhs
 
-type family MaybeInT p y ma where
+type family MaybeInT (p :: k) (y :: Type) (ma :: Type) where
   MaybeInT p y (Maybe a) = PP p (y,a)
   MaybeInT _ _ o = GL.TypeError (
       'GL.Text "MaybeInT: expected 'Maybe a' "

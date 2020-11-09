@@ -197,7 +197,7 @@ instance ( PP q x ~ a
 --
 data Succ deriving Show
 {-
->print $! (succ Proxy)
+>print $! (succ Proxy) -- need to force this to get an exception
 *** Exception: Proxy.succ
 -}
 instance ( Show x

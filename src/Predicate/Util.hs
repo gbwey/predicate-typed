@@ -104,9 +104,7 @@ module Predicate.Util (
   , OptC
   , type OptT
   , getOpt
-  , subopts
-  , _DVerbose
-  , _Debug
+  , zeroToLite
   , defOpts
 
 -- ** formatting functions
@@ -119,6 +117,7 @@ module Predicate.Util (
   , litL
   , litBL
   , litBS
+  , joinStrings
 
  -- ** printing methods
   , prtTreePure
@@ -163,6 +162,7 @@ import Data.Bool (bool)
 import GHC.Generics (Generic, Generic1)
 import qualified Language.Haskell.TH.Lift as TH
 import Instances.TH.Lift ()
+import Data.Kind (Type)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -193,23 +193,23 @@ instance Monoid PE where
 
 -- | concatenate two strings with delimiter
 --
--- >>> jamSS "xyz" "abc"
+-- >>> joinStrings "xyz" "abc"
 -- "xyz | abc"
 --
--- >>> jamSS "" "abc"
+-- >>> joinStrings "" "abc"
 -- "abc"
 --
--- >>> jamSS "xyz" ""
+-- >>> joinStrings "xyz" ""
 -- "xyz"
 --
--- >>> jamSS "" ""
+-- >>> joinStrings "" ""
 -- ""
 --
-jamSS :: String -> String -> String
-jamSS s s1 = s <> (if null s || null s1 then "" else " | ") <> s1
+joinStrings :: String -> String -> String
+joinStrings s s1 = s <> (if null s || null s1 then "" else " | ") <> s1
 
 instance Semigroup PE where
-  PE b s <> PE b1 s1 = PE (b <> b1) (jamSS s s1)
+  PE b s <> PE b1 s1 = PE (b <> b1) (joinStrings s s1)
 
 -- | semigroup for ValP
 --
@@ -238,7 +238,7 @@ instance Semigroup PE where
 -- FailP "abc | xyz | def"
 --
 instance Semigroup ValP where
-   FailP s <> FailP s1 = FailP (jamSS s s1)
+   FailP s <> FailP s1 = FailP (joinStrings s s1)
    FailP s <> _ = FailP s
    _ <> FailP s = FailP s
    FalseP <> _ = FalseP
@@ -293,7 +293,7 @@ instance Monad Val where
 -- True
 --
 instance Semigroup (Val a) where
-   Fail s <> Fail s1 = Fail (jamSS s s1)
+   Fail s <> Fail s1 = Fail (joinStrings s s1)
    Fail s <> _ = Fail s
    _ <> Fail s = Fail s
    Val _ <> Val b = Val b
@@ -338,7 +338,7 @@ makeLensesFor [("_ttString","ttString"),("_ttForest","ttForest")] ''TT
 
 instance Semigroup (TT a) where
    TT bp bt ss ts <> TT bp1 bt1 ss1 ts1 =
-     TT (bp <> bp1) (bt <> bt1) (jamSS ss ss1) (ts <> ts1)
+     TT (bp <> bp1) (bt <> bt1) (joinStrings ss ss1) (ts <> ts1)
 
 instance Monoid a => Monoid (TT a) where
    mempty = TT mempty mempty mempty mempty
@@ -355,7 +355,7 @@ instance Monad TT where
   z@(TT bp bt ss ts) >>= amb =
      case bt of
        Val a -> fixTTValP bp $ amb a
-                  & ttString %~ jamSS ss
+                  & ttString %~ joinStrings ss
                   & ttForest %~ (ts <>)
        Fail e -> z { _ttVal = Fail e }
 
@@ -449,7 +449,7 @@ getValueLR :: Inline
 getValueLR inline opts msg0 tt hs =
 -- hack: if infix ...
   let ts = if _ttString tt `isInfixOf` msg0 then "" else _ttString tt
-      xs = ts <> (if null ts || null msg0 then "" else " | ") <> msg0
+      xs = joinStrings ts msg0
       tts = case inline of
               Inline -> hs <> _ttForest tt
               NoInline -> hs <> [hh tt]
@@ -457,7 +457,7 @@ getValueLR inline opts msg0 tt hs =
 
 
 -- | elide the 'Identity' wrapper so it acts like a normal ADT
-type family HKD f a where
+type family HKD (f :: Type -> Type) (a :: Type) where
   HKD Identity a = a
   HKD f a = f a
 
@@ -1090,27 +1090,6 @@ type OUV = 'OUV   -- 'OUnicode ':# Color5 ':# 'OVerbose ':# Other2 ':# 'OWidth 2
 -- | unicode output without colours and verbose
 type OUNV = 'OUNV -- 'OUnicode ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
 
-_Debug :: Lens' POpts Debug
-_Debug afb opts = (\d -> opts { oDebug = d }) <$> afb (oDebug opts)
-
-_DVerboseI :: Prism' Debug ()
-_DVerboseI =
-  prism' (const DVerbose)
-  $ \case
-       DVerbose -> Just ()
-       _ -> Nothing
-
--- | traversal for DVerbose
---
--- >>> has _DVerbose (getOpt @OU)
--- False
---
--- >>> has _DVerbose (getOpt @OUV)
--- True
---
-_DVerbose :: Traversal' POpts ()
-_DVerbose = _Debug . _DVerboseI
-
 -- | convert typelevel options to 'POpts'
 --
 -- >>> (oDisp &&& fst . oColor &&& oWidth) (getOpt @(OA ':# OU ':# OA ':# 'OWidth 321 ':# Color4 ':# 'OMsg "test message"))
@@ -1166,9 +1145,9 @@ formatOMsg o suffix =
     [] -> mempty
     s@(_:_) -> intercalate " | " (map (setOtherEffects o) s) <> suffix
 
--- | override options for 'DZero' so we dont lose error information
-subopts :: POpts -> POpts
-subopts opts =
+-- | override options for 'DZero' so we dont lose error information: especially if we want to extract the topMessage and use it for Fail case
+zeroToLite :: POpts -> POpts
+zeroToLite opts =
   case oDebug opts of
     DZero -> opts { oDebug = DLite }
     _ -> opts

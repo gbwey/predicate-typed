@@ -46,8 +46,9 @@ import Predicate.Data.Ordering (type (>))
 import Predicate.Data.Enum (type (...), Pred)
 import Predicate.Data.List (Last)
 import Predicate.Data.Maybe (MaybeBool)
-import GHC.TypeLits (Nat, KnownNat)
+import GHC.TypeLits (Nat, KnownNat, ErrorMessage((:$$:),(:<>:)))
 import qualified GHC.TypeLits as GL
+import Data.Kind (Type)
 import Control.Lens
 import Data.Proxy (Proxy(Proxy))
 import Data.Maybe (catMaybes)
@@ -353,8 +354,12 @@ instance ( PP q a ~ s
                      let ret = fst <$> catMaybes vals
                      in mkNode opts (Val ret) (show3' opts msg1 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
 
-type family UnfoldrT mbs where
+type family UnfoldrT (mbs :: Type) where
   UnfoldrT (Maybe (b, _)) = b
+  UnfoldrT o = GL.TypeError (
+      'GL.Text "UnfoldrT: expected 'Maybe (b, _)' "
+      ':$$: 'GL.Text "o = "
+      ':<>: 'GL.ShowType o)
 
 -- | run @p@ @n@ times with state @s@
 data UnfoldN n p s deriving Show

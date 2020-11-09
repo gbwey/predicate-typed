@@ -272,7 +272,7 @@ instance ( PP r x ~ (a,b)
                           (False, True) -> topMessage pp
                           (True, False) -> topMessage qq
                           (False, False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
-                in mkNodeB opts (p&&q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> nullIf " | " zz) [hh rr, hh pp, hh qq]
+                in mkNodeB opts (p&&q) (showL opts p <> " " <> msg0 <> " " <> joinStrings (showL opts q) zz) [hh rr, hh pp, hh qq]
 
 -- | applies @p@ to lhs of the tuple and @q@ to the rhs and then @Ands@ them together
 --
@@ -320,7 +320,7 @@ instance ( PP r x ~ (a,b)
                 let zz = case (p,q) of
                           (False,False) -> topMessage pp <> " " <> msg0 <> " " <> topMessage qq
                           _ -> ""
-                in mkNodeB opts (p||q) (showL opts p <> " " <> msg0 <> " " <> showL opts q <> nullIf " | " zz) [hh rr, hh pp, hh qq]
+                in mkNodeB opts (p||q) (showL opts p <> " " <> msg0 <> " " <> joinStrings (showL opts q) zz) [hh rr, hh pp, hh qq]
 
 -- | applies @p@ to lhs of the tuple and @q@ to the rhs and then @Ors@ them together
 --
@@ -388,7 +388,7 @@ instance ( P p a
 -- >>> pz @(On' (==!) Len Fst (Reverse << Snd)) ("1ss","x2")
 -- Val GT
 --
-data On' (p :: Type -> Type -> k2) q r s deriving Show
+data On' (p :: Type -> Type -> k) q r s deriving Show
 
 instance ( P q (PP r x)
          , P q (PP s x)
@@ -444,7 +444,7 @@ instance ( P q (PP r x)
 -- >>> pz @(On (Flip (<>)) (Pure _ Id) >> '(Len,Head,Last)) ('x','y')
 -- Val (2,'y','x')
 --
-data On (p :: Type -> Type -> k2) q deriving Show
+data On (p :: Type -> Type -> k) q deriving Show
 type OnT p q = On' p q Fst Snd
 
 instance P (OnT p q) x => P (On p q) x where
@@ -481,7 +481,7 @@ instance P (OnT p q) x => P (On p q) x where
 -- >>> pz @(Uncurry (<>)) (SG.Sum 12,SG.Sum 99)
 -- Val (Sum {getSum = 111})
 --
-data Uncurry (p :: Type -> Type -> k2) deriving Show
+data Uncurry (p :: Type -> Type -> k) deriving Show
 type UncurryT p = On p Id
 
 instance P (UncurryT p) x => P (Uncurry p) x where

@@ -207,7 +207,7 @@ instance ( P q x
         zz <- eval (Proxy @z) opts q
         pure $ case getValueLR NoInline opts msg0 zz [hh qq] of
           Left e -> e
-          Right _z -> mkNodeCopy opts zz (msg0 <> nullIf " | " (zz ^. ttString)) [hh qq]
+          Right _z -> mkNodeCopy opts zz (joinStrings msg0 (zz ^. ttString)) [hh qq]
 
 -- the key is to pass all the vars into the type family so ghc can figure stuff out
 type family Pop0T (p :: Type) (q :: Type) :: Type where
@@ -268,7 +268,7 @@ instance ( P r x
         zz <- eval (Proxy @(z q)) opts r
         pure $ case getValueLR NoInline opts msg0 zz [hh rr] of
           Left e -> e
-          Right _z -> mkNodeCopy opts zz (msg0 <> nullIf " | " (zz ^. ttString)) [hh rr]
+          Right _z -> mkNodeCopy opts zz (joinStrings msg0 (zz ^. ttString)) [hh rr]
 
 type family Pop1T (p :: Type) (q :: k) (r :: Type) :: Type where
   Pop1T (Proxy z) q r = PP (z q) r
@@ -330,7 +330,7 @@ instance ( P r x
         zz <- eval (Proxy @(z w)) opts r
         pure $ case getValueLR NoInline opts msg0 zz [hh rr] of
           Left e -> e
-          Right _z -> mkNodeCopy opts zz (msg0 <> nullIf " | " (zz ^. ttString)) [hh rr]
+          Right _z -> mkNodeCopy opts zz (joinStrings msg0 (zz ^. ttString)) [hh rr]
 
 type family Pop1'T (p :: Type) (q :: Type) (r :: Type) :: Type where
   Pop1'T (Proxy z) (Proxy w) r = PP (z w) r
@@ -367,7 +367,7 @@ instance ( P s x
         zz <- eval (Proxy @(z q r)) opts s
         pure $ case getValueLR NoInline opts msg0 zz [hh ss] of
           Left e -> e
-          Right _z -> mkNodeCopy opts zz (msg0 <> nullIf " | " (zz ^. ttString)) [hh ss]
+          Right _z -> mkNodeCopy opts zz (joinStrings msg0 (zz ^. ttString)) [hh ss]
 
 -- pass all the arguments in!!! else ghc gets confused
 type family Pop2T (p :: Type) (q :: k) (r :: k1) (s :: Type) :: Type where
@@ -411,7 +411,7 @@ instance ( P s x
         zz <- eval (Proxy @(z w v)) opts s
         pure $ case getValueLR NoInline opts msg0 zz [hh ss] of
           Left e -> e
-          Right _z -> mkNodeCopy opts zz (msg0 <> nullIf " | " (zz ^. ttString)) [hh ss]
+          Right _z -> mkNodeCopy opts zz (joinStrings msg0 (zz ^. ttString)) [hh ss]
 
 -- pass in all the arguments otherwise ghc gets confused
 type family Pop2'T (p :: Type) (q :: Type) (r :: Type) (s :: Type) :: Type where

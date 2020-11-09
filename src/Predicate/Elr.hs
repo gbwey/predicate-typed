@@ -287,26 +287,25 @@ instance GetLen ('EBoth a b) where
 instance AssocC Elr where
   assoc ENone = ENone
   assoc (ELeft ENone) = ENone
-  assoc (EBoth ENone _) = ENone
   assoc (ELeft (ELeft a)) = ELeft a
   assoc (ELeft (ERight b)) = ERight (ELeft b)
-  assoc (ERight b) = ERight (ERight b)
+  assoc (ELeft (EBoth a b)) = EBoth a (ELeft b)
+  assoc (ERight c) = ERight (ERight c)
+  assoc (EBoth ENone c) = ERight (ERight c)
   assoc (EBoth (ELeft a) c) = EBoth a (ERight c)
   assoc (EBoth (ERight b) c) = ERight (EBoth b c)
   assoc (EBoth (EBoth a b) c) = EBoth a (EBoth b c)
-  assoc (ELeft (EBoth a b)) = EBoth a (ELeft b)
 
   unassoc ENone = ENone
-  unassoc (ERight ENone) = ENone
-  unassoc (EBoth _ ENone) = ENone
-
   unassoc (ELeft a) = ELeft (ELeft a)
+  unassoc (ERight ENone) = ELeft ENone
   unassoc (ERight (ELeft b)) = ELeft (ERight b)
-  unassoc (ERight (ERight b)) = ERight b
-  unassoc (EBoth a (ERight c)) = EBoth (ELeft a) c
+  unassoc (ERight (ERight c)) = ERight c
   unassoc (ERight (EBoth b c)) = EBoth (ERight b) c
-  unassoc (EBoth a (EBoth b c)) = EBoth (EBoth a b) c
+  unassoc (EBoth a ENone) = ELeft (ELeft a)
   unassoc (EBoth a (ELeft b)) = ELeft (EBoth a b)
+  unassoc (EBoth a (ERight c)) = EBoth (ELeft a) c
+  unassoc (EBoth a (EBoth b c)) = EBoth (EBoth a b) c
 
 instance SwapC Elr where
   swapC =

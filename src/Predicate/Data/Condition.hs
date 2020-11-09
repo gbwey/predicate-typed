@@ -582,7 +582,9 @@ instance ( PP prt (Int, a) ~ String
          qq <- eval (Proxy @prt) opts (cpos,a) -- only run prt when predicate is False
          pure $ case getValueLR NoInline opts (msgbase2 <> " False predicate and prt failed") qq [hh pp] of
             Left e -> e
-            Right msgx -> mkNode opts (Fail (msgbase1 <> " [" <> msgx <> "]" <> nullSpace (topMessage pp))) "" (hh pp : verboseList opts qq)
+            Right msgx ->
+              let top = topMessage pp
+              in mkNode opts (Fail (msgbase1 <> " [" <> msgx <> "]" <> nullSpace top)) "" (hh pp : verboseList opts qq)
        Right True ->
          if pos == 0 then -- we are at the bottom of the tree
             pure $ mkNodeB opts True msgbase2 [hh pp]
@@ -771,8 +773,8 @@ instance ( Show a
         qq <- eval (Proxy @prt) opts a
         pure $ case getValueLR NoInline opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
-          Right ee -> mkNode opts (Fail ee) (msg0 <> " | " <> showL opts a) (hh pp : verboseList opts qq)
-      Right True -> pure $ mkNode opts (Val a) (msg0 <> "(ok) | " <> showL opts a) [hh pp]  -- dont show the guard message if successful
+          Right ee -> mkNode opts (Fail ee) (joinStrings msg0 (showL opts a)) (hh pp : verboseList opts qq)
+      Right True -> pure $ mkNode opts (Val a) (joinStrings (msg0 <> "(ok)") (showL opts a)) [hh pp]  -- dont show the guard message if successful
 
 -- | boolean guard
 --
@@ -797,7 +799,9 @@ instance ( P prt a
         qq <- eval (Proxy @prt) opts a
         pure $ case getValueLR NoInline opts (msg0 <> " Msg") qq [hh pp] of
           Left e -> e
-          Right ee -> mkNode opts (Fail ee) (msg0 <> nullSpace (topMessage pp)) [hh pp, hh qq]
+          Right ee ->
+            let top = topMessage pp
+            in mkNode opts (Fail ee) (msg0 <> nullSpace top) [hh pp, hh qq]
       Right True -> pure $ mkNodeB opts True "" [hh pp]  -- dont show the guard message if successful
 
 -- | uses 'Guard' but negates @p@
@@ -885,11 +889,11 @@ instance ( Show a
   type PP (GuardSimple p) a = a
   eval _ opts a = do
     let msg0 = "GuardSimple"
-    pp <- evalBool (Proxy @p) (subopts opts) a -- temporarily lift DZero to DLite so as not to lose the failure message
+    pp <- evalBool (Proxy @p) (zeroToLite opts) a -- temporarily lift DZero to DLite so as not to lose the failure message
     pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right False ->
-        let msgx = topMessage pp
-        in mkNode opts (Fail msgx) (msg0 <> " | " <> showL opts a) [hh pp]
+        let top = topMessage pp -- need DLite at least to get a reasonable message for the Fail case
+        in mkNode opts (Fail top) (joinStrings msg0 (showL opts a)) [hh pp]
       Right True ->
-        mkNode opts (Val a) (msg0 <> "(ok) | " <> showL opts a) [hh pp]
+        mkNode opts (Val a) (joinStrings (msg0 <> "(ok)") (showL opts a)) [hh pp]

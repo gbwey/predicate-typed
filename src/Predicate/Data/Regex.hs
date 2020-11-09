@@ -160,13 +160,6 @@ instance P (ReT p) x => P (Re p) x where
   type PP (Re p) x = PP (ReT p) x
   eval _ = evalBool (Proxy @(ReT p))
 
--- only way with rescan is to be explicit: no repeats! and useanchors but not (?m)
--- or just use Re' but then we only get a bool ie doesnt capture groups
--- rescan returns Right [] as an failure!
--- [] is failure!
---  anchored means it has to start at the beginning: can have junk on the end which we cant detect but at least we know it starts at beginning
-
-
 -- | runs a regex matcher returning the original values and optionally any groups: see 'RH.scan'
 --
 -- >>> pl @(Rescan' '[ 'Anchored ] "([[:xdigit:]]{2})" Id) "wfeb12az"

@@ -1357,24 +1357,26 @@ instance AssocC Either where
   assoc (Left (Left a)) = Left a
   assoc (Left (Right b)) = Right (Left b)
   assoc (Right b) = Right (Right b)
+
   unassoc (Left a) = Left (Left a)
   unassoc (Right (Left b)) = Left (Right b)
   unassoc (Right (Right b)) = Right b
 instance AssocC These where
   assoc (This (This a)) = This a
   assoc (This (That b)) = That (This b)
-  assoc (That b) = That (That b)
+  assoc (This (These a b)) = These a (This b)
+  assoc (That c) = That (That c)
   assoc (These (This a) c) = These a (That c)
   assoc (These (That b) c) = That (These b c)
   assoc (These (These a b) c) = These a (These b c)
-  assoc (This (These a b)) = These a (This b)
+
   unassoc (This a) = This (This a)
   unassoc (That (This b)) = This (That b)
-  unassoc (That (That b)) = That b
-  unassoc (These a (That c)) = These (This a) c
+  unassoc (That (That c)) = That c
   unassoc (That (These b c)) = These (That b) c
-  unassoc (These a (These b c)) = These (These a b) c
   unassoc (These a (This b)) = This (These a b)
+  unassoc (These a (That c)) = These (This a) c
+  unassoc (These a (These b c)) = These (These a b) c
 
 instance AssocC (,) where
   assoc ((a,b),c) = (a,(b,c))

@@ -479,6 +479,6 @@ instance x ~ [Int]
               ys = map (\w -> if w>=10 then w-9 else w) xs
               z = sum' ys
               ret = z `mod` 10
-          in if ret == 0 then mkNodeB opts True (msg0 <> " | " <> showL opts ws) []
+          in if ret == 0 then mkNodeB opts True (joinStrings msg0 (showL opts ws)) []
              else mkNodeB opts False (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " ws) []
 

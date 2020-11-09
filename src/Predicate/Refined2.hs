@@ -498,7 +498,7 @@ data Msg2 = Msg2 { m2Desc :: !String
                  } deriving Eq
 
 instance Show Msg2 where
-  show (Msg2 a b c _d) = a <> nullIf " | " b <> nullIf "\n" c
+  show (Msg2 a b c _d) = joinStrings a b <> nullIf "\n" c
 
 -- | format the output from creating a 'Refined2' value into 'Msg2'
 prt2Impl :: forall a . Show a

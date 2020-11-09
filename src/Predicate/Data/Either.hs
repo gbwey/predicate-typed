@@ -634,7 +634,7 @@ instance ( Show a
                    Left e -> e
                    Right c -> mkNodeCopy opts qq (show3 opts msg1 c b) hhs
 
-type family EitherInT p y lr where
+type family EitherInT (p :: k) (y :: Type) (lr :: Type) where
   EitherInT p y (Either a _) = PP p (y,a)
   EitherInT _ _ o = GL.TypeError (
       'GL.Text "EitherInT: expected 'Either a b' "

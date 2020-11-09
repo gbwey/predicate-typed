@@ -588,7 +588,7 @@ data Msg3 = Msg3 { m3Desc :: !String
                  } deriving Eq
 
 instance Show Msg3 where
-  show (Msg3 a b c _d) = a <> nullIf " | " b <> nullIf "\n" c
+  show (Msg3 a b c _d) = joinStrings a b <> nullIf "\n" c
 
 prt3Impl :: forall a . Show a
   => POpts
