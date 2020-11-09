@@ -2072,6 +2072,12 @@ type family DoExpandLT (ps :: [k]) :: Type where
 -- >>> pz @(Fst && (Length Snd == 4)) (True,[12,11,12,13,14])
 -- Val False
 --
+-- >>> pz @(Uncurry (+:)) ([2..5],1)
+-- Val [2,3,4,5,1]
+--
+-- >>> pz @(Uncurry (==!)) ('x','y')
+-- Val LT
+--
 data p && q deriving Show
 infixr 3 &&
 

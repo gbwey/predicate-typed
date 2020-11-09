@@ -25,6 +25,8 @@ module Predicate.Data.Tuple (
   , type (***)
   , Both
   , On
+  , On'
+  , Uncurry
 
  -- ** flat tuples
   , Tuple
@@ -381,7 +383,42 @@ instance ( P p a
           Right b' ->
             mkNode opts (Val (b,b')) msg0 [hh pp, hh pp']
 
--- | similar to 'Data.Function.on': may require kind signatures: Both is a better choice
+-- | similar to 'Data.Function.on'
+--
+-- >>> pz @(On' (==!) Len Fst (Reverse << Snd)) ("1ss","x2")
+-- Val GT
+--
+data On' (p :: Type -> Type -> k2) q r s deriving Show
+
+instance ( P q (PP r x)
+         , P q (PP s x)
+         , P r x
+         , P s x
+         , P (p Fst Snd) (PP q (PP r x), PP q (PP s x))
+   ) => P (On' p q r s) x where
+  type PP (On' p q r s) x = PP (p Fst Snd) (PP q (PP r x), PP q (PP s x))
+  eval _ opts x = do
+    let msg0 = "On'"
+    lr <- runPQ NoInline msg0 (Proxy @r) (Proxy @s) opts x []
+    case lr of
+      Left e -> pure e
+      Right (r,s,rr,ss) -> do
+        let hhs = [hh rr, hh ss]
+        qq <- eval (Proxy @q) opts r
+        case getValueLR NoInline opts msg0 qq hhs of
+          Left e -> pure e
+          Right b -> do
+            qq' <- eval (Proxy @q) opts s
+            case getValueLR NoInline opts msg0 qq' (hhs ++ [hh qq]) of
+              Left e -> pure e
+              Right b' -> do
+                pp <- eval (Proxy @(p Fst Snd)) opts (b,b')
+                let hhs1 = hhs ++ [hh qq, hh qq']
+                pure $ case getValueLR NoInline opts msg0 pp hhs1 of
+                  Left e -> e
+                  Right _ -> mkNodeCopy opts pp msg0 hhs1 -- so we can preserve ValP
+
+-- | similar to 'Data.Function.on' for tuples
 --
 -- >>> pz @(On (==!) Len) ("1ss","x2") -- or use Comparing or Both+Compare
 -- Val GT
@@ -389,36 +426,67 @@ instance ( P p a
 -- >>> pz @('(4,2) >> On (**) (FromIntegral _)) ()
 -- Val 16.0
 --
--- >>> pz @('(4,2) >> Both (FromIntegral _) >> Fst ** Snd) () -- equivalent to the above but easier on ghc
+-- >>> pz @('(4,2) >> Both (FromIntegral _) >> Fst ** Snd) () -- equivalent to the above
 -- Val 16.0
 --
 -- >>> pz @(On (+) (Id * Id) >> Id ** (1 % 2 >> FromRational _)) (3,4)
 -- Val 5.0
 --
--- >>> pz @(Both (Id * Id) >> ((Fst + Snd) ** (1 % 2 >> FromRational _))) (3,4) -- equivalent to the above but easier on ghc
+-- >>> pz @(Both (Id * Id) >> ((Fst + Snd) ** (1 % 2 >> FromRational _))) (3,4) -- equivalent to the above
 -- Val 5.0
 --
+-- >>> pz @(On (<>) (Pure [] Id)) ('x','y')
+-- Val "xy"
+--
+-- >>> pz @(On (Flip (<>)) (Pure [] Id)) ('x','y')
+-- Val "yx"
+--
+-- >>> pz @(On (Flip (<>)) (Pure _ Id) >> '(Len,Head,Last)) ('x','y')
+-- Val (2,'y','x')
+--
 data On (p :: Type -> Type -> k2) q deriving Show
+type OnT p q = On' p q Fst Snd
 
-instance ( P q a
-         , P q a'
-         , P (p Fst Snd) (PP q a, PP q a')
-   ) => P (On p q) (a,a') where
-  type PP (On p q) (a,a') = PP (p Fst Snd) (PP q a, PP q a')
-  eval _ opts (a,a') = do
-    let msg0 = "On"
-    qq <- eval (Proxy @q) opts a
-    case getValueLR NoInline opts msg0 qq [] of
-      Left e -> pure e
-      Right b -> do
-        qq' <- eval (Proxy @q) opts a'
-        case getValueLR NoInline opts msg0 qq' [hh qq] of
-          Left e -> pure e
-          Right b' -> do
-            pp <- eval (Proxy @(p Fst Snd)) opts (b,b')
-            pure $ case getValueLR NoInline opts msg0 pp [hh qq, hh qq'] of
-              Left e -> e
-              Right p -> mkNode opts (Val p) msg0 [hh qq, hh qq', hh pp]
+instance P (OnT p q) x => P (On p q) x where
+  type PP (On p q) x = PP (OnT p q) x
+  eval _ = eval (Proxy @(OnT p q))
+
+-- | similar to 'uncurry'
+--
+-- >>> pl @(Uncurry (==)) ('x','x')
+-- True (On')
+-- Val True
+--
+-- >>> pz @(Uncurry (.&.)) (7,15)
+-- Val 7
+--
+-- >>> pz @(Uncurry (+)) (7,15)
+-- Val 22
+--
+-- >>> pz @(Uncurry (*)) (7,15)
+-- Val 105
+--
+-- >>> pz @(Uncurry '(,)) (7,15)
+-- Val (7,15)
+--
+-- >>> pz @(Uncurry ('(,,) 4)) ('x',True)
+-- Val (4,'x',True)
+--
+-- >>> pz @(Uncurry (Flip '(,))) (1,'x')
+-- Val ('x',1)
+--
+-- >>> pz @(Uncurry (<>)) ("ab","def")
+-- Val "abdef"
+--
+-- >>> pz @(Uncurry (<>)) (SG.Sum 12,SG.Sum 99)
+-- Val (Sum {getSum = 111})
+--
+data Uncurry (p :: Type -> Type -> k2) deriving Show
+type UncurryT p = On p Id
+
+instance P (UncurryT p) x => P (Uncurry p) x where
+  type PP (Uncurry p) x = PP (UncurryT p) x
+  eval _ = eval (Proxy @(UncurryT p))
 
 -- | create a @n@ tuple from a list or fail
 --

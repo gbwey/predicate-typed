@@ -46,7 +46,7 @@ allTests =
   , expectBT (Val ()) $ pl @(L22 >> L22) (1,('a',(3,(True,()))))
   , expectBT (Val True) $ pl @L31 (1,2,(True,4))
   , expectBT (Fail "failed3") $ pl @((Fst >> FailT _ "failed3" >> Le (6 -% 1)) || 'False) ([-5],True)
-  , expectBT (Val [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 -% 1 ) >> Wrap (MM.First _) Id)) >> Map (Fst <> Snd) >> Map ('Just Unwrap)) [Nothing,Just 10,Just 20,Nothing,Just 30]
+  , expectBT (Val [(-999) % 1,10 % 1,20 % 1,(-999) % 1,30 % 1]) $ pl @(Map (Wrap (MM.First _) Id &&& (Pure Maybe (999 -% 1 ) >> Wrap (MM.First _) Id)) >> Map (Uncurry (<>)) >> Map ('Just Unwrap)) [Nothing,Just 10,Just 20,Nothing,Just 30]
   , expectBT (Val (True,3.4)) $ pl @(Thd >> Snd >> Fst) (1,'a',('x',((True,3.4),999)))
   , expectBT (Val [13,16,17]) $ pl @(Guard "err" (Len > 2) >> Map Succ) [12,15,16]
   , expectBT (Val 55) $ pl @(Map (Wrap (SG.Sum _) Id) >> MConcat >> Unwrap) [1..10]
@@ -60,7 +60,7 @@ allTests =
   , expectBT (Fail "Guards:invalid length(5) expected 4") $ pl @(Rescan "(\\d+)\\.?" >> ConcatMap Snd Id >> Map (ReadBase Int 10) >| Ip4op) "1.22.244.66.77"
   , expectBT (Val 256) $ pl @(Rescan "(?i)^\\\\x([0-9a-f]{2})$" >> OneP >> Snd >> OneP >> ReadBase Int 16 >> Succ) "\\xfF"
   , expectBT (Val 256) $ pl @(Rescan "(?i)^\\\\x(.{2})$" >> OneP >> Snd >> OneP >> ReadBase Int 16 >> Succ) "\\xfF"
-  , expectBT (Val (("fF",(255,"ff")),False)) $ pl @(Rescan "(?i)^\\\\x([0-9a-f]{2})$" >> OneP >> Snd >> OneP >> (Id &&& (ReadBase Int 16 >> (Id &&& ShowBase 16))) >> (Id &&& ((Id *** Snd) >> Fst == Snd))) "\\xfF"
+  , expectBT (Val (("fF",(255,"ff")),False)) $ pl @(Rescan "(?i)^\\\\x([0-9a-f]{2})$" >> OneP >> Snd >> OneP >> (Id &&& (ReadBase Int 16 >> (Id &&& ShowBase 16))) >> (Id &&& ((Id *** Snd) >> Uncurry (==)))) "\\xfF"
   , expectBT (Val [31,11,1999]) $ pl @(Rescan DdmmyyyyRE >> OneP >> Map' (ReadBase Int 10) Snd >| Ddmmyyyyop) "31-11-1999"
   , expectBT (Val (TimeOfDay 23 13 59)) $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE) >> ReadP TimeOfDay Id) "23:13:59"
   , expectBT (Fail "hh:mm:ss regex failed") $ pl @(Guard "hh:mm:ss regex failed" (Re HmsRE) >> ReadP TimeOfDay Id) "23:13:60"

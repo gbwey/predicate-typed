@@ -851,21 +851,21 @@ instance ( Show a
               pp <- eval (Proxy @p) opts (s,a)
               pure $ case getValueLR NoInline opts (msg2 <> "p failed") pp hhs of
                    Left e -> e
-                   Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 a) (hhs ++ [hh pp])
+                   Right c -> mkNodeCopy opts pp (show3' opts msg0 c msg1 a) hhs
             That b -> do
               let msg1 = "That "
                   msg2 = msg0 <> msg1
               qq <- eval (Proxy @q) opts (s,b)
               pure $ case getValueLR NoInline opts (msg2 <> "q failed") qq hhs of
                    Left e -> e
-                   Right c -> mkNode opts (Val c) (show3' opts msg0 c msg1 b) (hhs ++ [hh qq])
+                   Right c -> mkNodeCopy opts qq (show3' opts msg0 c msg1 b) hhs
             These a b -> do
               let msg1 = "These "
                   msg2 = msg0 <> msg1
               rr <- eval (Proxy @r) opts (s,(a,b))
               pure $ case getValueLR NoInline opts (msg2 <> "r failed") rr hhs of
                    Left e -> e
-                   Right c -> mkNode opts (Val c) (show3' opts msg0 c "" (These a b)) (hhs ++ [hh rr])
+                   Right c -> mkNodeCopy opts rr (show3' opts msg0 c "" (These a b)) hhs
 
 type family TheseInT r y elr where
   TheseInT r y (These a b) = PP r (y,(a,b))

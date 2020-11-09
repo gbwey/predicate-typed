@@ -112,3 +112,18 @@ testKindSignature0C :: Either Msg0
         (Pop2' (Proxy ('(,) :: Type -> Bool -> (Type,Bool))) (Proxy (W "bbb")) Fst Snd >> Snd)
         (Proxy 'True, Int))
 testKindSignature0C = newRefined (Proxy @'True,1234)
+
+testKindSignature0D :: Either Msg0
+      (Refined
+        OU
+        (On (**) (FromIntegral Double) >> Id < (FromIntegral Double << 144))
+        (Int, Int))
+testKindSignature0D = newRefined (14,4)
+
+testKindSignature0E :: Either Msg0
+      (Refined
+        OU
+        (On (Flip (<>)) (Pure [] Id) >> '(Len,Head,Last) >> Fst > 5)
+        (Char, Char))
+testKindSignature0E = newRefined ('x','y')
+

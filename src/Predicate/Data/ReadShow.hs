@@ -28,7 +28,7 @@ module Predicate.Data.ReadShow (
   , PrintL
   , PrintT
   , PrintI
-  , PrintC(..)
+  , PrintC (..)
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -233,7 +233,7 @@ instance ( PrintfArg (PP p x)
 
 -- | uses inductive tuples to replace variable arguments
 --
-class PrintC x where
+class PrintC (x :: Type) where
   prtC :: (PrintfArg a, PrintfType r) => String -> (a,x) -> r
 instance PrintC () where
   prtC s (a,()) = printf s a

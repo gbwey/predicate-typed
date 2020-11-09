@@ -612,6 +612,7 @@ instance P (RepeatT n p) a => P (Repeat n p) a where
 --
 data DoN (n :: Nat) p deriving Show
 type DoNT (n :: Nat) p = Do (RepeatT n p)
+
 instance P (DoNT n p) a => P (DoN n p) a where
   type PP (DoN n p) a = PP (DoNT n p) a
   eval _ = eval (Proxy @(DoNT n p))

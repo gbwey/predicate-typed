@@ -49,7 +49,6 @@ import Data.Proxy (Proxy(..))
 import Data.Kind (Type)
 import Data.Void (Void)
 import qualified Data.Type.Equality as DE
-import Data.Bool (bool)
 -- $setup
 -- >>> import Predicate.Prelude
 -- >>> :set -XDataKinds
@@ -125,7 +124,7 @@ instance ( Show (PP r a)
                 else eval (Proxy @r) opts a
         pure $ case getValueLR Inline opts (msg0 <> " '" <> show b) qqrr [hh pp, hh qqrr] of
           Left e -> e
-          Right ret -> mkNodeCopy opts qqrr (msg0 <> " " <> bool "'False" "'True" b <> " " <> showL opts ret) [hh pp]
+          Right ret -> mkNodeCopy opts qqrr (msg0 <> " '" <> show b <> " " <> showL opts ret) [hh pp]
 
 type family GuardsT (ps :: [k]) where
   GuardsT '[] = '[]
@@ -140,14 +139,11 @@ type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
   ToGuardsT prt '[p] = '(prt,p) : '[]
   ToGuardsT prt (p ': ps) = '(prt,p) ': ToGuardsT prt ps
 
--- | tries each predicate ps and on the first match runs the corresponding qs but if there is no match on ps then runs the fail case e
-data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
--- ps = conditions
--- qs = what to do [one to one with ps]
--- r = the value
--- e = otherwise  -- leave til later
-
 -- | tries to match the value @r@ with a condition in @ps@ and if there is a match calls the associated @qs@ entry else run @e@
+--   ps = conditions
+--   qs = what to do [one to one with ps]
+--   r = the value
+--   e = otherwise  -- leave til later
 --
 -- >>> pl @(Case (Snd >> FailP "xx") '[Gt 3, Lt 2, Same 3] '["gt3","lt2","eq3"] Id) 15
 -- Present "gt3" (Case(0 of 2) "gt3" | 15)
@@ -253,6 +249,8 @@ instance (FailUnlessT (LenT ps DE.== LenT qs)
   type PP (Case e ps qs r) x = PP (CaseImplT e ps qs r) x
   eval _ = eval (Proxy @(CaseImplT e ps qs r))
 
+data CaseImpl (n :: Nat) (e :: k0) (ps :: [k]) (qs :: [k1]) (r :: k2) deriving Show
+
 -- only allow non empty lists!
 instance (GL.TypeError ('GL.Text "CaseImpl '[] invalid: lhs requires at least one value in the list"))
    => P (CaseImpl n e ('[] :: [k]) (q ': qs) r) x where
@@ -294,12 +292,12 @@ instance ( P r x
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR NoInline opts msgbase0 qq [hh rr, hh pp] of
               Left e -> e
-              Right q -> mkNode opts (Val q) (show3 opts msgbase0 q a) (hh rr : hh pp : verboseList opts qq)
+              Right q -> mkNodeCopy opts qq (show3 opts msgbase0 q a) [hh rr, hh pp]
           Right False -> do
             ww <- eval (Proxy @e) opts (a, Proxy @(PP q (PP r x)))
             pure $ case getValueLR NoInline opts ("Case:otherwise failed" <> nullIf ":" (ww ^. ttString)) ww [hh rr, hh pp] of
               Left e -> e
-              Right w -> mkNode opts (Val w) (show3 opts msgbase0 w a) [hh rr, hh pp, hh ww]
+              Right w -> mkNodeCopy opts ww (show3 opts msgbase0 w a) [hh rr, hh pp]
 
 instance ( KnownNat n
          , GetLen ps
@@ -331,12 +329,12 @@ instance ( KnownNat n
             qq <- eval (Proxy @q) opts a
             pure $ case getValueLR NoInline opts msgbase0 qq [hh pp, hh rr] of
               Left e -> e
-              Right q -> mkNode opts (Val q) (show3 opts msgbase0 q a) (hh rr : hh pp : verboseList opts qq)
+              Right q -> mkNodeCopy opts qq (show3 opts msgbase0 q a) [hh rr, hh pp]
           Right False -> do
             ww <- eval (Proxy @(CaseImpl n e (p1 ': ps) (q1 ': qs) r)) opts z
             pure $ case getValueLR Inline opts "" ww [hh rr, hh pp] of
               Left e -> e
-              Right w -> mkNode opts (Val w) (show3 opts msgbase1 w a) [hh rr, hh pp, hh ww]
+              Right w -> mkNodeCopy opts ww (show3 opts msgbase1 w a) [hh rr, hh pp]
 
 
 data GuardsImpl (n :: Nat) (os :: [(k,k1)]) deriving Show

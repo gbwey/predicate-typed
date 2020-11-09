@@ -199,7 +199,6 @@ instance P (BitShiftT p q) x => P (BitShift p q) x where
   type PP (BitShift p q) x = PP (BitShiftT p q) x
   eval _ = eval (Proxy @(BitShiftT p q))
 
-
 -- | shift left by @p@ using @q@: similar to flipped version of 'Data.Bits.shiftL'
 --
 -- >>> pz @(BitShiftL 1 Id) 123
