@@ -1510,9 +1510,10 @@ instance ( Ord (PP p x)
           Left e -> e
           Right (p,q,pp,qq) ->
             let hhs = [hh rr, hh pp, hh qq]
-            in if p <= r && r <= q then mkNodeB opts True (showL opts p <> " <= " <> showL opts r <> " <= " <> showL opts q) hhs
-               else if p > r then mkNodeB opts False (showL opts p <> " <= " <> showL opts r) hhs
-               else mkNodeB opts False (showL opts r <> " <= " <> showL opts q) hhs
+            in case (compare r p, compare r q) of
+                 (LT,_) -> mkNodeB opts False (showL opts p <> " <= " <> showL opts r) hhs
+                 (_,GT) -> mkNodeB opts False (showL opts r <> " <= " <> showL opts q) hhs
+                 _ -> mkNodeB opts True (showL opts p <> " <= " <> showL opts r <> " <= " <> showL opts q) hhs
 
 
 -- | A operator predicate that determines if the value is between @p@ and @q@

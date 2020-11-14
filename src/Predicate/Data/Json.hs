@@ -35,6 +35,7 @@ import qualified Data.Aeson.Encode.Pretty as AP
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import System.Directory (doesFileExist)
+import Data.Bool (bool)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -113,10 +114,10 @@ instance ( P p x
       Right p -> do
         let hhs = [hh pp]
             msg1 = msg0 <> "(" <> p <> ")"
-        mb <- runIO $ do
-                b <- doesFileExist p
-                if b then Just <$> BS8.readFile p
-                else pure Nothing
+        mb <- runIO $
+                ifM (doesFileExist p)
+                    (Just <$> BS8.readFile p)
+                    (pure Nothing)
         pure $ case mb of
           Nothing -> mkNode opts (Fail msg1) "" hhs
           Just Nothing -> mkNode opts (Fail (msg1 <> " file does not exist")) "" hhs
@@ -161,7 +162,7 @@ instance ( GetBool pretty
     pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let d = (if pretty then AP.encodePretty else A.encode) p
+        let d = bool A.encode AP.encodePretty pretty p
         in mkNode opts (Val d) (msg0 <> " " <> litL opts (litBL opts d)) [hh pp]
 
 -- | encode a json file with pretty option
@@ -181,7 +182,7 @@ instance ( GetBool pretty
     case lr of
       Left e -> pure e
       Right (p,q,pp,qq) -> do
-        let d = (if pretty then AP.encodePretty else A.encode) q
+        let d = bool A.encode AP.encodePretty pretty q
             hhs = [hh pp, hh qq]
         mb <- runIO $ BL8.writeFile p d
         pure $ case mb of

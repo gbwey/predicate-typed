@@ -36,6 +36,8 @@ module Predicate.Examples.Refined3 (
   , Luhn11
   , LuhnR
   , LuhnT
+  -- *** sim card
+  , SimT
 
   -- ** ssn
   , ssn
@@ -343,20 +345,45 @@ type BetweenN (opts :: Opt) m n = '(opts, Id, Between m n Id, Id, Int)
 
 type LuhnR (opts :: Opt) (n :: Nat) = MakeR3 (LuhnT opts n)
 
--- | Luhn check
+-- | Luhn check using builtin 'Predicate.Data.Extra.IsLuhn'
 --
 -- >>> newRefined3P (Proxy @(LuhnT OZ 4)) "1230"
 -- Right (Refined3 [1,2,3,0] "1230")
 --
 -- >>> newRefined3P (Proxy @(LuhnT OL 4)) "1234"
--- Left Step 2. False Boolean Check(op) | {True && False | (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])}
+-- Left Step 2. False Boolean Check(op) | {True && False | (IsLuhn map=[2,2,6,4] sum=14 ret=4 | [1,2,3,4])}
 --
--- | uses builtin 'IsLuhn'
 type LuhnT (opts :: Opt) (n :: Nat) =
    '(opts
     , Map' (ReadP Int Id) Ones
     , Msg "incorrect number of digits:"
           (Len == n) && IsLuhn
+    , ConcatMap (ShowP Id) Id
+    , String)
+
+-- | Sim card check using builtin 'Predicate.Data.Extra.LuhnDigit'
+--
+-- >>> newRefined3P (Proxy @(SimT OZ)) "12345678901234567859"
+-- Right (Refined3 [1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,5,9] "12345678901234567859")
+--
+-- >>> newRefined3P (Proxy @(SimT OZ)) "12345678901234567"
+-- Left Step 2. Failed Boolean Check(op) | invalid length expected 20 found 17
+--
+-- >>> newRefined3P (Proxy @(SimT OZ)) "12345678901234567819"
+-- Left Step 2. Failed Boolean Check(op) | bad first checkdigit was given as 1 but should be 5
+--
+-- >>> newRefined3P (Proxy @(SimT OZ)) "12345678901234567852"
+-- Left Step 2. Failed Boolean Check(op) | bad second checkdigit was given as 2 but should be 9
+--
+type SimT (opts :: Opt) =
+   '(opts
+    , Map' (ReadP Int Id) Ones
+    , Guard (PrintF "invalid length expected 20 found %d" Len) (Len == 20)
+   >> SplitAt 18 Id
+   >> '(LuhnDigit << Fst,LuhnDigit << Drop 6 Fst,Snd)
+   >> Guard (PrintT "bad first checkdigit was given as %d but should be %d" '(Head << Thd,Fst)) ((Head << Thd) == Fst)
+   >> Guard (PrintT "bad second checkdigit was given as %d but should be %d" '(Last << Thd,Snd)) ((Last << Thd) == Snd)
+   >> 'True
     , ConcatMap (ShowP Id) Id
     , String)
 

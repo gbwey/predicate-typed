@@ -684,8 +684,8 @@ gp1 b = go [b]
   go ret =
      \case
        [] -> [ret]
-       (tf, (_, a), _):as -> if tf then go (ret <> [a]) as
-                             else ret : go [a] as
+       (tf, (_, a), _):as | tf -> go (ret <> [a]) as
+                          | otherwise -> ret : go [a] as
 
 -- | similar to 'Data.List.filter'
 --
@@ -951,7 +951,7 @@ instance ( P n a
          ) => P (PadImpl left n p q) a where
   type PP (PadImpl left n p q) a = PP q a
   eval _ opts a = do
-    let msg0 = "Pad" <> (if lft then "L" else "R")
+    let msg0 = "Pad" <> bool "R" "L" lft
         lft = getBool @left
     lr <- runPQ NoInline msg0 (Proxy @n) (Proxy @p) opts a []
     case lr of
@@ -1222,7 +1222,7 @@ instance ( GetBool keep
          ) => P (KeepImpl keep p q) x where
   type PP (KeepImpl keep p q) x = PP q x
   eval _ opts x = do
-    let msg0 = if keep then "Keep" else "Remove"
+    let msg0 = bool "Remove" "Keep" keep
         keep = getBool @keep
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
@@ -1658,8 +1658,8 @@ instance ( PP q a ~ [x]
         let hhs = [hh qq, hh rr]
         in case chkSize2 opts msg0 q' r' hhs of
           Left e -> pure e
-          Right ((qLen,q),(rLen,r)) -> do
-            if qLen == rLen then do
+          Right ((qLen,q),(rLen,r))
+            | qLen == rLen -> do
                ts <- zipWithM (\i (x,y) -> ((i, (x,y)),) <$> evalHide @p opts (x,y)) [0::Int ..] (zip q r)
                pure $ case splitAndAlign opts msg0 ts of
                  Left e -> e
@@ -1669,9 +1669,9 @@ instance ( PP q a ~ [x]
                        ret = map fst kvs
                    in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
 
-             else do
+            | otherwise ->
                    let msg1 = msg0 ++ show (qLen,rLen)
-                   pure $ mkNode opts (Fail (msg1 <> " length mismatch")) (showVerbose opts "q=" q <> showVerbose opts " | r=" r) hhs
+                   in pure $ mkNode opts (Fail (msg1 <> " length mismatch")) (showVerbose opts "q=" q <> showVerbose opts " | r=" r) hhs
 
 -- | Zip two lists to their maximum length using optional padding
 --

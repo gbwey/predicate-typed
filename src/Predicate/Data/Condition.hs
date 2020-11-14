@@ -386,11 +386,11 @@ instance ( [a] ~ x
         n = getLen @ps
     case chkSize opts msg0 as' [] of
       Left e -> pure e
-      Right (asLen,as) ->
-        if n /= asLen then
-           let msg1 = msg0 <> badLength asLen n
-           in pure $ mkNode opts (Fail msg1) "" []
-        else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
+      Right (asLen,as)
+           | n == asLen -> eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
+           | otherwise ->
+               let msg2 = msg0 <> badLength asLen n
+               in pure $ mkNode opts (Fail msg2) "" []
 
 instance ( [a] ~ x
          , Show a
@@ -528,17 +528,17 @@ instance ( [a] ~ x
          , PP (BoolsImpl (LenT ps) ps) x ~ Bool
          ) => P (Bools ps) x where
   type PP (Bools ps) x = Bool
-  eval _ opts as = do
+  eval _ opts as' = do
     let msg0 = "Bools"
         msg1 = "Bool(" <> show (n-1) <> ")"
         n = getLen @ps
-    case chkSize opts msg1 as [] of
+    case chkSize opts msg1 as' [] of
       Left e -> pure e
-      Right (wsLen,ws) ->
-        if n /= wsLen then
-           let msg2 = msg0 <> badLength wsLen n
-           in pure $ mkNode opts (Fail msg2) "" []
-        else evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts ws
+      Right (asLen,as)
+           | n == asLen -> evalBool (Proxy @(BoolsImpl (LenT ps) ps)) opts as
+           | otherwise ->
+               let msg2 = msg0 <> badLength asLen n
+               in pure $ mkNode opts (Fail msg2) "" []
 
 data BoolsImpl (n :: Nat) (os :: [(k,k1)]) deriving Show
 
@@ -649,11 +649,11 @@ instance ( [a] ~ x
         n = getLen @ps
     case chkSize opts msg0 as' [] of
       Left e -> pure e
-      Right (asLen,as) ->
-        if n /= asLen then
-           let msg1 = msg0 <> badLength asLen n
-           in pure $ mkNode opts (Fail msg1) "" []
-        else eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
+      Right (asLen,as)
+           | n == asLen -> eval (Proxy @(GuardsImpl (LenT ps) ps)) opts as
+           | otherwise ->
+               let msg1 = msg0 <> badLength asLen n
+               in pure $ mkNode opts (Fail msg1) "" []
 
 -- | if a predicate fails then then the corresponding symbol and value will be passed to the print function
 --
@@ -856,11 +856,7 @@ instance P (ExitWhenT prt p) x => P (ExitWhen prt p) x where
 -- | similar to 'Guard' but uses the root message of the False predicate case as the failure message
 --
 -- >>> pz @(GuardSimple IsLuhn) [1..4]
--- Fail "(IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])"
---
--- >>> pl @IsLuhn [1..4]
--- False (IsLuhn map=[4,6,2,2] sum=14 ret=4 | [1,2,3,4])
--- Val False
+-- Fail "(IsLuhn map=[2,2,6,4] sum=14 ret=4 | [1,2,3,4])"
 --
 -- >>> pz @(GuardSimple IsLuhn) [1,2,3,0]
 -- Val [1,2,3,0]

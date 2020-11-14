@@ -43,7 +43,7 @@ import Predicate.Misc
 import Predicate.Util
 import Data.Proxy (Proxy(Proxy))
 import qualified Text.Regex.PCRE.Heavy as RH
-
+import Data.Bool (bool)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -388,7 +388,7 @@ instance ( GetBool b
          ) => P (ReplaceImpl b rs p q r) x where
   type PP (ReplaceImpl b rs p q r) x = String
   eval _ opts x = do
-    let msg0 = "Replace" <> (if alle then "All" else "One") <> unlessNull rs ("' " <> displayROpts fs)
+    let msg0 = "Replace" <> bool "One" "All" alle <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
         alle = getBool @b
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
@@ -407,14 +407,14 @@ instance ( GetBool b
                let ret :: String
                    ret = case q of
                            RReplace o s ->
-                             let g fn = (if alle then RH.gsub else RH.sub) regex fn r
+                             let g fn = bool RH.sub RH.gsub alle regex fn r
                              in g (case o of
                                   RPrepend -> (s <>)
                                   ROverWrite -> const s
                                   RAppend -> (<> s))
-                           RReplace1 s -> (if alle then RH.gsub else RH.sub) regex s r
-                           RReplace2 s -> (if alle then RH.gsub else RH.sub) regex s r
-                           RReplace3 s -> (if alle then RH.gsub else RH.sub) regex s r
+                           RReplace1 s -> bool RH.sub RH.gsub alle regex s r
+                           RReplace2 s -> bool RH.sub RH.gsub alle regex s r
+                           RReplace3 s -> bool RH.sub RH.gsub alle regex s r
                in mkNode opts (Val ret) (msg1 <> " " <> litL opts r <> litVerbose opts " | " ret) (hhs <> [hh rr])
 
 -- | replaces all values using regex @p@ with a replacement function @q@ inside the value @r@ using regex options @rs@

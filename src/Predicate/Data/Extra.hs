@@ -40,6 +40,7 @@ module Predicate.Data.Extra (
 
  -- ** luhn check
   , IsLuhn
+  , LuhnDigit
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -452,6 +453,14 @@ instance ( Integral (PP n x)
 
 -- | IsLuhn predicate check on last digit
 --
+-- >>> pl @IsLuhn [9,8,7,5,6]
+-- True (IsLuhn map=[9,7,7,1,6] sum=30 ret=0 | [9,8,7,5,6])
+-- Val True
+--
+-- >>> pl @IsLuhn [9,8,7,5,4]
+-- False (IsLuhn map=[9,7,7,1,4] sum=28 ret=8 | [9,8,7,5,4])
+-- Val False
+--
 -- >>> pz @IsLuhn [1,2,3,0]
 -- Val True
 --
@@ -459,11 +468,14 @@ instance ( Integral (PP n x)
 -- Val False
 --
 -- >>> pz @(GuardSimple IsLuhn) [15,4,3,1,99]
--- Fail "(IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])"
+-- Fail "(IsLuhn map=[6,8,3,2,90] sum=109 ret=9 | [15,4,3,1,99])"
 --
 -- >>> pl @IsLuhn [15,4,3,1,99]
--- False (IsLuhn map=[90,2,3,8,6] sum=109 ret=9 | [15,4,3,1,99])
+-- False (IsLuhn map=[6,8,3,2,90] sum=109 ret=9 | [15,4,3,1,99])
 -- Val False
+--
+-- >>> pz @(Ones >> Map (ReadP Int Id) >> IsLuhn) "9501234400008"
+-- Val True
 --
 data IsLuhn deriving Show
 
@@ -476,9 +488,51 @@ instance x ~ [Int]
          Left e -> e
          Right (_,ws) ->
           let xs = zipWith (*) (ws ^. reversed) (cycle' [1,2])
-              ys = map (\w -> if w>=10 then w-9 else w) xs
+              ys = map (\w -> if w>=10 then w-9 else w) xs ^. reversed
               z = sum' ys
               ret = z `mod` 10
-          in if ret == 0 then mkNodeB opts True (joinStrings msg0 (showL opts ws)) []
-             else mkNodeB opts False (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " ws) []
+          in mkNodeB opts (ret == 0) (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " ws) []
+
+-- | get Luhn check digit
+--
+-- >>> pz @(Ones >> Map (ReadP Int Id) >> LuhnDigit) "7992739871"
+-- Val 3
+--
+-- >>> pl @LuhnDigit [9,8,7,6]
+-- Present 4 (LuhnDigit map=[9,7,7,3] sum=26 | sum*9=234 | mod 10=4 | [9,8,7,6])
+-- Val 4
+--
+-- >>> pz @LuhnDigit [1,2,3]
+-- Val 0
+--
+-- >>> pz @(Ones >> Map (ReadP Int Id) >> LuhnDigit) "950123440000"
+-- Val 8
+--
+-- >>> pz @(Ones >> Map (ReadP Int Id) >> GuardSimple (Len == 18) >> '(Id,Drop 6 Id) >> Both LuhnDigit) "896101950123440000"
+-- Val (1,8)
+--
+-- >>> pz @(Ones >> Map (ReadP Int Id) >> GuardSimple (Len == 18) >> '(Id,Drop 6 Id) >> Both LuhnDigit) "89610195012344000"
+-- Fail "(17 == 18)"
+--
+-- >>> pz @(Ones >> Map (ReadP Int Id) >> GuardSimple (Len == 18) >> '(Id,Drop 6 Id) >> Both LuhnDigit >> GuardSimple (Id == '(2,8))) "896101950123440000"
+-- Fail "((1,8) == (2,8))"
+--
+-- >>> pz @(Ones >> Map (ReadP Int Id) >> GuardSimple (Len == 20) >> SplitAt 18 Id >> '(LuhnDigit << Fst,LuhnDigit << Drop 6 Fst,Snd) >> GuardSimple (Thd == '[ Fst, Snd ])) "89610195012344000018"
+-- Val (1,8,[1,8])
+--
+data LuhnDigit deriving Show
+
+instance x ~ [Int]
+         => P LuhnDigit x where
+  type PP LuhnDigit x = Int
+  eval _ opts x =
+    let msg0 = "LuhnDigit"
+    in pure $ case chkSize opts msg0 x [] of
+         Left e -> e
+         Right (_,ws) ->
+          let xs = zipWith (*) (ws ^. reversed) (cycle' [2,1])
+              ys = map (\w -> if w>=10 then w-9 else w) xs ^. reversed
+              z = sum' ys
+              ret = (z*9) `mod` 10
+          in mkNode opts (Val ret) (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " | sum*9=" <> showL opts (z*9) <> " | mod 10=" <> showL opts ret <> showVerbose opts " | " ws) []
 

@@ -39,7 +39,6 @@ module Predicate.Data.String (
 import Predicate.Core
 import Predicate.Misc
 import Predicate.Util
-import qualified GHC.TypeLits as GL
 import Control.Lens
 import Data.List (dropWhileEnd)
 import qualified Data.Text.Lens as DTL
@@ -53,6 +52,8 @@ import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import Control.Arrow (second)
+import Data.Bool (bool)
+import Data.These
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -62,23 +63,20 @@ import Control.Arrow (second)
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Sequence as Seq
 
-data TrimImpl (left :: Bool) (right :: Bool) deriving Show
+data TrimImpl (th :: These () ()) deriving Show
 
-instance ( FailUnlessT (OrT l r)
-            ('GL.Text "TrimImpl: left and right cannot both be False")
-         , GetBool l
-         , GetBool r
+instance ( GetThese th
          , DTL.IsText x
-         ) => P (TrimImpl l r) x where
-  type PP (TrimImpl l r) x = x
+         ) => P (TrimImpl th) x where
+  type PP (TrimImpl th) x = x
   eval _ opts x =
-    let msg0 = "Trim" ++ (if l && r then "Both" else if l then "L" else "R")
-        l = getBool @l
-        r = getBool @r
+    let (vv,fn) = case getThese @_ @_ @th of
+                    These () () -> ("Both", dropWhile isSpace . dropWhileEnd isSpace)
+                    This () -> ("L", dropWhile isSpace)
+                    That () -> ("R", dropWhileEnd isSpace)
+        msg0 = "Trim" ++ vv
         p = view DTL.unpacked x
-        fl = if l then dropWhile isSpace else id
-        fr = if r then dropWhileEnd isSpace else id
-        b =  (fl . fr) p
+        b =  fn p
      in pure $ mkNode opts (Val (b ^. DTL.packed)) (msg0 <> litL opts b <> litVerbose opts " | " p) []
 
 -- | similar to 'Data.Text.stripStart'
@@ -87,7 +85,7 @@ instance ( FailUnlessT (OrT l r)
 -- Val "abc   "
 --
 data TrimL deriving Show
-type TrimLT = TrimImpl 'True 'False
+type TrimLT = TrimImpl ('This '())
 
 instance P TrimLT x => P TrimL x where
   type PP TrimL x = PP TrimLT x
@@ -105,7 +103,7 @@ instance P TrimLT x => P TrimL x where
 -- Val ""
 --
 data TrimR deriving Show
-type TrimRT = TrimImpl 'False 'True
+type TrimRT = TrimImpl ('That '())
 
 instance P TrimRT x => P TrimR x where
   type PP TrimR x = PP TrimRT x
@@ -126,7 +124,7 @@ instance P TrimRT x => P TrimR x where
 -- Val ""
 --
 data TrimBoth deriving Show
-type TrimBothT = TrimImpl 'True 'True
+type TrimBothT = TrimImpl ('These '() '())
 
 instance P TrimBothT x => P TrimBoth x where
   type PP TrimBoth x = PP TrimBothT x
@@ -142,7 +140,7 @@ instance ( GetBool l
          ) => P (StripImpl l p q) x where
   type PP (StripImpl l p q) x = Maybe (PP q x)
   eval _ opts x = do
-    let msg0 = "Strip" ++ if l then "L" else "R"
+    let msg0 = "Strip" <> bool "R" "L" l
         l = getBool @l
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
@@ -208,7 +206,7 @@ instance ( GetBool ignore
   eval _ opts x = do
     let cmp = getOrdering @cmp
         ignore = getBool @ignore
-        lwr = if ignore then map toLower else id
+        lwr = bool id (map toLower) ignore
         (ff,msg0) = second (<>"C") $ cmpOf cmp
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
@@ -218,7 +216,7 @@ instance ( GetBool ignore
         in case chkSize2 opts msg0 p' q' hhs of
           Left e -> e
           Right ((_,p),(_,q)) ->
-            let msg1 = joinStrings (msg0 <> if ignore then "I" else "") p
+            let msg1 = joinStrings (msg0 <> bool "" "I" ignore) p
             in mkNodeB opts (on ff lwr p q) (msg1 <> " " <> litL opts q) hhs
 
 -- | similar to 'Data.List.isPrefixOf' for strings

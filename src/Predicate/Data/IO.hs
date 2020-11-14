@@ -87,10 +87,9 @@ instance ( PP p x ~ String
       Left e -> pure e
       Right p -> do
         let msg1 = msg0 <> "[" <> p <> "]"
-        mb <- runIO $ do
-                b <- doesFileExist p
-                if b then Just <$> readFile p
-                else pure Nothing
+        mb <- runIO $ ifM (doesFileExist p)
+                          (Just <$> readFile p)
+                          (pure Nothing)
         pure $ case mb of
           Nothing -> mkNode opts (Fail msg1) "" [hh pp]
           Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
@@ -110,10 +109,9 @@ instance ( PP p x ~ String
       Left e -> pure e
       Right p -> do
         let msg1 = msg0 <> "[" <> p <> "]"
-        mb <- runIO $ do
-                b <- doesFileExist p
-                if b then Just <$> BS8.readFile p
-                else pure Nothing
+        mb <- runIO $ ifM (doesFileExist p)
+                          (Just <$> BS8.readFile p)
+                          (pure Nothing)
         pure $ case mb of
           Nothing -> mkNode opts (Fail msg1) "" [hh pp]
           Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
@@ -155,10 +153,9 @@ instance ( PP p x ~ String
       Left e -> pure e
       Right p -> do
         let msg1 = msg0 <> "[" <> p <> "]"
-        mb <- runIO $ do
-                b <- doesDirectoryExist p
-                if b then Just <$> listDirectory p
-                else pure Nothing
+        mb <- runIO $ ifM (doesDirectoryExist p)
+                          (Just <$> listDirectory p)
+                          (pure Nothing)
         pure $ case mb of
           Nothing -> mkNode opts (Fail msg1) "" [hh pp]
           Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]

@@ -471,11 +471,11 @@ instance ( [a] ~ x
         n = getLen @ps
     case chkSize opts msg0 as' [] of
       Left e -> pure e
-      Right (asLen,as) ->
-        if n /= asLen then
-           let msg1 = msg0 <> badLength asLen n
-           in pure $ mkNode opts (Fail msg1) "" []
-        else eval (Proxy @(ParaImpl (LenT ps) ps)) opts as
+      Right (asLen,as)
+           | n == asLen -> eval (Proxy @(ParaImpl (LenT ps) ps)) opts as
+           | otherwise ->
+               let msg1 = msg0 <> badLength asLen n
+               in pure $ mkNode opts (Fail msg1) "" []
 
 -- only allow non empty lists -- might need [a] ~ x but it seems fine
 instance GL.TypeError ('GL.Text "ParaImpl '[] invalid: requires at least one value in the list")

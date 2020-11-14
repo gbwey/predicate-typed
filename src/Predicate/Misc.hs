@@ -149,7 +149,6 @@ import Data.Sequence (Seq)
 import Control.Applicative (ZipList)
 import Data.Kind (Type)
 import Data.These (These(..))
-import Data.These.Combinators (isThis, isThat, isThese)
 import Data.List.NonEmpty (NonEmpty(..))
 import Data.ByteString (ByteString)
 import GHC.Stack (HasCallStack)
@@ -254,13 +253,13 @@ showThese = \case
 
 -- | get 'These' from typelevel
 class GetThese (th :: These a b) where
-  getThese :: (String, These w v -> Bool)
+  getThese :: These () ()
 instance GetThese ('This x) where
-  getThese = ("This", isThis)
+  getThese = This ()
 instance GetThese ('That y) where
-  getThese = ("That", isThat)
+  getThese = That ()
 instance GetThese ('These x y) where
-  getThese = ("These", isThese)
+  getThese = These () ()
 
 -- | get ordering from the typelevel
 class GetOrdering (cmp :: Ordering) where
