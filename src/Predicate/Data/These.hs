@@ -291,12 +291,12 @@ instance ( x ~ These a b
   type PP (IsTh th) x = Bool
   eval _ opts x =
     let msg0 = "Is"
-        (txt,fn) = case getThese @_ @_ @th of
-                     This () -> ("This", TheseC.isThis)
-                     That () -> ("That", TheseC.isThat)
-                     These () () -> ("These", TheseC.isThese)
-        b = fn x
-    in pure $ mkNodeB opts b (msg0 <> txt <> showVerbose opts " | " x) []
+        th = getThese @_ @_ @th
+        fn = case th of
+               This () -> TheseC.isThis
+               That () -> TheseC.isThat
+               These () () -> TheseC.isThese
+    in pure $ mkNodeB opts (fn x) (msg0 <> showThese th <> showVerbose opts " | " x) []
 
 -- | predicate on 'Data.These.This'
 --

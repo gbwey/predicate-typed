@@ -967,9 +967,7 @@ instance ( P n a
               Left e -> e
               Right (qLen,q) ->
                 let diff = if n<=qLen then 0 else n-qLen
-                    bs = if lft
-                         then replicate diff p <> q
-                         else q <> replicate diff p
+                    bs = bool (q <>) (<> q) lft (replicate diff p)
                 in mkNode opts (Val bs) (show3 opts msg1 bs q) (hhs <> [hh qq])
 
 -- | left pad @q@ with @n@ values from @p@
@@ -1204,7 +1202,7 @@ instance ( PP p a ~ [b]
           Right p ->
             let hhs1 = hhs ++ [hh pp]
             in if n <= 0 then mkNode opts (Fail (msg0 <> " n<=0")) "" hhs1
-               else if i < 1 then mkNode opts (Fail (msg0 <> " i<1")) "" hhs1
+               else if i <= 0 then mkNode opts (Fail (msg0 <> " i<=0")) "" hhs1
                else let ret = unfoldr (\s -> if null s then Nothing else Just (take n s,drop i s)) p
                     in mkNode opts (Val ret) (show3' opts msg1 ret "n,i=" (n,i) <> showVerbose opts " | " p) hhs1
 

@@ -51,6 +51,7 @@ import Predicate.Data.Lifted (FMap)
 import Control.Lens
 import qualified Safe (headNote)
 import Data.Proxy (Proxy(..))
+import Data.Bool (bool)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -486,9 +487,8 @@ instance x ~ [Int]
     let msg0 = "IsLuhn"
     in pure $ case chkSize opts msg0 x [] of
          Left e -> e
-         Right (_,ws) ->
-          let xs = zipWith (*) (ws ^. reversed) (cycle' [1,2])
-              ys = map (\w -> if w>=10 then w-9 else w) xs ^. reversed
+         Right (wsLen,ws) ->
+          let ys = luhnImpl (even wsLen) ws
               z = sum' ys
               ret = z `mod` 10
           in mkNodeB opts (ret == 0) (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " ret=" <> showL opts ret <> showVerbose opts " | " ws) []
@@ -529,10 +529,15 @@ instance x ~ [Int]
     let msg0 = "LuhnDigit"
     in pure $ case chkSize opts msg0 x [] of
          Left e -> e
-         Right (_,ws) ->
-          let xs = zipWith (*) (ws ^. reversed) (cycle' [2,1])
-              ys = map (\w -> if w>=10 then w-9 else w) xs ^. reversed
+         Right (wsLen,ws) ->
+          let ys = luhnImpl (odd wsLen) ws
               z = sum' ys
               ret = (z*9) `mod` 10
           in mkNode opts (Val ret) (msg0 <> " map=" <> showL opts ys <> " sum=" <> showL opts z <> " | sum*9=" <> showL opts (z*9) <> " | mod 10=" <> showL opts ret <> showVerbose opts " | " ws) []
+
+luhnImpl :: Bool -> [Int] -> [Int]
+luhnImpl b ws =
+  let xs = zipWith (*) ws (cycle' (bool [1,2] [2,1] b))
+  in map (ifM (>=10) (subtract 9) id) xs
+ -- in map (\w -> if w>=10 then w-9 else w) xs
 

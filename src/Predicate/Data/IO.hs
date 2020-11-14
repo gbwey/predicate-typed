@@ -56,7 +56,7 @@ import Data.Kind (Type)
 import Control.Arrow (ArrowChoice(left))
 import Data.Time (UTCTime, ZonedTime, getCurrentTime, getZonedTime)
 import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
-import System.IO (hPutStr, withFile, IOMode(WriteMode, AppendMode))
+import System.IO (hPutStr, withFile, IOMode(WriteMode, AppendMode), stderr)
 import System.Environment (getEnvironment, lookupEnv)
 import qualified Data.ByteString.Char8 as BS8
 -- $setup
@@ -89,9 +89,9 @@ instance ( PP p x ~ String
         let msg1 = msg0 <> "[" <> p <> "]"
         mb <- runIO $ ifM (doesFileExist p)
                           (Just <$> readFile p)
-                          (pure Nothing)
+                          mempty
         pure $ case mb of
-          Nothing -> mkNode opts (Fail msg1) "" [hh pp]
+          Nothing -> mkNode opts (Fail (msg1 <> " must run in IO")) "" [hh pp]
           Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> litL opts b) [hh pp]
 
@@ -111,9 +111,9 @@ instance ( PP p x ~ String
         let msg1 = msg0 <> "[" <> p <> "]"
         mb <- runIO $ ifM (doesFileExist p)
                           (Just <$> BS8.readFile p)
-                          (pure Nothing)
+                          mempty
         pure $ case mb of
-          Nothing -> mkNode opts (Fail msg1) "" [hh pp]
+          Nothing -> mkNode opts (Fail (msg1 <> " must run in IO")) "" [hh pp]
           Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (BS8.length b) <> " Just " <> litBS opts b) [hh pp]
 
@@ -155,16 +155,20 @@ instance ( PP p x ~ String
         let msg1 = msg0 <> "[" <> p <> "]"
         mb <- runIO $ ifM (doesDirectoryExist p)
                           (Just <$> listDirectory p)
-                          (pure Nothing)
+                          mempty
         pure $ case mb of
-          Nothing -> mkNode opts (Fail msg1) "" [hh pp]
+          Nothing -> mkNode opts (Fail (msg1 <> " must run in IO")) "" [hh pp]
           Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (length b) <> " Just " <> showL opts b) [hh pp]
 
 -- | read an environment variable: similar to 'System.Environment.getEnv'
 --
--- >>> pz @(ReadEnv "PATH" >> 'Just Id >> 'True) ()
+-- >>> pz @(ReadEnv "PATH" >> Just' >> Not Null) ()
 -- Val True
+--
+-- >>> pl @(ReadEnv "xyzzy") ()
+-- Present Nothing (ReadEnv[xyzzy] does not exist)
+-- Val Nothing
 --
 data ReadEnv p deriving Show
 
@@ -181,7 +185,7 @@ instance ( PP p x ~ String
         let msg1 = msg0 <> "[" <> p <> "]"
         mb <- runIO $ lookupEnv p
         pure $ case mb of
-          Nothing -> mkNode opts (Fail msg1) "" [hh pp]
+          Nothing -> mkNode opts (Fail (msg1 <> " must run in IO")) "" [hh pp]
           Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
           Just (Just v) -> mkNode opts (Val (Just v)) (msg1 <> " " <> litL opts v) [hh pp]
 
@@ -301,8 +305,8 @@ instance ( GetFHandle fh
       Left e -> pure e
       Right ss -> do
           mb <- runIO $ case fh of
-                  FStdout -> fmap (left show) $ E.try @E.SomeException $ putStr ss
-                  FStderr -> fmap (left show) $ E.try @E.SomeException $ putStr ss
+                  FStdout -> left E.displayException <$> E.try @E.SomeException (putStr ss)
+                  FStderr -> left E.displayException <$> E.try @E.SomeException (hPutStr stderr ss)
                   FOther s w -> do
                      b <- doesFileExist s
                      if b && w == WFWrite then pure $ Left $ "file [" <> s <> "] already exists"
@@ -311,7 +315,7 @@ instance ( GetFHandle fh
                                        WFAppend -> AppendMode
                                        WFWrite -> WriteMode
                                        WFWriteForce -> WriteMode
-                            fmap (left show) $ E.try @E.SomeException $ withFile s md (`hPutStr` ss)
+                            left E.displayException <$> E.try @E.SomeException (withFile s md (`hPutStr` ss))
           pure $ case mb of
             Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" [hh pp]
             Just (Left e) -> mkNode opts (Fail $ msg0 <> ":" <> e) "" [hh pp]
@@ -330,13 +334,9 @@ instance P Stdin x where
   type PP Stdin x = String
   eval _ opts _ = do
     let msg0 = "Stdin"
-    mb <- runIO $ do
-                      lr <- E.try getLine
-                      pure $ case lr of
-                        Left (e :: E.SomeException) -> Left $ show e
-                        Right ss -> Right ss
+    mb <- runIO $ E.try @E.SomeException getLine
     pure $ case mb of
       Nothing -> mkNode opts (Fail (msg0 <> " must run in IO")) "" []
-      Just (Left e) -> mkNode opts (Fail $ msg0 <> ":" <> e) "" []
+      Just (Left e) -> mkNode opts (Fail $ msg0 <> ":" <> E.displayException e) "" []
       Just (Right ss) -> mkNode opts (Val ss) (msg0 <> "[" <> litVerbose opts "" ss <> "]") []
 

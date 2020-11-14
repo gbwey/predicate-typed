@@ -273,15 +273,13 @@ genRefined5P ::
   -> Gen (PP ip i)
   -> Gen (Refined5 opts ip op i)
 genRefined5P _ g =
-  let f !cnt = do
+  let o = getOpt @opts
+      r = getMaxRecursionValue o
+      f !cnt = do
         mi <- suchThatMaybe g (isRight . evalBool5 @opts @op)
         case mi of
-          Nothing ->
-             let o = getOpt @opts
-                 r = getMaxRecursionValue o
-             in if cnt >= r
-                then error $ setOtherEffects o ("genRefined5P recursion exceeded(" ++ show r ++ ")")
-             else f (cnt+1)
+          Nothing | cnt >= r -> error $ setOtherEffects o ("genRefined5P recursion exceeded(" ++ show r ++ ")")
+                  | otherwise -> f (cnt+1)
           Just i -> pure $ unsafeRefined5 i
   in f 0
 

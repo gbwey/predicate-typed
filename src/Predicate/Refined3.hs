@@ -321,19 +321,17 @@ genRefined3P ::
   -> Gen (PP ip i)
   -> Gen (Refined3 opts ip op fmt i)
 genRefined3P _ g =
-  let f !cnt = do
+  let o = getOpt @opts
+      r = getMaxRecursionValue o
+      f !cnt = do
         mppi <- suchThatMaybe g $ \a -> evalQuick @opts @op a == Right True
         case mppi of
-          Nothing ->
-             let o = getOpt @opts
-                 r = getMaxRecursionValue o
-             in if cnt >= r
-                then error $ setOtherEffects o ("genRefined3P recursion exceeded(" ++ show r ++ ")")
-                else f (cnt+1)
+          Nothing | cnt >= r -> error $ setOtherEffects o ("genRefined3P recursion exceeded(" ++ show r ++ ")")
+                  | otherwise -> f (cnt+1)
           Just ppi ->
              case evalQuick @opts @fmt ppi of
                Left e -> error $ "genRefined3P: formatting failed!! " ++ e
-               Right r -> pure $ unsafeRefined3 ppi r
+               Right ret -> pure $ unsafeRefined3 ppi ret
   in f 0
 
 -- | 'Binary' instance for 'Refined3'

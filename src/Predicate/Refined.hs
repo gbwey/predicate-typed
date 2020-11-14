@@ -228,15 +228,13 @@ genRefined :: forall opts p a .
    => Gen a
    -> Gen (Refined opts p a)
 genRefined g =
-  let f !cnt = do
+  let o = getOpt @opts
+      r = getMaxRecursionValue o
+      f !cnt = do
         ma <- suchThatMaybe g $ \a -> evalQuick @opts @p a == Right True
         case ma of
-          Nothing ->
-             let o = getOpt @opts
-                 r = getMaxRecursionValue o
-             in if cnt >= r
-                then error $ setOtherEffects o ("genRefined recursion exceeded(" ++ show r ++ ")")
-                else f (cnt+1)
+          Nothing | cnt >= r -> error $ setOtherEffects o ("genRefined recursion exceeded(" ++ show r ++ ")")
+                  | otherwise -> f (cnt+1)
           Just a -> pure $ unsafeRefined a
   in f 0
 

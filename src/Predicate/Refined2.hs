@@ -305,18 +305,16 @@ genRefined2P ::
   -> Gen (Refined2 opts ip op i)
 genRefined2P _ g =
   let o = getOpt @opts
+      r = getMaxRecursionValue o
       f !cnt = do
         mi <- suchThatMaybe g (isJust . snd . runIdentity . eval2M @opts @ip @op)
         case mi of
-          Nothing ->
-             let r = getMaxRecursionValue o
-             in if cnt >= r
-                then error $ setOtherEffects o ("genRefined2P recursion exceeded(" ++ show r ++ ")")
-                else f (cnt+1)
+          Nothing | cnt >= r -> error $ setOtherEffects o ("genRefined2P recursion exceeded(" ++ show r ++ ")")
+                  | otherwise -> f (cnt+1)
           Just i ->
              case newRefined2 i of
                Left e -> errorInProgram $ "conversion failed:" ++ show e
-               Right r -> pure r
+               Right ret -> pure ret
   in f 0
 
 -- | 'Binary' instance for 'Refined2'

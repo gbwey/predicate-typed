@@ -117,9 +117,9 @@ instance ( P p x
         mb <- runIO $
                 ifM (doesFileExist p)
                     (Just <$> BS8.readFile p)
-                    (pure Nothing)
+                    mempty
         pure $ case mb of
-          Nothing -> mkNode opts (Fail msg1) "" hhs
+          Nothing -> mkNode opts (Fail (msg1 <> " must run in IO")) "" hhs
           Just Nothing -> mkNode opts (Fail (msg1 <> " file does not exist")) "" hhs
           Just (Just s) ->
             case A.eitherDecodeStrict' s of

@@ -132,21 +132,21 @@ instance P TrimBothT x => P TrimBoth x where
 
 data StripImpl(left :: Bool) p q deriving Show
 
-instance ( GetBool l
+instance ( GetBool lft
          , PP p x ~ String
          , P p x
          , DTL.IsText (PP q x)
          , P q x
-         ) => P (StripImpl l p q) x where
-  type PP (StripImpl l p q) x = Maybe (PP q x)
+         ) => P (StripImpl lft p q) x where
+  type PP (StripImpl lft p q) x = Maybe (PP q x)
   eval _ opts x = do
-    let msg0 = "Strip" <> bool "R" "L" l
-        l = getBool @l
+    let msg0 = "Strip" <> bool "R" "L" lft
+        lft = getBool @lft
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
       Right (p,view DTL.unpacked -> q,pp,qq) ->
-        let b = if l then
+        let b = if lft then
                   let (before,after) = splitAt (length p) q
                   in if before == p then Just after else Nothing
                 else

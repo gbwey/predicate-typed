@@ -377,7 +377,7 @@ instance P (ResplitT p) x => P (Resplit p) x where
 
 data ReplaceImpl (alle :: Bool) (rs :: [ROpt]) p q r deriving Show
 
-instance ( GetBool b
+instance ( GetBool alle
          , GetROpts rs
          , PP p x ~ String
          , PP q x ~ RReplace
@@ -385,12 +385,12 @@ instance ( GetBool b
          , P p x
          , P q x
          , P r x
-         ) => P (ReplaceImpl b rs p q r) x where
-  type PP (ReplaceImpl b rs p q r) x = String
+         ) => P (ReplaceImpl alle rs p q r) x where
+  type PP (ReplaceImpl alle rs p q r) x = String
   eval _ opts x = do
     let msg0 = "Replace" <> bool "One" "All" alle <> unlessNull rs ("' " <> displayROpts fs)
         (fs,rs) = getROpts @rs
-        alle = getBool @b
+        alle = getBool @alle
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     case lr of
       Left e -> pure e
@@ -535,8 +535,8 @@ instance ( GetReplaceFnSub r
     pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let b = RReplace (getReplaceFnSub @r) p
-        in mkNode opts (Val b) (msg0 <> showVerbose opts " | " p) [hh pp]
+        let ret = RReplace (getReplaceFnSub @r) p
+        in mkNode opts (Val ret) (msg0 <> showVerbose opts " | " p) [hh pp]
 
 -- | A replacement function @(String -> [String] -> String)@ which returns the whole match and the groups
 -- Used by 'RH.sub' and 'RH.gsub'
