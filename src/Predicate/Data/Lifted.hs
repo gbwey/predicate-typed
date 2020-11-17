@@ -1117,7 +1117,7 @@ instance ( P p x
 -- >>> pz @(FPair Fst Snd >> FMap (Fst + Snd)) (Just 10, Just 13)
 -- Val (Just 23)
 --
--- >>> pz @(FPair (EnumFromTo Fst Snd) ('LT ... 'GT) ) (10,11)
+-- >>> pz @(FPair (EnumFromTo Fst Snd) ('LT ... 'GT)) (10,11)
 -- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
 --
 data FPair p q deriving Show
@@ -1517,10 +1517,10 @@ _bimapImpl opts proxyp proxyq msg0 hhs nab = do
 -- Present (["hap"],["bcd"]) (BiFoldMap(B) '(["hap"],[]) | '([],["bcd"]))
 -- Val (["hap"],["bcd"])
 --
--- >>> pz @(BiFoldMap '( Wrap (SG.Sum _) Id, MEmptyT _) '( MEmptyT _, Id)) (SG.Arg 123 "xyz")
+-- >>> pz @(BiFoldMap '(Wrap (SG.Sum _) Id, MEmptyT _) '(MEmptyT _, Id)) (SG.Arg 123 "xyz")
 -- Val (Sum {getSum = 123},"xyz")
 --
--- >>> pl @(BiFoldMap '( Wrap (SG.Sum _) Id, MEmptyT _) '( MEmptyT _, Id)) (Left 123)
+-- >>> pl @(BiFoldMap '(Wrap (SG.Sum _) Id, MEmptyT _) '(MEmptyT _, Id)) (Left 123)
 -- Present (Sum {getSum = 123},()) (BiFoldMap(L) '(Sum {getSum = 123},()))
 -- Val (Sum {getSum = 123},())
 --

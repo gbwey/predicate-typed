@@ -16,19 +16,13 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted 'Ordering' functions
 module Predicate.Data.Ordering (
-  -- ** functions
+  -- ** comparison
     type (>)
   , type (>=)
   , type (==)
   , type (/=)
   , type (<=)
   , type (<)
-  , type (>~)
-  , type (>=~)
-  , type (==~)
-  , type (/=~)
-  , type (<=~)
-  , type (<~)
   , Gt
   , Ge
   , Same
@@ -38,14 +32,26 @@ module Predicate.Data.Ordering (
   , type (==!)
   , Comparing
   , Compare
+
+  -- ** case insensitive comparison
+  , type (>~)
+  , type (>=~)
+  , type (==~)
+  , type (/=~)
+  , type (<=~)
+  , type (<~)
   , type (===~)
+
+  -- ** lists
   , Asc
   , Asc'
   , Desc
   , Desc'
+
+ -- ** numeric
   , AllPositive
-  , Positive
   , AllNegative
+  , Positive
   , Negative
  ) where
 import Predicate.Core

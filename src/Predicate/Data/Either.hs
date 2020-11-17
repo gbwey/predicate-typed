@@ -17,7 +17,7 @@
 -- | promoted 'Either' functions
 module Predicate.Data.Either (
 
- -- ** boolean predicates
+ -- ** predicates
     IsLeft
   , IsRight
 
@@ -45,7 +45,7 @@ module Predicate.Data.Either (
   , LeftDef'
   , RightDef'
 
- -- type families
+ -- ** type families
   , EitherInT
  ) where
 import Predicate.Core

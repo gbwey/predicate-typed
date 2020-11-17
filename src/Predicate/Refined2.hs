@@ -140,22 +140,29 @@ type Refined2C opts ip op i =
        , PP op (PP ip i) ~ Bool   -- the internal value needs to pass the predicate check
        )
 
-deriving stock instance ( Refined2C opts ip op i
-                  , Show i
-                  , Show (PP ip i)
-                  ) => Show (Refined2 opts ip op i)
-deriving stock instance ( Refined2C opts ip op i
-                  , Eq i
-                  , Eq (PP ip i)
-                  ) => Eq (Refined2 opts ip op i)
-deriving stock instance ( Refined2C opts ip op i
-                  , Ord i
-                  , Ord (PP ip i)
-                  ) => Ord (Refined2 opts ip op i)
-deriving stock instance ( Refined2C opts ip op i
-                  , TH.Lift (PP ip i)
-                  , TH.Lift i
-                  ) => TH.Lift (Refined2 opts ip op i)
+deriving stock instance
+  ( Refined2C opts ip op i
+  , Show i
+  , Show (PP ip i)
+  ) => Show (Refined2 opts ip op i)
+
+deriving stock instance
+  ( Refined2C opts ip op i
+  , Eq i
+  , Eq (PP ip i)
+  ) => Eq (Refined2 opts ip op i)
+
+deriving stock instance
+  ( Refined2C opts ip op i
+  , Ord i
+  , Ord (PP ip i)
+  ) => Ord (Refined2 opts ip op i)
+
+deriving stock instance
+  ( Refined2C opts ip op i
+  , TH.Lift (PP ip i)
+  , TH.Lift i
+  ) => TH.Lift (Refined2 opts ip op i)
 
 instance ( Refined2C opts ip op i
          , NFData i
@@ -580,6 +587,7 @@ mkProxy2' = Proxy
 type family MakeR2 p where
   MakeR2 '(opts,ip,op,i) = Refined2 opts ip op i
 
+-- | refinement exception
 newtype Refined2Exception = Refined2Exception String
   deriving Generic
 

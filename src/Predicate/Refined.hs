@@ -98,7 +98,6 @@ instance RefinedC opts p String
   fromString s =
     case newRefined @opts @p s of
       Left w -> E.throw $ RefinedException $ "IsString:fromString:\n" ++ errorDisplay (getOpt @opts) w
-  --    Left w -> error $ "IsString:fromString:" ++ errorDisplay (getOpt @opts) w
       Right r -> r
 
 errorDisplay :: POpts -> Msg0 -> String
@@ -238,7 +237,7 @@ genRefined g =
       f !cnt = do
         ma <- suchThatMaybe g $ \a -> evalQuick @opts @p a == Right True
         case ma of
-          Nothing | cnt >= r -> E.throw $ RefinedException $ setOtherEffects o ("genRefined recursion exceeded(" ++ show r ++ ")")
+          Nothing | cnt >= r -> E.throw $ RefinedException $ "\n" ++ setOtherEffects o ("genRefined recursion exceeded(" ++ show r ++ ")")
                   | otherwise -> f (cnt+1)
           Just a -> pure $ unsafeRefined a
   in f 0
@@ -351,19 +350,14 @@ unsafeRefined' a =
        Right True -> Refined a
        _ -> let s = prtTree o tt
                 bp = colorValBool o (tt ^. ttVal)
-            in E.throw $ RefinedException $ case oDebug o of
-                 DZero -> bp
-                 DLite -> bp ++ nullIf "\n" s
-                 _ -> bp ++ nullIf "\n" s
+            in E.throw $ RefinedException $ bp ++ nullIf "\n" s
 
+-- | refinement exception
 newtype RefinedException = RefinedException String
   deriving stock Generic
 
 instance Show RefinedException where
-  show (RefinedException e) = "RefinedException:\n" ++ e
+  show (RefinedException e) = "RefinedException:" ++ e
 
 instance E.Exception RefinedException where
   displayException = show
-
--- ghcid -a
--- $> fromString @(Refined OU (ReadP Int Id >> Id > 244) String) "523x"

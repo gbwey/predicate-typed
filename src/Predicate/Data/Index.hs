@@ -16,7 +16,6 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted indexing functions
 module Predicate.Data.Index (
-  -- ** functions
     Ix
   , Ix'
   , IxL

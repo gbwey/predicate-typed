@@ -17,24 +17,23 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted String functions
 module Predicate.Data.String (
-  -- ** functions
-    TrimBoth
-  , TrimL
-  , TrimR
-  , StripR
-  , StripL
+  -- ** converters
+    ToString
+  , ToStringC (..)
+  , FromString
+  , FromString'
 
-  , IsPrefixC
-  , IsInfixC
-  , IsSuffixC
+  -- ** predicates
   , IsPrefixCI
   , IsInfixCI
   , IsSuffixCI
 
-  , ToString
-  , ToStringC (..)
-  , FromString
-  , FromString'
+  -- ** mutators
+  , TrimBoth
+  , TrimL
+  , TrimR
+  , StripR
+  , StripL
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -54,6 +53,7 @@ import qualified Data.Text.Lazy as TL
 import Control.Arrow (second)
 import Data.Bool (bool)
 import Data.These
+import qualified Data.List.Lens
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -147,7 +147,7 @@ instance ( GetBool lft
       Left e -> e
       Right (p,view DTL.unpacked -> q,pp,qq) ->
         let b | lft = stripPrefix p q
-              | otherwise = stripSuffix' p q
+              | otherwise = Data.List.Lens.stripSuffix p q
         in mkNode opts (Val (view DTL.packed <$> b)) (msg0 <> showL opts b <> litVerbose opts " | p=" p <> litVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to 'Data.Text.stripLeft'
@@ -189,21 +189,18 @@ instance P (StripRT p q) x => P (StripR p q) x where
   type PP (StripR p q) x = PP (StripRT p q) x
   eval _ = eval (Proxy @(StripRT p q))
 
-data IsFixImplC (cmp :: Ordering) (ignore :: Bool) p q deriving Show
+data IsFixStringCI (cmp :: Ordering) p q deriving Show
 
-instance ( GetBool ignore
-         , P p x
+instance ( P p x
          , P q x
          , PP p x ~ String
          , PP q x ~ String
          , GetOrdering cmp
-         ) => P (IsFixImplC cmp ignore p q) x where
-  type PP (IsFixImplC cmp ignore p q) x = Bool
+         ) => P (IsFixStringCI cmp p q) x where
+  type PP (IsFixStringCI cmp p q) x = Bool
   eval _ opts x = do
     let cmp = getOrdering @cmp
-        ignore = getBool @ignore
-        lwr = bool id (map toLower) ignore
-        (ff,msg0) = second (<>"C") $ cmpOf cmp
+        (ff,msg0) = second (<> "CI") $ cmpOf cmp
     lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
     pure $ case lr of
       Left e -> e
@@ -212,73 +209,8 @@ instance ( GetBool ignore
         in case chkSize2 opts msg0 p' q' hhs of
           Left e -> e
           Right ((_,p),(_,q)) ->
-            let msg1 = joinStrings (msg0 <> bool "" "I" ignore) p
-            in mkNodeB opts (on ff lwr p q) (msg1 <> " " <> litL opts q) hhs
-
--- | similar to 'Data.List.isPrefixOf' for strings
---
--- >>> pl @(IsPrefixC "xy" Id) "xyzabw"
--- True (IsPrefixC | xy xyzabw)
--- Val True
---
--- >>> pl @(IsPrefixC "ab" Id) "xyzbaw"
--- False (IsPrefixC | ab xyzbaw)
--- Val False
---
--- >>> pz @(IsPrefixC "abc" "aBcbCd") ()
--- Val False
---
-data IsPrefixC p q deriving Show
-type IsPrefixCT p q = IsFixImplC 'LT 'False p q
-
-instance P (IsPrefixCT p q) x => P (IsPrefixC p q) x where
-  type PP (IsPrefixC p q) x = PP (IsPrefixCT p q) x
-  eval _ = evalBool (Proxy @(IsPrefixCT p q))
-
--- | similar to 'Data.List.isInfixOf' for strings
---
--- >>> pl @(IsInfixC "ab" Id) "xyzabw"
--- True (IsInfixC | ab xyzabw)
--- Val True
---
--- >>> pl @(IsInfixC "aB" Id) "xyzAbw"
--- False (IsInfixC | aB xyzAbw)
--- Val False
---
--- >>> pl @(IsInfixC "ab" Id) "xyzbaw"
--- False (IsInfixC | ab xyzbaw)
--- Val False
---
--- >>> pl @(IsInfixC Fst Snd) ("ab","xyzabw")
--- True (IsInfixC | ab xyzabw)
--- Val True
---
-data IsInfixC p q deriving Show
-type IsInfixCT p q = IsFixImplC 'EQ 'False p q
-
-instance P (IsInfixCT p q) x => P (IsInfixC p q) x where
-  type PP (IsInfixC p q) x = PP (IsInfixCT p q) x
-  eval _ = evalBool (Proxy @(IsInfixCT p q))
-
--- | similar to 'Data.List.isSuffixOf' for strings
---
--- >>> pl @(IsSuffixC "bw" Id) "xyzabw"
--- True (IsSuffixC | bw xyzabw)
--- Val True
---
--- >>> pl @(IsSuffixC "bw" Id) "xyzbaw"
--- False (IsSuffixC | bw xyzbaw)
--- Val False
---
--- >>> pz @(IsSuffixC "bCd" "aBcbCd") ()
--- Val True
---
-data IsSuffixC p q deriving Show
-type IsSuffixCT p q = IsFixImplC 'GT 'False p q
-
-instance P (IsSuffixCT p q) x => P (IsSuffixC p q) x where
-  type PP (IsSuffixC p q) x = PP (IsSuffixCT p q) x
-  eval _ = evalBool (Proxy @(IsSuffixCT p q))
+            let msg1 = joinStrings msg0 p
+            in mkNodeB opts (on ff (map toLower) p q) (msg1 <> " " <> litL opts q) hhs
 
 -- | similar to case insensitive 'Data.List.isPrefixOf' for strings
 --
@@ -286,7 +218,7 @@ instance P (IsSuffixCT p q) x => P (IsSuffixC p q) x where
 -- Val True
 --
 data IsPrefixCI p q deriving Show
-type IsPrefixCIT p q = IsFixImplC 'LT 'True p q
+type IsPrefixCIT p q = IsFixStringCI 'LT p q
 
 instance P (IsPrefixCIT p q) x => P (IsPrefixCI p q) x where
   type PP (IsPrefixCI p q) x = PP (IsPrefixCIT p q) x
@@ -302,7 +234,7 @@ instance P (IsPrefixCIT p q) x => P (IsPrefixCI p q) x where
 -- Val True
 --
 data IsInfixCI p q deriving Show
-type IsInfixCIT p q = IsFixImplC 'EQ 'True p q
+type IsInfixCIT p q = IsFixStringCI 'EQ p q
 
 instance P (IsInfixCIT p q) x => P (IsInfixCI p q) x where
   type PP (IsInfixCI p q) x = PP (IsInfixCIT p q) x
@@ -311,7 +243,7 @@ instance P (IsInfixCIT p q) x => P (IsInfixCI p q) x where
 -- | similar to case insensitive 'Data.List.isSuffixOf' for strings
 --
 data IsSuffixCI p q deriving Show
-type IsSuffixCIT p q = IsFixImplC 'GT 'True p q
+type IsSuffixCIT p q = IsFixStringCI 'GT p q
 
 instance P (IsSuffixCIT p q) x => P (IsSuffixCI p q) x where
   type PP (IsSuffixCI p q) x = PP (IsSuffixCIT p q) x
@@ -323,6 +255,7 @@ instance ToStringC x => P ToString x where
   type PP ToString x = String
   eval _ opts x = pure $ mkNode opts (Val (toStringC x)) "ToString" []
 
+-- | convert string-like value to a string
 class ToStringC (a :: Type) where
   toStringC :: a -> String
 instance ToStringC String where

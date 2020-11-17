@@ -72,15 +72,13 @@ import Predicate.Misc
 import Predicate.Util
 import Predicate.Data.Ordering (type (==))
 import GHC.TypeLits (Nat,KnownNat)
-import Data.List (elemIndex)
 import Data.Function (fix)
 import Data.Typeable (Typeable, Proxy(Proxy))
 import Data.Kind (Type)
-import qualified Numeric
-import Data.Char (toLower)
+import qualified Numeric.Lens (base)
 import Data.Ratio ((%))
 import GHC.Real (Ratio((:%)))
-import qualified Safe (fromJustNote, atNote)
+import Control.Lens
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -966,23 +964,16 @@ instance ( Typeable (PP t x)
          ) => P (ReadBase' t n p) x where
   type PP (ReadBase' t n p) x = PP t x
   eval _ opts x = do
-    let n = nat @n
-        xs = getValidBase n
+    let n = nat @n @Int
         msg0 = "ReadBase(" <> t <> "," <> show n <> ")"
         t = showT @(PP t x)
     pp <- eval (Proxy @p) opts x
     pure $ case getValueLR NoInline opts msg0 pp [] of
       Left e -> e
       Right p ->
-        let (ff,p1) = case p of
-                        '-':q -> (negate,q)
-                        _ -> (id,p)
-        in case Numeric.readInt (fromIntegral n)
-            ((`elem` xs) . toLower)
-            (Safe.fromJustNote "ReadBase" . (`elemIndex` xs) . toLower)
-            p1 of
-             [(b,"")] -> mkNode opts (Val (ff b)) (msg0 <> " " <> showL opts (ff b) <> showVerbose opts " | " p) [hh pp]
-             o -> mkNode opts (Fail ("invalid base " <> show n)) (msg0 <> " as=" <> p <> " err=" <> showL opts o) [hh pp]
+        case p ^? Numeric.Lens.base @Integer n of
+          Just (fromIntegral -> b) -> mkNode opts (Val b) (msg0 <> " " <> showL opts b <> showVerbose opts " | " p) [hh pp]
+          Nothing -> mkNode opts (Fail ("invalid base " <> show n)) (msg0 <> " p=" <> p) [hh pp]
 
 -- | Read a number using base 2 through a maximum of 36
 --
@@ -1019,7 +1010,7 @@ instance ( Typeable (PP t x)
 -- Val 255
 --
 -- >>> pl @(ReadBase Int 22) "zzz"
--- Error invalid base 22 (ReadBase(Int,22) as=zzz err=[])
+-- Error invalid base 22 (ReadBase(Int,22) p=zzz)
 -- Fail "invalid base 22"
 --
 -- >>> pl @((ReadBase Int 16 &&& Id) >> First (ShowBase 16)) "fFe0"
@@ -1071,14 +1062,11 @@ instance ( BetweenT "ShowBase" 2 36 n
          ) => P (ShowBase n) x where
   type PP (ShowBase n) x = String
   eval _ opts x =
-    let n = nat @n
-        xs = getValidBase n
+    let n = nat @n @Int
         msg0 = "ShowBase(" <> show n <> ")"
-        p :: Integer
-        p = fromIntegral x
-        (ff,a') = if p < 0 then (('-':), abs p) else (id,p)
-        b = Numeric.showIntAtBase (fromIntegral n) (Safe.atNote "ShowBase out of range" xs) a' ""
-    in pure $ mkNode opts (Val (ff b)) (msg0 <> " " <> litL opts (ff b) <> showVerbose opts " | " p) []
+        p = fromIntegral @_ @Integer x
+        b = Numeric.Lens.base n # p
+    in pure $ mkNode opts (Val b) (msg0 <> " " <> litL opts b <> showVerbose opts " | " p) []
 
 -- | Display a number at base >= 2 but just show as a list of ints: ignores the sign
 --

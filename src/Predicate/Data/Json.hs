@@ -16,13 +16,15 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted json encoding and decoding functions
 module Predicate.Data.Json (
-  -- ** functions
+  -- ** parse
     ParseJson'
   , ParseJson
-  , EncodeJson
-  , EncodeJsonFile
   , ParseJsonFile'
   , ParseJsonFile
+
+  -- ** encode
+  , EncodeJson
+  , EncodeJsonFile
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -64,7 +66,7 @@ instance ( P p x
             msg1 = msg0 <> "(" ++ litBL opts { oWidth = oWidth opts `div` 3 } s ++ ")"
         in case A.eitherDecode' s of
            Right b -> mkNode opts (Val b) (msg0 <> " " ++ showL opts { oWidth = oWidth opts `div` 2 } b) hhs
-           Left e -> mkNode opts (Fail (msg1 <> " " <> e) ) (litBL opts s) hhs
+           Left e -> mkNode opts (Fail (msg1 <> " " <> e)) (litBL opts s) hhs
 
 -- | parse json data using the type @t@
 --

@@ -232,17 +232,34 @@ type Luhn' (n :: Nat) =
         ,Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
         ])
 
--- convert json microsoft datetime to zonedtime
---type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+[+-]\\d{4})\\)" >> Head >> Snd >> Id !! 0 >> ReplaceOneString 'RPrepend "\\d{3}[+-]" "." Id >> ParseTimeP ZonedTime "%s%Q%z"
-
--- type JsonMicrosoftDateTime = Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)" >> Head >> Snd >> (Id !! 0 <> "." <> Id !! 1)  >> ParseTimeP ZonedTime "%s%Q%z"
-
--- jam the values together
--- eg pu @JsonMicrosoftDateTime "Date(1593460089052+0800)"
+-- | convert json microsoft datetime to zonedtime
+--
+-- >>> pz @JsonMicrosoftDateTime "Date(1593460089052+0800)"
+-- Val 2020-06-30 03:48:09.052 +0800
+--
+-- >>> pz @JsonMicrosoftDateTime "Date(0+0800)"
+-- Val 1970-01-01 08:00:00 +0800
+--
+-- >>> pz @JsonMicrosoftDateTime "Date(12+0800)"
+-- Val 1970-01-01 08:00:00.012 +0800
+--
+-- >>> pz @JsonMicrosoftDateTime "Date(123+0800)"
+-- Val 1970-01-01 08:00:00.123 +0800
+--
+-- >>> pz @JsonMicrosoftDateTime "Date(+1234+0800)"
+-- Val 1970-01-01 08:00:01.234 +0800
+--
+-- >>> pz @JsonMicrosoftDateTime "Date(-123456+0000)"
+-- Val 1969-12-31 23:57:57.456 +0000
+--
 type JsonMicrosoftDateTime =
-  Do '[ Rescan "^Date\\((\\d+)(\\d{3}[+-]\\d{4})\\)"
+  Do '[ Rescan "^Date\\(([-+])?(\\d*?)(\\d{0,3})([+-]\\d{4})\\)"
       , Head
       , Snd
-      , Id !! 0 <> "." <> Id !! 1
+      , If (Id !! 0 == "-") "-" ""
+        <> PadL 1 (C "0") (Id !! 1)
+        <> "."
+        <> PadL 3 (C "0") (Id !! 2)
+        <> Id !! 3
       , ParseTimeP ZonedTime "%s%Q%z"
       ]

@@ -162,22 +162,29 @@ type Refined3C opts ip op fmt i =
        , PP fmt (PP ip i) ~ i  -- the output type must match the original input type
        )
 
-deriving stock instance ( Refined3C opts ip op fmt i
-                  , Show (PP ip i)
-                  , Show i
-                  ) => Show (Refined3 opts ip op fmt i)
-deriving stock instance ( Refined3C opts ip op fmt i
-                  , Eq (PP ip i)
-                  , Eq i
-                  ) => Eq (Refined3 opts ip op fmt i)
-deriving stock instance ( Refined3C opts ip op fmt i
-                  , Ord (PP ip i)
-                  , Ord i
-                  ) => Ord (Refined3 opts ip op fmt i)
-deriving stock instance ( Refined3C opts ip op fmt i
-                  , TH.Lift (PP ip i)
-                  , TH.Lift i
-                  ) => TH.Lift (Refined3 opts ip op fmt i)
+deriving stock instance
+  ( Refined3C opts ip op fmt i
+  , Show (PP ip i)
+  , Show i
+  ) => Show (Refined3 opts ip op fmt i)
+
+deriving stock instance
+  ( Refined3C opts ip op fmt i
+  , Eq (PP ip i)
+  , Eq i
+  ) => Eq (Refined3 opts ip op fmt i)
+
+deriving stock instance
+  ( Refined3C opts ip op fmt i
+  , Ord (PP ip i)
+  , Ord i
+  ) => Ord (Refined3 opts ip op fmt i)
+
+deriving stock instance
+  ( Refined3C opts ip op fmt i
+  , TH.Lift (PP ip i)
+  , TH.Lift i
+  ) => TH.Lift (Refined3 opts ip op fmt i)
 
 instance ( Refined3C opts ip op fmt i
          , NFData i
@@ -651,6 +658,7 @@ prt3Impl opts v =
               <> prtTreePure opts t3
          in mkMsg3 m n r (t3 ^. root . peValP)
 
+-- | refinement exception
 newtype Refined3Exception = Refined3Exception String
   deriving stock Generic
 

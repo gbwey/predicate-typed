@@ -9,3 +9,7 @@ extra-deps:
 ghc-options:
   "$locals": -fwrite-ide-info
   "$everything": -haddock
+
+flags:
+  aeson-pretty:
+    lib-only: true

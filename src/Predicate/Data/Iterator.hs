@@ -352,7 +352,7 @@ instance ( PP q a ~ s
                    Left e -> mkNodeCopy opts e msg1 (hh qq : map (hh . prefixNumberToTT) itts)
                    Right () ->
                      let ret = fst <$> catMaybes vals
-                     in mkNode opts (Val ret) (show3' opts msg1 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
+                     in mkNode opts (Val ret) (show3' opts msg1 ret "s=" q) (hh qq : map (hh . prefixNumberToTT) itts)
 
 type family UnfoldrT (mbs :: Type) where
   UnfoldrT (Maybe (b, _)) = b

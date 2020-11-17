@@ -16,7 +16,7 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted 'These' functions
 module Predicate.Data.These (
- -- ** boolean predicates
+ -- ** predicates
     IsThis
   , IsThat
   , IsThese
@@ -250,9 +250,6 @@ type MkThatT (t :: Type) p = MkThat' (Hole t) p
 instance P (MkThatT t p) x => P (MkThat t p) x where
   type PP (MkThat t p) x = PP (MkThatT t p) x
   eval _ = eval (Proxy @(MkThatT t p))
-
--- type MkThat t p = MkThis t p >> Swap
--- type MkThat' (t :: Type) = Pure (These t) Id -- t has to be a semigroup
 
 -- | 'Data.These.These' constructor
 --

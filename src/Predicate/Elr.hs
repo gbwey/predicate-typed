@@ -36,7 +36,7 @@ module Predicate.Elr (
   , _elr2Maybe
   , _elr2These
 
- -- ** boolean predicates
+ -- ** predicates
   , isENone
   , isELeft
   , isERight

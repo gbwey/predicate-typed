@@ -31,7 +31,6 @@ module Predicate.Core (
   , Map'
   , Map
   , Do
-  , OneP
   , Swap
   , Arg'
 
@@ -128,7 +127,6 @@ import Predicate.Elr
 import qualified GHC.TypeLits as GL
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
 import Control.Lens
-import Data.Foldable (toList)
 import Data.Proxy (Proxy(..))
 import Data.Typeable (Typeable)
 import Data.Kind (Type)
@@ -273,7 +271,6 @@ instance ( P prt a
 
 -- | run the expression @p@ but remove the subtrees
 data Hide p deriving Show
--- type H p = Hide p -- doesnt work with %   -- unsaturated!
 
 instance P p x => P (Hide p) x where
   type PP (Hide p) x = PP p x
@@ -1432,47 +1429,6 @@ data FailP p deriving Show
 instance P (Fail UnproxyT p) x => P (FailP p) x where
   type PP (FailP p) x = PP (Fail UnproxyT p) x
   eval _ = eval (Proxy @(Fail UnproxyT p))
-
--- | gets the singleton value from a foldable
---
--- >>> pl @OneP [10..15]
--- Error OneP:expected one element(6)
--- Fail "OneP:expected one element(6)"
---
--- >>> pl @OneP [10]
--- Present 10 (OneP)
--- Val 10
---
--- >>> pl @OneP []
--- Error OneP:expected one element(empty)
--- Fail "OneP:expected one element(empty)"
---
--- >>> pl @OneP (Just 10)
--- Present 10 (OneP)
--- Val 10
---
--- >>> pl @OneP Nothing
--- Error OneP:expected one element(empty)
--- Fail "OneP:expected one element(empty)"
---
-data OneP deriving Show
-
-instance ( Foldable t
-         , x ~ t a
-         ) => P OneP x where
-  type PP OneP x = ExtractAFromTA x
-  eval _ opts x = do
-    let msg0 = "OneP"
-    pure $ case toList x of
-      [] -> mkNode opts (Fail (msg0 <> ":expected one element(empty)")) "" []
-      [a] -> mkNode opts (Val a) msg0 []
-      as' -> case chkSize opts msg0 as' [] of
-               Left e -> e
-               Right (asLen,_) ->
-                 mkNode opts (Fail (msg0 <> ":expected one element(" <> show asLen <> ")")) "" []
-
---type OneP = Guard "expected list of length 1" (Len == 1) >> Head
---type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head
 
 -- | A predicate that determines if the value is between @p@ and @q@
 --

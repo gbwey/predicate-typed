@@ -516,7 +516,7 @@ instance ( P p x
                      let kvs = map (view _1 &&& ((:[]) . view (_2 . _2))) abcs
                          itts = map (view _2 &&& view _3) abcs
                          ret = M.fromListWith (++) kvs
-                     in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
+                     in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q) (hh qq : map (hh . prefixNumberToTT) itts)
 
 -- | similar to 'Data.List.groupBy'
 --
@@ -612,7 +612,7 @@ instance ( Show x
                    Right abcs ->
                      let ret = gp1 x abcs
                          itts = map (view _2 &&& view _3) abcs
-                     in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
+                     in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q) (hh qq : map (hh . prefixNumberToTT) itts)
 
 -- | version of 'GroupCnt' that retains the original ordering
 --
@@ -1665,7 +1665,7 @@ instance ( PP q a ~ [x]
                    let kvs = map (view _1 &&& ((:[]) . view (_2 . _2))) abcs
                        itts = map (view _2 &&& view _3) abcs
                        ret = map fst kvs
-                   in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q ) (hh qq : map (hh . prefixNumberToTT) itts)
+                   in mkNode opts (Val ret) (show3' opts msg0 ret "s=" q) (hh qq : map (hh . prefixNumberToTT) itts)
 
             | otherwise ->
                    let msg1 = msg0 ++ show (qLen,rLen)
@@ -2016,6 +2016,17 @@ instance ( P p x
 -- False (IsPrefix | [2,3] [1,2,3])
 -- Val False
 --
+-- >>> pl @(IsPrefix "xy" Id) "xyzabw"
+-- True (IsPrefix | "xy" "xyzabw")
+-- Val True
+--
+-- >>> pl @(IsPrefix "ab" Id) "xyzbaw"
+-- False (IsPrefix | "ab" "xyzbaw")
+-- Val False
+--
+-- >>> pz @(IsPrefix "abc" "aBcbCd") ()
+-- Val False
+--
 data IsPrefix p q deriving Show
 type IsPrefixT p q = IsFixImpl 'LT p q
 
@@ -2033,6 +2044,22 @@ instance P (IsPrefixT p q) x => P (IsPrefix p q) x where
 -- False (IsInfix | [2,3] [1,2,1,3])
 -- Val False
 --
+-- >>> pl @(IsInfix "ab" Id) "xyzabw"
+-- True (IsInfix | "ab" "xyzabw")
+-- Val True
+--
+-- >>> pl @(IsInfix "aB" Id) "xyzAbw"
+-- False (IsInfix | "aB" "xyzAbw")
+-- Val False
+--
+-- >>> pl @(IsInfix "ab" Id) "xyzbaw"
+-- False (IsInfix | "ab" "xyzbaw")
+-- Val False
+--
+-- >>> pl @(IsInfix Fst Snd) ("ab","xyzabw")
+-- True (IsInfix | "ab" "xyzabw")
+-- Val True
+--
 data IsInfix p q deriving Show
 type IsInfixT p q = IsFixImpl 'EQ p q
 
@@ -2049,6 +2076,17 @@ instance P (IsInfixT p q) x => P (IsInfix p q) x where
 -- >>> pl @(IsSuffix '[2,3] Id) [2,3,4]
 -- False (IsSuffix | [2,3] [2,3,4])
 -- Val False
+--
+-- >>> pl @(IsSuffix "bw" Id) "xyzabw"
+-- True (IsSuffix | "bw" "xyzabw")
+-- Val True
+--
+-- >>> pl @(IsSuffix "bw" Id) "xyzbaw"
+-- False (IsSuffix | "bw" "xyzbaw")
+-- Val False
+--
+-- >>> pz @(IsSuffix "bCd" "aBcbCd") ()
+-- Val True
 --
 data IsSuffix p q deriving Show
 type IsSuffixT p q = IsFixImpl 'GT p q
@@ -2082,7 +2120,7 @@ instance ( x ~ [a]
 
 -- | zip cartesian product for lists: see 'Predicate.Data.Extra.LiftA2' for Applicative version
 --
--- >>> pz @(ZipCartesian (EnumFromTo Fst Snd) ('LT ... 'GT) ) (10,11)
+-- >>> pz @(ZipCartesian (EnumFromTo Fst Snd) ('LT ... 'GT)) (10,11)
 -- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
 --
 -- >>> pz @(ZipCartesian '[ '() ] (1 ... 5)) True

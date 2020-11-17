@@ -45,7 +45,7 @@ module Predicate.Data.Elr (
   , MkELeft'
   , MkERight'
 
- -- ** boolean predicates
+ -- ** predicates
   , IsENone
   , IsELeft
   , IsERight
@@ -492,7 +492,7 @@ instance ( Show a
 -- >>> pz @(ElrId '(999,"oops") '(Id,"fromleft") '(888,Id) Id) (ELeft 123)
 -- Val (123,"fromleft")
 --
--- >>> pl @(ElrId (FailT _ "none found" ) '(Id,"fromleft") '(888,Id) Id) ENone
+-- >>> pl @(ElrId (FailT _ "none found") '(Id,"fromleft") '(888,Id) Id) ENone
 -- Error none found (ElrIn(ENone) n failed)
 -- Fail "none found"
 --

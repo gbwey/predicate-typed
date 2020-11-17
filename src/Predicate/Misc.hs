@@ -131,8 +131,6 @@ module Predicate.Misc (
   , ifM
   , AssocC(..)
   , simpleAlign
-  , getValidBase
-  , stripSuffix'
   ) where
 import qualified GHC.TypeNats as GN
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
@@ -155,13 +153,14 @@ import Data.ByteString (ByteString)
 import GHC.Stack (HasCallStack)
 import Data.Containers.ListUtils (nubOrd)
 import Control.Arrow (Arrow((***)),ArrowChoice(left))
-import Data.List (foldl', intercalate, unfoldr, isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (foldl', intercalate, unfoldr, isPrefixOf, isInfixOf)
 import qualified Safe (headNote)
 import Data.Char (isSpace)
 import qualified Control.Exception as E
 import Data.Tree (Tree(Node))
 import Control.Lens
 import qualified Data.Semigroup as SG
+import Data.List.Lens (suffixed)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -1337,11 +1336,12 @@ product' = foldl' (*) 1
 foldMapStrict :: (Foldable t, Monoid m) => (a -> m) -> t a -> m
 foldMapStrict f = foldl' (\z a -> z <> f a) mempty
 
+-- | return a function that compares two lists based on the Ordering parameter
 cmpOf :: Eq a => Ordering -> ([a] -> [a] -> Bool, String)
 cmpOf = \case
            LT -> (isPrefixOf, "IsPrefix")
            EQ -> (isInfixOf, "IsInfix")
-           GT -> (isSuffixOf, "IsSuffix")
+           GT -> (has . suffixed, "IsSuffix")
 
 -- | lifted if statement
 ifM :: Monad m => m Bool -> m a -> m a -> m a
@@ -1403,25 +1403,3 @@ simpleAlign :: [a] -> [b] -> [These a b]
 simpleAlign as [] = map This as
 simpleAlign [] bs = map That bs
 simpleAlign (a:as) (b:bs) = These a b : simpleAlign as bs
-
--- | get base values for n between 2 and 36
---
--- >>> getValidBase 36
--- "0123456789abcdefghijklmnopqrstuvwxyz"
---
--- >>> getValidBase 2
--- "01"
---
--- >>> getValidBase 8
--- "01234567"
---
-getValidBase :: Int -> String
-getValidBase n
-  | n < 2 = errorInProgram $ "getValidBase: oops invalid base: found n<2 ie " ++ show n
-  | n > 36 = errorInProgram $ "getValidBase: oops invalid base: found n>36 ie " ++ show n
-  | otherwise = take n (['0'..'9'] <> ['a'..'z'])
-
-stripSuffix' :: Eq a => [a] -> [a] -> Maybe [a]
-stripSuffix' p q
-  | p `isSuffixOf` q = Just (take (length q-length p) q)
-  | otherwise = Nothing

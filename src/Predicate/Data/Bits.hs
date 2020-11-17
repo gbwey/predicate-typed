@@ -19,7 +19,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 -- | promoted bit manipulation functions
 module Predicate.Data.Bits (
-  -- ** functions
     type (.&.)
   , type (.|.)
   , type (.^.)

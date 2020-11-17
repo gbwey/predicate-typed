@@ -464,7 +464,7 @@ type family Pop2'T (p :: Type) (q :: Type) (r :: Type) (s :: Type) :: Type where
 --    `- P hello '"there"
 -- Val "there"
 --
--- >>> pz @(PApp (Proxy Proxy) (Proxy "abc") >> Pop0 Id () >> Pop0 Id () ) ()
+-- >>> pz @(PApp (Proxy Proxy) (Proxy "abc") >> Pop0 Id () >> Pop0 Id ()) ()
 -- Val "abc"
 --
 -- >>> pz @(PApp (Proxy '(,,)) (Proxy 10) >> PApp Id (Proxy "ss") >> PApp Id (Proxy Fst) >> Pop0 Id '(13 % 44,C "x")) ()

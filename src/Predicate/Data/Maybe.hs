@@ -17,7 +17,7 @@
 -- | promoted 'Maybe' functions
 module Predicate.Data.Maybe (
 
- -- ** boolean predicates
+ -- ** predicates
     IsNothing
   , IsJust
 

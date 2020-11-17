@@ -6,7 +6,6 @@ dist/
 *dump-hi
 .vscode/
 stack.yaml.lock
-cabal.project.local
 stack*.yaml.lock
 *.bundle
 .hie/

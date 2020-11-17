@@ -17,7 +17,6 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 -- | promoted 'Semigroup' and 'Monoid' functions
 module Predicate.Data.Monoid (
-  -- ** functions
     type (<>)
   , MConcat
   , SConcat

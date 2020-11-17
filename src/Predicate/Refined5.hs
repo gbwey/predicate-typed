@@ -119,21 +119,30 @@ unsafeRefined5 :: forall opts ip op i
   -> Refined5 opts ip op i
 unsafeRefined5 = Refined5
 
-deriving newtype instance ( Refined2C opts ip op i
-                          , NFData (PP ip i)
-                          ) => NFData (Refined5 opts ip op i)
-deriving stock instance  ( Refined2C opts ip op i
-                         , Show (PP ip i)
-                         ) => Show (Refined5 opts ip op i)
-deriving stock instance ( Refined2C opts ip op i
-                        , Eq (PP ip i)
-                        ) => Eq (Refined5 opts ip op i)
-deriving stock instance ( Refined2C opts ip op i
-                        , Ord (PP ip i)
-                        ) => Ord (Refined5 opts ip op i)
-deriving stock instance ( Refined2C opts ip op i
-                        , TH.Lift (PP ip i)
-                        ) => TH.Lift (Refined5 opts ip op i)
+deriving newtype instance
+  ( Refined2C opts ip op i
+  , NFData (PP ip i)
+  ) => NFData (Refined5 opts ip op i)
+
+deriving stock instance
+  ( Refined2C opts ip op i
+  , Show (PP ip i)
+  ) => Show (Refined5 opts ip op i)
+
+deriving stock instance
+  ( Refined2C opts ip op i
+  , Eq (PP ip i)
+  ) => Eq (Refined5 opts ip op i)
+
+deriving stock instance
+  ( Refined2C opts ip op i
+  , Ord (PP ip i)
+  ) => Ord (Refined5 opts ip op i)
+
+deriving stock instance
+  ( Refined2C opts ip op i
+  , TH.Lift (PP ip i)
+  ) => TH.Lift (Refined5 opts ip op i)
 
 -- | 'IsString' instance for Refined5
 --
@@ -445,6 +454,7 @@ evalBool5 i =
             Left e -> Left $ joinStrings "failed boolean check " e
   in left (++ ("\n" ++ prtTreePure opts p2)) w
 
+-- | refinement exception
 newtype Refined5Exception = Refined5Exception String
   deriving stock Generic
 

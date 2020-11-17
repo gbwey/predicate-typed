@@ -17,7 +17,6 @@
 {-# LANGUAGE ViewPatterns #-}
 -- | promoted foldable functions
 module Predicate.Data.Foldable (
-  -- ** functions
     Concat
   , ConcatMap
   , Cycle
@@ -34,6 +33,8 @@ module Predicate.Data.Foldable (
   , IToList'
 
   , ToNEList
+
+  , OneP
 
   , Null
   , Null'
@@ -609,4 +610,45 @@ instance ( x ~ t a
                      Nothing -> ""
                      Just i -> " i="++show i
            in mkNodeB opts (or x) (msg1 <> w <> showVerbose opts " | " x) []
+
+-- | gets the singleton value from a foldable
+--
+-- >>> pl @OneP [10..15]
+-- Error OneP:expected one element(6)
+-- Fail "OneP:expected one element(6)"
+--
+-- >>> pl @OneP [10]
+-- Present 10 (OneP)
+-- Val 10
+--
+-- >>> pl @OneP []
+-- Error OneP:expected one element(empty)
+-- Fail "OneP:expected one element(empty)"
+--
+-- >>> pl @OneP (Just 10)
+-- Present 10 (OneP)
+-- Val 10
+--
+-- >>> pl @OneP Nothing
+-- Error OneP:expected one element(empty)
+-- Fail "OneP:expected one element(empty)"
+--
+data OneP deriving Show
+
+instance ( Foldable t
+         , x ~ t a
+         ) => P OneP x where
+  type PP OneP x = ExtractAFromTA x
+  eval _ opts x = do
+    let msg0 = "OneP"
+    pure $ case toList x of
+      [] -> mkNode opts (Fail (msg0 <> ":expected one element(empty)")) "" []
+      [a] -> mkNode opts (Val a) msg0 []
+      as' -> case chkSize opts msg0 as' [] of
+               Left e -> e
+               Right (asLen,_) ->
+                 mkNode opts (Fail (msg0 <> ":expected one element(" <> show asLen <> ")")) "" []
+
+--type OneP = Guard "expected list of length 1" (Len == 1) >> Head
+--type OneP = Guard (PrintF "expected list of length 1 but found length=%d" Len) (Len == 1) >> Head
 
