@@ -18,6 +18,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DeriveLift #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
 -- |
@@ -63,6 +65,9 @@ module Predicate.Refined3 (
   , genRefined3
   , genRefined3P
 
+ -- ** exception
+  , Refined3Exception(..)
+
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -85,6 +90,8 @@ import Data.String (IsString(..))
 import Data.Hashable (Hashable(..))
 import GHC.Stack (HasCallStack)
 import Control.DeepSeq (rnf, rnf2, NFData)
+import qualified Control.Exception as E
+import GHC.Generics (Generic)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -133,7 +140,7 @@ unsafeRefined3' :: forall opts ip op fmt i
                   , Refined3C opts ip op fmt i
                 ) => i
                   -> Refined3 opts ip op fmt i
-unsafeRefined3' = either (error . show) id . newRefined3
+unsafeRefined3' = either (E.throw . Refined3Exception . show) id . newRefined3
 
 -- | directly load values into 'Refined3' without any checking
 unsafeRefined3 ::
@@ -155,19 +162,19 @@ type Refined3C opts ip op fmt i =
        , PP fmt (PP ip i) ~ i  -- the output type must match the original input type
        )
 
-deriving instance ( Refined3C opts ip op fmt i
+deriving stock instance ( Refined3C opts ip op fmt i
                   , Show (PP ip i)
                   , Show i
                   ) => Show (Refined3 opts ip op fmt i)
-deriving instance ( Refined3C opts ip op fmt i
+deriving stock instance ( Refined3C opts ip op fmt i
                   , Eq (PP ip i)
                   , Eq i
                   ) => Eq (Refined3 opts ip op fmt i)
-deriving instance ( Refined3C opts ip op fmt i
+deriving stock instance ( Refined3C opts ip op fmt i
                   , Ord (PP ip i)
                   , Ord i
                   ) => Ord (Refined3 opts ip op fmt i)
-deriving instance ( Refined3C opts ip op fmt i
+deriving stock instance ( Refined3C opts ip op fmt i
                   , TH.Lift (PP ip i)
                   , TH.Lift i
                   ) => TH.Lift (Refined3 opts ip op fmt i)
@@ -191,7 +198,7 @@ instance ( Refined3C opts ip op fmt String
          ) => IsString (Refined3 opts ip op fmt String) where
   fromString s =
     case newRefined3 s of
-      Left e -> error $ "Refined3(IsString:fromString):" ++ show e
+      Left e -> E.throw $ Refined3Exception $ "IsString:fromString:" ++ show e
       Right r -> r
 
 -- read instance from -ddump-deriv
@@ -326,11 +333,11 @@ genRefined3P _ g =
       f !cnt = do
         mppi <- suchThatMaybe g $ \a -> evalQuick @opts @op a == Right True
         case mppi of
-          Nothing | cnt >= r -> error $ setOtherEffects o ("genRefined3P recursion exceeded(" ++ show r ++ ")")
+          Nothing | cnt >= r -> E.throw $ Refined3Exception $ setOtherEffects o ("genRefined3P recursion exceeded(" ++ show r ++ ")")
                   | otherwise -> f (cnt+1)
           Just ppi ->
              case evalQuick @opts @fmt ppi of
-               Left e -> error $ "genRefined3P: formatting failed!! " ++ e
+               Left e -> E.throw $ Refined3Exception $ "genRefined3P: formatting failed!! " ++ e
                Right ret -> pure $ unsafeRefined3 ppi ret
   in f 0
 
@@ -421,7 +428,7 @@ data RResults3 a =
      | RTFalse !a !(Tree PE) !(Tree PE)        -- Right a + Right False
      | RTTrueF !a !(Tree PE) !(Tree PE) !String !(Tree PE) -- Right a + Right True + Left e
      | RTTrueT !a !(Tree PE) !(Tree PE) !(Tree PE)      -- Right a + Right True + Right b
-     deriving Show
+     deriving stock Show
 
 -- | same as 'newRefined3P'' but passes in the proxy
 newRefined3' :: forall opts ip op fmt i m
@@ -583,7 +590,7 @@ data Msg3 = Msg3 { m3Desc :: !String
                  , m3Short :: !String
                  , m3Long :: !String
                  , m3ValP :: !ValP
-                 } deriving Eq
+                 } deriving stock Eq
 
 instance Show Msg3 where
   show (Msg3 a b c _d) = joinStrings a b <> nullIf "\n" c
@@ -643,3 +650,12 @@ prt3Impl opts v =
               <> outmsg m
               <> prtTreePure opts t3
          in mkMsg3 m n r (t3 ^. root . peValP)
+
+newtype Refined3Exception = Refined3Exception String
+  deriving stock Generic
+
+instance Show Refined3Exception where
+  show (Refined3Exception e) = "Refined3Exception:\n" ++ e
+
+instance E.Exception Refined3Exception where
+  displayException = show

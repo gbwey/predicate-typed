@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ce998dc318ca06d53f625b8ae47f833c8bfabd675847d56a78cfa35f25fd9d2b
+-- hash: 011e0f70e4c2f6ab04d1dfe735d3bc7860244d7916bde480487f938fbc726836
 
 name:           predicate-typed
 version:        0.7.4.3
@@ -70,7 +70,7 @@ library
       Paths_predicate_typed
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wcompat -Wno-star-is-type -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wunused-type-patterns -Wredundant-constraints
+  ghc-options: -Wall -Wcompat -Wno-star-is-type -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wunused-type-patterns -Wredundant-constraints -Wnoncanonical-monad-instances -Wmissing-export-lists
   build-depends:
       QuickCheck
     , aeson
@@ -79,13 +79,11 @@ library
     , binary
     , bytestring
     , comonad
-    , constraints
     , containers
     , deepseq
     , directory
     , hashable
     , lens
-    , lens-action
     , pcre-heavy >=1.0.0.2
     , pcre-light
     , pretty-terminal >=0.1.0.0
@@ -117,7 +115,6 @@ test-suite doctests
     , binary
     , bytestring
     , comonad
-    , constraints
     , containers
     , deepseq
     , directory
@@ -163,7 +160,6 @@ test-suite predicate-typed-test
     , binary
     , bytestring
     , comonad
-    , constraints
     , containers
     , deepseq
     , directory

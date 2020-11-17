@@ -132,6 +132,8 @@ module Predicate.Misc (
   , AssocC(..)
   , simpleAlign
   , getValidBase
+  , stripSuffix'
+  , isSuffixOf'
   ) where
 import qualified GHC.TypeNats as GN
 import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:)))
@@ -154,13 +156,14 @@ import Data.ByteString (ByteString)
 import GHC.Stack (HasCallStack)
 import Data.Containers.ListUtils (nubOrd)
 import Control.Arrow (Arrow((***)),ArrowChoice(left))
-import Data.List (foldl', intercalate, unfoldr, isPrefixOf, isInfixOf, isSuffixOf)
+import Data.List (foldl', intercalate, unfoldr, isPrefixOf, isInfixOf)
 import qualified Safe (headNote)
 import Data.Char (isSpace)
 import qualified Control.Exception as E
 import Data.Tree (Tree(Node))
 import Control.Lens
 import qualified Data.Semigroup as SG
+import Data.Maybe (isJust)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -1340,7 +1343,7 @@ cmpOf :: Eq a => Ordering -> ([a] -> [a] -> Bool, String)
 cmpOf = \case
            LT -> (isPrefixOf, "IsPrefix")
            EQ -> (isInfixOf, "IsInfix")
-           GT -> (isSuffixOf, "IsSuffix")
+           GT -> (isSuffixOf', "IsSuffix")
 
 -- | lifted if statement
 ifM :: Monad m => m Bool -> m a -> m a -> m a
@@ -1420,3 +1423,9 @@ getValidBase n
   | n > 36 = errorInProgram $ "getValidBase: oops invalid base: found n>36 ie " ++ show n
   | otherwise = take n (['0'..'9'] <> ['a'..'z'])
 
+stripSuffix' :: Eq a => [a] -> [a] -> Maybe [a]
+stripSuffix' p q | foldr (const (drop 1)) q p == p = Just (zipWith const q p)
+                | otherwise = Nothing
+
+isSuffixOf' :: Eq a => [a] -> [a] -> Bool
+isSuffixOf' = (isJust .) . stripSuffix'

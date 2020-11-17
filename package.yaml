@@ -19,12 +19,10 @@ dependencies:
 - bytestring
 - comonad
 - containers
-- constraints
 - deepseq
 - directory
 - hashable
 - lens
-- lens-action
 - pcre-heavy >= 1.0.0.2
 - pcre-light
 - pretty-terminal >= 0.1.0.0
@@ -49,12 +47,15 @@ library:
   - -Wpartial-fields
   - -Wunused-type-patterns
   - -Wredundant-constraints
+  - -Wnoncanonical-monad-instances
+  - -Wmissing-export-lists
   when:
    - condition: impl(ghc >= 8.8)
      ghc-options:
      - -fwrite-ide-info
      - -hiedir=.hie
      - -Widentities
+   #  - -Wmissing-deriving-strategies
 
 tests:
   predicate-typed-test:
@@ -81,6 +82,7 @@ tests:
        - -Widentities
     dependencies:
     - base
+    - lens-action
     - predicate-typed
     - stm
     - tasty
@@ -111,3 +113,5 @@ tests:
     - base
     - predicate-typed
     - doctest
+    - lens-action
+

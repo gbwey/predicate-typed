@@ -40,7 +40,7 @@ import Predicate.Core
 import Predicate.Misc
 import Predicate.Util
 import Control.Lens
-import Data.List (dropWhileEnd)
+import Data.List (stripPrefix, dropWhileEnd)
 import qualified Data.Text.Lens as DTL
 import Data.Proxy (Proxy(Proxy))
 import Data.Kind (Type)
@@ -146,13 +146,9 @@ instance ( GetBool lft
     pure $ case lr of
       Left e -> e
       Right (p,view DTL.unpacked -> q,pp,qq) ->
-        let b = if lft then
-                  let (before,after) = splitAt (length p) q
-                  in if before == p then Just after else Nothing
-                else
-                  let (before,after) = splitAt (length q - length p) q
-                  in if after == p then Just before else Nothing
-        in mkNode opts (Val (fmap (view DTL.packed) b)) (msg0 <> showL opts b <> litVerbose opts " | p=" p <> litVerbose opts " | q=" q) [hh pp, hh qq]
+        let b | lft = stripPrefix p q
+              | otherwise = stripSuffix' p q
+        in mkNode opts (Val (view DTL.packed <$> b)) (msg0 <> showL opts b <> litVerbose opts " | p=" p <> litVerbose opts " | q=" q) [hh pp, hh qq]
 
 -- | similar to 'Data.Text.stripLeft'
 --

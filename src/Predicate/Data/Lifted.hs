@@ -320,7 +320,7 @@ instance Alternative t => P (EmptyT' t p) x where
 
 -- | creates an empty list for the given pointer to a type @t@
 --
--- >>> pz @(EmptyList' 123 <> '[Id]) 99
+-- >>> pz @(EmptyList' 123 +: Id) 99
 -- Val [99]
 --
 data EmptyList' (t :: k) deriving Show

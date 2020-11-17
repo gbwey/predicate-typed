@@ -520,6 +520,10 @@ instance x ~ [Int]
 -- >>> pz @(Ones >> Map (ReadP Int Id) >> GuardSimple (Len == 20) >> SplitAt 18 Id >> '(LuhnDigit << Fst,LuhnDigit << Drop 6 Fst,Snd) >> GuardSimple (Thd == '[ Fst, Snd ])) "89610195012344000018"
 -- Val (1,8,[1,8])
 --
+-- >>> pl @(IterateNWhile 5 'True (Id +: LuhnDigit) >> Map IsLuhn) [1]
+-- Present [False,True,True,True,True] ((>>) [False,True,True,True,True] | {Map [False,True,True,True,True] | [[1],[1,8],[1,8,2],[1,8,2,6],[1,8,2,6,7]]})
+-- Val [False,True,True,True,True]
+--
 data LuhnDigit deriving Show
 
 instance x ~ [Int]

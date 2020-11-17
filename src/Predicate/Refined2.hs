@@ -19,6 +19,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DeriveLift #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
 -- | a refinement type allowing the external type to differ from the internal type
@@ -56,6 +58,9 @@ module Predicate.Refined2 (
   , unsafeRefined2
   , unsafeRefined2'
 
+ -- ** exception
+  , Refined2Exception(..)
+
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -78,6 +83,8 @@ import Data.Hashable (Hashable(..))
 import GHC.Stack (HasCallStack)
 import Test.QuickCheck
 import Control.DeepSeq (rnf, rnf2, NFData)
+import qualified Control.Exception as E
+import GHC.Generics (Generic)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -115,7 +122,7 @@ unsafeRefined2' :: forall opts ip op i
                   )
                 => i
                 -> Refined2 opts ip op i
-unsafeRefined2' = either (error . show) id . newRefined2
+unsafeRefined2' = either (E.throw . Refined2Exception . show) id . newRefined2
 
 -- | directly load values into 'Refined2' without any checking
 unsafeRefined2 :: forall opts ip op i
@@ -133,19 +140,19 @@ type Refined2C opts ip op i =
        , PP op (PP ip i) ~ Bool   -- the internal value needs to pass the predicate check
        )
 
-deriving instance ( Refined2C opts ip op i
+deriving stock instance ( Refined2C opts ip op i
                   , Show i
                   , Show (PP ip i)
                   ) => Show (Refined2 opts ip op i)
-deriving instance ( Refined2C opts ip op i
+deriving stock instance ( Refined2C opts ip op i
                   , Eq i
                   , Eq (PP ip i)
                   ) => Eq (Refined2 opts ip op i)
-deriving instance ( Refined2C opts ip op i
+deriving stock instance ( Refined2C opts ip op i
                   , Ord i
                   , Ord (PP ip i)
                   ) => Ord (Refined2 opts ip op i)
-deriving instance ( Refined2C opts ip op i
+deriving stock instance ( Refined2C opts ip op i
                   , TH.Lift (PP ip i)
                   , TH.Lift i
                   ) => TH.Lift (Refined2 opts ip op i)
@@ -170,7 +177,7 @@ instance ( i ~ String
          ) => IsString (Refined2 opts ip op i) where
   fromString i =
     case newRefined2 i of
-      Left e -> error $ "Refined2(IsString:fromString):" ++ show e
+      Left e -> E.throw $ Refined2Exception  $ "IsString:fromString:" ++ show e
       Right r -> r
 
 -- read instance from -ddump-deriv
@@ -309,7 +316,7 @@ genRefined2P _ g =
       f !cnt = do
         mi <- suchThatMaybe g (isJust . snd . runIdentity . eval2M @opts @ip @op)
         case mi of
-          Nothing | cnt >= r -> error $ setOtherEffects o ("genRefined2P recursion exceeded(" ++ show r ++ ")")
+          Nothing | cnt >= r -> E.throw $ Refined2Exception $ setOtherEffects o $ "genRefined2P recursion exceeded(" ++ show r ++ ")"
                   | otherwise -> f (cnt+1)
           Just i ->
              case newRefined2 i of
@@ -369,7 +376,7 @@ data RResults2 a =
      | RTF !a !(Tree PE) !String !(Tree PE)    -- op fails
      | RTFalse !a !(Tree PE) !(Tree PE)        -- op false
      | RTTrue !a !(Tree PE) !(Tree PE) -- op true
-     deriving Show
+     deriving stock Show
 
 -- | version for creating a 'Refined2' value that works for any 'MonadEval' instance
 newRefined2' :: forall opts ip op i m
@@ -493,7 +500,7 @@ data Msg2 = Msg2 { m2Desc :: !String
                  , m2Short :: !String
                  , m2Long :: !String
                  , m2ValP :: !ValP
-                 } deriving Eq
+                 } deriving stock Eq
 
 instance Show Msg2 where
   show (Msg2 a b c _d) = joinStrings a b <> nullIf "\n" c
@@ -572,3 +579,12 @@ mkProxy2' = Proxy
 -- | type family for converting from a 4-tuple '(opts,ip,op,i) to a 'Refined2' type
 type family MakeR2 p where
   MakeR2 '(opts,ip,op,i) = Refined2 opts ip op i
+
+newtype Refined2Exception = Refined2Exception String
+  deriving Generic
+
+instance Show Refined2Exception where
+  show (Refined2Exception e) = "Refined2Exception:\n" ++ e
+
+instance E.Exception Refined2Exception where
+  displayException = show

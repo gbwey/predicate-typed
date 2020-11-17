@@ -23,6 +23,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE DeriveLift #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
 -- | refinement type allowing the external type to differ from the internal type
@@ -51,6 +52,8 @@ module Predicate.Refined5 (
   , unsafeRefined5
   , unsafeRefined5'
 
+ -- ** exception
+  , Refined5Exception(..)
  ) where
 import Predicate.Refined2 (Msg2(..), RResults2(..), prt2Impl, Refined2C)
 import Predicate.Refined (RefinedC)
@@ -67,7 +70,6 @@ import Data.Binary (Binary)
 import Control.Lens
 import Data.String (IsString(..))
 import Data.Hashable (Hashable(..))
-import GHC.Stack (HasCallStack)
 import Test.QuickCheck
 import Data.Coerce (coerce)
 import Data.Either (isRight)
@@ -75,7 +77,8 @@ import Data.Char (isSpace)
 import Control.Arrow (left)
 import Data.Tree.Lens (root)
 import Control.DeepSeq (NFData)
-
+import qualified Control.Exception as E
+import GHC.Generics (Generic)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -105,11 +108,10 @@ unRefined5 = coerce
 -- | directly load values into 'Refined5'. It still checks to see that those values are valid
 unsafeRefined5' :: forall opts ip op i
                 . ( Refined2C opts ip op i
-                  , HasCallStack
                   )
                 => PP ip i
                 -> Refined5 opts ip op i
-unsafeRefined5' = either error Refined5 . evalBool5 @opts @op
+unsafeRefined5' = either (E.throw . Refined5Exception) Refined5 . evalBool5 @opts @op
 
 -- | directly load values into 'Refined5' without any checking
 unsafeRefined5 :: forall opts ip op i
@@ -147,7 +149,7 @@ instance ( i ~ String
          ) => IsString (Refined5 opts ip op i) where
   fromString i =
     case newRefined5 i of
-      Left e -> error $ "Refined5(IsString:fromString):" ++ show e
+      Left e -> E.throw $ Refined5Exception $ "IsString:fromString:" ++ show e
       Right r -> r
 
 -- read instance from -ddump-deriv
@@ -255,9 +257,7 @@ instance ( Arbitrary (PP ip i)
 -- | create a 'Refined5' generator using a generator to restrict the values (so it completes)
 genRefined5 ::
     forall opts ip op i
-  . ( Refined2C opts ip op i
-    , HasCallStack
-    )
+  . Refined2C opts ip op i
   => Gen (PP ip i)
   -> Gen (Refined5 opts ip op i)
 genRefined5 = genRefined5P Proxy
@@ -266,9 +266,7 @@ genRefined5 = genRefined5P Proxy
 -- | create a 'Refined5' generator using a proxy
 genRefined5P ::
     forall opts ip op i
-  . ( Refined2C opts ip op i
-    , HasCallStack
-    )
+  . Refined2C opts ip op i
   => Proxy '(opts,ip,op,i)
   -> Gen (PP ip i)
   -> Gen (Refined5 opts ip op i)
@@ -278,7 +276,7 @@ genRefined5P _ g =
       f !cnt = do
         mi <- suchThatMaybe g (isRight . evalBool5 @opts @op)
         case mi of
-          Nothing | cnt >= r -> error $ setOtherEffects o ("genRefined5P recursion exceeded(" ++ show r ++ ")")
+          Nothing | cnt >= r -> E.throw $ Refined5Exception $ setOtherEffects o ("genRefined5P recursion exceeded(" ++ show r ++ ")")
                   | otherwise -> f (cnt+1)
           Just i -> pure $ unsafeRefined5 i
   in f 0
@@ -447,3 +445,11 @@ evalBool5 i =
             Left e -> Left $ joinStrings "failed boolean check " e
   in left (++ ("\n" ++ prtTreePure opts p2)) w
 
+newtype Refined5Exception = Refined5Exception String
+  deriving stock Generic
+
+instance Show Refined5Exception where
+  show (Refined5Exception e) = "Refined5Exception:\n" ++ e
+
+instance E.Exception Refined5Exception where
+  displayException = show

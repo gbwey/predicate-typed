@@ -898,6 +898,9 @@ instance ( Show a
 -- >>> pz @'Proxy 'x' ^!? acts . _Val . to typeRep
 -- Just Char
 --
+-- >>> pz @'Proxy 'x' >>= return . preview (_Val . to typeRep)
+-- Just Char
+--
 -- >>> pz @'Proxy 45 ^!? acts . _Val . to typeRep
 -- Just Integer
 --

@@ -364,6 +364,7 @@ instance ( PP p x ~ t a
 -- Val [9,2,7,4]
 --
 data ToList deriving Show
+
 instance ( Show (t a)
          , Foldable t
          ) => P ToList (t a) where

@@ -640,7 +640,7 @@ instance ( a ~ [x]
   eval _ opts zs =
     let msg0 = "GroupCntStable"
         xs = map (NE.head &&& length) $ NE.group $ sortOn (ys M.!) zs
-        ys = M.fromListWith (flip const) $ zip zs [0::Int ..]
+        ys = M.fromListWith (const id) $ zip zs [0::Int ..]
     in pure $ mkNode opts (Val xs) msg0 []
 
 

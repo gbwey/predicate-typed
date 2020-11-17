@@ -616,7 +616,7 @@ otherDef = coerce (True, Default, Default)
 
 nocolor, colorDef :: (String, PColor)
 -- | skip colors
-nocolor = ("nocolor", PColor $ flip const)
+nocolor = ("nocolor", PColor $ const id)
 -- | use default coloring from 'Color5'
 colorDef = Safe.fromJustNote "colorDef" $ coerce $ oColor $ getOptC @Color5
 

@@ -1,4 +1,3 @@
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,6 +12,8 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE DeriveLift #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE TypeOperators #-}
@@ -36,6 +37,9 @@ module Predicate.Refined (
   , unsafeRefined
   , unsafeRefined'
 
+ -- ** exception
+  , RefinedException(..)
+
  ) where
 import Predicate.Core
 import Predicate.Misc (nullIf)
@@ -52,9 +56,11 @@ import qualified Data.Binary as B
 import Data.Binary (Binary)
 import Data.String (IsString(..))
 import Data.Hashable (Hashable(..))
-import GHC.Stack (HasCallStack)
 import Data.Coerce (coerce)
 import Control.DeepSeq (NFData)
+import qualified Control.Exception as E
+import GHC.Generics (Generic)
+--import GHC.Stack (HasCallStack)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -91,7 +97,8 @@ instance RefinedC opts p String
       => IsString (Refined opts p String) where
   fromString s =
     case newRefined @opts @p s of
-      Left w -> error $ "Refined(IsString:fromString):" ++ errorDisplay (getOpt @opts) w
+      Left w -> E.throw $ RefinedException $ "IsString:fromString:\n" ++ errorDisplay (getOpt @opts) w
+  --    Left w -> error $ "IsString:fromString:" ++ errorDisplay (getOpt @opts) w
       Right r -> r
 
 errorDisplay :: POpts -> Msg0 -> String
@@ -222,9 +229,7 @@ instance ( Arbitrary a
 
 -- | create 'Refined' generator using a generator to restrict the values
 genRefined :: forall opts p a .
-   ( RefinedC opts p a
-   , HasCallStack
-   )
+   RefinedC opts p a
    => Gen a
    -> Gen (Refined opts p a)
 genRefined g =
@@ -233,7 +238,7 @@ genRefined g =
       f !cnt = do
         ma <- suchThatMaybe g $ \a -> evalQuick @opts @p a == Right True
         case ma of
-          Nothing | cnt >= r -> error $ setOtherEffects o ("genRefined recursion exceeded(" ++ show r ++ ")")
+          Nothing | cnt >= r -> E.throw $ RefinedException $ setOtherEffects o ("genRefined recursion exceeded(" ++ show r ++ ")")
                   | otherwise -> f (cnt+1)
           Just a -> pure $ unsafeRefined a
   in f 0
@@ -243,7 +248,7 @@ data Msg0 = Msg0 { m0BoolE :: !(Either String Bool)
                  , m0Short :: !String
                  , m0Long :: !String
                  , m0ValBoolColor :: !String
-                 } deriving Eq
+                 } deriving stock Eq
 
 -- | verbose display of 'Msg0'
 showMsg0 :: Msg0 -> String
@@ -337,9 +342,8 @@ unsafeRefined = Refined
 
 -- | create an unsafe 'Refined' value and also run the predicate
 unsafeRefined' :: forall opts p a
-  . ( RefinedC opts p a
-    , HasCallStack
-    ) => a -> Refined opts p a
+  . RefinedC opts p a
+     => a -> Refined opts p a
 unsafeRefined' a =
   let o = getOpt @opts
       tt = runIdentity $ evalBool (Proxy @p) o a
@@ -347,7 +351,19 @@ unsafeRefined' a =
        Right True -> Refined a
        _ -> let s = prtTree o tt
                 bp = colorValBool o (tt ^. ttVal)
-            in case oDebug o of
-                 DZero -> error bp
-                 DLite -> error $ bp ++ nullIf "\n" s
-                 _ -> error $ bp ++ nullIf "\n" s
+            in E.throw $ RefinedException $ case oDebug o of
+                 DZero -> bp
+                 DLite -> bp ++ nullIf "\n" s
+                 _ -> bp ++ nullIf "\n" s
+
+newtype RefinedException = RefinedException String
+  deriving stock Generic
+
+instance Show RefinedException where
+  show (RefinedException e) = "RefinedException:\n" ++ e
+
+instance E.Exception RefinedException where
+  displayException = show
+
+-- ghcid -a
+-- $> fromString @(Refined OU (ReadP Int Id >> Id > 244) String) "523x"
