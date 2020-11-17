@@ -1,0 +1,3 @@
+tests: True
+
+constraints: aeson-pretty +lib-only
