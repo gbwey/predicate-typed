@@ -18,7 +18,7 @@ converts a base 16 String to an Int and validates that the number is between 0 a
 internally Refined2 holds the internal value r2In as an Int and the original String in r2Out
 
 ```haskell
->type Hex = '(OL, ReadBase Int 16, Between 0 0xff Id, String)
+>type Hex = '(OU, ReadBase Int 16, Between 0 0xff Id, String)
 
 >newRefined2P (Proxy @Hex) "0000fe"
 Refined2 254 "0000fe"
@@ -29,7 +29,7 @@ Left "Step 2. False Boolean Check(op) | {8190 <= 255}"
 >import qualified Data.Aeson as A
 >import qualified Data.ByteString.Lazy as BL8 (ByteString)
 
->type Js = '(OL, ParseJson (Int,String) Id, Msg "0-255:" (Between 0 255 Fst) && Msg "length:" (Length Snd == 3), BL8.ByteString)
+>type Js = '(OU, ParseJson (Int,String) Id, Msg "0-255:" (Between 0 255 Fst) && Msg "length:" (Length Snd == 3), BL8.ByteString)
 
 >newRefined2P (Proxy @Js) "[10,\"Abc\"]"
 Right (Refined2 (10,"Abc") "[10,\"Abc\"]")
@@ -44,7 +44,7 @@ Left "Step 2. False Boolean Check(op) | {False && False | (0-255:0 <= -10) && (l
 ```haskell
 type Hex opts = '(opts, ReadBase Int 16, Between 0 255 Id, String)
 
-$$(refined2TH "0000fe") :: MakeR2 (Hex OL)
+$$(refined2TH "0000fe") :: MakeR2 (Hex OU)
 Refined2 254 "0000fe"
 ```
 

@@ -13,7 +13,7 @@ newtype Refined opts p a
 
 1. reads in a number and checks to see that it is greater than 99
 ```haskell
->newRefined @OL @(ReadP Int Id > 99) "123"
+>newRefined @OU @(ReadP Int Id > 99) "123"
 Right (Refined "123")
 ```
 
@@ -26,13 +26,13 @@ Left Error ReadP Int (1x2y3) (>)
 3. reads in a hexadecimal string and checks to see that it is between 99 and 256
 ```haskell
 --  (>>) forward composition
->newRefined @OL @(ReadBase Int 16 >> Between 99 256 Id) "000fe"
+>newRefined @OU @(ReadBase Int 16 >> Between 99 256 Id) "000fe"
 Right (Refined "000fe")
 ```
 
 4. reads in a hexadecimal string but fails the predicate check
 ```haskell
->newRefined @OL @(ReadBase Int 16 >> Between 99 253 Id) "000fe"
+>newRefined @OU @(ReadBase Int 16 >> Between 99 253 Id) "000fe"
 Left False ((>>) False | {254 <= 253})
 ```
 
@@ -43,7 +43,7 @@ Left False ((>>) False | {254 <= 253})
 
 6. reads in a string as time and does simple validation
 ```haskell
->newRefined @OL @(Resplit ":" >> Map (ReadP Int Id) >> Len == 3) "12:01:05"
+>newRefined @OU @(Resplit ":" >> Map (ReadP Int Id) >> Len == 3) "12:01:05"
 Right (Refined "12:01:05")
 ```
   * `Resplit ":"`
@@ -69,7 +69,7 @@ for less detail use _pl_\
 ```
 
 ```haskell
-ex1 :: Refined OL (ReadP Int Id > 99) String
+ex1 :: Refined OU (ReadP Int Id > 99) String
 ex1 = $$(refinedTH "123")
 ```
 

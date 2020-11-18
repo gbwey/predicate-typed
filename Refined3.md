@@ -21,7 +21,7 @@ and then roundtrips the value to a string
 ```haskell
 >type Hex opts = '(opts, ReadBase Int 16, Between 0 0xff Id, ShowBase 16, String)
 
->newRefined3P (Proxy @(Hex OL)) "0000fe"
+>newRefined3P (Proxy @(Hex OU)) "0000fe"
 Refined3 254 "fe"
 ```
 1. `ReadBase Int 16`
@@ -66,7 +66,7 @@ Val "fe"
 ```haskell
 type Hex opts = '(opts, ReadBase Int 16, Between 0 0xff Id, ShowBase 16, String)
 
-$$(refined3TH "0000fe") :: MakeR3 (Hex OL)
+$$(refined3TH "0000fe") :: MakeR3 (Hex OU)
 ```
 
 Here is an example where the predicate fails at compile-time and we choose to show the details using OU
