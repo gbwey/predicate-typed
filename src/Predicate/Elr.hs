@@ -16,7 +16,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
-{-# LANGUAGE EmptyDataDeriving #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -24,7 +24,7 @@
 {-# LANGUAGE DeriveLift #-}
 -- | Elr definition
 module Predicate.Elr (
- -- definition
+ -- ** definition
     Elr(..)
 
  -- ** prisms
@@ -64,10 +64,11 @@ import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
 import Control.Lens
 import Data.Bitraversable (Bitraversable(..))
 import Data.Bifoldable (Bifoldable(bifoldMap))
-import GHC.Generics (Generic)
-import Control.DeepSeq (NFData)
+import GHC.Generics (Generic,Generic1)
+import Control.DeepSeq (NFData(..), NFData1(..), NFData2(..), rnf1)
 import Control.Monad (ap)
 import Data.These (These(..))
+import Data.Data (Data)
 import qualified Language.Haskell.TH.Syntax as TH
 -- $setup
 -- >>> import Predicate.Prelude
@@ -76,11 +77,22 @@ import qualified Language.Haskell.TH.Syntax as TH
 -- | similar to 'Data.These' with an additional empty constructor to support a Monoid instance
 data Elr a b =
      ENone -- ^ empty constructor
-   | ELeft !a  -- ^ similar to 'Data.These.This'
-   | ERight !b -- ^ similar to 'Data.These.That'
-   | EBoth !a !b -- ^ similar to 'Data.These.These'
-   deriving stock (Show,Eq,Ord,Foldable,Functor,Traversable,Generic)
-   deriving anyclass NFData
+   | ELeft a  -- ^ similar to 'Data.These.This'
+   | ERight b -- ^ similar to 'Data.These.That'
+   | EBoth a b -- ^ similar to 'Data.These.These'
+   deriving stock (Show,Eq,Ord,Foldable,Functor,Traversable,Generic,Generic1,Data)
+
+instance (NFData a, NFData b) => NFData (Elr a b) where
+  rnf = rnf1
+
+instance NFData a => NFData1 (Elr a) where
+  liftRnf = liftRnf2 rnf
+
+instance NFData2 Elr where
+  liftRnf2 _l _r ENone = ()
+  liftRnf2 l _r (ELeft a) = l a
+  liftRnf2 _l r (ERight b) = r b
+  liftRnf2 l r (EBoth a b) = l a `seq` r b
 
 deriving instance (TH.Lift a, TH.Lift b) => TH.Lift (Elr a b)
 

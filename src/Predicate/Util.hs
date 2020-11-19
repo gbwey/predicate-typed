@@ -19,6 +19,7 @@
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DeriveGeneric #-}
 -- | utility methods for Predicate / methods for displaying the evaluation tree
@@ -159,6 +160,7 @@ import Control.Monad (ap)
 import Data.Bool (bool)
 import GHC.Generics (Generic, Generic1)
 import Data.Kind (Type)
+import Data.Data (Data)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -171,14 +173,14 @@ data ValP =
   | FalseP       -- ^ False predicate
   | TrueP        -- ^ True predicate
   | ValP     -- ^ Any value
-  deriving stock (Show, Ord, Eq, Read, Generic)
+  deriving stock (Show, Ord, Eq, Read, Generic, Data)
 
 makePrisms ''ValP
 
 -- | untyped child node for 'TT'
 data PE = PE { _peValP :: !ValP -- ^ holds the result of running the predicate
              , _peString :: !String -- ^ optional strings to include in the results
-             } deriving stock (Show, Read, Eq, Generic)
+             } deriving stock (Show, Read, Eq, Generic, Data)
 
 makeLenses ''PE
 
@@ -246,7 +248,7 @@ instance Monoid ValP where
 
 -- | contains the typed result from evaluating an expression
 data Val a = Fail !String | Val !a
-  deriving stock (Show, Eq, Ord, Read, Functor, Foldable, Traversable, Generic, Generic1)
+  deriving stock (Show, Eq, Ord, Read, Functor, Foldable, Traversable, Generic, Generic1, Data)
 
 makePrisms ''Val
 
@@ -323,7 +325,7 @@ data TT a = TT { _ttValP :: !ValP -- ^ display value
                , _ttVal :: !(Val a)  -- ^ the value at this root node
                , _ttString :: !String  -- ^ detailed information eg input and output and text
                , _ttForest :: !(Forest PE) -- ^ the child nodes
-               } deriving stock (Functor, Read, Show, Eq, Foldable, Traversable, Generic, Generic1)
+               } deriving stock (Functor, Read, Show, Eq, Foldable, Traversable, Generic, Generic1, Data)
 
 -- dont expose lenses for _ttValP and _ttVal as they must be kept in sync: see ttVal
 makeLensesFor [("_ttString","ttString"),("_ttForest","ttForest")] ''TT

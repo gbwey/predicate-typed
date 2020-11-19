@@ -543,5 +543,4 @@ luhnImpl :: Bool -> [Int] -> [Int]
 luhnImpl b ws =
   let xs = zipWith (*) ws (cycle' (bool [1,2] [2,1] b))
   in map (ifM (>=10) (subtract 9) id) xs
- -- in map (\w -> if w>=10 then w-9 else w) xs
 

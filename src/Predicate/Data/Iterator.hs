@@ -499,8 +499,6 @@ instance ( KnownNat n
         pp <- eval (Proxy @p) opts a
         pure $ case getValueLR NoInline opts msgbase1 pp [] of
           Left e -> e
-          -- showVerbose opts " " [b]  fails but using 'b' is ok and (b : []) also works!
-          -- GE.List problem
           Right b ->
             let ret = [b]
             in mkNode opts (Val ret) (msgbase1 <> " " <> showL opts ret <> showVerbose opts " | " a) [hh pp]
