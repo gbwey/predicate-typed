@@ -1,3 +1,7 @@
+{-
+:set -package th-lift
+:l main TH_Orphans.hs
+-}
 {-# OPTIONS -Wno-missing-export-lists #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
@@ -18,6 +22,7 @@ import qualified Type.Reflection as TR
 import qualified GHC.TypeLits as GL
 import Data.Time
 import Data.Kind (Type)
+import Data.These
 import TH_Orphans ()
 
 main :: IO ()
@@ -204,3 +209,9 @@ ttt =
 
 test5a :: Refined OU (Id < TimeUtc) UTCTime
 test5a = $$(refinedTHIO @OU (read "2020-01-01 12:12:12Z"))
+
+test5b :: Refined OU (EBoth' >> Fst > 3 || Snd) (Elr Int Bool)
+test5b = $$(refinedTHIO @OU (EBoth 4 False))
+
+test5c :: Refined OU (These' >> Fst > 3 || Snd) (These Int Bool)
+test5c = $$(refinedTHIO @OU (These 1 True))

@@ -5,7 +5,7 @@
 {-# LANGUAGE DeriveLift #-}
 {-# LANGUAGE PolyKinds #-}
 -- | orphan Lift instances for Data.Time, Proxy, These and Ordering
-module Predicate.TH_Orphans () where
+module TH_Orphans () where
 import Language.Haskell.TH.Syntax (Lift)
 import qualified Language.Haskell.TH.Syntax as TH
 import Data.Time
