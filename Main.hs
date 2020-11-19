@@ -1,5 +1,6 @@
 {-
 :set -package th-lift
+:set -package th-lift-instances
 :l main TH_Orphans.hs
 -}
 {-# OPTIONS -Wno-missing-export-lists #-}
@@ -24,6 +25,10 @@ import Data.Time
 import Data.Kind (Type)
 import Data.These
 import TH_Orphans ()
+import Instances.TH.Lift ()
+--import qualified Data.Text as T
+import Data.Text (Text)
+import Data.ByteString (ByteString)
 
 main :: IO ()
 main = putStrLn "ok"
@@ -215,3 +220,13 @@ test5b = $$(refinedTHIO @OU (EBoth 4 False))
 
 test5c :: Refined OU (These' >> Fst > 3 || Snd) (These Int Bool)
 test5c = $$(refinedTHIO @OU (These 1 True))
+
+test5d :: Refined OU (ToString >> Len >= 4) Text
+test5d = $$(refinedTH @OU ("Asdf" :: Text))
+
+test5e :: Refined3 OU ToString (Len >= 4) (FromString ByteString Id) ByteString
+test5e = $$(refined3TH @OU ("Asdf" :: ByteString))
+
+test5f :: Refined OU (Succ > 'EQ) Ordering
+test5f = $$(refinedTH @OU EQ)
+
