@@ -1,0 +1,11 @@
+cradle:
+  cabal:
+    - path: "src"
+      component: "lib:predicate-typed"
+
+#    - path: "doctest"   -- path is actually src
+#      component: "test:doctests"
+
+    - path: "test"
+      component: "test:predicate-typed-test"
+

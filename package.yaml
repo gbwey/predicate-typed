@@ -30,8 +30,6 @@ dependencies:
 - string-conversions
 - template-haskell
 - text
-- th-lift
-- th-lift-instances
 - these >= 0.8
 - time
 

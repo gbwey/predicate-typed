@@ -14,5 +14,3 @@ import Predicate.Util
 import Predicate.Util_TH
 import Predicate.Prelude
 import Predicate.Refined
-import Predicate.TH_Orphans ()
-import Instances.TH.Lift ()

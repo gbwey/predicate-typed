@@ -1,0 +1,11 @@
+cradle:
+  stack:
+    - path: "src"
+      component: "predicate-typed:lib"
+
+#    - path: "doctest" -- not relevant as path is really src
+#      component: "predicate-typed:test:doctests"
+
+    - path: "test"
+      component: "predicate-typed:test:predicate-typed-test"
+

@@ -160,8 +160,6 @@ import qualified Safe (initSafe, fromJustNote)
 import Control.Monad (ap)
 import Data.Bool (bool)
 import GHC.Generics (Generic, Generic1)
-import qualified Language.Haskell.TH.Lift as TH
-import Instances.TH.Lift ()
 import Data.Kind (Type)
 -- $setup
 -- >>> :set -XDataKinds
@@ -176,7 +174,6 @@ data ValP =
   | TrueP        -- ^ True predicate
   | ValP     -- ^ Any value
   deriving stock (Show, Ord, Eq, Read, Generic)
-  deriving TH.Lift
 
 makePrisms ''ValP
 
@@ -184,7 +181,6 @@ makePrisms ''ValP
 data PE = PE { _peValP :: !ValP -- ^ holds the result of running the predicate
              , _peString :: !String -- ^ optional strings to include in the results
              } deriving stock (Show, Read, Eq, Generic)
-               deriving TH.Lift
 
 makeLenses ''PE
 
@@ -253,7 +249,6 @@ instance Monoid ValP where
 -- | contains the typed result from evaluating an expression
 data Val a = Fail !String | Val !a
   deriving stock (Show, Eq, Ord, Read, Functor, Foldable, Traversable, Generic, Generic1)
-  deriving TH.Lift
 
 makePrisms ''Val
 
@@ -331,7 +326,6 @@ data TT a = TT { _ttValP :: !ValP -- ^ display value
                , _ttString :: !String  -- ^ detailed information eg input and output and text
                , _ttForest :: !(Forest PE) -- ^ the child nodes
                } deriving stock (Functor, Read, Show, Eq, Foldable, Traversable, Generic, Generic1)
-                 deriving stock TH.Lift
 
 -- dont expose lenses for _ttValP and _ttVal as they must be kept in sync: see ttVal
 makeLensesFor [("_ttString","ttString"),("_ttForest","ttForest")] ''TT

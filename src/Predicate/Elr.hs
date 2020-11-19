@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -66,8 +67,8 @@ import Data.Bifoldable (Bifoldable(bifoldMap))
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 import Control.Monad (ap)
-import qualified Language.Haskell.TH.Lift as TH
 import Data.These (These(..))
+import qualified Language.Haskell.TH.Syntax as TH
 -- $setup
 -- >>> import Predicate.Prelude
 -- >>> import qualified Data.Semigroup as SG
@@ -78,8 +79,10 @@ data Elr a b =
    | ELeft !a  -- ^ similar to 'Data.These.This'
    | ERight !b -- ^ similar to 'Data.These.That'
    | EBoth !a !b -- ^ similar to 'Data.These.These'
-   deriving stock (Show,Eq,Ord,Foldable,Functor,Traversable,Generic,TH.Lift)
+   deriving stock (Show,Eq,Ord,Foldable,Functor,Traversable,Generic)
    deriving anyclass NFData
+
+deriving instance (TH.Lift a, TH.Lift b) => TH.Lift (Elr a b)
 
 makePrisms ''Elr
 
