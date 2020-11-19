@@ -1120,6 +1120,9 @@ instance ( P p x
 -- >>> pz @(FPair (EnumFromTo Fst Snd) ('LT ... 'GT)) (10,11)
 -- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
 --
+-- >>> pz @(FPair '[ '() ] (1 ... 5)) True
+-- Val [((),1),((),2),((),3),((),4),((),5)]
+--
 data FPair p q deriving Show
 
 instance ( Applicative n

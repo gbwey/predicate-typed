@@ -47,7 +47,6 @@ module Predicate.Data.List (
   , ZipR
   , Zip
   , ZipWith
-  , ZipCartesian
   , ZipPad
 
  -- ** higher order methods
@@ -112,7 +111,6 @@ import Control.Arrow (Arrow((***), (&&&)))
 import qualified Data.Sequence as Seq
 import Data.Bool (bool)
 import qualified Data.Map.Strict as M
-import Control.Applicative (liftA2)
 import Data.Containers.ListUtils (nubOrd)
 import qualified Data.List.NonEmpty as NE
 -- $setup
@@ -2117,37 +2115,6 @@ instance ( x ~ [a]
     let msg0 = "Nub"
         ret = nubOrd x
     in pure $ mkNode opts (Val ret) (show3 opts msg0 ret x) []
-
--- | zip cartesian product for lists: see 'Predicate.Data.Extra.LiftA2' for Applicative version
---
--- >>> pz @(ZipCartesian (EnumFromTo Fst Snd) ('LT ... 'GT)) (10,11)
--- Val [(10,LT),(10,EQ),(10,GT),(11,LT),(11,EQ),(11,GT)]
---
--- >>> pz @(ZipCartesian '[ '() ] (1 ... 5)) True
--- Val [((),1),((),2),((),3),((),4),((),5)]
---
-data ZipCartesian p q deriving Show
-
-instance ( PP p x ~ [a]
-         , PP q x ~ [b]
-         , P p x
-         , P q x
-         , Show a
-         , Show b
-         ) => P (ZipCartesian p q) x where
-  type PP (ZipCartesian p q) x = [(ExtractAFromTA (PP p x), ExtractAFromTA (PP q x))]
-  eval _ opts x = do
-    let msg0 = "ZipCartesian"
-    lr <- runPQ NoInline msg0 (Proxy @p) (Proxy @q) opts x []
-    pure $ case lr of
-      Left e -> e
-      Right (p',q',pp,qq) ->
-        let hhs = [hh pp, hh qq]
-        in case chkSize2 opts msg0 p' q' hhs of
-          Left e -> e
-          Right ((_,p),(_,q)) ->
-            let d = liftA2 (,) p q
-            in mkNode opts (Val d) (show3' opts msg0 d "p=" p <> showVerbose opts " | q=" q) hhs
 
 -- | experimental: sorts then partitions and then sorts each partitions based on the leftmost occurring value in the original list
 --   if the existing order of data is fine then use 'Predicate.Data.List.GroupBy' as you do not need this
