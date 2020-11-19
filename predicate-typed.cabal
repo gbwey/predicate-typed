@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b89b3375e642a8efc10ae23067f9568ca93184b21c5dff17d2ab53af04e6302c
+-- hash: 20f88d1a6aa3a0bf9179f00248ed16b45d2b38960bddf1bc5e39599f886aa86c
 
 name:           predicate-typed
 version:        0.7.4.5
@@ -87,7 +87,6 @@ library
     , pcre-light
     , pretty-terminal >=0.1.0.0
     , safe
-    , string-conversions
     , template-haskell
     , text
     , these >=0.8
@@ -124,7 +123,6 @@ test-suite doctests
     , predicate-typed
     , pretty-terminal >=0.1.0.0
     , safe
-    , string-conversions
     , template-haskell
     , text
     , these >=0.8
@@ -166,8 +164,6 @@ test-suite predicate-typed-test
     , predicate-typed
     , pretty-terminal >=0.1.0.0
     , safe
-    , stm
-    , string-conversions
     , tasty
     , tasty-hunit
     , tasty-quickcheck

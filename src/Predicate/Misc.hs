@@ -106,6 +106,10 @@ module Predicate.Misc (
   , SColor(..)
   , GetColor(..)
 
+  -- ** styles
+  , SStyle(..)
+  , GetStyle(..)
+
  -- ** miscellaneous
   , SwapC(..)
   , showTK
@@ -137,7 +141,7 @@ import GHC.TypeLits (Symbol,Nat,KnownSymbol,KnownNat,ErrorMessage((:$$:),(:<>:))
 import qualified GHC.TypeLits as GL
 import Data.Proxy (Proxy(Proxy))
 import Data.Typeable (Typeable, typeRep)
-import System.Console.Pretty (Color(..))
+import System.Console.Pretty (Color(..), Style(..))
 import GHC.Exts (Constraint)
 import qualified Text.Regex.PCRE.Heavy as RH
 import qualified Text.Regex.PCRE.Light as RL
@@ -1230,6 +1234,47 @@ instance GetColor 'White where
   getColor = White
 instance GetColor 'Default where
   getColor = Default
+
+-- | wrapper for a Show instance around 'Color'
+newtype SStyle = SStyle Style
+  deriving newtype Enum
+instance Bounded SStyle where
+  minBound = SStyle Normal
+  maxBound = SStyle Reverse
+
+instance Show SStyle where
+  show (SStyle c) =
+    case c of
+      Normal -> "Normal"
+      Bold -> "Bold"
+      Faint -> "Faint"
+      Italic -> "Italic"
+      Underline -> "Underline"
+      SlowBlink -> "SlowBlink"
+      ColoredNormal -> "ColoredNormal"
+      Reverse -> "Reverse"
+
+-- | get 'Style' from the typelevel
+class GetStyle (a :: Style) where
+  getStyle :: Style
+instance GetStyle 'Normal where
+  getStyle = Normal
+instance GetStyle 'Bold where
+  getStyle = Bold
+instance GetStyle 'Faint where
+  getStyle = Faint
+instance GetStyle 'Italic where
+  getStyle = Italic
+instance GetStyle 'Underline where
+  getStyle = Underline
+instance GetStyle 'SlowBlink where
+  getStyle = SlowBlink
+instance GetStyle 'ColoredNormal where
+  getStyle = ColoredNormal
+instance GetStyle 'Reverse where
+  getStyle = Reverse
+
+
 
 -- | convenience method for optional display
 unlessNull :: (Foldable t, Monoid m) => t a -> m -> m

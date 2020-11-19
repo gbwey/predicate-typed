@@ -1,7 +1,5 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE DeriveLift #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -142,7 +140,7 @@ import Control.Arrow (Arrow((&&&)), ArrowChoice(left))
 import Data.List (intercalate, isInfixOf)
 import Data.Tree (drawTree, Forest, Tree(Node))
 import Data.Tree.Lens (root)
-import System.Console.Pretty (Color(..))
+import System.Console.Pretty (Style(..), Color(..))
 import qualified System.Console.Pretty as C
 import qualified Control.Exception as E
 import Control.DeepSeq (NFData, ($!!))
@@ -468,7 +466,7 @@ data HOpts f =
         , oRecursion :: !(HKD f Int) -- ^ max recursion for small values
         , oRecursionLarge :: !(HKD f Int) -- ^ max recursion for large values eg for Text
         , oLarge :: !(HKD f Bool) -- ^ use large value recursion
-        , oOther :: !(HKD f (Bool, SColor, SColor)) -- ^ other message effects
+        , oOther :: !(HKD f (SStyle, SColor, SColor)) -- ^ other message effects
         , oNoColor :: !(HKD f Bool) -- ^ no colors
         }
 
@@ -483,7 +481,7 @@ deriving stock instance
   , Show (HKD f Disp)
   , Show (HKD f (String, PColor))
   , Show (HKD f Bool)
-  , Show (HKD f (Bool, SColor, SColor))
+  , Show (HKD f (SStyle, SColor, SColor))
   ) => Show (HOpts f)
 
 -- | convert to a usable option using defaults to fill in any gaps
@@ -527,7 +525,7 @@ setLarge :: Bool -> HOpts Last
 setLarge b = mempty { oLarge = pure b }
 
 -- | set color of title message
-setOther :: Bool
+setOther :: Style
          -> Color
          -> Color
          -> HOpts Last
@@ -605,8 +603,8 @@ defOpts = HOpts
     }
 
 -- | default title message color and boundaries between multipart refine messages
-otherDef :: (Bool, SColor, SColor)
-otherDef = coerce (True, Default, Default)
+otherDef :: (SStyle, SColor, SColor)
+otherDef = coerce (Normal, Default, Default)
 
 nocolor, colorDef :: (String, PColor)
 -- | skip colors
@@ -638,9 +636,9 @@ type Color4 = 'OColor "color4" 'Default 'Red 'Red 'Default 'Green 'Default 'Blac
 type Color5 = 'OColor "color5" 'Blue 'Default 'Red 'Default 'Cyan 'Default 'Yellow 'Default
 
 -- | color palette for effects used in 'Predicate.Core.Msg' and the refined modules
-type Other1 = 'OOther 'True 'Yellow 'Default
+type Other1 = 'OOther 'Underline 'Yellow 'Default
 -- | color palette for effects used in 'Predicate.Core.Msg' and the refined modules
-type Other2 = 'OOther 'True 'Default 'Default
+type Other2 = 'OOther 'Underline 'Default 'Default
 
 -- | display a message and three values where the last one is displayed in verbose mode
 show3 :: (Show a1, Show a2)
@@ -937,7 +935,7 @@ data Opt =
   | ORecursionLarge !Nat  -- ^ set recursion limit for large fields
   | OLarge !Bool          -- ^ use large recursion
   | OOther                -- ^ set effects for messages
-     !Bool    -- ^ set underline
+     !Style   -- ^ set style
      !Color   -- ^ set foreground color
      !Color   -- ^ set background color
   | !Opt :# !Opt        -- ^ mappend
@@ -986,11 +984,11 @@ instance KnownNat n => OptC ('ORecursionLarge n) where
    getOptC = setRecursionLarge (nat @n)
 instance GetBool b => OptC ('OLarge b) where
    getOptC = setLarge (getBool @b)
-instance ( GetBool b
+instance ( GetStyle s
          , GetColor c1
          , GetColor c2
-         ) => OptC ('OOther b c1 c2) where
-   getOptC = setOther (getBool @b) (getColor @c1) (getColor @c2)
+         ) => OptC ('OOther s c1 c2) where
+   getOptC = setOther (getStyle @s) (getColor @c1) (getColor @c2)
 instance OptC 'OEmpty where
    getOptC = mempty
 instance ( OptC a
@@ -1092,8 +1090,8 @@ type OUNV = 'OUNV -- 'OUnicode ':# 'OColorOff ':# 'OVerbose ':# 'OWidth 200
 -- >>> oMsg (getOpt @('OMsg "abc" ':# 'OMsg "def"))
 -- ["abc","def"]
 --
--- >>> oOther (getOpt @('OOther 'False 'Red 'White ':# 'OOther 'True 'Red 'Black))
--- (True,Red,Black)
+-- >>> oOther (getOpt @('OOther 'Normal 'Red 'White ':# 'OOther 'Underline 'Red 'Black))
+-- (Underline,Red,Black)
 --
 -- >>> a = show (getOpt @('OEmpty ':# OU))
 -- >>> b = show (getOpt @(OU ':# 'OEmpty));
@@ -1151,8 +1149,8 @@ setOtherEffects :: POpts -> String -> String
 setOtherEffects o =
   if oNoColor o then id
   else case coerce (oOther o) of
-         (False, Default, Default) -> id
-         (b, c1, c2) -> (if b then C.style C.Underline else id) . C.color c1 . C.bgColor c2
+         (Normal, Default, Default) -> id
+         (s, c1, c2) -> C.style s . C.color c1 . C.bgColor c2
 
 -- | mconcat 'Opt' options at the type level
 --

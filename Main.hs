@@ -19,14 +19,13 @@ import Predicate.Examples.Refined3
 import Predicate.Refined3
 import Predicate
 import Data.Typeable
-import qualified Type.Reflection as TR
 import qualified GHC.TypeLits as GL
+import qualified Data.Semigroup as SG
 import Data.Time
 import Data.Kind (Type)
 import Data.These
 import TH_Orphans ()
 import Instances.TH.Lift ()
---import qualified Data.Text as T
 import Data.Text (Text)
 import Data.ByteString (ByteString)
 
@@ -72,19 +71,19 @@ test4c :: Refined OU
    ()
 test4c = $$(refinedTH @OU ())
 
--- fails
+-- fails without kind signature
 test4d :: Refined OU
    (Pop1' (Proxy (Lift "abc" :: GL.Nat -> Type)) (Proxy 4) () >> 'True)
    ()
 test4d = $$(refinedTH @OU ())
 
--- fails
+-- fails without kind signature
 test4e :: Refined OU
    (PApp (Proxy (Lift "abc" :: Type -> Type)) (Proxy ()) >> 'True)
    ()
 test4e = $$(refinedTH @OU ())
 
--- fails
+-- fails without kind signature
 test4f :: Refined OU
    (PApp (Proxy (Lift "abc" :: Type -> Type)) (Proxy ()) >> (4 > 3))
    ()
@@ -103,7 +102,7 @@ test4b :: Refined OU
    ()
 test4b = $$(refinedTH @OU ())
 
--- fails
+-- fails without kind signature
 test4d0 :: Refined OU
    (Pop1' (Proxy (Lift "abc" :: GL.Nat -> Type)) (Proxy 4) () >> 'True)
    ()
@@ -114,13 +113,13 @@ test4d1 :: Either Msg0 (Refined OU
    ())
 test4d1 = newRefined @OU @(Pop1' (Proxy (Lift "abc")) (Proxy 4) () >> 'True) ()
 
--- fails
+-- fails without kind signature GL.Symbol -> Type
 test4k :: Refined OU
    (PApp (Proxy ((<>) "abc" :: GL.Symbol -> Type)) (Proxy "def") >> 'True)
    ()
 test4k = $$(refinedTH @OU ())
 
--- fails
+-- fails without kind signature GL.Symbol -> Type
 test4k1 :: Either Msg0 (Refined 'OU
    (PApp (Proxy ((<>) "abc" :: GL.Symbol -> Type)) (Proxy "def") >> 'True)
    ())
@@ -152,7 +151,7 @@ test4n1 = $$(refinedTH @OU @(PApp (Proxy L1) (Proxy Id) >> 'True) ())
 test4n2 :: Either Msg0 (Refined OU (PApp (Proxy (L1 :: Type -> Type)) (Proxy Id) >> 'True) ())
 test4n2 = newRefined @OU @(PApp (Proxy L1) (Proxy Id) >> 'True) ()
 
--- fails
+-- fails without kind signature
 test4d2 :: Refined OU (Pop1 (Proxy (Lift "abc" :: GL.Nat -> Type)) 4 () >> 'True) ()
 test4d2 = $$(refinedTH @OU @(Pop1 (Proxy (Lift "abc")) 4 () >> 'True) ())
 
@@ -204,22 +203,17 @@ main.hs:133:13: error:
 133 | test4n = $$(refinedTH @OU ())
 -}
 
-ttt :: IO ()
-ttt =
-  let t = typeOf (Proxy @Id)
-  in case t of
-       TR.SomeTypeRep (_ :: TR.TypeRep p) ->
-         --let y = runIdentity $ eval (Proxy @p) defOpts ()
-         print (Proxy @p)
-
 test5a :: Refined OU (Id < TimeUtc) UTCTime
 test5a = $$(refinedTHIO @OU (read "2020-01-01 12:12:12Z"))
 
+test5a1 :: Refined3 OU (ParseTimeP UTCTime "%F %T") (Id < TimeUtc) (FormatTimeP "%F %T") String
+test5a1 = $$(refined3THIO @OU "2020-01-01 12:12:12")
+
 test5b :: Refined OU (EBoth' >> Fst > 3 || Snd) (Elr Int Bool)
-test5b = $$(refinedTHIO @OU (EBoth 4 False))
+test5b = $$(refinedTH @OU (EBoth 4 False))
 
 test5c :: Refined OU (These' >> Fst > 3 || Snd) (These Int Bool)
-test5c = $$(refinedTHIO @OU (These 1 True))
+test5c = $$(refinedTH @OU (These 1 True))
 
 test5d :: Refined OU (ToString >> Len >= 4) Text
 test5d = $$(refinedTH @OU ("Asdf" :: Text))
@@ -229,4 +223,8 @@ test5e = $$(refined3TH @OU ("Asdf" :: ByteString))
 
 test5f :: Refined OU (Succ > 'EQ) Ordering
 test5f = $$(refinedTH @OU EQ)
+
+test5g :: Refined OU (FromIntegral' (Fst >> UnproxyT) Snd > Pure SG.Sum 12) (Proxy (SG.Sum Int),Int)
+test5g = $$(refinedTH @OU (Proxy @(SG.Sum Int),23))
+
 
