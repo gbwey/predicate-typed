@@ -72,14 +72,13 @@ import Data.Data (Data)
 import qualified Language.Haskell.TH.Syntax as TH
 -- $setup
 -- >>> import Predicate.Prelude
--- >>> import qualified Data.Semigroup as SG
 
--- | similar to 'Data.These' with an additional empty constructor to support a Monoid instance
+-- | combination of values for two types @a@ and @b@
 data Elr a b =
-     ENone -- ^ empty constructor
-   | ELeft a  -- ^ similar to 'Data.These.This'
-   | ERight b -- ^ similar to 'Data.These.That'
-   | EBoth a b -- ^ similar to 'Data.These.These'
+     ENone -- ^ no value
+   | ELeft a  -- ^ left value
+   | ERight b -- ^ right value
+   | EBoth a b -- ^ both left and a right value
    deriving stock (Show,Eq,Ord,Foldable,Functor,Traversable,Generic,Generic1,Data)
 
 instance (NFData a, NFData b) => NFData (Elr a b) where
