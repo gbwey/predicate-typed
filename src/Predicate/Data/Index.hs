@@ -43,7 +43,7 @@ import Data.Proxy (Proxy(..))
 -- >>> import qualified Data.Map.Strict as M
 -- >>> import qualified Data.Set as Set
 -- >>> import qualified Data.Text as T
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Semigroup as SG
 
 -- | index a value in an 'Ixed' container and if not found return the given default value

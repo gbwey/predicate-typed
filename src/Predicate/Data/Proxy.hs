@@ -35,9 +35,9 @@ module Predicate.Data.Proxy (
   , Proxy2TT
   , Pop0T
   , Pop1T
-  , Pop1'T
+  , Pop1T'
   , Pop2T
-  , Pop2'T
+  , Pop2T'
   , PAppT
   , PApp2T
   , ProxifyT
@@ -54,7 +54,7 @@ import Control.Lens
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import Control.Lens
 -- >>> import Control.Lens.Action
 -- >>> import qualified Data.Semigroup as SG
@@ -128,6 +128,7 @@ instance P Proxy2T x where
     let b = Proxy @(Proxy2TT x)
     in pure $ mkNode opts (Val b) "Proxy2T" []
 
+-- | calculate the resulting type for 'Proxy2T'
 type family Proxy2TT (x :: Type) :: (Type -> Type) where
   Proxy2TT (t a _) = t a
 
@@ -210,6 +211,7 @@ instance ( P q x
           Right _z -> mkNodeCopy opts zz (joinStrings msg0 (zz ^. ttString)) [hh qq]
 
 -- the key is to pass all the vars into the type family so ghc can figure stuff out
+-- | calculate the resulting type for 'Pop0'
 type family Pop0T (p :: Type) (q :: Type) :: Type where
   Pop0T (Proxy z) q = PP z q
   Pop0T (_proxy z) q = PP z q
@@ -270,6 +272,7 @@ instance ( P r x
           Left e -> e
           Right _z -> mkNodeCopy opts zz (joinStrings msg0 (zz ^. ttString)) [hh rr]
 
+-- | calculate the resulting type for 'Pop1'
 type family Pop1T (p :: Type) (q :: k) (r :: Type) :: Type where
   Pop1T (Proxy z) q r = PP (z q) r
 --  Pop1T (Proxy (z :: k -> k1)) (q :: k) r = PP (z q :: k1) r
@@ -320,7 +323,7 @@ instance ( P r x
          , PP q x ~ Proxy (w :: k)
          , P (z w) (PP r x)
          ) => P (Pop1' p q r) x where
-  type PP (Pop1' p q r) x = Pop1'T (PP p x) (PP q x) (PP r x)
+  type PP (Pop1' p q r) x = Pop1T' (PP p x) (PP q x) (PP r x)
   eval _ opts x = do
     let msg0 = "Pop1'"
     rr <- eval (Proxy @r) opts x
@@ -332,12 +335,13 @@ instance ( P r x
           Left e -> e
           Right _z -> mkNodeCopy opts zz (joinStrings msg0 (zz ^. ttString)) [hh rr]
 
-type family Pop1'T (p :: Type) (q :: Type) (r :: Type) :: Type where
-  Pop1'T (Proxy z) (Proxy w) r = PP (z w) r
---  Pop1'T (Proxy (z :: k -> k1)) (Proxy (w :: k)) r = PP (z w :: k1) r
-  Pop1'T p q r =
+-- | calculate the resulting type for 'Pop1''
+type family Pop1T' (p :: Type) (q :: Type) (r :: Type) :: Type where
+  Pop1T' (Proxy z) (Proxy w) r = PP (z w) r
+--  Pop1T' (Proxy (z :: k -> k1)) (Proxy (w :: k)) r = PP (z w :: k1) r
+  Pop1T' p q r =
     GL.TypeError (
-     'GL.Text "Pop1'T: requires 'Proxy z' and z must be a function requiring one parameter!!"
+     'GL.Text "Pop1T': requires 'Proxy z' and z must be a function requiring one parameter!!"
        'GL.:$$: 'GL.Text " p = " 'GL.:<>: 'GL.ShowType p
        'GL.:$$: 'GL.Text " q = " 'GL.:<>: 'GL.ShowType q
        'GL.:$$: 'GL.Text " r = " 'GL.:<>: 'GL.ShowType r
@@ -370,6 +374,7 @@ instance ( P s x
           Right _z -> mkNodeCopy opts zz (joinStrings msg0 (zz ^. ttString)) [hh ss]
 
 -- pass all the arguments in!!! else ghc gets confused
+-- | calculate the resulting type for 'Pop2'
 type family Pop2T (p :: Type) (q :: k) (r :: k1) (s :: Type) :: Type where
   Pop2T (Proxy z) q r s = PP (z q r) s
 --  Pop2T (Proxy (z :: k -> k1 -> k2)) (q :: k) (r :: k1) s = PP (z q r :: k2) s
@@ -401,7 +406,7 @@ instance ( P s x
          , PP r x ~ Proxy (v :: k1)
          , P (z w v) (PP s x)
          ) => P (Pop2' p q r s) x where
-  type PP (Pop2' p q r s) x = Pop2'T (PP p x) (PP q x) (PP r x) (PP s x)
+  type PP (Pop2' p q r s) x = Pop2T' (PP p x) (PP q x) (PP r x) (PP s x)
   eval _ opts x = do
     let msg0 = "Pop2'"
     ss <- eval (Proxy @s) opts x
@@ -414,12 +419,13 @@ instance ( P s x
           Right _z -> mkNodeCopy opts zz (joinStrings msg0 (zz ^. ttString)) [hh ss]
 
 -- pass in all the arguments otherwise ghc gets confused
-type family Pop2'T (p :: Type) (q :: Type) (r :: Type) (s :: Type) :: Type where
-  Pop2'T (Proxy z) (Proxy w) (Proxy v) s = PP (z w v) s
---  Pop2'T (Proxy (z :: k -> k1 -> k2)) (Proxy (w :: k)) (Proxy (v :: k1)) s = PP (z w v :: k2) s
-  Pop2'T p q r s =
+-- | calculate the resulting type for 'Pop2''
+type family Pop2T' (p :: Type) (q :: Type) (r :: Type) (s :: Type) :: Type where
+  Pop2T' (Proxy z) (Proxy w) (Proxy v) s = PP (z w v) s
+--  Pop2T' (Proxy (z :: k -> k1 -> k2)) (Proxy (w :: k)) (Proxy (v :: k1)) s = PP (z w v :: k2) s
+  Pop2T' p q r s =
     GL.TypeError (
-     'GL.Text "Pop2'T: requires 'Proxy z' and z must be a function requiring one parameter!!"
+     'GL.Text "Pop2T': requires 'Proxy z' and z must be a function requiring one parameter!!"
        'GL.:$$: 'GL.Text " p = " 'GL.:<>: 'GL.ShowType p
        'GL.:$$: 'GL.Text " q = " 'GL.:<>: 'GL.ShowType q
        'GL.:$$: 'GL.Text " r = " 'GL.:<>: 'GL.ShowType r
@@ -482,6 +488,7 @@ instance ( PP p x ~ Proxy (z :: k -> k1)
   eval _ opts _ =
     pure $ mkNode opts (Val Proxy) "PApp" []
 
+-- | calculate the resulting type for 'PApp'
 type family PAppT (p :: Type) (q :: Type) :: Type where
   PAppT (Proxy z) (Proxy w) = Proxy (z w)
 --  PAppT (Proxy (z :: k -> k1)) (Proxy (w :: k)) = Proxy (z w :: k1)
@@ -516,6 +523,7 @@ instance ( PP p x ~ Proxy (z :: k -> k1 -> k2)
   eval _ opts _ =
     pure $ mkNode opts (Val Proxy) "PApp2" []
 
+-- | calculate the resulting type for 'PApp2'
 type family PApp2T (p :: Type) (q :: Type) (r :: Type) :: Type where
   PApp2T (Proxy z) (Proxy w) (Proxy v) = Proxy (z w v)
   --PApp2T (Proxy (z :: k -> k1 -> k2)) (Proxy (w :: k)) (Proxy (v :: k1)) = Proxy (z w v :: k2)
@@ -561,6 +569,7 @@ instance PP p x ~ proxy (z :: k)
   eval _ opts _ =
     pure $ mkNode opts (Val Proxy) "Proxify" []
 
+-- | calculate the resulting type for 'Proxify'
 type family ProxifyT p where
   ProxifyT (_proxy z) = Proxy z
   ProxifyT p = GL.TypeError (

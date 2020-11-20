@@ -22,7 +22,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DeriveGeneric #-}
--- | utility methods for Predicate / methods for displaying the evaluation tree
+-- | utility methods
 module Predicate.Util (
  -- ** Val
     Val(..)

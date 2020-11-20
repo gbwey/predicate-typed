@@ -47,7 +47,7 @@ import Data.Typeable (Typeable)
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import Data.Time
 
 -- | similar to 'show'

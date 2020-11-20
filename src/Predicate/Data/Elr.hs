@@ -64,7 +64,7 @@ import Control.Lens
 import Data.Proxy (Proxy(..))
 import Data.These (These)
 -- $setup
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Semigroup as SG
 -- >>> :m + Data.These
 
@@ -206,9 +206,14 @@ instance ( x ~ Elr a b
   type PP (IsElr th) x = Bool
   eval _ opts x =
     let msg0 = "Is"
-        (t,f) = getElr @_ @_ @th
-        b = f x
-    in pure $ mkNodeB opts b (msg0 <> t <> showVerbose opts " | " x) []
+        th = getElr @th
+        fn = case th of
+               ENone -> isENone
+               ELeft () -> isELeft
+               ERight () -> isERight
+               EBoth () () -> isEBoth
+        b = fn x
+    in pure $ mkNodeB opts b (msg0 <> showElr th <> showVerbose opts " | " x) []
 
 -- | predicate on 'ENone'
 --

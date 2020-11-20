@@ -24,12 +24,9 @@
 {-# LANGUAGE NoStarIsType #-}
 -- |
 -- Refinement type allowing the external type to differ from the internal type
--- see 'Refined3'
 --
 -- @
--- similar to 'Predicate.Refined2.Refined2' but also provides:
--- * quickCheck methods
--- * a canonical output value using the \'fmt\' parameter
+-- like 'Predicate.Refined2.Refined2' but also supports a canonical output value using the \'fmt\' parameter
 -- @
 --
 module Predicate.Refined3 (
@@ -97,7 +94,7 @@ import GHC.Generics (Generic)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> :m + Predicate.Prelude
+-- >>> :m + Predicate
 -- >>> :m + Data.Time
 
 -- | Like 'Predicate.Refined2' but additionally reconstructs the output value to a standardized format

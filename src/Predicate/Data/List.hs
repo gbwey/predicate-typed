@@ -123,7 +123,7 @@ import qualified Data.List.NonEmpty as NE
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import qualified Data.Text as T
 -- >>> import Data.These
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 
 -- | similar to (++)
 --

@@ -65,7 +65,7 @@ import qualified Data.Time.Clock.POSIX as P
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> import qualified Data.Text as T
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import Safe (readNote)
 
 -- | type level expression representing a formatted time

@@ -67,7 +67,7 @@ import qualified Data.Type.Equality as DE
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> import qualified Data.Text as T
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 
 -- | extracts the first character from a non empty 'GHC.TypeLits.Symbol'
 --

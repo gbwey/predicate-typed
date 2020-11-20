@@ -63,7 +63,7 @@ import Data.Either (isLeft, isRight, partitionEithers)
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> import qualified Data.Text as T
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Semigroup as SG
 
 -- | extracts the left value from an 'Either'
@@ -634,6 +634,7 @@ instance ( Show a
                    Left e -> e
                    Right c -> mkNodeCopy opts qq (show3 opts msg1 c b) hhs
 
+-- | calculate the return type for 'EitherIn'
 type family EitherInT (p :: k) (y :: Type) (lr :: Type) where
   EitherInT p y (Either a _) = PP p (y,a)
   EitherInT _ _ o = GL.TypeError (

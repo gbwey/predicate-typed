@@ -43,7 +43,7 @@ import Data.Bool (bool)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 
 -- | parse json data using the type @t@
 data ParseJson' t p deriving Show

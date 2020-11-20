@@ -1,4 +1,5 @@
 {-# OPTIONS -Wno-compat #-}
+{-# OPTIONS -Wno-missing-export-lists #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}

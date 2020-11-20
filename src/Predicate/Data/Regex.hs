@@ -49,7 +49,7 @@ import Data.Bool (bool)
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> import Safe (readNote)
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import Data.Time
 
 -- | runs a regular expression with given regex options and returns a boolean: see 'RH.=~'

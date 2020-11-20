@@ -58,7 +58,7 @@ import Data.Bool (bool)
 -- >>> :set -XTypeOperators
 -- >>> import qualified Data.Text as T
 -- >>> import qualified Data.Sequence as Seq
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.These
 

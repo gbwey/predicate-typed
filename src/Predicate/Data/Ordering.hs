@@ -68,7 +68,7 @@ import Data.Function (on)
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 
 -- | compare if expression @p@ is greater than @q@
 --

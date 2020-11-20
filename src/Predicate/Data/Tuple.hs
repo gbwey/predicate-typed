@@ -65,7 +65,7 @@ import Data.Kind (Type)
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Semigroup as SG
 -- >>> :m + Data.These
 -- >>> :m + Data.Ratio

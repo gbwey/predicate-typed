@@ -56,7 +56,7 @@ import Control.Arrow (Arrow((&&&)))
 import Data.Void (Void)
 
 -- $setup
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
@@ -354,6 +354,7 @@ instance ( PP q a ~ s
                      let ret = fst <$> catMaybes vals
                      in mkNode opts (Val ret) (show3' opts msg1 ret "s=" q) (hh qq : map (hh . prefixNumberToTT) itts)
 
+-- | calculate the return type for 'Unfoldr'
 type family UnfoldrT (mbs :: Type) where
   UnfoldrT (Maybe (b, _)) = b
   UnfoldrT o = GL.TypeError (

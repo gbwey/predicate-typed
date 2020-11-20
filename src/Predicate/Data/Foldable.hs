@@ -56,7 +56,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 import qualified GHC.Exts as GE
 import Data.List (findIndex)
 -- $setup
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators

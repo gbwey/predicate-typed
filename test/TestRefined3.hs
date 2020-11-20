@@ -1,3 +1,4 @@
+{-# OPTIONS -Wno-missing-export-lists #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -11,7 +12,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoStarIsType #-}
 module TestRefined3 where
---module TestRefined3 (suite) where
 import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -49,7 +49,7 @@ namedTests =
   , testCase "hms" $ (@?=) (newRefined3 "12:0:59" :: Either Msg3 (MakeR3 (Hms OAN))) (Right (unsafeRefined3 [12,0,59] "12:00:59"))
   , testCase "between5and9" $ (@?=) (newRefined3 "7" :: Either Msg3 (Refined3 OAN (ReadP Int Id) (Between 5 9 Id) (PrintF "%03d" Id) String)) (Right (unsafeRefined3 7 "007"))
   , testCase "ssn" $ (@?=) (newRefined3 "123-45-6789" :: Either Msg3 (MakeR3 (Ssn OAN))) (Right (unsafeRefined3 [123,45,6789] "123-45-6789"))
-  , testCase "base16" $ (@?=) (newRefined3 "12f" :: Either Msg3 (MakeR3 (BaseN OAN 16))) (Right (unsafeRefined3 303 "12f"))
+  , testCase "base16" $ (@?=) (newRefined3 "12f" :: Either Msg3 (MakeR3 (BaseN OAN 16 'True))) (Right (unsafeRefined3 303 "12f"))
   , testCase "daten1" $ (@?=) (newRefined3 "June 25 1900" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (Safe.readNote "testrefined3: daten1" "1900-06-25") "1900-06-25"))
   , testCase "daten2" $ (@?=) (newRefined3 "12/02/99" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (Safe.readNote "testrefined3: daten2" "1999-12-02") "1999-12-02"))
   , testCase "daten3" $ (@?=) (newRefined3 "2011-12-02" :: Either Msg3 (MakeR3 (DateN OAN))) (Right (unsafeRefined3 (Safe.readNote "testrefined3: daten3" "2011-12-02") "2011-12-02"))
@@ -162,10 +162,10 @@ unnamedTests = [
   , expect3 (Left $ XF "ReadP Int (3x)") $ runIdentity $ eval3P (ip4 @OZ) "1.2.3x.4"
   , expect3 (Left $ XTF [1,2,3,4,5] "Guards:invalid length(5) expected 4") $ runIdentity $ eval3P (ip4 @OZ) "1.2.3.4.5"
   , expect3 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ runIdentity $ eval3P (ip4 @OZ) "1.2.300.4"
-  , expect3 (Left $ XTF [1,2,3,4,5] "Bools:invalid length(5) expected 4") $ runIdentity $ eval3P (ip4' @OZ) "1.2.3.4.5"
-  , expect3 (Left $ XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300]") $ runIdentity $ eval3P (ip4' @OZ) "1.2.300.4"
+  , expect3 (Left $ XTF [1,2,3,4,5] "Bools:invalid length(5) expected 4") $ runIdentity $ eval3P (mkProxy3 @(Ip4' OZ)) "1.2.3.4.5"
+  , expect3 (Left $ XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300]") $ runIdentity $ eval3P (mkProxy3 @(Ip4' OZ)) "1.2.300.4"
+  , expect3 (Left (XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ runIdentity $ eval3P (mkProxy3 @(Ip4' OL)) "1.2.300.4"
 
-  , expect3 (Left (XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)")) $ runIdentity $ eval3P (ip4' @OL) "1.2.300.4"
   , expect3 (Right $ unsafeRefined3 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903") $ runIdentity $ eval3P (luhn11 @OAN) "12345678903"
   , expect3 (Left $ XTF [1,2,3,4,5,6,7,8,9,0,1] "invalid checkdigit") $ runIdentity $ eval3P (luhn11 @OZ) "12345678901"
 

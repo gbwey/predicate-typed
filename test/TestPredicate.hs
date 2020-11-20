@@ -1,4 +1,5 @@
 {-# OPTIONS -Wno-type-defaults #-}
+{-# OPTIONS -Wno-missing-export-lists #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -11,7 +12,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoStarIsType #-}
 module TestPredicate where
---module TestPredicate (suite) where
 import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit

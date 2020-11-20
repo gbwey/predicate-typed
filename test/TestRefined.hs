@@ -1,4 +1,5 @@
 {-# OPTIONS -Wno-type-defaults #-}
+{-# OPTIONS -Wno-missing-export-lists #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -10,7 +11,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NoStarIsType #-}
 module TestRefined where
---module TestRefined (suite) where
 import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit

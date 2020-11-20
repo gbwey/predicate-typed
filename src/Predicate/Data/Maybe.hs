@@ -57,7 +57,7 @@ import qualified GHC.TypeLits as GL
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> import qualified Data.Map.Strict as M
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Semigroup as SG
 
 -- | similar to 'Data.Maybe.fromJust'
@@ -381,6 +381,7 @@ instance ( Show a
                    Left e -> e
                    Right c -> mkNodeCopy opts pp (show3 opts msg1 c a) hhs
 
+-- | calculate the return type for 'MaybeIn'
 type family MaybeInT (p :: k) (y :: Type) (ma :: Type) where
   MaybeInT p y (Maybe a) = PP p (y,a)
   MaybeInT _ _ o = GL.TypeError (

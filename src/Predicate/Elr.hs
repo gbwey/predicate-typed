@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -44,7 +45,6 @@ module Predicate.Elr (
   , isEBoth
 
  -- ** type families
-  , ENoneT
   , ELeftT
   , ERightT
   , EBothT
@@ -53,6 +53,7 @@ module Predicate.Elr (
   , getBifoldInfo
   , showElr
   , GetElr(..)
+  , getElr
   , partitionElr
   , fromElr
   , mergeElrWith
@@ -71,7 +72,7 @@ import Data.These (These(..))
 import Data.Data (Data)
 import qualified Language.Haskell.TH.Syntax as TH
 -- $setup
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 
 -- | combination of values for two types @a@ and @b@
 data Elr a b =
@@ -162,16 +163,20 @@ showElr = \case
   EBoth {} -> "EBoth"
 
 -- | get 'Elr' from typelevel [type application order is a b then th if explicit kind for th else is first parameter!
-class GetElr (th :: Elr k k1) where
-  getElr :: (String, Elr w v -> Bool)
+class GetElr (elr :: Elr k k1) where
+  getElr' :: Elr () ()
 instance GetElr 'ENone where
-  getElr = ("ENone", isENone)
+  getElr' = ENone
 instance GetElr ('ELeft x) where
-  getElr = ("ELeft", isELeft)
+  getElr' = ELeft ()
 instance GetElr ('ERight y) where
-  getElr = ("ERight", isERight)
+  getElr' = ERight ()
 instance GetElr ('EBoth x y) where
-  getElr = ("EBoth", isEBoth)
+  getElr' = EBoth () ()
+
+-- | get 'Elr' from the typelevel
+getElr :: forall th . GetElr th => Elr () ()
+getElr = getElr' @_ @_ @th
 
 isENone, isELeft, isERight, isEBoth :: Elr a b -> Bool
 -- | predicate on ENone
@@ -190,15 +195,7 @@ isERight _ = False
 isEBoth EBoth {} = True
 isEBoth _ = False
 
--- | extract the relevant type for 'ENone'
-type family ENoneT lr where
-  ENoneT (Elr _ _) = ()
-  ENoneT o = GL.TypeError (
-      'GL.Text "ENoneT: expected 'Elr a b' "
-      ':$$: 'GL.Text "o = "
-      ':<>: 'GL.ShowType o)
-
--- | extract the relevant type for 'ELeft'
+-- | extract the type from 'ELeft'
 type family ELeftT lr where
   ELeftT (Elr a _) = a
   ELeftT o = GL.TypeError (
@@ -206,7 +203,7 @@ type family ELeftT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
--- | extract the relevant type for 'ERight'
+-- | extract the type from 'ERight'
 type family ERightT lr where
   ERightT (Elr _ b) = b
   ERightT o = GL.TypeError (
@@ -214,7 +211,7 @@ type family ERightT lr where
       ':$$: 'GL.Text "o = "
       ':<>: 'GL.ShowType o)
 
--- | extract the relevant types for 'EBoth'
+-- | extract the types as a tuple from 'EBoth'
 type family EBothT lr where
   EBothT (Elr a b) = (a,b)
   EBothT o = GL.TypeError (
@@ -262,7 +259,7 @@ _elr2These = iso fw bw
          Just (That b) -> ERight b
          Just (These a b) -> EBoth a b
 
--- | iso from 'Elr' to a pair of 'Maybe's
+-- | iso from 'Elr' to a 'Maybe' pair
 --
 -- >>> ENone ^. _elr2Maybe
 -- (Nothing,Nothing)
@@ -287,7 +284,6 @@ _elr2Maybe = iso fw bw
           (Nothing, Just b) -> ERight b
           (Just a, Just b) -> EBoth a b
 
--- | 'GetLen' instances for 'Elr'
 instance GetLen 'ENone where
   getLen = 0
 instance GetLen ('ELeft a) where
@@ -297,7 +293,6 @@ instance GetLen ('ERight b) where
 instance GetLen ('EBoth a b) where
   getLen = 1
 
--- | 'AssocC' instances for 'Elr'
 instance AssocC Elr where
   assoc ENone = ENone
   assoc (ELeft ENone) = ENone
@@ -339,6 +334,16 @@ getBifoldInfo bi =
     EBoth () () -> "(B)"
 
 -- | similar to 'elr' without a separate EBoth combinator
+--
+-- >>> mergeElrWith [] (:[]) (pure . read) (++) (ELeft 123)
+-- [123]
+--
+-- >>> mergeElrWith [] (:[]) (pure . read) (++) (EBoth 123 "11")
+-- [123,11]
+--
+-- >>> mergeElrWith [999] (:[]) (pure . read) (++) ENone
+-- [999]
+--
 mergeElrWith :: c -> (a -> c) -> (b -> c) -> (c -> c -> c) -> Elr a b -> c
 mergeElrWith c fa fb fcc =
   \case
@@ -348,6 +353,16 @@ mergeElrWith c fa fb fcc =
     EBoth a b -> fcc (fa a) (fb b)
 
 -- | destruct 'Elr'
+--
+-- >>> elr Nothing (Just . This) (Just . That) ((Just .) . These) (ELeft 10)
+-- Just (This 10)
+--
+-- >>> elr Nothing (Just . This) (Just . That) ((Just .) . These) (EBoth 'x' 99)
+-- Just (These 'x' 99)
+--
+-- >>> elr Nothing (Just . This) (Just . That) ((Just .) . These) ENone
+-- Nothing
+--
 elr :: c -> (a -> c) -> (b -> c) -> (a -> b -> c) -> Elr a b -> c
 elr c fa fb fab =
   \case

@@ -67,7 +67,7 @@ import GHC.Generics (Generic)
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> :m + Predicate.Prelude
+-- >>> :m + Predicate
 -- >>> :m + Control.Arrow
 -- >>> :m + Text.Show.Functions
 

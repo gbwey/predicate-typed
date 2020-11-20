@@ -145,7 +145,7 @@ import qualified Data.Semigroup as SG
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XNoOverloadedLists
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import Data.Time
 -- >>> :m + Control.Lens
 -- >>> :m + Control.Lens.Action
@@ -1985,6 +1985,7 @@ instance (P (DoExpandT ps) a) => P (Do ps) a where
   eval _ = eval (Proxy @(DoExpandT ps))
 
 -- need both :: Type and (Id >> p or W)
+-- | expand out a type level list of commands using 'Predicate.Core.>>' (associates to the right)
 type family DoExpandT (ps :: [k]) :: Type where -- need Type not k else No instance for GN.KnownNat: pl @(Do '[4,5,6]) ()
   DoExpandT '[] = GL.TypeError ('GL.Text "DoExpandT '[] invalid: requires at least one predicate in the list")
   DoExpandT '[p] = W p -- need W or Id >> p else will fail with No instance for Show: pl @(Do '[4,5,6]) ()
@@ -2009,6 +2010,7 @@ instance (P (DoExpandLT ps) a) => P (DoL ps) a where
   type PP (DoL ps) a = PP (DoExpandLT ps) a
   eval _ = eval (Proxy @(DoExpandLT ps))
 
+-- | like 'DoExpandT' but associates to the left
 type family DoExpandLT (ps :: [k]) :: Type where
   DoExpandLT '[] = GL.TypeError ('GL.Text "DoExpandT '[] invalid: requires at least one predicate in the list")
   DoExpandLT '[p] = W p
@@ -2477,6 +2479,7 @@ instance x ~ SG.Arg a b => P Arg' x where
         ret = (a,b)
     in pure $ mkNode opts (Val ret) msg0 []
 
+-- | calculates the return type for 'Arg''
 type family ArgT (x :: Type) where
   ArgT (SG.Arg a b) = (a,b)
   ArgT o = GL.TypeError (

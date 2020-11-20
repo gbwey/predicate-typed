@@ -60,7 +60,7 @@ import qualified Data.List.Lens
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> import qualified Data.Text as T
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Sequence as Seq
 
 data TrimImpl (th :: These () ()) deriving Show
@@ -70,7 +70,7 @@ instance ( GetThese th
          ) => P (TrimImpl th) x where
   type PP (TrimImpl th) x = x
   eval _ opts x =
-    let (vv,fn) = case getThese @_ @_ @th of
+    let (vv,fn) = case getThese @th of
                     These () () -> ("Both", dropWhile isSpace . dropWhileEnd isSpace)
                     This () -> ("L", dropWhile isSpace)
                     That () -> ("R", dropWhileEnd isSpace)

@@ -26,7 +26,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE NoStarIsType #-}
--- | refinement type allowing the external type to differ from the internal type
+-- | refinement type allowing the external type to differ from the internal type but throws away the original value
 module Predicate.Refined5 (
 
   -- ** Refined5
@@ -84,7 +84,7 @@ import GHC.Generics (Generic)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> :m + Predicate.Prelude
+-- >>> :m + Predicate
 -- >>> :m + Predicate.Refined2
 -- >>> :m + Data.Time
 

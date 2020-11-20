@@ -17,7 +17,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
--- | Utility methods for Predicate / methods for displaying the evaluation tree
+-- | helper methods
 module Predicate.Misc (
   -- ** useful type families
     AndT
@@ -54,6 +54,7 @@ module Predicate.Misc (
   , GetBool(..)
   , GetLen(..)
   , GetThese(..)
+  , getThese
   , GetOrdering(..)
   , OrderingP(..)
   , GetOrd(..)
@@ -255,15 +256,19 @@ showThese = \case
   That {} -> "That"
   These {} -> "These"
 
--- | get 'These' from typelevel
+-- | get 'These' from the typelevel
 class GetThese (th :: These a b) where
-  getThese :: These () ()
+  getThese' :: These () ()
 instance GetThese ('This x) where
-  getThese = This ()
+  getThese' = This ()
 instance GetThese ('That y) where
-  getThese = That ()
+  getThese' = That ()
 instance GetThese ('These x y) where
-  getThese = These () ()
+  getThese' = These () ()
+
+-- | get 'These' from the typelevel
+getThese :: forall th . GetThese th => These () ()
+getThese = getThese' @_ @_ @th
 
 -- | get ordering from the typelevel
 class GetOrdering (cmp :: Ordering) where
@@ -300,6 +305,7 @@ type family RepeatT (n :: Nat) (p :: k) :: [k] where
   RepeatT 1 p = p ': '[]
   RepeatT n p = p ': RepeatT (n GN.- 1) p
 
+-- | type operator for appending a type level symbol
 type s <%> t = GL.AppendSymbol s t
 infixr 7 <%>
 
@@ -482,6 +488,7 @@ instance ToITupleListC 12 a where
   toITupleListC [a,b,c,d,e,f,g,h,i,j,k,l] = Right (a,(b,(c,(d,(e,(f,(g,(h,(i,(j,(k,(l,()))))))))))))
   toITupleListC _ = Left "toITupleListC: expected exactly 12 values"
 
+-- | reverse an inductive tuple
 class ReverseITupleC (x :: Type) (xs :: Type) (ys :: Type) where
   type ReverseITupleT x xs ys
   reverseITupleC :: x -> xs -> ys -> ReverseITupleT x xs ys
@@ -645,6 +652,7 @@ type family FnT ab :: Type where
       ':$$: 'GL.Text "ab = "
       ':<>: 'GL.ShowType ab)
 
+-- | combine two containers
 type family JoinT x y where
   JoinT (t a) (t b) = t (a, b)
   JoinT ta tb = GL.TypeError (
@@ -654,6 +662,7 @@ type family JoinT x y where
        ':$$: 'GL.Text "t b = "
        ':<>: 'GL.ShowType tb)
 
+-- | replace the type inside a container using @b@
 type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
   ApplyConstT (t _) b = t b
   ApplyConstT ta b = GL.TypeError (
@@ -663,6 +672,7 @@ type family ApplyConstT (ta :: Type) (b :: Type) :: Type where
        ':$$: 'GL.Text "b = "
        ':<>: 'GL.ShowType b)
 
+-- | fail with a programmer error
 errorInProgram :: HasCallStack => String -> x
 errorInProgram s = error $ "programmer error:" <> s
 
@@ -741,8 +751,8 @@ class ExtractL3C (tp :: Type) where
   type ExtractL3T tp
   extractL3C :: tp -> ExtractL3T tp
 instance ExtractL3C (a,b) where
-  type ExtractL3T (a,b) = GL.TypeError ('GL.Text "L3 doesn't work for 2-tuples")
-  extractL3C _ = errorInProgram "L3 doesn't work for 2-tuples"
+  type ExtractL3T (a,b) = GL.TypeError ('GL.Text "L3 invalid for 2-tuples")
+  extractL3C _ = errorInProgram "L3 invalid for 2-tuples"
 instance ExtractL3C (a,b,c) where
   type ExtractL3T (a,b,c) = c
   extractL3C (_,_,c) = c
@@ -767,11 +777,11 @@ class ExtractL4C (tp :: Type) where
   type ExtractL4T tp
   extractL4C :: tp -> ExtractL4T tp
 instance ExtractL4C (a,b) where
-  type ExtractL4T (a,b) = GL.TypeError ('GL.Text "L4 doesn't work for 2-tuples")
-  extractL4C _ = errorInProgram "L4 doesn't work for 2-tuples"
+  type ExtractL4T (a,b) = GL.TypeError ('GL.Text "L4 invalid for 2-tuples")
+  extractL4C _ = errorInProgram "L4 invalid for 2-tuples"
 instance ExtractL4C (a,b,c) where
-  type ExtractL4T (a,b,c) = GL.TypeError ('GL.Text "L4 doesn't work for 3-tuples")
-  extractL4C _ = errorInProgram "L4 doesn't work for 3-tuples"
+  type ExtractL4T (a,b,c) = GL.TypeError ('GL.Text "L4 invalid for 3-tuples")
+  extractL4C _ = errorInProgram "L4 invalid for 3-tuples"
 instance ExtractL4C (a,b,c,d) where
   type ExtractL4T (a,b,c,d) = d
   extractL4C (_,_,_,d) = d
@@ -793,14 +803,14 @@ class ExtractL5C (tp :: Type) where
   type ExtractL5T tp
   extractL5C :: tp -> ExtractL5T tp
 instance ExtractL5C (a,b) where
-  type ExtractL5T (a,b) = GL.TypeError ('GL.Text "L5 doesn't work for 2-tuples")
-  extractL5C _ = errorInProgram "L5 doesn't work for 2-tuples"
+  type ExtractL5T (a,b) = GL.TypeError ('GL.Text "L5 invalid for 2-tuples")
+  extractL5C _ = errorInProgram "L5 invalid for 2-tuples"
 instance ExtractL5C (a,b,c) where
-  type ExtractL5T (a,b,c) = GL.TypeError ('GL.Text "L5 doesn't work for 3-tuples")
-  extractL5C _ = errorInProgram "L5 doesn't work for 3-tuples"
+  type ExtractL5T (a,b,c) = GL.TypeError ('GL.Text "L5 invalid for 3-tuples")
+  extractL5C _ = errorInProgram "L5 invalid for 3-tuples"
 instance ExtractL5C (a,b,c,d) where
-  type ExtractL5T (a,b,c,d) = GL.TypeError ('GL.Text "L5 doesn't work for 4-tuples")
-  extractL5C _ = errorInProgram "L5 doesn't work for 4-tuples"
+  type ExtractL5T (a,b,c,d) = GL.TypeError ('GL.Text "L5 invalid for 4-tuples")
+  extractL5C _ = errorInProgram "L5 invalid for 4-tuples"
 instance ExtractL5C (a,b,c,d,e) where
   type ExtractL5T (a,b,c,d,e) = e
   extractL5C (_,_,_,_,e) = e
@@ -819,17 +829,17 @@ class ExtractL6C (tp :: Type) where
   type ExtractL6T tp
   extractL6C :: tp -> ExtractL6T tp
 instance ExtractL6C (a,b) where
-  type ExtractL6T (a,b) = GL.TypeError ('GL.Text "L6 doesn't work for 2-tuples")
-  extractL6C _ = errorInProgram "L6 doesn't work for 2-tuples"
+  type ExtractL6T (a,b) = GL.TypeError ('GL.Text "L6 invalid for 2-tuples")
+  extractL6C _ = errorInProgram "L6 invalid for 2-tuples"
 instance ExtractL6C (a,b,c) where
-  type ExtractL6T (a,b,c) = GL.TypeError ('GL.Text "L6 doesn't work for 3-tuples")
-  extractL6C _ = errorInProgram "L6 doesn't work for 3-tuples"
+  type ExtractL6T (a,b,c) = GL.TypeError ('GL.Text "L6 invalid for 3-tuples")
+  extractL6C _ = errorInProgram "L6 invalid for 3-tuples"
 instance ExtractL6C (a,b,c,d) where
-  type ExtractL6T (a,b,c,d) = GL.TypeError ('GL.Text "L6 doesn't work for 4-tuples")
-  extractL6C _ = errorInProgram "L6 doesn't work for 4-tuples"
+  type ExtractL6T (a,b,c,d) = GL.TypeError ('GL.Text "L6 invalid for 4-tuples")
+  extractL6C _ = errorInProgram "L6 invalid for 4-tuples"
 instance ExtractL6C (a,b,c,d,e) where
-  type ExtractL6T (a,b,c,d,e) = GL.TypeError ('GL.Text "L6 doesn't work for 5-tuples")
-  extractL6C _ = errorInProgram "L6 doesn't work for 5-tuples"
+  type ExtractL6T (a,b,c,d,e) = GL.TypeError ('GL.Text "L6 invalid for 5-tuples")
+  extractL6C _ = errorInProgram "L6 invalid for 5-tuples"
 instance ExtractL6C (a,b,c,d,e,f) where
   type ExtractL6T (a,b,c,d,e,f) = f
   extractL6C (_,_,_,_,_,f) = f
@@ -845,20 +855,20 @@ class ExtractL7C (tp :: Type) where
   type ExtractL7T tp
   extractL7C :: tp -> ExtractL7T tp
 instance ExtractL7C (a,b) where
-  type ExtractL7T (a,b) = GL.TypeError ('GL.Text "L7 doesn't work for 2-tuples")
-  extractL7C _ = errorInProgram "L7 doesn't work for 2-tuples"
+  type ExtractL7T (a,b) = GL.TypeError ('GL.Text "L7 invalid for 2-tuples")
+  extractL7C _ = errorInProgram "L7 invalid for 2-tuples"
 instance ExtractL7C (a,b,c) where
-  type ExtractL7T (a,b,c) = GL.TypeError ('GL.Text "L7 doesn't work for 3-tuples")
-  extractL7C _ = errorInProgram "L7 doesn't work for 3-tuples"
+  type ExtractL7T (a,b,c) = GL.TypeError ('GL.Text "L7 invalid for 3-tuples")
+  extractL7C _ = errorInProgram "L7 invalid for 3-tuples"
 instance ExtractL7C (a,b,c,d) where
-  type ExtractL7T (a,b,c,d) = GL.TypeError ('GL.Text "L7 doesn't work for 4-tuples")
-  extractL7C _ = errorInProgram "L7 doesn't work for 4-tuples"
+  type ExtractL7T (a,b,c,d) = GL.TypeError ('GL.Text "L7 invalid for 4-tuples")
+  extractL7C _ = errorInProgram "L7 invalid for 4-tuples"
 instance ExtractL7C (a,b,c,d,e) where
-  type ExtractL7T (a,b,c,d,e) = GL.TypeError ('GL.Text "L7 doesn't work for 5-tuples")
-  extractL7C _ = errorInProgram "L7 doesn't work for 5-tuples"
+  type ExtractL7T (a,b,c,d,e) = GL.TypeError ('GL.Text "L7 invalid for 5-tuples")
+  extractL7C _ = errorInProgram "L7 invalid for 5-tuples"
 instance ExtractL7C (a,b,c,d,e,f) where
-  type ExtractL7T (a,b,c,d,e,f) = GL.TypeError ('GL.Text "L7 doesn't work for 6-tuples")
-  extractL7C _ = errorInProgram "L7 doesn't work for 6-tuples"
+  type ExtractL7T (a,b,c,d,e,f) = GL.TypeError ('GL.Text "L7 invalid for 6-tuples")
+  extractL7C _ = errorInProgram "L7 invalid for 6-tuples"
 instance ExtractL7C (a,b,c,d,e,f,g) where
   type ExtractL7T (a,b,c,d,e,f,g) = g
   extractL7C (_,_,_,_,_,_,g) = g
@@ -871,23 +881,23 @@ class ExtractL8C (tp :: Type) where
   type ExtractL8T tp
   extractL8C :: tp -> ExtractL8T tp
 instance ExtractL8C (a,b) where
-  type ExtractL8T (a,b) = GL.TypeError ('GL.Text "L8 doesn't work for 2-tuples")
-  extractL8C _ = errorInProgram "L8 doesn't work for 2-tuples"
+  type ExtractL8T (a,b) = GL.TypeError ('GL.Text "L8 invalid for 2-tuples")
+  extractL8C _ = errorInProgram "L8 invalid for 2-tuples"
 instance ExtractL8C (a,b,c) where
-  type ExtractL8T (a,b,c) = GL.TypeError ('GL.Text "L8 doesn't work for 3-tuples")
-  extractL8C _ = errorInProgram "L8 doesn't work for 3-tuples"
+  type ExtractL8T (a,b,c) = GL.TypeError ('GL.Text "L8 invalid for 3-tuples")
+  extractL8C _ = errorInProgram "L8 invalid for 3-tuples"
 instance ExtractL8C (a,b,c,d) where
-  type ExtractL8T (a,b,c,d) = GL.TypeError ('GL.Text "L8 doesn't work for 4-tuples")
-  extractL8C _ = errorInProgram "L8 doesn't work for 4-tuples"
+  type ExtractL8T (a,b,c,d) = GL.TypeError ('GL.Text "L8 invalid for 4-tuples")
+  extractL8C _ = errorInProgram "L8 invalid for 4-tuples"
 instance ExtractL8C (a,b,c,d,e) where
-  type ExtractL8T (a,b,c,d,e) = GL.TypeError ('GL.Text "L8 doesn't work for 5-tuples")
-  extractL8C _ = errorInProgram "L8 doesn't work for 5-tuples"
+  type ExtractL8T (a,b,c,d,e) = GL.TypeError ('GL.Text "L8 invalid for 5-tuples")
+  extractL8C _ = errorInProgram "L8 invalid for 5-tuples"
 instance ExtractL8C (a,b,c,d,e,f) where
-  type ExtractL8T (a,b,c,d,e,f) = GL.TypeError ('GL.Text "L8 doesn't work for 6-tuples")
-  extractL8C _ = errorInProgram "L8 doesn't work for 6-tuples"
+  type ExtractL8T (a,b,c,d,e,f) = GL.TypeError ('GL.Text "L8 invalid for 6-tuples")
+  extractL8C _ = errorInProgram "L8 invalid for 6-tuples"
 instance ExtractL8C (a,b,c,d,e,f,g) where
-  type ExtractL8T (a,b,c,d,e,f,g) = GL.TypeError ('GL.Text "L8 doesn't work for 7-tuples")
-  extractL8C _ = errorInProgram "L8 doesn't work for 7-tuples"
+  type ExtractL8T (a,b,c,d,e,f,g) = GL.TypeError ('GL.Text "L8 invalid for 7-tuples")
+  extractL8C _ = errorInProgram "L8 invalid for 7-tuples"
 instance ExtractL8C (a,b,c,d,e,f,g,h) where
   type ExtractL8T (a,b,c,d,e,f,g,h) = h
   extractL8C (_,_,_,_,_,_,_,h) = h
@@ -1274,29 +1284,32 @@ instance GetStyle 'ColoredNormal where
 instance GetStyle 'Reverse where
   getStyle = Reverse
 
-
-
--- | convenience method for optional display
-unlessNull :: (Foldable t, Monoid m) => t a -> m -> m
-unlessNull t m | null t = mempty
+-- | return the second value if the first is not empty
+unlessNull :: (AsEmpty t, Monoid m) => t -> m -> m
+unlessNull t m | has _Empty t = mempty
                | otherwise = m
 
-unlessNullM :: (Foldable t, Applicative m) => t a -> (t a -> m ()) -> m ()
+-- | return the result of the second value if the first is not empty
+unlessNullM :: (AsEmpty t, Applicative m) => t -> (t -> m ()) -> m ()
 unlessNullM t f
-  | null t = pure ()
+  | has _Empty t = pure ()
   | otherwise = f t
 
+-- | append a space if the given value is not empty
 nullSpace :: String -> String
 nullSpace = nullIf " "
 
+-- | combine the two values if the first is not empty
 nullIf :: String -> String -> String
 nullIf s t
   | all isSpace t = ""
   | otherwise = s <> t
 
+-- | catch an exception: for use in testing
 pureTryTest :: a -> IO (Either () a)
 pureTryTest = fmap (left (const ())) . E.try @E.SomeException . E.evaluate
 
+-- | catch an exception and the use a predicate to determine if it is the one we want: for use in testing
 pureTryTestPred :: (String -> Bool)
                 -> a
                 -> IO (Either String (Either () a))
@@ -1345,6 +1358,7 @@ removeAnsiImpl =
 _Id :: Lens (Identity a) (Identity b) a b
 _Id afb (Identity a) = Identity <$> afb a
 
+-- | swap values in a bifunctor
 class Bifunctor p => SwapC p where
   swapC :: p a b -> p b a
 instance SwapC Either where
@@ -1394,10 +1408,11 @@ ifM mb mt mf = do
   b <- mb
   if b then mt else mf
 
-
+-- | associate and unassociate certain two parameter types
 class AssocC p where
   assoc :: p (p a b) c -> p a (p b c)
   unassoc :: p a (p b c) -> p (p a b) c
+
 instance AssocC Either where
   assoc (Left (Left a)) = Left a
   assoc (Left (Right b)) = Right (Left b)
@@ -1406,6 +1421,7 @@ instance AssocC Either where
   unassoc (Left a) = Left (Left a)
   unassoc (Right (Left b)) = Left (Right b)
   unassoc (Right (Right b)) = Right b
+
 instance AssocC These where
   assoc (This (This a)) = This a
   assoc (This (That b)) = That (This b)

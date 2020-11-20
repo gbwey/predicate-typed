@@ -30,7 +30,7 @@ module Predicate.Examples.Common (
   , Hmsfmt
   , HmsRE
 
-  -- ** credit cards
+  -- ** luhn check
   , Luhnip
   , Luhnop
   , Luhnfmt
@@ -67,7 +67,7 @@ module Predicate.Examples.Common (
   , Isbn13op
   , Isbn13fmt
    ) where
-import Predicate.Prelude
+import Predicate
 import GHC.TypeLits (Nat)
 import Data.Time (Day, UTCTime, ZonedTime)
 
@@ -159,44 +159,52 @@ type Ip6op = Msg "count is bad:" (Len == 8)
 -- | @fmt@ type for formatting an ip6 address
 type Ip6fmt = PrintL 8 "%04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x" Id
 
-
+-- | isbn 10 converter
 type Isbn10ip = Resplit "-"
              >> Concat
              >> 'Just Unsnoc
              >> Map (ReadP Int (Singleton Id)) *** If (Singleton Id ==~ "X") 10 (ReadP Int (Singleton Id))
 
+-- | isbn 10 validator
 type Isbn10op = GuardSimple ((Fst >> All (0 <..> 9)) && Between 0 10 Snd)
              >> ZipWith (Fst * Snd) (1...10 >> Reverse) (Fst +: Snd)
              >> Sum
              >> GuardBool "mod 0 oops" (Id `Mod` 11 == 0)
 
+-- | isbn 10 formatter
 type Isbn10fmt = ConcatMap (ShowP Id) Id *** If (Id == 10) "X" (ShowP Id)
                  >> Fst <> "-" <> Snd  -- no standard format: just hyphen before checkdigit
 
 
+-- | isbn 13 converter
 type Isbn13ip = Resplit "-"
              >> Concat
              >> Map (ReadP Int (Singleton Id))
 
+-- | isbn 13 validator
 type Isbn13op = ZipWith (Fst * Snd) (Cycle 13 [1,3] >> Reverse) Id
              >> Sum
              >> '(Id,Id `Mod` 10)
              >> GuardBool (PrintT "sum=%d mod 10=%d" Id) (Snd == 0)
 
+-- | isbn 13 formatter
 type Isbn13fmt = 'Just Unsnoc >> ConcatMap (ShowP Id) Fst <> "-" <> ShowP Snd
 
 -- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
+-- | selected date formats used in the examples
 type DateFmts = '["%Y-%m-%d", "%m/%d/%y", "%B %d %Y"]
 
 -- | @ip@ type for reading one of many date formats from 'DateFmts'
 type DateNip = ParseTimes Day DateFmts Id
 
+-- | selected datetime formats used in the examples
 type DateTimeFmts = '["%Y-%m-%d %H:%M:%S", "%m/%d/%y %H:%M:%S", "%B %d %Y %H:%M:%S", "%Y-%m-%dT%H:%M:%S"]
 
 -- | @ip@ type for reading one of many date time formats from 'DateTimeFmts'
 type DateTimeNip = ParseTimes UTCTime DateTimeFmts Id
 
 -- ParseTimeP is easier and accurate
+-- | simple date regular expression
 type DdmmyyyyRE = "^(\\d{2})-(\\d{2})-(\\d{4})$"
 {-
 type Ddmmyyyyop =
@@ -206,10 +214,13 @@ type Ddmmyyyyop =
           >> 'True
 -}
 --type Ddmmyyyyop' = GuardsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]
+-- | date validator for a three value list containing day month and year using GuardsDetail
 type Ddmmyyyyop = GuardsDetail "%s %d is out of range" '[ '("day", Between 1 31 Id), '("month", Between 1 12 Id), '("year", Between 1990 2050 Id) ] >> 'True
+-- | date validator for a three value list containing day month and year using Bools
 type Ddmmyyyyop' = Bools '[ '("day", Between 1 31 Id), '("month", Between 1 12 Id), '("year", Between 1990 2050 Id) ]
 --type Ddmmyyyyop'''' = BoolsQuick (PrintT "guard(%d) %d is out of range" Id) '[Between 1 31 Id, Between 1 12 Id, Between 1990 2050 Id]
 
+-- | luhn check digit validator
 type Luhnop' (n :: Nat) =
          Guard (PrintT "incorrect number of digits found %d but expected %d in [%s]" '(Len, n, ShowP Id)) (Len == n)
       >> Do '[
@@ -219,6 +230,7 @@ type Luhnop' (n :: Nat) =
              ]
         >> Guard (PrintT "expected %d mod 10 = 0 but found %d" '(Id, Id `Mod` 10)) (Mod Id 10 == 0)
 
+-- | luhn check digit validator (alternate version)
 type Luhn' (n :: Nat) =
        Msg "Luhn'" (Do
        '[Guard (PrintT "incorrect length: found %d but expected %d in [%s]" '(Len, n, Id)) (Len == n)

@@ -99,7 +99,7 @@ import Data.Coerce (Coercible)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> import qualified Data.Text as T
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Functor.Identity
 -- >>> import Data.These
@@ -763,6 +763,7 @@ instance (P (DotExpandT ps q) a) => P (Dot ps q) a where
   type PP (Dot ps q) a = PP (DotExpandT ps q) a
   eval _ = eval (Proxy @(DotExpandT ps q))
 
+-- | calculates the return type for 'Dot'
 type family DotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
   DotExpandT '[] _ = GL.TypeError ('GL.Text "'[] invalid: requires at least one predicate in the list")
   DotExpandT '[p] q = p $ q
@@ -783,6 +784,7 @@ instance P (RDotExpandT ps q) a => P (RDot ps q) a where
   type PP (RDot ps q) a = PP (RDotExpandT ps q) a
   eval _ = eval (Proxy @(RDotExpandT ps q))
 
+-- | calculates the return type for 'RDot'
 type family RDotExpandT (ps :: [Type -> Type]) (q :: Type) :: Type where
   RDotExpandT '[] _ = GL.TypeError ('GL.Text "'[] invalid: requires at least one predicate in the list")
   RDotExpandT '[p] q = p $ q

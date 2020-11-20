@@ -41,7 +41,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Functor.Identity
 

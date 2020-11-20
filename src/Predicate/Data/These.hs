@@ -74,7 +74,7 @@ import GHC.TypeLits (ErrorMessage((:$$:),(:<>:)))
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Semigroup as SG
 
 -- | similar to 'Data.These.partitionThese'. returns a 3-tuple with the results so use 'Fst' 'Snd' 'Thd' to extract
@@ -288,7 +288,7 @@ instance ( x ~ These a b
   type PP (IsTh th) x = Bool
   eval _ opts x =
     let msg0 = "Is"
-        th = getThese @_ @_ @th
+        th = getThese @th
         fn = case th of
                This () -> TheseC.isThis
                That () -> TheseC.isThat
@@ -867,6 +867,7 @@ instance ( Show a
                    Left e -> e
                    Right c -> mkNodeCopy opts rr (show3' opts msg0 c "" (These a b)) hhs
 
+-- | calculate the return type for 'TheseIn'
 type family TheseInT r y elr where
   TheseInT r y (These a b) = PP r (y,(a,b))
   TheseInT _ _ o = GL.TypeError (

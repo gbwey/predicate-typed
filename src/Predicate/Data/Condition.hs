@@ -36,7 +36,6 @@ module Predicate.Data.Condition (
   -- ** type families
   , ToGuardsT
   , ToGuardsDetailT
-  , GuardsT
  ) where
 import Predicate.Core
 import Predicate.Misc
@@ -50,7 +49,7 @@ import Data.Kind (Type)
 import Data.Void (Void)
 import qualified Data.Type.Equality as DE
 -- $setup
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
@@ -126,16 +125,12 @@ instance ( Show (PP r a)
           Left e -> e
           Right ret -> mkNodeCopy opts qqrr (msg0 <> " '" <> show b <> " " <> showL opts ret) [hh pp]
 
-type family GuardsT (ps :: [k]) where
-  GuardsT '[] = '[]
-  GuardsT (p ': ps) = Guard "fromGuardsT" p ': GuardsT ps
-
---type Guards' (ps :: [k]) = Para (GuardsT ps)
-
---type ToGuards (prt :: k) (os :: [k1]) = Proxy (Guards (ToGuardsT prt os))
-
+-- | expands out the condition parameter used by 'Guards' and 'Bools'
 type family ToGuardsT (prt :: k) (os :: [k1]) :: [(k,k1)] where
-  ToGuardsT _prt '[] = GL.TypeError ('GL.Text "ToGuardsT cannot be empty")
+  ToGuardsT prt '[] = GL.TypeError
+                       ('GL.Text "ToGuardsT cannot be empty: prt="
+                       ':<>:
+                       'GL.ShowType prt)
   ToGuardsT prt '[p] = '(prt,p) : '[]
   ToGuardsT prt (p ': ps) = '(prt,p) ': ToGuardsT prt ps
 
@@ -673,6 +668,7 @@ instance P (GuardsDetailT prt ps) x => P (GuardsDetail prt ps) x where
   type PP (GuardsDetail prt ps) x = PP (GuardsDetailT prt ps) x
   eval _ = eval (Proxy @(GuardsDetailT prt ps))
 
+-- | expands out the condition parameter used by 'GuardsDetail'
 type family ToGuardsDetailT (prt :: k1) (os :: [(k2,k3)]) :: [(Type,k3)] where
   ToGuardsDetailT prt '[ '(s,p) ] = '(PrintT prt '(s,Snd), p) : '[]
   ToGuardsDetailT prt ( '(s,p) ': ps) = '(PrintT prt '(s,Snd), p) ': ToGuardsDetailT prt ps

@@ -85,7 +85,7 @@ import Control.Lens
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XNoOverloadedLists
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 -- >>> import qualified Data.Semigroup as SG
 -- >>> import Data.Time
 
@@ -1108,7 +1108,7 @@ instance P (ToBitsT p) x => P (ToBits p) x where
   type PP (ToBits p) x = PP (ToBitsT p) x
   eval _ = eval (Proxy @(ToBitsT p))
 
--- | reverse 'ShowBaseN': doesn't enforce that the values are in range of the given base
+-- | reverse 'ShowBaseN': does not enforce that the values are in range of the given base
 --
 -- >>> pz @(UnShowBaseN 2 Id) [1,0,0,1,0]
 -- Val 18

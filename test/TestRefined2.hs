@@ -1,3 +1,4 @@
+{-# OPTIONS -Wno-missing-export-lists #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE TypeApplications #-}
@@ -11,7 +12,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NoStarIsType #-}
 module TestRefined2 where
---module TestRefined2 (suite) where
 import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -49,7 +49,6 @@ namedTests =
   , testCase "hms" $ (@?=) (newRefined2 "12:0:59" :: Either Msg2 (MakeR2 (Hms OAN))) (Right (unsafeRefined2 [12,0,59] "12:0:59"))
   , testCase "between5and9" $ (@?=) (newRefined2 "7" :: Either Msg2 (Refined2 OAN (ReadP Int Id) (Between 5 9 Id) String)) (Right (unsafeRefined2 7 "7"))
   , testCase "ssn" $ (@?=) (newRefined2 "123-45-6789" :: Either Msg2 (MakeR2 (Ssn OAN))) (Right (unsafeRefined2 [123,45,6789] "123-45-6789"))
-  , testCase "base16" $ (@?=) (newRefined2 "12f" :: Either Msg2 (MakeR2 (BaseN OAN 16))) (Right (unsafeRefined2 303 "12f"))
   , testCase "daten1" $ (@?=) (newRefined2 "June 25 1900" :: Either Msg2 (MakeR2 (DateN OAN))) (Right (unsafeRefined2 (Safe.readNote "testrefined2: daten1" "1900-06-25") "June 25 1900"))
   , testCase "daten2" $ (@?=) (newRefined2 "12/02/99" :: Either Msg2 (MakeR2 (DateN OAN))) (Right (unsafeRefined2 (Safe.readNote "testrefined2: daten2" "1999-12-02") "12/02/99"))
   , testCase "daten3" $ (@?=) (newRefined2 "2011-12-02" :: Either Msg2 (MakeR2 (DateN OAN))) (Right (unsafeRefined2 (Safe.readNote "testrefined2: daten3" "2011-12-02") "2011-12-02"))
@@ -153,9 +152,7 @@ unnamedTests = [
 
   , expect2 (Right $ unsafeRefined2 [1,2,3,4] "1.2.3.4") $ runIdentity $ eval2P (ip4 @OAN) "1.2.3.4"
   , expect2 (Left $ XF "ReadP Int (3x)") $ runIdentity $ eval2P (ip4 @OAN) "1.2.3x.4"
-  , expect2 (Left $ XTF [1,2,3,4,5] "Bools:invalid length(5) expected 4") $ runIdentity $ eval2P (ip4' @OAN) "1.2.3.4.5"
   , expect2 (Left $ XTF [1,2,3,4,5] "Guards:invalid length(5) expected 4") $ runIdentity $ eval2P (ip4 @OAN) "1.2.3.4.5"
-  , expect2 (Left $ XTF [1,2,300,4] "Bool(2) [octet 2 out of range 0-255 found 300] (300 <= 255)") $ runIdentity $ eval2P (ip4' @OAN) "1.2.300.4"
   , expect2 (Left $ XTF [1,2,300,4] "octet 2 out of range 0-255 found 300") $ runIdentity $ eval2P (ip4 @OAN) "1.2.300.4"
   , expect2 (Right $ unsafeRefined2 [1,2,3,4,5,6,7,8,9,0,3] "12345678903") $ runIdentity $ eval2P (luhn11 @OAN) "12345678903"
   , expect2 (Left $ XTF [1,2,3,4,5,6,7,8,9,0,1] "invalid checkdigit") $ runIdentity $ eval2P (luhn11 @OZ) "12345678901"
@@ -215,7 +212,6 @@ tst0a =
   , newRefined2P (daten @OL) "12/02/19" @?= Right (unsafeRefined2 (fromGregorian 2019 12 2) "12/02/19")
   , newRefined2P (Proxy @(Luhn OL 4)) "1230" @?= Right (unsafeRefined2 [1,2,3,0] "1230")
   , newRefined2P (Proxy @(Luhn OL 6)) "123455" @?= Right (unsafeRefined2 [1,2,3,4,5,5] "123455")
-  , test2a @?= Right (unsafeRefined2 254 "0000fe")
   , test2b @?= Right (unsafeRefined2 [123,211,122,1] "123.211.122.1")
   , test2c @?= Right (unsafeRefined2 [200,2,3,4] "200.2.3.4")
   , expectIO (left show <$> test2d) (() <$)
@@ -285,9 +281,6 @@ expect2 :: (HasCallStack, Show i, Show r, Eq i, Eq r)
   -> IO ()
 expect2 lhs (rhs,mr) =
   (@?=) (maybe (Left $ toRResults2 rhs) Right mr) lhs
-
-test2a :: Either Msg2 (MakeR2 (BaseN OAN 16))
-test2a = newRefined2 "0000fe"
 
 test2b :: Either Msg2 (Refined2 OAN
    (Rescan "^(\\d+)\\.(\\d+)\\.(\\d+)\\.(\\d+)$" >> Head >> Snd >> Map (ReadP Int Id))

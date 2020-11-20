@@ -1,11 +1,11 @@
 cradle:
-  stack:
+  cabal:
     - path: "src"
-      component: "predicate-typed:lib"
+      component: "lib:predicate-typed"
 
-#    - path: "doctest" -- not relevant as path is really src
-#      component: "predicate-typed:test:doctests"
+#    - path: "doctest"   -- path is actually src
+#      component: "test:doctests"
 
     - path: "test"
-      component: "predicate-typed:test:predicate-typed-test"
+      component: "test:predicate-typed-test"
 

@@ -10,7 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE NoStarIsType #-}
--- | Contains prepackaged 4-tuples to use with 'Refined2'
+-- | Contains prepackaged 4-tuples to use with 'Predicate.Refined2.Refined2'
 module Predicate.Examples.Refined2 (
  -- ** datetime
     DateTime1
@@ -25,10 +25,8 @@ module Predicate.Examples.Refined2 (
   , hms
   , Hms
   , HmsR
-  , Hms'
-  , HmsR'
 
-  -- ** credit cards
+  -- ** luhn check
   , Luhn
   , luhn11
 
@@ -41,10 +39,6 @@ module Predicate.Examples.Refined2 (
   , ip4
   , Ip4
   , Ip4R
-
-  , ip4'
-  , Ip4'
-  , Ip4R'
 
   -- ** ipv6
   , ip6
@@ -63,7 +57,6 @@ module Predicate.Examples.Refined2 (
 
  -- ** base n
   , BaseN
-  , BaseN'
   , BaseIJ
   , BaseIJ'
   , BaseIJip
@@ -84,9 +77,8 @@ import Data.Proxy (Proxy(..))
 -- >>> :set -XTypeApplications
 -- >>> :m + Data.Time
 -- >>> :m + Control.Lens
--- >>> :m + Text.Show.Functions
 
--- | credit card with luhn algorithm
+-- | credit card check using luhn algorithm
 --
 -- >>> newRefined2 @OZ @Luhnip @(Luhnop 11) "1234-5678-901"
 -- Left Step 2. Failed Boolean Check(op) | invalid checkdigit
@@ -100,7 +92,21 @@ import Data.Proxy (Proxy(..))
 -- >>> pz @(Luhnip >> Luhnop 10) "79927398713"
 -- Fail "expected 10 digits but found 11"
 --
+-- >>> newRefined2P (luhn11 @OZ) "1234-5678-903"
+-- Right (Refined2 [1,2,3,4,5,6,7,8,9,0,3] "1234-5678-903")
+--
+-- >>> newRefined2 @OZ @Luhnip @(Luhnop 4) "1230"
+-- Right (Refined2 [1,2,3,0] "1230")
+--
+-- >>> newRefined2 @OL @Luhnip @(Luhnop 4) "1234"
+-- Left Step 2. Failed Boolean Check(op) | invalid checkdigit
+--
+luhn11 :: Proxy (Luhn opts 11)
+luhn11 = Proxy
+
+-- | luhn checkdigit validator for @n@ digits
 type Luhn (opts :: Opt) (n :: Nat) = '(opts, Luhnip, Luhnop n, String)
+
 
 -- | read in a valid datetime
 --
@@ -110,21 +116,31 @@ type Luhn (opts :: Opt) (n :: Nat) = '(opts, Luhnip, Luhnop n, String)
 -- >>> newRefined2 @OL @(Dtip LocalTime) @'True "2018-09-99 12:12:12"
 -- Left Step 1. Failed Initial Conversion(ip) | ParseTimeP LocalTime (%F %T) failed to parse
 --
+-- >>> newRefined2P (datetime1 @OZ @LocalTime) "2018-09-14 02:57:04"
+-- Right (Refined2 2018-09-14 02:57:04 "2018-09-14 02:57:04")
+--
 datetime1 :: Proxy (DateTime1 opts t)
 datetime1 = mkProxy2
 
+-- | datetime validator with default predicate of true
 type DateTime1 (opts :: Opt) (t :: Type) = '(opts, Dtip t, 'True, String)
 
+-- | proxy for 'DateTimeN'
 datetimen :: OptC opts => Proxy (DateTimeN opts)
 datetimen = mkProxy2'
 
--- valid dates for for DateFmts are "2001-01-01" "Jan 24 2009" and "03/29/07"
+-- valid dates for for DateFmts eg "2001-01-01" "Jan 24 2009" and "03/29/07"
+-- | date validator which tries to match against multiple date formats
 type DateN (opts :: Opt) = '(opts,ParseTimes Day DateFmts Id, 'True, String)
 
+-- | proxy for 'DateN'
 daten :: OptC opts => Proxy (DateN opts)
 daten = mkProxy2'
 
+-- | 'Predicate.Refined2.Refined2' type signature for 'DateTimeN'
 type DateTimeNR (opts :: Opt) = MakeR2 (DateTimeN opts)
+
+-- | datetime validator which tries to match against multiple datetime formats
 type DateTimeN (opts :: Opt) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True, String)
 
 -- | read in an ssn
@@ -138,11 +154,16 @@ type DateTimeN (opts :: Opt) = '(opts, ParseTimes UTCTime DateTimeFmts Id, 'True
 -- >>> newRefined2 @OL @Ssnip @Ssnop "667-00-2211"
 -- Left Step 2. Failed Boolean Check(op) | Bool(1) [number for group 1 invalid: found 0] (1 <= 0)
 --
-
+-- >>> newRefined2P (ssn @OL) "667-00-2211"
+-- Left Step 2. Failed Boolean Check(op) | Bool(1) [number for group 1 invalid: found 0] (1 <= 0)
+--
 ssn :: OptC opts => Proxy (Ssn opts)
 ssn = mkProxy2'
 
+-- | 'Predicate.Refined2.Refined2' signature for 'Ssn'
 type SsnR (opts :: Opt) = MakeR2 (Ssn opts)
+
+-- | ssn validator
 type Ssn (opts :: Opt) = '(opts, Ssnip, Ssnop, String)
 
 
@@ -157,19 +178,19 @@ type Ssn (opts :: Opt) = '(opts, Ssnip, Ssnop, String)
 -- >>> newRefined2 @OL @Hmsip @Hmsop' "26:13:59"
 -- Left Step 2. Failed Boolean Check(op) | Bool(0) [hours] (26 <= 23)
 --
+-- >>> newRefined2P (hms @OL) "23:13:59"
+-- Right (Refined2 [23,13,59] "23:13:59")
+--
 hms :: OptC opts => Proxy (Hms opts)
 hms = mkProxy2'
 
+-- | 'Predicate.Refined2.Refined2' type signature for 'Hms'
 type HmsR (opts :: Opt) = MakeR2 (Hms opts)
+
+-- | time validator
 type Hms (opts :: Opt) = '(opts, Hmsip, Hmsop, String)
 
---hms' :: Proxy (Hms' OZ)
---hms' = mkProxy2'
-
-type HmsR' (opts :: Opt) = MakeR2 (Hms' opts)
-type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', String)
-
--- | read in an ipv4 address and validate it
+-- | read in an ipv4 address and validate it using guards
 --
 -- >>> newRefined2 @OZ @Ip4ip @Ip4op' "001.223.14.1"
 -- Right (Refined2 [1,223,14,1] "001.223.14.1")
@@ -186,25 +207,25 @@ type Hms' (opts :: Opt) = '(opts, Hmsip, Hmsop', String)
 -- >>> newRefined2P (ip4 @OL) "001.257.14.1"
 -- Left Step 2. Failed Boolean Check(op) | octet 1 out of range 0-255 found 257
 --
-type Ip4R (opts :: Opt) = MakeR2 (Ip4 opts)
-type Ip4 (opts :: Opt) = '(opts, Ip4ip, Ip4op, String) -- guards
-
 ip4 :: Proxy (Ip4 opts)
 ip4 = Proxy
 
-type Ip4R' (opts :: Opt) = MakeR2 (Ip4' opts)
-type Ip4' (opts :: Opt) = '(opts, Ip4ip, Ip4op', String) -- boolean predicates
+-- | validator for ipv4 addresses
+type Ip4 (opts :: Opt) = '(opts, Ip4ip, Ip4op, String)
 
-ip4' :: Proxy (Ip4' opts)
-ip4' = Proxy
+-- | 'Predicate.Refined2.Refined2' type signature for 'Ip4'
+type Ip4R (opts :: Opt) = MakeR2 (Ip4 opts)
 
+-- | 'Predicate.Refined2.Refined2' type signature for 'Ip6'
 type Ip6R (opts :: Opt) = MakeR2 (Ip6 opts)
-type Ip6 (opts :: Opt) = '(opts, Ip6ip, Ip6op, String) -- guards
+-- | validator for ipv6 using guards
+type Ip6 (opts :: Opt) = '(opts, Ip6ip, Ip6op, String)
 
+-- | proxy for 'Ip6'
 ip6 :: Proxy (Ip6 opts)
 ip6 = Proxy
 
--- | validate isbn10
+-- | validate isbn10 using guards
 --
 -- >>> newRefined2P (isbn10 @OZ) "0-306-40611-X"
 -- Right (Refined2 ([0,3,0,6,4,0,6,1,1],10) "0-306-40611-X")
@@ -212,11 +233,14 @@ ip6 = Proxy
 -- >>> newRefined2P (isbn10 @OZ) "0-306-40611-9"
 -- Left Step 2. Failed Boolean Check(op) | mod 0 oops
 --
-type Isbn10R (opts :: Opt) = MakeR2 (Isbn10 opts)
-type Isbn10 (opts :: Opt) = '(opts, Isbn10ip, Isbn10op, String) -- guards
-
 isbn10 :: Proxy (Isbn10 opts)
 isbn10 = Proxy
+
+-- | validator for isbn10
+type Isbn10 (opts :: Opt) = '(opts, Isbn10ip, Isbn10op, String)
+
+-- | 'Predicate.Refined2.Refined2' type signature for 'Isbn10'
+type Isbn10R (opts :: Opt) = MakeR2 (Isbn10 opts)
 
 -- | validate isbn13
 --
@@ -226,44 +250,16 @@ isbn10 = Proxy
 -- >>> newRefined2P (isbn13 @OZ) "978-0-306-40615-8"
 -- Left Step 2. Failed Boolean Check(op) | sum=101 mod 10=1
 --
-type Isbn13R (opts :: Opt) = MakeR2 (Isbn13 opts)
-type Isbn13 (opts :: Opt) = '(opts, Isbn13ip, Isbn13op, String) -- guards
-
 isbn13 :: Proxy (Isbn13 opts)
 isbn13 = Proxy
 
+-- | validate isbn13 using guards
+type Isbn13 (opts :: Opt) = '(opts, Isbn13ip, Isbn13op, String)
+-- | 'Predicate.Refined2.Refined2' type signature for 'Isbn10'
+type Isbn13R (opts :: Opt) = MakeR2 (Isbn13 opts)
 
-
-luhn11 :: Proxy (Luhn opts 11)
-luhn11 = Proxy
-
--- | convert a string from a given base \'i\' and store it internally as an base 10 integer
---
--- >>> newRefined2 @OZ @(ReadBase Int 16) @'True "00fe"
--- Right (Refined2 254 "00fe")
---
--- >>> newRefined2 @OZ @(ReadBase Int 16) @(Between 100 400 Id) "00fe"
--- Right (Refined2 254 "00fe")
---
--- >>> newRefined2 @OZ @(ReadBase Int 16) @(GuardSimple (Id < 400) >> 'True) "f0fe"
--- Left Step 2. Failed Boolean Check(op) | (61694 < 400)
---
--- >>> newRefined2 @OL @(ReadBase Int 16) @(Id < 400) "f0fe" -- todo: why different parens vs braces
--- Left Step 2. False Boolean Check(op) | {61694 < 400}
---
-type BaseN (opts :: Opt) (n :: Nat) = BaseN' opts n 'True
-type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n, p, String)
-
-
--- | Luhn check
---
--- >>> newRefined2 @OZ @Luhnip @(Luhnop 4) "1230"
--- Right (Refined2 [1,2,3,0] "1230")
---
--- >>> newRefined2 @OL @Luhnip @(Luhnop 4) "1234"
--- Left Step 2. Failed Boolean Check(op) | invalid checkdigit
---
--- | uses builtin 'IsLuhn'
+-- | 4-tuple for reading for base @n@
+type BaseN (opts :: Opt) (n :: Nat) p = '(opts, ReadBase Int n, p, String)
 
 -- | convert a string from a given base \'i\' and store it internally as a base \'j\' string
 --
@@ -278,58 +274,8 @@ type BaseN' (opts :: Opt) (n :: Nat) p = '(opts,ReadBase Int n, p, String)
 --
 type BaseIJip (i :: Nat) (j :: Nat) = ReadBase Int i >> ShowBase j
 
-type BaseIJ (i :: Nat) (j :: Nat) = BaseIJ' i j 'True
+-- | convert a string from a given base \'i\' and store it internally as a base \'j\' string with a predicate \'p\'
 type BaseIJ' (i :: Nat) (j :: Nat) p = '(ReadBase Int i >> ShowBase j, p, String)
 
--- | take any valid Read/Show instance and turn it into a valid 'Predicate.Refined2.Refined2'
---
--- >>> :m + Data.Ratio
--- >>> newRefined2 @OZ @(ReadP Rational Id) @'True "13 % 3"
--- Right (Refined2 (13 % 3) "13 % 3")
---
--- >>> newRefined2 @OZ @(ReadP Rational Id) @'True "13x % 3"
--- Left Step 1. Failed Initial Conversion(ip) | ReadP Ratio Integer (13x % 3)
---
--- >>> newRefined2 @OZ @(ReadP Rational Id) @(3 % 1 <..> 5 % 1) "13 % 3"
--- Right (Refined2 (13 % 3) "13 % 3")
---
--- >>> newRefined2 @OZ @(ReadP Rational Id) @(11 -% 2 <..> 3 -% 1) "-13 % 3"
--- Right (Refined2 ((-13) % 3) "-13 % 3")
---
--- >>> newRefined2 @OZ @(ReadP Rational Id) @(Id > (15 % 1)) "13 % 3"
--- Left Step 2. False Boolean Check(op) | FalseP
---
--- >>> newRefined2 @OL @(ReadP Rational Id) @(Msg (PrintF "invalid=%3.2f" (FromRational Double)) (Id > (15 % 1))) "13 % 3"
--- Left Step 2. False Boolean Check(op) | {invalid=4.33 13 % 3 > 15 % 1}
---
--- >>> newRefined2 @OZ @(ReadP Rational Id) @(Id > (11 % 1)) "13 % 3"
--- Left Step 2. False Boolean Check(op) | FalseP
---
--- >>> newRefined2 @OZ @(ReadP UTCTime Id) @'True "2018-10-19 14:53:11.5121359 UTC"
--- Right (Refined2 2018-10-19 14:53:11.5121359 UTC "2018-10-19 14:53:11.5121359 UTC")
---
--- >>> :m + Data.Aeson
--- >>> newRefined2 @OZ @(ReadP Value Id) @'True "String \"jsonstring\""
--- Right (Refined2 (String "jsonstring") "String \"jsonstring\"")
---
--- >>> newRefined2 @OZ @(ReadP Value Id) @'True "Number 123.4"
--- Right (Refined2 (Number 123.4) "Number 123.4")
---
--- >>> newRefined @OU @((Id $$ 13) > 100) (\x -> x * 14)
--- Right (Refined <function>)
---
--- >>> newRefined2 @OU @(Id $$ 13) @(Id > 100) (\x -> x * 14) ^? _Right . to r2Out
--- Just <function>
---
--- >>> newRefined2 @OU @(Id $$ 13) @(Id > 100) (\x -> x * 14) ^? _Right . to r2In
--- Just 182
---
--- >>> newRefined2 @OU @(Id $$ 13) @(Id > 100) (\x -> x * 14) ^? _Right . to (($ 13) . r2Out)
--- Just 182
---
--- >>> newRefined2 @OZ @(Pop0 Fst Id) @(Len > 1) (Proxy @Snd,"Abcdef") ^? _Right . to r2In
--- Just "Abcdef"
---
--- >>> newRefined2 @OZ @(Pop0 Fst Id >> Len) @(Id > 1) (Proxy @Snd,"Abcdef") ^? _Right . to r2In
--- Just 6
---
+-- | convert a string from a given base \'i\' and store it internally as a base \'j\' string
+type BaseIJ (i :: Nat) (j :: Nat) = BaseIJ' i j 'True

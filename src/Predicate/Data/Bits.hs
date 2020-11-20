@@ -47,7 +47,7 @@ import Data.Bits (Bits(..))
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 
 -- | bitwise @and@ similar to 'Data.Bits..&.'
 --

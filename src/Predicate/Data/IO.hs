@@ -64,7 +64,7 @@ import qualified Data.ByteString.Char8 as BS8
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> import Predicate.Prelude
+-- >>> import Predicate
 
 -- | similar to 'System.IO.readFile'
 --

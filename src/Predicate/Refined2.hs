@@ -90,7 +90,7 @@ import GHC.Generics (Generic)
 -- >>> :set -XTypeApplications
 -- >>> :set -XTypeOperators
 -- >>> :set -XOverloadedStrings
--- >>> :m + Predicate.Prelude
+-- >>> :m + Predicate
 -- >>> :m + Data.Time
 
 -- | Refinement type for specifying an input type that is different from the output type
@@ -446,6 +446,54 @@ newRefined2P' _ i = do
 --
 -- >>> newRefined2 @OL @(ReadP UTCTime Id) @(Between (MkDay '(2020,5,2)) (MkDay '(2020,5,7)) (MkJust ToDay)) "2020-05-08 12:13:14Z"
 -- Left Step 2. False Boolean Check(op) | {Just 2020-05-08 <= Just 2020-05-07}
+--
+-- >>> :m + Data.Ratio
+-- >>> newRefined2 @OZ @(ReadP Rational Id) @'True "13 % 3"
+-- Right (Refined2 (13 % 3) "13 % 3")
+--
+-- >>> newRefined2 @OZ @(ReadP Rational Id) @'True "13x % 3"
+-- Left Step 1. Failed Initial Conversion(ip) | ReadP Ratio Integer (13x % 3)
+--
+-- >>> newRefined2 @OZ @(ReadP Rational Id) @(3 % 1 <..> 5 % 1) "13 % 3"
+-- Right (Refined2 (13 % 3) "13 % 3")
+--
+-- >>> newRefined2 @OZ @(ReadP Rational Id) @(11 -% 2 <..> 3 -% 1) "-13 % 3"
+-- Right (Refined2 ((-13) % 3) "-13 % 3")
+--
+-- >>> newRefined2 @OZ @(ReadP Rational Id) @(Id > (15 % 1)) "13 % 3"
+-- Left Step 2. False Boolean Check(op) | FalseP
+--
+-- >>> newRefined2 @OL @(ReadP Rational Id) @(Msg (PrintF "invalid=%3.2f" (FromRational Double)) (Id > (15 % 1))) "13 % 3"
+-- Left Step 2. False Boolean Check(op) | {invalid=4.33 13 % 3 > 15 % 1}
+--
+-- >>> newRefined2 @OZ @(ReadP Rational Id) @(Id > (11 % 1)) "13 % 3"
+-- Left Step 2. False Boolean Check(op) | FalseP
+--
+-- >>> newRefined2 @OZ @(ReadP UTCTime Id) @'True "2018-10-19 14:53:11.5121359 UTC"
+-- Right (Refined2 2018-10-19 14:53:11.5121359 UTC "2018-10-19 14:53:11.5121359 UTC")
+--
+-- >>> :m + Data.Aeson
+-- >>> newRefined2 @OZ @(ReadP Value Id) @'True "String \"jsonstring\""
+-- Right (Refined2 (String "jsonstring") "String \"jsonstring\"")
+--
+-- >>> newRefined2 @OZ @(ReadP Value Id) @'True "Number 123.4"
+-- Right (Refined2 (Number 123.4) "Number 123.4")
+--
+-- >>> :m + Text.Show.Functions
+-- >>> newRefined2 @OU @(Id $$ 13) @(Id > 100) (\x -> x * 14) ^? _Right . to r2Out
+-- Just <function>
+--
+-- >>> newRefined2 @OU @(Id $$ 13) @(Id > 100) (\x -> x * 14) ^? _Right . to r2In
+-- Just 182
+--
+-- >>> newRefined2 @OU @(Id $$ 13) @(Id > 100) (\x -> x * 14) ^? _Right . to (($ 13) . r2Out)
+-- Just 182
+--
+-- >>> newRefined2 @OZ @(Pop0 Fst Id) @(Len > 1) (Proxy @Snd,"Abcdef") ^? _Right . to r2In
+-- Just "Abcdef"
+--
+-- >>> newRefined2 @OZ @(Pop0 Fst Id >> Len) @(Id > 1) (Proxy @Snd,"Abcdef") ^? _Right . to r2In
+-- Just 6
 --
 newRefined2 :: forall opts ip op i
   . ( Refined2C opts ip op i

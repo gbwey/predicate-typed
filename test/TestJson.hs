@@ -1,3 +1,4 @@
+{-# OPTIONS -Wno-missing-export-lists #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
@@ -10,7 +11,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE NoStarIsType #-}
 module TestJson where
---module TestJson (suite) where
 import TastyExtras
 import Test.Tasty
 import Test.Tasty.HUnit
