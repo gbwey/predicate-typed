@@ -35,7 +35,7 @@ main = putStrLn "ok"
 test0a :: Refined 'OA (Between 0 0xff Id) Int
 test0a = $$(refinedTH 0xfe)
 
-test3a :: MakeR3 (BaseN 'OU 16)
+test3a :: MakeR3 (BaseN 'OU 16 (200 <..> 255))
 test3a = $$(refined3TH "0000fe")
 
 test3b :: Refined3 'OU

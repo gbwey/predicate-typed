@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7b8641d98523b7ba560d78a888fe80718f2be98e8926561aadf2c52fb60cac8e
+-- hash: 14d6eba0bb5825ea206348cd35d9a21a8cfe241762324c8584ad17e7fe51d120
 
 name:           predicate-typed
 version:        0.7.4.5
@@ -68,7 +68,7 @@ library
       Paths_predicate_typed
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wcompat -Wno-star-is-type -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wunused-type-patterns -Wredundant-constraints -Wnoncanonical-monad-instances -Wmissing-export-lists
+  ghc-options: -Wall -Wcompat -Wno-star-is-type -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wunused-type-patterns -Wredundant-constraints -Wnoncanonical-monad-instances -Wmissing-export-lists -O2
   build-depends:
       QuickCheck
     , aeson
@@ -143,7 +143,7 @@ test-suite predicate-typed-test
       Paths_predicate_typed
   hs-source-dirs:
       test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Wno-star-is-type -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wunused-type-patterns -Wredundant-constraints
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Wno-star-is-type -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wunused-type-patterns -Wredundant-constraints -O2
   build-depends:
       QuickCheck
     , aeson

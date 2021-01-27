@@ -35,7 +35,6 @@ dependencies:
 
 library:
   source-dirs: src
-
   ghc-options:
   - -Wall
   - -Wcompat
@@ -47,6 +46,7 @@ library:
   - -Wredundant-constraints
   - -Wnoncanonical-monad-instances
   - -Wmissing-export-lists
+  - -O2
   when:
    - condition: impl(ghc >= 8.8)
      ghc-options:
@@ -61,8 +61,7 @@ library:
 tests:
   predicate-typed-test:
     main:                TestSpec.hs
-    source-dirs:
-    - test
+    source-dirs: test
     ghc-options:
     - -threaded
     - -rtsopts
@@ -75,6 +74,7 @@ tests:
     - -Wpartial-fields
     - -Wunused-type-patterns
     - -Wredundant-constraints
+    - -O2
     when:
     -  condition: impl(ghc >= 8.8)
        ghc-options:
@@ -90,8 +90,7 @@ tests:
     - tasty-quickcheck
   doctests:
     main: doctests.hs
-    source-dirs:
-    - doctest
+    source-dirs: doctest
     ghc-options:
     - -Wall
     - -threaded
