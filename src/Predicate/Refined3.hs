@@ -1,6 +1,6 @@
 -- arbitrary and hash use the internal value!
 -- binary and json use the external value
-{-# OPTIONS -Wno-redundant-constraints #-}
+--   {-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -85,7 +85,6 @@ import Data.Tree.Lens (root)
 import Data.Char (isSpace)
 import Data.String (IsString(..))
 import Data.Hashable (Hashable(..))
-import GHC.Stack (HasCallStack)
 import Control.DeepSeq (rnf, rnf2, NFData)
 import qualified Control.Exception as E
 import GHC.Generics (Generic)
@@ -132,8 +131,7 @@ r3Out (Refined3 _ i) = i
 
 -- | directly load values into 'Refined3'. It still checks to see that those values are valid
 unsafeRefined3' :: forall opts ip op fmt i
-                . ( HasCallStack
-                  , Show (PP ip i)
+                . ( Show (PP ip i)
                   , Refined3C opts ip op fmt i
                 ) => i
                   -> Refined3 opts ip op fmt i
@@ -315,9 +313,7 @@ instance ( Arbitrary (PP ip i)
 --
 genRefined3 ::
     forall opts ip op fmt i
-  . ( Refined3C opts ip op fmt i
-    , HasCallStack
-    )
+  . Refined3C opts ip op fmt i
   => Gen (PP ip i)
   -> Gen (Refined3 opts ip op fmt i)
 genRefined3 = genRefined3P Proxy
@@ -325,9 +321,7 @@ genRefined3 = genRefined3P Proxy
 -- | create a 'Refined3' generator using a proxy
 genRefined3P ::
     forall opts ip op fmt i
-  . ( Refined3C opts ip op fmt i
-    , HasCallStack
-    )
+  . Refined3C opts ip op fmt i
   => Proxy '(opts,ip,op,fmt,i)
   -> Gen (PP ip i)
   -> Gen (Refined3 opts ip op fmt i)

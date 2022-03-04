@@ -77,9 +77,9 @@ import qualified Language.Haskell.TH.Syntax as TH
 -- | combination of values for two types @a@ and @b@
 data Elr a b =
      ENone -- ^ no value
-   | ELeft a  -- ^ left value
-   | ERight b -- ^ right value
-   | EBoth a b -- ^ both left and a right value
+   | ELeft !a  -- ^ left value
+   | ERight !b -- ^ right value
+   | EBoth !a !b -- ^ both left and a right value
    deriving stock (Show,Eq,Ord,Foldable,Functor,Traversable,Generic,Generic1,Data)
 
 instance (NFData a, NFData b) => NFData (Elr a b) where

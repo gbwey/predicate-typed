@@ -1,11 +1,10 @@
 cradle:
-  cabal:
-    - path: "src"
-      component: "lib:predicate-typed"
+  stack:
+    - path: "./src"
+      component: "predicate-typed:lib"
 
-#    - path: "doctest"   -- path is actually src
-#      component: "test:doctests"
+    - path: "./doctest"
+      component: "predicate-typed:test:doctests"
 
-    - path: "test"
-      component: "test:predicate-typed-test"
-
+    - path: "./test"
+      component: "predicate-typed:test:predicate-typed-test"

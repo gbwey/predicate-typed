@@ -150,7 +150,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 import qualified Data.List.NonEmpty as N
 import Data.Either (partitionEithers)
 import qualified Data.ByteString.Lazy.Char8 as BL8
-import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Char8 as B8
 import Data.Monoid (Last(Last))
 import Data.Maybe (fromMaybe)
 import Data.Coerce (coerce)
@@ -732,10 +732,10 @@ litBL o s =
   in litL' i (BL8.unpack (BL8.take (1+fromIntegral i) s))
 
 -- | display bytestring output up to the maximum width in the options
-litBS :: POpts -> BS8.ByteString -> String
+litBS :: POpts -> B8.ByteString -> String
 litBS o s =
   let i = oWidth o
-  in litL' i (BS8.unpack (BS8.take (i+1) s))
+  in litL' i (B8.unpack (B8.take (i+1) s))
 
 -- | extract values from the trees or if there are errors return a tree with context
 splitAndAlign :: Show x =>

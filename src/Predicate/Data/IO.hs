@@ -58,7 +58,7 @@ import Data.Time (UTCTime, ZonedTime, getCurrentTime, getZonedTime)
 import System.Directory (doesDirectoryExist, doesFileExist, listDirectory)
 import System.IO (hPutStr, withFile, IOMode(WriteMode, AppendMode), stderr)
 import System.Environment (getEnvironment, lookupEnv)
-import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Char8 as B8
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -101,7 +101,7 @@ data ReadFileBinary p deriving Show
 instance ( PP p x ~ String
          , P p x
          ) => P (ReadFileBinary p) x where
-  type PP (ReadFileBinary p) x = Maybe BS8.ByteString
+  type PP (ReadFileBinary p) x = Maybe B8.ByteString
   eval _ opts x = do
     let msg0 = "ReadFileBinary"
     pp <- eval (Proxy @p) opts x
@@ -110,12 +110,12 @@ instance ( PP p x ~ String
       Right p -> do
         let msg1 = msg0 <> "[" <> p <> "]"
         mb <- runIO $ ifM (doesFileExist p)
-                          (Just <$> BS8.readFile p)
+                          (Just <$> B8.readFile p)
                           mempty
         pure $ case mb of
           Nothing -> mkNode opts (Fail (msg1 <> " must run in IO")) "" [hh pp]
           Just Nothing -> mkNode opts (Val Nothing) (msg1 <> " does not exist") [hh pp]
-          Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (BS8.length b) <> " Just " <> litBS opts b) [hh pp]
+          Just (Just b) -> mkNode opts (Val (Just b)) (msg1 <> " len=" <> show (B8.length b) <> " Just " <> litBS opts b) [hh pp]
 
 -- | similar to 'System.Directory.doesFileExist'
 data FileExists p deriving Show

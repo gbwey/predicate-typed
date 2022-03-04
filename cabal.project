@@ -1,0 +1,3 @@
+packages: *.cabal
+constraints: aeson-pretty +lib-only
+tests: True

@@ -1,4 +1,4 @@
-resolver: nightly-2020-09-28
+resolver: lts-17.0
 
 packages:
 - .
@@ -9,3 +9,7 @@ extra-deps:
 ghc-options:
   "$locals": -fwrite-ide-info
   "$everything": -haddock
+
+flags:
+  aeson-pretty:
+    lib-only: true

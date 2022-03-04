@@ -357,7 +357,7 @@ newtype RefinedException = RefinedException String
   deriving stock Generic
 
 instance Show RefinedException where
-  show (RefinedException e) = "RefinedException:" ++ e
+  show (RefinedException e) = "RefinedException:\n" ++ e
 
 instance E.Exception RefinedException where
   displayException = show

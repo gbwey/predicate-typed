@@ -34,7 +34,7 @@ import Data.Typeable (Typeable)
 import Data.Kind (Type)
 import qualified Data.Aeson as A
 import qualified Data.Aeson.Encode.Pretty as AP
-import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import System.Directory (doesFileExist)
 import Data.Bool (bool)
@@ -118,7 +118,7 @@ instance ( P p x
             msg1 = msg0 <> "(" <> p <> ")"
         mb <- runIO $
                 ifM (doesFileExist p)
-                    (Just <$> BS8.readFile p)
+                    (Just <$> B8.readFile p)
                     mempty
         pure $ case mb of
           Nothing -> mkNode opts (Fail (msg1 <> " must run in IO")) "" hhs
@@ -131,7 +131,7 @@ instance ( P p x
 -- | parse a json file @p@ using the type @t@
 --
 -- >>> pz @(ParseJsonFile [A.Value] "test1.json" >> Id !! 2) ()
--- Val (Object (fromList [("lastName",String "Doe"),("age",Number 45.0),("firstName",String "John"),("likesPizza",Bool False)]))
+-- Val (Object (fromList [("age",Number 45.0),("firstName",String "John"),("lastName",String "Doe"),("likesPizza",Bool False)]))
 --
 data ParseJsonFile (t :: Type) p deriving Show
 type ParseJsonFileT (t :: Type) p = ParseJsonFile' (Hole t) p

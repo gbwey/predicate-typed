@@ -1,14 +1,14 @@
-resolver: lts-17.0
+resolver: lts-18.10
 
 packages:
 - .
 
-extra-deps:
-- pretty-terminal-0.1.0.0
+extra-deps: []
+# - pretty-terminal-0.1.0.0
 
-ghc-options:
-  "$locals": -fwrite-ide-info
-  "$everything": -haddock
+#ghc-options:
+#  "$locals": -fwrite-ide-info
+#  "$everything": -haddock
 
 flags:
   aeson-pretty:

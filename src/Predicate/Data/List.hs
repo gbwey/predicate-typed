@@ -103,7 +103,7 @@ import Predicate.Data.Numeric (Mod, type (-))
 import Predicate.Data.Enum (type (...))
 import Predicate.Data.Monoid (type (<>))
 import Control.Lens
-import Data.List (foldl', partition, intercalate, inits, tails, unfoldr, sortOn)
+import qualified Data.List as X
 import Data.Proxy (Proxy(Proxy))
 import Control.Monad (zipWithM)
 import Data.Foldable (toList)
@@ -112,7 +112,8 @@ import qualified Data.Sequence as Seq
 import Data.Bool (bool)
 import qualified Data.Map.Strict as M
 import Data.Containers.ListUtils (nubOrd)
-import qualified Data.List.NonEmpty as NE
+import qualified Data.List.NonEmpty as N
+import Data.Ord (comparing)
 -- $setup
 -- >>> :set -XDataKinds
 -- >>> :set -XTypeApplications
@@ -414,7 +415,7 @@ instance ( P p x
                Left e -> e
                Right abcs ->
                  let itts = map (view _2 &&& view _3) abcs
-                     w0 = partition (view _1) abcs
+                     w0 = X.partition (view _1) abcs
                      zz1 = (map (view (_2 . _2)) *** map (view (_2 . _2))) w0
                  in mkNode opts (Val zz1) (show3' opts msg0 zz1 "s=" q) (hh qq : map (hh . prefixNumberToTT) itts)
 
@@ -637,7 +638,7 @@ instance ( a ~ [x]
   type PP GroupCntStable a = [(ExtractAFromList a, Int)]
   eval _ opts zs =
     let msg0 = "GroupCntStable"
-        xs = map (NE.head &&& length) $ NE.group $ sortOn (ys M.!) zs
+        xs = map (N.head &&& length) $ N.group $ X.sortBy (comparing (ys M.!)) zs
         ys = M.fromListWith (const id) $ zip zs [0::Int ..]
     in pure $ mkNode opts (Val xs) msg0 []
 
@@ -826,7 +827,7 @@ instance ( PP p x ~ [a]
         in case chkSize2 opts msg0 p' q' hhs of
           Left e -> e
           Right ((_,p),(_,q)) ->
-            let d = intercalate p (map pure q)
+            let d = X.intercalate p (map pure q)
             in mkNode opts (Val d) (show3 opts msg0 d p <> showVerbose opts " | " q) hhs
 
 -- | 'elem' function
@@ -891,7 +892,7 @@ instance ( [a] ~ x
   type PP Inits x = [x]
   eval _ opts as =
     let msg0 = "Inits"
-        xs = inits as
+        xs = X.inits as
     in pure $ mkNode opts (Val xs) (show3 opts msg0 xs as) []
 
 -- | similar to 'Data.List.tails'
@@ -914,7 +915,7 @@ instance ( [a] ~ x
   type PP Tails x = [x]
   eval _ opts as =
     let msg0 = "Tails"
-        xs = tails as
+        xs = X.tails as
     in pure $ mkNode opts (Val xs) (show3 opts msg0 xs as) []
 
 -- | split a list into single values
@@ -1201,7 +1202,7 @@ instance ( PP p a ~ [b]
             let hhs1 = hhs ++ [hh pp]
             in if n <= 0 then mkNode opts (Fail (msg0 <> " n<=0")) "" hhs1
                else if i <= 0 then mkNode opts (Fail (msg0 <> " i<=0")) "" hhs1
-               else let ret = unfoldr (\s -> if null s then Nothing else Just (take n s,drop i s)) p
+               else let ret = X.unfoldr (\s -> if null s then Nothing else Just (take n s,drop i s)) p
                     in mkNode opts (Val ret) (show3' opts msg1 ret "n,i=" (n,i) <> showVerbose opts " | " p) hhs1
 
 -- empty lists at the type level wont work here
@@ -1568,7 +1569,7 @@ instance ( x ~ [a]
   type PP Reverse x = x
   eval _ opts as =
     let msg0 = "Reverse"
-        d = foldl' (flip (:)) [] as
+        d = X.foldl' (flip (:)) [] as
     in pure $ mkNode opts (Val d) (show3 opts msg0 d as) []
 
 -- | reverses using 'reversing'
@@ -1953,7 +1954,7 @@ instance ( x ~ [a]
     pure $ case as' of
      [] -> mkNode opts (Fail "empty list") msg0 []
      xs@(a:as) ->
-       let v = foldl' min a as
+       let v = X.foldl' min a as
        in mkNode opts (Val v) (show3 opts msg0 v xs) []
 
 -- | similar to 'Data.List.maximum'
@@ -1976,7 +1977,7 @@ instance ( x ~ [a]
     pure $ case as' of
       [] -> mkNode opts (Fail "empty list") msg0 []
       xs@(a:as) ->
-        let v = foldl' max a as
+        let v = X.foldl' max a as
         in mkNode opts (Val v) (show3 opts msg0 v xs) []
 
 data IsFixImpl (cmp :: Ordering) p q deriving Show

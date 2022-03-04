@@ -46,7 +46,7 @@ import Data.Kind (Type)
 import Data.String (IsString(..))
 import Data.Char (isSpace, toLower)
 import Data.Function (on)
-import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString.Lazy.Char8 as BL8
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
@@ -266,8 +266,8 @@ instance ToStringC TL.Text where
   toStringC = TL.unpack
 instance ToStringC BL8.ByteString where
   toStringC = BL8.unpack
-instance ToStringC BS8.ByteString where
-  toStringC = BS8.unpack
+instance ToStringC B8.ByteString where
+  toStringC = B8.unpack
 
 -- | 'fromString' function where you need to provide a reference to the type @t@ of the result
 data FromString' t p deriving Show

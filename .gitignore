@@ -12,3 +12,6 @@ stack*.yaml.lock
 hpc/
 weeder.dhall
 *OLD
+stan.html
+fred*.txt
+.stack-work-profiling/

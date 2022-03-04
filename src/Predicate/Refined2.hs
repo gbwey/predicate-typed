@@ -1,7 +1,7 @@
 -- tojson binary hash arbitrary all use i not PP ip i
 -- all instances work with the original input [ie not the internal values]
 --   we have no way to get back to i from PP ip i (unlike Refined3)
-{-# OPTIONS -Wno-redundant-constraints #-}
+--  {-# OPTIONS -Wno-redundant-constraints #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -118,7 +118,6 @@ type role Refined2 phantom nominal nominal nominal
 unsafeRefined2' :: forall opts ip op i
                 . ( Show (PP ip i)
                   , Refined2C opts ip op i
-                  , HasCallStack
                   )
                 => i
                 -> Refined2 opts ip op i

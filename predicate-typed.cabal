@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 14d6eba0bb5825ea206348cd35d9a21a8cfe241762324c8584ad17e7fe51d120
+-- hash: a976b33215bd5aea6dc0d50695ea6515a6b697ef69fb09301542e404593a6ce9
 
 name:           predicate-typed
 version:        0.7.4.5
@@ -68,7 +68,7 @@ library
       Paths_predicate_typed
   hs-source-dirs:
       src
-  ghc-options: -Wall -Wcompat -Wno-star-is-type -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wunused-type-patterns -Wredundant-constraints -Wnoncanonical-monad-instances -Wmissing-export-lists -O2
+  ghc-options: -Wall -Wcompat -Wno-star-is-type -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wunused-type-patterns -Wredundant-constraints -Wnoncanonical-monad-instances -Wmissing-export-lists
   build-depends:
       QuickCheck
     , aeson
@@ -91,7 +91,7 @@ library
     , these >=0.8
     , time
   if impl(ghc >= 8.8)
-    ghc-options: -fwrite-ide-info -hiedir=.hie -Widentities
+    ghc-options: -fwrite-ide-info -hiedir=.hie
   default-language: Haskell2010
 
 test-suite doctests
@@ -127,7 +127,7 @@ test-suite doctests
     , these >=0.8
     , time
   if impl(ghc >= 8.8)
-    ghc-options: -fwrite-ide-info -hiedir=.hie -Widentities
+    ghc-options: -fwrite-ide-info -hiedir=.hie
   default-language: Haskell2010
 
 test-suite predicate-typed-test
@@ -143,7 +143,7 @@ test-suite predicate-typed-test
       Paths_predicate_typed
   hs-source-dirs:
       test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Wno-star-is-type -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wunused-type-patterns -Wredundant-constraints -O2
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N -Wall -Wcompat -Wno-star-is-type -Wincomplete-record-updates -Wincomplete-uni-patterns -Wpartial-fields -Wunused-type-patterns -Wredundant-constraints
   build-depends:
       QuickCheck
     , aeson
@@ -171,5 +171,5 @@ test-suite predicate-typed-test
     , these >=0.8
     , time
   if impl(ghc >= 8.8)
-    ghc-options: -fwrite-ide-info -hiedir=.hie -Widentities
+    ghc-options: -fwrite-ide-info -hiedir=.hie
   default-language: Haskell2010
